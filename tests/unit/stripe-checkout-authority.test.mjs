@@ -88,6 +88,7 @@ async function checkout({
         },
       }),
     },
+    loose: (client) => client,
     stripeSubscriptionBlocksCheckout,
     BILLING_ENV,
     resolveBillingPlan,

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { loose } from "@/lib/supabase-loose";
 import {
   createStripeClient,
   type StripeEnv,
@@ -43,7 +44,7 @@ async function priceIdFrom(value: unknown, environment: StripeEnv): Promise<stri
   if (!priceId || !/^price_[A-Za-z0-9]+$/u.test(priceId)) return undefined;
 
   if (environment === "live") {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await loose(supabaseAdmin)
       .from("billing_plan_tiers")
       .select("stripe_price_id")
       .eq("environment", environment)

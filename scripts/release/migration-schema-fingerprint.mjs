@@ -101,6 +101,20 @@ export function fingerprintMigrationSchemaSnapshot(snapshot) {
   return fingerprint;
 }
 
+export function digestMigrationSchemaSnapshot(snapshot) {
+  fingerprintMigrationSchemaSnapshot(snapshot);
+  return createHash("sha256")
+    .update(JSON.stringify(stableObject(snapshot)))
+    .digest("hex");
+}
+
+export function digestMigrationSchemaScope(snapshot) {
+  fingerprintMigrationSchemaSnapshot(snapshot);
+  return createHash("sha256")
+    .update(JSON.stringify(stableObject(snapshot.scope)))
+    .digest("hex");
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const input = process.env.KOVA_MIGRATION_SCHEMA_SNAPSHOT_FILE;
   if (!input) throw new Error("KOVA_MIGRATION_SCHEMA_SNAPSHOT_FILE_required");

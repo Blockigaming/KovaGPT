@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { ownedPrivateFileLink, PRIVATE_PROJECT_COLUMNS } from "./kova-auth-private-download.mjs";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { loose } from "@/lib/supabase-loose";
 import { z } from "zod";
 
 type SupabaseQueryLike = {
@@ -298,7 +299,7 @@ export const listFiles = createServerFn({ method: "GET" })
       throw new Error("Project file cleanup is incomplete. Retry shortly.", { cause: error });
     }
 
-    let q = context.supabase
+    let q = loose(context.supabase)
       .from("project_files")
       .select(`${PRIVATE_PROJECT_COLUMNS},created_at`)
       .eq("project_id", data.project_id)
@@ -338,7 +339,7 @@ export const reindexProjectFile = createServerFn({ method: "POST" })
   .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(
     async ({ data, context }): Promise<{ indexed: boolean; chunks: number; reason?: string }> => {
-      const { data: row, error } = await context.supabase
+      const { data: row, error } = await loose(context.supabase)
         .from("project_files")
         .select("id, project_id, name, storage_path, mime_type, kind, status")
         .eq("id", data.id)
@@ -514,7 +515,7 @@ export const searchProject = createServerFn({ method: "GET" })
         .eq("project_id", data.project_id)
         .ilike("title", like)
         .limit(20),
-      context.supabase
+      loose(context.supabase)
         .from("project_files")
         .select("id, name")
         .eq("project_id", data.project_id)

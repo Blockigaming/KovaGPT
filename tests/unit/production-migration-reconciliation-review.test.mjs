@@ -51,6 +51,11 @@ test("the September 15 review keeps all nineteen structural mappings blocked", (
   assert.equal(lineage.entries.filter((entry) => entry.status === "schema_proven").length, 0);
 });
 
+test("the proof checkpoint contains every current candidate migration", () => {
+  assert.equal(lineage.observedSourceCommit, "eb5596c77bc6309dc4856b716ac7f4143add13c1");
+  assert.equal(lineage.observedSourceMigrationCount, 157);
+});
+
 test("workspace candidates include the existing canonical reconciliation", () => {
   for (const version of workspace) {
     assert.ok(entries.get(version).candidateSourceVersions.includes("20260904230332"));
@@ -75,13 +80,27 @@ test("the only lineage changes are the fifteen reviewed candidate additions", ()
     assert.equal(entry.candidateSourceVersions.filter((v) => v === candidate).length, 1);
     entry.candidateSourceVersions = entry.candidateSourceVersions.filter((v) => v !== candidate);
   }
-  // Pin the semantic content of main's 3f155680... lineage blob. This preserves
-  // the historical 93-source snapshot, all five equivalences, hashes, reasons,
-  // safety notes, and every pre-existing candidate without relying on formatting.
+  // Pin the semantic content of main's 3f155680... lineage blob. The current
+  // reviewed checkpoint is restored to the historical values before hashing so
+  // this still detects changes outside the explicitly reviewed checkpoint update.
+  restored.observedSourceCommit = "21e2a300ada52e3b8e9a50dd4654fd59f15c41b2";
+  restored.observedSourceMigrationCount = 93;
   const digest = createHash("sha256")
     .update(JSON.stringify(canonical(restored)))
     .digest("hex");
   assert.equal(digest, "a8aadcc911f244b39d49c6b6028fdbde52a41398cc14d2e6103ae2f65a76818e");
+});
+
+test("the live report pins read-only provenance and preserves scheduled-object blockers", () => {
+  const report = readFileSync(
+    "docs/release-reconciliation/live-catalog-reconciliation-20260920.md",
+    "utf8",
+  );
+  assert.match(report, /REPEATABLE READ.*, `READ ONLY`/u);
+  assert.match(report, /Application\/customer rows queried: none/u);
+  assert.match(report, /e6dbb8b559b88ea1696b7e229b73269fd464d0c90f3306721e7fd19a66a2b140/u);
+  assert.match(report, /383de147866c2d1903cfdb7d204f6f701c36010af9a6c81a7689b621150542ac/u);
+  assert.match(report, /All 19 structural lineage\s+candidates remain `requires_schema_proof`/u);
 });
 
 test("the reviewed evidence distinguishes the historical and current-state baselines", () => {

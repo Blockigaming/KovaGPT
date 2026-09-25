@@ -17,12 +17,14 @@ test("production Azure example is complete, inert, and production-scoped", () =>
     "supabaseUrl",
     "supabasePublishableKey",
     "cloudflareClientCertificateSha256Fingerprints",
+    "containerAppName",
   ]) {
     assert.ok(Object.hasOwn(parameters, name), `missing production parameter: ${name}`);
   }
 
   for (const name of [
     "managedEnvironmentName",
+    "containerAppName",
     "managedIdentityName",
     "logAnalyticsWorkspaceName",
     "acrName",
@@ -49,7 +51,7 @@ test("production Azure example is complete, inert, and production-scoped", () =>
     /^https:\/\/REPLACE_WITH_PRODUCTION_KEY_VAULT\.vault\.azure\.net\/secrets\/kova-ip-hash-secret\/REPLACE_WITH_VERSION$/u,
   );
   assert.equal(parameters.generationEnabled.value, false);
-  assert.equal(parameters.minReplicas.value, 1);
+  assert.equal(parameters.minReplicas.value, 0);
   assert.equal(parameters.deployBudget.value, false);
   assert.deepEqual(parameters.cloudflareClientCertificateSha256Fingerprints.value, [
     "REPLACE_WITH_64_HEX_CLOUDFLARE_CLIENT_CERT_SHA256",
@@ -59,7 +61,9 @@ test("production Azure example is complete, inert, and production-scoped", () =>
   assert.match(bicep, /param kovaIpHashSecretUri string/u);
   assert.match(bicep, /keyVaultUrl: kovaIpHashSecretUri/u);
   assert.match(bicep, /secretRef: 'kova-ip-hash-secret'/u);
-  assert.match(bicep, /clientCertificateMode: 'require'/u);
+  assert.doesNotMatch(bicep, /^\s*ingress:\s*\{/mu, "frozen production must have no ingress");
+  assert.match(bicep, /rules:\s*\[\s*\]/u, "frozen production must have no scale rules");
+  assert.doesNotMatch(bicep, /name: 'http'/u, "HTTP must not wake a replica");
   assert.match(bicep, /param cloudflareClientCertificateSha256Fingerprints array/u);
   assert.match(bicep, /name: 'KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS'/u);
   assert.match(bicep, /join\(cloudflareClientCertificateSha256Fingerprints, ','\)/u);
@@ -68,6 +72,19 @@ test("production Azure example is complete, inert, and production-scoped", () =>
     assert.match(bicep, new RegExp(`type: '${type}'[\\s\\S]*?tcpSocket:`, "u"));
   }
   assert.doesNotMatch(bicep, /httpGet:/u);
+  assert.match(
+    bicep,
+    /@allowed\(\[\s*0\s*\]\)\s*param minReplicas int = 0/su,
+    "production must remain hard-frozen at zero replicas during migration",
+  );
+  assert.doesNotMatch(bicep, /param minReplicas int = 1/u);
+  assert.ok(bicep.includes("output containerAppFqdn string = ''"));
+
+  const handoff = read("docs/release/KOVAGPT_MANUAL_HANDOFF.md");
+  const man02 = handoff.split("### MAN-02 —")[1]?.split("### MAN-03 —")[0];
+  assert.ok(man02, "missing MAN-02 production handoff");
+  assert.match(man02, /Migration freeze stop:/u);
+  assert.doesNotMatch(man02, /az deployment group create/u);
 
   const exampleEnv = read(".env.example");
   assert.match(exampleEnv, /^KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS=$/mu);

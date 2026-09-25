@@ -44,6 +44,7 @@ const activeRootInputs = new Set([
 ]);
 const scannerDefinitionFiles = new Set([
   "scripts/release/zero-lovable.mjs",
+  "scripts/release/zero-lovable-production.mjs",
   "scripts/release/ai-provider-contract.mjs",
   "scripts/security/scan-ai-runtime.mjs",
   "scripts/azure/validate-staging-template.mjs",
@@ -58,9 +59,10 @@ const allowedGateScriptNames = new Set([
   "release:zero-lovable",
   "release:zero-lovable:strict",
   "release:zero-lovable:built",
+  "release:zero-lovable:production",
 ]);
 const allowedGateReference =
-  /release:zero-lovable(?::(?:strict|built))?|scripts\/release\/zero-lovable\.mjs|zero-lovable(?:-(?:strict|built))?|zeroLovable(?:Source|Image|Network)/giu;
+  /release:zero-lovable(?::(?:strict|built|production))?|scripts\/release\/zero-lovable(?:-production)?\.mjs|zero-lovable(?:-(?:strict|built|production))?|zeroLovable(?:Source|Image|Network)/giu;
 const currentZeroLovableDocs = new Set([
   "docs/azure-staging-validation-status.md",
   "docs/azure/DEPLOYMENT_CHECKLIST.md",

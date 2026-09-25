@@ -1,0 +1,497 @@
+{
+  "readOnly": true,
+  "routines": [
+    {
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "claim_due_scheduled_tasks",
+      "owner": "postgres",
+      "result": "SETOF public.scheduled_tasks",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 1201,
+      "leakproof": false,
+      "bodySha256": "816621acf2a66674c7510fcf2541174b4e4630195bb89960cec8aea639321c1b",
+      "returnsSet": true,
+      "searchPath": ["search_path=public"],
+      "volatility": "v",
+      "securityDefiner": true,
+      "definitionSha256": "b0abaa34852488a7c6eb12405a15938fea806b7b03a33259c6d4273a4b402418",
+      "identityArguments": "p_worker_id text, p_limit integer, p_lease_seconds integer",
+      "configurationSha256": "8ff994e0214168825107d1a0d977f5830c535e7d61d49c72b584faea17822544",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 2
+    },
+    {
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "complete_scheduled_task_execution",
+      "owner": "postgres",
+      "result": "timestamp with time zone",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 1060,
+      "leakproof": false,
+      "bodySha256": "28c4bf3479a0d2a088f228561bdc69ff76a3d34531f2bd006052f5a5f76e48a2",
+      "returnsSet": false,
+      "searchPath": ["search_path=public"],
+      "volatility": "v",
+      "securityDefiner": true,
+      "definitionSha256": "6af4b1fc9b6e12b9b333eec1162fc6885ab135f13cddb0dc5ec9caabb78e4093",
+      "identityArguments": "p_task_id uuid, p_worker_id text, p_scheduled_for timestamp with time zone, p_result text",
+      "configurationSha256": "8ff994e0214168825107d1a0d977f5830c535e7d61d49c72b584faea17822544",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "fail_scheduled_task_execution",
+      "owner": "postgres",
+      "result": "timestamp with time zone",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 1521,
+      "leakproof": false,
+      "bodySha256": "1dcf083a278286dbaf37f25926f90515a3556d229f9c656104da954b6ddcfaf7",
+      "returnsSet": false,
+      "searchPath": ["search_path=public"],
+      "volatility": "v",
+      "securityDefiner": true,
+      "definitionSha256": "457628b0702b3bd82badb207f886d0f7ab5150d20098c06e411bd3fdf1a08d9c",
+      "identityArguments": "p_task_id uuid, p_worker_id text, p_failure_type text, p_safe_error text, p_retryable boolean",
+      "configurationSha256": "8ff994e0214168825107d1a0d977f5830c535e7d61d49c72b584faea17822544",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "PUBLIC",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "anon",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "authenticated",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "next_scheduled_task_occurrence",
+      "owner": "postgres",
+      "result": "timestamp with time zone",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 446,
+      "leakproof": false,
+      "bodySha256": "a520fb5502e65b6a45f01f7f98d7ee185aececda0f6347eb17a0418645111d51",
+      "returnsSet": false,
+      "searchPath": ["search_path=public"],
+      "volatility": "s",
+      "securityDefiner": false,
+      "definitionSha256": "9563c72c8b02971a31038ef5ef843f8b2a7f131f4401cf6fed14aa4fa90b87bc",
+      "identityArguments": "p_previous timestamp with time zone, p_repeat text",
+      "configurationSha256": "8ff994e0214168825107d1a0d977f5830c535e7d61d49c72b584faea17822544",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": true,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "recover_expired_scheduled_task_leases",
+      "owner": "postgres",
+      "result": "integer",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 468,
+      "leakproof": false,
+      "bodySha256": "2d58ebf25cd93f97efa47968bdf5a8ba85e189ed0aec28be96dd54b38e17ba33",
+      "returnsSet": false,
+      "searchPath": ["search_path=public"],
+      "volatility": "v",
+      "securityDefiner": true,
+      "definitionSha256": "6be0b218eddf0e76eec80bf263875b72030f96049ca4371c8ec7c88a54029f5f",
+      "identityArguments": "",
+      "configurationSha256": "8ff994e0214168825107d1a0d977f5830c535e7d61d49c72b584faea17822544",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "settle_scheduled_task_failure",
+      "owner": "postgres",
+      "result": "TABLE(retry_at timestamp with time zone, delivery_status text)",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 4296,
+      "leakproof": false,
+      "bodySha256": "898fb253cabaa30b16a0a72280953c7b1ca6a4801e12a37809a77de1178071a9",
+      "returnsSet": true,
+      "searchPath": ["search_path=public"],
+      "volatility": "v",
+      "securityDefiner": true,
+      "definitionSha256": "2afc84269513a8575cbe8f30595628fe80f50329d852c5cf8cb334d52afcb29c",
+      "identityArguments": "p_task_id uuid, p_worker_id text, p_run_id text, p_failure_type text, p_safe_error text, p_retryable boolean",
+      "configurationSha256": "8ff994e0214168825107d1a0d977f5830c535e7d61d49c72b584faea17822544",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    },
+    {
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ],
+      "kind": "f",
+      "name": "settle_scheduled_task_success",
+      "owner": "postgres",
+      "result": "TABLE(next_run_at timestamp with time zone, delivery_status text)",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "bodyBytes": 3746,
+      "leakproof": false,
+      "bodySha256": "fc9072aa88938dff5a725bf0d7f67692e6f298f3357f2f366fc91de0fe0a57c0",
+      "returnsSet": true,
+      "searchPath": ["search_path=public"],
+      "volatility": "v",
+      "securityDefiner": true,
+      "definitionSha256": "95b0efa1407a3074ccae2add24f18ef44c8d2f3e82b6267807e4ceee901a47a0",
+      "identityArguments": "p_task_id uuid, p_worker_id text, p_scheduled_for timestamp with time zone, p_run_id text, p_result text",
+      "configurationSha256": "8ff994e0214168825107d1a0d977f5830c535e7d61d49c72b584faea17822544",
+      "effectivePrivileges": [
+        {
+          "role": "anon",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "authenticated",
+          "execute": false,
+          "schemaUsage": true
+        },
+        {
+          "role": "service_role",
+          "execute": true,
+          "schemaUsage": true
+        }
+      ],
+      "defaultArgumentCount": 0
+    }
+  ],
+  "isolation": "repeatable read",
+  "capturedAt": "2026-09-24T01:47:39.221Z",
+  "captureKind": "scheduled-execution-routine-catalog",
+  "databaseName": "postgres",
+  "routineCount": 7,
+  "schemaVersion": 1,
+  "ledgerVersions": [
+    "20260622225346",
+    "20260623005558",
+    "20260623005610",
+    "20260623145549",
+    "20260623154814",
+    "20260623154832",
+    "20260623155803",
+    "20260623161227",
+    "20260623161519",
+    "20260623194741",
+    "20260623195646",
+    "20260623201628",
+    "20260624124535",
+    "20260624124557",
+    "20260624230040",
+    "20260625132920",
+    "20260625135417",
+    "20260627004905",
+    "20260627210732",
+    "20260702142256",
+    "20260702161114",
+    "20260702163905",
+    "20260702163922",
+    "20260704033129",
+    "20260707004617",
+    "20260707005030",
+    "20260712011732",
+    "20260712013949",
+    "20260713010018",
+    "20260718151609",
+    "20260718152250",
+    "20260718154259",
+    "20260721211500",
+    "20260722123000",
+    "20260722130000",
+    "20260727090000",
+    "20260727120000",
+    "20260727150000",
+    "20260727210000",
+    "20260727230000",
+    "20260728090000",
+    "20260728120000",
+    "20260728150000",
+    "20260728180000",
+    "20260728200000",
+    "20260728220000",
+    "20260731120000",
+    "20260801120000",
+    "20260801123000",
+    "20260801235959",
+    "20260802003000",
+    "20260802120000",
+    "20260802130000",
+    "20260802131000",
+    "20260802132000",
+    "20260803100000",
+    "20260803101000",
+    "20260803110000",
+    "20260803120000",
+    "20260803121000",
+    "20260803122000",
+    "20260803123000",
+    "20260803130000",
+    "20260803143000",
+    "20260803184741",
+    "20260803184803",
+    "20260803200951",
+    "20260803202921",
+    "20260804004928",
+    "20260804015247",
+    "20260805123909",
+    "20260815213024",
+    "20260816213000",
+    "20260820220000",
+    "20260823092042",
+    "20260823092107",
+    "20260823092405",
+    "20260823092450",
+    "20260823100156",
+    "20260823120804",
+    "20260823151901",
+    "20260823151927",
+    "20260823214802",
+    "20260823215044",
+    "20260823215132",
+    "20260823215222",
+    "20260823215259",
+    "20260823215454",
+    "20260823215619",
+    "20260823215848",
+    "20260824081357",
+    "20260824081812",
+    "20260824081926",
+    "20260824082127",
+    "20260824084005",
+    "20260824085042",
+    "20260824085444",
+    "20260906024459"
+  ],
+  "ledgerVersionCount": 98,
+  "postgresVersionNum": 170006,
+  "publicSchemaPresent": true,
+  "catalogSentinelPresent": true
+}

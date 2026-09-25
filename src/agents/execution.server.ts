@@ -1,4 +1,5 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
+import { loose } from "@/lib/supabase-loose";
 import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
 import { createClient } from "@supabase/supabase-js";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
@@ -125,7 +126,7 @@ export async function controlAgentRun(
   // The caller-scoped RPC locks the run and commits approval decisions,
   // terminal child cleanup, and evidence atomically. Unbound legacy approvals
   // cannot be associated using caller-supplied metadata.
-  const { data, error } = await caller.supabaseUser.rpc("control_disabled_browser_run", {
+  const { data, error } = await loose(caller.supabaseUser).rpc("control_disabled_browser_run", {
     p_run_id: runId,
     p_command: command,
     p_approval_id: approvalId ?? null,

@@ -17,6 +17,10 @@ import {
   CURRENT_HISTORY_SNAPSHOT,
   extendCurrentHistory,
 } from "./upgrade-database-current-history.mjs";
+import {
+  extendProposedCanonicalHistory,
+  HISTORY_ONLY_SENTINEL,
+} from "./upgrade-database-canonical-history.mjs";
 
 import {
   TEMP_EXPORT_CATALOG_SQL,
@@ -46,6 +50,22 @@ import {
   buildScheduledTableEvidence,
   parseScheduledTableCapture,
 } from "./upgrade-database-scheduled-tables.mjs";
+
+import {
+  CHAT_WORKSPACE_TABLE_FILE,
+  CHAT_WORKSPACE_TABLE_SQL,
+  CHAT_WORKSPACE_TABLE_QUERY_SHA256,
+  buildChatWorkspaceTableEvidence,
+  parseChatWorkspaceTableCapture,
+} from "./upgrade-database-chat-workspace-tables.mjs";
+
+import {
+  CHAT_WORKSPACE_CATALOG_FILE,
+  CHAT_WORKSPACE_CATALOG_SQL,
+  CHAT_WORKSPACE_CATALOG_QUERY_SHA256,
+  buildChatWorkspaceCatalogEvidence,
+  parseChatWorkspaceCatalogCapture,
+} from "./upgrade-database-chat-workspace-routines.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const MANIFEST = "tests/fixtures/production-migration-history-20260904/manifest.json";
@@ -114,23 +134,35 @@ export function rehearseUpgrade({
   root = ROOT,
   dryRun = false,
   currentHistory = false,
+  canonicalHistory = false,
   captureTemporaryExport = false,
   captureScheduledCatalog = false,
   captureScheduledTables = false,
+  captureChatWorkspaceTables = false,
+  captureChatWorkspaceRoutines = false,
   execute = spawnSync,
   inspectSource = captureCleanUpgradeSource,
 } = {}) {
   const outputDir = join(root, "artifacts/release");
+  const resultFilename = canonicalHistory
+    ? "upgrade-canonical-history.json"
+    : "upgrade-database.json";
   // A failed full-run preflight must not leave an earlier success artifact.
   // Dry runs remain observational, including when their input is invalid.
   if (!dryRun) {
     mkdirSync(outputDir, { recursive: true });
     for (const file of [
-      "upgrade-database.json",
+      resultFilename,
       "upgrade-failure.log",
-      TEMP_EXPORT_PROOF_FILE,
-      SCHEDULED_CATALOG_FILE,
-      SCHEDULED_TABLE_FILE,
+      ...(!canonicalHistory
+        ? [
+            TEMP_EXPORT_PROOF_FILE,
+            SCHEDULED_CATALOG_FILE,
+            SCHEDULED_TABLE_FILE,
+            CHAT_WORKSPACE_TABLE_FILE,
+            CHAT_WORKSPACE_CATALOG_FILE,
+          ]
+        : []),
     ])
       rmSync(join(outputDir, file), { force: true });
   }
@@ -141,10 +173,25 @@ export function rehearseUpgrade({
   try {
     if (captureScheduledTables && !currentHistory)
       throw new Error("upgrade_scheduled_tables_current_history_required");
+    if (captureChatWorkspaceTables && !currentHistory)
+      throw new Error("upgrade_chat_workspace_tables_current_history_required");
+    if (captureChatWorkspaceRoutines && !currentHistory)
+      throw new Error("upgrade_chat_workspace_routines_current_history_required");
     if (captureScheduledCatalog && !currentHistory)
       throw new Error("upgrade_scheduled_catalog_current_history_required");
     if (captureTemporaryExport && !currentHistory)
       throw new Error("upgrade_temp_export_current_history_required");
+    if (canonicalHistory && !currentHistory)
+      throw new Error("upgrade_canonical_history_current_history_required");
+    if (
+      canonicalHistory &&
+      (captureTemporaryExport ||
+        captureScheduledCatalog ||
+        captureScheduledTables ||
+        captureChatWorkspaceTables ||
+        captureChatWorkspaceRoutines)
+    )
+      throw new Error("upgrade_canonical_history_separate_capture_required");
     if (!dryRun) {
       sourceBefore = inspectSource(root);
       assertUpgradeSourceUnchanged(sourceBefore, sourceBefore);
@@ -155,6 +202,8 @@ export function rehearseUpgrade({
     plan = currentHistory
       ? extendCurrentHistory(historical, readSource(join(root, CURRENT_HISTORY_SNAPSHOT)))
       : historical;
+    if (canonicalHistory)
+      plan = extendProposedCanonicalHistory(plan, root, readSource, readDirectory);
   } catch (error) {
     if (!dryRun) {
       // Parser and filesystem errors may contain input bytes or local paths.
@@ -167,8 +216,13 @@ export function rehearseUpgrade({
     throw error;
   }
   const executionForward = plan.executionForward ?? plan.forward;
+  const recordOnlyVersions = plan.recordOnlyVersions ?? [];
   const baselineVersions = plan.baseline.map((row) => row.version);
-  const finalVersions = [...plan.baseline, ...executionForward].map((row) => row.version);
+  const finalVersions = [
+    ...baselineVersions,
+    ...recordOnlyVersions,
+    ...executionForward.map((row) => row.version),
+  ];
   const currentHistoryEvidence = plan.currentHistory
     ? {
         currentHistory: plan.currentHistory,
@@ -196,7 +250,22 @@ export function rehearseUpgrade({
       ...(captureScheduledTables
         ? { scheduledTablesPlanned: true, scheduledTablesQuerySha256: SCHEDULED_TABLE_QUERY_SHA256 }
         : {}),
+      ...(captureChatWorkspaceTables
+        ? {
+            chatWorkspaceTablesPlanned: true,
+            chatWorkspaceTablesQuerySha256: CHAT_WORKSPACE_TABLE_QUERY_SHA256,
+          }
+        : {}),
+      ...(captureChatWorkspaceRoutines
+        ? {
+            chatWorkspaceRoutinesPlanned: true,
+            chatWorkspaceRoutinesQuerySha256: CHAT_WORKSPACE_CATALOG_QUERY_SHA256,
+          }
+        : {}),
       ...currentHistoryEvidence,
+      ...(plan.canonicalHistoryProposal
+        ? { canonicalHistoryProposal: plan.canonicalHistoryProposal }
+        : {}),
     };
   let assertions, seed;
   try {
@@ -301,6 +370,10 @@ export function rehearseUpgrade({
   let scheduledBytes;
   let tableBaseline;
   let tableBytes;
+  let chatTableBaseline;
+  let chatTableBytes;
+  let chatRoutineBaseline;
+  let chatRoutineBytes;
   try {
     supabase(["start", "-x", "studio,imgproxy,edge-runtime,logflare,vector,supavisor"]);
     supabase(["db", "reset", "--local", "--no-seed"]);
@@ -322,17 +395,34 @@ export function rehearseUpgrade({
       );
     if (captureScheduledTables)
       tableBaseline = parseScheduledTableCapture(sql(SCHEDULED_TABLE_SQL, true), baselineVersions);
+    if (captureChatWorkspaceTables)
+      chatTableBaseline = parseChatWorkspaceTableCapture(
+        sql(CHAT_WORKSPACE_TABLE_SQL, true),
+        baselineVersions,
+      );
+    if (captureChatWorkspaceRoutines)
+      chatRoutineBaseline = parseChatWorkspaceCatalogCapture(
+        sql(CHAT_WORKSPACE_CATALOG_SQL, true),
+        baselineVersions,
+      );
+    if (recordOnlyVersions.length) {
+      // The local CLI requires a matching migration filename before repairing
+      // history. A disposable failing sentinel guarantees that a repaired
+      // version never silently executes its already-equivalent source body.
+      for (const version of recordOnlyVersions) {
+        const row = plan.forward.find((migration) => migration.version === version);
+        if (!row) throw new Error("upgrade_canonical_history_record_only_source_missing");
+        writeFileSync(join(migrationsDir, row.name), HISTORY_ONLY_SENTINEL);
+      }
+      supabase(["migration", "repair", "--local", "--status", "applied", ...recordOnlyVersions]);
+      sql(historyAssertion([...baselineVersions, ...recordOnlyVersions], "repaired"));
+    }
     sql(seed);
     for (const migration of executionForward)
       writeFileSync(join(migrationsDir, migration.name), migration.content);
     supabase(["migration", "up", "--local", "--include-all"]);
     sql(assertions);
-    sql(
-      historyAssertion(
-        [...plan.baseline, ...executionForward].map((row) => row.version),
-        "final",
-      ),
-    );
+    sql(historyAssertion(finalVersions, "final"));
     const upgradedCapture = captureTemporaryExport
       ? parseTemporaryExportCapture(sql(TEMP_EXPORT_CATALOG_SQL, true), finalVersions)
       : null;
@@ -343,9 +433,19 @@ export function rehearseUpgrade({
     const tableUpgraded = captureScheduledTables
       ? parseScheduledTableCapture(sql(SCHEDULED_TABLE_SQL, true), finalVersions)
       : null;
+    const chatTableUpgraded = captureChatWorkspaceTables
+      ? parseChatWorkspaceTableCapture(sql(CHAT_WORKSPACE_TABLE_SQL, true), finalVersions)
+      : null;
+    const chatRoutineUpgraded = captureChatWorkspaceRoutines
+      ? parseChatWorkspaceCatalogCapture(sql(CHAT_WORKSPACE_CATALOG_SQL, true), finalVersions)
+      : null;
     const sourceCommit = run("git", ["-C", root, "rev-parse", "HEAD"]).trim();
     const sourceTree =
-      captureTemporaryExport || captureScheduledCatalog || captureScheduledTables
+      captureTemporaryExport ||
+      captureScheduledCatalog ||
+      captureScheduledTables ||
+      captureChatWorkspaceTables ||
+      captureChatWorkspaceRoutines
         ? run("git", ["-C", root, "rev-parse", "HEAD^{tree}"]).trim()
         : null;
     if (
@@ -359,6 +459,34 @@ export function rehearseUpgrade({
           buildScheduledTableEvidence({
             baseline: tableBaseline,
             upgraded: tableUpgraded,
+            baselineVersions,
+            finalVersions,
+            sourceCommit,
+            sourceTree,
+          }),
+          null,
+          2,
+        ) + "\n";
+    if (captureChatWorkspaceTables)
+      chatTableBytes =
+        JSON.stringify(
+          buildChatWorkspaceTableEvidence({
+            baseline: chatTableBaseline,
+            upgraded: chatTableUpgraded,
+            baselineVersions,
+            finalVersions,
+            sourceCommit,
+            sourceTree,
+          }),
+          null,
+          2,
+        ) + "\n";
+    if (captureChatWorkspaceRoutines)
+      chatRoutineBytes =
+        JSON.stringify(
+          buildChatWorkspaceCatalogEvidence({
+            baseline: chatRoutineBaseline,
+            upgraded: chatRoutineUpgraded,
             baselineVersions,
             finalVersions,
             sourceCommit,
@@ -435,7 +563,28 @@ export function rehearseUpgrade({
             },
           }
         : {}),
+      ...(chatTableBytes
+        ? {
+            chatWorkspaceTables: {
+              file: CHAT_WORKSPACE_TABLE_FILE,
+              sha256: sha256(chatTableBytes),
+              querySha256: CHAT_WORKSPACE_TABLE_QUERY_SHA256,
+            },
+          }
+        : {}),
+      ...(chatRoutineBytes
+        ? {
+            chatWorkspaceRoutines: {
+              file: CHAT_WORKSPACE_CATALOG_FILE,
+              sha256: sha256(chatRoutineBytes),
+              querySha256: CHAT_WORKSPACE_CATALOG_QUERY_SHA256,
+            },
+          }
+        : {}),
       ...currentHistoryEvidence,
+      ...(plan.canonicalHistoryProposal
+        ? { canonicalHistoryProposal: plan.canonicalHistoryProposal }
+        : {}),
     };
   } catch (error) {
     failure = error;
@@ -462,7 +611,10 @@ export function rehearseUpgrade({
   if (proofBytes) writeFileSync(join(outputDir, TEMP_EXPORT_PROOF_FILE), proofBytes);
   if (scheduledBytes) writeFileSync(join(outputDir, SCHEDULED_CATALOG_FILE), scheduledBytes);
   if (tableBytes) writeFileSync(join(outputDir, SCHEDULED_TABLE_FILE), tableBytes);
-  writeFileSync(join(outputDir, "upgrade-database.json"), JSON.stringify(result, null, 2) + "\n");
+  if (chatTableBytes) writeFileSync(join(outputDir, CHAT_WORKSPACE_TABLE_FILE), chatTableBytes);
+  if (chatRoutineBytes)
+    writeFileSync(join(outputDir, CHAT_WORKSPACE_CATALOG_FILE), chatRoutineBytes);
+  writeFileSync(join(outputDir, resultFilename), JSON.stringify(result, null, 2) + "\n");
   return result;
 }
 
@@ -481,9 +633,22 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         rehearseUpgrade({
           dryRun: process.argv.includes("--dry-run"),
           currentHistory: !process.argv.includes("--historical-baseline"),
-          captureTemporaryExport: !process.argv.includes("--historical-baseline"),
-          captureScheduledCatalog: !process.argv.includes("--historical-baseline"),
-          captureScheduledTables: !process.argv.includes("--historical-baseline"),
+          canonicalHistory: process.argv.includes("--canonical-history"),
+          captureTemporaryExport:
+            !process.argv.includes("--historical-baseline") &&
+            !process.argv.includes("--canonical-history"),
+          captureScheduledCatalog:
+            !process.argv.includes("--historical-baseline") &&
+            !process.argv.includes("--canonical-history"),
+          captureScheduledTables:
+            !process.argv.includes("--historical-baseline") &&
+            !process.argv.includes("--canonical-history"),
+          captureChatWorkspaceTables:
+            !process.argv.includes("--historical-baseline") &&
+            !process.argv.includes("--canonical-history"),
+          captureChatWorkspaceRoutines:
+            !process.argv.includes("--historical-baseline") &&
+            !process.argv.includes("--canonical-history"),
         }),
         null,
         2,

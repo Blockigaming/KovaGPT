@@ -135,6 +135,7 @@ function storageServer({
       },
     },
     "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: auth },
+    "@/lib/supabase-loose": { loose: (client) => client },
     "@/lib/modes": { STORAGE_LIMITS_BYTES: { free: 500, plus: 25000, pro: 25000 } },
   });
   return {

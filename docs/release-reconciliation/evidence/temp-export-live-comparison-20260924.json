@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "artifactKind": "temporary-export-live-catalog-comparison",
+  "proofId": "proof-20260824085042",
+  "sourceCommit": "6642e8c109ca7fce346fa3a760976d5a09aaae2f",
+  "sourceTree": "fb265d07798304b1bbb71a7b4169f055f90a97e7",
+  "rehearsalQuerySha256": "e6dbb8b559b88ea1696b7e229b73269fd464d0c90f3306721e7fd19a66a2b140",
+  "liveQueryIdentityVerified": false,
+  "artifactSha256": "776980840a3442520c9b6b7b078e706bc7e94e706855095b8396ac15f8b63e31",
+  "liveCaptureSha256": "a26459dc6426d6c4dc3c56a65d055112aa90241fcba6de981e03c556b9767e22",
+  "capturedAt": "2026-09-24T01:46:18.014Z",
+  "liveLedgerVersionCount": 98,
+  "isolatedFingerprint": {
+    "schemaSha256": "974207baf501e2babe05ef0d20b329a9b020f8a88bc1a7ac505a1a86913e2965",
+    "aclSha256": "1625cf9ce9407f79f96a762aa02f67465cbc5c1e1c3bb3dba2e56cbe4d6abd95",
+    "rlsSha256": "1625cf9ce9407f79f96a762aa02f67465cbc5c1e1c3bb3dba2e56cbe4d6abd95",
+    "functionSha256": "2a1b181d96d9553def58a598ecffbd8e097b612b87b8995c5461c883efba47c5"
+  },
+  "liveFingerprint": {
+    "schemaSha256": "974207baf501e2babe05ef0d20b329a9b020f8a88bc1a7ac505a1a86913e2965",
+    "aclSha256": "1625cf9ce9407f79f96a762aa02f67465cbc5c1e1c3bb3dba2e56cbe4d6abd95",
+    "rlsSha256": "1625cf9ce9407f79f96a762aa02f67465cbc5c1e1c3bb3dba2e56cbe4d6abd95",
+    "functionSha256": "2a1b181d96d9553def58a598ecffbd8e097b612b87b8995c5461c883efba47c5"
+  },
+  "scopedCatalogMatch": true,
+  "liveCatalogCompared": true,
+  "schemaProofPromoted": false,
+  "canonicalHistoryReconciled": false,
+  "productionReleaseReady": false
+}

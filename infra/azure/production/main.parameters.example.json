@@ -5,6 +5,9 @@
     "namePrefix": {
       "value": "kovagpt-prod"
     },
+    "containerAppName": {
+      "value": "REPLACE_WITH_PRODUCTION_CONTAINER_APP_NAME"
+    },
     "managedEnvironmentName": {
       "value": "REPLACE_WITH_PRODUCTION_CONTAINER_APPS_ENVIRONMENT"
     },
@@ -78,7 +81,7 @@
       "value": false
     },
     "minReplicas": {
-      "value": 1
+      "value": 0
     },
     "maxReplicas": {
       "value": 4

@@ -178,8 +178,9 @@ identity/role, and links to the provider audit-log views.
 - **Owner:** authorized Azure/GitHub production operator; a separate required reviewer approves the
   protected environment where policy requires it
 - **Prerequisites:** the non-negotiable entry gate; reviewed two-phase origin-cutover IaC on exact
-  `main`; an ACR digest built from `KOVA_RELEASE_SHA`; a known-good previous production
-  digest/revision; staging and production must use isolated configuration. Phase one must use an
+  `main` that separately restores serving ingress and HTTP scaling after the migration cost freeze
+  is explicitly lifted; an ACR digest built from `KOVA_RELEASE_SHA`; a known-good previous
+  production digest/revision; staging and production must use isolated configuration. Phase one must use an
   Azure client-certificate **accept/audit** posture that keeps existing DNS-only clients healthy;
   it must not require a certificate yet.
 - **Why manual:** production resource identity and Azure authentication are unavailable here, and
@@ -191,6 +192,13 @@ the production Bicep derives an app target instead of binding the positively ide
 resource, would replace the runtime environment with an incomplete set, omits required role
 assignments, and declares log retention/quota parameters without applying them. Engineering must
 correct and review those contracts first. Do not hand-edit a live app to compensate.
+
+**Migration freeze stop:** the current `infra/azure/production/main.bicep` deliberately has no
+production ingress or HTTP scaling rule and has `minReplicas = 0`. Never apply that template as
+MAN-02's serving phase: it would remove the production entry point. MAN-02 stays blocked until a
+separate owner-approved, reviewed activation change restores serving ingress and scaling, resolves
+the other engineering blockers, and provides a reviewed deployment path. An Azure `what-if` of
+the frozen template is read-only evidence, not approval to apply it.
 
 **Exact owner action**
 
@@ -205,10 +213,12 @@ correct and review those contracts first. Do not hand-edit a live app to compens
    exactly the existing `AZURE_PROD_APP`; a similarly named second app is a stop condition. Any
    omitted existing runtime variable/secret reference or full-array replacement is also a stop
    condition.
-4. Confirm `what-if` creates no resource, replica, premium feature, workspace, retention, or log
-   capacity and has `$0` incremental cost. After protected approval, deploy the same digest to
-   production in the reviewed **non-enforcing accept/audit phase**. Do not deploy the final
-   client-certificate requirement yet. Do not deploy or alter `ca-kovagpt-dev`.
+4. After the separately approved source activation and all engineering blockers are resolved,
+   obtain a new `what-if` for that exact reviewed serving template, verify the existing target and
+   approved cost impact, and obtain protected approval before a separate production deployment
+   in the **non-enforcing accept/audit phase**. Do not use the frozen template for this phase.
+   Do not deploy the final client-certificate requirement yet. Do not deploy or alter
+   `ca-kovagpt-dev`.
 5. Record the Azure deployment operation ID, new revision, image digest, managed-identity and Key
    Vault access result, probe status, client-certificate phase, and UTC start/end times. Continue
    immediately to MAN-03; phase one is not a completed production release.
@@ -222,19 +232,13 @@ az deployment group what-if \
   --resource-group "$AZURE_PROD_RG" \
   --template-file infra/azure/production/main.bicep \
   --parameters "@$KOVA_PROD_PARAMS"
-az deployment group create \
-  --name "kovagpt-$KOVA_RELEASE_SHA" \
-  --resource-group "$AZURE_PROD_RG" \
-  --template-file infra/azure/production/main.bicep \
-  --parameters "@$KOVA_PROD_PARAMS" \
-  --mode Incremental
 ```
 
-Do not run the `create` command unless `what-if` targets the recorded existing resource IDs,
-matches the reviewed change set, has no unrelated deletion, and has `$0` incremental spend. The
-currently reviewed IaC is not safe to apply if it unconditionally sets
-`clientCertificateMode: require` while public DNS remains DNS-only. A phase-one deployment is not
-proof of final promotion; verify:
+No production `create` command is included while the migration freeze is active. A future
+separately reviewed activation plan must restore ingress and scaling, target the recorded existing
+resource IDs, match its approved change set and cost, and preserve the accept/audit certificate
+phase while public DNS remains DNS-only. A phase-one deployment is not proof of final promotion;
+after that future deployment, verify:
 
 ```bash
 az containerapp show --resource-group "$AZURE_PROD_RG" --name "$AZURE_PROD_APP" \

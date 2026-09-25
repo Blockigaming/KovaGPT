@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
-import { chmod, copyFile, lstat, mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { chmod, copyFile, lstat, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, normalize, resolve, sep } from "node:path";
+import { fingerprintDist } from "./candidate-dist-fingerprint.mjs";
 
 const sourceRoot = process.cwd();
 const host = process.env.KOVA_AUTH_VISUAL_HOST || "127.0.0.1";
@@ -146,45 +146,8 @@ async function copyTrackedWorkingTree() {
   }
 }
 
-async function listFiles(directory, prefix = "") {
-  let entries;
-  try {
-    entries = await readdir(directory, { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-
-  const files = [];
-  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-    const absolutePath = join(directory, entry.name);
-    const relativePath = join(prefix, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await listFiles(absolutePath, relativePath)));
-    } else if (entry.isFile()) {
-      files.push({ absolutePath, relativePath });
-    } else {
-      throw new Error(`Unexpected entry in candidate dist: ${relative(directory, absolutePath)}`);
-    }
-  }
-  return files;
-}
-
-async function fingerprint(directory) {
-  const hash = createHash("sha256");
-  const files = await listFiles(directory);
-  hash.update(`files:${files.length}\0`);
-  for (const file of files) {
-    hash.update(file.relativePath);
-    hash.update("\0");
-    hash.update(await readFile(file.absolutePath));
-    hash.update("\0");
-  }
-  return hash.digest("hex");
-}
-
 try {
-  const candidateFingerprint = await fingerprint(candidateDist);
+  const candidateFingerprint = await fingerprintDist(candidateDist);
 
   // Copy exactly the tracked working-tree state. This includes staged and
   // unstaged source edits while excluding untracked files, local environment
@@ -196,7 +159,7 @@ try {
   });
   await run(npmCommand, ["run", "build"], { cwd: fixtureRoot });
 
-  const fingerprintAfterBuild = await fingerprint(candidateDist);
+  const fingerprintAfterBuild = await fingerprintDist(candidateDist);
   if (candidateFingerprint !== fingerprintAfterBuild) {
     throw new Error("The isolated auth fixture modified the candidate dist directory.");
   }

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { fingerprintMigrationSchemaSnapshot } from "../../scripts/release/migration-schema-fingerprint.mjs";
+import {
+  digestMigrationSchemaScope,
+  digestMigrationSchemaSnapshot,
+  fingerprintMigrationSchemaSnapshot,
+} from "../../scripts/release/migration-schema-fingerprint.mjs";
 
 const fingerprint = fingerprintMigrationSchemaSnapshot;
 const fields = ["schemaSha256", "aclSha256", "rlsSha256", "functionSha256"];
@@ -38,6 +42,23 @@ test("fingerprints are stable across object-key and top-level row ordering", () 
   assert.deepEqual(fingerprint(first), fingerprint(second));
 });
 
+test("snapshot digests canonicalize object keys while preserving exact row order", () => {
+  const first = snapshot();
+  first.categories.schema.push({ table: "scheduled_tasks", column: "lease_expires_at" });
+  const reorderedKeys = structuredClone(first);
+  reorderedKeys.categories.schema[0] = {
+    nullable: true,
+    column: "worker_id",
+    table: "scheduled_tasks",
+  };
+  assert.equal(digestMigrationSchemaSnapshot(first), digestMigrationSchemaSnapshot(reorderedKeys));
+  reorderedKeys.categories.schema.reverse();
+  assert.notEqual(
+    digestMigrationSchemaSnapshot(first),
+    digestMigrationSchemaSnapshot(reorderedKeys),
+  );
+});
+
 test("fingerprints preserve nested sequence semantics such as argument order", () => {
   const first = fingerprint(snapshot());
   const changed = snapshot();
@@ -49,10 +70,12 @@ test("fingerprints preserve nested sequence semantics such as argument order", (
 
 test("fingerprints bind every category to the declared proof scope", () => {
   const first = fingerprint(snapshot());
+  const firstScope = digestMigrationSchemaScope(snapshot());
   const changed = snapshot();
   changed.scope.proofId = "proof-20260823092450";
   const second = fingerprint(changed);
   for (const field of fields) assert.notEqual(first[field], second[field]);
+  assert.notEqual(firstScope, digestMigrationSchemaScope(changed));
 });
 
 test("rejects a missing category rather than treating it as empty", () => {

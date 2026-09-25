@@ -23,6 +23,7 @@ async function tier(summary) {
     },
     useEffect: (fn) => fn(),
     getSupabaseClientConfigStatus: () => ({ configured: true }),
+    loose: (client) => client,
     supabase: {
       auth: {
         getUser: async () => ({ data: { user: { id: "fixture" } } }),

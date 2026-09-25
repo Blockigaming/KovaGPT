@@ -23,10 +23,12 @@ jobs:
     outputs:
       run_ci: ${{ steps.scope.outputs.run_ci }}
       run_database: ${{ steps.scope.outputs.run_database }}
+      run_canonical_history: ${{ steps.scope.outputs.run_canonical_history }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
       - name: Classify changed files
@@ -36,6 +38,7 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
             echo "run_ci=true" >> "$GITHUB_OUTPUT"
             echo "run_database=true" >> "$GITHUB_OUTPUT"
+            echo "run_canonical_history=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -52,18 +55,28 @@ jobs:
             echo "Documentation-only change: expensive CI stages are not required."
           fi
 
-          if grep -Eq '^(supabase/migrations/|tests/fixtures/production-migration-history-20260904/|database-contract\.json$|release-migrations\.json$|scripts/release/(isolated-database|migrations|schema-contract)\.mjs$|scripts/release/upgrade-database[^/]*\.(mjs|sql)$)' <<< "$files"; then
+          if grep -Eq '^docs/release-reconciliation/canonical-history-actions-20260923\.json$' <<< "$files"; then
+            echo "run_canonical_history=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_canonical_history=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if grep -Eq '^(\.github/workflows/ci\.yml$|supabase/migrations/|tests/fixtures/production-migration-history-20260904/|database-contract\.json$|release-migration-lineage\.json$|release-migrations\.json$|scripts/release/(isolated-database|migration-preflight|migration-schema-fingerprint|migration-schema-proof-plan|migration-temp-export-source-proof|migrations|schema-contract)\.mjs$|scripts/release/upgrade-database[^/]*\.(mjs|sql)$)' <<< "$files"; then
             echo "run_database=true" >> "$GITHUB_OUTPUT"
           else
             echo "run_database=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up Node
-        if: steps.scope.outputs.run_ci == 'true'
+        if: steps.scope.outputs.run_ci == 'true' || steps.scope.outputs.run_canonical_history == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: npm
+
+      - name: Check canonical history action inventory
+        if: steps.scope.outputs.run_ci == 'true' || steps.scope.outputs.run_canonical_history == 'true'
+        run: node scripts/release/canonical-history-decision.mjs --check
 
       - name: Install dependencies
         if: steps.scope.outputs.run_ci == 'true'
@@ -139,7 +152,7 @@ jobs:
         if: steps.integration.outcome == 'failure'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: integration-test-log-${{ github.sha }}
+          name: integration-test-log-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/ci/integration-tests.log
           if-no-files-found: error
           retention-days: 7
@@ -159,10 +172,18 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: deployed-baseline-${{ github.sha }}
+          name: deployed-baseline-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/ui-audit/deployed-baseline
           if-no-files-found: warn
           retention-days: 7
+
+      # Preserve the Cloudflare artifact through integration tests, then build
+      # a Node artifact for the prebuilt Playwright preview used below.
+      - name: Browser preview build
+        if: steps.scope.outputs.run_ci == 'true'
+        env:
+          KOVA_BROWSER_PREVIEW: node
+        run: npm run build
 
       - name: Accessibility checks
         if: steps.scope.outputs.run_ci == 'true'
@@ -182,7 +203,7 @@ jobs:
         if: always() && steps.candidate_visual.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: candidate-visual-${{ github.sha }}
+          name: candidate-visual-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/ui-audit/candidate-visual/*.png
           if-no-files-found: error
           retention-days: 7
@@ -226,6 +247,8 @@ jobs:
         shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
@@ -282,6 +305,8 @@ jobs:
         run: test "$PUBLIC_RESULT" = success
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -332,6 +357,8 @@ jobs:
           PUBLIC_RESULT: ${{ needs.public-surface.result }}
         run: test "$PUBLIC_RESULT" = success
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
@@ -350,6 +377,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
@@ -413,6 +442,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
@@ -420,6 +450,8 @@ jobs:
       - run: npm run release:db:isolated
       - name: Rehearse upgrade from captured production history
         run: npm run release:db:upgrade
+      - name: Rehearse proposed 80-body and 3-history-only sequence
+        run: node scripts/release/upgrade-database.mjs --canonical-history
       - run: npm run release:schema && git diff --exit-code -- database-contract.json
       - name: Upload upgrade rehearsal evidence
         if: always()
