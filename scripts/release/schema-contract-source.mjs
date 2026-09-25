@@ -14,14 +14,20 @@ export function activePolicyNames(sql) {
   return [...policies.values()].sort();
 }
 
-// Only direct, literal SELECT/ALL statements on one public table are tracked.
+// Only direct, literal SELECT/ALL privileges on one public table are tracked.
 // A false value is a recorded direct REVOKE, not an assertion about inherited
 // privileges, ownership, SECURITY DEFINER functions or the live target.
 export function directTableSelectDecisions(sql) {
   const decisions = new Map();
   const events =
-    /(?:^|[;\n])[ \t]*(grant|revoke)\s+(select|all(?:\s+privileges)?)\s+on\s+(?:table\s+)?(public\.[a-z_][\w]*)\s+(?:to|from)\s+((?:[a-z_][\w]*\s*,\s*)*[a-z_][\w]*)\s*(?=;)/giu;
+    /(?:^|[;\n])[ \t]*(grant|revoke)\s+((?:all(?:\s+privileges)?|select|insert|update|delete|truncate|references|trigger|maintain)(?:\s*,\s*(?:all(?:\s+privileges)?|select|insert|update|delete|truncate|references|trigger|maintain))*)\s+on\s+(?:table\s+)?(public\.[a-z_][\w]*)\s+(?:to|from)\s+((?:[a-z_][\w]*\s*,\s*)*[a-z_][\w]*)\s*(?=;)/giu;
   for (const match of sql.matchAll(events)) {
+    if (
+      !match[2]
+        .split(",")
+        .some((privilege) => /^(?:select|all(?:\s+privileges)?)$/iu.test(privilege.trim()))
+    )
+      continue;
     const table = match[3].toLowerCase();
     const granted = match[1].toLowerCase() === "grant";
     for (const role of match[4].split(",")) {

@@ -24,9 +24,15 @@ CREATE POLICY "read_flags" ON public.other FOR SELECT USING (true);
   const sameLine = `
 CREATE POLICY "first" ON public.one FOR SELECT USING (true);CREATE POLICY "second" ON public.two FOR SELECT USING (true);DROP POLICY "first" ON public.one;
 GRANT SELECT ON public.two TO authenticated; GRANT ALL ON public.two TO service_role; REVOKE SELECT ON public.two FROM authenticated;
+REVOKE ALL ON public.agent_run_approval_bindings FROM service_role;
+GRANT SELECT,INSERT,DELETE ON public.agent_run_approval_bindings TO service_role;
+REVOKE SELECT ON public.insert_only FROM service_role;
+GRANT INSERT,DELETE ON public.insert_only TO service_role;
 `;
   assert.deepEqual(activePolicyNames(sameLine), ["second"]);
   assert.deepEqual(directTableSelectDecisions(sameLine), [
+    { table: "public.agent_run_approval_bindings", role: "service_role", granted: true },
+    { table: "public.insert_only", role: "service_role", granted: false },
     { table: "public.two", role: "authenticated", granted: false },
     { table: "public.two", role: "service_role", granted: true },
   ]);
@@ -70,4 +76,11 @@ test("current migration inventory does not advertise revoked feature-flag client
       true,
     );
   }
+  assert.equal(
+    contract.directTableSelectDecisions.find(
+      (entry) =>
+        entry.table === "public.agent_run_approval_bindings" && entry.role === "service_role",
+    )?.granted,
+    true,
+  );
 });

@@ -139,7 +139,32 @@ WITH target_relations AS (
 ), function_rows AS (
   SELECT n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_id,
          encode(extensions.digest(convert_to(jsonb_build_object(
-           'definition', encode(extensions.digest(convert_to(pg_get_functiondef(p.oid), 'UTF8'), 'sha256'), 'hex'),
+           'definition', encode(extensions.digest(convert_to(
+             CASE WHEN p.prokind = 'a' THEN jsonb_build_object(
+               'kind', p.prokind::text,
+               'arguments', pg_get_function_identity_arguments(p.oid),
+               'result', pg_get_function_result(p.oid),
+               'aggregate', (SELECT jsonb_build_object(
+                 'kind', a.aggkind::text, 'directArguments', a.aggnumdirectargs,
+                 'transitionFunction', a.aggtransfn::regprocedure::text,
+                 'finalFunction', nullif(a.aggfinalfn, 0::oid)::regprocedure::text,
+                 'combineFunction', nullif(a.aggcombinefn, 0::oid)::regprocedure::text,
+                 'serializeFunction', nullif(a.aggserialfn, 0::oid)::regprocedure::text,
+                 'deserializeFunction', nullif(a.aggdeserialfn, 0::oid)::regprocedure::text,
+                 'movingTransitionFunction', nullif(a.aggmtransfn, 0::oid)::regprocedure::text,
+                 'inverseTransitionFunction', nullif(a.aggminvtransfn, 0::oid)::regprocedure::text,
+                 'movingFinalFunction', nullif(a.aggmfinalfn, 0::oid)::regprocedure::text,
+                 'sortOperator', nullif(a.aggsortop, 0::oid)::regoperator::text,
+                 'transitionType', format_type(a.aggtranstype, NULL),
+                 'movingTransitionType', format_type(nullif(a.aggmtranstype, 0::oid), NULL),
+                 'transitionSpace', a.aggtransspace,
+                 'movingTransitionSpace', a.aggmtransspace,
+                 'initialValue', a.agginitval, 'movingInitialValue', a.aggminitval,
+                 'finalExtra', a.aggfinalextra, 'movingFinalExtra', a.aggmfinalextra,
+                 'finalModify', a.aggfinalmodify::text,
+                 'movingFinalModify', a.aggmfinalmodify::text
+               ) FROM pg_aggregate a WHERE a.aggfnoid = p.oid)
+             )::text ELSE pg_get_functiondef(p.oid) END, 'UTF8'), 'sha256'), 'hex'),
            'owner', p.proowner::regrole::text, 'securityDefiner', p.prosecdef,
            'settings', p.proconfig, 'explicitAcl', p.proacl::text,
            'anonExecute', has_function_privilege('anon', p.oid, 'EXECUTE'),
