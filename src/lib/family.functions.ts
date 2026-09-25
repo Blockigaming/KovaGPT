@@ -9,6 +9,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { loose } from "@/lib/supabase-loose";
 
 function newToken() {
   const bytes = new Uint8Array(24);
@@ -69,10 +70,13 @@ export const createFamilyGroup = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: groupId, error } = await supabaseAdmin.rpc("create_or_repair_family_group", {
-      p_owner_id: context.userId,
-      p_name: data.name,
-    });
+    const { data: groupId, error } = await loose(supabaseAdmin).rpc(
+      "create_or_repair_family_group",
+      {
+        p_owner_id: context.userId,
+        p_name: data.name,
+      },
+    );
     if (error || typeof groupId !== "string") {
       throw new Error(
         "Family group could not be saved. If you belong to another family, leave it first.",
@@ -109,10 +113,13 @@ export const acceptFamilyInvite = createServerFn({ method: "POST" })
   .validator((i: unknown) => z.object({ token: z.string().regex(/^[0-9a-f]{48}$/u) }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: groupId, error } = await supabaseAdmin.rpc("accept_family_invite_atomic", {
-      p_user_id: context.userId,
-      p_token: data.token,
-    });
+    const { data: groupId, error } = await loose(supabaseAdmin).rpc(
+      "accept_family_invite_atomic",
+      {
+        p_user_id: context.userId,
+        p_token: data.token,
+      },
+    );
     if (error || typeof groupId !== "string") {
       throw new Error(
         "Invite could not be accepted. Check that it is current, matches your verified email, and that you are not already in a family.",

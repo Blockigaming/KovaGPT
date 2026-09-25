@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { workExecutionDatabase } from "@/lib/work-execution-database.server";
+import { loose } from "@/lib/supabase-loose";
 import { requireUser } from "@/lib/api-auth.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { workUuid } from "@/lib/work-execution-protocol.mjs";
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/api/work/output")({
         if (!binding.data) return json({ error: "work_output_not_found" }, 404);
         // Caller-scoped RLS must still allow this exact Project file today. User
         // writable Library metadata and previously signed URLs never grant access.
-        const file = await auth.supabaseUser
+        const file = await loose(auth.supabaseUser)
           .from("project_files")
           .select("id,storage_path,status,content_sha256,size_bytes,mime_type")
           .eq("id", binding.data.project_file_id)
