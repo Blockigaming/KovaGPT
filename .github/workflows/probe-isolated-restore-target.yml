@@ -27,7 +27,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Start an empty local Supabase Postgres 17.6.1.155
+      - name: Start an empty local Supabase stack on Postgres 17.6.1.155
         shell: bash
         run: |
           set -euo pipefail
@@ -37,12 +37,7 @@ jobs:
           npx supabase init --workdir "$target" --yes
           mkdir -p "$target/supabase/.temp"
           printf '%s\n' '17.6.1.155' > "$target/supabase/.temp/postgres-version"
-          npx supabase db start --workdir "$target" --yes
-      - name: Start local Auth Storage and Realtime services without production configuration
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx supabase start --workdir "$KOVA_PROBE_WORKDIR" \
+          npx supabase start --workdir "$target" \
             -x studio,imgproxy,edge-runtime,logflare,vector,supavisor --yes
       - name: Capture only image identity and managed-schema counts
         shell: bash
