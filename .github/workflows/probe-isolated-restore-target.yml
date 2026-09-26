@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/probe-isolated-restore-target.yml
       - scripts/release/isolated-restore-target-catalog.sql
+      - scripts/release/isolated-restore-target-extensions.sql
 
 permissions:
   contents: read
@@ -14,6 +15,8 @@ jobs:
   probe:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    env:
+      KOVA_PROBE_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -52,21 +55,28 @@ jobs:
             exit 1
           }
           docker exec -i "$container" psql -U postgres -d postgres \
+            --no-psqlrc --quiet --set ON_ERROR_STOP=1 --file - \
+            < scripts/release/isolated-restore-target-extensions.sql > /dev/null
+          docker exec -i "$container" psql -U postgres -d postgres \
             --no-psqlrc --quiet --tuples-only --no-align --set ON_ERROR_STOP=1 --file - \
             < scripts/release/isolated-restore-target-catalog.sql > "$RUNNER_TEMP/kova-local-catalog.json"
           KOVA_PROBE_IMAGE_TAG="$image_tag" KOVA_PROBE_IMAGE_ID="$image_id" python3 - <<'PY'
-          import hashlib, json, os
+          import hashlib, json, os, subprocess
           from pathlib import Path
           source = Path('scripts/release/isolated-restore-target-catalog.sql').read_bytes()
           raw = Path(os.environ['RUNNER_TEMP'], 'kova-local-catalog.json').read_text().strip()
           data = json.loads(raw)
+          actual_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          if actual_commit != os.environ['KOVA_PROBE_SOURCE_SHA']:
+              raise SystemExit('Checked-out source does not match the exact pull request head')
           if data.get('serverVersionNum') != 170006 or set(data.get('managedSchemas', {})) != {'auth', 'storage', 'realtime'}:
               raise SystemExit('Unexpected local PostgreSQL or managed schema catalog')
           if not isinstance(data.get('extensions'), list):
               raise SystemExit('Missing local extension catalog')
           receipt = {
-              'kind': 'synthetic-empty-supabase-restore-target-probe',
-              'sourceCommit': os.environ['GITHUB_SHA'],
+              'kind': 'synthetic-prepared-supabase-restore-target-probe',
+              'sourceCommit': actual_commit,
+              'sourceTree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
               'imageTag': os.environ['KOVA_PROBE_IMAGE_TAG'],
               'localImageId': os.environ['KOVA_PROBE_IMAGE_ID'],
               'querySha256': hashlib.sha256(source).hexdigest(),
