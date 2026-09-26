@@ -37,9 +37,10 @@ jobs:
           npx supabase init --workdir "$target" --yes
           mkdir -p "$target/supabase/.temp"
           printf '%s\n' '17.6.1.155' > "$target/supabase/.temp/postgres-version"
+          printf '%s' 'v2.197.0' > "$target/supabase/.temp/gotrue-version"
           npx supabase start --workdir "$target" \
             -x studio,imgproxy,edge-runtime,logflare,vector,supavisor --yes
-      - name: Capture only image identity and managed-schema counts
+      - name: Capture image identity and managed-schema fingerprints
         shell: bash
         run: |
           set -euo pipefail
@@ -78,10 +79,14 @@ jobs:
               if len(matches) != 1:
                   raise SystemExit('Expected one local managed service: ' + label)
               services[label] = matches[0]
+          if services['auth'] != 'public.ecr.aws/supabase/gotrue:v2.197.0':
+              raise SystemExit('Auth image did not match the recorded production version')
           if data.get('serverVersionNum') != 170006 or set(data.get('managedSchemas', {})) != {'auth', 'storage', 'realtime'}:
               raise SystemExit('Unexpected local PostgreSQL or managed schema catalog')
           if not isinstance(data.get('extensions'), list):
               raise SystemExit('Missing local extension catalog')
+          if not isinstance(data.get('managedObjects'), dict) or not isinstance(data.get('serviceMigrations'), dict):
+              raise SystemExit('Missing local managed object or service migration catalog')
           receipt = {
               'kind': 'synthetic-prepared-supabase-restore-target-probe',
               'sourceCommit': actual_commit,

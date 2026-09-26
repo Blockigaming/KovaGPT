@@ -74,6 +74,13 @@ SELECT jsonb_build_object(
       JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname IN ('auth', 'storage', 'realtime') AND NOT t.tgisinternal
     )
+  ),
+  'serviceMigrations', jsonb_build_object(
+    'auth', (SELECT jsonb_build_object('count', count(*), 'latest', max(version)) FROM auth.schema_migrations),
+    'storage', (SELECT jsonb_build_object('count', count(*), 'latest', (
+      SELECT jsonb_build_object('id', id, 'name', name) FROM storage.migrations ORDER BY id DESC LIMIT 1
+    )) FROM storage.migrations),
+    'realtime', (SELECT jsonb_build_object('count', count(*), 'latest', max(version)) FROM realtime.schema_migrations)
   )
 )::text;
 COMMIT;
