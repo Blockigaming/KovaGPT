@@ -13,6 +13,24 @@ Status on 2026-09-23: **M17 and M18 remain open.** This document describes evide
 
 The backup workflow expressly records `storageObjectBytesBackedUp: false`, `authStorageManagedSchemaCustomizationBackupComplete: false`, and `restoreExercised: false`. Its successful upload cannot flip these facts. See [production-backup-export.md](production-backup-export.md).
 
+### Private integrity and passphrase precheck for the retained September 18 copy
+
+The source-only [backup inspector](../../scripts/release/inspect-encrypted-recovery-backup.py) can verify the retained ZIP, GPG passphrase, six internal archive members, manifest and five SQL payload hashes **before a restore is approved**. Run it only in a private, trusted environment where the retained ZIP and protected `KOVA_PRODUCTION_BACKUP_PASSPHRASE` are already available. It does not connect to production or an isolated database, and writes no decrypted SQL file. The result is a private integrity receipt, not a schema or restore proof. Do not run this command in a public CI job or upload the receipt or decrypted bytes to a PR.
+
+```bash
+umask 077
+: "${KOVA_RECOVERY_ZIP:?private retained September 18 ZIP path required}"
+: "${KOVA_PRODUCTION_BACKUP_PASSPHRASE:?protected secret required}"
+private_receipt_dir="$(mktemp -d)"
+python3 scripts/release/inspect-encrypted-recovery-backup.py \
+  --zip "$KOVA_RECOVERY_ZIP" \
+  --expected-zip-sha256 9e744a8ac16534df53ea2f071ecbf122846a1325eff15df5bbab31b020374eaf \
+  --expected-source-sha 8518628335eea524da6b7cb1fb951178441de95f \
+  --private-receipt "$private_receipt_dir/backup-inspection.json"
+```
+
+Keep that directory out of the repository and preserve the receipt privately. This check does not decide whether the dump's SQL can run inside one transaction, whether managed schema customizations or Storage bytes are recoverable, or whether Auth and app behavior works. Those still require the separate approved target, restore, and checks below. A different backup needs a separately pinned ZIP digest and source SHA; never substitute one by changing a constant in place.
+
 The catalog marks `Users upload to own library folder` and `Users delete own library images` as **live-only**: migration `20260905033500_library_image_storage_quota.sql:35-36` drops both because browser Storage writes bypass the server quota-reservation contract. They remain in the nine-policy live snapshot as evidence, but their replay is blocked until an explicit source/live reconciliation decision. The two absent Auth deletion triggers are source-only. This known-difference inventory is not exhaustive.
 
 The catalog query was executed with the Supabase connector explicitly targeting project `mfbycmbjygcfkrsuepxf`; the JSON's project reference records that invocation. The SQL output by itself does not authenticate its target. Recheck the connector target whenever repeating it.

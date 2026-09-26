@@ -5,8 +5,11 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - .github/workflows/backup-supabase-production.yml
+      - scripts/release/inspect-encrypted-recovery-backup.py
       - tests/unit/supabase-production-backup-workflow.test.mjs
+      - tests/unit/test_inspect_encrypted_recovery_backup.py
       - docs/release-reconciliation/production-backup-export.md
+      - docs/release-reconciliation/isolated-backup-restore-rehearsal-20260923.md
   workflow_dispatch:
     inputs:
       confirmation:
@@ -39,6 +42,11 @@ jobs:
           package-manager-cache: false
       - name: Verify backup workflow safety contract
         run: node --test tests/unit/supabase-production-backup-workflow.test.mjs
+      - name: Verify encrypted backup inspector with synthetic SQL
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          KOVA_REQUIRE_REAL_GPG_TEST: "1"
+        run: python3 -m unittest discover -s tests/unit -p 'test_inspect_encrypted_recovery_backup.py'
 
   backup-only:
     needs: source-tests
