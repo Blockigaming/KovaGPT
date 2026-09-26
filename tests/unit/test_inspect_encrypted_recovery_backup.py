@@ -40,12 +40,19 @@ class RecoveryBackupInspectorTest(unittest.TestCase):
         self.fake_path = f"{fake_bin}:{os.environ['PATH']}"
 
     def archive(self, *, bad_manifest_hash=False, symlink=False, real_gpg=False,
-                review_sql=False):
+                review_sql=False, function_sql=False):
         files = {name: b"-- synthetic only\nSELECT 1;\n" for name in
                  ("roles.sql", "schema.sql", "data.sql", "history_schema.sql", "history_data.sql")}
         if review_sql:
             files["roles.sql"] = b"-- synthetic only\nBEGIN;\nCOMMIT;\n\\connect other\n"
             files["schema.sql"] = b"-- synthetic only\nCREATE DATABASE scratch;\n"
+        if function_sql:
+            files["schema.sql"] = (
+                b"-- BEGIN in a comment\nSELECT '$fake$ BEGIN $fake$';\n"
+                b"CREATE FUNCTION test() RETURNS void AS $body$\n"
+                b"BEGIN\n  PERFORM 1;\n  COMMIT;\nEND;\n$body$ LANGUAGE plpgsql;\n"
+                b"BEGIN;\n"
+            )
         manifest = {
             "schemaVersion": 1,
             "operation": "supabase-production-logical-backup",
@@ -152,6 +159,19 @@ class RecoveryBackupInspectorTest(unittest.TestCase):
             "schema.sql": {"transactionBoundary": 0, "nontransactionalCommand": 1,
                            "psqlMetaCommand": 0},
         })
+        self.assertEqual(receipt["sqlReviewTransactionLocations"]["roles.sql"],
+                         {"withinDollarQuote": 0, "outsideDollarQuote": 2,
+                          "classificationComplete": True})
+
+    def test_transaction_locations_separate_dollar_body_from_top_level(self):
+        archive_path, archive_hash = self.archive(function_sql=True)
+        result = self.inspect(archive_path, archive_hash)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt = json.loads(self.receipt.read_text())
+        self.assertEqual(receipt["sqlReviewTransactionLocations"]["schema.sql"],
+                         {"withinDollarQuote": 2, "outsideDollarQuote": 1,
+                          "classificationComplete": True})
+        self.assertNotIn("PERFORM", self.receipt.read_text())
 
     def test_downloads_copy_writes_private_documents_receipt(self):
         downloads = self.directory / "Downloads"

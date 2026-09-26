@@ -31,6 +31,7 @@ SQL_REVIEW_PATTERNS = {
     "psqlMetaCommand": re.compile(
         rb"^[ \t]*\\(?:connect|c|gexec|i|include|!)(?:[ \t]|$)", re.I | re.M),
 }
+DOLLAR_TAG = re.compile(rb"\$(?:[A-Za-z_][A-Za-z_0-9]*)?\$")
 
 
 def sql_review_candidates(files):
@@ -41,6 +42,88 @@ def sql_review_candidates(files):
                        for category, pattern in SQL_REVIEW_PATTERNS.items()})
         and any(counts.values())
     }
+
+
+def transaction_locations(data):
+    """Count transaction candidates inside/outside dollar strings, without emitting SQL.
+
+    This is a lexical review aid, not a PostgreSQL parser or transaction-safety proof.
+    Unbalanced literals fail closed into an incomplete classification.
+    """
+    ranges = []
+    index = 0
+    state = "code"
+    block_depth = 0
+    dollar_start = 0
+    dollar_tag = b""
+    single_backslash_escape = False
+    while index < len(data):
+        char = data[index:index + 1]
+        following = data[index + 1:index + 2]
+        if state == "code":
+            if char == b"-" and following == b"-":
+                state = "line_comment"
+                index += 2
+                continue
+            if char == b"/" and following == b"*":
+                state = "block_comment"
+                block_depth = 1
+                index += 2
+                continue
+            if char == b"'":
+                single_backslash_escape = (index > 0 and data[index - 1:index].lower() == b"e" and
+                                           (index == 1 or not re.match(rb"[A-Za-z_0-9]", data[index - 2:index - 1])))
+                state = "single_quote"
+            elif char == b'"':
+                state = "double_quote"
+            elif char == b"$":
+                match = DOLLAR_TAG.match(data, index)
+                if match:
+                    dollar_start = index
+                    dollar_tag = match.group()
+                    index = match.end()
+                    state = "dollar_quote"
+                    continue
+        elif state == "line_comment":
+            if char == b"\n":
+                state = "code"
+        elif state == "block_comment":
+            if char == b"/" and following == b"*":
+                block_depth += 1
+                index += 2
+                continue
+            if char == b"*" and following == b"/":
+                block_depth -= 1
+                index += 2
+                if block_depth == 0:
+                    state = "code"
+                continue
+        elif state == "single_quote":
+            if char == b"\\" and single_backslash_escape:
+                index += 2
+                continue
+            if char == b"'":
+                if following == b"'":
+                    index += 2
+                    continue
+                state = "code"
+        elif state == "double_quote" and char == b'"':
+            if following == b'"':
+                index += 2
+                continue
+            state = "code"
+        elif state == "dollar_quote" and data.startswith(dollar_tag, index):
+            index += len(dollar_tag)
+            ranges.append((dollar_start, index))
+            state = "code"
+            continue
+        index += 1
+    matches = list(SQL_REVIEW_PATTERNS["transactionBoundary"].finditer(data))
+    within = sum(any(start <= match.start() < end for start, end in ranges)
+                 for match in matches)
+    return {"withinDollarQuote": within,
+            "outsideDollarQuote": len(matches) - within,
+            "classificationComplete": state in ("code", "line_comment")}
 
 
 class StopInspection(Exception):
@@ -167,6 +250,10 @@ def inspect(archive_path, expected_zip_sha256, expected_source_sha, output_path)
         "sqlPayloadsVerified": 5,
         "potentialNontransactionalSqlPresent": bool(candidates),
         "sqlReviewCandidates": candidates,
+        "sqlReviewTransactionLocations": {
+            name: transaction_locations(files[name]) for name, counts in candidates.items()
+            if counts["transactionBoundary"]
+        },
         "transactionCompatibility": "requires_manual_review",
         "storageObjectBytesIncluded": False,
         "managedSchemaCustomizationsIncluded": False,
