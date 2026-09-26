@@ -9,7 +9,7 @@ This workflow exists because the current KovaGPT production Supabase project is 
 Create these as GitHub **production environment secrets**, never repository files, workflow inputs, PR comments, issue comments, or chat messages:
 
 - `KOVA_PRODUCTION_DATABASE_URL`: the exact production Supabase Postgres connection URI for project `mfbycmbjygcfkrsuepxf`. A Session pooler URI is acceptable and is preferable when direct IPv6 connectivity is unavailable. The workflow rejects a URI whose host/user identity does not bind to that project.
-- `KOVA_PRODUCTION_BACKUP_PASSPHRASE`: a unique random passphrase of at least 32 characters. Store it outside the repository and separately from the encrypted backup artifact. Losing it makes the encrypted backup unusable.
+- `KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926`: a newly generated random passphrase of at least 32 characters for fresh backups. Save it in an owner-controlled password manager **before** setting this new environment secret; verify the saved value can be retrieved privately. Store it separately from the encrypted backup artifact. The older `KOVA_PRODUCTION_BACKUP_PASSPHRASE` secret must remain intact: replacing it does not decrypt the September 18 backup, whose original passphrase has not been recovered. The new workflow maps the new secret into its existing runtime variable without printing it.
 
 Do not reset the database password merely to satisfy this workflow unless a separately reviewed credential-rotation decision requires it.
 
@@ -42,11 +42,12 @@ A successful backup run is not a restore rehearsal. Final rollback evidence stil
 ## Owner sequence
 
 1. Review and merge the backup workflow through the normal source process.
-2. Add the two protected `production` environment secrets privately.
+2. Confirm the existing protected production database URI secret is available. Generate and save the new backup passphrase privately, verify private retrieval, then add `KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926` as a separate protected `production` environment secret. Do not modify the older backup passphrase secret.
 3. Run **Backup Supabase production only** on the exact reviewed `main` SHA with `confirmation=BACKUP_ONLY` and `source_sha=<same SHA>`.
 4. Download the resulting encrypted artifact before its 7-day Actions retention expires and store it in a durable private location separate from Supabase.
-5. Record the run ID, exact SHA, encrypted archive SHA-256 and durable storage location in release evidence. Do not record the database URI or encryption passphrase.
-6. Separately capture Storage object bytes, managed `auth`/`storage` customizations, and configuration-recovery evidence.
-7. Perform a later isolated restore rehearsal before claiming rollback readiness.
+5. Run the private inspector against this **new** encrypted artifact using the saved new passphrase and its own observed ZIP hash and source SHA. The September 18 pins do not apply to the new artifact. Keep the inspection receipt private; a successful export alone does not establish decryptability.
+6. Record the run ID, exact SHA, encrypted archive SHA-256 and durable storage location in release evidence. Do not record the database URI or encryption passphrase.
+7. Separately capture Storage object bytes, managed `auth`/`storage` customizations, and configuration-recovery evidence.
+8. Perform a later isolated restore rehearsal before claiming rollback readiness.
 
 The workflow's success means only that a filtered, encrypted logical export was produced. It must never be described as PITR, a physical Supabase backup, a full project clone, or completed disaster recovery.

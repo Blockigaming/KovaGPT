@@ -18,7 +18,10 @@ const checkpoint = "5734b9e3d96224b06cdf2bc6f824078738b86ce1";
 const decisionCommit = "bd0d2878ea41b4972bae13494288bd15c24b51aa";
 const decisionSha256 = "6c0aa894709e131dade3c93e3597fbd45c3a55ec8cdde8130babfdfb34552df0";
 const mergedMainMigration = "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4.sql";
-const migrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
+const pinnedMigrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
+const migrationTree = "3b688ddbfaa4b91ae2a85506915a959d66f85cd9";
+const currentSourceCommit = "3ffdde6fe80e6511ab1e2f76b405c71a2858edfd";
+const currentSourceCount = 185;
 const targetProjectRef = "mfbycmbjygcfkrsuepxf";
 const capturedAtPattern =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
@@ -148,15 +151,23 @@ export function buildCanonicalHistoryDecision({
     execFileSync("git", ["rev-parse", `${checkpoint}:supabase/migrations`], {
       cwd: repositoryRoot,
       encoding: "utf8",
-    }).trim() !== migrationTree
+    }).trim() !== pinnedMigrationTree
   )
     throw new Error("canonical_history_migration_tree_changed");
   const pinnedSource = pinned(checkpoint, sourcePath);
-  const source = JSON.parse(pinnedSource);
+  const pinnedSourceManifest = JSON.parse(pinnedSource);
+  const source = json(sourcePath);
+  if (
+    !bytes(sourcePath).equals(pinned(currentSourceCommit, sourcePath)) ||
+    execFileSync("git", ["rev-parse", `${currentSourceCommit}:supabase/migrations`], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+    }).trim() !== migrationTree
+  )
+    throw new Error("canonical_history_current_source_checkpoint_changed");
   const lineage = json(lineagePath);
   if (
     !bytes(lineagePath).equals(pinned(checkpoint, lineagePath)) ||
-    sha256(bytes(decisionPath)) !== decisionSha256 ||
     sha256(pinned(decisionCommit, decisionPath)) !== decisionSha256
   )
     throw new Error("canonical_history_pinned_evidence_changed");
@@ -164,12 +175,14 @@ export function buildCanonicalHistoryDecision({
   const supplement = json(supplementPath);
   validateCanonicalHistoryCapture(lineage, baseline, supplement, sha256(bytes(baselinePath)));
   validateForwardExtension(
+    pinnedSourceManifest,
     source,
-    json(sourcePath),
     readDirectory(join(repositoryRoot, "supabase/migrations")),
     (filename) => bytes(`supabase/migrations/${filename}`),
   );
-  const securitySource = source.migrations.find((entry) => entry.timestamp === "20260903145843");
+  const securitySource = pinnedSourceManifest.migrations.find(
+    (entry) => entry.timestamp === "20260903145843",
+  );
   if (!securitySource) throw new Error("canonical_history_security_source_missing");
   validateEquivalentSupplement(
     supplement,
@@ -223,9 +236,11 @@ export function buildCanonicalHistoryDecision({
         requiredValidation: "exact_ledger_delta_and_scoped_catalog_and_synthetic_two_user_contract",
         requiredRecoveryGate: "verified_actual_backup_restore_and_approved_rollback",
         captured98RowRehearsal:
-          entry.timestamp === "20260903145843"
-            ? "body_executed_in_baseline_under_remote_version"
-            : "body_replayed_forward_in_isolated_database",
+          source.migrations.indexOf(entry) >= pinnedSourceManifest.count
+            ? "not_rehearsed_in_historical_98_row_upgrade"
+            : entry.timestamp === "20260903145843"
+              ? "body_executed_in_baseline_under_remote_version"
+              : "body_replayed_forward_in_isolated_database",
         reviewStatus: "blocked_pending_per_version_prestate_and_effect_review",
         expectedLedgerAddition: entry.timestamp,
       };
@@ -254,9 +269,9 @@ export function buildCanonicalHistoryDecision({
       };
     });
   if (
-    source.migrations.length !== 157 ||
+    source.migrations.length !== currentSourceCount ||
     remote.length !== 98 ||
-    sourceOnly.length !== 83 ||
+    sourceOnly.length !== 111 ||
     remoteOnly.length !== 24 ||
     remoteOnly.filter((entry) => entry.mappingStatus === "equivalent").length !== 5 ||
     remoteOnly.filter((entry) => entry.mappingStatus === "requires_schema_proof").length !== 19 ||
@@ -278,9 +293,9 @@ export function buildCanonicalHistoryDecision({
     schemaVersion: 1,
     status: "proposed_only_no_history_repair_or_production_action",
     targetProjectRef: supplement.projectRef,
-    sourceCheckpointCommit: checkpoint,
+    sourceCheckpointCommit: currentSourceCommit,
     sourceMigrationTree: migrationTree,
-    sourceManifestSha256: sha256(pinnedSource),
+    sourceManifestSha256: sha256(bytes(sourcePath)),
     lineageSha256: sha256(bytes(lineagePath)),
     historicalFixtureManifestSha256: sha256(bytes(baselinePath)),
     currentSupplementSha256: sha256(bytes(supplementPath)),
@@ -319,7 +334,7 @@ export function buildCanonicalHistoryDecision({
 if (process.argv[1]?.endsWith("canonical-history-decision.mjs")) {
   const expected = `${JSON.stringify(buildCanonicalHistoryDecision(), null, 2)}\n`;
   if (process.argv.includes("--write")) {
-    if (read(join(ROOT, sourcePath)).count !== 157)
+    if (read(join(ROOT, sourcePath)).count !== currentSourceCount)
       throw new Error("canonical_history_checkpoint_is_immutable");
     writeFileSync(join(ROOT, decisionPath), expected);
   } else if (process.argv.includes("--check")) {

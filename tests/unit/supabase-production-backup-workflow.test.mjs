@@ -70,7 +70,8 @@ test("workflow never uploads plaintext SQL and explicitly preserves remaining ba
 
 test("credentials are required as secrets, masked, and not accepted as workflow inputs", () => {
   assert.match(workflow, /secrets\.KOVA_PRODUCTION_DATABASE_URL/u);
-  assert.match(workflow, /secrets\.KOVA_PRODUCTION_BACKUP_PASSPHRASE/u);
+  assert.match(workflow, /secrets\.KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926/u);
+  assert.doesNotMatch(workflow, /secrets\.KOVA_PRODUCTION_BACKUP_PASSPHRASE\s*\}\}/u);
   assert.match(workflow, /::add-mask::\$KOVA_PRODUCTION_DATABASE_URL/u);
   assert.match(workflow, /::add-mask::\$KOVA_PRODUCTION_BACKUP_PASSPHRASE/u);
   const inputs = workflow.slice(

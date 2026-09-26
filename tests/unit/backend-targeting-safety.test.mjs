@@ -61,7 +61,7 @@ test("unreconciled production project rejects write commands before linking", ()
       },
     });
     assert.equal(run.status, 2);
-    assert.match(run.stderr, /production_history_requires_approved_80_plus_3_plan/u);
+    assert.match(run.stderr, /production_history_requires_approved_108_plus_3_plan/u);
     assert.doesNotMatch(run.stdout, /Linking the Supabase CLI/u);
   }
 });

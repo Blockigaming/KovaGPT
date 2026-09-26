@@ -13,7 +13,7 @@ Optional environment overrides:
 - `KOVA_MIGRATION_LINEAGE_FILE` for the reviewed lineage JSON.
 - `KOVA_MIGRATION_MANIFEST` for the current generated migration manifest.
 
-The command is source-only and read-only. It does not connect to Supabase, repair migration history, apply DDL, alter production, or mark any lineage entry proven. Its version-2 output lists every unresolved remote version, the candidate source versions that must be rehearsed, the required provenance fields, and the four fingerprint categories required by the preflight contract: schema, ACL, RLS, and functions.
+The command is source-only and read-only. It does not connect to Supabase, repair migration history, apply DDL, alter production, or mark any lineage entry proven. Its version-2 output lists every unresolved remote version, the candidate source versions that must be rehearsed, the required provenance fields, and the four fingerprint categories required by the preflight contract: schema, ACL, RLS, and functions. It also reports `currentSourceMigrationCount`, `currentSourceDelta`, and `requiresCurrentSourceReview` against the lineage's observed checkpoint. On the September 26 source tree, the observed checkpoint has 157 versions and the current tree has 185; the 28 additions require separate review before accepting any source-bound proof.
 
 A lineage entry may move to `schema_proven` only after an isolated source-state rehearsal and the reviewed remote state produce equal normalized fingerprints accepted by `validateSchemaProofEvidence()` in `scripts/release/migration-preflight.mjs`. Version-1 proof files are rejected.
 

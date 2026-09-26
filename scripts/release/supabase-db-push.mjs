@@ -46,7 +46,7 @@ if (forbiddenTargetFlags.length > 0) {
 }
 
 // The captured production ledger has 98 rows and the proposed reconciliation
-// requires three history-only records before pushing the remaining 80 bodies.
+// requires three history-only records before pushing the remaining 108 bodies.
 // Until that plan and its recovery prerequisites are independently accepted,
 // even an explicitly linked production target must fail before the CLI runs.
 const unreconciledProductionRef = "mfbycmbjygcfkrsuepxf";
@@ -57,7 +57,7 @@ const previewOnly =
     forwardedArgs[1] === "--dry-run");
 if (projectRef === unreconciledProductionRef && !previewOnly) {
   console.error(
-    "production_history_requires_approved_80_plus_3_plan: only exact --dry-run or --include-all --dry-run previews are permitted for this production project; no migration push was started.",
+    "production_history_requires_approved_108_plus_3_plan: only exact --dry-run or --include-all --dry-run previews are permitted for this production project; no migration push was started.",
   );
   process.exit(2);
 }

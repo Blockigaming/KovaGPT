@@ -1,0 +1,128 @@
+name: Probe isolated restore target without customer data
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/probe-isolated-restore-target.yml
+      - scripts/release/isolated-restore-target-catalog.sql
+      - scripts/release/isolated-restore-target-extensions.sql
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      KOVA_PROBE_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Start an empty local Supabase stack on Postgres 17.6.1.155
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="$RUNNER_TEMP/kova-isolated-target-probe"
+          mkdir -m 0700 "$target"
+          echo "KOVA_PROBE_WORKDIR=$target" >> "$GITHUB_ENV"
+          npx supabase init --workdir "$target" --yes
+          mkdir -p "$target/supabase/.temp"
+          printf '%s\n' '17.6.1.155' > "$target/supabase/.temp/postgres-version"
+          printf '%s' 'v2.197.0' > "$target/supabase/.temp/gotrue-version"
+          # Candidate images: upstream releases contain the latest live Storage and Realtime migrations.
+          # Matching migration markers does not establish the production image identity.
+          printf '%s' 'v1.77.6' > "$target/supabase/.temp/storage-version"
+          printf '%s' 'v2.138.1' > "$target/supabase/.temp/realtime-version"
+          npx supabase start --workdir "$target" \
+            -x studio,imgproxy,edge-runtime,logflare,vector,supavisor --yes
+      - name: Capture image identity and managed-schema fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t containers < <(docker ps --format '{{.Names}}' --filter name='^supabase_db_kova-isolated-target-probe$')
+          [[ "${#containers[@]}" -eq 1 ]] || {
+            echo '::error::Expected exactly one fresh local database container.'
+            exit 1
+          }
+          container="${containers[0]}"
+          image_tag="$(docker inspect --format '{{.Config.Image}}' "$container")"
+          image_id="$(docker inspect --format '{{.Image}}' "$container")"
+          [[ "$image_tag" == */supabase/postgres:17.6.1.155 && "$image_id" =~ ^sha256:[a-f0-9]{64}$ ]] || {
+            echo '::error::Local target image is not the selected Supabase patch version.'
+            exit 1
+          }
+          docker exec -i "$container" psql -U postgres -d postgres \
+            --no-psqlrc --quiet --set ON_ERROR_STOP=1 --file - \
+            < scripts/release/isolated-restore-target-extensions.sql > /dev/null
+          docker exec -i "$container" psql -U postgres -d postgres \
+            --no-psqlrc --quiet --tuples-only --no-align --set ON_ERROR_STOP=1 --file - \
+            < scripts/release/isolated-restore-target-catalog.sql > "$RUNNER_TEMP/kova-local-catalog.json"
+          KOVA_PROBE_IMAGE_TAG="$image_tag" KOVA_PROBE_IMAGE_ID="$image_id" python3 - <<'PY'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          source = Path('scripts/release/isolated-restore-target-catalog.sql').read_bytes()
+          raw = Path(os.environ['RUNNER_TEMP'], 'kova-local-catalog.json').read_text().strip()
+          data = json.loads(raw)
+          actual_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          if actual_commit != os.environ['KOVA_PROBE_SOURCE_SHA']:
+              raise SystemExit('Checked-out source does not match the exact pull request head')
+          running = subprocess.check_output(['docker', 'ps', '--format', '{{.Names}}|{{.Image}}'], text=True)
+          services = {}
+          for label in ('auth', 'storage', 'realtime'):
+              matches = [line.split('|', 1)[1] for line in running.splitlines()
+                         if line.startswith('supabase_' + label + '_')]
+              if len(matches) != 1:
+                  raise SystemExit('Expected one local managed service: ' + label)
+              services[label] = matches[0]
+          if services['auth'] != 'public.ecr.aws/supabase/gotrue:v2.197.0':
+              raise SystemExit('Auth image did not match the recorded production version')
+          if services['storage'] != 'public.ecr.aws/supabase/storage-api:v1.77.6':
+              raise SystemExit('Storage image did not match the candidate migration version')
+          if services['realtime'] != 'public.ecr.aws/supabase/realtime:v2.138.1':
+              raise SystemExit('Realtime image did not match the candidate migration version')
+          if data.get('serverVersionNum') != 170006 or set(data.get('managedSchemas', {})) != {'auth', 'storage', 'realtime'}:
+              raise SystemExit('Unexpected local PostgreSQL or managed schema catalog')
+          if not isinstance(data.get('extensions'), list):
+              raise SystemExit('Missing local extension catalog')
+          if not isinstance(data.get('managedObjects'), dict) or not isinstance(data.get('serviceMigrations'), dict):
+              raise SystemExit('Missing local managed object or service migration catalog')
+          receipt = {
+              'kind': 'synthetic-prepared-supabase-restore-target-probe',
+              'sourceCommit': actual_commit,
+              'sourceTree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+              'imageTag': os.environ['KOVA_PROBE_IMAGE_TAG'],
+              'localImageId': os.environ['KOVA_PROBE_IMAGE_ID'],
+              'localServiceImages': services,
+              'querySha256': hashlib.sha256(source).hexdigest(),
+              'catalog': data,
+              'productionDataUsed': False,
+              'restorePerformed': False,
+              'approvedForRestore': False,
+          }
+          Path('local-restore-target-probe.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          print('Empty target probe recorded; no backup or production data was used.')
+          PY
+      - name: Upload data-free probe receipt
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: local-restore-target-probe
+          path: local-restore-target-probe.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Remove disposable local database
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${KOVA_PROBE_WORKDIR:-}" ]]; then
+            npx supabase stop --no-backup --workdir "$KOVA_PROBE_WORKDIR" || true
+          fi

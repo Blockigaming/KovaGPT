@@ -7,15 +7,13 @@ import { buildCanonicalHistoryDecision } from "./canonical-history-decision.mjs"
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const DECISION = "docs/release-reconciliation/canonical-history-actions-20260923.json";
-const SOURCE = "release-migrations.json";
-const CHECKPOINT_SOURCE_COUNT = 157;
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const RECORD_ONLY = ["20260822122000", "20260823113000", "20260903145843"];
 export const HISTORY_ONLY_SENTINEL = `do $kova_history_only$ begin
   raise exception 'upgrade_history_only_source_body_was_executed';
 end $kova_history_only$;\n`;
 
-// A separate, explicitly selected synthetic rehearsal of the proposed 80+3
+// A separate, explicitly selected synthetic rehearsal of the proposed 108+3
 // inventory. This function cannot repair a remote ledger or accept the plan.
 export function extendProposedCanonicalHistory(
   plan,
@@ -32,17 +30,14 @@ export function extendProposedCanonicalHistory(
   if (
     decision.targetProjectRef !== plan.currentHistory.projectRef ||
     decision.capturedLedgerMetadataSha256 !== plan.currentHistory.ledgerMetadataSha256 ||
-    decision.counts.conditionalForwardBodies !== 80 ||
+    decision.counts.conditionalForwardBodies !== 108 ||
     decision.counts.conditionalRecordOnlyVersions !== 3 ||
-    decision.counts.proposedFinalLedgerCount !== 181
+    decision.counts.proposedFinalLedgerCount !== 209
   )
     throw new Error("upgrade_canonical_history_inventory_mismatch");
 
-  const extension = JSON.parse(readFile(join(root, SOURCE))).migrations.slice(
-    CHECKPOINT_SOURCE_COUNT,
-  );
   const pending = new Map(plan.forward.map((row) => [row.version, row]));
-  if (pending.size !== 83 + extension.length || decision.sourceOnly.length !== 83)
+  if (pending.size !== 111 || decision.sourceOnly.length !== 111)
     throw new Error("upgrade_canonical_history_pending_mismatch");
   const recordOnly = [];
   const executionForward = [];
@@ -75,17 +70,9 @@ export function extendProposedCanonicalHistory(
       executionForward.push(source);
     } else throw new Error("upgrade_canonical_history_action_invalid");
   }
-  const deferredExtensionVersions = [];
-  for (const entry of extension) {
-    const source = pending.get(entry.timestamp);
-    if (!source || source.name !== entry.filename || source.sha256 !== entry.sha256)
-      throw new Error("upgrade_canonical_history_extension_mismatch");
-    pending.delete(entry.timestamp);
-    deferredExtensionVersions.push(entry.timestamp);
-  }
   if (
     pending.size ||
-    executionForward.length !== 80 ||
+    executionForward.length !== 108 ||
     JSON.stringify(recordOnly.sort()) !== JSON.stringify(RECORD_ONLY)
   )
     throw new Error("upgrade_canonical_history_action_counts_invalid");
@@ -102,8 +89,8 @@ export function extendProposedCanonicalHistory(
       recordOnlyVersions: recordOnly,
       historyOnlySentinelSha256: sha256(HISTORY_ONLY_SENTINEL),
       forwardVersions: executionForward.map((row) => row.version),
-      deferredExtensionVersions,
-      expectedFinalLedgerCount: 181,
+      deferredExtensionVersions: [],
+      expectedFinalLedgerCount: decision.counts.proposedFinalLedgerCount,
       productionReleaseReady: false,
       productionRowsRestored: false,
       schemaProofsAccepted: false,
