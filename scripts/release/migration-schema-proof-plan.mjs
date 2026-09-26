@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import {
+  analyzeMigrationManifest,
   inspectMigrationSourceCommit,
   validateLineageSourceCheckpoint,
   validateMigrationLineage,
@@ -29,11 +30,27 @@ export function buildMigrationSchemaProofPlan(
   manifest,
   { repositoryPath = process.cwd(), inspectSource = inspectMigrationSourceCommit } = {},
 ) {
+  const currentManifest = analyzeMigrationManifest(manifest);
   const analysis = validateMigrationLineage(lineage, manifest);
-  validateLineageSourceCheckpoint(lineage, manifest, {
+  const checkpoint = validateLineageSourceCheckpoint(lineage, manifest, {
     repositoryPath,
     inspectSource,
   });
+  const currentByVersion = new Map(
+    manifest.migrations.map((migration) => [migration.timestamp, migration]),
+  );
+  const observedByVersion = new Map(
+    checkpoint.migrations.map((migration) => [migration.version, migration]),
+  );
+  const added = currentManifest.versions.filter((version) => !observedByVersion.has(version));
+  const modified = currentManifest.versions.filter((version) => {
+    const observed = observedByVersion.get(version);
+    const current = currentByVersion.get(version);
+    return (
+      observed && (observed.filename !== current.filename || observed.sha256 !== current.sha256)
+    );
+  });
+  const removed = checkpoint.ledgerVersions.filter((version) => !currentByVersion.has(version));
   const entries = lineage.entries
     .filter((entry) => entry.status === "requires_schema_proof")
     .map((entry) => ({
@@ -54,6 +71,9 @@ export function buildMigrationSchemaProofPlan(
     observedSourceCommit: analysis.observedSourceCommit,
     targetProjectRef: analysis.targetProjectRef,
     observedSourceMigrationCount: analysis.observedSourceMigrationCount,
+    currentSourceMigrationCount: currentManifest.count,
+    currentSourceDelta: { added, modified, removed },
+    requiresCurrentSourceReview: Boolean(added.length || modified.length || removed.length),
     observedRemoteMigrationCount: analysis.observedRemoteMigrationCount,
     requiredSourceProvenanceFields: [...SOURCE_PROVENANCE_FIELDS],
     requiredRemoteProvenanceFields: [...REMOTE_PROVENANCE_FIELDS],

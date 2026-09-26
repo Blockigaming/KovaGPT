@@ -42,6 +42,11 @@ import {
   captureCleanUpgradeSource,
   assertUpgradeSourceUnchanged,
 } from "./upgrade-source-provenance.mjs";
+import {
+  MIGRATION_PROOF_CATALOG_SQL,
+  MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+  parseMigrationProofCatalog,
+} from "./migration-proof-catalog.mjs";
 
 import {
   SCHEDULED_TABLE_FILE,
@@ -140,6 +145,7 @@ export function rehearseUpgrade({
   captureScheduledTables = false,
   captureChatWorkspaceTables = false,
   captureChatWorkspaceRoutines = false,
+  captureProofCatalog = false,
   execute = spawnSync,
   inspectSource = captureCleanUpgradeSource,
 } = {}) {
@@ -161,6 +167,7 @@ export function rehearseUpgrade({
             SCHEDULED_TABLE_FILE,
             CHAT_WORKSPACE_TABLE_FILE,
             CHAT_WORKSPACE_CATALOG_FILE,
+            "upgrade-migration-proof-catalog.json",
           ]
         : []),
     ])
@@ -189,9 +196,12 @@ export function rehearseUpgrade({
         captureScheduledCatalog ||
         captureScheduledTables ||
         captureChatWorkspaceTables ||
-        captureChatWorkspaceRoutines)
+        captureChatWorkspaceRoutines ||
+        captureProofCatalog)
     )
       throw new Error("upgrade_canonical_history_separate_capture_required");
+    if (captureProofCatalog && !currentHistory)
+      throw new Error("upgrade_proof_catalog_current_history_required");
     if (!dryRun) {
       sourceBefore = inspectSource(root);
       assertUpgradeSourceUnchanged(sourceBefore, sourceBefore);
@@ -239,6 +249,12 @@ export function rehearseUpgrade({
         ? {
             temporaryExportProofPlanned: true,
             temporaryExportQuerySha256: TEMP_EXPORT_QUERY_SHA256,
+          }
+        : {}),
+      ...(captureProofCatalog
+        ? {
+            proofCatalogPlanned: true,
+            proofCatalogQuerySha256: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
           }
         : {}),
       ...(captureScheduledCatalog
@@ -374,6 +390,8 @@ export function rehearseUpgrade({
   let chatTableBytes;
   let chatRoutineBaseline;
   let chatRoutineBytes;
+  let proofCatalogBaseline;
+  let proofCatalogBytes;
   try {
     supabase(["start", "-x", "studio,imgproxy,edge-runtime,logflare,vector,supavisor"]);
     supabase(["db", "reset", "--local", "--no-seed"]);
@@ -417,6 +435,12 @@ export function rehearseUpgrade({
       supabase(["migration", "repair", "--local", "--status", "applied", ...recordOnlyVersions]);
       sql(historyAssertion([...baselineVersions, ...recordOnlyVersions], "repaired"));
     }
+    if (captureProofCatalog)
+      proofCatalogBaseline = parseMigrationProofCatalog(
+        sql(MIGRATION_PROOF_CATALOG_SQL, true),
+        baselineVersions,
+        { requireSingleStatementHistory: false },
+      );
     sql(seed);
     for (const migration of executionForward)
       writeFileSync(join(migrationsDir, migration.name), migration.content);
@@ -439,13 +463,19 @@ export function rehearseUpgrade({
     const chatRoutineUpgraded = captureChatWorkspaceRoutines
       ? parseChatWorkspaceCatalogCapture(sql(CHAT_WORKSPACE_CATALOG_SQL, true), finalVersions)
       : null;
+    const proofCatalog = captureProofCatalog
+      ? parseMigrationProofCatalog(sql(MIGRATION_PROOF_CATALOG_SQL, true), finalVersions, {
+          requireSingleStatementHistory: false,
+        })
+      : null;
     const sourceCommit = run("git", ["-C", root, "rev-parse", "HEAD"]).trim();
     const sourceTree =
       captureTemporaryExport ||
       captureScheduledCatalog ||
       captureScheduledTables ||
       captureChatWorkspaceTables ||
-      captureChatWorkspaceRoutines
+      captureChatWorkspaceRoutines ||
+      captureProofCatalog
         ? run("git", ["-C", root, "rev-parse", "HEAD^{tree}"]).trim()
         : null;
     if (
@@ -524,6 +554,23 @@ export function rehearseUpgrade({
           2,
         ) + "\n";
     }
+    if (proofCatalog)
+      proofCatalogBytes =
+        JSON.stringify(
+          {
+            schemaVersion: 1,
+            artifactKind: "source-final-object-digest-inventory-not-schema-proof",
+            sourceCommit,
+            sourceTree,
+            querySha256: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+            historicalBodyHashEquivalenceAsserted: false,
+            baseline: proofCatalogBaseline,
+            upgraded: proofCatalog,
+            acceptedProofs: 0,
+          },
+          null,
+          2,
+        ) + "\n";
     result = {
       schemaVersion: 1,
       passed: true,
@@ -581,6 +628,16 @@ export function rehearseUpgrade({
             },
           }
         : {}),
+      ...(proofCatalogBytes
+        ? {
+            proofCatalog: {
+              file: "upgrade-migration-proof-catalog.json",
+              sha256: sha256(proofCatalogBytes),
+              querySha256: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+              acceptedProofs: 0,
+            },
+          }
+        : {}),
       ...currentHistoryEvidence,
       ...(plan.canonicalHistoryProposal
         ? { canonicalHistoryProposal: plan.canonicalHistoryProposal }
@@ -588,6 +645,8 @@ export function rehearseUpgrade({
     };
   } catch (error) {
     failure = error;
+    if (/^migration_proof_catalog_[a-z_]+$/u.test(error?.message ?? ""))
+      writeFileSync(join(outputDir, "upgrade-failure.log"), `${error.message}\n`);
   } finally {
     // A failed start may still have created local containers. The generated
     // project ID ensures cleanup cannot target another project.
@@ -614,6 +673,8 @@ export function rehearseUpgrade({
   if (chatTableBytes) writeFileSync(join(outputDir, CHAT_WORKSPACE_TABLE_FILE), chatTableBytes);
   if (chatRoutineBytes)
     writeFileSync(join(outputDir, CHAT_WORKSPACE_CATALOG_FILE), chatRoutineBytes);
+  if (proofCatalogBytes)
+    writeFileSync(join(outputDir, "upgrade-migration-proof-catalog.json"), proofCatalogBytes);
   writeFileSync(join(outputDir, resultFilename), JSON.stringify(result, null, 2) + "\n");
   return result;
 }
@@ -647,6 +708,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
             !process.argv.includes("--historical-baseline") &&
             !process.argv.includes("--canonical-history"),
           captureChatWorkspaceRoutines:
+            !process.argv.includes("--historical-baseline") &&
+            !process.argv.includes("--canonical-history"),
+          captureProofCatalog:
             !process.argv.includes("--historical-baseline") &&
             !process.argv.includes("--canonical-history"),
         }),
