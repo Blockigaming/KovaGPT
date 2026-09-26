@@ -23,6 +23,11 @@ SELECT jsonb_build_object(
         'id', n.nspname || '.' || c.relname,
         'kind', c.relkind,
         'rowSecurity', c.relrowsecurity,
+        'owner', pg_get_userbyid(c.relowner),
+        'partitionParent', (SELECT parent_ns.nspname || '.' || parent.relname
+          FROM pg_inherits i JOIN pg_class parent ON parent.oid = i.inhparent
+          JOIN pg_namespace parent_ns ON parent_ns.oid = parent.relnamespace
+          WHERE i.inhrelid = c.oid ORDER BY i.inhseqno LIMIT 1),
         'columnSha256', encode(extensions.digest(coalesce((
           SELECT jsonb_agg(jsonb_build_object(
             'name', a.attname, 'type', format_type(a.atttypid, a.atttypmod),
@@ -32,7 +37,15 @@ SELECT jsonb_build_object(
           FROM pg_attribute a LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
           WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
         ), '[]'), 'sha256'), 'hex'),
-        'aclSha256', encode(extensions.digest(coalesce(c.relacl::text, 'NULL'), 'sha256'), 'hex')
+        'aclSha256', encode(extensions.digest(coalesce(c.relacl::text, 'NULL'), 'sha256'), 'hex'),
+        'aclEntries', CASE WHEN n.nspname = 'storage' AND c.relname IN ('buckets', 'objects') THEN
+          (SELECT coalesce(jsonb_agg(jsonb_build_object(
+            'grantor', pg_get_userbyid(x.grantor),
+            'grantee', CASE WHEN x.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(x.grantee) END,
+            'privilege', x.privilege_type, 'grantable', x.is_grantable
+          ) ORDER BY x.grantee, x.grantor, x.privilege_type, x.is_grantable), '[]'::jsonb)
+          FROM aclexplode(c.relacl) x)
+          ELSE NULL END
       ) ORDER BY n.nspname, c.relname), '[]'::jsonb)
       FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname IN ('auth', 'storage', 'realtime') AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
