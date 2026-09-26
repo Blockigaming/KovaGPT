@@ -61,7 +61,7 @@ test("Lite and Extra High wire labels match the Models v2 selection schema", () 
     family: "orion",
     effort: "Extra High",
   });
-  assert.deepEqual(parseKovaChatSelection({ family: "cosmo", effort: "instant" }), {
+  assert.deepEqual(parseKovaChatSelection({ family: "cosmo", effort: "light" }), {
     family: "cosmo",
     effort: "light",
     routeId: "chat:cosmo:light",
@@ -106,6 +106,8 @@ test("client input and JSON-shaped grants cannot set a model, budget, wildcard o
     { family: "cosmo", effort: "light", passes: [9, 9, 9, 9] },
     { family: "orion", effort: "ultra", outputCeiling: 999999 },
     { family: "nova", effort: "light" },
+    { family: "cosmo", effort: "instant" },
+    { family: "orion", effort: "instant" },
     { family: "cosmo", effort: "auto" },
     { family: "cosmo", effort: "thinking" },
   ])

@@ -4,7 +4,8 @@ The September 20 owner decision supersedes the earlier one-model Chat target.
 This source catalog follows the Models `current-product-policy.v3.json`: Chat has
 Cosmo and Orion families, six processing levels per family and no Nova Chat or
 separate 8B Chat slot. A level is a setting over its selected family, not a new
-model. Lite maps to the preserved internal `light` effort. Guest and Free can
+model. Lite maps to the preserved internal `light` effort; the legacy Chat
+`instant` ID is not accepted by the new family/effort selector. Guest and Free can
 choose Cosmo Lite; Plus can choose both families at Lite, Medium and High; Pro
 can choose both families at Lite through Ultra. Auto requires a separate trusted
 server classifier and is not another model or accepted client family/effort.

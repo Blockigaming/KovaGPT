@@ -31,7 +31,6 @@ const FAMILY_IDS = new Set(KOVA_CHAT_FAMILIES.map((family) => family.id));
 const EFFORT_ALIASES = new Map([
   ["light", "light"],
   ["lite", "light"],
-  ["instant", "light"],
   ["medium", "medium"],
   ["high", "high"],
   ["extra-high", "extra-high"],
