@@ -38,6 +38,12 @@ jobs:
           mkdir -p "$target/supabase/.temp"
           printf '%s\n' '17.6.1.155' > "$target/supabase/.temp/postgres-version"
           npx supabase db start --workdir "$target" --yes
+      - name: Start local Auth Storage and Realtime services without production configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx supabase start --workdir "$KOVA_PROBE_WORKDIR" \
+            -x studio,imgproxy,edge-runtime,logflare,vector,supavisor --yes
       - name: Capture only image identity and managed-schema counts
         shell: bash
         run: |
@@ -69,6 +75,14 @@ jobs:
           actual_commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
           if actual_commit != os.environ['KOVA_PROBE_SOURCE_SHA']:
               raise SystemExit('Checked-out source does not match the exact pull request head')
+          running = subprocess.check_output(['docker', 'ps', '--format', '{{.Names}}|{{.Image}}'], text=True)
+          services = {}
+          for label in ('auth', 'storage', 'realtime'):
+              matches = [line.split('|', 1)[1] for line in running.splitlines()
+                         if line.startswith('supabase_' + label + '_')]
+              if len(matches) != 1:
+                  raise SystemExit('Expected one local managed service: ' + label)
+              services[label] = matches[0]
           if data.get('serverVersionNum') != 170006 or set(data.get('managedSchemas', {})) != {'auth', 'storage', 'realtime'}:
               raise SystemExit('Unexpected local PostgreSQL or managed schema catalog')
           if not isinstance(data.get('extensions'), list):
@@ -79,6 +93,7 @@ jobs:
               'sourceTree': subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
               'imageTag': os.environ['KOVA_PROBE_IMAGE_TAG'],
               'localImageId': os.environ['KOVA_PROBE_IMAGE_ID'],
+              'localServiceImages': services,
               'querySha256': hashlib.sha256(source).hexdigest(),
               'catalog': data,
               'productionDataUsed': False,
