@@ -38,6 +38,10 @@ jobs:
           mkdir -p "$target/supabase/.temp"
           printf '%s\n' '17.6.1.155' > "$target/supabase/.temp/postgres-version"
           printf '%s' 'v2.197.0' > "$target/supabase/.temp/gotrue-version"
+          # Candidate images: upstream releases contain the latest live Storage and Realtime migrations.
+          # Matching migration markers does not establish the production image identity.
+          printf '%s' 'v1.77.6' > "$target/supabase/.temp/storage-version"
+          printf '%s' 'v2.138.1' > "$target/supabase/.temp/realtime-version"
           npx supabase start --workdir "$target" \
             -x studio,imgproxy,edge-runtime,logflare,vector,supavisor --yes
       - name: Capture image identity and managed-schema fingerprints
@@ -81,6 +85,10 @@ jobs:
               services[label] = matches[0]
           if services['auth'] != 'public.ecr.aws/supabase/gotrue:v2.197.0':
               raise SystemExit('Auth image did not match the recorded production version')
+          if services['storage'] != 'public.ecr.aws/supabase/storage-api:v1.77.6':
+              raise SystemExit('Storage image did not match the candidate migration version')
+          if services['realtime'] != 'public.ecr.aws/supabase/realtime:v2.138.1':
+              raise SystemExit('Realtime image did not match the candidate migration version')
           if data.get('serverVersionNum') != 170006 or set(data.get('managedSchemas', {})) != {'auth', 'storage', 'realtime'}:
               raise SystemExit('Unexpected local PostgreSQL or managed schema catalog')
           if not isinstance(data.get('extensions'), list):
