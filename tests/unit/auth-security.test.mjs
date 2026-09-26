@@ -98,6 +98,13 @@ test("mutation origin checks reject cross-origin and opaque browser requests", (
   assert.equal(isCrossSiteMutation(sibling), true);
   assert.equal(isCrossSiteMutation(opaque), true);
   assert.equal(isCrossSiteMutation(nonBrowser), false);
+  const proxied = new Request("http://internal.local/api/auth/recovery/request", {
+    method: "POST",
+    headers: { origin: "https://kovagpt.com", "sec-fetch-site": "same-origin" },
+  });
+  assert.equal(isCrossSiteMutation(proxied), true);
+  assert.equal(isCrossSiteMutation(proxied, "https://kovagpt.com"), false);
+  assert.equal(isCrossSiteMutation(proxied, "https://other.example"), true);
   assert.equal(
     isCrossSiteMutation(
       new Request("https://kovagpt.com/api/account", {

@@ -409,6 +409,32 @@ test("cross-site, missing origin, wrong methods, invalid media, account selector
   );
 });
 
+test("passkey mutation accepts the configured public origin behind an internal proxy", async () => {
+  const f = passkeyHttp(null, {
+    limit: () => ({ allowed: false, status: "unavailable", retryAfter: 60 }),
+  });
+  const requestFrom = (origin) =>
+    new Request("http://internal.local/api/auth/passkey/login/options", {
+      method: "POST",
+      headers: {
+        Origin: origin,
+        "Sec-Fetch-Site": "same-origin",
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    });
+  assert.equal(
+    (await f.handleKovaPasskeyLoginOptions(requestFrom("https://kova.test"))).status,
+    503,
+  );
+  assert.equal(
+    (await f.handleKovaPasskeyLoginOptions(requestFrom("https://evil.test"))).status,
+    403,
+  );
+  assert.equal(f.limits.length, 1);
+  assert.equal(f.calls.length, 0);
+});
+
 test("shared throttling fails closed, account throttling uses only the verified account", async () => {
   for (const [status, expected] of [
     ["limited", 429],

@@ -60,11 +60,11 @@ function mutationGuard(request: Request): { origin: string; rpID: string } | Res
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
   if (request.method !== "POST") return jsonError("Method not allowed.", 405);
-  if (isCrossSiteMutation(request)) return jsonError("Forbidden", 403);
   try {
     const rp = kovaPasskeyRp(publicOrigin());
     // Origin is a trusted deployment value, never a Host/forwarded-header RP.
-    if (request.headers.get("origin") !== rp.origin) return jsonError("Forbidden", 403);
+    if (isCrossSiteMutation(request, rp.origin) || request.headers.get("origin") !== rp.origin)
+      return jsonError("Forbidden", 403);
     return rp;
   } catch {
     return jsonError("Passkeys are temporarily unavailable.", 503);
