@@ -36,7 +36,7 @@ export function evaluateAuthenticatedUser(user, claims, now = Date.now()) {
   };
 }
 
-export function isCrossSiteMutation(request) {
+export function isCrossSiteMutation(request, trustedOrigin) {
   const method = request.method.toUpperCase();
   if (["GET", "HEAD", "OPTIONS"].includes(method)) return false;
 
@@ -47,7 +47,7 @@ export function isCrossSiteMutation(request) {
   if (!origin) return false;
   if (origin === "null") return true;
   try {
-    return new URL(origin).origin !== new URL(request.url).origin;
+    return new URL(origin).origin !== new URL(trustedOrigin ?? request.url).origin;
   } catch {
     return true;
   }

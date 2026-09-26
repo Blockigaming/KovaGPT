@@ -27,6 +27,7 @@ function harness(options = {}) {
     Error,
     console: { error() {} },
     isCrossSiteMutation,
+    isKovaCrossSiteMutation: (request) => isCrossSiteMutation(request, origin),
     kovaModeAvailable: () => options.unavailable ?? null,
     readKovaSessionToken: () => {
       events.push("read-cookie");
