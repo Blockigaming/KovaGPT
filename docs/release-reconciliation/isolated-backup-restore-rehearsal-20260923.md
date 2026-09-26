@@ -1,8 +1,12 @@
 # Supabase recovery package and isolated restore rehearsal
 
-Status on 2026-09-23: **M17 and M18 remain open.** This document describes evidence and an approval-ready recovery procedure. No restore, database write, project creation, or branch creation was performed.
+Status on 2026-09-26: **M17 and M18 remain open.** This document describes evidence and an approval-ready recovery procedure. No restore, database write, project creation, or branch creation was performed for recovery.
 
 ## Retained inputs and limits
+
+**Current candidate:** manual backup-only run `36258645141`, artifact `10911453026`, source/main commit `24106a7c34d05c234f6d1040cc4bb339c26ed0ca`. The downloaded ZIP is 152,310 bytes with SHA-256 `de65e0334bdfa1a2046c46dc36f52756956da65116386eb255d73d8ecd4bf4eb`, matching GitHub's artifact digest. It contains only `backup-evidence.json` and `kova-production-backup.tar.gpg`; the latter is 151,590 bytes, SHA-256 `a153ed26ce29f59d800e14b66733846fc1a2e841182d6265ac2fd7322a4ae53f`, matching the evidence member. The owner reports that the **new** passphrase saved in 1Password privately decrypted this exact ZIP and verified all five SQL payload hashes, with private receipt SHA-256 `771523428932de5b05708530fa3bb4cba4b3590097764861b88877e3e03653ca`. The private receipt and passphrase were not transmitted here or committed. The GitHub artifact expires `2026-10-03T17:21:53Z`; preserve a separate durable owner copy. No restore or SQL compatibility review occurred.
+
+The September 18 archive in the historical row below has no recoverable original passphrase and must **not** be selected for the proposed restore. Its prior ciphertext checks do not establish recoverability.
 
 | Input                    | Verified observation                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Limit                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -13,19 +17,19 @@ Status on 2026-09-23: **M17 and M18 remain open.** This document describes evide
 
 The backup workflow expressly records `storageObjectBytesBackedUp: false`, `authStorageManagedSchemaCustomizationBackupComplete: false`, and `restoreExercised: false`. Its successful upload cannot flip these facts. See [production-backup-export.md](production-backup-export.md).
 
-### Private integrity and passphrase precheck for the retained September 18 copy
+### Private integrity and passphrase precheck for the current September 26 copy
 
-The source-only [backup inspector](../../scripts/release/inspect-encrypted-recovery-backup.py) can verify the retained ZIP, GPG passphrase, six internal archive members, manifest and five SQL payload hashes **before a restore is approved**. Run it only in a private, trusted environment where the retained ZIP and protected `KOVA_PRODUCTION_BACKUP_PASSPHRASE` are already available. It does not connect to production or an isolated database, and writes no decrypted SQL file. The result is a private integrity receipt, not a schema or restore proof. Do not run this command in a public CI job or upload the receipt or decrypted bytes to a PR.
+The source-only [backup inspector](../../scripts/release/inspect-encrypted-recovery-backup.py) can verify the retained ZIP, GPG passphrase, six internal archive members, manifest and five SQL payload hashes **before a restore is approved**. Run it only in a private, trusted environment where the current ZIP and the **new** passphrase are available. The standalone Downloads-path correction is proposed in PR #417; use that exact reviewed inspector or run the existing verified inspector from a directory layout that does not misidentify `/Users` as the repository. It does not connect to production or an isolated database, and writes no decrypted SQL file. The owner's successful private inspection is a decryption/integrity receipt, not a schema or restore proof. Do not run this command in a public CI job or upload the receipt or decrypted bytes to a PR.
 
 ```bash
 umask 077
-: "${KOVA_RECOVERY_ZIP:?private retained September 18 ZIP path required}"
-: "${KOVA_PRODUCTION_BACKUP_PASSPHRASE:?protected secret required}"
+: "${KOVA_RECOVERY_ZIP:?private retained September 26 ZIP path required}"
+: "${KOVA_PRODUCTION_BACKUP_PASSPHRASE:?load new passphrase privately from 1Password}"
 private_receipt_dir="$(mktemp -d)"
 python3 scripts/release/inspect-encrypted-recovery-backup.py \
   --zip "$KOVA_RECOVERY_ZIP" \
-  --expected-zip-sha256 9e744a8ac16534df53ea2f071ecbf122846a1325eff15df5bbab31b020374eaf \
-  --expected-source-sha 8518628335eea524da6b7cb1fb951178441de95f \
+  --expected-zip-sha256 de65e0334bdfa1a2046c46dc36f52756956da65116386eb255d73d8ecd4bf4eb \
+  --expected-source-sha 24106a7c34d05c234f6d1040cc4bb339c26ed0ca \
   --private-receipt "$private_receipt_dir/backup-inspection.json"
 ```
 
@@ -66,10 +70,10 @@ umask 077
 : "${KOVA_PRODUCTION_BACKUP_PASSPHRASE:?load from protected secret storage}"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-printf '%s  %s\n' 9e744a8ac16534df53ea2f071ecbf122846a1325eff15df5bbab31b020374eaf "$KOVA_RECOVERY_ZIP" | sha256sum --check --strict
+printf '%s  %s\n' de65e0334bdfa1a2046c46dc36f52756956da65116386eb255d73d8ecd4bf4eb "$KOVA_RECOVERY_ZIP" | sha256sum --check --strict
 unzip -p "$KOVA_RECOVERY_ZIP" backup-evidence.json > "$work/backup-evidence.json"
 unzip -p "$KOVA_RECOVERY_ZIP" kova-production-backup.tar.gpg > "$work/archive.gpg"
-printf '%s  %s\n' 5576f064954d8deb1d09faa8838a9600d4906e2b4dc8a1e51a48a6ced8aff6af "$work/archive.gpg" | sha256sum --check --strict
+printf '%s  %s\n' a153ed26ce29f59d800e14b66733846fc1a2e841182d6265ac2fd7322a4ae53f "$work/archive.gpg" | sha256sum --check --strict
 printf '%s' "$KOVA_PRODUCTION_BACKUP_PASSPHRASE" | gpg --batch --quiet --pinentry-mode loopback --passphrase-fd 0 --decrypt --output "$work/plain.tar" "$work/archive.gpg"
 unset KOVA_PRODUCTION_BACKUP_PASSPHRASE
 mkdir "$work/plain"
@@ -94,10 +98,10 @@ const root = process.env.KOVA_RECOVERY_WORK;
 const receipt = JSON.parse(readFileSync(join(root, "backup-evidence.json"), "utf8"));
 const manifest = JSON.parse(readFileSync(join(root, "plain/manifest.json"), "utf8"));
 const projectRef = "mfbycmbjygcfkrsuepxf";
-const sourceSha = "8518628335eea524da6b7cb1fb951178441de95f";
+const sourceSha = "24106a7c34d05c234f6d1040cc4bb339c26ed0ca";
 const expected = ["roles.sql", "schema.sql", "data.sql", "history_schema.sql", "history_data.sql"];
 if (receipt.projectRef !== projectRef || receipt.sourceSha !== sourceSha ||
-    receipt.encryptedArchiveSha256 !== "5576f064954d8deb1d09faa8838a9600d4906e2b4dc8a1e51a48a6ced8aff6af" ||
+    receipt.encryptedArchiveSha256 !== "a153ed26ce29f59d800e14b66733846fc1a2e841182d6265ac2fd7322a4ae53f" ||
     manifest.projectRef !== projectRef || manifest.sourceSha !== sourceSha ||
     manifest.schemaVersion !== 1 || manifest.files?.length !== expected.length ||
     manifest.includesStorageObjectBytes !== false ||
@@ -159,6 +163,6 @@ The `APPROVED_ISOLATED_PG17_DATABASE_URL` value is intentionally absent from thi
 
 Against the isolated target only, compare aggregate counts and schema fingerprints with the backup manifest and source snapshot; exercise Auth login and token/session semantics with isolated test identities; confirm Storage bucket settings, one retained object's SHA-256, access policies, and previous application revision compatibility without external requests. Verify all nine live policy semantics after a separately reviewed managed-schema replay. Confirm no real email, OAuth callback, Stripe, AI request, scheduled task, or webhook occurred. Record target image digest, timestamps, commands with secrets redacted, export/restore hashes, count differences, health checks, RTO, and cleanup proof.
 
-**Stop** if backup/passphrase retrieval, data integrity, managed-schema alignment, provider configuration, target isolation, target emptiness, compatibility, or cost cap cannot be established. Delete or quarantine the isolated restored copy according to the approved data retention plan. The September 18 snapshot proves only recovery of that snapshot, not the current production state; take a fresh verified backup before cutover.
+**Stop** if backup/passphrase retrieval, data integrity, managed-schema alignment, provider configuration, target isolation, target emptiness, compatibility, or cost cap cannot be established. Delete or quarantine the isolated restored copy according to the approved data retention plan. The September 26 snapshot proves only recovery of that snapshot, not later production state; take another fresh verified backup before cutover if production has changed.
 
-M18 closes only after an **actual** approved isolated restore, application recovery exercise, and independently reviewed evidence. This plan and local source tests confer no restore credit.
+M18 closes only after an **actual** approved isolated restore, application recovery exercise, and independently reviewed evidence. The successful private inspection establishes decryptability and payload hashes only; it confers no restore or schema-proof credit.
