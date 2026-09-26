@@ -1,0 +1,95 @@
+name: Probe isolated restore target without customer data
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/probe-isolated-restore-target.yml
+      - scripts/release/isolated-restore-target-catalog.sql
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Start an empty local Supabase Postgres 17.6.1.155
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="$RUNNER_TEMP/kova-isolated-target-probe"
+          mkdir -m 0700 "$target"
+          echo "KOVA_PROBE_WORKDIR=$target" >> "$GITHUB_ENV"
+          npx supabase init --workdir "$target" --yes
+          mkdir -p "$target/supabase/.temp"
+          printf '%s\n' '17.6.1.155' > "$target/supabase/.temp/postgres-version"
+          npx supabase db start --workdir "$target" --yes
+      - name: Capture only image identity and managed-schema counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t containers < <(docker ps --format '{{.Names}}' --filter name='^supabase_db_kova-isolated-target-probe$')
+          [[ "${#containers[@]}" -eq 1 ]] || {
+            echo '::error::Expected exactly one fresh local database container.'
+            exit 1
+          }
+          container="${containers[0]}"
+          image_tag="$(docker inspect --format '{{.Config.Image}}' "$container")"
+          image_id="$(docker inspect --format '{{.Image}}' "$container")"
+          [[ "$image_tag" == */supabase/postgres:17.6.1.155 && "$image_id" =~ ^sha256:[a-f0-9]{64}$ ]] || {
+            echo '::error::Local target image is not the selected Supabase patch version.'
+            exit 1
+          }
+          docker exec -i "$container" psql -U postgres -d postgres \
+            --no-psqlrc --quiet --tuples-only --no-align --set ON_ERROR_STOP=1 --file - \
+            < scripts/release/isolated-restore-target-catalog.sql > "$RUNNER_TEMP/kova-local-catalog.json"
+          KOVA_PROBE_IMAGE_TAG="$image_tag" KOVA_PROBE_IMAGE_ID="$image_id" python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          source = Path('scripts/release/isolated-restore-target-catalog.sql').read_bytes()
+          raw = Path(os.environ['RUNNER_TEMP'], 'kova-local-catalog.json').read_text().strip()
+          data = json.loads(raw)
+          if data.get('serverVersionNum') != 170006 or set(data.get('managedSchemas', {})) != {'auth', 'storage', 'realtime'}:
+              raise SystemExit('Unexpected local PostgreSQL or managed schema catalog')
+          if not isinstance(data.get('extensions'), list):
+              raise SystemExit('Missing local extension catalog')
+          receipt = {
+              'kind': 'synthetic-empty-supabase-restore-target-probe',
+              'sourceCommit': os.environ['GITHUB_SHA'],
+              'imageTag': os.environ['KOVA_PROBE_IMAGE_TAG'],
+              'localImageId': os.environ['KOVA_PROBE_IMAGE_ID'],
+              'querySha256': hashlib.sha256(source).hexdigest(),
+              'catalog': data,
+              'productionDataUsed': False,
+              'restorePerformed': False,
+              'approvedForRestore': False,
+          }
+          Path('local-restore-target-probe.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          print('Empty target probe recorded; no backup or production data was used.')
+          PY
+      - name: Upload data-free probe receipt
+        if: success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: local-restore-target-probe
+          path: local-restore-target-probe.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Remove disposable local database
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "${KOVA_PROBE_WORKDIR:-}" ]]; then
+            npx supabase stop --no-backup --workdir "$KOVA_PROBE_WORKDIR" || true
+          fi
