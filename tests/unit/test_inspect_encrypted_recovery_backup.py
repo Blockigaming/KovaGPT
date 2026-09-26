@@ -105,11 +105,12 @@ class RecoveryBackupInspectorTest(unittest.TestCase):
             zipped.writestr("kova-production-backup.tar.gpg", encrypted)
         return archive_path, hashlib.sha256(archive_path.read_bytes()).hexdigest()
 
-    def inspect(self, archive_path, archive_hash, passphrase=SECRET, real_gpg=False):
+    def inspect(self, archive_path, archive_hash, passphrase=SECRET, real_gpg=False,
+                script=SCRIPT, receipt=None):
         return subprocess.run(
-            ["python3", str(SCRIPT), "--zip", str(archive_path),
+            ["python3", str(script), "--zip", str(archive_path),
              "--expected-zip-sha256", archive_hash, "--expected-source-sha", SOURCE_SHA,
-             "--private-receipt", str(self.receipt)],
+             "--private-receipt", str(receipt or self.receipt)],
             env={**os.environ, "KOVA_PRODUCTION_BACKUP_PASSPHRASE": passphrase,
                  "PATH": os.environ["PATH"] if real_gpg else self.fake_path},
             text=True, capture_output=True, timeout=30, check=False,
@@ -127,6 +128,29 @@ class RecoveryBackupInspectorTest(unittest.TestCase):
         self.assertEqual(receipt["sqlPayloadsVerified"], 5)
         self.assertFalse(receipt["restorePerformed"])
         self.assertFalse(receipt["plaintextArtifactWritten"])
+
+    def test_downloads_copy_writes_private_documents_receipt(self):
+        downloads = self.directory / "Downloads"
+        documents = self.directory / "Documents"
+        downloads.mkdir(mode=0o700)
+        documents.mkdir(mode=0o700)
+        standalone = downloads / SCRIPT.name
+        shutil.copyfile(SCRIPT, standalone)
+        receipt_path = documents / "inspection.json"
+        archive_path, archive_hash = self.archive()
+        result = self.inspect(archive_path, archive_hash, script=standalone,
+                              receipt=receipt_path)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(json.loads(receipt_path.read_text())
+                        ["decryptionAndHashVerificationSucceeded"])
+
+    def test_repository_receipt_remains_blocked(self):
+        archive_path, archive_hash = self.archive()
+        receipt_path = ROOT / "private-inspection-should-not-exist.json"
+        self.assertFalse(receipt_path.exists())
+        result = self.inspect(archive_path, archive_hash, receipt=receipt_path)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(receipt_path.exists())
 
     def test_wrong_passphrase_and_tampered_manifest_fail_without_receipt(self):
         archive_path, archive_hash = self.archive()

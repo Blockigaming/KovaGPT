@@ -159,8 +159,15 @@ def inspect(archive_path, expected_zip_sha256, expected_source_sha, output_path)
         "restorePerformed": False,
         "plaintextArtifactWritten": False,
     }
-    repo_root = Path(__file__).resolve().parents[2]
-    require(not output_path.resolve().is_relative_to(repo_root), "receipt_must_be_private")
+    script_path = Path(__file__).resolve()
+    # A standalone copy in ~/Downloads has no repository root. Its third
+    # ancestor could be /Users, which would reject a private ~/Documents receipt.
+    if (script_path.parent.name == "release" and
+            script_path.parent.parent.name == "scripts"):
+        repo_root = script_path.parents[2]
+        if (repo_root / "package.json").is_file():
+            require(not output_path.resolve().is_relative_to(repo_root),
+                    "receipt_must_be_private")
     require(output_path.parent.is_dir() and not output_path.parent.is_symlink() and
             output_path.parent.stat().st_mode & 0o077 == 0, "receipt_directory_not_private")
     require(not output_path.exists() and not output_path.is_symlink(), "receipt_exists")
