@@ -23,11 +23,24 @@ EXPECTED_MEMBERS = frozenset(
 EXPECTED_ZIP_MEMBERS = frozenset({"backup-evidence.json", "kova-production-backup.tar.gpg"})
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
 PRODUCTION_REF = "mfbycmbjygcfkrsuepxf"
-UNSAFE_SQL = re.compile(
-    rb"^\s*(?:BEGIN|COMMIT|ROLLBACK|CREATE\s+DATABASE|CREATE\s+TABLESPACE|"
-    rb"ALTER\s+SYSTEM|VACUUM|REINDEX)(?:\s|;|$)|^\s*\\(?:connect|c|gexec|i|include|!)(?:\s|$)",
-    re.IGNORECASE | re.MULTILINE,
-)
+SQL_REVIEW_PATTERNS = {
+    "transactionBoundary": re.compile(rb"^[ \t]*(?:BEGIN|COMMIT|ROLLBACK)(?:[ \t;]|$)", re.I | re.M),
+    "nontransactionalCommand": re.compile(
+        rb"^[ \t]*(?:CREATE[ \t]+DATABASE|CREATE[ \t]+TABLESPACE|ALTER[ \t]+SYSTEM|"
+        rb"VACUUM|REINDEX)(?:[ \t;]|$)", re.I | re.M),
+    "psqlMetaCommand": re.compile(
+        rb"^[ \t]*\\(?:connect|c|gexec|i|include|!)(?:[ \t]|$)", re.I | re.M),
+}
+
+
+def sql_review_candidates(files):
+    """Return only filenames and category counts; never return SQL or line contents."""
+    return {
+        name: counts for name, data in sorted(files.items())
+        if (counts := {category: len(pattern.findall(data))
+                       for category, pattern in SQL_REVIEW_PATTERNS.items()})
+        and any(counts.values())
+    }
 
 
 class StopInspection(Exception):
@@ -143,6 +156,7 @@ def inspect(archive_path, expected_zip_sha256, expected_source_sha, output_path)
         require(row.get("bytes") == len(data) and row.get("sha256") == digest(data),
                 "payload_hash_mismatch")
 
+    candidates = sql_review_candidates(files)
     result = {
         "kind": "kova-encrypted-backup-private-inspection",
         "projectRef": PRODUCTION_REF,
@@ -151,7 +165,8 @@ def inspect(archive_path, expected_zip_sha256, expected_source_sha, output_path)
         "encryptedSha256": digest(encrypted),
         "manifestSha256": digest(manifest_bytes),
         "sqlPayloadsVerified": 5,
-        "potentialNontransactionalSqlPresent": any(UNSAFE_SQL.search(data) for data in files.values()),
+        "potentialNontransactionalSqlPresent": bool(candidates),
+        "sqlReviewCandidates": candidates,
         "transactionCompatibility": "requires_manual_review",
         "storageObjectBytesIncluded": False,
         "managedSchemaCustomizationsIncluded": False,

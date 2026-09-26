@@ -39,9 +39,13 @@ class RecoveryBackupInspectorTest(unittest.TestCase):
         fake_gpg.chmod(0o700)
         self.fake_path = f"{fake_bin}:{os.environ['PATH']}"
 
-    def archive(self, *, bad_manifest_hash=False, symlink=False, real_gpg=False):
+    def archive(self, *, bad_manifest_hash=False, symlink=False, real_gpg=False,
+                review_sql=False):
         files = {name: b"-- synthetic only\nSELECT 1;\n" for name in
                  ("roles.sql", "schema.sql", "data.sql", "history_schema.sql", "history_data.sql")}
+        if review_sql:
+            files["roles.sql"] = b"-- synthetic only\nBEGIN;\nCOMMIT;\n\\connect other\n"
+            files["schema.sql"] = b"-- synthetic only\nCREATE DATABASE scratch;\n"
         manifest = {
             "schemaVersion": 1,
             "operation": "supabase-production-logical-backup",
@@ -128,6 +132,26 @@ class RecoveryBackupInspectorTest(unittest.TestCase):
         self.assertEqual(receipt["sqlPayloadsVerified"], 5)
         self.assertFalse(receipt["restorePerformed"])
         self.assertFalse(receipt["plaintextArtifactWritten"])
+        self.assertFalse(receipt["potentialNontransactionalSqlPresent"])
+        self.assertEqual(receipt["sqlReviewCandidates"], {})
+
+    def test_private_receipt_classifies_review_candidates_without_sql(self):
+        archive_path, archive_hash = self.archive(review_sql=True)
+        result = self.inspect(archive_path, archive_hash)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        receipt_bytes = self.receipt.read_bytes()
+        self.assertNotIn(b"other", receipt_bytes)
+        self.assertNotIn(b"scratch", receipt_bytes)
+        self.assertNotIn(b"BEGIN", receipt_bytes)
+        self.assertNotIn(SECRET.encode(), receipt_bytes)
+        receipt = json.loads(receipt_bytes)
+        self.assertTrue(receipt["potentialNontransactionalSqlPresent"])
+        self.assertEqual(receipt["sqlReviewCandidates"], {
+            "roles.sql": {"transactionBoundary": 2, "nontransactionalCommand": 0,
+                          "psqlMetaCommand": 1},
+            "schema.sql": {"transactionBoundary": 0, "nontransactionalCommand": 1,
+                           "psqlMetaCommand": 0},
+        })
 
     def test_downloads_copy_writes_private_documents_receipt(self):
         downloads = self.directory / "Downloads"
