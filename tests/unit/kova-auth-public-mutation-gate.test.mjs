@@ -45,3 +45,35 @@ test("public password, recovery, signup and resend posts reject cross-site and n
   await h.handleKovaLogin(authRequest({}, { path: "/api/auth/login" }));
   assert.equal(h.limits[0]?.action, "kova_auth_login");
 });
+
+test("owned-auth mutations accept the configured browser origin behind an internal proxy", async () => {
+  const h = authHttp({
+    env: { KOVA_AUTH_PUBLIC_ORIGIN: "https://kova.test" },
+    limit: () => ({ allowed: false, status: "unavailable", retryAfter: 60 }),
+    rpc: () => {
+      throw Error("Unexpected auth database access");
+    },
+  });
+  const request = (origin, site = "same-origin") =>
+    new Request("http://internal.local/api/auth/recovery/request", {
+      method: "POST",
+      headers: {
+        Origin: origin,
+        "Sec-Fetch-Site": site,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email: "owner@example.test" }),
+    });
+
+  assert.equal((await h.handleKovaRecoveryRequest(request("https://kova.test"))).status, 503);
+  assert.equal(h.limits[0]?.action, "kova_auth_recovery");
+  assert.equal((await h.handleKovaMfaEnroll(request("https://kova.test"))).status, 503);
+  assert.equal(h.limits[1]?.action, "kova_auth_mfa_enroll");
+  assert.equal((await h.handleKovaRecoveryRequest(request("https://evil.test"))).status, 403);
+  assert.equal(
+    (await h.handleKovaRecoveryRequest(request("https://kova.test", "same-site"))).status,
+    403,
+  );
+  assert.equal(h.limits.length, 2);
+  assert.equal(h.calls.length, 0);
+});

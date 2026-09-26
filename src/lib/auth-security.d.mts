@@ -22,7 +22,7 @@ export function evaluateAuthenticatedUser(
       emailVerified: boolean;
       assuranceLevel: string;
     };
-export function isCrossSiteMutation(request: Request): boolean;
+export function isCrossSiteMutation(request: Request, trustedOrigin?: string): boolean;
 export function safeRelativeRedirect(
   candidate: unknown,
   baseOrigin: string,

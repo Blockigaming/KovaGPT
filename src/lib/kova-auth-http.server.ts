@@ -295,12 +295,18 @@ async function readJsonObject(
 function publicAuthMutationGuard(request: Request): Response | null {
   if (request.method !== "POST") return jsonError("Method not allowed", 405);
   if (
-    isCrossSiteMutation(request) ||
+    isKovaCrossSiteMutation(request) ||
     (!request.headers.get("origin") && request.headers.get("sec-fetch-site") !== "same-origin")
   ) {
     return jsonError("Cross-origin request rejected", 403);
   }
   return null;
+}
+
+function isKovaCrossSiteMutation(request: Request): boolean {
+  // Azure's internal request URL can differ from the public browser origin.
+  // The configured HTTPS origin is the authority for owned-auth mutations.
+  return isCrossSiteMutation(request, process.env.KOVA_AUTH_PUBLIC_ORIGIN);
 }
 
 async function rateLimit(
@@ -642,7 +648,7 @@ export async function handleKovaLogout(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
   if (request.method !== "POST") return jsonError("Method not allowed.", 405);
-  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  if (isKovaCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const credential = readKovaSessionToken(request);
   if (credential?.ok) {
     try {
@@ -763,7 +769,7 @@ export async function handleKovaMfaEnroll(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
   if (request.method !== "POST") return jsonError("Method not allowed.", 405);
-  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  if (isKovaCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const limited = await rateLimit(request, "kova_auth_mfa_enroll", 10, 900);
   if (limited) return limited;
   const body = await readJsonObject(request);
@@ -908,7 +914,7 @@ export async function handleKovaMfaVerify(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
   if (request.method !== "POST") return jsonError("Method not allowed.", 405);
-  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  if (isKovaCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const limited = await rateLimit(request, "kova_auth_mfa_verify", 10, 900);
   if (limited) return limited;
   const body = await readJsonObject(request);
@@ -1019,7 +1025,7 @@ export async function handleKovaMfaRemove(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
   if (request.method !== "POST") return jsonError("Method not allowed.", 405);
-  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  if (isKovaCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const limited = await rateLimit(request, "kova_auth_mfa_remove", 5, 900);
   if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
@@ -1086,7 +1092,7 @@ export async function handleKovaPasswordChange(request: Request): Promise<Respon
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
   if (request.method !== "POST") return jsonError("Method not allowed.", 405);
-  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  if (isKovaCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const limited = await rateLimit(request, "kova_auth_password_change", 5, 900);
   if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
@@ -1167,7 +1173,7 @@ export async function handleKovaMfaRecoveryRegenerate(request: Request): Promise
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
   if (request.method !== "POST") return jsonError("Method not allowed.", 405);
-  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  if (isKovaCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const limited = await rateLimit(request, "kova_auth_mfa_regenerate", 5, 900);
   if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
@@ -1223,7 +1229,7 @@ export async function handleKovaRevokeOtherSessions(request: Request): Promise<R
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
   if (request.method !== "POST") return jsonError("Method not allowed.", 405);
-  if (isCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
+  if (isKovaCrossSiteMutation(request)) return jsonError("Forbidden.", 403);
   const limited = await rateLimit(request, "kova_auth_revoke_other_sessions", 5, 900);
   if (limited) return limited;
   const sessionDigest = requireSessionDigest(request);
@@ -1250,7 +1256,7 @@ export async function handleKovaRefresh(request: Request): Promise<Response> {
   if (unavailable) return unavailable;
   if (request.method !== "POST") return jsonError("Method not allowed.", 405);
   if (
-    isCrossSiteMutation(request) ||
+    isKovaCrossSiteMutation(request) ||
     (!request.headers.get("origin") && request.headers.get("sec-fetch-site") !== "same-origin")
   )
     return jsonError("Forbidden.", 403);
