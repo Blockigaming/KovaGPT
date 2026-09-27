@@ -20,6 +20,7 @@ import {
 import {
   assessCanonicalScheduledRecurrence,
   extendProposedCanonicalHistory,
+  extendScheduledRecordOnlyHypothesis,
   HISTORY_ONLY_SENTINEL,
 } from "./upgrade-database-canonical-history.mjs";
 
@@ -79,6 +80,7 @@ const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const SCHEDULED_CANDIDATE_PREFIX = ["20260822122000", "20260822143000"];
 const SCHEDULED_CANDIDATE_FILE = "upgrade-scheduled-candidate-checkpoint.json";
 const CANONICAL_SCHEDULED_FILE = "upgrade-canonical-scheduled-catalog.json";
+const SCHEDULED_HYPOTHESIS_FILE = "upgrade-scheduled-history-hypothesis-catalog.json";
 const FIXTURE_HEADER = Buffer.from(
   "-- Reviewed structural history fixture, never a live migration command.\n" +
     "-- Replayed only in the generated disposable local upgrade project.\n\n",
@@ -181,13 +183,19 @@ export function rehearseUpgrade({
   captureProofCatalog = false,
   captureScheduledCandidate = false,
   captureCanonicalScheduledCatalog = false,
+  scheduledRecordOnlyHypothesis = false,
   execute = spawnSync,
   inspectSource = captureCleanUpgradeSource,
 } = {}) {
   const outputDir = join(root, "artifacts/release");
-  const resultFilename = canonicalHistory
-    ? "upgrade-canonical-history.json"
-    : "upgrade-database.json";
+  const resultFilename = scheduledRecordOnlyHypothesis
+    ? "upgrade-scheduled-history-hypothesis.json"
+    : canonicalHistory
+      ? "upgrade-canonical-history.json"
+      : "upgrade-database.json";
+  const canonicalScheduledFile = scheduledRecordOnlyHypothesis
+    ? SCHEDULED_HYPOTHESIS_FILE
+    : CANONICAL_SCHEDULED_FILE;
   // A failed full-run preflight must not leave an earlier success artifact.
   // Dry runs remain observational, including when their input is invalid.
   if (!dryRun) {
@@ -195,7 +203,7 @@ export function rehearseUpgrade({
     for (const file of [
       resultFilename,
       "upgrade-failure.log",
-      ...(canonicalHistory ? [CANONICAL_SCHEDULED_FILE] : []),
+      ...(canonicalHistory ? [canonicalScheduledFile] : []),
       ...(!canonicalHistory
         ? [
             TEMP_EXPORT_PROOF_FILE,
@@ -243,6 +251,8 @@ export function rehearseUpgrade({
       throw new Error("upgrade_scheduled_candidate_current_history_required");
     if (captureCanonicalScheduledCatalog && (!currentHistory || !canonicalHistory))
       throw new Error("upgrade_canonical_scheduled_history_required");
+    if (scheduledRecordOnlyHypothesis && (!canonicalHistory || !captureCanonicalScheduledCatalog))
+      throw new Error("upgrade_scheduled_hypothesis_canonical_capture_required");
     if (!dryRun) {
       sourceBefore = inspectSource(root);
       assertUpgradeSourceUnchanged(sourceBefore, sourceBefore);
@@ -255,6 +265,7 @@ export function rehearseUpgrade({
       : historical;
     if (canonicalHistory)
       plan = extendProposedCanonicalHistory(plan, root, readSource, readDirectory);
+    if (scheduledRecordOnlyHypothesis) plan = extendScheduledRecordOnlyHypothesis(plan);
     if (
       captureScheduledCandidate &&
       JSON.stringify(plan.executionForward.slice(0, 2).map((row) => row.version)) !==
@@ -797,7 +808,7 @@ export function rehearseUpgrade({
       ...(canonicalScheduledBytes
         ? {
             canonicalScheduledCatalog: {
-              file: CANONICAL_SCHEDULED_FILE,
+              file: canonicalScheduledFile,
               sha256: sha256(canonicalScheduledBytes),
               querySha256: SCHEDULED_CATALOG_QUERY_SHA256,
               acceptedProofs: 0,
@@ -851,7 +862,7 @@ export function rehearseUpgrade({
   if (scheduledCandidateBytes)
     writeFileSync(join(outputDir, SCHEDULED_CANDIDATE_FILE), scheduledCandidateBytes);
   if (canonicalScheduledBytes)
-    writeFileSync(join(outputDir, CANONICAL_SCHEDULED_FILE), canonicalScheduledBytes);
+    writeFileSync(join(outputDir, canonicalScheduledFile), canonicalScheduledBytes);
   writeFileSync(join(outputDir, resultFilename), JSON.stringify(result, null, 2) + "\n");
   return result;
 }
@@ -892,6 +903,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
             !process.argv.includes("--canonical-history"),
           captureScheduledCandidate: process.argv.includes("--capture-scheduled-candidate"),
           captureCanonicalScheduledCatalog: process.argv.includes("--canonical-history"),
+          scheduledRecordOnlyHypothesis: process.argv.includes(
+            "--scheduled-record-only-hypothesis",
+          ),
         }),
         null,
         2,

@@ -8,6 +8,7 @@ import test from "node:test";
 import {
   assessCanonicalScheduledRecurrence,
   extendProposedCanonicalHistory,
+  extendScheduledRecordOnlyHypothesis,
   HISTORY_ONLY_SENTINEL,
 } from "../../scripts/release/upgrade-database-canonical-history.mjs";
 import {
@@ -257,6 +258,115 @@ test("canonical recurrence assessment rejects an unexpected baseline and never a
   assert.throws(
     () => assessCanonicalScheduledRecurrence({ routines: [] }, baseline),
     /upgrade_canonical_scheduled_recurrence_missing/u,
+  );
+});
+
+test("scheduled hypothesis requires the pinned blank-line statement difference", () => {
+  const canonical = extendProposedCanonicalHistory(
+    extendCurrentHistory(planUpgrade(), readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT))),
+  );
+  const alternative = extendScheduledRecordOnlyHypothesis(canonical);
+  assert.equal(alternative.executionForward.length, 107);
+  assert.deepEqual(alternative.recordOnlyVersions, [...REPAIRED, "20260822143000"].sort());
+  assert.equal(
+    alternative.canonicalHistoryProposal.scheduledRecordOnlyHypothesis.sourceActionApproved,
+    false,
+  );
+  assert.equal(canonical.executionForward.length, 108);
+  assert.deepEqual(canonical.recordOnlyVersions, REPAIRED);
+  const tampered = {
+    ...canonical,
+    baseline: canonical.baseline.map((row) => ({ ...row })),
+  };
+  tampered.baseline.find((row) => row.version === "20260823092450").capturedStatementsSha256 =
+    "0".repeat(64);
+  assert.throws(
+    () => extendScheduledRecordOnlyHypothesis(tampered),
+    /upgrade_scheduled_hypothesis_statement_mismatch/u,
+  );
+  assert.throws(
+    () => rehearseUpgrade({ scheduledRecordOnlyHypothesis: true, dryRun: true }),
+    /upgrade_scheduled_hypothesis_canonical_capture_required/u,
+  );
+});
+
+test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separate receipt", () => {
+  const baseline = JSON.parse(
+    readFileSync(
+      join(
+        ROOT,
+        "docs/release-reconciliation/evidence/scheduled-routines-live-capture-20260924.json",
+      ),
+    ),
+  );
+  const dry = rehearseUpgrade({
+    currentHistory: true,
+    canonicalHistory: true,
+    captureCanonicalScheduledCatalog: true,
+    scheduledRecordOnlyHypothesis: true,
+    dryRun: true,
+  });
+  const final = structuredClone(baseline);
+  final.capturedAt = "2026-09-28T00:00:00.000Z";
+  final.ledgerVersions = [...baseline.ledgerVersions, ...dry.pendingVersions].sort();
+  final.ledgerVersionCount = final.ledgerVersions.length;
+  const oldArtifact = readFileSync(
+    join(ROOT, "artifacts/release/upgrade-canonical-scheduled-catalog.json"),
+  );
+  let catalogCalls = 0;
+  let repaired = false;
+  const result = rehearseUpgrade({
+    currentHistory: true,
+    canonicalHistory: true,
+    captureCanonicalScheduledCatalog: true,
+    scheduledRecordOnlyHypothesis: true,
+    inspectSource,
+    execute(command, args, options) {
+      if (command === "git")
+        return {
+          status: 0,
+          stdout: args.at(-1) === "HEAD^{tree}" ? "b".repeat(40) : "a".repeat(40),
+        };
+      if (command === "docker" && options.input === SCHEDULED_CATALOG_SQL)
+        return { status: 0, stdout: JSON.stringify(++catalogCalls === 1 ? baseline : final) };
+      if (args[0] === "migration" && args[1] === "repair") {
+        repaired = true;
+        assert.deepEqual(args.slice(5, 9), [...REPAIRED, "20260822143000"].sort());
+        const scheduledFile = planUpgrade().forward.find((row) => row.version === "20260822143000");
+        assert.equal(
+          readFileSync(join(options.cwd, "supabase/migrations", scheduledFile.name), "utf8"),
+          HISTORY_ONLY_SENTINEL,
+        );
+      }
+      return { status: 0, stdout: "", stderr: "" };
+    },
+  });
+  assert.equal(repaired, true);
+  assert.equal(catalogCalls, 2);
+  assert.equal(result.forwardMigrations.length, 107);
+  assert.equal(result.canonicalHistoryProposal.expectedFinalLedgerCount, 209);
+  assert.equal(
+    result.canonicalHistoryProposal.scheduledRecurrenceAssessment.volatilityDriftDetected,
+    false,
+  );
+  assert.equal(result.canonicalHistoryProposal.productionReleaseReady, false);
+  assert.equal(
+    result.canonicalHistoryProposal.scheduledRecordOnlyHypothesis.sourceActionApproved,
+    false,
+  );
+  assert.equal(
+    result.canonicalScheduledCatalog.file,
+    "upgrade-scheduled-history-hypothesis-catalog.json",
+  );
+  assert.equal(
+    createHash("sha256")
+      .update(readFileSync(join(ROOT, "artifacts/release", result.canonicalScheduledCatalog.file)))
+      .digest("hex"),
+    result.canonicalScheduledCatalog.sha256,
+  );
+  assert.deepEqual(
+    readFileSync(join(ROOT, "artifacts/release/upgrade-canonical-scheduled-catalog.json")),
+    oldArtifact,
   );
 });
 
