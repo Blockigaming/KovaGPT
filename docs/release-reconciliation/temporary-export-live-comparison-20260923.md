@@ -77,3 +77,38 @@ fingerprints. It does not verify the SQL identity of the live capture. Its
 `productionReleaseReady` remain false. Complete schema evidence, a reviewed
 dependency and later-writer scope, data compatibility, an actual backup
 restore, and production-history reconciliation remain separate gates.
+
+## September 27 comparison against the current hosted rehearsal
+
+The #436 exact-head hosted isolated-database run `36337285127` recorded the
+canonical 98-version baseline and 208-version source final at commit
+`56c66d16dd8ae7e5310285608dda9ec61722d216`, tree
+`91329495c0c8c1260140f5a5edb39f24aa3a59a7`. Its
+`database-upgrade-evidence` ZIP artifact `10938038678` has SHA-256
+`0de3c625ced5ff18faafe9171be8e4c208e417c3242bf0a9fb89f28256f6e835`.
+Extract `upgrade-database.json` (SHA-256
+`4a0b5fd36e57fb3d55e3737c6d9b93ece7a5279949d3ad050b89e3c268870a30`)
+and `upgrade-temp-export-proof.json` (SHA-256
+`d34c3674b3380f84654f378802623615c3c7aa3ef4728848a4bc5fa7f15f2275`).
+The ZIP's separate synthetic omission variant is not used.
+
+The exported collector SQL was run through the selected production project
+`mfbycmbjygcfkrsuepxf` as a read-only repeatable-read transaction. The
+[new live capture](./evidence/temp-export-live-capture-20260927.json)
+completed `2026-09-27T18:21:47.328Z` with 98 ledger versions and no exact
+signature, routine-family member, inbound dependency, or literal stored
+routine-body reference. Its SHA-256 is
+`62f5bc60539d0159b6049266fabf18b2f2fecab590a4a54763535d80f3a77269`.
+The [saved comparison](./evidence/temp-export-live-comparison-20260927.json)
+has SHA-256
+`c663e300eafe6c75b39442cffd865b7fd4412e50bac58b7002b5597406cba384`
+and independently recomputes a matching bounded absence fingerprint at
+both isolated checkpoints and live. Reproduce it with the comparator command
+above and these two exact ZIP inputs plus the September 27 live capture.
+
+The comparator's `liveQueryIdentityVerified` remains false because raw JSON
+cannot attest the selected connector project or SQL identity. This absence
+finding does not attribute the candidate `20260824090000` migration's
+other four-table and routine effects to remote `20260824085042`. Its
+`schemaProofPromoted`, `canonicalHistoryReconciled`, and
+`productionReleaseReady` flags are false.
