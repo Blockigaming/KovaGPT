@@ -11,6 +11,11 @@ on:
         description: "Browser-safe sb_publishable key for the isolated Auth Rehearsal project"
         required: true
         type: string
+      enable_owned_google:
+        description: "Expose owned Google sign-in after isolated OAuth credentials and redirect are configured"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -125,8 +130,14 @@ jobs:
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
           SOURCE_TREE: ${{ steps.source.outputs.tree }}
           REHEARSAL_PUBLISHABLE_KEY: ${{ inputs.rehearsal_publishable_key }}
+          ENABLE_OWNED_GOOGLE: ${{ inputs.enable_owned_google }}
         run: |
           set -euo pipefail
+
+          if [ "$ENABLE_OWNED_GOOGLE" != "true" ] && [ "$ENABLE_OWNED_GOOGLE" != "false" ]; then
+            echo "::error::enable_owned_google must be true or false."
+            exit 1
+          fi
 
           docker build \
             --platform linux/amd64 \
@@ -139,6 +150,7 @@ jobs:
             --build-arg VITE_SUPABASE_URL="https://${REHEARSAL_PROJECT_REF}.supabase.co" \
             --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$REHEARSAL_PUBLISHABLE_KEY" \
             --build-arg VITE_KOVA_AUTH_MODE=dual \
+            --build-arg VITE_KOVA_GOOGLE_AUTH_ENABLED="$ENABLE_OWNED_GOOGLE" \
             --tag "$IMAGE_REF" \
             .
 

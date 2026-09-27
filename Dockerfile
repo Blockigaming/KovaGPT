@@ -20,6 +20,7 @@ ARG KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS=
 ARG VITE_SUPABASE_URL=
 ARG VITE_SUPABASE_PUBLISHABLE_KEY=
 ARG VITE_KOVA_AUTH_MODE=supabase
+ARG VITE_KOVA_GOOGLE_AUTH_ENABLED=false
 ARG VITE_PAYMENTS_CLIENT_TOKEN=
 WORKDIR /app
 ENV NODE_ENV=production \
@@ -27,6 +28,11 @@ ENV NODE_ENV=production \
     AI_GENERATION_ENABLED=false
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+RUN case "$VITE_KOVA_GOOGLE_AUTH_ENABLED" in \
+      true|false) ;; \
+      *) echo 'VITE_KOVA_GOOGLE_AUTH_ENABLED must be true or false' >&2; exit 1 ;; \
+    esac
 
 RUN SHA="$KOVA_SOURCE_SHA" TREE="$KOVA_SOURCE_TREE" node -e "require('fs').writeFileSync('/app/.kova-source-attestation.json', JSON.stringify({schemaVersion:1,context:'acr-git',sourceSha:process.env.SHA,sourceTree:process.env.TREE}))"
 RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" NODE_OPTIONS=--max-old-space-size=3072 KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
