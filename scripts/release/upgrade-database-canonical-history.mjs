@@ -29,8 +29,7 @@ export function assessCanonicalScheduledRecurrence(baseline, final) {
   const after = matches(final);
   if (before.length !== 1 || after.length !== 1)
     throw new Error("upgrade_canonical_scheduled_recurrence_missing");
-  if (before[0].volatility !== "s")
-    throw new Error("upgrade_canonical_scheduled_baseline_changed");
+  if (before[0].volatility !== "s") throw new Error("upgrade_canonical_scheduled_baseline_changed");
   return {
     routine: "public.next_scheduled_task_occurrence(timestamptz,text)",
     baselineVolatility: before[0].volatility,

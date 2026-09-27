@@ -46,7 +46,7 @@ rehearsal; a matching `STABLE` value never itself approves the production plan.
 
 The separate, opt-in `--canonical-history --scheduled-record-only-hypothesis`
 rehearsal keeps the original proposal intact, then replaces only source
-`20260822143000`'s *local* forward execution with a fourth history-only
+`20260822143000`'s _local_ forward execution with a fourth history-only
 sentinel. It checks that deleting exactly one blank line before the settlement
 marker in that pinned source matches both the saved SHA-256 and MD5 of the
 second recorded scheduled entry (`20260823092450`). This verifies only the
