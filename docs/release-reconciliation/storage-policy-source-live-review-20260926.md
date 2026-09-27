@@ -16,3 +16,11 @@ The fresh [managed-schema comparison](managed-schema-production-vs-empty-2026092
 Thus **six live policy names are explicitly dropped by later source migrations without same-name recreation**: the old agent-evidence policy, two library image write/delete policies, and three project-file write/update/delete policies. The three other live names require definition review; a matching name alone is not semantic proof. This is a comparison to the current source tree, which has 185 migration files, while the reviewed production checkpoint contains 98 remote versions. The later source migrations have not been approved for production application, so the difference does not establish a production fault.
 
 The read-only September 27 bucket observation has `agent-evidence` (private) and `brand-assets` (public), but no `library-images` or `project-files` bucket. Source migrations define those later buckets. Reconcile bucket creation, policies, ACLs, and object bytes together on an approved isolated target. Keep the production project unchanged pending the history/schema proofs, recovery packet, and separate production authorization.
+
+A fresh read-only query of those three live policies on September 27 UTC narrows the definition review:
+
+- `Owners read agent evidence` is live as a permissive SELECT policy for `PUBLIC` with the same bucket/folder ownership predicate. The September 2 source replacement specifies `TO authenticated`. Restricting or replaying it requires explicit semantic review.
+- `Users read own library images` is live for `authenticated`, with the same bucket/folder owner predicate as its source creation. This narrow policy match does not establish the missing bucket or application behavior.
+- `project_files_read` is live for `authenticated` using `kova_private.is_project_member(...)`. The September 4 source replacement requires a matching `public.project_files` row in `ready` status and membership through `public.project_members`. Do not preserve the live predicate as the later source contract without review.
+
+These expressions were read from `pg_policy` for `storage.objects`; they return no customer rows or secret values. No policy was altered.
