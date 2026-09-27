@@ -75,6 +75,33 @@ import {
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const MANIFEST = "tests/fixtures/production-migration-history-20260904/manifest.json";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const FIXTURE_HEADER = Buffer.from(
+  "-- Reviewed structural history fixture, never a live migration command.\n" +
+    "-- Replayed only in the generated disposable local upgrade project.\n\n",
+);
+const FIXTURE_SUFFIXES = [Buffer.from("\n;\n"), Buffer.from(";\n")];
+
+function assertCapturedFixtureBody(migration, content) {
+  if (
+    migration.statementCount !== 1 ||
+    !content.subarray(0, FIXTURE_HEADER.length).equals(FIXTURE_HEADER)
+  )
+    throw new Error(`upgrade_fixture_statement_mismatch:${migration.version}`);
+  const matchingBodies = FIXTURE_SUFFIXES.filter((suffix) => {
+    if (
+      content.length < FIXTURE_HEADER.length + suffix.length ||
+      !content.subarray(-suffix.length).equals(suffix)
+    )
+      return false;
+    const body = content.subarray(FIXTURE_HEADER.length, -suffix.length);
+    return (
+      sha256(body) === migration.capturedStatementsSha256 &&
+      createHash("md5").update(body).digest("hex") === migration.capturedStatementsMd5
+    );
+  });
+  if (matchingBodies.length !== 1)
+    throw new Error(`upgrade_fixture_statement_mismatch:${migration.version}`);
+}
 
 export function planUpgrade(root = ROOT, readSource = readFileSync, readDirectory = readdirSync) {
   const manifestBytes = readSource(join(root, MANIFEST));
@@ -110,6 +137,8 @@ export function planUpgrade(root = ROOT, readSource = readFileSync, readDirector
     const content = readSource(join(root, migration.path));
     if (sha256(content) !== migration.sha256)
       throw new Error(`upgrade_baseline_changed:${migration.version}`);
+    if (migration.origin === "reviewed_structural_fixture")
+      assertCapturedFixtureBody(migration, content);
     seen.add(migration.version);
     previous = migration.version;
     origins[migration.origin]++;

@@ -50,15 +50,23 @@ function syntheticPlan() {
     const version = String(20260601000000 + index);
     const origin = index < 74 ? "matched_source" : "reviewed_structural_fixture";
     const directory = index < 74 ? "supabase/migrations" : dirname(MANIFEST);
+    const replay =
+      origin === "matched_source"
+        ? content
+        : Buffer.from(
+            "-- Reviewed structural history fixture, never a live migration command.\n" +
+              "-- Replayed only in the generated disposable local upgrade project.\n\n" +
+              "select 1;\n;\n",
+          );
     return {
       version,
       path: `${directory}/${version}_synthetic.sql`,
-      sha256: hash("sha256", content),
+      sha256: hash("sha256", replay),
       capturedStatementsSha256: hash("sha256", content),
       capturedStatementsMd5: hash("md5", content),
-      statementCount: index === 96 ? 946 : 1,
+      statementCount: index === 73 ? 946 : 1,
       origin,
-      content,
+      content: replay,
     };
   });
   const manifest = {
