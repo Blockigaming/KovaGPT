@@ -5,6 +5,8 @@ on:
     paths:
       - .github/workflows/capture-observed-source-temp-export.yml
       - scripts/release/capture-observed-source-temp-export.mjs
+      - scripts/release/migration-proof-catalog.mjs
+      - scripts/release/migration-proof-catalog.sql
   workflow_dispatch:
 
 permissions:
@@ -25,10 +27,12 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Replay exact observed source checkpoint in disposable local database
-        run: node scripts/release/capture-observed-source-temp-export.mjs
+        run: node scripts/release/capture-observed-source-temp-export.mjs --with-full-catalog
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: observed-source-temp-export-candidate
-          path: artifacts/release/observed-source-temp-export.json
+          path: |
+            artifacts/release/observed-source-temp-export.json
+            artifacts/release/observed-source-full-catalog.json
           if-no-files-found: error
           retention-days: 14
