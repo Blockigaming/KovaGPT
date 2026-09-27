@@ -1,5 +1,6 @@
 import { BoundedJsonError, readBoundedJsonObject } from "./bounded-json.server.mjs";
 import { normalizeWorkflowSkillSelection } from "./workflow-skills-policy.mjs";
+import { parseKovaChatSelection } from "./kova-chat-policy.mjs";
 
 export const CHAT_BODY_LIMIT_BYTES = 8 * 1024 * 1024;
 export const CHAT_MAX_MESSAGES = 100;
@@ -312,6 +313,14 @@ export function normalizeChatPayload(value) {
   }
 
   const payload = { messages };
+  if (value.kovaModel !== undefined) {
+    try {
+      const selection = parseKovaChatSelection(value.kovaModel);
+      payload.kovaModel = { family: selection.family, effort: selection.effort };
+    } catch {
+      invalid("invalid_kova_model", "Invalid Kova model selection.");
+    }
+  }
   if (value.kova !== undefined) {
     if (
       !isRecord(value.kova) ||

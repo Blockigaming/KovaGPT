@@ -13,6 +13,31 @@ import {
 
 const VALID_ID = "123e4567-e89b-42d3-a456-426614174000";
 
+test("Kova model requests keep only a valid family and effort, never an injected model", () => {
+  const base = { messages: [{ role: "user", content: "Hello" }] };
+  assert.deepEqual(
+    normalizeChatPayload({ ...base, kovaModel: { family: "cosmo", effort: "lite" } }).kovaModel,
+    { family: "cosmo", effort: "light" },
+  );
+  assert.deepEqual(
+    normalizeChatPayload({ ...base, kovaModel: { family: "orion", effort: "extra_high" } })
+      .kovaModel,
+    { family: "orion", effort: "extra-high" },
+  );
+  for (const kovaModel of [
+    null,
+    { family: "nova", effort: "light" },
+    { family: "cosmo", effort: "instant" },
+    { family: "cosmo", effort: "light", model: "external-provider" },
+    { family: "orion", effort: "ultra", outputCeiling: 999999 },
+  ]) {
+    assert.throws(
+      () => normalizeChatPayload({ ...base, kovaModel }),
+      (error) => error instanceof ChatIngressError && error.code === "invalid_kova_model",
+    );
+  }
+});
+
 function streamedRequest(chunks, headers = {}) {
   const body = new ReadableStream({
     start(controller) {
