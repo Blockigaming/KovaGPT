@@ -12,6 +12,33 @@ const RECORD_ONLY = ["20260822122000", "20260823113000", "20260903145843"];
 export const HISTORY_ONLY_SENTINEL = `do $kova_history_only$ begin
   raise exception 'upgrade_history_only_source_body_was_executed';
 end $kova_history_only$;\n`;
+const RECURRENCE_ARGUMENTS = "p_previous timestamp with time zone, p_repeat text";
+
+// Consume only the strict, receipt-bound routine captures. A green local replay
+// must identify the scheduled-function regression rather than imply that the
+// proposed 108+3 production history action is safe.
+export function assessCanonicalScheduledRecurrence(baseline, final) {
+  const matches = (capture) =>
+    capture.routines.filter(
+      (row) =>
+        row.schema === "public" &&
+        row.name === "next_scheduled_task_occurrence" &&
+        row.identityArguments === RECURRENCE_ARGUMENTS,
+    );
+  const before = matches(baseline);
+  const after = matches(final);
+  if (before.length !== 1 || after.length !== 1)
+    throw new Error("upgrade_canonical_scheduled_recurrence_missing");
+  if (before[0].volatility !== "s") throw new Error("upgrade_canonical_scheduled_baseline_changed");
+  return {
+    routine: "public.next_scheduled_task_occurrence(timestamptz,text)",
+    baselineVolatility: before[0].volatility,
+    finalVolatility: after[0].volatility,
+    bodySha256Unchanged: before[0].bodySha256 === after[0].bodySha256,
+    volatilityDriftDetected: before[0].volatility !== after[0].volatility,
+    proposedProductionSequenceApproved: false,
+  };
+}
 
 // A separate, explicitly selected synthetic rehearsal of the proposed 108+3
 // inventory. This function cannot repair a remote ledger or accept the plan.
@@ -94,6 +121,62 @@ export function extendProposedCanonicalHistory(
       productionReleaseReady: false,
       productionRowsRestored: false,
       schemaProofsAccepted: false,
+    },
+  };
+}
+
+// Explore one alternative in disposable PostgreSQL. The pinned second remote
+// scheduled statement differs from this source by exactly one blank line
+// outside a dollar-quoted body. This check does not prove the earlier remote
+// statement, later grants, row compatibility, or production history action.
+export function extendScheduledRecordOnlyHypothesis(plan) {
+  if (
+    plan.canonicalHistoryProposal?.status !==
+      "synthetic_proposal_only_no_production_history_repair" ||
+    plan.baseline?.length !== 98 ||
+    plan.executionForward?.length !== 108 ||
+    plan.recordOnlyVersions?.length !== 3
+  )
+    throw new Error("upgrade_scheduled_hypothesis_plan_invalid");
+  const scheduled = plan.executionForward.filter((row) => row.version === "20260822143000");
+  const remote = plan.baseline.filter((row) => row.version === "20260823092450");
+  if (scheduled.length !== 1 || remote.length !== 1 || remote[0].statementCount !== 1)
+    throw new Error("upgrade_scheduled_hypothesis_mapping_missing");
+  const original = scheduled[0].content.toString("utf8");
+  const beforeMarker = "\n\n-- DAY14_SETTLEMENT_CONTRACT_V1\n";
+  const afterMarker = "\n-- DAY14_SETTLEMENT_CONTRACT_V1\n";
+  if (original.split(beforeMarker).length !== 2)
+    throw new Error("upgrade_scheduled_hypothesis_normalization_invalid");
+  const normalized = Buffer.from(original.replace(beforeMarker, afterMarker));
+  if (
+    sha256(scheduled[0].content) !== scheduled[0].sha256 ||
+    sha256(normalized) !== remote[0].capturedStatementsSha256 ||
+    createHash("md5").update(normalized).digest("hex") !== remote[0].capturedStatementsMd5
+  )
+    throw new Error("upgrade_scheduled_hypothesis_statement_mismatch");
+
+  const executionForward = plan.executionForward.filter((row) => row !== scheduled[0]);
+  const recordOnlyVersions = [...plan.recordOnlyVersions, scheduled[0].version].sort();
+  if (executionForward.length !== 107 || recordOnlyVersions.length !== 4)
+    throw new Error("upgrade_scheduled_hypothesis_counts_invalid");
+  return {
+    ...plan,
+    executionForward,
+    recordOnlyVersions,
+    canonicalHistoryProposal: {
+      ...plan.canonicalHistoryProposal,
+      status: "synthetic_scheduled_record_only_hypothesis_no_production_history_repair",
+      recordOnlyVersions,
+      forwardVersions: executionForward.map((row) => row.version),
+      scheduledRecordOnlyHypothesis: {
+        sourceVersion: scheduled[0].version,
+        sourceSha256: scheduled[0].sha256,
+        remoteVersion: remote[0].version,
+        remoteCapturedStatementsSha256: remote[0].capturedStatementsSha256,
+        difference: "one_blank_line_before_settlement_marker_outside_dollar_quote",
+        firstRemoteScheduledVersionProven: false,
+        sourceActionApproved: false,
+      },
     },
   };
 }

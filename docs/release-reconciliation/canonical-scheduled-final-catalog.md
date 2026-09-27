@@ -34,6 +34,31 @@ differences; `upgrade-canonical-history.json` pins its byte SHA-256 and the
 collector query SHA-256. Failure removes stale success artifacts. The existing
 CI upload glob includes both files.
 
+The same validated 98/209 captures now yield a receipt-bound recurrence
+assessment. It requires exactly one `public.next_scheduled_task_occurrence`
+routine with the reviewed signature at each checkpoint and requires the
+baseline volatility to be `STABLE`. The receipt and artifact explicitly report
+the final volatility, whether the body hash changed, and whether volatility
+drift occurred. On the observed canonical proposal the assessment reports
+`STABLE` → `IMMUTABLE`, unchanged body hash, drift detected, and production
+sequence approval false. An unexpected baseline or missing routine fails the
+rehearsal; a matching `STABLE` value never itself approves the production plan.
+
+The separate, opt-in `--canonical-history --scheduled-record-only-hypothesis`
+rehearsal keeps the original proposal intact, then replaces only source
+`20260822143000`'s _local_ forward execution with a fourth history-only
+sentinel. It checks that deleting exactly one blank line before the settlement
+marker in that pinned source matches both the saved SHA-256 and MD5 of the
+second recorded scheduled entry (`20260823092450`). This verifies only the
+bounded statement-byte relationship; the first remote entry, data, grants,
+full schema scope, later writers and authorization still need review.
+The hypothesis replays 107 other source bodies, checks the exact 209-version
+ledger and captures the same seven routine families at baseline and final.
+Its separate receipt and artifact are uploaded by the isolated CI job under
+`upgrade-scheduled-history-hypothesis*.json`; it never changes the recorded
+canonical action inventory or any production database. Even if that isolated
+result remains `STABLE`, no history action or schema proof becomes accepted.
+
 Review the actual final `volatility`, `definitionSha256` and later writers in
 that artifact before changing the proposed action for either source version.
 This collector does not decide whether recording the scheduled candidate

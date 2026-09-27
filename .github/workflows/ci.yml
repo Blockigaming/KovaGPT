@@ -454,6 +454,8 @@ jobs:
         run: npm run release:db:upgrade -- --capture-scheduled-candidate
       - name: Rehearse proposed canonical history sequence
         run: node scripts/release/upgrade-database.mjs --canonical-history
+      - name: Compare scheduled history-only hypothesis in isolated database
+        run: node scripts/release/upgrade-database.mjs --canonical-history --scheduled-record-only-hypothesis
       - run: npm run release:schema && git diff --exit-code -- database-contract.json
       - name: Upload upgrade rehearsal evidence
         if: always()
