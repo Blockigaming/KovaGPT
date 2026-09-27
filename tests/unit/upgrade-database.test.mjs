@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -95,6 +96,29 @@ test("an edited baseline or duplicate source version stops before creating a dat
   writeFileSync(path, original);
   writeFileSync(join(root, "supabase/migrations/20260904230332_duplicate.sql"), "select 1;");
   assert.throws(() => planUpgrade(root), /upgrade_duplicate_source_version/);
+});
+
+test("a fixture and its file hash cannot be rewritten without matching the captured SQL body", (t) => {
+  const root = fixture(t);
+  const manifest = JSON.parse(readFileSync(join(root, MANIFEST), "utf8"));
+  const historical = manifest.migrations.find(
+    (row) => row.version === "20260823092107" && row.origin === "reviewed_structural_fixture",
+  );
+  assert.ok(historical);
+  const path = join(root, historical.path);
+  const edited = Buffer.from(
+    readFileSync(path, "utf8").replace(
+      "scheduled_execution_forbidden",
+      "scheduled_execution_permitted",
+    ),
+  );
+  writeFileSync(path, edited);
+  historical.sha256 = createHash("sha256").update(edited).digest("hex");
+  writeFileSync(join(root, MANIFEST), JSON.stringify(manifest));
+  assert.throws(
+    () => rehearseUpgrade({ root, execute: () => assert.fail("must not execute") }),
+    /upgrade_fixture_statement_mismatch:20260823092107/,
+  );
 });
 
 test("out-of-order history and path traversal are rejected before reading fixture files", (t) => {

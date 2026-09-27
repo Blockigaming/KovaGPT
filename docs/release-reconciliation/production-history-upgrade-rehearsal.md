@@ -8,6 +8,16 @@ The read-only capture contained **97 migration versions and 1,042 SQL statements
 
 The fixture manifest pins every replay file by SHA-256. It also records the original statement count, SHA-256, and MD5 of statement strings joined by LF. All 97 LF-joined MD5 values were checked against the separately captured migration ledger. The fixtures contain schema/function/policy history, not production application rows, credentials, or a database dump. They remain outside `supabase/migrations` so normal release commands cannot mistake them for pending production migrations.
 
+Before starting a disposable database, the planner now strips only the fixed
+non-executable fixture header and its final replay separator (`;` plus a final
+newline, with or without a preceding newline). Each of the 23 single-statement
+fixtures, including all 19 unresolved remote-only entries, must then match its
+captured statement's SHA-256 and MD5 in the pinned manifest. Editing a fixture
+and updating its file hash cannot silently preserve the historical-body claim.
+This verifies the recorded bytes against the separately captured digest; it
+does not prove live schema equivalence, establish the origin of later grants,
+or accept any of the 19 schema proofs.
+
 The baseline deliberately retains production-only versions. The rehearsal neither deletes their history nor marks an unexecuted source migration as applied. The historical mode applies every source version absent from the captured history, including earlier timestamps, using `migration up --local --include-all` in the disposable project. Current-history mode accounts separately for the one byte-identical security migration already executed while building the baseline; its canonical timestamp remains unresolved rather than being fabricated.
 
 ## Commands and evidence
