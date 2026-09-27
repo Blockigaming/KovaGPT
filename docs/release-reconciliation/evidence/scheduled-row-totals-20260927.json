@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "captureKind": "scheduled-row-totals",
+  "projectId": "mfbycmbjygcfkrsuepxf",
+  "clientRecordedAt": "2026-09-27T18:18:31.080Z",
+  "readOnly": true,
+  "isolation": "repeatable read",
+  "scheduled_tasks": 0,
+  "scheduled_task_runs": 0
+}

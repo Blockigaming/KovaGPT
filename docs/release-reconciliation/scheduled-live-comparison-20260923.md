@@ -116,3 +116,57 @@ baseline changes; two table and seven routine source-final changes. Every
 promotion, canonical-history and production-readiness flag remains false.
 The two live captures are separate snapshots and their bytes alone do not
 independently attest the selected project or exact executed query.
+
+## Dated September 27 continuation against the current hosted replay
+
+The exact-head #436 KovaGPT CI run `36337285127` passed its isolated-database
+job at source commit `56c66d16dd8ae7e5310285608dda9ec61722d216`, tree
+`91329495c0c8c1260140f5a5edb39f24aa3a59a7`. Its artifact `10938038678`
+has ZIP SHA-256 `0de3c625ced5ff18faafe9171be8e4c208e417c3242bf0a9fb89f28256f6e835`.
+The canonical 98-to-208 replay's extracted
+`upgrade-database.json`, `upgrade-scheduled-table-catalog.json`, and
+`upgrade-scheduled-execution-catalog.json` have SHA-256 respectively
+`4a0b5fd36e57fb3d55e3737c6d9b93ece7a5279949d3ad050b89e3c268870a30`,
+`af6421f030c874bf364c11cdc51da7edff298e21b99f0284460607a6c6523a32`,
+and `1c3616dc4ef2481758855017c1afc227720e7eb51c770ac7985c060885244b5a`.
+The first-remote-omission synthetic variant in the same ZIP was not used.
+
+Fresh read-only, repeatable-read SQL calls against the selected project
+`mfbycmbjygcfkrsuepxf` returned a two-table [catalog](./evidence/scheduled-tables-live-capture-20260927.json)
+at `2026-09-27T18:17:07.793Z` and a seven-routine
+[catalog](./evidence/scheduled-routines-live-capture-20260927.json) at
+`18:17:16.632Z`. Both reported the same ordered 98-version ledger.
+A separate read-only [row-total observation](./evidence/scheduled-row-totals-20260927.json)
+returned zero rows in both tables; its client time was recorded after the SQL
+response. These separate transactions are not an atomic snapshot, and zero
+rows cannot prove row conversion.
+
+The [saved comparison](./evidence/scheduled-live-comparison-20260927.json)
+was regenerated from the formatted checked-in catalogs and the exact hosted
+receipt; it agrees with a fresh comparator invocation. Baseline-to-live has
+two changed tables, only in explicit ACL and effective privileges, and one
+changed recurrence routine, only in its explicit ACL. The table schema/RLS/trigger
+and routine-definition fingerprints match the isolated baseline. Live has
+16 additional table DML grant entries across the two tables and three
+additional EXECUTE grant entries on
+`next_scheduled_task_occurrence(timestamptz,text)`; routine effective execute
+access is unchanged. Source-final-to-live has two changed tables and seven
+changed routine identities. The later `kova_owned_session_guard` restrictive
+policy exists on both scheduled tables in the isolated source final, not the
+98-version baseline or live capture. This is a later writer, not proof of either
+historical scheduled entry's effect.
+
+To reproduce the saved comparison, verify the ZIP digest above, extract the
+three named JSON files, and run `compare-live-scheduled-catalog.mjs` with
+those paths followed by the two September 27 catalog paths. The table and
+routine exported query SHA-256 values are
+`6bb88798ba36bf178a6057a4a14fb4c4941e6925384511c59f7f168257dd46d0`
+and `f29d28e93527edd4437c1be74c13a70a0e025a1b36da90aeae`. The saved
+comparison SHA-256 is
+`dc1e14324a8eecffefde18fa983e81a435a023aee8f770377bbf8de0b97468fa`.
+The SQL calls' selected project and identity were observed through the
+connector, not proven by the raw catalog JSON; the comparator correctly sets
+`liveQueryIdentityVerified: false`. Its proof, history, and release flags
+remain false. Review the extra grants and the first/second remote statement
+effects, later writers, row history, dependencies, and synthetic behavior
+before proposing either version-2 proof.
