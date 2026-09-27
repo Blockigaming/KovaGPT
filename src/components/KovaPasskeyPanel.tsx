@@ -327,8 +327,8 @@ export function KovaPasskeyPanel() {
           ) : null}
           {!status.canRegister ? (
             <p className="text-xs text-muted-foreground">
-              Confirm your password or sign in with two-factor authentication before adding a
-              passkey.
+              Sign in with Google again and add your passkey within five minutes, confirm your
+              password, or complete two-factor authentication.
             </p>
           ) : null}
           {status.passkeys.length >= 10 ? (
