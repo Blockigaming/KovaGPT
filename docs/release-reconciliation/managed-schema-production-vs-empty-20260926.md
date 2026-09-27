@@ -1,0 +1,24 @@
+# Managed-schema comparison: production and empty .155 probe
+
+Status on September 26 ET / September 27 UTC: **read-only comparison; M17 and M18 remain open.** Do not replay the differences as DDL without separate source/live review and isolated-restore approval.
+
+## Bound inputs
+
+- Production: Supabase connector explicitly targeting project `mfbycmbjygcfkrsuepxf`, executing [the read-only catalog SQL](../../scripts/release/isolated-restore-target-catalog.sql) under `REPEATABLE READ READ ONLY` at approximately 2026-09-27 00:37 UTC. The SQL's SHA-256 was `7c100ab324b6bedec6ce5483d9215ca818bf1f9e5e02ce17000fe607043a4452`. The query output does not independently authenticate the connector target.
+- Empty probe: successful workflow run `36253205803`, artifact `10909962666` (`local-restore-target-probe`), ZIP SHA-256 `99d98d2e8c15ed0fdd754fd5fae273e1b2bfcc0908396595bb34d0c665a5660d`. It pinned source commit `98c591619560728bf8915d390b8f6db6cf6142fa`, image `public.ecr.aws/supabase/postgres:17.6.1.155` with image ID `sha256:56da3fb43b03aca9b8fa264c156177dd204f722e9500e8d80008f5c9f7b82985`, and the same catalog SQL digest. The probe declares no production data, no restore, and no approval for a restore.
+
+Comparison by stable catalog object ID and the normalized definition hashes in that query:
+
+| Scope | Production | Empty probe | Difference requiring review |
+| --- | ---: | ---: | --- |
+| Managed functions | 38 | 38 | Identical IDs and definition hashes. |
+| Noninternal managed triggers | 8 | 8 | Identical IDs and definition hashes (seven Storage, one Realtime). |
+| Managed policies | 9 | 0 | All nine are on `storage.objects` in production; two are already flagged as live-only in the [recovery runbook](isolated-backup-restore-rehearsal-20260923.md). Review all nine against the current application policy contract. |
+| Auth relations and sequence | 27 + 1 | 27 + 1 | No relation ID or captured field differences. |
+| Storage relations | 8 | 10 | The probe alone has `storage.iceberg_namespaces` and `storage.iceberg_tables`. |
+| Realtime relations and sequence | 3 + 1 | 8 + 1 | The probe alone has five dated `realtime.messages_2026_09_25` through `2026_09_29` partitions. |
+| `storage.buckets` and `storage.objects` ACLs | Present | Present | For each relation, the eight `supabase_storage_admin` table privileges have grant option in production but not in the probe. Other captured fields and the other grant entries match. |
+
+The extension names, versions and schemas, and the Auth, Storage and Realtime service-migration counts and latest identifiers matched. The prior [September 23 production catalog](managed-schema-recovery-catalog-20260923.json) listed four Storage noninternal triggers. Fresh production has seven: the four older trigger definition hashes remain unchanged, while `storage.buckets.protect_bucket_control_insert`, `protect_bucket_control_update`, and `protect_bucket_control_update_role` are now present and match the empty probe. This is evidence of changed observed state across capture times; its cause and replay requirements are not yet established.
+
+The empty probe's relation presence and privileges can depend on service image, capture time, and service startup behavior even with a matching database image and service migration ledger. The matched function/trigger hashes do not prove complete DDL, grant, bucket, provider or key recoverability. Fresh state and a reviewed restoration recipe remain prerequisites for M17, followed by a separately approved real-backup restore for M18. No schema proof is accepted by this comparison.
