@@ -302,10 +302,10 @@ Kova OAuth and email links require exact HTTPS origins in
 exact HTTPS URL in `KOVA_AUTH_ISSUER` (including its trailing slash). Secret
 material is server-only:
 
-`VITE_KOVA_AUTH_ORIGIN` is the browser-safe copy of `KOVA_AUTH_ORIGIN`. It is
-used only to navigate to the Kova-owned Google OAuth start endpoint when the
-auth and application hosts differ; the server still validates the request
-against `KOVA_AUTH_ORIGIN` before creating state.
+Owned Google sign-in begins on the public application origin so its host-only
+browser proof is established there. For a separate auth host, the server then
+redirects with a sealed handoff to `KOVA_AUTH_ORIGIN`; the browser does not
+select an auth host from its build configuration.
 
 - `KOVA_AUTH_ENCRYPTION_KEY` is a base64url 32-byte AES key and
   `KOVA_AUTH_ENCRYPTION_KEY_SHA256` pins its fingerprint.
@@ -351,7 +351,7 @@ source tree and compares it with a clean checked-out commit. Run it with
 --config-sha256 <audited-config-fingerprint>`. The receipt must contain the
 exact `sourceSha` and `appBuildSha`, environment, project ref, `ACTIVE_HEALTHY`
 status, HTTPS deployment origin, `kova` mode, config fingerprint, and a capture
-time no more than fifteen minutes old. It requires all eight named migrations,
+time no more than fifteen minutes old. It requires all nine named migrations,
 `legacyMfaGapCount: 0` and `legacyAdoptionGapCount: 0`, the six fields from
 `kova-auth-revocation-proof.sql`, service-only ACL/search-path/timeout evidence
 for the five security-sensitive RPCs, every named deployed check exported by

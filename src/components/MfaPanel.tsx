@@ -10,8 +10,10 @@ import { KovaPasskeyPanel } from "@/components/KovaPasskeyPanel";
 import {
   browserKovaAuthMode,
   clearKovaAuthCache,
+  getCapturedKovaPrincipal,
   isKovaSessionActive,
   kovaAuthJson,
+  restoreKovaSessionAfterRotation,
 } from "@/lib/kova-auth-browser";
 
 type Factor = {
@@ -81,9 +83,18 @@ export function MfaPanel() {
     try {
       if (useKovaAuth) {
         setLegacyOwnerId(null);
+        const captured = getCapturedKovaPrincipal();
+        if (!captured) throw new Error("kova_mfa_owner_unavailable");
         const response = await fetch("/api/auth/mfa/factors", {
           credentials: "same-origin",
-          headers: { Accept: "application/json" },
+          mode: "same-origin",
+          redirect: "error",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "X-Kova-Owner": captured.accountId,
+            "X-Kova-Session": captured.sessionId,
+          },
         });
         if (!response.ok) throw new Error("kova_mfa_factors");
         const payload = (await response.json()) as {
@@ -94,6 +105,8 @@ export function MfaPanel() {
           }>;
         };
         if (
+          getCapturedKovaPrincipal()?.accountId !== captured.accountId ||
+          getCapturedKovaPrincipal()?.sessionId !== captured.sessionId ||
           !Array.isArray(payload.factors) ||
           payload.factors.some(
             (factor) =>
@@ -269,14 +282,26 @@ export function MfaPanel() {
         setFactors([]);
         clearKovaAuthCache();
       } else if (useKovaAuth) {
-        const response = await kovaAuthJson("/api/auth/mfa/verify", {
-          factorId: enrolling.factorId,
-          code: code.trim(),
-        });
-        const payload = (await response.json()) as { recoveryCodes?: unknown };
-        if (!response.ok) throw new Error("verify");
-        setRecoveryCodes(verifiedRecoveryCodes(payload.recoveryCodes));
-        clearKovaAuthCache();
+        const previous = getCapturedKovaPrincipal();
+        const response = await kovaAuthJson(
+          "/api/auth/mfa/verify",
+          { factorId: enrolling.factorId, code: code.trim() },
+          previous ?? undefined,
+        );
+        const payload = (await response.json()) as {
+          recoveryCodes?: unknown;
+          session?: { accountId?: unknown; sessionId?: unknown };
+        };
+        if (
+          !response.ok ||
+          !previous ||
+          payload.session?.accountId !== previous.accountId ||
+          typeof payload.session.sessionId !== "string"
+        )
+          throw new Error("verify");
+        const codes = verifiedRecoveryCodes(payload.recoveryCodes);
+        await restoreKovaSessionAfterRotation(previous, payload.session.sessionId);
+        setRecoveryCodes(codes);
       } else {
         const { data: chal, error: cErr } = await supabase.auth.mfa.challenge({
           factorId: enrolling.factorId,
@@ -312,15 +337,31 @@ export function MfaPanel() {
     if (!beginMutation()) return;
     try {
       if (useKovaAuth) {
-        const response = await kovaAuthJson("/api/auth/mfa/remove", { factorId: id });
-        if (!response.ok) throw new Error("remove");
+        const previous = getCapturedKovaPrincipal();
+        const response = await kovaAuthJson(
+          "/api/auth/mfa/remove",
+          { factorId: id },
+          previous ?? undefined,
+        );
+        const payload = (await response.json()) as {
+          removed?: unknown;
+          session?: { accountId?: unknown; sessionId?: unknown };
+        };
+        if (
+          !response.ok ||
+          payload.removed !== true ||
+          !previous ||
+          payload.session?.accountId !== previous.accountId ||
+          typeof payload.session.sessionId !== "string"
+        )
+          throw new Error("remove");
+        await restoreKovaSessionAfterRotation(previous, payload.session.sessionId);
       } else {
         const { error } = await supabase.auth.mfa.unenroll({ factorId: id });
         if (error) throw error;
       }
       setRecoveryCodes([]);
       setConfirmRegeneration(false);
-      if (useKovaAuth) clearKovaAuthCache();
       toast.success("Two-factor removed");
       load();
     } catch (error) {
@@ -347,7 +388,6 @@ export function MfaPanel() {
         ) {
           throw new Error("kova_other_sessions_failed");
         }
-        clearKovaAuthCache();
       } else {
         const { error } = await supabase.auth.signOut({ scope: "others" });
         if (error) throw error;
@@ -366,17 +406,34 @@ export function MfaPanel() {
   async function regenerateRecoveryCodes() {
     if (!useKovaAuth || !confirmRegeneration || !beginMutation()) return;
     setRecoveryCodes([]);
+    let responseStatus: number | undefined;
     try {
-      const response = await kovaAuthJson("/api/auth/mfa/recovery/regenerate", { confirm: true });
-      const payload = (await response.json()) as { recoveryCodes?: unknown };
-      if (!response.ok) throw new Error("kova_recovery_regeneration_failed");
-      setRecoveryCodes(verifiedRecoveryCodes(payload.recoveryCodes));
-      clearKovaAuthCache();
+      const previous = getCapturedKovaPrincipal();
+      const response = await kovaAuthJson(
+        "/api/auth/mfa/recovery/regenerate",
+        { confirm: true },
+        previous ?? undefined,
+      );
+      responseStatus = response.status;
+      const payload = (await response.json()) as {
+        recoveryCodes?: unknown;
+        session?: { accountId?: unknown; sessionId?: unknown };
+      };
+      if (
+        !response.ok ||
+        !previous ||
+        payload.session?.accountId !== previous.accountId ||
+        typeof payload.session.sessionId !== "string"
+      )
+        throw new Error("kova_recovery_regeneration_failed");
+      const codes = verifiedRecoveryCodes(payload.recoveryCodes);
+      await restoreKovaSessionAfterRotation(previous, payload.session.sessionId);
+      setRecoveryCodes(codes);
       setConfirmRegeneration(false);
       toast.success("Recovery codes replaced. Save the new codes now.");
       void load();
     } catch {
-      clearKovaAuthCache();
+      if (responseStatus !== 401 && responseStatus !== 409) clearKovaAuthCache();
       toast.error("Could not confirm new recovery codes. Sign in again before trying again.");
     } finally {
       endMutation();

@@ -12,6 +12,7 @@ export const requiredMigrations = Object.freeze([
   "kova_owned_cutover_population_guards",
   "kova_owned_cutover_authority_and_rp",
   "kova_owned_cutover_required_mfa_guard",
+  "kova_restore_legacy_private_helper_usage",
 ]);
 
 export const requiredDeployedChecks = Object.freeze([

@@ -408,6 +408,7 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
 
   const verificationToken = generateKovaToken();
   const verificationDigest = digestKovaToken(verificationToken);
+  let candidateAccountId: string | null = null;
   try {
     const origin = publicOrigin();
     const link = new URL("/api/auth/verify", origin);
@@ -418,7 +419,7 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
       link: link.toString(),
       tokenDigest: verificationDigest,
     });
-    const candidateAccountId = await createCompatibilityPrincipal();
+    candidateAccountId = await createCompatibilityPrincipal();
     const created = await createPasswordAccount({
       candidateAccountId,
       email,
@@ -436,8 +437,17 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
       { status: 202 },
     );
   } catch (error) {
-    // A lost RPC response does not prove rollback. Keep a possibly adopted
-    // account; cleanup requires a positively acknowledged unused candidate.
+    // A database SQLSTATE proves the signup transaction rolled back. A lost
+    // or malformed reply may follow a commit, so preserve its candidate.
+    if (
+      candidateAccountId &&
+      error instanceof KovaAuthStoreError &&
+      error.operation === "kova_auth_create_password_account" &&
+      error.databaseCode &&
+      /^[A-Z0-9]{5}$/u.test(error.databaseCode)
+    ) {
+      await cleanupCandidate(candidateAccountId);
+    }
     console.error("[KovaAuth] Signup failed", {
       error: error instanceof Error ? error.name : "unknown_error",
     });
@@ -756,9 +766,14 @@ function matchesCapturedPrincipal(request: Request, principal: KovaPrincipal): b
 export async function handleKovaMfaFactors(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
+  if (request.method !== "GET") return jsonError("Method not allowed.", 405);
   const sessionDigest = requireSessionDigest(request);
   if (sessionDigest instanceof Response) return sessionDigest;
   try {
+    const principal = await resolveSession(sessionDigest);
+    if (!principal?.emailVerified) return jsonError("Invalid or expired session.", 401);
+    if (!matchesCapturedPrincipal(request, principal))
+      return jsonError("Your account changed. Please try again.", 409);
     return json({ factors: await listTotpFactors(sessionDigest) });
   } catch {
     return jsonError("Security settings could not be loaded.", 401);
@@ -1078,6 +1093,8 @@ export async function handleKovaPasswordStatus(request: Request): Promise<Respon
   try {
     const principal = await resolveSession(sessionDigest);
     if (!principal?.emailVerified) return jsonError("Invalid or expired session.", 401);
+    if (!matchesCapturedPrincipal(request, principal))
+      return jsonError("Your account changed. Please try again.", 409);
     const credential = await lookupPassword(principal.email);
     if (credential && credential.accountId !== principal.accountId) {
       throw new KovaAuthStoreError("password_status_account_mismatch");
@@ -1279,7 +1296,47 @@ export async function handleKovaVerification(request: Request): Promise<Response
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
   const target = new URL("/", publicOrigin());
-  const rawToken = new URL(request.url).searchParams.get("token") ?? "";
+  const invalid = () => {
+    target.searchParams.set("auth_error", "invalid_verification");
+    return new Response(null, {
+      status: 303,
+      headers: noStoreHeaders({ Location: target.toString() }),
+    });
+  };
+  if (request.method === "GET") {
+    const tokens = new URL(request.url).searchParams.getAll("token");
+    if (tokens.length !== 1 || !/^[A-Za-z0-9_-]{43,128}$/u.test(tokens[0])) return invalid();
+    // Mail scanners may follow GET links. The token remains unconsumed until
+    // the recipient explicitly submits this form on the public origin.
+    const headers = noStoreHeaders({
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy":
+        "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; style-src 'unsafe-inline'",
+      "X-Frame-Options": "DENY",
+    });
+    return new Response(
+      `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Verify your KovaGPT email</title><style>body{font:16px system-ui,sans-serif;background:#f7f9fc;color:#17253d;margin:0;min-height:100vh;display:grid;place-items:center}main{padding:32px;max-width:420px;background:white;border-radius:16px;box-shadow:0 8px 30px #17253d1a}button{font:inherit;background:#2563eb;color:white;border:0;border-radius:10px;padding:14px 20px;cursor:pointer}</style><main><h1>Verify your email</h1><p>Confirm your KovaGPT email address to finish creating your account.</p><form method="post" action="/api/auth/verify"><input type="hidden" name="token" value="${tokens[0]}"><button type="submit">Verify email</button></form></main></html>`,
+      { headers },
+    );
+  }
+  if (request.method !== "POST") return jsonError("Method not allowed.", 405);
+  const rejected = publicAuthMutationGuard(request);
+  if (rejected) return rejected;
+  if (
+    request.headers.get("content-type")?.split(";", 1)[0]?.toLowerCase() !==
+    "application/x-www-form-urlencoded"
+  )
+    return jsonError("Invalid verification request.", 415);
+  let rawToken: string;
+  try {
+    const form = new URLSearchParams(await readUtf8BodyBounded(request, 512));
+    const tokens = form.getAll("token");
+    if (tokens.length !== 1 || [...form.keys()].some((key) => key !== "token")) return invalid();
+    rawToken = tokens[0];
+  } catch {
+    return invalid();
+  }
+  if (!/^[A-Za-z0-9_-]{43,128}$/u.test(rawToken)) return invalid();
   const sessionToken = generateKovaToken();
   try {
     await consumeVerification({
@@ -1309,11 +1366,7 @@ export async function handleKovaVerification(request: Request): Promise<Response
       headers: noStoreHeaders({ Location: target.toString() }),
     });
   } catch {
-    target.searchParams.set("auth_error", "invalid_verification");
-    return new Response(null, {
-      status: 303,
-      headers: noStoreHeaders({ Location: target.toString() }),
-    });
+    return invalid();
   }
 }
 

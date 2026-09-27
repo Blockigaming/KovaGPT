@@ -71,6 +71,7 @@ const evidence = () => ({
 });
 
 test("cutover receipt binds the deployed build, live database and fresh evidence", () => {
+  assert.ok(requiredMigrations.includes("kova_restore_legacy_private_helper_usage"));
   assert.deepEqual(validateCutoverEvidence(evidence(), options), {
     sourceSha,
     configSha256,
@@ -108,6 +109,10 @@ test("cutover receipt rejects a passkey origin on a different application", () =
 test("cutover receipt fails closed on missing proof, public function access and unexpired tokens", () => {
   const mutations = [
     (item) => item.appliedMigrations.pop(),
+    (item) =>
+      (item.appliedMigrations = item.appliedMigrations.filter(
+        (name) => name !== "kova_restore_legacy_private_helper_usage",
+      )),
     (item) => (item.legacyMfaGapCount = 1),
     (item) => (item.legacyAdoptionGapCount = 1),
     (item) => delete item.legacyAdoptionGapCount,

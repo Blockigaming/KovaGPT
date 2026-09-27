@@ -57,9 +57,13 @@ export function WorkspaceSearch({ userId }: { userId: string }) {
       const response = await fetch("/api/workspace/search", {
         method: "POST",
         cache: "no-store",
+        credentials: "same-origin",
+        mode: "same-origin",
+        redirect: "error",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${data.session.access_token}`,
+          "X-Kova-Owner": userId,
         },
         body: JSON.stringify({ query: query.trim() }),
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]),

@@ -85,9 +85,13 @@ function Contacts({ userId }: { userId: string }) {
           {
             method,
             cache: "no-store",
+            credentials: "same-origin",
+            mode: "same-origin",
+            redirect: "error",
             headers: {
               Authorization: `Bearer ${data.session.access_token}`,
               "Content-Type": "application/json",
+              "X-Kova-Owner": userId,
             },
             body: body === undefined ? undefined : JSON.stringify(body),
             signal: AbortSignal.any([abort.signal, AbortSignal.timeout(15000)]),

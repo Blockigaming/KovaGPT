@@ -37,7 +37,7 @@ function reply(overrides = {}) {
     ...overrides,
   };
 }
-function fixture({ response, active = true } = {}) {
+function fixture({ response, active = true, syncCloseStatus = false } = {}) {
   let monotonic = 0,
     wall = wallStart,
     generation = 0,
@@ -69,6 +69,7 @@ function fixture({ response, active = true } = {}) {
     },
     unsubscribe: async () => {
       events.unsubscribed++;
+      if (syncCloseStatus) channel.status?.("CLOSED");
       return "ok";
     },
     teardown: () => {
@@ -379,6 +380,20 @@ test("an established subscription retries a transient 503 with bounded fail-clos
   f.status();
   f.frame();
   assert.equal(f.events.invalidate, 1);
+  f.stop();
+});
+
+test("a synchronous CLOSED callback during unsubscribe cannot schedule duplicate retries", async () => {
+  const f = fixture({ syncCloseStatus: true });
+  await flush();
+  f.replies.push(new Response(null, { status: 503 }));
+  await f.advance(15000);
+  assert.equal(f.tasks.size, 1);
+  assert.equal(f.events.unsubscribed, 1);
+  await f.advance(1000);
+  assert.equal(f.events.fetch.length, 3);
+  assert.equal(f.events.created, 2);
+  assert.equal(f.events.subscribed, 2);
   f.stop();
 });
 

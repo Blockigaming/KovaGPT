@@ -89,6 +89,12 @@ function fixture(options = {}) {
       isKovaSessionActive: () => options.owned !== false,
       browserKovaAuthMode: () => options.browserMode ?? "dual",
       clearKovaAuthCache: () => calls.push(["clear-cache"]),
+      getCapturedKovaPrincipal: () => ({ accountId: "owner", sessionId: "old-session" }),
+      restoreKovaSessionAfterRotation: async (previous, nextId) => {
+        calls.push(["clear-cache"]);
+        calls.push(["restore", previous.accountId, previous.sessionId, nextId]);
+        if (options.restoreFails) throw Error("session switched");
+      },
       async kovaAuthJson(path, body) {
         calls.push(["owned", path, plain(body)]);
         if (options.hold) await options.hold;
@@ -108,8 +114,19 @@ function fixture(options = {}) {
           remaining = 8;
           return Response.json({
             recoveryCodes: options.codes === undefined ? codes : options.codes,
+            session: { accountId: "owner", sessionId: "next-session" },
           });
         }
+        if (path.endsWith("/mfa/verify"))
+          return Response.json({
+            recoveryCodes: options.codes === undefined ? codes : options.codes,
+            session: { accountId: "owner", sessionId: "next-session" },
+          });
+        if (path.endsWith("/mfa/remove"))
+          return Response.json({
+            removed: true,
+            session: { accountId: "owner", sessionId: "next-session" },
+          });
         return Response.json({ revokedCount: options.revokedCount ?? 1 });
       },
     },
@@ -155,8 +172,12 @@ function fixture(options = {}) {
       return modules[name];
     },
     console: { error: (...args) => logs.push(args) },
-    fetch: async (path) => {
-      calls.push(["fetch", path]);
+    fetch: async (path, init) => {
+      calls.push(["fetch", path, init]);
+      if (options.owned !== false) {
+        assert.equal(init.headers["X-Kova-Owner"], "owner");
+        assert.equal(init.headers["X-Kova-Session"], "old-session");
+      }
       return Response.json({
         factors: options.noFactors
           ? []
@@ -227,6 +248,10 @@ test("owned recovery settings require explicit confirmation, show exactly eight 
   const transcript = JSON.stringify({ calls: f.calls, messages: f.messages, logs: f.logs });
   for (const code of codes) assert.ok(!transcript.includes(code));
   assert.ok(f.calls.some(([kind]) => kind === "clear-cache"));
+  assert.deepEqual(
+    f.calls.find(([kind]) => kind === "restore"),
+    ["restore", "owner", "old-session", "next-session"],
+  );
 });
 
 test("recovery replacement synchronously rejects double clicks and blocks concurrent device changes", async () => {
@@ -338,4 +363,41 @@ test("fresh Google/passkey enrollment can omit a password and cancelling removes
     .nodes()
     .find((node) => node.type === "input" && node.props.id === "mfa-enrollment-password");
   assert.equal(password.props.value, "");
+});
+
+test("owned factor activation and removal restore the rotated session before reloading security controls", async () => {
+  const activation = fixture({ noFactors: true });
+  await activation.flush();
+  await activation.click("Set up authenticator app");
+  activation
+    .nodes()
+    .find((node) => node.type === "input" && node.props.placeholder === "123 456")
+    .props.onChange({ target: { value: "123456" } });
+  await activation.flush();
+  await activation.click("Verify & enable");
+  assert.deepEqual(
+    activation.calls.find(([kind]) => kind === "restore"),
+    ["restore", "owner", "old-session", "next-session"],
+  );
+  assert.ok(
+    activation.calls.some(([kind, path]) => kind === "fetch" && path === "/api/auth/mfa/factors"),
+  );
+
+  const removal = fixture();
+  await removal.flush();
+  await removal.click("Remove");
+  assert.deepEqual(
+    removal.calls.find(([kind]) => kind === "restore"),
+    ["restore", "owner", "old-session", "next-session"],
+  );
+  assert.equal(removal.messages.at(-1)[0], "success");
+});
+
+test("a rotated MFA session from another account cannot display recovery codes", async () => {
+  const f = fixture({ restoreFails: true });
+  await f.flush();
+  await f.click("Generate new recovery codes");
+  await f.click("Replace recovery codes");
+  assert.equal(f.nodes().filter((node) => node.type === "li").length, 0);
+  assert.equal(f.messages.at(-1)[0], "error");
 });

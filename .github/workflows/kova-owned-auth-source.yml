@@ -24,6 +24,8 @@ on:
       - src/lib/multimodal/image-source.server.mjs
       - src/routes/api/library/files.ts
       - src/integrations/supabase/auth-middleware.ts
+      - src/integrations/supabase/auth-attacher.ts
+      - src/lib/auth-fetch.ts
       - src/lib/account-export*.mjs
       - src/lib/account-export*.mts
       - src/lib/kova-recovery-link.*
@@ -41,7 +43,9 @@ on:
       - src/components/KovaPasskeyPanel.tsx
       - src/components/auth/AuthDialog.tsx
       - src/components/auth/ClerkSafe.tsx
+      - src/components/WorkspaceSearch.tsx
       - src/routes/auth.tsx
+      - src/routes/trusted-contacts.tsx
       - src/routes/api/auth/**
       - supabase/migrations/**
       - tests/unit/kova-auth*

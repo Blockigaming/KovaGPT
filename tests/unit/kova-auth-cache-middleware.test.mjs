@@ -158,6 +158,130 @@ test("a panel mutation cannot discover a switched cookie after its principal cac
   assert.deepEqual(calls, ["/api/auth/session"]);
 });
 
+test("bad password and MFA codes preserve the same verified session for retry", async () => {
+  for (const [path, status] of [
+    ["/api/auth/password", 401],
+    ["/api/auth/mfa/verify", 401],
+    ["/api/auth/mfa/recovery/regenerate", 409],
+  ]) {
+    const exports = {};
+    const calls = [];
+    vm.runInNewContext(browserSource, {
+      exports,
+      Response,
+      URL,
+      Error,
+      TEST_ENV: { VITE_KOVA_AUTH_MODE: "dual" },
+      fetch: async (url) => {
+        calls.push(url);
+        if (url === "/api/auth/session") return Response.json({ session: principal("session-A") });
+        if (url === "/api/auth/token")
+          return Response.json({
+            accessToken: "token-A",
+            expiresIn: 300,
+            session: principal("session-A"),
+          });
+        assert.equal(url, path);
+        return Response.json({ error: "invalid input" }, { status });
+      },
+    });
+    await exports.fetchKovaSession();
+    assert.equal(await exports.getKovaCompatibilityToken(), "token-A");
+    assert.equal((await exports.kovaAuthJson(path, {})).status, status);
+    assert.equal(exports.getCapturedKovaPrincipal().sessionId, "session-A");
+    assert.equal(await exports.getKovaCompatibilityToken(), "token-A");
+    assert.equal((await exports.kovaAuthJson(path, {})).status, status);
+    assert.equal(exports.isKovaSessionActive(), true);
+    assert.equal(calls.filter((value) => value === "/api/auth/session").length, 3);
+  }
+});
+
+test("a rejected mutation cannot adopt a switched cookie or keep an old token", async () => {
+  for (const changed of ["other", "revoked", "unavailable"]) {
+    const exports = {};
+    let switched = false;
+    vm.runInNewContext(browserSource, {
+      exports,
+      Response,
+      URL,
+      Error,
+      TEST_ENV: { VITE_KOVA_AUTH_MODE: "dual" },
+      fetch: async (url) => {
+        if (url === "/api/auth/session") {
+          if (switched && changed === "revoked") return new Response(null, { status: 401 });
+          if (switched && changed === "unavailable") return new Response(null, { status: 503 });
+          return Response.json({
+            session:
+              switched && changed === "other"
+                ? { ...principal("session-B"), accountId: "other" }
+                : principal("session-A"),
+          });
+        }
+        if (url === "/api/auth/token")
+          return Response.json({
+            accessToken: "token-A",
+            expiresIn: 300,
+            session: principal("session-A"),
+          });
+        switched = true;
+        return new Response(null, { status: 409 });
+      },
+    });
+    await exports.fetchKovaSession();
+    assert.equal(await exports.getKovaCompatibilityToken(), "token-A");
+    assert.equal((await exports.kovaAuthJson("/api/auth/mfa/remove", {})).status, 409);
+    assert.equal(exports.getCapturedKovaPrincipal(), null);
+    assert.equal(exports.getKovaTokenBinding("token-A"), null);
+    assert.equal(await exports.getKovaCompatibilityToken(), null);
+    assert.equal(exports.isKovaSessionActive(), true);
+  }
+});
+
+test("session rotation restores the same owner without retaining the old compatibility token", async () => {
+  for (const nextOwner of ["owner", "other"]) {
+    const exports = {};
+    let rotated = false;
+    vm.runInNewContext(browserSource, {
+      exports,
+      Response,
+      URL,
+      Error,
+      TEST_ENV: { VITE_KOVA_AUTH_MODE: "kova" },
+      fetch: async (path) =>
+        path === "/api/auth/session"
+          ? Response.json({
+              session: {
+                ...principal(rotated ? "session-B" : "session-A"),
+                accountId: rotated ? nextOwner : "owner",
+              },
+            })
+          : Response.json({
+              accessToken: rotated ? "token-B" : "token-A",
+              expiresIn: 300,
+              session: principal(rotated ? "session-B" : "session-A"),
+            }),
+    });
+    const previous = await exports.fetchKovaSession();
+    assert.equal(await exports.getKovaCompatibilityToken(), "token-A");
+    rotated = true;
+    if (nextOwner === "owner") {
+      assert.equal(
+        (await exports.restoreKovaSessionAfterRotation(previous, "session-B")).sessionId,
+        "session-B",
+      );
+      assert.equal(exports.getKovaTokenBinding("token-A"), null);
+      assert.equal(await exports.getKovaCompatibilityToken(), "token-B");
+    } else {
+      await assert.rejects(
+        exports.restoreKovaSessionAfterRotation(previous, "session-B"),
+        exports.isKovaSessionRejectedError,
+      );
+      assert.equal(exports.getCapturedKovaPrincipal(), null);
+      assert.equal(await exports.getKovaCompatibilityToken(), null);
+    }
+  }
+});
+
 test("MFA cache invalidation discards prior compatibility tokens and cached principals", async () => {
   const f = browserFixture();
   assert.equal(await f.api.getKovaCompatibilityToken(), null);

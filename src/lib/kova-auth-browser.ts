@@ -55,16 +55,6 @@ export function browserKovaAuthEnabled(): boolean {
   return browserKovaAuthMode() !== "supabase";
 }
 
-export function browserKovaAuthOrigin(currentOrigin = window.location.origin): string {
-  const configured = import.meta.env.VITE_KOVA_AUTH_ORIGIN;
-  if (!configured) return currentOrigin;
-  const parsed = new URL(configured);
-  if (parsed.protocol !== "https:" || parsed.origin !== configured) {
-    throw new Error("VITE_KOVA_AUTH_ORIGIN must be an exact HTTPS origin");
-  }
-  return parsed.origin;
-}
-
 export function setKovaSessionActive(active: boolean): void {
   if (active === kovaSessionActive) return;
   kovaSessionActive = active;
@@ -170,6 +160,29 @@ export async function fetchKovaSession(): Promise<KovaBrowserPrincipal | null> {
 export async function getCachedKovaSession(): Promise<KovaBrowserPrincipal | null> {
   if (principalCache && principalCache.refreshAt > Date.now()) return principalCache.principal;
   return fetchKovaSession();
+}
+
+/** Restore this tab after a security mutation has replaced its HttpOnly cookie. */
+export async function restoreKovaSessionAfterRotation(
+  previous: Pick<KovaBrowserPrincipal, "accountId" | "sessionId">,
+  expectedSessionId: string,
+): Promise<KovaBrowserPrincipal> {
+  clearKovaAuthCache();
+  try {
+    const current = await fetchKovaSession();
+    if (
+      !current ||
+      current.accountId !== previous.accountId ||
+      current.sessionId === previous.sessionId ||
+      current.sessionId !== expectedSessionId
+    ) {
+      throw new KovaSessionRejectedError();
+    }
+    return current;
+  } catch (error) {
+    clearKovaAuthCache();
+    throw error;
+  }
 }
 
 /** Keep a rendered security panel bound to the principal it already displayed. */
@@ -296,9 +309,20 @@ export async function kovaAuthJson(
     },
     body: JSON.stringify(body),
   });
-  // A 401/409 means the ambient cookie no longer matches the principal captured
-  // for this UI action. Invalidate local authority before any retry/re-render.
-  if (response.status === 401 || response.status === 409) clearKovaAuthCache();
+  // A bad password or MFA code also returns 401. Recheck the HttpOnly cookie
+  // before discarding a valid principal; never adopt a different principal
+  // from a rejected mutation started by this panel.
+  if (response.status === 401 || response.status === 409) {
+    const generation = cacheGeneration;
+    try {
+      const current = await fetchKovaSession();
+      if (current?.accountId !== captured.accountId || current.sessionId !== captured.sessionId) {
+        clearKovaAuthCache();
+      }
+    } catch {
+      if (cacheGeneration === generation) clearKovaAuthCache();
+    }
+  }
   // This is an invalidation hint only, never an identity or authorization claim.
   // Other tabs must re-read the HttpOnly cookie through the session endpoint.
   if (response.ok) announceKovaAuthChange();
