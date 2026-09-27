@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
-import { readKovaRecoveryLink } from "../../src/lib/kova-recovery-link.mjs";
 
 const token = "A".repeat(43);
 
@@ -43,7 +42,6 @@ function fixture(href, mode = "dual") {
           isKovaSessionRejectedError: () => false,
           KOVA_AUTH_CHANGE_KEY: "auth-change",
         },
-        "@/lib/kova-recovery-link.mjs": { readKovaRecoveryLink },
         "@/components/ui/dropdown-menu": {},
       },
       globals: {

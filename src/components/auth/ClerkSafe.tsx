@@ -70,7 +70,6 @@ import {
   setKovaSessionActive,
   type KovaBrowserPrincipal,
 } from "@/lib/kova-auth-browser";
-import { readKovaRecoveryLink } from "@/lib/kova-recovery-link.mjs";
 
 export const clerkEnabled = true;
 
@@ -111,7 +110,8 @@ function KovaClerkProvider({
   // while the guest session resolves, or the remounted route loses the token.
   const ownedRecovery = useRef(
     typeof window !== "undefined" &&
-      readKovaRecoveryLink(window.location.href, browserKovaAuthMode()).token !== null,
+      window.location.pathname === "/reset-password" &&
+      /^#token=[A-Za-z0-9_-]{43,128}$/u.test(window.location.hash),
   ).current;
 
   const purgeOwnerlessStateFor = useCallback((userId: string | null) => {
