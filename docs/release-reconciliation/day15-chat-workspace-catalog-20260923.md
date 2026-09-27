@@ -1,5 +1,7 @@
 # Day-15 chat-workspace catalog and data checkpoint — 2026-09-23
 
+The [September 27 live versus exact-head rehearsal comparison](./day15-live-rehearsal-comparison-20260927.md) now completes the fresh read-only catalog comparison described below. It finds matching scoped 98-version table catalogs and one routine EXECUTE-grant difference; it does not promote any proof.
+
 All ten Day-15 remote-only lineage entries remain `requires_schema_proof`.
 These collectors add bounded, reproducible scope to the current-history
 isolated upgrade run. The collector is source-only until its exact-head hosted
