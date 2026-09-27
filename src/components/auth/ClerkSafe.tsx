@@ -16,6 +16,8 @@ import {
 } from "react";
 import {
   createContext,
+  lazy,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -29,7 +31,6 @@ import {
   signOutLegacySupabaseSession,
   supabase,
 } from "@/integrations/supabase/client";
-import { AuthDialog } from "@/components/auth/AuthDialog";
 import { MfaChallengeDialog } from "@/components/auth/MfaChallengeDialog";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import {
@@ -70,6 +71,10 @@ import {
   setKovaSessionActive,
   type KovaBrowserPrincipal,
 } from "@/lib/kova-auth-browser";
+
+const AuthDialog = lazy(() =>
+  import("@/components/auth/AuthDialog").then((module) => ({ default: module.AuthDialog })),
+);
 
 export const clerkEnabled = true;
 
@@ -324,12 +329,16 @@ function KovaClerkProvider({
           </button>
         </div>
       ) : null}
-      <AuthDialog
-        open={dialog.open}
-        mode={dialog.mode}
-        returnFocusTarget={authReturnFocusRef.current}
-        onOpenChange={(open) => setDialog((current) => ({ ...current, open }))}
-      />
+      <Suspense fallback={null}>
+        {dialog.open && (
+          <AuthDialog
+            open={dialog.open}
+            mode={dialog.mode}
+            returnFocusTarget={authReturnFocusRef.current}
+            onOpenChange={(open) => setDialog((current) => ({ ...current, open }))}
+          />
+        )}
+      </Suspense>
     </Ctx.Provider>
   );
 }
@@ -760,12 +769,16 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
           </button>
         </div>
       ) : null}
-      <AuthDialog
-        open={dialog.open}
-        mode={dialog.mode}
-        returnFocusTarget={authReturnFocusRef.current}
-        onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}
-      />
+      <Suspense fallback={null}>
+        {dialog.open && (
+          <AuthDialog
+            open={dialog.open}
+            mode={dialog.mode}
+            returnFocusTarget={authReturnFocusRef.current}
+            onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}
+          />
+        )}
+      </Suspense>
       <MfaChallengeDialog
         open={Boolean(pendingMfaSession)}
         onVerified={(verifiedSession) => void acceptSession(verifiedSession)}

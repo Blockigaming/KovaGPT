@@ -45,6 +45,7 @@ function fixture(href, mode = "dual") {
         "@/components/ui/dropdown-menu": {},
       },
       globals: {
+        HTMLElement: class HTMLElement {},
         URLSearchParams,
         document: { addEventListener() {}, removeEventListener() {}, visibilityState: "visible" },
         window: {
@@ -104,6 +105,19 @@ test("pure owned mode keeps the reset form mounted during guest resolution", asy
   await f.flush();
   assert.equal(f.tree.type, "context-provider");
   assert.equal(f.tree.key, "owned-recovery");
+});
+
+test("owned sign-in loads the account dialog only when opened", async () => {
+  const { f, resolveSession } = fixture("https://kova.test/", "kova");
+  resolveSession(null);
+  await f.flush();
+  assert.equal(
+    f.nodes().some((node) => node.type === "lazy-component"),
+    false,
+  );
+  f.tree.props.value.openAuth("sign-in");
+  f.render();
+  assert.equal(f.find("lazy-component").props.mode, "sign-in");
 });
 
 test("dual guest still falls back to hosted auth without a valid owned reset fragment", async () => {
