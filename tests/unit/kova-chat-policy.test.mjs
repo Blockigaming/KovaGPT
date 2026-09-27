@@ -56,11 +56,17 @@ test("Chat display names follow the tier without changing Models effort IDs", ()
   assert.deepEqual(names("guest"), [["light", "Lite"]]);
   assert.deepEqual(names("free"), [["light", "Lite"]]);
   assert.deepEqual(names("plus"), [
-    ["light", "Lite"], ["medium", "Medium"], ["high", "Thinking"],
+    ["light", "Lite"],
+    ["medium", "Medium"],
+    ["high", "Thinking"],
   ]);
   assert.deepEqual(names("pro"), [
-    ["light", "Lite"], ["medium", "Medium"], ["high", "High"],
-    ["extra-high", "Extra High"], ["max", "Max"], ["ultra", "Ultra"],
+    ["light", "Lite"],
+    ["medium", "Medium"],
+    ["high", "High"],
+    ["extra-high", "Extra High"],
+    ["max", "Max"],
+    ["ultra", "Ultra"],
   ]);
   assert.equal(kovaModelsChatSelection({ family: "cosmo", effort: "high" }).effort, "High");
 });

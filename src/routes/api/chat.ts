@@ -81,10 +81,7 @@ import {
   createChatPreflightRunner,
   normalizeChatPreflightFailure,
 } from "@/lib/chat-preflight.server.mjs";
-import {
-  kovaChatOptionsForTier,
-  parseKovaChatSelection,
-} from "@/lib/kova-chat-policy.mjs";
+import { kovaChatOptionsForTier, parseKovaChatSelection } from "@/lib/kova-chat-policy.mjs";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };

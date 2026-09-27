@@ -96,10 +96,7 @@ export function kovaModelsChatSelection(value) {
 }
 
 export function kovaChatOptionsForTier(tier) {
-  if (
-    typeof tier !== "string" ||
-    !Object.prototype.hasOwnProperty.call(ALLOWED_BY_TIER, tier)
-  )
+  if (typeof tier !== "string" || !Object.prototype.hasOwnProperty.call(ALLOWED_BY_TIER, tier))
     reject();
   return Object.freeze(
     KOVA_CHAT_ROUTES.map((route) =>
