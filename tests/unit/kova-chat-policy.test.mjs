@@ -48,6 +48,23 @@ test("guest and Free see one Chat choice; Plus six and Pro twelve", () => {
   }
 });
 
+test("Chat display names follow the tier without changing Models effort IDs", () => {
+  const names = (tier) =>
+    kovaChatOptionsForTier(tier)
+      .filter((route) => route.entitled && route.familyId === "cosmo")
+      .map((route) => [route.effortId, route.effortLabel]);
+  assert.deepEqual(names("guest"), [["light", "Lite"]]);
+  assert.deepEqual(names("free"), [["light", "Lite"]]);
+  assert.deepEqual(names("plus"), [
+    ["light", "Lite"], ["medium", "Medium"], ["high", "Thinking"],
+  ]);
+  assert.deepEqual(names("pro"), [
+    ["light", "Lite"], ["medium", "Medium"], ["high", "High"],
+    ["extra-high", "Extra High"], ["max", "Max"], ["ultra", "Ultra"],
+  ]);
+  assert.equal(kovaModelsChatSelection({ family: "cosmo", effort: "high" }).effort, "High");
+});
+
 test("Lite and Extra High wire labels match the Models v2 selection schema", () => {
   assert.deepEqual(kovaModelsChatSelection({ family: "cosmo", effort: "lite" }), {
     schema_version: "kova-models.v2",
