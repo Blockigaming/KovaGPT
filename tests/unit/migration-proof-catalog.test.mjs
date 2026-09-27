@@ -109,3 +109,27 @@ test("inventory rejects incomplete history, unsafe replication role and missing 
     /relations_invalid/u,
   );
 });
+
+test("source checkpoint requires its exact ledger and no remote-only history", () => {
+  const source = capture();
+  source.ledger = { versions: ["20260822143000"], version_count: 1 };
+  source.remoteOnlyHistory = [];
+  assert.equal(
+    parseMigrationProofCatalog(JSON.stringify(source), source.ledger.versions, {
+      sourceCheckpoint: true,
+    }).remoteOnlyHistory.length,
+    0,
+  );
+  assert.throws(
+    () => parseMigrationProofCatalog(JSON.stringify(source), source.ledger.versions),
+    /checkpoint_invalid/u,
+  );
+  source.remoteOnlyHistory = capture().remoteOnlyHistory;
+  assert.throws(
+    () =>
+      parseMigrationProofCatalog(JSON.stringify(source), source.ledger.versions, {
+        sourceCheckpoint: true,
+      }),
+    /checkpoint_invalid/u,
+  );
+});

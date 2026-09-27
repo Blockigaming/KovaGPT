@@ -36,7 +36,11 @@ const REMOTE_ONLY = [
 export function parseMigrationProofCatalog(
   stdout,
   expectedVersions,
-  { requireSingleStatementHistory = true, allowHistoricalCapture = false } = {},
+  {
+    requireSingleStatementHistory = true,
+    allowHistoricalCapture = false,
+    sourceCheckpoint = false,
+  } = {},
 ) {
   if (typeof stdout !== "string" || Buffer.byteLength(stdout, "utf8") > 2 * 1024 * 1024)
     throw new Error("migration_proof_catalog_output_invalid");
@@ -63,11 +67,11 @@ export function parseMigrationProofCatalog(
     !versions.every((version) => typeof version === "string" && VERSION.test(version)) ||
     capture.ledger.version_count !== versions.length ||
     JSON.stringify(versions) !== JSON.stringify(sorted) ||
-    !REMOTE_ONLY.every((version) => versions.includes(version)) ||
+    (!sourceCheckpoint && !REMOTE_ONLY.every((version) => versions.includes(version))) ||
     !Array.isArray(remoteOnlyHistory) ||
-    remoteOnlyHistory.length !== REMOTE_ONLY.length ||
+    remoteOnlyHistory.length !== (sourceCheckpoint ? 0 : REMOTE_ONLY.length) ||
     JSON.stringify(remoteOnlyHistory.map((entry) => entry?.version)) !==
-      JSON.stringify(REMOTE_ONLY) ||
+      JSON.stringify(sourceCheckpoint ? [] : REMOTE_ONLY) ||
     remoteOnlyHistory.some(
       (entry) =>
         !Number.isInteger(entry.statementCount) ||

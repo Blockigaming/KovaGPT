@@ -5,6 +5,11 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 
 import { inspectMigrationSourceCommit } from "./migration-preflight.mjs";
+import {
+  MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+  MIGRATION_PROOF_CATALOG_SQL,
+  parseMigrationProofCatalog,
+} from "./migration-proof-catalog.mjs";
 import { TEMP_EXPORT_CATALOG_SQL } from "./upgrade-database-temp-export-proof.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -18,7 +23,12 @@ if (checkpoint.ledgerVersions.length !== lineage.observedSourceMigrationCount)
 const project = mkdtempSync(join(tmpdir(), "kova-observed-source-"));
 const projectId = `kova_observed_${randomUUID().slice(0, 12).replaceAll("-", "")}`;
 const migrationsDir = join(project, "supabase/migrations");
-const output = resolve(process.argv[2] ?? "artifacts/release/observed-source-temp-export.json");
+const args = process.argv.slice(2);
+const fullCatalog = args.includes("--with-full-catalog");
+const positional = args.filter((arg) => arg !== "--with-full-catalog");
+if (positional.length > 1 || positional.some((arg) => arg.startsWith("--")))
+  throw new Error("observed_source_capture_usage_invalid");
+const output = resolve(positional[0] ?? "artifacts/release/observed-source-temp-export.json");
 const cli = join(root, "node_modules/.bin/supabase");
 const env = {
   ...process.env,
@@ -134,6 +144,55 @@ try {
     )}\n`,
   );
   console.log("Observed source checkpoint replayed locally; bounded capture saved for review.");
+  if (fullCatalog) {
+    const full = parseMigrationProofCatalog(
+      run(
+        "docker",
+        [
+          "--host",
+          "unix:///var/run/docker.sock",
+          "exec",
+          "-i",
+          `supabase_db_${projectId}`,
+          "psql",
+          "-X",
+          "-U",
+          "postgres",
+          "-d",
+          "postgres",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-A",
+          "-t",
+          "-q",
+        ],
+        MIGRATION_PROOF_CATALOG_SQL,
+      ),
+      checkpoint.ledgerVersions,
+      { sourceCheckpoint: true },
+    );
+    const catalogOutput = resolve("artifacts/release/observed-source-full-catalog.json");
+    mkdirSync(dirname(catalogOutput), { recursive: true });
+    writeFileSync(
+      catalogOutput,
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          artifactKind: "observed-source-full-catalog-candidate",
+          sourceCommit: checkpoint.sourceCommit,
+          sourceTree: checkpoint.sourceTree,
+          ledgerVersionsSha256: checkpoint.ledgerVersionsSha256,
+          querySha256: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+          capture: full,
+          schemaProofPromoted: false,
+          productionReleaseReady: false,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    console.log("Whole-catalog source capture saved for review; no proof promoted.");
+  }
 } finally {
   if (started) supabase(["stop", "--no-backup"], true);
   rmSync(project, { recursive: true, force: true });
