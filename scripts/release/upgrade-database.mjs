@@ -75,6 +75,8 @@ import {
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const MANIFEST = "tests/fixtures/production-migration-history-20260904/manifest.json";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const SCHEDULED_CANDIDATE_PREFIX = ["20260822122000", "20260822143000"];
+const SCHEDULED_CANDIDATE_FILE = "upgrade-scheduled-candidate-checkpoint.json";
 const FIXTURE_HEADER = Buffer.from(
   "-- Reviewed structural history fixture, never a live migration command.\n" +
     "-- Replayed only in the generated disposable local upgrade project.\n\n",
@@ -175,6 +177,7 @@ export function rehearseUpgrade({
   captureChatWorkspaceTables = false,
   captureChatWorkspaceRoutines = false,
   captureProofCatalog = false,
+  captureScheduledCandidate = false,
   execute = spawnSync,
   inspectSource = captureCleanUpgradeSource,
 } = {}) {
@@ -197,6 +200,7 @@ export function rehearseUpgrade({
             CHAT_WORKSPACE_TABLE_FILE,
             CHAT_WORKSPACE_CATALOG_FILE,
             "upgrade-migration-proof-catalog.json",
+            SCHEDULED_CANDIDATE_FILE,
           ]
         : []),
     ])
@@ -231,6 +235,8 @@ export function rehearseUpgrade({
       throw new Error("upgrade_canonical_history_separate_capture_required");
     if (captureProofCatalog && !currentHistory)
       throw new Error("upgrade_proof_catalog_current_history_required");
+    if (captureScheduledCandidate && (!currentHistory || canonicalHistory))
+      throw new Error("upgrade_scheduled_candidate_current_history_required");
     if (!dryRun) {
       sourceBefore = inspectSource(root);
       assertUpgradeSourceUnchanged(sourceBefore, sourceBefore);
@@ -243,6 +249,12 @@ export function rehearseUpgrade({
       : historical;
     if (canonicalHistory)
       plan = extendProposedCanonicalHistory(plan, root, readSource, readDirectory);
+    if (
+      captureScheduledCandidate &&
+      JSON.stringify(plan.executionForward.slice(0, 2).map((row) => row.version)) !==
+        JSON.stringify(SCHEDULED_CANDIDATE_PREFIX)
+    )
+      throw new Error("upgrade_scheduled_candidate_prefix_invalid");
   } catch (error) {
     if (!dryRun) {
       // Parser and filesystem errors may contain input bytes or local paths.
@@ -284,6 +296,12 @@ export function rehearseUpgrade({
         ? {
             proofCatalogPlanned: true,
             proofCatalogQuerySha256: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+          }
+        : {}),
+      ...(captureScheduledCandidate
+        ? {
+            scheduledCandidateCheckpointPlanned: true,
+            scheduledCandidatePrefix: SCHEDULED_CANDIDATE_PREFIX,
           }
         : {}),
       ...(captureScheduledCatalog
@@ -421,6 +439,8 @@ export function rehearseUpgrade({
   let chatRoutineBytes;
   let proofCatalogBaseline;
   let proofCatalogBytes;
+  let scheduledCandidate;
+  let scheduledCandidateBytes;
   try {
     supabase(["start", "-x", "studio,imgproxy,edge-runtime,logflare,vector,supavisor"]);
     supabase(["db", "reset", "--local", "--no-seed"]);
@@ -471,7 +491,30 @@ export function rehearseUpgrade({
         { requireSingleStatementHistory: false },
       );
     sql(seed);
-    for (const migration of executionForward)
+    if (captureScheduledCandidate) {
+      for (const migration of executionForward.slice(0, SCHEDULED_CANDIDATE_PREFIX.length))
+        writeFileSync(join(migrationsDir, migration.name), migration.content);
+      supabase(["migration", "up", "--local", "--include-all"]);
+      const checkpointVersions = [...baselineVersions, ...SCHEDULED_CANDIDATE_PREFIX].sort();
+      sql(historyAssertion(checkpointVersions, "scheduled_candidate"));
+      scheduledCandidate = {
+        versions: checkpointVersions,
+        wholeCatalog: parseMigrationProofCatalog(
+          sql(MIGRATION_PROOF_CATALOG_SQL, true),
+          checkpointVersions,
+          { requireSingleStatementHistory: false },
+        ),
+        scheduledTables: parseScheduledTableCapture(
+          sql(SCHEDULED_TABLE_SQL, true),
+          checkpointVersions,
+        ),
+        scheduledRoutines: parseScheduledCatalogCapture(
+          sql(SCHEDULED_CATALOG_SQL, true),
+          checkpointVersions,
+        ),
+      };
+    }
+    for (const migration of executionForward.slice(captureScheduledCandidate ? 2 : 0))
       writeFileSync(join(migrationsDir, migration.name), migration.content);
     supabase(["migration", "up", "--local", "--include-all"]);
     sql(assertions);
@@ -504,7 +547,8 @@ export function rehearseUpgrade({
       captureScheduledTables ||
       captureChatWorkspaceTables ||
       captureChatWorkspaceRoutines ||
-      captureProofCatalog
+      captureProofCatalog ||
+      captureScheduledCandidate
         ? run("git", ["-C", root, "rev-parse", "HEAD^{tree}"]).trim()
         : null;
     if (
@@ -600,6 +644,37 @@ export function rehearseUpgrade({
           null,
           2,
         ) + "\n";
+    if (scheduledCandidate)
+      scheduledCandidateBytes =
+        JSON.stringify(
+          {
+            schemaVersion: 1,
+            artifactKind: "isolated-post-baseline-scheduled-candidate-not-schema-proof",
+            sourceCommit,
+            sourceTree,
+            baselineLedgerVersionsSha256: sha256([...baselineVersions].sort().join("\n")),
+            checkpointVersions: scheduledCandidate.versions,
+            checkpointLedgerVersionsSha256: sha256(scheduledCandidate.versions.join("\n")),
+            candidateMigrations: executionForward.slice(0, 2).map(({ version, sha256 }) => ({
+              version,
+              sha256,
+            })),
+            querySha256: {
+              wholeCatalog: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+              scheduledTables: SCHEDULED_TABLE_QUERY_SHA256,
+              scheduledRoutines: SCHEDULED_CATALOG_QUERY_SHA256,
+            },
+            captures: {
+              wholeCatalog: scheduledCandidate.wholeCatalog,
+              scheduledTables: scheduledCandidate.scheduledTables,
+              scheduledRoutines: scheduledCandidate.scheduledRoutines,
+            },
+            acceptedProofs: 0,
+            productionReleaseReady: false,
+          },
+          null,
+          2,
+        ) + "\n";
     result = {
       schemaVersion: 1,
       passed: true,
@@ -667,6 +742,15 @@ export function rehearseUpgrade({
             },
           }
         : {}),
+      ...(scheduledCandidateBytes
+        ? {
+            scheduledCandidateCheckpoint: {
+              file: SCHEDULED_CANDIDATE_FILE,
+              sha256: sha256(scheduledCandidateBytes),
+              acceptedProofs: 0,
+            },
+          }
+        : {}),
       ...currentHistoryEvidence,
       ...(plan.canonicalHistoryProposal
         ? { canonicalHistoryProposal: plan.canonicalHistoryProposal }
@@ -704,6 +788,8 @@ export function rehearseUpgrade({
     writeFileSync(join(outputDir, CHAT_WORKSPACE_CATALOG_FILE), chatRoutineBytes);
   if (proofCatalogBytes)
     writeFileSync(join(outputDir, "upgrade-migration-proof-catalog.json"), proofCatalogBytes);
+  if (scheduledCandidateBytes)
+    writeFileSync(join(outputDir, SCHEDULED_CANDIDATE_FILE), scheduledCandidateBytes);
   writeFileSync(join(outputDir, resultFilename), JSON.stringify(result, null, 2) + "\n");
   return result;
 }
@@ -742,6 +828,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
           captureProofCatalog:
             !process.argv.includes("--historical-baseline") &&
             !process.argv.includes("--canonical-history"),
+          captureScheduledCandidate: process.argv.includes("--capture-scheduled-candidate"),
         }),
         null,
         2,
