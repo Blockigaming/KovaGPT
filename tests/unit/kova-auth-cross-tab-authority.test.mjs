@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
+import { readKovaRecoveryLink } from "../../src/lib/kova-recovery-link.mjs";
 
 const pending = () => {
   let resolve, reject;
@@ -45,6 +46,7 @@ function fixture() {
     }),
     dispatchPrincipalBrowserStorageCleared: () => {},
   };
+  modules["@/lib/kova-recovery-link.mjs"] = { readKovaRecoveryLink };
   modules["@/lib/kova-auth-browser"] = {
     KOVA_AUTH_CHANGE_KEY: "kova:auth-change",
     browserKovaAuthMode: () => "dual",
