@@ -49,8 +49,8 @@ export function AuthDialog({
   const [cooldown, setCooldown] = useState(0);
   const submittingRef = useRef(false);
   const navigate = useNavigate();
-  const providers = useAuthProviders(open);
   const useKovaAuth = browserKovaAuthEnabled();
+  const providers = useAuthProviders(open && !useKovaAuth);
 
   useEffect(() => {
     setPasskeySupported(browserSupportsPasskeys());
