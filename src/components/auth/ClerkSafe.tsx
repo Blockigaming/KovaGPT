@@ -106,6 +106,13 @@ function KovaClerkProvider({
   const [useLegacy, setUseLegacy] = useState(false);
   const [dialog, setDialog] = useState<AuthDialogState>({ open: false, mode: "sign-in" });
   const authReturnFocusRef = useRef<HTMLElement | null>(null);
+  // The reset route removes its fragment on mount. Keep its provider in place
+  // while the guest session resolves, or the remounted route loses the token.
+  const ownedRecovery = useRef(
+    typeof window !== "undefined" &&
+      window.location.pathname === "/reset-password" &&
+      /^#token=[A-Za-z0-9_-]{43,128}$/u.test(window.location.hash),
+  ).current;
 
   const purgeOwnerlessStateFor = useCallback((userId: string | null) => {
     const result = purgeUnscopedPrivateBrowserStorage(userId);
@@ -163,13 +170,13 @@ function KovaClerkProvider({
         if (cancelled || repeat) return;
         if (initial) announceKovaAuthChange();
         initial = false;
-        if (!principal && allowLegacyFallback) {
+        if (!principal && allowLegacyFallback && !ownedRecovery) {
           setKovaSessionActive(false);
           setUseLegacy(true);
           return;
         }
         purgeOwnerlessStateFor(principal?.accountId ?? null);
-        setKovaSessionActive(Boolean(principal) || !allowLegacyFallback);
+        setKovaSessionActive(Boolean(principal) || !allowLegacyFallback || ownedRecovery);
         setUseLegacy(false);
         setSession(principal ? toSession(principal) : null);
         setAuthIssue(null);
@@ -227,7 +234,7 @@ function KovaClerkProvider({
       window.removeEventListener("storage", storage);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [allowLegacyFallback, purgeOwnerlessStateFor, toSession]);
+  }, [allowLegacyFallback, ownedRecovery, purgeOwnerlessStateFor, toSession]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -295,7 +302,12 @@ function KovaClerkProvider({
   if (useLegacy) return <SupabaseClerkProvider>{children}</SupabaseClerkProvider>;
 
   return (
-    <Ctx.Provider key={isLoaded ? (session?.user.id ?? "guest") : "unresolved"} value={value}>
+    <Ctx.Provider
+      key={
+        ownedRecovery ? "owned-recovery" : isLoaded ? (session?.user.id ?? "guest") : "unresolved"
+      }
+      value={value}
+    >
       {children}
       {authIssue ? (
         <div
