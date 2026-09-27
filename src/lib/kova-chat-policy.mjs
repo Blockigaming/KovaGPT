@@ -47,7 +47,9 @@ const EFFORT_WIRE_LABELS = Object.freeze({
   ultra: "Ultra",
 });
 const ALLOWED_BY_TIER = Object.freeze({
-  guest: new Set(["chat:cosmo:light"]),
+  // Models ExecutionGrant has no guest tier or anonymous owner. A guest
+  // selection stays unavailable until an authenticated admission path exists.
+  guest: new Set(),
   free: new Set(["chat:cosmo:light"]),
   plus: new Set(
     KOVA_CHAT_ROUTES.filter((route) => ["light", "medium", "high"].includes(route.effortId)).map(

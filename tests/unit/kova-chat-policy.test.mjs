@@ -24,9 +24,9 @@ test("Chat has only Cosmo and Orion, with shared per-family effort settings", ()
   assert.ok(KOVA_CHAT_ROUTES.every((route) => !Object.hasOwn(route, "model")));
 });
 
-test("guest and Free see one Chat choice; Plus six and Pro twelve", () => {
+test("guest has no Kova grant; Free sees one, Plus six and Pro twelve", () => {
   for (const [tier, routes] of Object.entries({
-    guest: ["chat:cosmo:light"],
+    guest: [],
     free: ["chat:cosmo:light"],
     plus: [
       "chat:cosmo:light",
@@ -53,7 +53,7 @@ test("Chat display names follow the tier without changing Models effort IDs", ()
     kovaChatOptionsForTier(tier)
       .filter((route) => route.entitled && route.familyId === "cosmo")
       .map((route) => [route.effortId, route.effortLabel]);
-  assert.deepEqual(names("guest"), [["light", "Lite"]]);
+  assert.deepEqual(names("guest"), []);
   assert.deepEqual(names("free"), [["light", "Lite"]]);
   assert.deepEqual(names("plus"), [
     ["light", "Lite"],
