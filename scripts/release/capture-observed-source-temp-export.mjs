@@ -59,7 +59,9 @@ const run = (command, args, input, allowFailure = false) => {
   if (result.error || result.status !== 0) {
     if (allowFailure) return false;
     if (command === "docker")
-      console.error(`Local catalog query error: ${(result.stderr ?? result.error?.message ?? "unknown").slice(-1200)}`);
+      console.error(
+        `Local catalog query error: ${(result.stderr ?? result.error?.message ?? "unknown").slice(-1200)}`,
+      );
     throw new Error(`observed_source_local_command_failed:${basename(command)}:${args[0]}`);
   }
   return result.stdout;
