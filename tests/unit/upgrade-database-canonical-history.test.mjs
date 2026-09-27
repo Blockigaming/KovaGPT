@@ -20,6 +20,10 @@ import {
   SCHEDULED_CATALOG_QUERY_SHA256,
   SCHEDULED_CATALOG_SQL,
 } from "../../scripts/release/upgrade-database-scheduled-catalog.mjs";
+import {
+  SCHEDULED_TABLE_QUERY_SHA256,
+  SCHEDULED_TABLE_SQL,
+} from "../../scripts/release/upgrade-database-scheduled-tables.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const REPAIRED = ["20260822122000", "20260823113000", "20260903145843"];
@@ -182,7 +186,20 @@ test("canonical final scheduled catalog binds a read-only 209-version observatio
   const recurrence = final.routines.find((row) => row.name === "next_scheduled_task_occurrence");
   recurrence.volatility = "i";
   recurrence.definitionSha256 = "f".repeat(64);
+  const baselineTables = JSON.parse(
+    readFileSync(
+      join(
+        ROOT,
+        "docs/release-reconciliation/evidence/scheduled-tables-live-capture-20260924.json",
+      ),
+    ),
+  );
+  const finalTables = structuredClone(baselineTables);
+  finalTables.capturedAt = final.capturedAt;
+  finalTables.ledgerVersions = finalVersions;
+  finalTables.ledgerVersionCount = finalVersions.length;
   let catalogCalls = 0;
+  let tableCalls = 0;
   const result = rehearseUpgrade({
     canonicalHistory: true,
     currentHistory: true,
@@ -196,10 +213,16 @@ test("canonical final scheduled catalog binds a read-only 209-version observatio
         };
       if (command === "docker" && options.input === SCHEDULED_CATALOG_SQL)
         return { status: 0, stdout: JSON.stringify(++catalogCalls === 1 ? baseline : final) };
+      if (command === "docker" && options.input === SCHEDULED_TABLE_SQL)
+        return {
+          status: 0,
+          stdout: JSON.stringify(++tableCalls === 1 ? baselineTables : finalTables),
+        };
       return { status: 0, stdout: "", stderr: "" };
     },
   });
   assert.equal(catalogCalls, 2);
+  assert.equal(tableCalls, 2);
   assert.equal(result.passed, true);
   assert.equal(result.canonicalHistoryProposal.productionReleaseReady, false);
   assert.deepEqual(result.canonicalHistoryProposal.scheduledRecurrenceAssessment, {
@@ -234,6 +257,16 @@ test("canonical final scheduled catalog binds a read-only 209-version observatio
     ),
   );
   assert.equal(artifact.schemaProofPromoted, false);
+  const tableBytes = readFileSync(
+    join(ROOT, "artifacts/release/upgrade-canonical-scheduled-table-catalog.json"),
+  );
+  assert.equal(result.canonicalScheduledTables.querySha256, SCHEDULED_TABLE_QUERY_SHA256);
+  assert.equal(
+    result.canonicalScheduledTables.sha256,
+    createHash("sha256").update(tableBytes).digest("hex"),
+  );
+  assert.equal(JSON.parse(tableBytes).upgraded.capture.ledgerVersionCount, 209);
+  assert.equal(JSON.parse(tableBytes).schemaProofPromoted, false);
 });
 
 test("canonical recurrence assessment rejects an unexpected baseline and never approves a plan", () => {
@@ -310,10 +343,26 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
   final.capturedAt = "2026-09-28T00:00:00.000Z";
   final.ledgerVersions = [...baseline.ledgerVersions, ...dry.pendingVersions].sort();
   final.ledgerVersionCount = final.ledgerVersions.length;
+  const baselineTables = JSON.parse(
+    readFileSync(
+      join(
+        ROOT,
+        "docs/release-reconciliation/evidence/scheduled-tables-live-capture-20260924.json",
+      ),
+    ),
+  );
+  const finalTables = structuredClone(baselineTables);
+  finalTables.capturedAt = final.capturedAt;
+  finalTables.ledgerVersions = final.ledgerVersions;
+  finalTables.ledgerVersionCount = final.ledgerVersionCount;
   const oldArtifact = readFileSync(
     join(ROOT, "artifacts/release/upgrade-canonical-scheduled-catalog.json"),
   );
+  const oldTableArtifact = readFileSync(
+    join(ROOT, "artifacts/release/upgrade-canonical-scheduled-table-catalog.json"),
+  );
   let catalogCalls = 0;
+  let tableCalls = 0;
   let repaired = false;
   const result = rehearseUpgrade({
     currentHistory: true,
@@ -329,6 +378,11 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
         };
       if (command === "docker" && options.input === SCHEDULED_CATALOG_SQL)
         return { status: 0, stdout: JSON.stringify(++catalogCalls === 1 ? baseline : final) };
+      if (command === "docker" && options.input === SCHEDULED_TABLE_SQL)
+        return {
+          status: 0,
+          stdout: JSON.stringify(++tableCalls === 1 ? baselineTables : finalTables),
+        };
       if (args[0] === "migration" && args[1] === "repair") {
         repaired = true;
         assert.deepEqual(args.slice(5, 9), [...REPAIRED, "20260822143000"].sort());
@@ -343,6 +397,7 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
   });
   assert.equal(repaired, true);
   assert.equal(catalogCalls, 2);
+  assert.equal(tableCalls, 2);
   assert.equal(result.forwardMigrations.length, 107);
   assert.equal(result.canonicalHistoryProposal.expectedFinalLedgerCount, 209);
   assert.equal(
@@ -367,6 +422,20 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
   assert.deepEqual(
     readFileSync(join(ROOT, "artifacts/release/upgrade-canonical-scheduled-catalog.json")),
     oldArtifact,
+  );
+  assert.equal(
+    result.canonicalScheduledTables.file,
+    "upgrade-scheduled-history-hypothesis-table-catalog.json",
+  );
+  assert.equal(
+    createHash("sha256")
+      .update(readFileSync(join(ROOT, "artifacts/release", result.canonicalScheduledTables.file)))
+      .digest("hex"),
+    result.canonicalScheduledTables.sha256,
+  );
+  assert.deepEqual(
+    readFileSync(join(ROOT, "artifacts/release/upgrade-canonical-scheduled-table-catalog.json")),
+    oldTableArtifact,
   );
 });
 

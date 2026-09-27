@@ -81,6 +81,8 @@ const SCHEDULED_CANDIDATE_PREFIX = ["20260822122000", "20260822143000"];
 const SCHEDULED_CANDIDATE_FILE = "upgrade-scheduled-candidate-checkpoint.json";
 const CANONICAL_SCHEDULED_FILE = "upgrade-canonical-scheduled-catalog.json";
 const SCHEDULED_HYPOTHESIS_FILE = "upgrade-scheduled-history-hypothesis-catalog.json";
+const CANONICAL_SCHEDULED_TABLE_FILE = "upgrade-canonical-scheduled-table-catalog.json";
+const SCHEDULED_HYPOTHESIS_TABLE_FILE = "upgrade-scheduled-history-hypothesis-table-catalog.json";
 const FIXTURE_HEADER = Buffer.from(
   "-- Reviewed structural history fixture, never a live migration command.\n" +
     "-- Replayed only in the generated disposable local upgrade project.\n\n",
@@ -196,6 +198,9 @@ export function rehearseUpgrade({
   const canonicalScheduledFile = scheduledRecordOnlyHypothesis
     ? SCHEDULED_HYPOTHESIS_FILE
     : CANONICAL_SCHEDULED_FILE;
+  const canonicalScheduledTableFile = scheduledRecordOnlyHypothesis
+    ? SCHEDULED_HYPOTHESIS_TABLE_FILE
+    : CANONICAL_SCHEDULED_TABLE_FILE;
   // A failed full-run preflight must not leave an earlier success artifact.
   // Dry runs remain observational, including when their input is invalid.
   if (!dryRun) {
@@ -203,7 +208,7 @@ export function rehearseUpgrade({
     for (const file of [
       resultFilename,
       "upgrade-failure.log",
-      ...(canonicalHistory ? [canonicalScheduledFile] : []),
+      ...(canonicalHistory ? [canonicalScheduledFile, canonicalScheduledTableFile] : []),
       ...(!canonicalHistory
         ? [
             TEMP_EXPORT_PROOF_FILE,
@@ -325,6 +330,8 @@ export function rehearseUpgrade({
         ? {
             canonicalScheduledCatalogPlanned: true,
             canonicalScheduledQuerySha256: SCHEDULED_CATALOG_QUERY_SHA256,
+            canonicalScheduledTablesPlanned: true,
+            canonicalScheduledTablesQuerySha256: SCHEDULED_TABLE_QUERY_SHA256,
           }
         : {}),
       ...(captureScheduledCatalog
@@ -466,6 +473,8 @@ export function rehearseUpgrade({
   let scheduledCandidateBytes;
   let canonicalScheduledBaseline;
   let canonicalScheduledBytes;
+  let canonicalTableBaseline;
+  let canonicalTableBytes;
   try {
     supabase(["start", "-x", "studio,imgproxy,edge-runtime,logflare,vector,supavisor"]);
     supabase(["db", "reset", "--local", "--no-seed"]);
@@ -485,11 +494,16 @@ export function rehearseUpgrade({
         sql(SCHEDULED_CATALOG_SQL, true),
         baselineVersions,
       );
-    if (captureCanonicalScheduledCatalog)
+    if (captureCanonicalScheduledCatalog) {
       canonicalScheduledBaseline = parseScheduledCatalogCapture(
         sql(SCHEDULED_CATALOG_SQL, true),
         baselineVersions,
       );
+      canonicalTableBaseline = parseScheduledTableCapture(
+        sql(SCHEDULED_TABLE_SQL, true),
+        baselineVersions,
+      );
+    }
     if (captureScheduledTables)
       tableBaseline = parseScheduledTableCapture(sql(SCHEDULED_TABLE_SQL, true), baselineVersions);
     if (captureChatWorkspaceTables)
@@ -557,6 +571,9 @@ export function rehearseUpgrade({
       : null;
     const canonicalScheduledFinal = captureCanonicalScheduledCatalog
       ? parseScheduledCatalogCapture(sql(SCHEDULED_CATALOG_SQL, true), finalVersions)
+      : null;
+    const canonicalTableFinal = captureCanonicalScheduledCatalog
+      ? parseScheduledTableCapture(sql(SCHEDULED_TABLE_SQL, true), finalVersions)
       : null;
     const canonicalScheduledAssessment = captureCanonicalScheduledCatalog
       ? assessCanonicalScheduledRecurrence(canonicalScheduledBaseline, canonicalScheduledFinal)
@@ -663,6 +680,20 @@ export function rehearseUpgrade({
             }),
             proposedCanonicalRecurrence: canonicalScheduledAssessment,
           },
+          null,
+          2,
+        ) + "\n";
+    if (captureCanonicalScheduledCatalog)
+      canonicalTableBytes =
+        JSON.stringify(
+          buildScheduledTableEvidence({
+            baseline: canonicalTableBaseline,
+            upgraded: canonicalTableFinal,
+            baselineVersions,
+            finalVersions,
+            sourceCommit,
+            sourceTree,
+          }),
           null,
           2,
         ) + "\n";
@@ -815,6 +846,16 @@ export function rehearseUpgrade({
             },
           }
         : {}),
+      ...(canonicalTableBytes
+        ? {
+            canonicalScheduledTables: {
+              file: canonicalScheduledTableFile,
+              sha256: sha256(canonicalTableBytes),
+              querySha256: SCHEDULED_TABLE_QUERY_SHA256,
+              acceptedProofs: 0,
+            },
+          }
+        : {}),
       ...currentHistoryEvidence,
       ...(plan.canonicalHistoryProposal
         ? {
@@ -863,6 +904,8 @@ export function rehearseUpgrade({
     writeFileSync(join(outputDir, SCHEDULED_CANDIDATE_FILE), scheduledCandidateBytes);
   if (canonicalScheduledBytes)
     writeFileSync(join(outputDir, canonicalScheduledFile), canonicalScheduledBytes);
+  if (canonicalTableBytes)
+    writeFileSync(join(outputDir, canonicalScheduledTableFile), canonicalTableBytes);
   writeFileSync(join(outputDir, resultFilename), JSON.stringify(result, null, 2) + "\n");
   return result;
 }
