@@ -1,14 +1,16 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import {
   assessCanonicalScheduledRecurrence,
+  extendFirstRemoteScheduledOmission,
   extendProposedCanonicalHistory,
   extendScheduledRecordOnlyHypothesis,
+  FIRST_REMOTE_NOOP,
   HISTORY_ONLY_SENTINEL,
 } from "../../scripts/release/upgrade-database-canonical-history.mjs";
 import {
@@ -436,6 +438,117 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
   assert.deepEqual(
     readFileSync(join(ROOT, "artifacts/release/upgrade-canonical-scheduled-table-catalog.json")),
     oldTableArtifact,
+  );
+});
+
+test("first remote omission is a distinct pinned synthetic baseline, never an accepted proof", () => {
+  const dry = rehearseUpgrade({
+    currentHistory: true,
+    canonicalHistory: true,
+    captureCanonicalScheduledCatalog: true,
+    scheduledRecordOnlyHypothesis: true,
+    firstRemoteOmission: true,
+    dryRun: true,
+  });
+  assert.equal(dry.syntheticFixtureBodySubstitution.version, "20260823092107");
+  assert.equal(dry.syntheticFixtureBodySubstitution.baselineMatchesCapturedStatements, false);
+  assert.equal(dry.syntheticFixtureBodySubstitution.firstRemoteEffectProven, false);
+  assert.equal(dry.syntheticFixtureBodySubstitution.sourceActionApproved, false);
+  assert.throws(
+    () => rehearseUpgrade({ firstRemoteOmission: true, dryRun: true }),
+    /upgrade_first_remote_omission_hypothesis_required/u,
+  );
+  const canonical = extendScheduledRecordOnlyHypothesis(
+    extendProposedCanonicalHistory(
+      extendCurrentHistory(planUpgrade(), readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT))),
+    ),
+  );
+  const changed = {
+    ...canonical,
+    baseline: canonical.baseline.map((row) => ({ ...row })),
+  };
+  changed.baseline.find((row) => row.version === "20260823092107").sha256 = "0".repeat(64);
+  assert.throws(
+    () => extendFirstRemoteScheduledOmission(changed),
+    /upgrade_first_remote_omission_fixture_mismatch/u,
+  );
+
+  const baseline = JSON.parse(
+    readFileSync(
+      join(
+        ROOT,
+        "docs/release-reconciliation/evidence/scheduled-routines-live-capture-20260924.json",
+      ),
+    ),
+  );
+  const tables = JSON.parse(
+    readFileSync(
+      join(
+        ROOT,
+        "docs/release-reconciliation/evidence/scheduled-tables-live-capture-20260924.json",
+      ),
+    ),
+  );
+  const after = structuredClone(baseline);
+  after.capturedAt = "2026-09-28T00:00:00.000Z";
+  after.ledgerVersions = [...baseline.ledgerVersions, ...dry.pendingVersions].sort();
+  after.ledgerVersionCount = after.ledgerVersions.length;
+  const afterTables = structuredClone(tables);
+  afterTables.capturedAt = after.capturedAt;
+  afterTables.ledgerVersions = after.ledgerVersions;
+  afterTables.ledgerVersionCount = after.ledgerVersionCount;
+  const originalReceipt = readFileSync(
+    join(ROOT, "artifacts/release/upgrade-scheduled-history-hypothesis.json"),
+  );
+  const omitted = canonical.baseline.find((row) => row.version === "20260823092107");
+  let routineCalls = 0;
+  let tableCalls = 0;
+  let resetObserved = false;
+  const result = rehearseUpgrade({
+    currentHistory: true,
+    canonicalHistory: true,
+    captureCanonicalScheduledCatalog: true,
+    scheduledRecordOnlyHypothesis: true,
+    firstRemoteOmission: true,
+    inspectSource,
+    execute(command, args, options) {
+      if (command === "git")
+        return {
+          status: 0,
+          stdout: args.at(-1) === "HEAD^{tree}" ? "b".repeat(40) : "a".repeat(40),
+        };
+      if (command === "docker" && options.input === SCHEDULED_CATALOG_SQL)
+        return { status: 0, stdout: JSON.stringify(++routineCalls === 1 ? baseline : after) };
+      if (command === "docker" && options.input === SCHEDULED_TABLE_SQL)
+        return { status: 0, stdout: JSON.stringify(++tableCalls === 1 ? tables : afterTables) };
+      if (args[0] === "db" && args[1] === "reset") {
+        resetObserved = true;
+        assert.equal(
+          readFileSync(
+            join(options.cwd, "supabase/migrations", omitted.replayName ?? basename(omitted.path)),
+            "utf8",
+          ),
+          FIRST_REMOTE_NOOP,
+        );
+      }
+      return { status: 0, stdout: "", stderr: "" };
+    },
+  });
+  assert.equal(resetObserved, true);
+  assert.equal(routineCalls, 2);
+  assert.equal(tableCalls, 2);
+  assert.equal(result.forwardMigrations.length, 107);
+  assert.equal(result.syntheticFixtureBodySubstitution.baselineMatchesCapturedStatements, false);
+  for (const key of ["canonicalScheduledCatalog", "canonicalScheduledTables"]) {
+    const pointer = result[key];
+    assert.match(pointer.file, /^upgrade-first-remote-omission(?:-table)?-catalog\.json$/u);
+    const bytes = readFileSync(join(ROOT, "artifacts/release", pointer.file));
+    assert.equal(pointer.sha256, createHash("sha256").update(bytes).digest("hex"));
+    assert.equal(JSON.parse(bytes).syntheticFixtureBodySubstitution.firstRemoteEffectProven, false);
+  }
+  assert.deepEqual(
+    readFileSync(join(ROOT, "artifacts/release/upgrade-scheduled-history-hypothesis.json")),
+    originalReceipt,
   );
 });
 
