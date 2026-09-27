@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "captureKind": "chat-workspace-live-catalog-comparison",
+  "sourceCommit": "56c66d16dd8ae7e5310285608dda9ec61722d216",
+  "sourceTree": "91329495c0c8c1260140f5a5edb39f24aa3a59a7",
+  "liveLedgerVersionCount": 98,
+  "tables": {
+    "querySha256": "f4586501852be6a16cedf6561445fa4281b72f13a20cf3479f84ba37c8c0db26",
+    "artifactSha256": "ab01a0378a2ad3744f390156900dbab4bbacfae4002e0e28c8173f9cf4a884fc",
+    "liveCaptureSha256": "1301bcb6e155cad620d97e9caf0e79571fdfce06f8435cd0d2c70f0a16ff0ea1",
+    "capturedAt": "2026-09-27T18:01:31.647Z",
+    "baselineVsLive": [],
+    "sourceFinalVsLive": [
+      {
+        "table": "public.chat_branches",
+        "fields": ["constraints", "indexes", "policies", "triggers"]
+      },
+      {
+        "table": "public.chat_custom_rules",
+        "fields": ["constraints", "indexes", "policies", "triggers"]
+      },
+      {
+        "table": "public.chat_message_versions",
+        "fields": ["constraints", "indexes", "policies", "triggers"]
+      },
+      {
+        "table": "public.chat_pinned_files",
+        "fields": ["constraints", "indexes", "policies", "triggers"]
+      }
+    ],
+    "baselineFingerprint": {
+      "schema": "27f9fecafce6c72340d640207bafff6bda79675e71cb8eba36a255a6c266727c",
+      "acl": "eeb967a9e6235e0b5b2516296fd3a303ea1784ed6cc28154fc047758de0e9638",
+      "rls": "d5ed1a8d82b22246dc7c40003e74acbdbee5783d4f7ad89c46a178286584c3fb",
+      "trigger": "12f1e1106aa4387a0c793b654697dd4e82afb1313ff2598e947f708fc5477a8f"
+    },
+    "sourceFinalFingerprint": {
+      "schema": "f2faa445e89d3ebe3730d8a6a62abbe037ee4caf79d1aa1058be9cbf2327aec5",
+      "acl": "eeb967a9e6235e0b5b2516296fd3a303ea1784ed6cc28154fc047758de0e9638",
+      "rls": "1b520505f4a682ac23b1f3bcba4891831c1628b0a971cfc060d940e09a933488",
+      "trigger": "1717ca268db8ce29359a592f050fb9b685215a604d3849868680e35ca52ec5d8"
+    },
+    "liveFingerprint": {
+      "schema": "27f9fecafce6c72340d640207bafff6bda79675e71cb8eba36a255a6c266727c",
+      "acl": "eeb967a9e6235e0b5b2516296fd3a303ea1784ed6cc28154fc047758de0e9638",
+      "rls": "d5ed1a8d82b22246dc7c40003e74acbdbee5783d4f7ad89c46a178286584c3fb",
+      "trigger": "12f1e1106aa4387a0c793b654697dd4e82afb1313ff2598e947f708fc5477a8f"
+    }
+  },
+  "routines": {
+    "querySha256": "5e7e22c232389e7aa2273417c8465585555da2d831739e696b1a93d7e6c950de",
+    "artifactSha256": "6ad8ee76bc1538936849b8214326a23127a4f4ed37522a6b88b72bb2b088d8fd",
+    "liveCaptureSha256": "dd5f7c81ae30fe40cee8d3a77bbc312785f4181122d91313147c8f0b4e16d58b",
+    "capturedAt": "2026-09-27T18:01:53.987Z",
+    "baselineVsLive": [
+      {
+        "identity": "[\"public\",\"set_active_chat_branch\",\"p_chat_id text, p_branch_id uuid\"]",
+        "kind": "changed",
+        "fields": ["acl", "effectivePrivileges"]
+      }
+    ],
+    "sourceFinalVsLive": [
+      {
+        "identity": "[\"public\",\"accept_chat_message_version\",\"p_version_id uuid\"]",
+        "kind": "changed",
+        "fields": ["language", "bodyBytes", "bodySha256", "definitionSha256"]
+      },
+      {
+        "identity": "[\"public\",\"activate_chat_branch\",\"p_branch_id uuid\"]",
+        "kind": "changed",
+        "fields": ["bodyBytes", "bodySha256", "definitionSha256"]
+      },
+      {
+        "identity": "[\"public\",\"create_chat_branch\",\"p_chat_id text, p_conversation_id text, p_parent_branch_id uuid, p_branch_from_parent_message_id text, p_branch_from_message_id text, p_branch_from_message_index integer, p_message_ids text[], p_label text, p_activate boolean, p_max_branches integer\"]",
+        "kind": "removed"
+      },
+      {
+        "identity": "[\"public\",\"create_chat_branch\",\"p_chat_id text, p_parent_branch_id uuid, p_branch_from_message_id text, p_branch_from_parent_message_id text, p_label text, p_activate boolean\"]",
+        "kind": "changed",
+        "fields": ["language", "bodyBytes", "bodySha256", "definitionSha256"]
+      },
+      {
+        "identity": "[\"public\",\"get_chat_workspace_state\",\"p_chat_id text, p_message_id text\"]",
+        "kind": "changed",
+        "fields": ["bodyBytes", "bodySha256", "definitionSha256"]
+      },
+      {
+        "identity": "[\"public\",\"kova_accept_message_version\",\"p_version_id uuid\"]",
+        "kind": "changed",
+        "fields": ["bodyBytes", "bodySha256", "definitionSha256"]
+      },
+      {
+        "identity": "[\"public\",\"kova_activate_chat_branch\",\"p_chat_id text, p_branch_id uuid\"]",
+        "kind": "changed",
+        "fields": ["bodyBytes", "bodySha256", "definitionSha256"]
+      },
+      {
+        "identity": "[\"public\",\"kova_can_pin_source\",\"p_source_type text, p_source_id uuid, p_project_id uuid\"]",
+        "kind": "removed"
+      },
+      {
+        "identity": "[\"public\",\"kova_chat_branch_lineage_guard\",\"\"]",
+        "kind": "removed"
+      },
+      {
+        "identity": "[\"public\",\"kova_create_chat_branch\",\"p_chat_id text, p_conversation_id text, p_parent_branch_id uuid, p_branch_from_parent_message_id text, p_branch_from_message_id text, p_branch_from_message_index integer, p_message_ids text[], p_label text, p_activate boolean, p_max_branches integer\"]",
+        "kind": "changed",
+        "fields": ["bodyBytes", "bodySha256", "definitionSha256"]
+      },
+      {
+        "identity": "[\"public\",\"kova_record_message_version\",\"p_chat_id text, p_message_id text, p_source text, p_content text, p_branch_id uuid, p_instruction text, p_original_content text, p_accepted boolean, p_selection_start integer, p_selection_end integer, p_max_versions integer\"]",
+        "kind": "changed",
+        "fields": ["bodyBytes", "bodySha256", "definitionSha256"]
+      },
+      {
+        "identity": "[\"public\",\"kova_set_updated_at\",\"\"]",
+        "kind": "removed"
+      },
+      {
+        "identity": "[\"public\",\"set_active_chat_branch\",\"p_chat_id text, p_branch_id uuid\"]",
+        "kind": "changed",
+        "fields": ["acl", "effectivePrivileges"]
+      }
+    ],
+    "baselineFingerprint": {
+      "routineSha256": "beb9d1c24998716a19c9efb196636a2723e05155b60dfbb56954ffba1f521ef1",
+      "aclSha256": "dbb1c7b3d923eecd6fa4f3dd21812f8d63a09195464c1a0da0460c5f1692c289"
+    },
+    "sourceFinalFingerprint": {
+      "routineSha256": "2131ad3527f9f8ccd57b83d3faabc50a4085e6cc4ef9ac76829193f895e08381",
+      "aclSha256": "a5e3cc83ae4c2cd993c7427ad9d4291011130446bb2ae1d80167e5322c8d29b2"
+    },
+    "liveFingerprint": {
+      "routineSha256": "beb9d1c24998716a19c9efb196636a2723e05155b60dfbb56954ffba1f521ef1",
+      "aclSha256": "7634df84b50b2479057eae903e177bd0a2cb184cb2a3ea8182a1ffc8f21dffea"
+    }
+  },
+  "liveData": {
+    "querySha256": "2c4d62919fae56192644d4f104605da4e6b0a0e998e5edc5cad61838dc15f947",
+    "captureSha256": "7161c35e65dc2d7f5c0cc9573b325fd4b3140d97d4b8d9bd2f8d89b29b6fec83",
+    "capturedAt": "2026-09-27T18:03:17.211Z",
+    "observedViolationCount": 0
+  },
+  "liveCatalogCompared": true,
+  "schemaProofPromoted": false,
+  "canonicalHistoryReconciled": false,
+  "productionReleaseReady": false,
+  "limitations": [
+    "The source replay is isolated; these live reads and data counts occurred separately. Concurrent changes between captures cannot be excluded.",
+    "The count query returns only aggregate counts. Its client-recorded time/project and catalog-ledger association do not independently attest database settings, provenance, or an atomic snapshot.",
+    "The catalog envelopes record the Supabase project selected by the client; generic PostgreSQL database names and client-recorded project fields cannot authenticate origin without independent review of the connector calls.",
+    "Table metadata and selected routine-name families are covered. Other dependencies, views and executable behavior need their own scope and synthetic tests.",
+    "No mapping is promoted; a current checkpoint, later-writer review, full scope, independent acceptance and restore evidence are required."
+  ]
+}
