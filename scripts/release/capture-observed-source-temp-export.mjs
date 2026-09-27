@@ -16,7 +16,7 @@ if (checkpoint.ledgerVersions.length !== lineage.observedSourceMigrationCount)
 // The complete Git object, rather than the current working tree, supplies the
 // migration bodies. A unique local project prevents overlap with other CI jobs.
 const project = mkdtempSync(join(tmpdir(), "kova-observed-source-"));
-const projectId = `kova_observed_${randomUUID().replaceAll("-", "")}`;
+const projectId = `kova_observed_${randomUUID().slice(0, 12).replaceAll("-", "")}`;
 const migrationsDir = join(project, "supabase/migrations");
 const output = resolve(process.argv[2] ?? "artifacts/release/observed-source-temp-export.json");
 const cli = join(root, "node_modules/.bin/supabase");
