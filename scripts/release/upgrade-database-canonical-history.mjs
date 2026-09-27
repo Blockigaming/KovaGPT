@@ -180,3 +180,58 @@ export function extendScheduledRecordOnlyHypothesis(plan) {
     },
   };
 }
+
+// A disposable counterfactual: preserve the first remote ledger version but
+// replay a harmless statement in its place, then let the pinned second remote
+// body and the 107+4 source sequence run as before. This can compare final
+// scoped catalogs; it cannot prove what happened to production rows or grants.
+export const FIRST_REMOTE_NOOP = "select 1;\n";
+export function extendFirstRemoteScheduledOmission(plan) {
+  if (
+    plan.canonicalHistoryProposal?.status !==
+      "synthetic_scheduled_record_only_hypothesis_no_production_history_repair" ||
+    plan.baseline?.length !== 98 ||
+    plan.executionForward?.length !== 107 ||
+    plan.recordOnlyVersions?.length !== 4
+  )
+    throw new Error("upgrade_first_remote_omission_plan_invalid");
+  const first = plan.baseline.filter((row) => row.version === "20260823092107");
+  const second = plan.baseline.filter((row) => row.version === "20260823092450");
+  if (
+    first.length !== 1 ||
+    second.length !== 1 ||
+    first[0].origin !== "reviewed_structural_fixture" ||
+    first[0].statementCount !== 1 ||
+    first[0].sha256 !== "6dd86a55e89eeeacf8748e8a52cc4a0380e0e7d2c820a58cda6eb1ea07de9171" ||
+    first[0].capturedStatementsSha256 !==
+      "36c62ee32dad94f2940361030de17d29a7d32a2650e2462aee506b6b97530441" ||
+    first[0].capturedStatementsMd5 !== "a0b35aef40ab1c251b7611aa596479a5" ||
+    second[0].capturedStatementsSha256 !==
+      "822e5dbc631673be4127994af60abc265f778ccb7ab703a4b02741bbb47f6190" ||
+    sha256(first[0].content) !== first[0].sha256 ||
+    sha256(second[0].content) !== second[0].sha256
+  )
+    throw new Error("upgrade_first_remote_omission_fixture_mismatch");
+  const syntheticFixtureBodySubstitution = {
+    version: first[0].version,
+    originalFixtureSha256: first[0].sha256,
+    originalCapturedStatementsSha256: first[0].capturedStatementsSha256,
+    secondRemoteCapturedStatementsSha256: second[0].capturedStatementsSha256,
+    substitutedStatementSha256: sha256(FIRST_REMOTE_NOOP),
+    baselineMatchesCapturedStatements: false,
+    firstRemoteEffectProven: false,
+    sourceActionApproved: false,
+  };
+  return {
+    ...plan,
+    baseline: plan.baseline.map((row) =>
+      row === first[0] ? { ...row, content: Buffer.from(FIRST_REMOTE_NOOP) } : row,
+    ),
+    syntheticFixtureBodySubstitution,
+    canonicalHistoryProposal: {
+      ...plan.canonicalHistoryProposal,
+      status: "synthetic_first_remote_omission_no_production_history_repair",
+      syntheticFixtureBodySubstitution,
+    },
+  };
+}

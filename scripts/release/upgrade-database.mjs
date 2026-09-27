@@ -19,6 +19,7 @@ import {
 } from "./upgrade-database-current-history.mjs";
 import {
   assessCanonicalScheduledRecurrence,
+  extendFirstRemoteScheduledOmission,
   extendProposedCanonicalHistory,
   extendScheduledRecordOnlyHypothesis,
   HISTORY_ONLY_SENTINEL,
@@ -81,8 +82,10 @@ const SCHEDULED_CANDIDATE_PREFIX = ["20260822122000", "20260822143000"];
 const SCHEDULED_CANDIDATE_FILE = "upgrade-scheduled-candidate-checkpoint.json";
 const CANONICAL_SCHEDULED_FILE = "upgrade-canonical-scheduled-catalog.json";
 const SCHEDULED_HYPOTHESIS_FILE = "upgrade-scheduled-history-hypothesis-catalog.json";
+const FIRST_REMOTE_OMISSION_FILE = "upgrade-first-remote-omission-catalog.json";
 const CANONICAL_SCHEDULED_TABLE_FILE = "upgrade-canonical-scheduled-table-catalog.json";
 const SCHEDULED_HYPOTHESIS_TABLE_FILE = "upgrade-scheduled-history-hypothesis-table-catalog.json";
+const FIRST_REMOTE_OMISSION_TABLE_FILE = "upgrade-first-remote-omission-table-catalog.json";
 const FIXTURE_HEADER = Buffer.from(
   "-- Reviewed structural history fixture, never a live migration command.\n" +
     "-- Replayed only in the generated disposable local upgrade project.\n\n",
@@ -186,21 +189,28 @@ export function rehearseUpgrade({
   captureScheduledCandidate = false,
   captureCanonicalScheduledCatalog = false,
   scheduledRecordOnlyHypothesis = false,
+  firstRemoteOmission = false,
   execute = spawnSync,
   inspectSource = captureCleanUpgradeSource,
 } = {}) {
   const outputDir = join(root, "artifacts/release");
-  const resultFilename = scheduledRecordOnlyHypothesis
-    ? "upgrade-scheduled-history-hypothesis.json"
-    : canonicalHistory
-      ? "upgrade-canonical-history.json"
-      : "upgrade-database.json";
-  const canonicalScheduledFile = scheduledRecordOnlyHypothesis
-    ? SCHEDULED_HYPOTHESIS_FILE
-    : CANONICAL_SCHEDULED_FILE;
-  const canonicalScheduledTableFile = scheduledRecordOnlyHypothesis
-    ? SCHEDULED_HYPOTHESIS_TABLE_FILE
-    : CANONICAL_SCHEDULED_TABLE_FILE;
+  const resultFilename = firstRemoteOmission
+    ? "upgrade-first-remote-omission.json"
+    : scheduledRecordOnlyHypothesis
+      ? "upgrade-scheduled-history-hypothesis.json"
+      : canonicalHistory
+        ? "upgrade-canonical-history.json"
+        : "upgrade-database.json";
+  const canonicalScheduledFile = firstRemoteOmission
+    ? FIRST_REMOTE_OMISSION_FILE
+    : scheduledRecordOnlyHypothesis
+      ? SCHEDULED_HYPOTHESIS_FILE
+      : CANONICAL_SCHEDULED_FILE;
+  const canonicalScheduledTableFile = firstRemoteOmission
+    ? FIRST_REMOTE_OMISSION_TABLE_FILE
+    : scheduledRecordOnlyHypothesis
+      ? SCHEDULED_HYPOTHESIS_TABLE_FILE
+      : CANONICAL_SCHEDULED_TABLE_FILE;
   // A failed full-run preflight must not leave an earlier success artifact.
   // Dry runs remain observational, including when their input is invalid.
   if (!dryRun) {
@@ -258,6 +268,11 @@ export function rehearseUpgrade({
       throw new Error("upgrade_canonical_scheduled_history_required");
     if (scheduledRecordOnlyHypothesis && (!canonicalHistory || !captureCanonicalScheduledCatalog))
       throw new Error("upgrade_scheduled_hypothesis_canonical_capture_required");
+    if (
+      firstRemoteOmission &&
+      (!scheduledRecordOnlyHypothesis || !captureCanonicalScheduledCatalog)
+    )
+      throw new Error("upgrade_first_remote_omission_hypothesis_required");
     if (!dryRun) {
       sourceBefore = inspectSource(root);
       assertUpgradeSourceUnchanged(sourceBefore, sourceBefore);
@@ -271,6 +286,7 @@ export function rehearseUpgrade({
     if (canonicalHistory)
       plan = extendProposedCanonicalHistory(plan, root, readSource, readDirectory);
     if (scheduledRecordOnlyHypothesis) plan = extendScheduledRecordOnlyHypothesis(plan);
+    if (firstRemoteOmission) plan = extendFirstRemoteScheduledOmission(plan);
     if (
       captureScheduledCandidate &&
       JSON.stringify(plan.executionForward.slice(0, 2).map((row) => row.version)) !==
@@ -333,6 +349,9 @@ export function rehearseUpgrade({
             canonicalScheduledTablesPlanned: true,
             canonicalScheduledTablesQuerySha256: SCHEDULED_TABLE_QUERY_SHA256,
           }
+        : {}),
+      ...(plan.syntheticFixtureBodySubstitution
+        ? { syntheticFixtureBodySubstitution: plan.syntheticFixtureBodySubstitution }
         : {}),
       ...(captureScheduledCatalog
         ? {
@@ -679,6 +698,9 @@ export function rehearseUpgrade({
               sourceTree,
             }),
             proposedCanonicalRecurrence: canonicalScheduledAssessment,
+            ...(plan.syntheticFixtureBodySubstitution
+              ? { syntheticFixtureBodySubstitution: plan.syntheticFixtureBodySubstitution }
+              : {}),
           },
           null,
           2,
@@ -686,14 +708,19 @@ export function rehearseUpgrade({
     if (captureCanonicalScheduledCatalog)
       canonicalTableBytes =
         JSON.stringify(
-          buildScheduledTableEvidence({
-            baseline: canonicalTableBaseline,
-            upgraded: canonicalTableFinal,
-            baselineVersions,
-            finalVersions,
-            sourceCommit,
-            sourceTree,
-          }),
+          {
+            ...buildScheduledTableEvidence({
+              baseline: canonicalTableBaseline,
+              upgraded: canonicalTableFinal,
+              baselineVersions,
+              finalVersions,
+              sourceCommit,
+              sourceTree,
+            }),
+            ...(plan.syntheticFixtureBodySubstitution
+              ? { syntheticFixtureBodySubstitution: plan.syntheticFixtureBodySubstitution }
+              : {}),
+          },
           null,
           2,
         ) + "\n";
@@ -857,6 +884,9 @@ export function rehearseUpgrade({
           }
         : {}),
       ...currentHistoryEvidence,
+      ...(plan.syntheticFixtureBodySubstitution
+        ? { syntheticFixtureBodySubstitution: plan.syntheticFixtureBodySubstitution }
+        : {}),
       ...(plan.canonicalHistoryProposal
         ? {
             canonicalHistoryProposal: {
@@ -949,6 +979,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
           scheduledRecordOnlyHypothesis: process.argv.includes(
             "--scheduled-record-only-hypothesis",
           ),
+          firstRemoteOmission: process.argv.includes("--omit-first-remote-scheduled-body"),
         }),
         null,
         2,

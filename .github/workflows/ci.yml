@@ -456,6 +456,8 @@ jobs:
         run: node scripts/release/upgrade-database.mjs --canonical-history
       - name: Compare scheduled history-only hypothesis in isolated database
         run: node scripts/release/upgrade-database.mjs --canonical-history --scheduled-record-only-hypothesis
+      - name: Compare first remote scheduled-body omission in isolated database
+        run: node scripts/release/upgrade-database.mjs --canonical-history --scheduled-record-only-hypothesis --omit-first-remote-scheduled-body
       - run: npm run release:schema && git diff --exit-code -- database-contract.json
       - name: Upload upgrade rehearsal evidence
         if: always()
