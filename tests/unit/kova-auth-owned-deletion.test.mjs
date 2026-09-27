@@ -49,6 +49,14 @@ const snapshot = async (db) =>
 test("owned final deletion requires the irreversible fence and exact current session, preserves another owner and cascades owned secrets", async () => {
   const { db, account, sibling } = await fixture();
   try {
+    // Model a Google-adopted account whose hosted authority was not yet retired.
+    await db.query("delete from kova_private.auth_legacy_retirements where account_id=$1", [owner]);
+    await db.query("insert into auth.sessions(id,user_id) values($1,$2)", [randomUUID(), owner]);
+    assert.equal(
+      (await db.query("select public.kova_auth_legacy_session_allowed($1) allowed", [owner]))
+        .rows[0].allowed,
+      true,
+    );
     assert.equal(await finish(db, owner, account.session_id), false);
     await db.query("insert into public.account_deletion_fences(user_id) values($1)", [owner]);
     await assert.rejects(
@@ -64,6 +72,25 @@ test("owned final deletion requires the irreversible fence and exact current ses
     assert.equal(await finish(db, owner, account.session_id), true);
     assert.equal(await finish(db, owner, account.session_id), true);
     await db.exec("reset role");
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int n from kova_private.auth_legacy_retirements where account_id=$1",
+          [owner],
+        )
+      ).rows[0].n,
+      1,
+    );
+    assert.equal(
+      (await db.query("select count(*)::int n from auth.sessions where user_id=$1", [owner]))
+        .rows[0].n,
+      0,
+    );
+    assert.equal(
+      (await db.query("select public.kova_auth_legacy_session_allowed($1) allowed", [owner]))
+        .rows[0].allowed,
+      false,
+    );
     for (const table of [
       "auth.users",
       "kova_private.auth_accounts",

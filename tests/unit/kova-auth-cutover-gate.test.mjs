@@ -72,6 +72,7 @@ const evidence = () => ({
 
 test("cutover receipt binds the deployed build, live database and fresh evidence", () => {
   assert.ok(requiredMigrations.includes("kova_restore_legacy_private_helper_usage"));
+  assert.ok(requiredMigrations.includes("kova_owned_auth_remaining_review_fixes"));
   assert.deepEqual(validateCutoverEvidence(evidence(), options), {
     sourceSha,
     configSha256,

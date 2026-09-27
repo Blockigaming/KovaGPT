@@ -174,10 +174,12 @@ presence/verification, signatures, counter rules and backup eligibility. Embedde
 cross-origin ceremonies, malformed/noncanonical binary encodings and incorrect
 user handles are rejected. User handles are derived from stable account UUIDs.
 
-`POST /api/auth/passkeys/register/options` requires an owned session and either
-current-password verification at AAL1 or an already verified AAL2 session. The
-resulting registration challenge binds the account, session and applicable
-password credential revision. `POST /api/auth/passkeys/login/options` is
+`POST /api/auth/passkeys/register/options` requires an owned session and current-password
+verification at AAL1, an already verified AAL2 session, or a Google/passkey
+primary sign-in audited on this exact session within five minutes. The latter
+allows a Google-only account to add its first passkey; a refresh or rotated
+session cannot renew the proof. The resulting registration challenge binds the
+account, session and applicable password credential revision. `POST /api/auth/passkeys/login/options` is
 discoverable: no email/account selector or credential list is accepted or returned.
 Both create five-minute SHA-256-digested challenges and a browser-bound
 `__Host-kova_passkey` cookie (Secure, HttpOnly, SameSite=Strict).

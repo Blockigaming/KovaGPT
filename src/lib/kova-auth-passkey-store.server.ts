@@ -112,6 +112,13 @@ export async function listPasskeys(sessionDigest: string): Promise<PasskeyListIt
   });
 }
 
+export async function recentPasskeyPrimarySession(sessionDigest: string): Promise<boolean> {
+  const operation = "kova_auth_passkey_recent_primary_session";
+  const value = await rpc<unknown>(operation, { p_session_digest_hex: sessionDigest });
+  if (typeof value !== "boolean") return fail(operation);
+  return value;
+}
+
 export async function lookupPasskey(credentialId: string): Promise<StoredKovaPasskey | null> {
   const operation = "kova_auth_lookup_passkey";
   const value = await rpc<unknown>(operation, { p_credential_id: credentialId });

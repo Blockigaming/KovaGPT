@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 185,
-  "latest": "20260925143706_kova_restore_legacy_private_helper_usage.sql",
+  "count": 186,
+  "latest": "20260927163950_kova_owned_auth_remaining_review_fixes.sql",
   "migrations": [
     {
       "order": 1,
@@ -3887,6 +3887,28 @@
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 186,
+      "filename": "20260927163950_kova_owned_auth_remaining_review_fixes.sql",
+      "timestamp": "20260927163950",
+      "sha256": "83c429d97ca4cdcf7406adfa6f021b1f7e50898959f51e528321338627ea3c2c",
+      "tables": [],
+      "functions": [
+        "legacy_mfa_required",
+        "recent_primary_session",
+        "kova_auth_passkey_recent_primary_session",
+        "kova_auth_begin_passkey_challenge",
+        "kova_auth_activate_totp_with_session",
+        "kova_auth_finalize_account_deletion",
+        "kova_auth_legacy_mfa_gap_count"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],

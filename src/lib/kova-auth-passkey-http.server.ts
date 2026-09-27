@@ -21,6 +21,7 @@ import {
   finishPasskeyRegistration,
   finishPasskeyLogin,
   listPasskeys,
+  recentPasskeyPrimarySession,
   lookupPasskey,
   renamePasskey,
   removePasskey,
@@ -102,7 +103,8 @@ export async function handleKovaPasskeyList(request: Request): Promise<Response>
     kovaPasskeyRp(publicOrigin());
     const principal = bound;
     const keys = await listPasskeys(sessionDigest);
-    const requiresPassword = principal.assuranceLevel !== "aal2";
+    const requiresPassword =
+      principal.assuranceLevel !== "aal2" && !(await recentPasskeyPrimarySession(sessionDigest));
     const password = requiresPassword ? await lookupPassword(principal.email) : null;
     return json({
       passkeys: keys.map(({ id, friendlyName, createdAt, lastUsedAt }) => ({
@@ -148,21 +150,26 @@ export async function handleKovaPasskeyRegisterOptions(request: Request): Promis
     let credentialId: string | undefined;
     let credentialRevision: number | undefined;
     if (principal.assuranceLevel !== "aal2") {
-      const password = await lookupPassword(principal.email);
       if (
-        typeof body.currentPassword !== "string" ||
-        body.currentPassword.length > 1024 ||
-        !password ||
-        password.accountId !== principal.accountId ||
-        !(await verifyKovaPassword(body.currentPassword, password.passwordHash))
+        body.currentPassword !== undefined ||
+        !(await recentPasskeyPrimarySession(sessionDigest))
       ) {
-        return jsonError(
-          "Confirm your current password or sign in with two-factor authentication.",
-          401,
-        );
+        const password = await lookupPassword(principal.email);
+        if (
+          typeof body.currentPassword !== "string" ||
+          body.currentPassword.length > 1024 ||
+          !password ||
+          password.accountId !== principal.accountId ||
+          !(await verifyKovaPassword(body.currentPassword, password.passwordHash))
+        ) {
+          return jsonError(
+            "Confirm your current password or sign in with two-factor authentication.",
+            401,
+          );
+        }
+        credentialId = password.credentialId;
+        credentialRevision = password.credentialRevision;
       }
-      credentialId = password.credentialId;
-      credentialRevision = password.credentialRevision;
     }
     const keys = await listPasskeys(sessionDigest);
     const options = await kovaPasskeyRegistrationOptions({

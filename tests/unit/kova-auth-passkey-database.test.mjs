@@ -26,7 +26,7 @@ test("passkeys are service-only and private tables grant no browser access", asy
       has_function_privilege('anon',p.oid,'execute') as anon,
       has_function_privilege('authenticated',p.oid,'execute') as browser
       from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'kova_auth_%passkey%'`);
-    assert.equal(result.rows.length, 8);
+    assert.equal(result.rows.length, 9);
     for (const row of result.rows) {
       assert.equal(row.prosecdef, true);
       assert.ok(row.proconfig.includes('search_path=""'));
