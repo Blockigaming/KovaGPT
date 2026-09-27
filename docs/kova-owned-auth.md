@@ -350,6 +350,24 @@ an email address. A suspended hosted account also remains in the census, and
 a suspended mapped account with legacy MFA remains in the MFA gap count.
 These checks establish database state, not a deployed application rehearsal.
 
+The September 27 RP-bound census returned **two** remaining adoption gaps and
+zero legacy MFA gaps. One remaining confirmed hosted account has no hosted
+password, hosted session, or owned mapping. In a disposable PostgreSQL-backed
+test, ordinary owned signup for an email-only hosted account kept the original
+UUID, queued a mailbox verification, and left the gap open until the one-time
+proof was explicitly consumed. Verification activated its owned password,
+retired hosted authority, and closed the gap; replay failed. This gives an
+account holder who controls that mailbox a possible self-service route during
+a separately authorized live rehearsal, without changing the existing
+one-recipient recovery dispatcher. It is local source evidence, not proof that
+the deployed UI, mail delivery, or that particular account has completed
+adoption. If the mailbox holder or account purpose is unknown, resolve that
+identity before attempting adoption or any disposition.
+The separate real HTTP/store/database check also exercised signup, a
+non-consuming verification GET, explicit same-origin POST, cleanup of the
+unused compatibility candidate, immediate verification-session revocation,
+and subsequent owned password login.
+
 `scripts/release/kova-auth-cutover-gate.mjs` accepts a JSON receipt outside the
 source tree and compares it with a clean checked-out commit. Run it with
 `--evidence <receipt.json> --environment <name> --project-ref <ref>

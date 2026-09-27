@@ -188,6 +188,94 @@ test("mailbox-proven recovery adopts an email-only hosted account and retires ho
   }
 });
 
+test("mailbox-verified signup adopts an email-only hosted account without a recovery dispatcher", async () => {
+  const db = await authDatabase();
+  try {
+    const email = `${owner}@example.invalid`;
+    await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,$2,$3)", [
+      owner,
+      email,
+      now,
+    ]);
+    await db.query("insert into auth.identities(id,user_id) values($1,$2)", [randomUUID(), owner]);
+    assert.equal(await adoptionGapCount(db), 1);
+
+    const candidate = (
+      await db.query("select public.kova_auth_create_compatibility_principal() as id")
+    ).rows[0].id;
+    const pending = (
+      await db.query(
+        `select * from public.kova_auth_create_password_account(
+          $1,$2,'Owner',$3,$4,$5,jsonb_build_object('to',$2::text,'label','kova-auth-verification'),$6)`,
+        [candidate, email, stagedHash, digest("email-only-signup"), expiry, now],
+      )
+    ).rows[0];
+    assert.equal(pending.account_id, owner);
+    assert.equal(pending.candidate_used, false);
+    assert.equal(pending.verification_created, true);
+    assert.equal(await adoptionGapCount(db), 1); // Pending signup is not adoption.
+    assert.equal(
+      (
+        await db.query("select public.kova_auth_delete_unused_compatibility_principal($1) as ok", [
+          candidate,
+        ])
+      ).rows[0].ok,
+      true,
+    );
+
+    const verified = (
+      await db.query("select * from public.kova_auth_consume_verification($1,$2,$3,$4)", [
+        digest("email-only-signup"),
+        digest("email-only-signup-session"),
+        expiry,
+        now,
+      ])
+    ).rows[0];
+    assert.equal(verified.account_id, owner);
+    assert.equal(verified.assurance_level, "aal1");
+    assert.equal(await adoptionGapCount(db), 0);
+    assert.equal(await gapCount(db), 0);
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int as n from kova_private.auth_legacy_retirements where account_id=$1",
+          [owner],
+        )
+      ).rows[0].n,
+      1,
+    );
+    assert.equal(
+      (
+        await db.query(
+          "select count(*)::int as n from auth.users where id=$1 and encrypted_password is null",
+          [owner],
+        )
+      ).rows[0].n,
+      1,
+    );
+    assert.equal(
+      (
+        await db.query("select account_id from public.kova_auth_resolve_session($1,$2)", [
+          digest("email-only-signup-session"),
+          now,
+        ])
+      ).rows[0].account_id,
+      owner,
+    );
+    await assert.rejects(
+      db.query("select * from public.kova_auth_consume_verification($1,$2,$3,$4)", [
+        digest("email-only-signup"),
+        digest("replayed-signup-session"),
+        expiry,
+        now,
+      ]),
+      /kova_auth_invalid_verification/u,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
 test("cutover census accepts a verified owned Google credential for an adopted hosted identity", async () => {
   const db = await authDatabase();
   try {

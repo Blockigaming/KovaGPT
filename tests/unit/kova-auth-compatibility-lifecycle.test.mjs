@@ -388,6 +388,98 @@ test("actual signup HTTP, password crypto and SQL preserve the first pending cre
   }
 });
 
+test("owned signup HTTP and explicit verification adopt an email-only hosted account", async () => {
+  const db = await authDatabase();
+  try {
+    const password = "email-only-hosted-password-test";
+    await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,$2,$3)", [
+      owner,
+      email,
+      now,
+    ]);
+    await db.query("insert into auth.identities(id,user_id) values($1,$2)", [randomUUID(), owner]);
+    const scalarRpc = new Set([
+      "kova_auth_create_compatibility_principal",
+      "kova_auth_delete_unused_compatibility_principal",
+      "kova_auth_revoke_session",
+    ]);
+    const allowed = new Set([
+      ...scalarRpc,
+      "kova_auth_create_password_account",
+      "kova_auth_consume_verification",
+      "kova_auth_password_lookup",
+      "kova_auth_create_session",
+    ]);
+    const h = authHttp({
+      env: { KOVA_AUTH_PUBLIC_ORIGIN: "https://kova.test", KOVA_EMAIL_QUEUE_ENABLED: "true" },
+      rpc: async (name, args) => {
+        assert.ok(allowed.has(name), name);
+        try {
+          const keys = Object.keys(args);
+          const result = await db.query(
+            `select * from public.${name}(${keys.map((key, i) => `${key}=>$${i + 1}`).join(",")})`,
+            Object.values(args),
+          );
+          return {
+            data: scalarRpc.has(name) ? Object.values(result.rows[0])[0] : result.rows,
+          };
+        } catch (error) {
+          return { error: { code: error.code, message: error.message } };
+        }
+      },
+    });
+    const signup = await h.handleKovaSignup(
+      authRequest({ email, password }, { path: "/api/auth/signup" }),
+    );
+    assert.equal(signup.status, 202, await signup.clone().text());
+    assert.equal(await scalar(db, "select count(*)::int from auth.users"), 1);
+    assert.equal(await scalar(db, "select count(*)::int from public.test_email_queue"), 1);
+    const queued = await scalar(db, "select payload->>'text' from public.test_email_queue");
+    const link = queued.match(/https:\/\/[^\s]+/u)?.[0];
+    assert.ok(link);
+    const verifyUrl = new URL(link);
+    const token = verifyUrl.searchParams.get("token");
+    assert.ok(token);
+    assert.equal((await h.handleKovaVerification(new Request(verifyUrl))).status, 200);
+    assert.equal(
+      await scalar(db, "select count(*)::int from kova_private.auth_legacy_retirements"),
+      0,
+    );
+    const confirmed = await h.handleKovaVerification(
+      new Request(verifyUrl, {
+        method: "POST",
+        headers: {
+          Origin: "https://kova.test",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ token }),
+      }),
+    );
+    assert.equal(confirmed.status, 303, await confirmed.clone().text());
+    assert.equal(confirmed.headers.get("set-cookie"), null);
+    assert.equal(await scalar(db, "select count(*)::int from auth.users"), 1);
+    assert.equal(
+      await scalar(db, "select count(*)::int from kova_private.auth_legacy_retirements"),
+      1,
+    );
+    assert.equal(
+      await scalar(
+        db,
+        "select count(*)::int from kova_private.auth_sessions where revoked_at is null",
+      ),
+      0,
+    );
+    const login = await h.handleKovaLogin(
+      authRequest({ email, password }, { path: "/api/auth/login" }),
+    );
+    assert.equal(login.status, 200, await login.clone().text());
+    const loggedIn = await login.json();
+    assert.equal(loggedIn.session.accountId, owner);
+  } finally {
+    await db.close();
+  }
+});
+
 test("upgrading retires unbound recovery links without touching passwords or inventing current proof", async () => {
   const db = await authDatabase({
     beforeMigration: async (name, connection) => {
