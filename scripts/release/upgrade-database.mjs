@@ -18,6 +18,7 @@ import {
   extendCurrentHistory,
 } from "./upgrade-database-current-history.mjs";
 import {
+  assessCanonicalScheduledRecurrence,
   extendProposedCanonicalHistory,
   HISTORY_ONLY_SENTINEL,
 } from "./upgrade-database-canonical-history.mjs";
@@ -546,6 +547,9 @@ export function rehearseUpgrade({
     const canonicalScheduledFinal = captureCanonicalScheduledCatalog
       ? parseScheduledCatalogCapture(sql(SCHEDULED_CATALOG_SQL, true), finalVersions)
       : null;
+    const canonicalScheduledAssessment = captureCanonicalScheduledCatalog
+      ? assessCanonicalScheduledRecurrence(canonicalScheduledBaseline, canonicalScheduledFinal)
+      : null;
 
     const tableUpgraded = captureScheduledTables
       ? parseScheduledTableCapture(sql(SCHEDULED_TABLE_SQL, true), finalVersions)
@@ -637,14 +641,17 @@ export function rehearseUpgrade({
     if (captureCanonicalScheduledCatalog)
       canonicalScheduledBytes =
         JSON.stringify(
-          buildScheduledCatalogEvidence({
-            baseline: canonicalScheduledBaseline,
-            upgraded: canonicalScheduledFinal,
-            baselineVersions,
-            finalVersions,
-            sourceCommit,
-            sourceTree,
-          }),
+          {
+            ...buildScheduledCatalogEvidence({
+              baseline: canonicalScheduledBaseline,
+              upgraded: canonicalScheduledFinal,
+              baselineVersions,
+              finalVersions,
+              sourceCommit,
+              sourceTree,
+            }),
+            proposedCanonicalRecurrence: canonicalScheduledAssessment,
+          },
           null,
           2,
         ) + "\n";
@@ -799,7 +806,14 @@ export function rehearseUpgrade({
         : {}),
       ...currentHistoryEvidence,
       ...(plan.canonicalHistoryProposal
-        ? { canonicalHistoryProposal: plan.canonicalHistoryProposal }
+        ? {
+            canonicalHistoryProposal: {
+              ...plan.canonicalHistoryProposal,
+              ...(canonicalScheduledAssessment
+                ? { scheduledRecurrenceAssessment: canonicalScheduledAssessment }
+                : {}),
+            },
+          }
         : {}),
     };
   } catch (error) {

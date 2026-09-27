@@ -12,6 +12,34 @@ const RECORD_ONLY = ["20260822122000", "20260823113000", "20260903145843"];
 export const HISTORY_ONLY_SENTINEL = `do $kova_history_only$ begin
   raise exception 'upgrade_history_only_source_body_was_executed';
 end $kova_history_only$;\n`;
+const RECURRENCE_ARGUMENTS = "p_previous timestamp with time zone, p_repeat text";
+
+// Consume only the strict, receipt-bound routine captures. A green local replay
+// must identify the scheduled-function regression rather than imply that the
+// proposed 108+3 production history action is safe.
+export function assessCanonicalScheduledRecurrence(baseline, final) {
+  const matches = (capture) =>
+    capture.routines.filter(
+      (row) =>
+        row.schema === "public" &&
+        row.name === "next_scheduled_task_occurrence" &&
+        row.identityArguments === RECURRENCE_ARGUMENTS,
+    );
+  const before = matches(baseline);
+  const after = matches(final);
+  if (before.length !== 1 || after.length !== 1)
+    throw new Error("upgrade_canonical_scheduled_recurrence_missing");
+  if (before[0].volatility !== "s")
+    throw new Error("upgrade_canonical_scheduled_baseline_changed");
+  return {
+    routine: "public.next_scheduled_task_occurrence(timestamptz,text)",
+    baselineVolatility: before[0].volatility,
+    finalVolatility: after[0].volatility,
+    bodySha256Unchanged: before[0].bodySha256 === after[0].bodySha256,
+    volatilityDriftDetected: before[0].volatility !== after[0].volatility,
+    proposedProductionSequenceApproved: false,
+  };
+}
 
 // A separate, explicitly selected synthetic rehearsal of the proposed 108+3
 // inventory. This function cannot repair a remote ledger or accept the plan.

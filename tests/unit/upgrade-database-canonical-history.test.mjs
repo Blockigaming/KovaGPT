@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import {
+  assessCanonicalScheduledRecurrence,
   extendProposedCanonicalHistory,
   HISTORY_ONLY_SENTINEL,
 } from "../../scripts/release/upgrade-database-canonical-history.mjs";
@@ -200,6 +201,14 @@ test("canonical final scheduled catalog binds a read-only 209-version observatio
   assert.equal(catalogCalls, 2);
   assert.equal(result.passed, true);
   assert.equal(result.canonicalHistoryProposal.productionReleaseReady, false);
+  assert.deepEqual(result.canonicalHistoryProposal.scheduledRecurrenceAssessment, {
+    routine: "public.next_scheduled_task_occurrence(timestamptz,text)",
+    baselineVolatility: "s",
+    finalVolatility: "i",
+    bodySha256Unchanged: true,
+    volatilityDriftDetected: true,
+    proposedProductionSequenceApproved: false,
+  });
   assert.equal(result.canonicalScheduledCatalog.querySha256, SCHEDULED_CATALOG_QUERY_SHA256);
   const bytes = readFileSync(
     join(ROOT, "artifacts/release/upgrade-canonical-scheduled-catalog.json"),
@@ -211,6 +220,10 @@ test("canonical final scheduled catalog binds a read-only 209-version observatio
   const artifact = JSON.parse(bytes);
   assert.equal(artifact.baseline.capture.ledgerVersionCount, 98);
   assert.equal(artifact.upgraded.capture.ledgerVersionCount, 209);
+  assert.deepEqual(
+    artifact.proposedCanonicalRecurrence,
+    result.canonicalHistoryProposal.scheduledRecurrenceAssessment,
+  );
   assert.equal(artifact.routineCatalogMatch, false);
   assert.ok(
     artifact.changes.some(
@@ -220,6 +233,31 @@ test("canonical final scheduled catalog binds a read-only 209-version observatio
     ),
   );
   assert.equal(artifact.schemaProofPromoted, false);
+});
+
+test("canonical recurrence assessment rejects an unexpected baseline and never approves a plan", () => {
+  const baseline = JSON.parse(
+    readFileSync(
+      join(
+        ROOT,
+        "docs/release-reconciliation/evidence/scheduled-routines-live-capture-20260924.json",
+      ),
+    ),
+  );
+  const recurrence = baseline.routines.find((row) => row.name === "next_scheduled_task_occurrence");
+  const stable = assessCanonicalScheduledRecurrence(baseline, structuredClone(baseline));
+  assert.equal(stable.volatilityDriftDetected, false);
+  assert.equal(stable.proposedProductionSequenceApproved, false);
+  const tampered = structuredClone(baseline);
+  tampered.routines.find((row) => row.name === recurrence.name).volatility = "i";
+  assert.throws(
+    () => assessCanonicalScheduledRecurrence(tampered, baseline),
+    /upgrade_canonical_scheduled_baseline_changed/u,
+  );
+  assert.throws(
+    () => assessCanonicalScheduledRecurrence({ routines: [] }, baseline),
+    /upgrade_canonical_scheduled_recurrence_missing/u,
+  );
 });
 
 test("failed local history repair never starts any forward migration", () => {

@@ -34,6 +34,16 @@ differences; `upgrade-canonical-history.json` pins its byte SHA-256 and the
 collector query SHA-256. Failure removes stale success artifacts. The existing
 CI upload glob includes both files.
 
+The same validated 98/209 captures now yield a receipt-bound recurrence
+assessment. It requires exactly one `public.next_scheduled_task_occurrence`
+routine with the reviewed signature at each checkpoint and requires the
+baseline volatility to be `STABLE`. The receipt and artifact explicitly report
+the final volatility, whether the body hash changed, and whether volatility
+drift occurred. On the observed canonical proposal the assessment reports
+`STABLE` → `IMMUTABLE`, unchanged body hash, drift detected, and production
+sequence approval false. An unexpected baseline or missing routine fails the
+rehearsal; a matching `STABLE` value never itself approves the production plan.
+
 Review the actual final `volatility`, `definitionSha256` and later writers in
 that artifact before changing the proposed action for either source version.
 This collector does not decide whether recording the scheduled candidate
