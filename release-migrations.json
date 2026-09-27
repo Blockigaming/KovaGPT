@@ -3896,14 +3896,15 @@
       "order": 186,
       "filename": "20260927163950_kova_owned_auth_remaining_review_fixes.sql",
       "timestamp": "20260927163950",
-      "sha256": "83c429d97ca4cdcf7406adfa6f021b1f7e50898959f51e528321338627ea3c2c",
-      "tables": [],
+      "sha256": "b07344cc8d8217358622e335428af3a54c27b17194c0def495c2fec17cc1bfa5",
+      "tables": ["kova_private"],
       "functions": [
         "legacy_mfa_required",
         "recent_primary_session",
         "kova_auth_passkey_recent_primary_session",
         "kova_auth_begin_passkey_challenge",
         "kova_auth_activate_totp_with_session",
+        "kova_auth_remove_totp_with_session",
         "kova_auth_finalize_account_deletion",
         "kova_auth_legacy_mfa_gap_count"
       ],

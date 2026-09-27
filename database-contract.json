@@ -143,6 +143,7 @@
     "kova_private",
     "kova_private",
     "kova_private",
+    "kova_private",
     "kova_schema_contract",
     "kova_site_access_sessions",
     "kova_site_aliases",
@@ -571,6 +572,7 @@
     "kova_auth_regenerate_mfa_recovery_codes",
     "kova_auth_remove_passkey",
     "kova_auth_remove_totp_factor",
+    "kova_auth_remove_totp_with_session",
     "kova_auth_remove_totp_with_session",
     "kova_auth_rename_passkey",
     "kova_auth_resend_verification",
@@ -2865,6 +2867,7 @@
     "all on kova_private.auth_compatibility_candidates from public, anon, authenticated, service_role",
     "all on kova_private.auth_legacy_mfa_migrations\n  from public, anon, authenticated, service_role",
     "all on kova_private.auth_legacy_retirements from public, anon, authenticated, service_role",
+    "all on kova_private.auth_mfa_legacy_optouts from public, anon, authenticated, service_role",
     "all on kova_private.auth_mfa_login_challenges from public, anon, authenticated",
     "all on kova_private.auth_passkeys, kova_private.auth_passkey_challenges from public, anon, authenticated",
     "all on public.%I from anon, authenticated', t)",
@@ -2996,5 +2999,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "f7e2060f968b71482765e5420a67a763220115785aee909d643c3f9ad4bcebd9"
+  "sha256": "0345e24536a83174695e34cd8d241b10343fd05e72664ff9396f91c96cf4256a"
 }

@@ -157,6 +157,14 @@ test("owned MFA activation retires hosted sessions atomically; retired hosted fa
     ).rows[0];
     assert.equal(removed.assurance_level, "aal1");
     assert.equal(
+      await value(
+        db,
+        "select count(*)::int from kova_private.auth_mfa_legacy_optouts where account_id=$1",
+        [owner],
+      ),
+      1,
+    );
+    assert.equal(
       await value(db, "select mfa_required from kova_private.auth_accounts where id=$1", [owner]),
       false,
     );
@@ -171,6 +179,11 @@ test("owned MFA activation retires hosted sessions atomically; retired hosted fa
       owner,
     );
     assert.equal(await value(db, "select public.kova_auth_legacy_mfa_gap_count($1)", [now]), 0);
+    await db.exec("set role authenticated");
+    await assert.rejects(
+      db.query("select * from kova_private.auth_mfa_legacy_optouts"),
+      /permission denied/u,
+    );
   } finally {
     await db.close();
   }
@@ -227,6 +240,51 @@ test("the forward migration retires hosted authority for already active owned MF
         ])
       ).rows[0].account_id,
       owner,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("removing the last owned factor fails atomically while hosted MFA remains active", async () => {
+  const db = await authDatabase();
+  try {
+    await passwordAccount(db);
+    const factor = await pendingFactor(db);
+    await db.query("select * from public.kova_auth_activate_totp_with_session($1,$2,$3,$4,$5,$6)", [
+      digest("session"),
+      factor,
+      codeDigests(),
+      digest("mfa-session"),
+      expiry,
+      now,
+    ]);
+    await db.query("delete from kova_private.auth_legacy_retirements where account_id=$1", [owner]);
+    await db.query("insert into auth.mfa_factors(id,user_id,status) values($1,$2,'verified')", [
+      randomUUID(),
+      owner,
+    ]);
+    await assert.rejects(
+      db.query("select * from public.kova_auth_remove_totp_with_session($1,$2,$3,$4,$5)", [
+        digest("mfa-session"),
+        factor,
+        digest("removed"),
+        expiry,
+        now,
+      ]),
+      /kova_auth_mfa_migration_required/u,
+    );
+    assert.equal(
+      await value(db, "select state from kova_private.auth_mfa_factors where id=$1", [factor]),
+      "active",
+    );
+    assert.equal(
+      await value(db, "select mfa_required from kova_private.auth_accounts where id=$1", [owner]),
+      true,
+    );
+    assert.equal(
+      await value(db, "select count(*)::int from kova_private.auth_mfa_legacy_optouts"),
+      0,
     );
   } finally {
     await db.close();

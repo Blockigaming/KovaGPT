@@ -285,7 +285,10 @@ RPCs remain in migration history but are not executable by `service_role` or
 browser roles. Pending activation expires after ten minutes; invalid code sets,
 wrong-account factors, stale sessions, and replacement-token collisions roll
 back without changing factor or account state. Removing the last factor returns
-an AAL1 session only when no other owned or legacy MFA requirement remains.
+an AAL1 session when no other owned factor remains and any hosted factor has
+already been retired. The verified AAL2 removal records a private, durable
+opt-out before rotating the session; an unretired hosted factor blocks removal
+instead of leaving the account without a usable owned factor.
 
 TOTP login consumption now rechecks the active factor and credential revision
 under account-first locks. A factor removed between HTTP verification and RPC
@@ -376,6 +379,9 @@ tokens at the database guard; the deployed receipt separately tests rejection.
 The MFA census also counts verified owned accounts whose `mfa_required` flag
 persists after hosted MFA removal and that lack an active verified owned TOTP
 factor. A zero MFA gap must account for these users before cutover.
+Retired hosted factors remain in this census unless their owner explicitly
+removed the last owned factor through the AAL2 flow. The durable opt-out is
+service-only; a retirement marker alone cannot waive hosted MFA evidence.
 
 Capture the database counts and ACLs with read-only queries on the project
 identified in the receipt. Capture the browser, device, email, OAuth, Storage,

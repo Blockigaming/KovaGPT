@@ -1,13 +1,23 @@
 -- Forward-only auth authority repairs. No application mode or deployment changes.
 begin;
 
--- Hosted TOTP rows are no longer an authority after legacy sign-in retires.
+-- Only a successful owned AAL2 removal can waive a retired hosted TOTP
+-- factor. Keep the proof after ordinary audit retention and deny browser writes.
+create table kova_private.auth_mfa_legacy_optouts (
+  account_id uuid primary key references kova_private.auth_accounts(id) on delete cascade,
+  removed_at timestamptz not null
+);
+alter table kova_private.auth_mfa_legacy_optouts enable row level security;
+revoke all on kova_private.auth_mfa_legacy_optouts from public, anon, authenticated, service_role;
+
 create or replace function kova_private.legacy_mfa_required(p_account_id uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
-  select not exists(select 1 from kova_private.auth_legacy_retirements r
-    where r.account_id = p_account_id)
-    and exists(select 1 from auth.mfa_factors f
+  select exists(select 1 from auth.mfa_factors f
       where f.user_id = p_account_id and f.status = 'verified')
+    and not exists(select 1 from kova_private.auth_mfa_legacy_optouts o
+      join kova_private.auth_legacy_retirements r on r.account_id = o.account_id
+      join kova_private.auth_accounts a on a.id = o.account_id
+      where o.account_id = p_account_id and a.mfa_required is false)
 $$;
 
 -- An audited primary sign-in on this exact session can authorize a first key.
@@ -155,6 +165,60 @@ begin
 end
 $$;
 
+create or replace function public.kova_auth_remove_totp_with_session(
+  p_session_digest_hex text, p_factor_id uuid, p_next_session_digest_hex text,
+  p_expires_at timestamptz, p_now timestamptz default now()
+) returns table(session_id uuid, account_id uuid, email text, email_verified boolean,
+  assurance_level text, expires_at timestamptz)
+language plpgsql security definer set search_path = '' set statement_timeout = '5s' as $$
+#variable_conflict use_column
+declare
+  v_session kova_private.auth_sessions;
+  v_next kova_private.auth_sessions;
+  v_changed integer;
+  v_required boolean;
+  v_legacy uuid;
+begin
+  v_session := kova_private.lock_auth_session(p_session_digest_hex, p_now);
+  if v_session.assurance_level <> 'aal2' then raise exception 'kova_auth_mfa_required'; end if;
+  update kova_private.auth_mfa_factors set state = 'disabled', disabled_at = p_now, updated_at = p_now
+   where id = p_factor_id and account_id = v_session.account_id and factor_type = 'totp'
+     and state = 'active' and disabled_at is null and verified_at is not null;
+  get diagnostics v_changed = row_count;
+  if v_changed <> 1 then raise exception 'kova_auth_invalid_mfa_factor'; end if;
+  select exists(select 1 from kova_private.auth_mfa_factors f where f.account_id = v_session.account_id
+    and f.state = 'active' and f.disabled_at is null and f.verified_at is not null)
+    into v_required;
+  if not v_required then
+    select legacy_supabase_user_id into v_legacy from kova_private.auth_accounts
+      where id = v_session.account_id;
+    if v_legacy is not null and kova_private.legacy_mfa_required(v_legacy) then
+      if exists(select 1 from kova_private.auth_legacy_retirements
+        where account_id = v_legacy) then
+        -- The owner verified AAL2 and removed the last usable owned factor.
+        insert into kova_private.auth_mfa_legacy_optouts(account_id, removed_at)
+          values(v_session.account_id, p_now)
+          on conflict(account_id) do update set removed_at = excluded.removed_at;
+      else
+        -- Do not strand the owner with no usable owned factor while hosted
+        -- MFA is still an active requirement.
+        raise exception 'kova_auth_mfa_migration_required' using errcode = '42501';
+      end if;
+    end if;
+  end if;
+  update kova_private.auth_accounts set mfa_required = v_required, updated_at = p_now
+   where id = v_session.account_id;
+  if not v_required then
+    delete from kova_private.auth_mfa_recovery_codes where account_id = v_session.account_id;
+  end if;
+  v_next := kova_private.rotate_security_session(v_session, p_next_session_digest_hex,
+    case when v_required then 'aal2' else 'aal1' end, p_expires_at,
+    'mfa_removed', jsonb_build_object('factor_id', p_factor_id), p_now);
+  return query select v_next.id, a.id, a.primary_email, true, v_next.assurance_level, v_next.expires_at
+    from kova_private.auth_accounts a where a.id = v_next.account_id;
+end
+$$;
+
 create or replace function public.kova_auth_finalize_account_deletion(p_account_id uuid, p_session_id uuid)
 returns boolean language plpgsql security definer set search_path = '' set statement_timeout = '20s' as $$
 declare v_account kova_private.auth_accounts; v_session kova_private.auth_sessions;
@@ -210,12 +274,10 @@ begin
          -- removed by the user and the owned MFA requirement is now clear.
          and exists(select 1 from auth.mfa_factors hosted
            where hosted.user_id = a.legacy_supabase_user_id and hosted.status = 'verified')
-         and not exists(select 1 from kova_private.auth_audit_events e
-           where e.account_id = a.id and e.event_type = 'mfa_removed'
-             and e.outcome = 'success' and e.occurred_at <= p_now
-             and exists(select 1 from kova_private.auth_legacy_retirements r
-               where r.account_id = a.legacy_supabase_user_id
-                 and r.retired_at <= e.occurred_at))
+         and not exists(select 1 from kova_private.auth_mfa_legacy_optouts o
+           join kova_private.auth_legacy_retirements r on r.account_id = o.account_id
+           where o.account_id = a.id and a.mfa_required is false
+             and o.removed_at <= p_now and r.retired_at <= o.removed_at)
        )
      )
      and not exists(
