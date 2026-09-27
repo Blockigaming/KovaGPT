@@ -150,6 +150,7 @@ jobs:
             --build-arg VITE_SUPABASE_URL="https://${REHEARSAL_PROJECT_REF}.supabase.co" \
             --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$REHEARSAL_PUBLISHABLE_KEY" \
             --build-arg VITE_KOVA_AUTH_MODE=dual \
+            --build-arg KOVA_RUNTIME_AUTH_MODE=dual \
             --build-arg VITE_KOVA_GOOGLE_AUTH_ENABLED="$ENABLE_OWNED_GOOGLE" \
             --tag "$IMAGE_REF" \
             .

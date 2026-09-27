@@ -60,14 +60,26 @@ ARG KOVA_SOURCE_SHA
 ARG KOVA_SOURCE_TREE
 ARG KOVA_EXPECTED_SUPABASE_PROJECT_REF
 ARG KOVA_VERIFY_BROWSER_CONFIG
+ARG VITE_KOVA_AUTH_MODE=supabase
+ARG KOVA_RUNTIME_AUTH_MODE=supabase
 WORKDIR /app
 ENV NODE_ENV=production \
-    HOST=0.0.0.0
+    HOST=0.0.0.0 \
+    KOVA_AUTH_MODE=${KOVA_RUNTIME_AUTH_MODE} \
+    KOVA_COMPILED_AUTH_MODE=${VITE_KOVA_AUTH_MODE}
 LABEL org.opencontainers.image.revision="${KOVA_SOURCE_SHA}" \
       com.kovagpt.source.tree="${KOVA_SOURCE_TREE}" \
       com.kovagpt.browser.supabase-project-ref="${KOVA_EXPECTED_SUPABASE_PROJECT_REF}" \
       com.kovagpt.browser.config-verified="${KOVA_VERIFY_BROWSER_CONFIG}" \
       com.kovagpt.browser.config-provenance="/app/dist/browser-config-provenance.json"
+
+RUN case "$KOVA_RUNTIME_AUTH_MODE" in \
+      supabase|dual|kova) ;; \
+      *) echo 'KOVA_RUNTIME_AUTH_MODE must be a supported auth mode' >&2; exit 1 ;; \
+    esac \
+    && if [ "$KOVA_RUNTIME_AUTH_MODE" != "$VITE_KOVA_AUTH_MODE" ]; then \
+      echo 'Browser and server authentication modes must match' >&2; exit 1; \
+    fi
 
 RUN groupadd --system --gid 10001 kova && \
     useradd --system --uid 10001 --gid kova --home-dir /app --shell /usr/sbin/nologin kova
@@ -80,4 +92,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "const net=require('node:net');const socket=net.connect(Number(process.env.PORT||3000),'127.0.0.1');socket.setTimeout(4000);socket.once('connect',()=>{socket.destroy();process.exit(0)});socket.once('timeout',()=>process.exit(1));socket.once('error',()=>process.exit(1))"
 
-CMD ["node", "dist/server/index.mjs"]
+CMD ["sh", "-c", "if [ \"$KOVA_AUTH_MODE\" != \"$KOVA_COMPILED_AUTH_MODE\" ]; then echo 'Browser and server authentication modes must match' >&2; exit 1; fi; exec node dist/server/index.mjs"]

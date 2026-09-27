@@ -301,6 +301,12 @@ do not constitute a deployed rehearsal or retire hosted authentication.
 The server and compiled browser must use matching `KOVA_AUTH_MODE` and
 `VITE_KOVA_AUTH_MODE` values. The default is `supabase`; `dual` and `kova` are
 activated only through an environment-specific deployment review.
+For container builds, pass the same mode as `VITE_KOVA_AUTH_MODE` and
+`KOVA_RUNTIME_AUTH_MODE`. The image bakes that value into the server environment,
+rejects a build with different modes, and refuses to start if a deployment
+overrides `KOVA_AUTH_MODE` to a different value. The isolated Auth rehearsal
+image workflow explicitly passes `dual` for both arguments. Confirm the live
+revision's server mode and an owned-auth flow before crediting rehearsal gates.
 
 Kova OAuth and email links require exact HTTPS origins in
 `KOVA_AUTH_ORIGIN` and `KOVA_AUTH_PUBLIC_ORIGIN`. The JWT issuer must be an
