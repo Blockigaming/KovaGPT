@@ -356,10 +356,10 @@ source tree and compares it with a clean checked-out commit. Run it with
 --config-sha256 <audited-config-fingerprint>`. The receipt must contain the
 exact `sourceSha` and `appBuildSha`, environment, project ref, `ACTIVE_HEALTHY`
 status, HTTPS deployment origin, `kova` mode, config fingerprint, and a capture
-time no more than fifteen minutes old. It requires all nine named migrations,
-`legacyMfaGapCount: 0` and `legacyAdoptionGapCount: 0`, the six fields from
+time no more than fifteen minutes old. It requires all ten named migrations,
+`legacyMfaGapCount: 0` and `legacyAdoptionGapCount: 0`, the seven fields from
 `kova-auth-revocation-proof.sql`, service-only ACL/search-path/timeout evidence
-for the five security-sensitive RPCs, every named deployed check exported by
+for seven security-sensitive RPCs, every named deployed check exported by
 the script, and expiration times for the last pre-marker JWT and last historic
 signed Storage URL that precede capture. JSON field names are defined by the
 validator and exercised in `tests/unit/kova-auth-cutover-gate.test.mjs`.

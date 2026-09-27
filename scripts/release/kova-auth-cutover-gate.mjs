@@ -55,6 +55,8 @@ const serviceOnlyFunctions = Object.freeze([
   "kova_auth_legacy_adoption_gap_count",
   "kova_auth_activate_legacy_mfa_migration",
   "kova_auth_validate_compatibility_session",
+  "kova_auth_passkey_recent_primary_session",
+  "kova_auth_remove_totp_with_session",
 ]);
 const hex = /^[a-f0-9]{64}$/u;
 const commit = /^[a-f0-9]{40}$/u;

@@ -48,6 +48,8 @@ const evidence = () => ({
       "kova_auth_legacy_adoption_gap_count",
       "kova_auth_activate_legacy_mfa_migration",
       "kova_auth_validate_compatibility_session",
+      "kova_auth_passkey_recent_primary_session",
+      "kova_auth_remove_totp_with_session",
     ].map((name) => [
       name,
       {
@@ -127,6 +129,10 @@ test("cutover receipt fails closed on missing proof, public function access and 
     (item) => (item.revocationProof.scoped_rls_tables = 0),
     (item) =>
       (item.serviceOnlyFunctions.kova_auth_validate_compatibility_session.anonExecute = true),
+    (item) => delete item.serviceOnlyFunctions.kova_auth_passkey_recent_primary_session,
+    (item) =>
+      (item.serviceOnlyFunctions.kova_auth_passkey_recent_primary_session.authenticatedExecute = true),
+    (item) => (item.serviceOnlyFunctions.kova_auth_remove_totp_with_session.timeoutMs = 0),
     (item) => (item.serviceOnlyFunctions.kova_auth_activate_legacy_mfa_migration.timeoutMs = 0),
     (item) => (item.deployedChecks.realtime_reauthorization = false),
     (item) => (item.historicExpiry.signedStorageUrl = "2026-09-24T21:01:00.000Z"),
