@@ -5,6 +5,8 @@ on:
     branches: [codex/kova-owned-auth-foundation]
     paths:
       - .github/workflows/kova-owned-auth-source.yml
+      - .github/workflows/build-auth-rehearsal-image.yml
+      - Dockerfile
       - src/lib/kova-auth*
       - src/lib/kova-recovery-landing*
       - src/lib/account-identity.server.*
