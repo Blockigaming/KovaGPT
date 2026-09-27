@@ -20,3 +20,8 @@ the existing application continues on its separate provider route. The older
 prompt and client mode labels must be reconciled when that application path is
 actually integrated. Models Phase A A24/A36/A39 remain open; 30/40 verified,
 Phase B NOT READY. No merge, deployment, GPU or paid action is authorized here.
+
+Tier-specific option labels present Lite by default and call the Plus High
+effort Thinking. Pro keeps the High label. These are display names only: the
+canonical route remains `chat:{family}:high` and the Models v2 selection wire
+value remains `High`; the label cannot grant a route or mark a runtime verified.

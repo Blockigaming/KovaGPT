@@ -105,6 +105,14 @@ export function kovaChatOptionsForTier(tier) {
     KOVA_CHAT_ROUTES.map((route) =>
       Object.freeze({
         ...route,
+        // The UI names this Plus effort Thinking; the Models v2 wire value
+        // stays High. Pro exposes High under its own name.
+        effortLabel:
+          route.effortId === "light"
+            ? "Lite"
+            : tier === "plus" && route.effortId === "high"
+              ? "Thinking"
+              : route.effortLabel,
         entitled: ALLOWED_BY_TIER[tier].has(route.routeId),
         // Catalog availability is not proof of an active, verified model.
         runtimeVerified: false,
