@@ -77,6 +77,7 @@ export const MANIFEST = "tests/fixtures/production-migration-history-20260904/ma
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const SCHEDULED_CANDIDATE_PREFIX = ["20260822122000", "20260822143000"];
 const SCHEDULED_CANDIDATE_FILE = "upgrade-scheduled-candidate-checkpoint.json";
+const CANONICAL_SCHEDULED_FILE = "upgrade-canonical-scheduled-catalog.json";
 const FIXTURE_HEADER = Buffer.from(
   "-- Reviewed structural history fixture, never a live migration command.\n" +
     "-- Replayed only in the generated disposable local upgrade project.\n\n",
@@ -178,6 +179,7 @@ export function rehearseUpgrade({
   captureChatWorkspaceRoutines = false,
   captureProofCatalog = false,
   captureScheduledCandidate = false,
+  captureCanonicalScheduledCatalog = false,
   execute = spawnSync,
   inspectSource = captureCleanUpgradeSource,
 } = {}) {
@@ -192,6 +194,7 @@ export function rehearseUpgrade({
     for (const file of [
       resultFilename,
       "upgrade-failure.log",
+      ...(canonicalHistory ? [CANONICAL_SCHEDULED_FILE] : []),
       ...(!canonicalHistory
         ? [
             TEMP_EXPORT_PROOF_FILE,
@@ -237,6 +240,8 @@ export function rehearseUpgrade({
       throw new Error("upgrade_proof_catalog_current_history_required");
     if (captureScheduledCandidate && (!currentHistory || canonicalHistory))
       throw new Error("upgrade_scheduled_candidate_current_history_required");
+    if (captureCanonicalScheduledCatalog && (!currentHistory || !canonicalHistory))
+      throw new Error("upgrade_canonical_scheduled_history_required");
     if (!dryRun) {
       sourceBefore = inspectSource(root);
       assertUpgradeSourceUnchanged(sourceBefore, sourceBefore);
@@ -302,6 +307,12 @@ export function rehearseUpgrade({
         ? {
             scheduledCandidateCheckpointPlanned: true,
             scheduledCandidatePrefix: SCHEDULED_CANDIDATE_PREFIX,
+          }
+        : {}),
+      ...(captureCanonicalScheduledCatalog
+        ? {
+            canonicalScheduledCatalogPlanned: true,
+            canonicalScheduledQuerySha256: SCHEDULED_CATALOG_QUERY_SHA256,
           }
         : {}),
       ...(captureScheduledCatalog
@@ -441,6 +452,8 @@ export function rehearseUpgrade({
   let proofCatalogBytes;
   let scheduledCandidate;
   let scheduledCandidateBytes;
+  let canonicalScheduledBaseline;
+  let canonicalScheduledBytes;
   try {
     supabase(["start", "-x", "studio,imgproxy,edge-runtime,logflare,vector,supavisor"]);
     supabase(["db", "reset", "--local", "--no-seed"]);
@@ -457,6 +470,11 @@ export function rehearseUpgrade({
       );
     if (captureScheduledCatalog)
       scheduledBaseline = parseScheduledCatalogCapture(
+        sql(SCHEDULED_CATALOG_SQL, true),
+        baselineVersions,
+      );
+    if (captureCanonicalScheduledCatalog)
+      canonicalScheduledBaseline = parseScheduledCatalogCapture(
         sql(SCHEDULED_CATALOG_SQL, true),
         baselineVersions,
       );
@@ -525,6 +543,9 @@ export function rehearseUpgrade({
     const scheduledUpgraded = captureScheduledCatalog
       ? parseScheduledCatalogCapture(sql(SCHEDULED_CATALOG_SQL, true), finalVersions)
       : null;
+    const canonicalScheduledFinal = captureCanonicalScheduledCatalog
+      ? parseScheduledCatalogCapture(sql(SCHEDULED_CATALOG_SQL, true), finalVersions)
+      : null;
 
     const tableUpgraded = captureScheduledTables
       ? parseScheduledTableCapture(sql(SCHEDULED_TABLE_SQL, true), finalVersions)
@@ -548,7 +569,8 @@ export function rehearseUpgrade({
       captureChatWorkspaceTables ||
       captureChatWorkspaceRoutines ||
       captureProofCatalog ||
-      captureScheduledCandidate
+      captureScheduledCandidate ||
+      captureCanonicalScheduledCatalog
         ? run("git", ["-C", root, "rev-parse", "HEAD^{tree}"]).trim()
         : null;
     if (
@@ -604,6 +626,20 @@ export function rehearseUpgrade({
           buildScheduledCatalogEvidence({
             baseline: scheduledBaseline,
             upgraded: scheduledUpgraded,
+            baselineVersions,
+            finalVersions,
+            sourceCommit,
+            sourceTree,
+          }),
+          null,
+          2,
+        ) + "\n";
+    if (captureCanonicalScheduledCatalog)
+      canonicalScheduledBytes =
+        JSON.stringify(
+          buildScheduledCatalogEvidence({
+            baseline: canonicalScheduledBaseline,
+            upgraded: canonicalScheduledFinal,
             baselineVersions,
             finalVersions,
             sourceCommit,
@@ -751,6 +787,16 @@ export function rehearseUpgrade({
             },
           }
         : {}),
+      ...(canonicalScheduledBytes
+        ? {
+            canonicalScheduledCatalog: {
+              file: CANONICAL_SCHEDULED_FILE,
+              sha256: sha256(canonicalScheduledBytes),
+              querySha256: SCHEDULED_CATALOG_QUERY_SHA256,
+              acceptedProofs: 0,
+            },
+          }
+        : {}),
       ...currentHistoryEvidence,
       ...(plan.canonicalHistoryProposal
         ? { canonicalHistoryProposal: plan.canonicalHistoryProposal }
@@ -790,6 +836,8 @@ export function rehearseUpgrade({
     writeFileSync(join(outputDir, "upgrade-migration-proof-catalog.json"), proofCatalogBytes);
   if (scheduledCandidateBytes)
     writeFileSync(join(outputDir, SCHEDULED_CANDIDATE_FILE), scheduledCandidateBytes);
+  if (canonicalScheduledBytes)
+    writeFileSync(join(outputDir, CANONICAL_SCHEDULED_FILE), canonicalScheduledBytes);
   writeFileSync(join(outputDir, resultFilename), JSON.stringify(result, null, 2) + "\n");
   return result;
 }
@@ -829,6 +877,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
             !process.argv.includes("--historical-baseline") &&
             !process.argv.includes("--canonical-history"),
           captureScheduledCandidate: process.argv.includes("--capture-scheduled-candidate"),
+          captureCanonicalScheduledCatalog: process.argv.includes("--canonical-history"),
         }),
         null,
         2,

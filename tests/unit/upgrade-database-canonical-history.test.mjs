@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,6 +14,10 @@ import {
   CURRENT_HISTORY_SNAPSHOT,
 } from "../../scripts/release/upgrade-database-current-history.mjs";
 import { planUpgrade, rehearseUpgrade } from "../../scripts/release/upgrade-database.mjs";
+import {
+  SCHEDULED_CATALOG_QUERY_SHA256,
+  SCHEDULED_CATALOG_SQL,
+} from "../../scripts/release/upgrade-database-scheduled-catalog.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const REPAIRED = ["20260822122000", "20260823113000", "20260903145843"];
@@ -148,6 +153,73 @@ test("canonical history mock confines three repairs to local project and checks 
   assert.match(result.canonicalHistoryProposal.historyOnlySentinelSha256, /^[a-f0-9]{64}$/u);
   assert.equal(existsSync(join(ROOT, "artifacts/release/upgrade-canonical-history.json")), true);
   assert.equal(existsSync(project), false);
+});
+
+test("canonical final scheduled catalog binds a read-only 209-version observation to its receipt", () => {
+  const plan = extendProposedCanonicalHistory(
+    extendCurrentHistory(planUpgrade(), readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT))),
+  );
+  const finalVersions = [
+    ...plan.baseline.map((row) => row.version),
+    ...plan.recordOnlyVersions,
+    ...plan.executionForward.map((row) => row.version),
+  ].sort();
+  const baseline = JSON.parse(
+    readFileSync(
+      join(
+        ROOT,
+        "docs/release-reconciliation/evidence/scheduled-routines-live-capture-20260924.json",
+      ),
+      "utf8",
+    ),
+  );
+  const final = structuredClone(baseline);
+  final.capturedAt = "2026-09-28T00:00:00.000Z";
+  final.ledgerVersions = finalVersions;
+  final.ledgerVersionCount = finalVersions.length;
+  const recurrence = final.routines.find((row) => row.name === "next_scheduled_task_occurrence");
+  recurrence.volatility = "i";
+  recurrence.definitionSha256 = "f".repeat(64);
+  let catalogCalls = 0;
+  const result = rehearseUpgrade({
+    canonicalHistory: true,
+    currentHistory: true,
+    captureCanonicalScheduledCatalog: true,
+    inspectSource,
+    execute(command, args, options) {
+      if (command === "git")
+        return {
+          status: 0,
+          stdout: args.at(-1) === "HEAD^{tree}" ? "b".repeat(40) : "a".repeat(40),
+        };
+      if (command === "docker" && options.input === SCHEDULED_CATALOG_SQL)
+        return { status: 0, stdout: JSON.stringify(++catalogCalls === 1 ? baseline : final) };
+      return { status: 0, stdout: "", stderr: "" };
+    },
+  });
+  assert.equal(catalogCalls, 2);
+  assert.equal(result.passed, true);
+  assert.equal(result.canonicalHistoryProposal.productionReleaseReady, false);
+  assert.equal(result.canonicalScheduledCatalog.querySha256, SCHEDULED_CATALOG_QUERY_SHA256);
+  const bytes = readFileSync(
+    join(ROOT, "artifacts/release/upgrade-canonical-scheduled-catalog.json"),
+  );
+  assert.equal(
+    result.canonicalScheduledCatalog.sha256,
+    createHash("sha256").update(bytes).digest("hex"),
+  );
+  const artifact = JSON.parse(bytes);
+  assert.equal(artifact.baseline.capture.ledgerVersionCount, 98);
+  assert.equal(artifact.upgraded.capture.ledgerVersionCount, 209);
+  assert.equal(artifact.routineCatalogMatch, false);
+  assert.ok(
+    artifact.changes.some(
+      (row) =>
+        row.identity.includes("next_scheduled_task_occurrence") &&
+        row.fields.includes("volatility"),
+    ),
+  );
+  assert.equal(artifact.schemaProofPromoted, false);
 });
 
 test("failed local history repair never starts any forward migration", () => {
