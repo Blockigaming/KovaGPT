@@ -11,3 +11,14 @@ On 2026-09-27 00:46:48 UTC, the same bounded [read-only seven-family routine col
 - The isolated upgrade comparison reports six changed routine identities between its baseline and its final 208-version source/remote union. That final state is not the live 98-version state or a per-entry replay of the two scheduled migrations.
 
 This is evidence about a **seven-family routine subset only**. Scheduled-task table columns, indexes, constraints, table/column ACLs, RLS, intermediate historical effects, later writers and the complete four-category per-entry schema snapshots remain uncaptured. The lineage still requires independent source-state and live captures for each scoped proof, reviewed query/scope digests, and exact artifact provenance. Do not promote either entry or the release gate on the basis of matching routine records.
+
+## Scheduled table catalog comparison
+
+The same isolated artifact also contains `upgrade-scheduled-table-catalog.json`, query SHA-256 `6bb88798ba36bf178a6057a4a14fb4c4941e6925384511c59f7f168257dd46d0`. The matching [read-only two-table collector](../../scripts/release/upgrade-database-scheduled-tables.mjs) ran against the same production connector target on 2026-09-27 00:48:24 UTC. Both captures reported the same ordered 98-version ledger and exactly `public.scheduled_tasks` and `public.scheduled_task_runs`.
+
+After normalizing JSON object keys while preserving semantic array order, the captured table records matched on **every field except `acl` and `effectivePrivileges`**:
+
+- `scheduled_task_runs`: production has explicit `SELECT`, `INSERT`, `UPDATE`, and `DELETE` grants to `anon`, `authenticated`, and `service_role` absent from the isolated baseline. Effective privileges for those roles reflect the extra grants.
+- `scheduled_tasks`: production has those four explicit grants to `anon` absent from the isolated baseline, with corresponding effective privileges.
+
+RLS and other captured table fields matched, but that does **not** prove these grants permit a row operation or that browser access is safe. The production-versus-rehearsal ACL differences block equivalence; review the intended grant model, effective role inheritance and RLS behavior with isolated identities before any production change or proof promotion. The catalog remains a bounded subset, not a complete v2 schema/ACL/RLS/function proof for either remote entry.
