@@ -9,15 +9,15 @@ Status on September 26 ET / September 27 UTC: **read-only comparison; M17 and M1
 
 Comparison by stable catalog object ID and the normalized definition hashes in that query:
 
-| Scope | Production | Empty probe | Difference requiring review |
-| --- | ---: | ---: | --- |
-| Managed functions | 38 | 38 | Identical IDs and definition hashes. |
-| Noninternal managed triggers | 8 | 8 | Identical IDs and definition hashes (seven Storage, one Realtime). |
-| Managed policies | 9 | 0 | All nine are on `storage.objects` in production; two are already flagged as live-only in the [recovery runbook](isolated-backup-restore-rehearsal-20260923.md). Review all nine against the current application policy contract. |
-| Auth relations and sequence | 27 + 1 | 27 + 1 | No relation ID or captured field differences. |
-| Storage relations | 8 | 10 | The probe alone has `storage.iceberg_namespaces` and `storage.iceberg_tables`. |
-| Realtime relations and sequence | 3 + 1 | 8 + 1 | The probe alone has five dated `realtime.messages_2026_09_25` through `2026_09_29` partitions. |
-| `storage.buckets` and `storage.objects` ACLs | Present | Present | For each relation, the eight `supabase_storage_admin` table privileges have grant option in production but not in the probe. Other captured fields and the other grant entries match. |
+| Scope                                        | Production | Empty probe | Difference requiring review                                                                                                                                                                                                      |
+| -------------------------------------------- | ---------: | ----------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Managed functions                            |         38 |          38 | Identical IDs and definition hashes.                                                                                                                                                                                             |
+| Noninternal managed triggers                 |          8 |           8 | Identical IDs and definition hashes (seven Storage, one Realtime).                                                                                                                                                               |
+| Managed policies                             |          9 |           0 | All nine are on `storage.objects` in production; two are already flagged as live-only in the [recovery runbook](isolated-backup-restore-rehearsal-20260923.md). Review all nine against the current application policy contract. |
+| Auth relations and sequence                  |     27 + 1 |      27 + 1 | No relation ID or captured field differences.                                                                                                                                                                                    |
+| Storage relations                            |          8 |          10 | The probe alone has `storage.iceberg_namespaces` and `storage.iceberg_tables`.                                                                                                                                                   |
+| Realtime relations and sequence              |      3 + 1 |       8 + 1 | The probe alone has five dated `realtime.messages_2026_09_25` through `2026_09_29` partitions.                                                                                                                                   |
+| `storage.buckets` and `storage.objects` ACLs |    Present |     Present | For each relation, the eight `supabase_storage_admin` table privileges have grant option in production but not in the probe. Other captured fields and the other grant entries match.                                            |
 
 The extension names, versions and schemas, and the Auth, Storage and Realtime service-migration counts and latest identifiers matched. The prior [September 23 production catalog](managed-schema-recovery-catalog-20260923.json) listed four Storage noninternal triggers. Fresh production has seven: the four older trigger definition hashes remain unchanged, while `storage.buckets.protect_bucket_control_insert`, `protect_bucket_control_update`, and `protect_bucket_control_update_role` are now present and match the empty probe. This is evidence of changed observed state across capture times; its cause and replay requirements are not yet established.
 
