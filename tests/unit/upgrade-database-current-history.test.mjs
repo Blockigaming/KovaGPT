@@ -306,6 +306,8 @@ test("current snapshot core: CLI defaults to 98 with explicit historical opt-out
     "migration-schema-fingerprint.mjs",
     "migration-proof-catalog.mjs",
     "migration-proof-catalog.sql",
+    "migration-acl-detail.mjs",
+    "migration-acl-detail.sql",
   ])
     writeFileSync(
       join(root, "scripts/release", name),

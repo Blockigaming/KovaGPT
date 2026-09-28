@@ -50,6 +50,11 @@ import {
   MIGRATION_PROOF_CATALOG_QUERY_SHA256,
   parseMigrationProofCatalog,
 } from "./migration-proof-catalog.mjs";
+import {
+  MIGRATION_ACL_DETAIL_SQL,
+  MIGRATION_ACL_DETAIL_QUERY_SHA256,
+  parseMigrationAclDetail,
+} from "./migration-acl-detail.mjs";
 
 import {
   SCHEDULED_TABLE_FILE,
@@ -86,6 +91,7 @@ const FIRST_REMOTE_OMISSION_FILE = "upgrade-first-remote-omission-catalog.json";
 const CANONICAL_SCHEDULED_TABLE_FILE = "upgrade-canonical-scheduled-table-catalog.json";
 const SCHEDULED_HYPOTHESIS_TABLE_FILE = "upgrade-scheduled-history-hypothesis-table-catalog.json";
 const FIRST_REMOTE_OMISSION_TABLE_FILE = "upgrade-first-remote-omission-table-catalog.json";
+const BASELINE_ACL_DETAIL_FILE = "upgrade-baseline-acl-detail.json";
 const FIXTURE_HEADER = Buffer.from(
   "-- Reviewed structural history fixture, never a live migration command.\n" +
     "-- Replayed only in the generated disposable local upgrade project.\n\n",
@@ -186,6 +192,7 @@ export function rehearseUpgrade({
   captureChatWorkspaceTables = false,
   captureChatWorkspaceRoutines = false,
   captureProofCatalog = false,
+  captureAclDetail = false,
   captureScheduledCandidate = false,
   captureCanonicalScheduledCatalog = false,
   scheduledRecordOnlyHypothesis = false,
@@ -227,6 +234,7 @@ export function rehearseUpgrade({
             CHAT_WORKSPACE_TABLE_FILE,
             CHAT_WORKSPACE_CATALOG_FILE,
             "upgrade-migration-proof-catalog.json",
+            BASELINE_ACL_DETAIL_FILE,
             SCHEDULED_CANDIDATE_FILE,
           ]
         : []),
@@ -257,11 +265,14 @@ export function rehearseUpgrade({
         captureScheduledTables ||
         captureChatWorkspaceTables ||
         captureChatWorkspaceRoutines ||
-        captureProofCatalog)
+        captureProofCatalog ||
+        captureAclDetail)
     )
       throw new Error("upgrade_canonical_history_separate_capture_required");
     if (captureProofCatalog && !currentHistory)
       throw new Error("upgrade_proof_catalog_current_history_required");
+    if (captureAclDetail && (!currentHistory || !captureProofCatalog))
+      throw new Error("upgrade_acl_detail_proof_catalog_required");
     if (captureScheduledCandidate && (!currentHistory || canonicalHistory))
       throw new Error("upgrade_scheduled_candidate_current_history_required");
     if (captureCanonicalScheduledCatalog && (!currentHistory || !canonicalHistory))
@@ -334,6 +345,12 @@ export function rehearseUpgrade({
         ? {
             proofCatalogPlanned: true,
             proofCatalogQuerySha256: MIGRATION_PROOF_CATALOG_QUERY_SHA256,
+          }
+        : {}),
+      ...(captureAclDetail
+        ? {
+            baselineAclDetailPlanned: true,
+            baselineAclDetailQuerySha256: MIGRATION_ACL_DETAIL_QUERY_SHA256,
           }
         : {}),
       ...(captureScheduledCandidate
@@ -488,6 +505,9 @@ export function rehearseUpgrade({
   let chatRoutineBytes;
   let proofCatalogBaseline;
   let proofCatalogBytes;
+  let aclDetailBaseline;
+  let aclDetailRecordedAt;
+  let aclDetailBytes;
   let scheduledCandidate;
   let scheduledCandidateBytes;
   let canonicalScheduledBaseline;
@@ -553,6 +573,13 @@ export function rehearseUpgrade({
         baselineVersions,
         { requireSingleStatementHistory: false },
       );
+    if (captureAclDetail) {
+      aclDetailBaseline = parseMigrationAclDetail(
+        sql(MIGRATION_ACL_DETAIL_SQL, true),
+        proofCatalogBaseline.relations.map((entry) => entry.object_id),
+      );
+      aclDetailRecordedAt = new Date().toISOString();
+    }
     sql(seed);
     if (captureScheduledCandidate) {
       for (const migration of executionForward.slice(0, SCHEDULED_CANDIDATE_PREFIX.length))
@@ -620,6 +647,7 @@ export function rehearseUpgrade({
       captureChatWorkspaceTables ||
       captureChatWorkspaceRoutines ||
       captureProofCatalog ||
+      captureAclDetail ||
       captureScheduledCandidate ||
       captureCanonicalScheduledCatalog
         ? run("git", ["-C", root, "rev-parse", "HEAD^{tree}"]).trim()
@@ -756,6 +784,24 @@ export function rehearseUpgrade({
           null,
           2,
         ) + "\n";
+    if (aclDetailBaseline)
+      aclDetailBytes =
+        JSON.stringify(
+          {
+            schemaVersion: 1,
+            artifactKind: "isolated-baseline-acl-detail-not-schema-proof",
+            sourceCommit,
+            sourceTree,
+            querySha256: MIGRATION_ACL_DETAIL_QUERY_SHA256,
+            baselineLedgerVersions: baselineVersions,
+            baselineLedgerVersionsSha256: sha256(baselineVersions.join("\n")),
+            captureRecordedAt: aclDetailRecordedAt,
+            capture: aclDetailBaseline,
+            acceptedProofs: 0,
+          },
+          null,
+          2,
+        ) + "\n";
     if (scheduledCandidate)
       scheduledCandidateBytes =
         JSON.stringify(
@@ -854,6 +900,16 @@ export function rehearseUpgrade({
             },
           }
         : {}),
+      ...(aclDetailBytes
+        ? {
+            baselineAclDetail: {
+              file: BASELINE_ACL_DETAIL_FILE,
+              sha256: sha256(aclDetailBytes),
+              querySha256: MIGRATION_ACL_DETAIL_QUERY_SHA256,
+              acceptedProofs: 0,
+            },
+          }
+        : {}),
       ...(scheduledCandidateBytes
         ? {
             scheduledCandidateCheckpoint: {
@@ -930,6 +986,7 @@ export function rehearseUpgrade({
     writeFileSync(join(outputDir, CHAT_WORKSPACE_CATALOG_FILE), chatRoutineBytes);
   if (proofCatalogBytes)
     writeFileSync(join(outputDir, "upgrade-migration-proof-catalog.json"), proofCatalogBytes);
+  if (aclDetailBytes) writeFileSync(join(outputDir, BASELINE_ACL_DETAIL_FILE), aclDetailBytes);
   if (scheduledCandidateBytes)
     writeFileSync(join(outputDir, SCHEDULED_CANDIDATE_FILE), scheduledCandidateBytes);
   if (canonicalScheduledBytes)
@@ -974,6 +1031,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
           captureProofCatalog:
             !process.argv.includes("--historical-baseline") &&
             !process.argv.includes("--canonical-history"),
+          captureAclDetail: process.argv.includes("--capture-acl-detail"),
           captureScheduledCandidate: process.argv.includes("--capture-scheduled-candidate"),
           captureCanonicalScheduledCatalog: process.argv.includes("--canonical-history"),
           scheduledRecordOnlyHypothesis: process.argv.includes(
