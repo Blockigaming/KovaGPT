@@ -624,6 +624,8 @@ export function rehearseUpgrade({
     const canonicalScheduledAssessment = captureCanonicalScheduledCatalog
       ? assessCanonicalScheduledRecurrence(canonicalScheduledBaseline, canonicalScheduledFinal)
       : null;
+    if (canonicalScheduledAssessment?.volatilityDriftDetected)
+      throw new Error("upgrade_canonical_scheduled_recurrence_drift");
 
     const tableUpgraded = captureScheduledTables
       ? parseScheduledTableCapture(sql(SCHEDULED_TABLE_SQL, true), finalVersions)

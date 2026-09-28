@@ -1,12 +1,12 @@
 # Proposed canonical sequence: scheduled routine final catalog
 
-The proposed 108-body plus three history-only local rehearsal records
+The earlier 108-body plus three history-only local rehearsal recorded
 `20260823113000_day14_atomic_settlement.sql` without running it, while it
 executes the earlier `20260822143000_day14_scheduled_execution.sql`. The earlier
 body replaces `public.next_scheduled_task_occurrence(timestamptz,text)` with an
 `IMMUTABLE` definition. The later source body explicitly changes it to
 `STABLE`. Both source files have the hashes pinned in
-`canonical-history-actions-20260923.json`; this is an unapproved proposal, not
+the earlier inventory; it is an unsafe synthetic control, not
 an executable production plan.
 
 The isolated 100-version intermediate checkpoint in CI run `36327982471`
@@ -39,28 +39,26 @@ assessment. It requires exactly one `public.next_scheduled_task_occurrence`
 routine with the reviewed signature at each checkpoint and requires the
 baseline volatility to be `STABLE`. The receipt and artifact explicitly report
 the final volatility, whether the body hash changed, and whether volatility
-drift occurred. On the observed canonical proposal the assessment reports
-`STABLE` → `IMMUTABLE`, unchanged body hash, drift detected, and production
-sequence approval false. An unexpected baseline or missing routine fails the
-rehearsal; a matching `STABLE` value never itself approves the production plan.
+drift occurred. The previous 108+3 artifact reports `STABLE` → `IMMUTABLE`
+with unchanged body hash. The revised conditional 107+4 local proposal omits
+that duplicate source body and keeps `STABLE`; the runner now fails if the
+recurrence volatility changes. Neither result approves a production sequence.
 
-The separate, opt-in `--canonical-history --scheduled-record-only-hypothesis`
-rehearsal keeps the original proposal intact, then replaces only source
-`20260822143000`'s _local_ forward execution with a fourth history-only
-sentinel. It checks that deleting exactly one blank line before the settlement
+The `--canonical-history` rehearsal now uses a fourth history-only sentinel
+for source `20260822143000`. It checks that deleting exactly one blank line before the settlement
 marker in that pinned source matches both the saved SHA-256 and MD5 of the
 second recorded scheduled entry (`20260823092450`). This verifies only the
 bounded statement-byte relationship; the first remote entry, data, grants,
 full schema scope, later writers and authorization still need review.
-The hypothesis replays 107 other source bodies, checks the exact 209-version
+This conditional proposal replays 107 other source bodies, checks the exact 209-version
 ledger and captures the same seven routine families at baseline and final.
-Its separate receipt and artifact are uploaded by the isolated CI job under
-`upgrade-scheduled-history-hypothesis*.json`; it never changes the recorded
-canonical action inventory or any production database. Even if that isolated
-result remains `STABLE`, no history action or schema proof becomes accepted.
+The opt-in `--scheduled-record-only-hypothesis` remains as a separate control
+receipt for comparison. The revised action inventory marks the scheduled
+record-only action pending both remote proofs. Even if the isolated result
+remains `STABLE`, no history action or schema proof becomes accepted.
 
 Review the actual final `volatility`, `definitionSha256` and later writers in
-that artifact before changing the proposed action for either source version.
+that artifact before accepting the proposed action for either source version.
 This collector does not decide whether recording the scheduled candidate
 without execution, reordering approved actions, or another reviewed repair is
 safe. Both scheduled mappings remain `requires_schema_proof`; all 19 proofs

@@ -28,7 +28,7 @@ import {
 } from "../../scripts/release/upgrade-database-scheduled-tables.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const REPAIRED = ["20260822122000", "20260823113000", "20260903145843"];
+const REPAIRED = ["20260822122000", "20260822143000", "20260823113000", "20260903145843"];
 const inspectSource = () => ({
   commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   tree: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -37,11 +37,11 @@ const inspectSource = () => ({
   readDirectory: readdirSync,
 });
 
-test("canonical history rehearsal pins exactly 108 bodies and 3 equivalent history records", () => {
+test("revised history proposal rehearses 107 bodies and four conditional history records", () => {
   const dry = rehearseUpgrade({ canonicalHistory: true, currentHistory: true, dryRun: true });
   assert.equal(dry.baselineVersions, 98);
   assert.equal(dry.pendingVersions.length, 111);
-  assert.equal(dry.replayPendingVersions.length, 108);
+  assert.equal(dry.replayPendingVersions.length, 107);
   const extensionVersions = JSON.parse(readFileSync(join(ROOT, "release-migrations.json")))
     .migrations.slice(157)
     .map((entry) => entry.timestamp);
@@ -49,6 +49,10 @@ test("canonical history rehearsal pins exactly 108 bodies and 3 equivalent histo
   assert.deepEqual(dry.canonicalHistoryProposal.deferredExtensionVersions, []);
   assert.ok(extensionVersions.every((version) => dry.replayPendingVersions.includes(version)));
   assert.deepEqual(dry.canonicalHistoryProposal.recordOnlyVersions, REPAIRED);
+  assert.equal(
+    dry.canonicalHistoryProposal.scheduledRecordOnlyHypothesis.sourceActionApproved,
+    false,
+  );
   assert.equal(dry.canonicalHistoryProposal.expectedFinalLedgerCount, 209);
   assert.equal(dry.canonicalHistoryProposal.productionReleaseReady, false);
   assert.equal(dry.executed, false);
@@ -109,10 +113,10 @@ test("canonical rehearsal reads the decision and all manifests through its captu
     assert.ok(files.has(join(ROOT, filename)), `captured reader missed ${filename}`);
   }
   assert.ok(directories.has(join(ROOT, "supabase/migrations")));
-  assert.equal(result.executionForward.length, 108);
+  assert.equal(result.executionForward.length, 107);
 });
 
-test("canonical history mock confines three repairs to local project and checks both ledgers", () => {
+test("canonical history mock confines four repairs to local project and checks both ledgers", () => {
   const calls = [];
   const recordOnlyNames = planUpgrade().forward.filter((row) => REPAIRED.includes(row.version));
   let project;
@@ -141,18 +145,17 @@ test("canonical history mock confines three repairs to local project and checks 
   });
   const repair = calls.find((call) => call.args[0] === "migration" && call.args[1] === "repair");
   const up = calls.find((call) => call.args[0] === "migration" && call.args[1] === "up");
-  assert.deepEqual(repair.args.slice(0, 7), [
+  assert.deepEqual(repair.args.slice(0, 9), [
     "migration",
     "repair",
     "--local",
     "--status",
     "applied",
-    ...REPAIRED.slice(0, 2),
+    ...REPAIRED,
   ]);
-  assert.equal(repair.args[7], REPAIRED[2]);
   assert.ok(calls.indexOf(repair) < calls.indexOf(up));
   assert.deepEqual(up.args.slice(0, 4), ["migration", "up", "--local", "--include-all"]);
-  assert.equal(result.forwardMigrations.length, 108);
+  assert.equal(result.forwardMigrations.length, 107);
   const sql = calls.filter((call) => call.command === "docker");
   assert.match(sql[1].input, /upgrade_repaired_history_mismatch/u);
   assert.match(sql.at(-1).input, /upgrade_final_history_mismatch/u);
@@ -186,8 +189,7 @@ test("canonical final scheduled catalog binds a read-only 209-version observatio
   final.ledgerVersions = finalVersions;
   final.ledgerVersionCount = finalVersions.length;
   const recurrence = final.routines.find((row) => row.name === "next_scheduled_task_occurrence");
-  recurrence.volatility = "i";
-  recurrence.definitionSha256 = "f".repeat(64);
+  assert.equal(recurrence.volatility, "s");
   const baselineTables = JSON.parse(
     readFileSync(
       join(
@@ -230,9 +232,9 @@ test("canonical final scheduled catalog binds a read-only 209-version observatio
   assert.deepEqual(result.canonicalHistoryProposal.scheduledRecurrenceAssessment, {
     routine: "public.next_scheduled_task_occurrence(timestamptz,text)",
     baselineVolatility: "s",
-    finalVolatility: "i",
+    finalVolatility: "s",
     bodySha256Unchanged: true,
-    volatilityDriftDetected: true,
+    volatilityDriftDetected: false,
     proposedProductionSequenceApproved: false,
   });
   assert.equal(result.canonicalScheduledCatalog.querySha256, SCHEDULED_CATALOG_QUERY_SHA256);
@@ -250,14 +252,8 @@ test("canonical final scheduled catalog binds a read-only 209-version observatio
     artifact.proposedCanonicalRecurrence,
     result.canonicalHistoryProposal.scheduledRecurrenceAssessment,
   );
-  assert.equal(artifact.routineCatalogMatch, false);
-  assert.ok(
-    artifact.changes.some(
-      (row) =>
-        row.identity.includes("next_scheduled_task_occurrence") &&
-        row.fields.includes("volatility"),
-    ),
-  );
+  assert.equal(artifact.routineCatalogMatch, true);
+  assert.deepEqual(artifact.changes, []);
   assert.equal(artifact.schemaProofPromoted, false);
   const tableBytes = readFileSync(
     join(ROOT, "artifacts/release/upgrade-canonical-scheduled-table-catalog.json"),
@@ -269,6 +265,39 @@ test("canonical final scheduled catalog binds a read-only 209-version observatio
   );
   assert.equal(JSON.parse(tableBytes).upgraded.capture.ledgerVersionCount, 209);
   assert.equal(JSON.parse(tableBytes).schemaProofPromoted, false);
+
+  const drifted = structuredClone(final);
+  const driftedRecurrence = drifted.routines.find(
+    (row) => row.name === "next_scheduled_task_occurrence",
+  );
+  driftedRecurrence.volatility = "i";
+  driftedRecurrence.definitionSha256 = "f".repeat(64);
+  let driftedCalls = 0;
+  let driftedTableCalls = 0;
+  assert.throws(
+    () =>
+      rehearseUpgrade({
+        canonicalHistory: true,
+        currentHistory: true,
+        captureCanonicalScheduledCatalog: true,
+        inspectSource,
+        execute(command, args, options) {
+          if (command === "docker" && options.input === SCHEDULED_CATALOG_SQL)
+            return {
+              status: 0,
+              stdout: JSON.stringify(++driftedCalls === 1 ? baseline : drifted),
+            };
+          if (command === "docker" && options.input === SCHEDULED_TABLE_SQL)
+            return {
+              status: 0,
+              stdout: JSON.stringify(++driftedTableCalls === 1 ? baselineTables : finalTables),
+            };
+          return { status: 0, stdout: "", stderr: "" };
+        },
+      }),
+    /upgrade_canonical_scheduled_recurrence_drift/u,
+  );
+  assert.equal(existsSync(join(ROOT, "artifacts/release/upgrade-canonical-history.json")), false);
 });
 
 test("canonical recurrence assessment rejects an unexpected baseline and never approves a plan", () => {
@@ -302,21 +331,21 @@ test("scheduled hypothesis requires the pinned blank-line statement difference",
   );
   const alternative = extendScheduledRecordOnlyHypothesis(canonical);
   assert.equal(alternative.executionForward.length, 107);
-  assert.deepEqual(alternative.recordOnlyVersions, [...REPAIRED, "20260822143000"].sort());
+  assert.deepEqual(alternative.recordOnlyVersions, REPAIRED);
   assert.equal(
     alternative.canonicalHistoryProposal.scheduledRecordOnlyHypothesis.sourceActionApproved,
     false,
   );
-  assert.equal(canonical.executionForward.length, 108);
+  assert.equal(canonical.executionForward.length, 107);
   assert.deepEqual(canonical.recordOnlyVersions, REPAIRED);
-  const tampered = {
-    ...canonical,
-    baseline: canonical.baseline.map((row) => ({ ...row })),
-  };
+  const tampered = extendCurrentHistory(
+    planUpgrade(),
+    readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT)),
+  );
   tampered.baseline.find((row) => row.version === "20260823092450").capturedStatementsSha256 =
     "0".repeat(64);
   assert.throws(
-    () => extendScheduledRecordOnlyHypothesis(tampered),
+    () => extendProposedCanonicalHistory(tampered),
     /upgrade_scheduled_hypothesis_statement_mismatch/u,
   );
   assert.throws(
@@ -357,12 +386,18 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
   finalTables.capturedAt = final.capturedAt;
   finalTables.ledgerVersions = final.ledgerVersions;
   finalTables.ledgerVersionCount = final.ledgerVersionCount;
-  const oldArtifact = readFileSync(
-    join(ROOT, "artifacts/release/upgrade-canonical-scheduled-catalog.json"),
+  const canonicalArtifact = join(
+    ROOT,
+    "artifacts/release/upgrade-canonical-scheduled-catalog.json",
   );
-  const oldTableArtifact = readFileSync(
-    join(ROOT, "artifacts/release/upgrade-canonical-scheduled-table-catalog.json"),
+  const canonicalTableArtifact = join(
+    ROOT,
+    "artifacts/release/upgrade-canonical-scheduled-table-catalog.json",
   );
+  const oldArtifact = existsSync(canonicalArtifact) ? readFileSync(canonicalArtifact) : null;
+  const oldTableArtifact = existsSync(canonicalTableArtifact)
+    ? readFileSync(canonicalTableArtifact)
+    : null;
   let catalogCalls = 0;
   let tableCalls = 0;
   let repaired = false;
@@ -387,7 +422,7 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
         };
       if (args[0] === "migration" && args[1] === "repair") {
         repaired = true;
-        assert.deepEqual(args.slice(5, 9), [...REPAIRED, "20260822143000"].sort());
+        assert.deepEqual(args.slice(5, 9), REPAIRED);
         const scheduledFile = planUpgrade().forward.find((row) => row.version === "20260822143000");
         assert.equal(
           readFileSync(join(options.cwd, "supabase/migrations", scheduledFile.name), "utf8"),
@@ -422,7 +457,7 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
     result.canonicalScheduledCatalog.sha256,
   );
   assert.deepEqual(
-    readFileSync(join(ROOT, "artifacts/release/upgrade-canonical-scheduled-catalog.json")),
+    existsSync(canonicalArtifact) ? readFileSync(canonicalArtifact) : null,
     oldArtifact,
   );
   assert.equal(
@@ -436,7 +471,7 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
     result.canonicalScheduledTables.sha256,
   );
   assert.deepEqual(
-    readFileSync(join(ROOT, "artifacts/release/upgrade-canonical-scheduled-table-catalog.json")),
+    existsSync(canonicalTableArtifact) ? readFileSync(canonicalTableArtifact) : null,
     oldTableArtifact,
   );
 });
