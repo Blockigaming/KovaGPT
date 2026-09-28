@@ -21,11 +21,13 @@ test("all 18 Kova Work selections fail closed after tier admission", () => {
     assert.equal(hasKovaWorkSelection(choice), true);
     for (const tier of [null, "free", "business", "enterprise"])
       assert.deepEqual(kovaWorkSubmissionBoundary(choice, tier), {
-        error: "work_kova_entitlement_required", status: 403,
+        error: "work_kova_entitlement_required",
+        status: 403,
       });
     for (const tier of ["plus", "pro"])
       assert.deepEqual(kovaWorkSubmissionBoundary(choice, tier), {
-        error: "work_kova_runtime_unverified", status: 503,
+        error: "work_kova_runtime_unverified",
+        status: 503,
       });
   }
 });
