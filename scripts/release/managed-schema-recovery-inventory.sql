@@ -60,7 +60,7 @@ managed_policies AS (
   WHERE n.nspname IN ('auth', 'storage')
 )
 SELECT jsonb_build_object(
-  'schemaVersion', 1,
+  'schemaVersion', 2,
   'catalog', jsonb_build_object(
     'authRelations', r.auth_relations,
     'storageRelations', r.storage_relations,
@@ -83,6 +83,49 @@ SELECT jsonb_build_object(
     )
     FROM pg_extension e
     JOIN pg_namespace n ON n.oid = e.extnamespace
+  ),
+  'storageBucketSettings', (
+    SELECT coalesce(jsonb_agg(
+      jsonb_build_object(
+        'id', b.id,
+        'name', b.name,
+        'public', b.public,
+        'fileSizeLimit', b.file_size_limit,
+        'allowedMimeTypes', b.allowed_mime_types
+      ) ORDER BY b.id
+    ), '[]'::jsonb)
+    FROM storage.buckets b
+  ),
+  'managedSchemaGrants', (
+    SELECT coalesce(jsonb_agg(
+      jsonb_build_object(
+        'schema', n.nspname,
+        'owner', pg_get_userbyid(n.nspowner),
+        'grantor', pg_get_userbyid(a.grantor),
+        'grantee', CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
+        'privilege', a.privilege_type,
+        'grantable', a.is_grantable
+      ) ORDER BY n.nspname, a.grantee, a.grantor, a.privilege_type), '[]'::jsonb)
+    FROM pg_namespace n
+    CROSS JOIN LATERAL aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) a
+    WHERE n.nspname IN ('auth', 'storage')
+  ),
+  'managedRelationGrants', (
+    SELECT coalesce(jsonb_agg(
+      jsonb_build_object(
+        'schema', n.nspname,
+        'relation', c.relname,
+        'kind', c.relkind,
+        'owner', pg_get_userbyid(c.relowner),
+        'grantor', pg_get_userbyid(a.grantor),
+        'grantee', CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
+        'privilege', a.privilege_type,
+        'grantable', a.is_grantable
+      ) ORDER BY n.nspname, c.relname, c.relkind, a.grantee, a.grantor, a.privilege_type), '[]'::jsonb)
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL aclexplode(coalesce(c.relacl, acldefault((CASE WHEN c.relkind = 'S' THEN 'S' ELSE 'r' END)::"char", c.relowner))) a
+    WHERE n.nspname IN ('auth', 'storage') AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
   ),
   'managedPolicies', (
     SELECT jsonb_agg(
