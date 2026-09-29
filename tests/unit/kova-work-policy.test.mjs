@@ -40,9 +40,9 @@ test("Kova Work catalog is exactly three families by six preserved efforts", () 
       ),
     );
     assert.ok(
-      kovaWorkOptionsForTier("plus").filter((route) => route.familyId === family.id).every(
-        (route) => route.familyLabel === family.label,
-      ),
+      kovaWorkOptionsForTier("plus")
+        .filter((route) => route.familyId === family.id)
+        .every((route) => route.familyLabel === family.label),
     );
   }
   assert.equal(KOVA_WORK_EFFORTS.length, 6);
