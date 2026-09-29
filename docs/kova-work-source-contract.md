@@ -1,7 +1,9 @@
 # Kova Work request boundary
 
-The Work catalog has 18 selections: Cosmo, Orion and Nova, each at Lite
-through Ultra. They follow the approved Models v3 Free 0, Plus 18, Pro 18
+The Work catalog has 18 selections: Kova Cosmo, Kova Orion and Kova Nova,
+each at Lite through Ultra. These display names follow the owner-approved Models
+`config/current-product-policy.v3.json`; the family IDs remain `cosmo`, `orion`
+and `nova`. They follow the approved Models v3 Free 0, Plus 18, Pro 18
 entitlement policy. The existing application's Work runner still selects older
 provider roles; it has no trusted active Kova model identity or Models job
 service connection.
