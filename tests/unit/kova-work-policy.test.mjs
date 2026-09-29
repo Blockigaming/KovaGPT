@@ -29,6 +29,22 @@ test("Kova Work catalog is exactly three families by six preserved efforts", () 
     KOVA_WORK_FAMILIES.map((family) => family.id),
     ["cosmo", "orion", "nova"],
   );
+  assert.deepEqual(
+    KOVA_WORK_FAMILIES.map((family) => family.label),
+    ["Kova Cosmo", "Kova Orion", "Kova Nova"],
+  );
+  for (const family of KOVA_WORK_FAMILIES) {
+    assert.ok(
+      KOVA_WORK_ROUTES.filter((route) => route.familyId === family.id).every(
+        (route) => route.familyLabel === family.label,
+      ),
+    );
+    assert.ok(
+      kovaWorkOptionsForTier("plus").filter((route) => route.familyId === family.id).every(
+        (route) => route.familyLabel === family.label,
+      ),
+    );
+  }
   assert.equal(KOVA_WORK_EFFORTS.length, 6);
   assert.equal(KOVA_WORK_ROUTES.length, 18);
   assert.equal(new Set(KOVA_WORK_ROUTES.map((route) => route.routeId)).size, 18);
