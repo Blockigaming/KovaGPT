@@ -44,6 +44,10 @@ export type ChatAttachment =
     };
 
 export type NormalizedChatPayload = {
+  kovaModel?: {
+    family: "cosmo" | "orion";
+    effort: "light" | "medium" | "high" | "extra-high" | "max" | "ultra";
+  };
   kova?: { id: string; versionId?: string };
   skill?: { installationId: string; versionId: string };
   messages: Array<{

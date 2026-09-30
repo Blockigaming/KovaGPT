@@ -3,6 +3,8 @@ import { requireUser, requireVerifiedUser } from "@/lib/api-auth.server";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { getAgentEntitlement } from "@/agents/execution.server";
+import { hasKovaWorkSelection, kovaWorkSubmissionBoundary } from "@/lib/kova-work-submission.mjs";
 import {
   controlWorkExecution,
   getWorkExecution,
@@ -80,7 +82,14 @@ export const Route = createFileRoute("/api/work/execution")({
           return json({ error: "json_content_type_required" }, 415);
         try {
           const body = await readBoundedJsonObject(request, 49152);
-          if (body.operation === "submit") return json(await submitWorkExecution(auth, body.input));
+          if (body.operation === "submit") {
+            if (hasKovaWorkSelection(body.input)) {
+              const tier = await getAgentEntitlement(auth);
+              const result = kovaWorkSubmissionBoundary(body.input, tier);
+              return json({ error: result.error }, result.status);
+            }
+            return json(await submitWorkExecution(auth, body.input));
+          }
           if (body.operation === "control") return json(await controlWorkExecution(auth, body));
           return json({ error: "work_operation_invalid" }, 400);
         } catch (error) {

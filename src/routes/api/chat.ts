@@ -81,6 +81,7 @@ import {
   createChatPreflightRunner,
   normalizeChatPreflightFailure,
 } from "@/lib/chat-preflight.server.mjs";
+import { kovaChatOptionsForTier, parseKovaChatSelection } from "@/lib/kova-chat-policy.mjs";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -628,6 +629,33 @@ export const Route = createFileRoute("/api/chat")({
               callerTier = isOwner
                 ? "pro"
                 : await preflight.run("plan_entitlement", () => getCallerTier(auth));
+            }
+
+            if (ingress.kovaModel) {
+              const routeId = parseKovaChatSelection(ingress.kovaModel).routeId;
+              const entitled = kovaChatOptionsForTier(auth ? callerTier : "guest").some(
+                (option) => option.routeId === routeId && option.entitled,
+              );
+              if (!entitled) {
+                return Response.json(
+                  {
+                    error: "This Kova model is unavailable for your plan.",
+                    code: "kova_model_not_entitled",
+                  },
+                  { status: 403, headers: { "Cache-Control": "no-store" } },
+                );
+              }
+              // No loaded-model identity or signed runtime route has been
+              // verified. Never send a requested Kova route to the existing
+              // provider path, including when its provider is configured.
+              return Response.json(
+                {
+                  error: "This Kova model is not available yet.",
+                  code: "kova_model_runtime_unverified",
+                  retryable: false,
+                },
+                { status: 503, headers: { "Cache-Control": "no-store" } },
+              );
             }
 
             // A custom Kova supplies creator instructions and immutable knowledge,
