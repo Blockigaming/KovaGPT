@@ -60,7 +60,7 @@ managed_policies AS (
   WHERE n.nspname IN ('auth', 'storage')
 )
 SELECT jsonb_build_object(
-  'schemaVersion', 1,
+  'schemaVersion', 2,
   'catalog', jsonb_build_object(
     'authRelations', r.auth_relations,
     'storageRelations', r.storage_relations,
@@ -83,6 +83,103 @@ SELECT jsonb_build_object(
     )
     FROM pg_extension e
     JOIN pg_namespace n ON n.oid = e.extnamespace
+  ),
+  'storageBucketSettings', (
+    SELECT coalesce(jsonb_agg(
+      jsonb_build_object(
+        'id', b.id,
+        'name', b.name,
+        'public', b.public,
+        'fileSizeLimit', b.file_size_limit,
+        'allowedMimeTypes', b.allowed_mime_types
+      ) ORDER BY b.id
+    ), '[]'::jsonb)
+    FROM storage.buckets b
+  ),
+  'managedSchemaGrants', (
+    SELECT coalesce(jsonb_agg(
+      jsonb_build_object(
+        'schema', n.nspname,
+        'owner', pg_get_userbyid(n.nspowner),
+        'grantor', pg_get_userbyid(a.grantor),
+        'grantee', CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
+        'privilege', a.privilege_type,
+        'grantable', a.is_grantable
+      ) ORDER BY n.nspname, a.grantee, a.grantor, a.privilege_type), '[]'::jsonb)
+    FROM pg_namespace n
+    CROSS JOIN LATERAL aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) a
+    WHERE n.nspname IN ('auth', 'storage')
+  ),
+  'managedRelationGrants', (
+    SELECT coalesce(jsonb_agg(
+      jsonb_build_object(
+        'schema', n.nspname,
+        'relation', c.relname,
+        'kind', c.relkind,
+        'owner', pg_get_userbyid(c.relowner),
+        'grantor', pg_get_userbyid(a.grantor),
+        'grantee', CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
+        'privilege', a.privilege_type,
+        'grantable', a.is_grantable
+      ) ORDER BY n.nspname, c.relname, c.relkind, a.grantee, a.grantor, a.privilege_type), '[]'::jsonb)
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL aclexplode(coalesce(c.relacl, acldefault((CASE WHEN c.relkind = 'S' THEN 'S' ELSE 'r' END)::"char", c.relowner))) a
+    WHERE n.nspname IN ('auth', 'storage') AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
+  ),
+  'managedFunctionInventory', (
+    SELECT coalesce(jsonb_agg(
+      jsonb_build_object(
+        'schema', n.nspname,
+        'identity', p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
+        'kind', p.prokind,
+        'owner', pg_get_userbyid(p.proowner),
+        'securityDefiner', p.prosecdef,
+        'volatility', p.provolatile,
+        'definitionSha256', encode(digest(
+          CASE WHEN p.prokind IN ('f', 'p') THEN pg_get_functiondef(p.oid)
+            ELSE p.prokind::text || '|' || p.prosrc || '|' || p.proargtypes::text END,
+          'sha256'), 'hex'),
+        'executeGrants', (
+          SELECT coalesce(jsonb_agg(jsonb_build_object(
+            'grantor', pg_get_userbyid(a.grantor),
+            'grantee', CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
+            'privilege', a.privilege_type,
+            'grantable', a.is_grantable
+          ) ORDER BY a.grantee, a.grantor, a.privilege_type), '[]'::jsonb)
+          FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+        )
+      ) ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)), '[]'::jsonb)
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname IN ('auth', 'storage')
+  ),
+  'managedColumnGrants', (
+    SELECT coalesce(jsonb_agg(
+      jsonb_build_object(
+        'schema', n.nspname, 'relation', c.relname, 'column', col.attname,
+        'grantor', pg_get_userbyid(a.grantor),
+        'grantee', CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
+        'privilege', a.privilege_type, 'grantable', a.is_grantable
+      ) ORDER BY n.nspname, c.relname, col.attnum, a.grantee, a.grantor, a.privilege_type), '[]'::jsonb)
+    FROM pg_attribute col
+    JOIN pg_class c ON c.oid = col.attrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL aclexplode(col.attacl) a
+    WHERE n.nspname IN ('auth', 'storage') AND col.attnum > 0 AND NOT col.attisdropped
+  ),
+  'managedDefaultGrants', (
+    SELECT coalesce(jsonb_agg(
+      jsonb_build_object(
+        'schema', n.nspname, 'owner', pg_get_userbyid(d.defaclrole),
+        'objectType', d.defaclobjtype,
+        'grantor', pg_get_userbyid(a.grantor),
+        'grantee', CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
+        'privilege', a.privilege_type, 'grantable', a.is_grantable
+      ) ORDER BY n.nspname, d.defaclrole, d.defaclobjtype, a.grantee, a.grantor, a.privilege_type), '[]'::jsonb)
+    FROM pg_default_acl d
+    JOIN pg_namespace n ON n.oid = d.defaclnamespace
+    CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+    WHERE n.nspname IN ('auth', 'storage')
   ),
   'managedPolicies', (
     SELECT jsonb_agg(

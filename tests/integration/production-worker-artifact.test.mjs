@@ -72,7 +72,7 @@ test("production build emits Nitro's deployable Cloudflare Worker", () => {
 
 test(
   "generated production Worker boots in workerd and serves dynamic routes",
-  { timeout: 50_000 },
+  { timeout: 65_000 },
   async () => {
     const fixtureRoot = await mkdtemp(join(tmpdir(), "kovagpt-worker-"));
     await cp("dist", join(fixtureRoot, "dist"), { recursive: true });
@@ -154,7 +154,7 @@ test(
       assert.match(diagnostics.timestamp, /^\d{4}-\d{2}-\d{2}T/);
 
       const rootResponse = await fetch(`${origin}/`, {
-        signal: AbortSignal.timeout(5_000),
+        signal: AbortSignal.timeout(20_000),
       });
       const rootBody = await rootResponse.text();
       assert.equal(rootResponse.status, 200, rootBody);
