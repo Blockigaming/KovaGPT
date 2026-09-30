@@ -15,8 +15,8 @@ end $kova_history_only$;\n`;
 const RECURRENCE_ARGUMENTS = "p_previous timestamp with time zone, p_repeat text";
 
 // Consume only the strict, receipt-bound routine captures. A green local replay
-// must identify the scheduled-function regression rather than imply that the
-// proposed 108+3 production history action is safe.
+// must identify a scheduled-function regression rather than imply that any
+// proposed production history action is safe.
 export function assessCanonicalScheduledRecurrence(baseline, final) {
   const matches = (capture) =>
     capture.routines.filter(
@@ -40,8 +40,8 @@ export function assessCanonicalScheduledRecurrence(baseline, final) {
   };
 }
 
-// A separate, explicitly selected synthetic rehearsal of the proposed 108+3
-// inventory. This function cannot repair a remote ledger or accept the plan.
+// Rehearse the reviewed source inventory in a disposable database. The
+// scheduled history-only action is provisional until its remote proofs pass.
 export function extendProposedCanonicalHistory(
   plan,
   root = ROOT,
@@ -57,8 +57,8 @@ export function extendProposedCanonicalHistory(
   if (
     decision.targetProjectRef !== plan.currentHistory.projectRef ||
     decision.capturedLedgerMetadataSha256 !== plan.currentHistory.ledgerMetadataSha256 ||
-    decision.counts.conditionalForwardBodies !== 108 ||
-    decision.counts.conditionalRecordOnlyVersions !== 3 ||
+    decision.counts.conditionalForwardBodies !== 107 ||
+    decision.counts.conditionalRecordOnlyVersions !== 4 ||
     decision.counts.proposedFinalLedgerCount !== 209
   )
     throw new Error("upgrade_canonical_history_inventory_mismatch");
@@ -93,6 +93,20 @@ export function extendProposedCanonicalHistory(
       )
         throw new Error("upgrade_canonical_history_equivalence_missing");
       recordOnly.push(source.version);
+    } else if (action.proposedAction === "record_scheduled_version_pending_remote_effect_review") {
+      if (
+        source.version !== "20260822143000" ||
+        JSON.stringify([...action.linkedRemoteOnlyVersions].sort()) !==
+          JSON.stringify(["20260823092107", "20260823092450"]) ||
+        decision.remoteOnly.filter(
+          (remote) =>
+            action.linkedRemoteOnlyVersions.includes(remote.version) &&
+            remote.mappingStatus === "requires_schema_proof",
+        ).length !== 2
+      )
+        throw new Error("upgrade_scheduled_history_review_required");
+      // Strict statement validation below runs before withholding execution.
+      executionForward.push(source);
     } else if (action.proposedAction === "execute_pinned_source_body_then_record_version") {
       executionForward.push(source);
     } else throw new Error("upgrade_canonical_history_action_invalid");
@@ -103,7 +117,7 @@ export function extendProposedCanonicalHistory(
     JSON.stringify(recordOnly.sort()) !== JSON.stringify(RECORD_ONLY)
   )
     throw new Error("upgrade_canonical_history_action_counts_invalid");
-  return {
+  const original = {
     ...plan,
     pending: decision.sourceOnly.map((entry) => entry.path.slice("supabase/migrations/".length)),
     executionForward,
@@ -123,6 +137,14 @@ export function extendProposedCanonicalHistory(
       schemaProofsAccepted: false,
     },
   };
+  const revised = extendScheduledRecordOnlyHypothesis(original);
+  return {
+    ...revised,
+    canonicalHistoryProposal: {
+      ...revised.canonicalHistoryProposal,
+      status: "synthetic_revised_scheduled_proposal_pending_remote_effect_review",
+    },
+  };
 }
 
 // Explore one alternative in disposable PostgreSQL. The pinned second remote
@@ -130,6 +152,19 @@ export function extendProposedCanonicalHistory(
 // outside a dollar-quoted body. This check does not prove the earlier remote
 // statement, later grants, row compatibility, or production history action.
 export function extendScheduledRecordOnlyHypothesis(plan) {
+  if (
+    plan.canonicalHistoryProposal?.status ===
+      "synthetic_revised_scheduled_proposal_pending_remote_effect_review" &&
+    plan.executionForward?.length === 107 &&
+    plan.recordOnlyVersions?.length === 4
+  )
+    return {
+      ...plan,
+      canonicalHistoryProposal: {
+        ...plan.canonicalHistoryProposal,
+        status: "synthetic_scheduled_record_only_hypothesis_no_production_history_repair",
+      },
+    };
   if (
     plan.canonicalHistoryProposal?.status !==
       "synthetic_proposal_only_no_production_history_repair" ||

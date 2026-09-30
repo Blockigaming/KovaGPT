@@ -213,6 +213,7 @@ export function buildCanonicalHistoryDecision({
   const sourceOnly = source.migrations
     .filter((entry) => !remoteVersions.has(entry.timestamp))
     .map((entry) => {
+      const scheduledCandidate = entry.timestamp === "20260822143000";
       const matches = lineage.entries.filter(
         (remoteEntry) =>
           remoteEntry.status === "equivalent" && remoteEntry.sourceVersion === entry.timestamp,
@@ -224,13 +225,17 @@ export function buildCanonicalHistoryDecision({
         linkedRemoteOnlyVersions: linkedRemote(entry.timestamp),
         proposedAction: matches.length
           ? "record_canonical_version_without_rerunning_equivalent_body"
-          : "execute_pinned_source_body_then_record_version",
+          : scheduledCandidate
+            ? "record_scheduled_version_pending_remote_effect_review"
+            : "execute_pinned_source_body_then_record_version",
         equivalentRemoteVersions: matches.map((match) => match.remoteVersion),
         manifestDataBackfillFlag: entry.dataBackfill,
         manifestDestructiveFlag: entry.destructive,
         requiredPrestateEvidence: matches.length
           ? "fresh_ledger_and_equivalent_remote_body_and_scoped_live_effect"
-          : "fresh_ledger_and_exact_prior_schema_data_acl_rls_function_state",
+          : scheduledCandidate
+            ? "both_remote_scheduled_effects_and_live_acl_data_compatibility_and_later_writers"
+            : "fresh_ledger_and_exact_prior_schema_data_acl_rls_function_state",
         requiredDataReview:
           "migration_specific_before_after_transformations_and_no_unintended_loss",
         requiredValidation: "exact_ledger_delta_and_scoped_catalog_and_synthetic_two_user_contract",
@@ -322,7 +327,8 @@ export function buildCanonicalHistoryDecision({
       ).length,
       conditionalRecordOnlyVersions: sourceOnly.filter(
         (entry) =>
-          entry.proposedAction === "record_canonical_version_without_rerunning_equivalent_body",
+          entry.proposedAction === "record_canonical_version_without_rerunning_equivalent_body" ||
+          entry.proposedAction === "record_scheduled_version_pending_remote_effect_review",
       ).length,
       proposedFinalLedgerCount: remote.length + sourceOnly.length,
     },

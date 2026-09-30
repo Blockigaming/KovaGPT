@@ -71,8 +71,8 @@ test("the decision accounts for each current source-only and remote-only version
     sourceOnly: 111,
     equivalentRemoteRows: 5,
     blockedRemoteRows: 19,
-    conditionalForwardBodies: 108,
-    conditionalRecordOnlyVersions: 3,
+    conditionalForwardBodies: 107,
+    conditionalRecordOnlyVersions: 4,
     proposedFinalLedgerCount: 209,
   });
   assert.deepEqual(
@@ -84,6 +84,11 @@ test("the decision accounts for each current source-only and remote-only version
       .map((item) => item.version),
     ["20260822122000", "20260823113000", "20260903145843"],
   );
+  const scheduled = decision.sourceOnly.find((item) => item.version === "20260822143000");
+  assert.equal(scheduled.proposedAction, "record_scheduled_version_pending_remote_effect_review");
+  assert.deepEqual(scheduled.linkedRemoteOnlyVersions, ["20260823092107", "20260823092450"]);
+  assert.deepEqual(scheduled.equivalentRemoteVersions, []);
+  assert.match(scheduled.reviewStatus, /^blocked_/u);
   assert.ok(
     decision.remoteOnly.every((item) => item.proposedAction === "retain_remote_history_row"),
   );

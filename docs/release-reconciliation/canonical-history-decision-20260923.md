@@ -11,12 +11,12 @@ timestamp absent from production is not an execution instruction.
 
 ## Exact inventory and disposition
 
-| Set                                          | Count | Proposed disposition                                                                                                                                                                                              |
-| -------------------------------------------- | ----: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shared source and captured remote timestamps |    74 | Retain; verify full statement identity and current ledger before application.                                                                                                                                     |
-| Remote-only versions                         |    24 | Retain all 24. Five have reviewed content equivalence; 19 remain `requires_schema_proof`. Never delete or silently relabel them.                                                                                  |
-| Source-only timestamps                       |   111 | Preserve as the raw gap. Three have proposed history-only disposition, and 108 require separate review before executing their bodies. The prior 98-row control rehearsal covered only the older 82 source bodies. |
-| Prior isolated control ledger                |   180 | 98 existing + 82 older forward executions. This disposable result did not include the 28 later source migrations and is not current production history.                                                           |
+| Set                                          | Count | Proposed disposition                                                                                                                                         |
+| -------------------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Shared source and captured remote timestamps |    74 | Retain; verify full statement identity and current ledger before application.                                                                                |
+| Remote-only versions                         |    24 | Retain all 24. Five have reviewed content equivalence; 19 remain `requires_schema_proof`. Never delete or silently relabel them.                             |
+| Source-only timestamps                       |   111 | Preserve as the raw gap. Four have conditional history-only disposition, including one still-unproven scheduled mapping; 107 bodies require separate review. |
+| Prior isolated control ledger                |   180 | 98 existing + 82 older forward executions. This disposable result did not include the 28 later source migrations and is not current production history.      |
 
 The full, machine-checked **proposed** action for each of the 111 source-only
 versions and the retain decision for each of the 24 remote-only versions is in
@@ -34,13 +34,18 @@ migration SQL file and filename against the source manifest. Dirty or new SQL
 files fail the check even when the committed Git tree remains unchanged.
 
 Three source-only versions (`20260822122000`, `20260823113000`, and
-`20260903145843`) are **proposed** as history-only canonical records after
-verification of their equivalent remote effects, without executing their SQL
-again. The other 108 are **proposed** for execution and recording only after
+`20260903145843`) have reviewed content-equivalent remote bodies. A fourth,
+`20260822143000`, is **conditionally proposed** for history-only recording:
+its pinned source statement matches the second recorded scheduled statement
+after removing one blank line, and a disposable 107-body/4-record rehearsal
+keeps `next_scheduled_task_occurrence` `STABLE`. The first scheduled remote
+effect, live grants, dependencies, and data compatibility remain unproven;
+both scheduled entries remain `requires_schema_proof`. No history-only action
+is approved. The other 107 are **proposed** for execution and recording only after
 their individual pre-state, data transformation, and schema contracts are
 reviewed. The 98-row synthetic rehearsal executed 82 source bodies (including
 the earlier two equivalent goals/settlement files) and skipped only the
-security body, so it does **not** validate the proposed 108-body execution
+security body, so it does **not** validate the conditional 107-body execution
 sequence, including 28 migrations added after the earlier pinned source set. A complete canonical ledger would contain 209 versions (98 existing
 plus 111 canonical versions) if all these proposed actions were separately
 accepted and applied. Neither the 180-row rehearsal nor the 209-row projection
@@ -102,24 +107,25 @@ authorization for M20. No
 production SQL write, history repair, restore, deployment, or mapping promotion was
 performed to prepare it.
 
-## Separate local rehearsal of the proposed 108+3 action sequence
+## Local rehearsal of the conditional 107+4 action sequence
 
 Run `node scripts/release/upgrade-database.mjs --canonical-history --dry-run`
 to verify the pinned inventory without starting a database. The full command
 without `--dry-run` targets only a newly generated local Docker/Supabase
 project. It first checks the 98 historical rows, then invokes the pinned CLI
-with `migration repair --local --status applied` for exactly the three
-content-equivalent canonical versions. The CLI requires local files for those
-three timestamps, so only the disposable project receives matching filenames
+with `migration repair --local --status applied` for exactly four conditional
+history-only canonical versions. The CLI requires local files for those
+four timestamps, so only the disposable project receives matching filenames
 whose SQL deliberately raises an error if run. Source files stay unchanged;
 an unexpected replay fails instead of re-executing equivalent bodies. It checks
-that 101-row ledger, inserts
-synthetic two-user data, applies only the other 108 source migration bodies with
+that 102-row ledger, inserts
+synthetic two-user data, applies only the other 107 source migration bodies with
 `migration up --local --include-all`, and requires exactly 209 rows before
 cleaning up. The proposed result is written separately to
 `artifacts/release/upgrade-canonical-history.json`; the refreshed 110-body
 control rehearsal records 208 local rows in `upgrade-database.json`. CI must run the refreshed sequence
-and upload its receipt. A failed repair or changed inventory fails before the 108 bodies.
+and upload its receipt. A failed repair, changed recorded statement, changed
+inventory, or recurrence volatility regression fails the rehearsal.
 
 The repair mechanism is demonstrated **only against disposable local history**.
 The pinned September 18 production capture, remote-only structural gaps,
@@ -129,12 +135,12 @@ receipt does not accept this canonical decision or authorize production repair.
 
 The observed 98-row production ledger has 111 absent source timestamps. A
 default linked `db push` may skip older out-of-order versions, while an
-`--include-all` push would include the already-applied security body among all 111. Neither produces the proposed 108+3 sequence. The source guard makes
+`--include-all` push would include the already-applied security body among all 111. Neither produces the conditional 107+4 sequence. The source guard makes
 `scripts/release/supabase-db-push.mjs` reject a write invocation for the exact
 production project **before linking**, while allowing only the exact
 `--dry-run` and `--include-all --dry-run` preview forms. There is no environment
 bypass. A later production write needs
 accepted M12/M13 and real-backup recovery evidence, a separate approval for
-history-only recording, a verified 101-row pre-state, a read-only dry run that
-selects exactly 108 approved bodies using `--include-all --dry-run`, and a new reviewed source change to enable
+history-only recording, a verified 102-row pre-state, a read-only dry run that
+selects exactly 107 approved bodies using `--include-all --dry-run`, and a new reviewed source change to enable
 the guarded execution. The local rehearsal is not that production mechanism.
