@@ -1,0 +1,25 @@
+{
+  "kind": "SOURCE_AND_STOPPED_ENVIRONMENT_PREPARATION",
+  "deployedS6Counts": {
+    "pass": 13,
+    "fail": 1,
+    "blocked": 8
+  },
+  "authMigrationVerified": 14,
+  "targetStarted": false,
+  "tests": {
+    "focusedNode": 150,
+    "watchdogAndControlPython": 11,
+    "typecheck": "PASS",
+    "lint": "PASS",
+    "dualNodeBuild": "PASS",
+    "kovaNodeBuild": "PASS",
+    "builtRuntimeGoogleOriginBoundary": "PASS"
+  },
+  "remaining": [
+    "Obtain immutable dual/kova image receipts for the prepared source.",
+    "Validate complete owner-session handoff and receipt transfer with the live-run coordinator.",
+    "Execute nine remaining deployed checks only after a new bounded staging authorization."
+  ],
+  "ownerActionNow": "NONE"
+}

@@ -28,12 +28,13 @@ function runAuthModeGuard(serverMode, browserMode) {
   });
 }
 
-test("rehearsal image sets dual mode in both the browser and server", () => {
+test("rehearsal image binds browser and server to the same explicit dual/kova mode", () => {
   assert.match(dockerfile, /^ARG KOVA_RUNTIME_AUTH_MODE=supabase$/mu);
   assert.match(dockerfile, /^\s+KOVA_AUTH_MODE=\$\{KOVA_RUNTIME_AUTH_MODE\} \\/mu);
   assert.match(dockerfile, /^\s+KOVA_COMPILED_AUTH_MODE=\$\{VITE_KOVA_AUTH_MODE\}$/mu);
-  assert.match(workflow, /--build-arg VITE_KOVA_AUTH_MODE=dual \\/u);
-  assert.match(workflow, /--build-arg KOVA_RUNTIME_AUTH_MODE=dual \\/u);
+  assert.match(workflow, /options: \[dual, kova\]/u);
+  assert.match(workflow, /--build-arg VITE_KOVA_AUTH_MODE="\$AUTH_MODE" \\/u);
+  assert.match(workflow, /--build-arg KOVA_RUNTIME_AUTH_MODE="\$AUTH_MODE" \\/u);
 });
 
 test("image build guard accepts matching auth modes and rejects mismatches", () => {
