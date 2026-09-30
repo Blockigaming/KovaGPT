@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { LOCAL_WORKSPACE_STORAGE_KEY } from "../../src/lib/local-chat-workspace.mjs";
 import * as principal from "../../src/lib/principal-browser-storage.mjs";
 import {
   createHookHarness,
@@ -85,12 +86,19 @@ test("unresolved, inaccessible, or incomplete browser measurements are not zero 
 test("guest storage remains separate and invalid byte counts are unavailable", () => {
   const guest = principal.listPrincipalBrowserStorageKeys(null, { purgeUnscopedPrivate: false });
   const own = principal.listPrincipalBrowserStorageKeys("owner", { purgeUnscopedPrivate: false });
+  const guestWorkspace = '{"chats":{"guest-chat":{"pins":["message-1"]}}}';
   const area = storage([
     [guest.localExact[0], "guest"],
+    [LOCAL_WORKSPACE_STORAGE_KEY, guestWorkspace],
     [own.localExact[0], "private"],
   ]);
-  assert.ok(display.estimateAccountBrowserBytes(null, area) > 0);
-  assert.deepEqual(area.reads, [guest.localExact[0]]);
+  assert.ok(guest.localExact.includes(LOCAL_WORKSPACE_STORAGE_KEY));
+  assert.equal(
+    display.estimateAccountBrowserBytes(null, area),
+    (guest.localExact[0].length + "guest".length) * 2 +
+      (LOCAL_WORKSPACE_STORAGE_KEY.length + guestWorkspace.length) * 2,
+  );
+  assert.deepEqual(area.reads, [guest.localExact[0], LOCAL_WORKSPACE_STORAGE_KEY]);
   for (const value of [-1, NaN, Infinity])
     assert.equal(display.formatStorageBytes(value), "Unavailable");
   assert.equal(display.formatStorageBytes(0), "0 B");
