@@ -332,7 +332,8 @@ export class S6Run {
       body: { email: f.email, password: f.password, email_confirm: true },
     });
     assert.ok([200, 201].includes(created.status));
-    f.id = created.data.id;
+    f.id = created.data.user?.id ?? created.data.id;
+    assert.match(f.id, /^[a-f0-9-]{36}$/i);
     const signed = await this.bearer("/auth/v1/token?grant_type=password", this.apiKey, {
       method: "POST",
       body: { email: f.email, password: f.password },
