@@ -784,6 +784,25 @@ const topics: readonly AcademyTopic[] = [
 
 export const PUBLIC_ACADEMY_PAGES: readonly PublicDetailPage[] = topics.map(academy);
 
+function normalizeGuideSearch(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+/** Match every search term against the text shown on each guide card. */
+export function filterAcademyGuides(query: string): readonly PublicDetailPage[] {
+  const terms = normalizeGuideSearch(query).split(" ").filter(Boolean);
+  if (!terms.length) return PUBLIC_ACADEMY_PAGES;
+  return PUBLIC_ACADEMY_PAGES.filter((page) => {
+    const text = normalizeGuideSearch(`${page.title} ${page.summary}`);
+    return terms.every((term) => text.includes(term));
+  });
+}
+
 export const PUBLIC_ACADEMY_PAGE_BY_KEY = new Map(
   PUBLIC_ACADEMY_PAGES.map((item) => [`${item.section}/${item.slug}`, item]),
 );
