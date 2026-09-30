@@ -20,7 +20,6 @@ import {
   loadConversations,
   subscribeToConversationChanges,
   saveConversations,
-  savePendingActive,
 } from "@/lib/chat-store";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { saveStoredSettings } from "@/lib/settings-storage";
@@ -29,6 +28,8 @@ import {
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
 } from "@/lib/principal-browser-storage.mjs";
+import { persistChatRoute } from "@/lib/chat-route-persistence";
+import { toast } from "sonner";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 
 /**
@@ -40,6 +41,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
   const storagePrincipal = chatStoragePrincipal(userKey);
+  const principalRef = useRef(storagePrincipal);
+  principalRef.current = isLoaded ? storagePrincipal : "loading";
+  const selectionRef = useRef(0);
+  useEffect(
+    () => () => {
+      selectionRef.current += 1;
+    },
+    [],
+  );
   const [conversationState, setConversationState] = useState<{
     principal: string | null;
     items: Conversation[];
@@ -76,6 +86,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
 
   useEffect(() => {
+    selectionRef.current += 1;
     if (!isLoaded) {
       setConversationState({ principal: null, items: [] });
       setSettingsOpen(false);
@@ -99,6 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!isLoaded) return;
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      selectionRef.current += 1;
       setConversationState({ principal: null, items: [] });
       setSettingsOpen(false);
     };
@@ -110,6 +122,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return installShortcutListener(
       {
         "new-chat": () => {
+          selectionRef.current += 1;
           try {
             clearPendingActive(userKey);
           } catch {
@@ -165,17 +178,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("kova-open-settings", handleOpenSettings);
   }, [openSettings]);
 
-  const goToConversation = (id: string) => {
+  const goToConversation = async (id: string) => {
     if (!principalReady) return;
-    try {
-      savePendingActive(userKey, id);
-    } catch {
-      /* ignore */
+    const selection = ++selectionRef.current;
+    const current = () =>
+      principalRef.current === storagePrincipal && selectionRef.current === selection;
+    const saved = await persistChatRoute(userKey, conversations, id, current);
+    if (!current()) return;
+    if (!saved) {
+      toast.error("This chat could not be saved. Please retry.");
+      return;
     }
-    navigate({ to: "/" });
+    clearPendingActive(userKey);
+    void navigate({ to: "/c/$conversationId", params: { conversationId: id } });
   };
 
   const handleNew = () => {
+    selectionRef.current += 1;
     try {
       clearPendingActive(userKey);
     } catch {

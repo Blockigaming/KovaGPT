@@ -19,6 +19,8 @@ import {
   useState,
   type SetStateAction,
 } from "react";
+import { AppShell } from "@/components/AppShell";
+import { persistChatRoute } from "@/lib/chat-route-persistence";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, Search, Share2, Download, Sliders, MoreHorizontal } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
@@ -153,7 +155,7 @@ const USER_STOP_REASON = "kova_user_stopped_generation";
 type AppChatContextHandoff = string | { prompt: string; tool: "web_search" };
 
 export const Route = createFileRoute("/")({
-  component: KovaGPT,
+  component: () => null,
   head: () => ({
     meta: [
       { title: "KovaGPT" },
@@ -187,7 +189,7 @@ export const Route = createFileRoute("/")({
 
 const EMPTY_CONVERSATIONS: Conversation[] = [];
 
-function KovaGPT() {
+export function KovaGPT({ routeConversationId = null }: { routeConversationId?: string | null }) {
   const { isSignedIn, isLoaded, user } = useUser();
   const { tier } = useTier();
   const { openSignUp } = useClerkSafe();
@@ -423,6 +425,10 @@ function KovaGPT() {
   const retryTimerRef = useRef<number | null>(null);
   const retryActionEpochRef = useRef(new Map<string, number>());
   const activeIdRef = useRef<string | null>(null);
+  activeIdRef.current = activeId;
+  const routeIdRef = useRef(routeConversationId);
+  routeIdRef.current = routeConversationId;
+  const lastRouteRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
@@ -430,6 +436,7 @@ function KovaGPT() {
   // Load (or reload) settings whenever the signed-in user changes so each
   // account gets its own personalization, behavior, appearance, etc.
   useEffect(() => {
+    lastRouteRef.current = null;
     if (!isLoaded) {
       storageGenerationRef.current += 1;
       setConversationState({ principal: null, items: [] });
@@ -507,6 +514,20 @@ function KovaGPT() {
     });
   }, [isLoaded, storagePrincipal, userKey]);
 
+  // Root keeps this workspace mounted across / and /c/:id, including streams.
+  useEffect(() => {
+    if (!principalReady) return;
+    const key = JSON.stringify([storagePrincipal, routeConversationId]);
+    if (lastRouteRef.current === key) return;
+    const initialHome = lastRouteRef.current === null && routeConversationId === null;
+    lastRouteRef.current = key;
+    if (!initialHome && activeIdRef.current !== routeConversationId) {
+      setActiveId(routeConversationId);
+      setEditingMessage(null);
+      setAttachments([]);
+    }
+  }, [principalReady, storagePrincipal, routeConversationId]);
+
   // Re-apply theme only after this principal's settings are ready.
   // Guest mode is canonical in kova-theme-mode and must not be
   // overwritten by the default settings state during hydration.
@@ -531,16 +552,49 @@ function KovaGPT() {
     if (!principalReady) return;
     const generation = storageGenerationRef.current;
     const snapshot = chatHistorySnapshot(userKey);
-    const t = setTimeout(() => {
-      if (generation !== storageGenerationRef.current) return;
-      saveConversations(
-        userKey,
-        conversations.filter((c) => !c.temporary),
-        { snapshot },
-      );
+    let cancelled = false;
+    const current = () =>
+      !cancelled &&
+      generation === storageGenerationRef.current &&
+      storagePrincipalRef.current === storagePrincipal &&
+      routeIdRef.current === routeConversationId &&
+      activeIdRef.current === activeId;
+    const t = setTimeout(async () => {
+      if (!current()) return;
+      const items = conversations.filter((c) => !c.temporary);
+      const target = items.find((c) => c.id === activeId);
+      if (target && target.id !== routeConversationId) {
+        const saved = await persistChatRoute(userKey, items, target.id, current, snapshot);
+        if (saved && current())
+          void navigate({
+            to: "/c/$conversationId",
+            params: { conversationId: target.id },
+            replace: routeConversationId === null,
+          });
+        else if (current())
+          toast.error("Chat could not be saved", {
+            id: "chat-route-save",
+            description: "Keep this tab open and retry when storage is available.",
+          });
+      } else {
+        await saveConversations(userKey, items, { snapshot });
+        if (current() && activeId === null && routeConversationId !== null)
+          void navigate({ to: "/" });
+      }
     }, 400);
-    return () => clearTimeout(t);
-  }, [conversations, principalReady, userKey]);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [
+    conversations,
+    principalReady,
+    userKey,
+    activeId,
+    routeConversationId,
+    navigate,
+    storagePrincipal,
+  ]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -783,6 +837,8 @@ function KovaGPT() {
 
   useEffect(
     () => () => {
+      storageGenerationRef.current += 1;
+      abortRef.current?.abort();
       clearRetryTimer(retryTimerRef);
     },
     [],
@@ -890,7 +946,8 @@ function KovaGPT() {
     setAttachments([]);
     setEditingMessage(null);
     setPendingWorkflowSkill(null);
-  }, [setConversations]);
+    if (routeConversationId !== null) void navigate({ to: "/" });
+  }, [setConversations, navigate, routeConversationId]);
 
   useEffect(() => {
     if (!settingsReady || !userKey) return;
@@ -1602,6 +1659,37 @@ function KovaGPT() {
   }, [setConversations]);
 
   // Image generation removed; can be reintroduced when user explicitly asks.
+
+  if (routeConversationId && (!principalReady || (activeId === routeConversationId && !active))) {
+    return (
+      <AppShell>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6 py-16"
+        >
+          {!principalReady ? (
+            <p role="status">Loading chat…</p>
+          ) : (
+            <>
+              <h1 className="text-2xl font-semibold">Chat unavailable</h1>
+              <p className="mt-3 text-sm text-muted-foreground">
+                This chat is not in this account's available history. It may be archived, deleted,
+                or saved on another device.
+              </p>
+              <button
+                type="button"
+                className="mt-6 min-h-11 self-start rounded-xl bg-foreground px-5 text-background"
+                onClick={newChat}
+              >
+                Start a new chat
+              </button>
+            </>
+          )}
+        </main>
+      </AppShell>
+    );
+  }
 
   return (
     <div
