@@ -156,6 +156,7 @@ import { Route as ApiInternalDeveloperBillingRouteImport } from './routes/api/in
 import { Route as ApiInternalDeveloperFundingRouteImport } from './routes/api/internal/developer-funding'
 import { Route as ApiInternalGoogleOauthCleanupRouteImport } from './routes/api/internal/google-oauth-cleanup'
 import { Route as ApiInternalReceiptMaintenanceRouteImport } from './routes/api/internal/receipt-maintenance'
+import { Route as ApiInternalS6OwnerRelayRouteImport } from './routes/api/internal/s6-owner-relay'
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
 import { Route as ApiInternalSiteMaintenanceRouteImport } from './routes/api/internal/site-maintenance'
 import { Route as ApiInternalStorageArtifactCleanupRouteImport } from './routes/api/internal/storage-artifact-cleanup'
@@ -964,6 +965,11 @@ const ApiInternalReceiptMaintenanceRoute =
     path: '/api/internal/receipt-maintenance',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalS6OwnerRelayRoute = ApiInternalS6OwnerRelayRouteImport.update({
+  id: '/api/internal/s6-owner-relay',
+  path: '/api/internal/s6-owner-relay',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiInternalScheduledExecutionRoute =
   ApiInternalScheduledExecutionRouteImport.update({
     id: '/api/internal/scheduled-execution',
@@ -1422,6 +1428,7 @@ export interface FileRoutesByFullPath {
   '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
   '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
+  '/api/internal/s6-owner-relay': typeof ApiInternalS6OwnerRelayRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/internal/site-maintenance': typeof ApiInternalSiteMaintenanceRoute
   '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
@@ -1629,6 +1636,7 @@ export interface FileRoutesByTo {
   '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
   '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
+  '/api/internal/s6-owner-relay': typeof ApiInternalS6OwnerRelayRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/internal/site-maintenance': typeof ApiInternalSiteMaintenanceRoute
   '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
@@ -1837,6 +1845,7 @@ export interface FileRoutesById {
   '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
   '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
+  '/api/internal/s6-owner-relay': typeof ApiInternalS6OwnerRelayRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/internal/site-maintenance': typeof ApiInternalSiteMaintenanceRoute
   '/api/internal/storage-artifact-cleanup': typeof ApiInternalStorageArtifactCleanupRoute
@@ -2046,6 +2055,7 @@ export interface FileRouteTypes {
     | '/api/internal/developer-funding'
     | '/api/internal/google-oauth-cleanup'
     | '/api/internal/receipt-maintenance'
+    | '/api/internal/s6-owner-relay'
     | '/api/internal/scheduled-execution'
     | '/api/internal/site-maintenance'
     | '/api/internal/storage-artifact-cleanup'
@@ -2253,6 +2263,7 @@ export interface FileRouteTypes {
     | '/api/internal/developer-funding'
     | '/api/internal/google-oauth-cleanup'
     | '/api/internal/receipt-maintenance'
+    | '/api/internal/s6-owner-relay'
     | '/api/internal/scheduled-execution'
     | '/api/internal/site-maintenance'
     | '/api/internal/storage-artifact-cleanup'
@@ -2460,6 +2471,7 @@ export interface FileRouteTypes {
     | '/api/internal/developer-funding'
     | '/api/internal/google-oauth-cleanup'
     | '/api/internal/receipt-maintenance'
+    | '/api/internal/s6-owner-relay'
     | '/api/internal/scheduled-execution'
     | '/api/internal/site-maintenance'
     | '/api/internal/storage-artifact-cleanup'
@@ -2663,6 +2675,7 @@ export interface RootRouteChildren {
   ApiInternalDeveloperFundingRoute: typeof ApiInternalDeveloperFundingRoute
   ApiInternalGoogleOauthCleanupRoute: typeof ApiInternalGoogleOauthCleanupRoute
   ApiInternalReceiptMaintenanceRoute: typeof ApiInternalReceiptMaintenanceRoute
+  ApiInternalS6OwnerRelayRoute: typeof ApiInternalS6OwnerRelayRoute
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
   ApiInternalSiteMaintenanceRoute: typeof ApiInternalSiteMaintenanceRoute
   ApiInternalStorageArtifactCleanupRoute: typeof ApiInternalStorageArtifactCleanupRoute
@@ -3749,6 +3762,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalReceiptMaintenanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/s6-owner-relay': {
+      id: '/api/internal/s6-owner-relay'
+      path: '/api/internal/s6-owner-relay'
+      fullPath: '/api/internal/s6-owner-relay'
+      preLoaderRoute: typeof ApiInternalS6OwnerRelayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/scheduled-execution': {
       id: '/api/internal/scheduled-execution'
       path: '/api/internal/scheduled-execution'
@@ -4409,6 +4429,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInternalDeveloperFundingRoute: ApiInternalDeveloperFundingRoute,
   ApiInternalGoogleOauthCleanupRoute: ApiInternalGoogleOauthCleanupRoute,
   ApiInternalReceiptMaintenanceRoute: ApiInternalReceiptMaintenanceRoute,
+  ApiInternalS6OwnerRelayRoute: ApiInternalS6OwnerRelayRoute,
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
   ApiInternalSiteMaintenanceRoute: ApiInternalSiteMaintenanceRoute,
   ApiInternalStorageArtifactCleanupRoute:

@@ -26,12 +26,12 @@ export async function realtimeProbe(run) {
   const db = run.db;
   // This dedicated table contains only synthetic test payloads. It is removed
   // in finally; the production publication and other tables are unchanged.
-  db.query(`create table public.kova_s6_realtime(id uuid primary key,owner_id uuid not null,payload text not null);
+  db.query(`begin;create table public.kova_s6_realtime(id uuid primary key,owner_id uuid not null,payload text not null);
     alter table public.kova_s6_realtime enable row level security;
     grant select on public.kova_s6_realtime to authenticated;
     create policy owner_read on public.kova_s6_realtime for select to authenticated using(owner_id=auth.uid());
     create policy live_session on public.kova_s6_realtime as restrictive for select to authenticated using(kova_auth_guard.session_is_active());
-    alter publication supabase_realtime add table public.kova_s6_realtime;`);
+    alter publication supabase_realtime add table public.kova_s6_realtime;commit;`);
   let stop;
   try {
     class Socket extends WebSocket {

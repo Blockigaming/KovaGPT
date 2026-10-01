@@ -7,8 +7,17 @@ import assert from "node:assert/strict";
 import { chromium } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { ORIGIN, totp } from "./s6-deployed-checks.mjs";
+import { OwnerRelayClient } from "./s6-owner-relay-client.mjs";
 
-export async function ownerSession({ page, expectedEmail, deadline, sourceSha }) {
+export async function ownerSession({
+  page,
+  expectedEmail,
+  expectedAccountId,
+  deadline,
+  sourceSha,
+  runId,
+}) {
+  assert.match(runId, /^[a-f0-9]{12}$/);
   const receipts = [];
   let principal, totpSecret, recoveryCodes, factorId, passkeyId;
   let callbackRequest;
@@ -45,6 +54,7 @@ export async function ownerSession({ page, expectedEmail, deadline, sourceSha })
     const r = await api("/api/auth/session");
     assert.equal(r.status, 200);
     assert.equal(r.data.session.email.toLowerCase(), expectedEmail);
+    assert.equal(r.data.session.accountId, expectedAccountId);
     principal = r.data.session;
     return principal;
   };
@@ -70,9 +80,13 @@ export async function ownerSession({ page, expectedEmail, deadline, sourceSha })
     guard();
     await logout();
     await page.goto(ORIGIN, { waitUntil: "domcontentloaded", timeout: 20000 });
-    await page.evaluate((origin) => {
-      window.location.assign(origin + "/api/auth/google/start?return_to=%2F%3Fs6_owner_return%3D1");
-    }, ORIGIN);
+    const start =
+      ORIGIN +
+      "/api/auth/google/start?return_to=" +
+      encodeURIComponent("/?s6_owner_return=1&s6_run=" + runId);
+    await page.evaluate((url) => {
+      window.location.assign(url);
+    }, start);
     // The owner uses Google normally in this visible browser. No script reads
     // or enters passwords, one-time provider codes, or consent controls.
     await page.waitForURL(
@@ -83,7 +97,9 @@ export async function ownerSession({ page, expectedEmail, deadline, sourceSha })
     );
     if (method) {
       assert.equal(new URL(page.url()).searchParams.get("google_mfa"), "1");
-      assert.equal((await api("/api/auth/session")).status, 401);
+      const unauthenticated = await api("/api/auth/session");
+      assert.equal(unauthenticated.status, 200);
+      assert.equal(unauthenticated.data.session, null);
       const proof =
         method === "totp" ? { code: totp(totpSecret) } : { recoveryCode: recoveryCodes[0] };
       const finish = await api("/api/auth/login", { googleMfa: true, ...proof });
@@ -295,26 +311,46 @@ export async function ownerSession({ page, expectedEmail, deadline, sourceSha })
 
 async function main() {
   const [flag, baselinePath, receiptPath] = process.argv.slice(2);
-  assert.equal(flag, "--owner-authorized");
-  const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
-  assert.equal(baseline.origin, ORIGIN);
-  assert.equal(baseline.existingAccounts, 0);
-  assert.equal(baseline.existingHostedUsers, 0);
-  assert.equal(baseline.authorizedDisposableGoogleIdentity, true);
-  assert.ok(Date.now() - Date.parse(baseline.capturedAt) < 300000);
-  const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext({ baseURL: ORIGIN });
-  const page = await context.newPage();
-  page.setDefaultTimeout(120000);
+  assert.ok(["--owner-authorized", "--owner-relay-authorized"].includes(flag));
+  const input = JSON.parse(readFileSync(baselinePath, "utf8"));
+  const relay = flag === "--owner-relay-authorized" ? new OwnerRelayClient(input.ticket) : null;
+  let browser;
   try {
-    const receipts = await ownerSession({ page, ...baseline });
-    writeFileSync(receiptPath, JSON.stringify(receipts, null, 2), { mode: 0o600 });
+    const baseline = relay ? await relay.claim(input) : input;
+    assert.equal(baseline.origin, ORIGIN);
+    assert.equal(baseline.existingAccounts, 0);
+    assert.equal(baseline.existingHostedUsers, 0);
+    assert.equal(baseline.authorizedDisposableGoogleIdentity, true);
+    assert.ok(Date.now() - Date.parse(baseline.capturedAt) < 300000);
+    browser = await chromium.launch({ headless: false, timeout: 20000 });
+    const context = await browser.newContext({ baseURL: ORIGIN });
+    const page = await context.newPage();
+    page.setDefaultTimeout(120000);
+    try {
+      const receipts = await ownerSession({ page, ...baseline });
+      if (relay) await relay.call({ action: "complete", runId: input.runId, receipts });
+      if (receiptPath)
+        writeFileSync(receiptPath, JSON.stringify(receipts, null, 2), { mode: 0o600 });
+      console.log(
+        JSON.stringify({
+          status: "COMPLETE",
+          receiptTransferred: Boolean(relay),
+          checks: receipts.map(({ check, status }) => ({ check, status })),
+        }),
+      );
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  } catch (error) {
+    if (relay) await relay.call({ action: "fail", runId: input.runId }).catch(() => {});
+    throw error;
   } finally {
-    await context.close();
-    await browser.close();
+    await browser?.close().catch(() => {});
+    await relay?.close();
   }
 }
-if (process.argv.includes("--owner-authorized"))
+if (process.argv.some((x) => ["--owner-authorized", "--owner-relay-authorized"].includes(x)))
   main().catch((error) => {
     console.error(JSON.stringify({ status: "FAILED", errorType: error.name }));
     process.exitCode = 2;

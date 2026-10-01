@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 187,
-  "latest": "20260930224000_kova_owned_storage_cache_boundary.sql",
+  "count": 188,
+  "latest": "20261001003120_kova_owned_passkey_registration_primary_session.sql",
   "migrations": [
     {
       "order": 1,
@@ -3927,6 +3927,20 @@
       "reversible": false,
       "rls": [],
       "policies": ["kova_owned_storage_cache_boundary"],
+      "indexes": []
+    },
+    {
+      "order": 188,
+      "filename": "20261001003120_kova_owned_passkey_registration_primary_session.sql",
+      "timestamp": "20261001003120",
+      "sha256": "ed52d3aa90dcffe28f4199d4dd12dfdf713b14cd46f74a2f9af9d3218cd97ce5",
+      "tables": [],
+      "functions": ["kova_auth_finish_passkey_registration"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
       "indexes": []
     }
   ]

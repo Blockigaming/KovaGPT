@@ -248,6 +248,7 @@ export class S6Run {
     this.fixtures.push(f);
     return {
       origin: ORIGIN,
+      runId: this.runId,
       expectedEmail,
       deadline: this.deadline - 300000,
       sourceSha: this.sourceSha,
@@ -278,8 +279,11 @@ export class S6Run {
     f.principal = r.data.session;
     return f;
   }
-  async signup(kind = "signup") {
-    const f = this.fixture(kind);
+  async signup(kind = "signup", preparedOwner) {
+    if (preparedOwner)
+      assert.ok(preparedOwner === this.ownerFixture && preparedOwner.disposableGoogle);
+    const f = preparedOwner ?? this.fixture(kind);
+    f.password ??= password();
     const r = await this.app("/api/auth/signup", {
       method: "POST",
       body: { email: f.email, password: f.password, displayName: "Disposable S6 fixture" },
@@ -315,6 +319,20 @@ export class S6Run {
     assert.equal(f.principal.email, f.email);
     assert.equal(f.principal.emailVerified, true);
     return f;
+  }
+  async bootstrapOwner() {
+    // An owned password provides the last-key removal fallback. Its random value
+    // remains solely in the coordinator, never in the invitation or browser kit.
+    const f = await this.signup("owner", this.ownerFixture);
+    const loggedOut = await this.app("/api/auth/logout", {
+      method: "POST",
+      body: {},
+      cookie: f.cookie,
+      principal: f.principal,
+    });
+    assert.equal(loggedOut.status, 204);
+    f.cookie = undefined;
+    return f.principal.accountId;
   }
   async signupCheck() {
     this.signupOwner = await this.signup();
@@ -567,14 +585,11 @@ export class S6Run {
       await testAuthority(this.sourceSha);
       // A real, otherwise valid hosted credential from before retirement still
       // cannot select legacy authority in pure Kova mode.
-      assert.equal(
-        (
-          await this.app("/api/auth/session", {
-            headers: { Authorization: `Bearer ${this.retiredEvidence.hosted}` },
-          })
-        ).status,
-        401,
-      );
+      const noFallback = await this.app("/api/auth/session", {
+        headers: { Authorization: `Bearer ${this.retiredEvidence.hosted}` },
+      });
+      assert.equal(noFallback.status, 200);
+      assert.equal(noFallback.data.session, null);
     } finally {
       const dual = await transition("restore");
       assert.equal(dual.mode, "dual");
@@ -626,6 +641,10 @@ export class S6Run {
         this.db.query(`begin;
         update kova_private.auth_accounts set deleted_at=coalesce(deleted_at,now()),updated_at=now() where primary_email in (${list});
         update kova_private.auth_sessions set revoked_at=coalesce(revoked_at,now()) where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));
+        update kova_private.auth_passkeys set disabled_at=coalesce(disabled_at,now()) where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));
+        update kova_private.auth_mfa_factors set state='disabled',disabled_at=coalesce(disabled_at,now()),updated_at=now() where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));
+        update kova_private.auth_mfa_recovery_codes set consumed_at=coalesce(consumed_at,now()) where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));
+        update kova_private.auth_oauth_states set consumed_at=coalesce(consumed_at,now()) where return_to=${literal("/?s6_owner_return=1&s6_run=" + this.runId)};
         update kova_private.auth_email_verifications set consumed_at=coalesce(consumed_at,now()) where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));
         update kova_private.auth_password_recoveries set consumed_at=coalesce(consumed_at,now()) where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));
         update kova_private.auth_mfa_login_challenges set consumed_at=coalesce(consumed_at,now()) where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));

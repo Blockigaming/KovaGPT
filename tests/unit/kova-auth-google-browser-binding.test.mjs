@@ -15,7 +15,7 @@ const cookie = (response, name) =>
     .getSetCookie()
     .find((value) => value.startsWith(name + "="))
     ?.split(";")[0];
-function harness(db, auth = pub) {
+function harness(db, auth = pub, identityAllowed) {
   const rpc = postgresTransport(db, [
     "kova_auth_create_oauth_state",
     "kova_auth_consume_oauth_state",
@@ -26,6 +26,9 @@ function harness(db, auth = pub) {
   ]);
   const providerCalls = [];
   const h = authHttp({
+    modules: identityAllowed
+      ? { "@/lib/s6-owner-relay.mjs": { s6GoogleIdentityAllowed: identityAllowed } }
+      : {},
     env: {
       KOVA_AUTH_PUBLIC_ORIGIN: pub,
       KOVA_AUTH_ORIGIN: auth,
@@ -122,6 +125,38 @@ test("cross-site Google starts are rejected before OAuth state creation", async 
       (await db.query("select count(*)::int as n from kova_private.auth_oauth_states")).rows[0].n,
       0,
     );
+  } finally {
+    await db.close();
+  }
+});
+test("staging owner restriction refuses a different Google identity before principal or account mutation", async () => {
+  const db = await authDatabase();
+  try {
+    const h = harness(db, pub, () => false);
+    const start = await h.handleKovaGoogleStart(
+      new Request(pub + "/api/auth/google/start", {
+        headers: { "sec-fetch-site": "same-origin" },
+      }),
+    );
+    const state = new URL(start.headers.get("location")).searchParams.get("state");
+    const response = await h.handleKovaGoogleCallback(
+      new Request(pub + "/api/auth/google/callback?state=" + state + "&code=fixture-code", {
+        headers: { Cookie: cookie(start, "__Host-kova_oauth_state") },
+      }),
+    );
+    assert.equal(response.status, 303);
+    assert.match(response.headers.get("location"), /google_denied/);
+    assert.equal(h.providerCalls.length, 1);
+    assert.ok(
+      !h.calls.some(([name]) =>
+        ["kova_auth_create_compatibility_principal", "kova_auth_finish_google"].includes(name),
+      ),
+    );
+    assert.equal(
+      (await db.query("select count(*)::int n from kova_private.auth_accounts")).rows[0].n,
+      0,
+    );
+    assert.equal((await db.query("select count(*)::int n from auth.users")).rows[0].n, 0);
   } finally {
     await db.close();
   }

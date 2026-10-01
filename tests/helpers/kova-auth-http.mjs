@@ -1,4 +1,5 @@
 import * as proxyOrigin from "../../src/lib/kova-auth-proxy-origin.mjs";
+import * as ownerRelay from "../../src/lib/s6-owner-relay.mjs";
 import assert from "node:assert/strict";
 import * as nodeCrypto from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -26,6 +27,7 @@ export function authHttp(options = {}) {
     logs = [];
   const modules = {
     "@/lib/kova-auth-proxy-origin.mjs": proxyOrigin,
+    "@/lib/s6-owner-relay.mjs": ownerRelay,
     "node:crypto": nodeCrypto,
     "@/lib/kova-auth-crypto.server.mjs": { ...crypto, ...options.crypto },
     "@/lib/kova-auth-contract.mjs": {

@@ -244,3 +244,48 @@ test("rollback restores pinned dual even when a pure-Kova authority assertion fa
     await run.dispatcher.close();
   }
 });
+test("rollback accepts the real no-session response while denying every hosted fallback", async () => {
+  const run = new S6Run({
+    database: {},
+    serviceKey: "fixture",
+    apiKey: "fixture",
+    deadline: Date.now() + 900000,
+    sourceSha: "c".repeat(40),
+  });
+  const h = authHttp({ env: { KOVA_AUTH_PUBLIC_ORIGIN: ORIGIN } });
+  let phase = "dual";
+  run.signupOwner = {};
+  run.retiredEvidence = { hosted: "hosted", owned: "revoked", cookie: "revoked-cookie" };
+  run.login = async () => {};
+  run.token = async () => "valid";
+  run.bearer = async (_path, token) => ({ status: token === "valid" ? 200 : 401 });
+  run.app = async (path, options = {}) => {
+    if (path === "/api/version")
+      return {
+        status: 200,
+        data: {
+          sha: phase === "restored" ? "c92fdbfea58a0917f34c25264d7b8b40a78a47fb" : run.sourceSha,
+        },
+      };
+    if (path === "/api/auth/session") {
+      const response = await h.handleKovaSession(
+        new Request(ORIGIN + path, { headers: options.headers }),
+      );
+      return { status: response.status, data: await response.json() };
+    }
+    return { status: 200, data: { isError: true } };
+  };
+  try {
+    await run.rollbackCheck(async (action) => {
+      phase = action === "switch-kova" ? "kova" : "restored";
+      return {
+        mode: phase === "kova" ? "kova" : "dual",
+        compiledMode: phase === "kova" ? "kova" : "dual",
+      };
+    });
+    assert.equal(run.records[0].status, "PASS");
+    assert.equal(run.rollbackRestored, true);
+  } finally {
+    await run.dispatcher.close();
+  }
+});

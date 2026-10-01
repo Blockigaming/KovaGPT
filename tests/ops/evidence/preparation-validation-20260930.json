@@ -17,9 +17,31 @@
     "builtRuntimeGoogleOriginBoundary": "PASS"
   },
   "remaining": [
-    "Obtain immutable dual/kova image receipts for the prepared source.",
-    "Validate complete owner-session handoff and receipt transfer with the live-run coordinator.",
-    "Execute nine remaining deployed checks only after a new bounded staging authorization."
+    "Publication/build gate: obtain immutable dual/kova image receipts for the prepared source and generate the digest-pinned plan. Prior automatic approval review rejected GitHub publication without explicit authorization to publish to Blockigaming/KovaGPT.",
+    "After readiness, execute nine remaining deployed checks during one newly authorized bounded staging run and one consolidated owner session."
   ],
-  "ownerActionNow": "NONE"
+  "ownerActionNow": "NONE",
+  "continuedPreparationAt": "2026-10-01T00:44:19.218999+00:00",
+  "continuedPreparation": {
+    "kind": "OFFLINE_ONLY",
+    "targetStarted": false,
+    "cloudMutations": false,
+    "focusedTests": 49,
+    "controlTests": 13,
+    "finalAdapterTests": 10,
+    "typecheck": "PASS",
+    "lint": "PASS",
+    "dualNodeBuild": "PASS",
+    "kovaNodeBuild": "PASS",
+    "ownerKitBundled": "PASS",
+    "ownerKitOfflineDependencyInstall": "PASS",
+    "builtNodeRelay": "PASS",
+    "newRegressionFound": "Recent Google authentication permitted passkey registration start but was rejected at registration completion.",
+    "newRegressionFixed": "Completion rechecks the same audited five-minute primary authentication; expired proof and non-service callers are rejected.",
+    "ownerHandoff": "One physical-device browser session with one-use invitation and automatic receipt transfer; provider and authenticator not exercised during preparation.",
+    "rollbackScope": "Only the exact rehearsal app: prepared dual to matching kova to original pinned dual. Restore original template and remove the two temporary secrets. Keep forward-only isolated database corrections.",
+    "watchdogSourceMatchesProvenTimer": true,
+    "azureSession": "Expired; account selection required. No owner interruption requested.",
+    "latestIndependentStoppedProof": "2026-09-30T23:25:41.370544+00:00"
+  }
 }

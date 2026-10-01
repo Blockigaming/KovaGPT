@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import {
   IsolatedDatabase,
   S6Run,
@@ -10,6 +10,8 @@ import {
   validateWatchdog,
 } from "./s6-deployed-checks.mjs";
 import { realtimeProbe } from "./s6-realtime-probe.mjs";
+import { OwnerRelayClient } from "./s6-owner-relay-client.mjs";
+import { executeS6 } from "./s6-coordinator.mjs";
 
 async function main() {
   const [flag, guardPath, sourceSha, reportFile, manifestPath] = process.argv.slice(2);
@@ -82,66 +84,20 @@ async function main() {
     );
     return JSON.parse(raw.trim());
   };
-  if (manifest) {
-    assert.equal(manifest.target, TARGET);
-    assert.equal(manifest.sourceSha, sourceSha);
-    assert.ok(
-      !existsSync(manifest.ownerBaseline) && !existsSync(manifest.ownerReceipt),
-      "owner receipt must be fresh",
-    );
-    const baseline = run.prepareOwner(manifest.ownerEmail);
-    writeFileSync(manifest.ownerBaseline, JSON.stringify(baseline, null, 2), { mode: 0o600 });
-    console.log(
-      JSON.stringify({
-        ownerSessionReady: true,
-        ownerBaseline: manifest.ownerBaseline,
-        origin: ORIGIN,
-        deadline,
-      }),
-    );
-  }
+  let relay;
   try {
-    const version = await run.app("/api/version");
-    assert.equal(version.status, 200);
-    assert.ok(JSON.stringify(version.data).includes(sourceSha), "unexpected deployed source");
-    await run.check("public_login_and_signup", () => run.signupCheck());
-    await run.check("legacy_mfa_bridge", () => run.legacyCheck());
-    await run.check("hosted_bearer_denied_after_retirement", () => run.hostedCheck());
-    await run.check("storage_revocation_and_url_lifetime", () => run.storageCheck());
-    await run.check("realtime_reauthorization", () => realtimeProbe(run));
     if (manifest) {
-      // One owner session can run concurrently with all API-only fixtures.
-      const ownerEnd = Math.min(Date.now() + 480000, deadline - 360000);
-      while (!existsSync(manifest.ownerReceipt) && Date.now() < ownerEnd)
-        await new Promise((r) => setTimeout(r, 1000));
-      if (existsSync(manifest.ownerReceipt)) {
-        const receipt = JSON.parse(readFileSync(manifest.ownerReceipt, "utf8"));
-        for (const check of [
-          "passkey_registration",
-          "passkey_login_and_removal",
-          "google_callback_and_consent",
-        ]) {
-          const row = receipt.find((x) => x.check === check);
-          assert.ok(row && row.kind === "DEPLOYED" && row.status === "PASS");
-          assert.equal(row.sourceSha, sourceSha);
-          assert.ok(Date.parse(row.at) > Date.parse(run.ownerFixture.createdAfter));
-          run.records.push(row);
-        }
-        run.save();
-      }
-      await run.check("rollback_rehearsal", () => run.rollbackCheck(transition));
+      assert.equal(manifest.target, TARGET);
+      assert.equal(manifest.sourceSha, sourceSha);
+      assert.ok(!existsSync(manifest.ownerInvitation), "owner invitation must be fresh");
+      assert.equal(app.properties.template.scale.maxReplicas, 1);
+      relay = new OwnerRelayClient(secrets["kova-s6-owner-relay-key"]);
     }
+    await executeS6(run, { manifest, relay, transition, realtime: realtimeProbe });
   } finally {
-    try {
-      await run.cleanup();
-    } finally {
-      try {
-        if (manifest && !run.rollbackRestored) await transition("restore");
-      } finally {
-        db.close();
-        await run.dispatcher.close();
-      }
-    }
+    db.close();
+    await run.dispatcher.close();
+    await relay?.close();
   }
   console.log(
     JSON.stringify({

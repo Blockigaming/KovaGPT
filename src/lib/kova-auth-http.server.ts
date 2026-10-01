@@ -1,4 +1,5 @@
 import { kovaAuthRequestUrl } from "@/lib/kova-auth-proxy-origin.mjs";
+import { s6GoogleIdentityAllowed } from "@/lib/s6-owner-relay.mjs";
 import { createHash, timingSafeEqual } from "node:crypto";
 import {
   clearKovaSessionCookie,
@@ -1646,6 +1647,10 @@ export async function handleKovaGoogleCallback(request: Request): Promise<Respon
       clientId,
       expectedNonceDigest: stateRecord.nonceDigest,
     });
+
+    // The disposable owner rehearsal may only adopt its preflighted fixture.
+    // Check before creating a principal or touching an existing Google account.
+    if (!s6GoogleIdentityAllowed(identity.email)) return googleFailureRedirect("google_denied");
 
     candidateAccountId = await createCompatibilityPrincipal();
     const handoff = generateKovaToken();
