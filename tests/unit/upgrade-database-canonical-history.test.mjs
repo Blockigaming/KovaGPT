@@ -32,7 +32,12 @@ test("canonical history rehearsal pins exactly 80 bodies and 3 equivalent histor
   const extensionVersions = JSON.parse(readFileSync(join(ROOT, "release-migrations.json")))
     .migrations.slice(157)
     .map((entry) => entry.timestamp);
-  assert.equal(extensionVersions.length, 28);
+  assert.equal(extensionVersions.length, 31);
+  assert.deepEqual(extensionVersions.slice(-3), [
+    "20260927163950",
+    "20260930224000",
+    "20261001003120",
+  ]);
   assert.deepEqual(dry.canonicalHistoryProposal.deferredExtensionVersions, extensionVersions);
   assert.ok(dry.replayPendingVersions.every((version) => !extensionVersions.includes(version)));
   assert.deepEqual(dry.canonicalHistoryProposal.recordOnlyVersions, REPAIRED);
