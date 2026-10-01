@@ -12,6 +12,15 @@ const workflow = readFileSync(
   "utf8",
 );
 
+test("Azure readiness accepts the guarded Node startup contract", () => {
+  const result = spawnSync(process.execPath, ["scripts/azure/validate.mjs"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Azure Container Apps readiness validation passed/u);
+});
+
 function runAuthModeGuard(serverMode, browserMode) {
   const instruction = dockerfile.match(
     /^RUN case "\$KOVA_RUNTIME_AUTH_MODE" in[\s\S]*?(?=\n\nRUN )/mu,
