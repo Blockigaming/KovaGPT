@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Scoped, guarded S6 image/config transitions. No startup, production or SQL actions.
 
-Google credentials are entered by the owner using non-echoing getpass in Cloud
-Shell and sent in an HTTPS ARM request body. They never enter argv, files or logs.
+Google credentials are read from the existing staging Key Vault into memory and
+sent in an HTTPS ARM request body. They never enter argv, files or logs.
 """
-import argparse, copy, getpass, importlib.util, json, pathlib, re, secrets as random_secrets, signal, subprocess, time
+import argparse, copy, importlib.util, json, pathlib, re, secrets as random_secrets, subprocess, time
 import urllib.request, urllib.error
 
 ORIGIN='https://ca-kovagpt-auth-rehearsal.whitepebble-42e8ad60.eastus.azurecontainerapps.io'
@@ -14,6 +14,8 @@ BASE_SHA='c92fdbfea58a0917f34c25264d7b8b40a78a47fb'
 TARGET='/subscriptions/ab732127-11c3-46a7-a1cb-6ee8d86594f4/resourceGroups/rg-kovagpt-dev/providers/Microsoft.App/containerApps/ca-kovagpt-auth-rehearsal'
 SECRET='kova-s6-google-client-secret'
 RELAY_SECRET='kova-s6-owner-relay-key'
+GOOGLE_VAULT='kv-kovagpt-staging'
+GOOGLE_VAULT_NAMES=('kova-s6-google-client-id','kova-s6-google-client-secret')
 GOOGLE_FIELDS={'KOVA_GOOGLE_CLIENT_ID','KOVA_GOOGLE_CLIENT_SECRET','KOVA_AUTH_REVERSE_PROXY_ORIGIN',
   'KOVA_S6_OWNER_RELAY_KEY','KOVA_S6_OWNER_RELAY_DEADLINE','KOVA_S6_SOURCE_SHA'}
 
@@ -22,18 +24,19 @@ def image(value):
         raise ValueError('Pinned rehearsal image digest required')
     return value
 
-def hidden_credentials(seconds):
-    # Linux Cloud Shell only. No fallback to echoed stdin is permitted.
-    import sys
-    assert sys.stdin.isatty(), 'Credentials require an interactive hidden terminal'
-    def expired(*_): raise TimeoutError('credential_entry_timeout')
-    previous=signal.signal(signal.SIGALRM,expired)
-    signal.setitimer(signal.ITIMER_REAL,max(1,seconds))
-    try:
-        return (getpass.getpass('Dedicated staging Web OAuth client ID (hidden): '),
-          getpass.getpass('Dedicated staging Web OAuth client secret (hidden): '))
-    finally:
-        signal.setitimer(signal.ITIMER_REAL,0);signal.signal(signal.SIGALRM,previous)
+def staging_google_credentials():
+    values=[]
+    for name in GOOGLE_VAULT_NAMES:
+        result=subprocess.run(['az','keyvault','secret','show','--subscription',TARGET.split('/')[2],
+            '--vault-name',GOOGLE_VAULT,'--name',name,'--query','value','-o','tsv','--only-show-errors'],
+            capture_output=True,text=True,timeout=15)
+        if result.returncode!=0:
+            raise ValueError('staging_google_credential_unavailable')
+        values.append(result.stdout.rstrip('\r\n'))
+    client_id,client_secret=values
+    if not re.fullmatch(r'[A-Za-z0-9_-]+\.apps\.googleusercontent\.com',client_id) or not 16<=len(client_secret)<=512:
+        raise ValueError('staging_google_credential_invalid')
+    return client_id,client_secret
 
 def build_receipt(path,mode,source):
     result=json.loads(pathlib.Path(path).read_text())
@@ -96,6 +99,9 @@ class Control:
         return result
 
 def main(args):
+    if args.command=='check-google':
+        staging_google_credentials()
+        print(json.dumps({'credentialSource':GOOGLE_VAULT,'ready':True,'appStartRequested':False}));return
     if args.command=='plan':
         dual=build_receipt(args.dual_receipt,'dual',args.source_sha)
         kova=build_receipt(args.kova_receipt,'kova',args.source_sha)
@@ -104,7 +110,7 @@ def main(args):
         plan={'target':TARGET,'origin':ORIGIN,'googleRedirect':ORIGIN+'/api/auth/google/callback',
           'googleClientType':'Web application','googleAuthorizedJavascriptOrigin':ORIGIN,
           'googleScopes':['openid','email','profile'],'googleConsentAudience':'External / Testing; dedicated disposable Google account as test user',
-          'googleOfflineAccess':False,'secretStore':TARGET+'/secrets/'+SECRET,
+          'googleOfflineAccess':False,'secretStore':GOOGLE_VAULT,'googleCredentialNames':GOOGLE_VAULT_NAMES,
           'temporarySecrets':[SECRET,RELAY_SECRET],'ownerBrowser':'headed browser on owner physical device',
           'sourceSha':args.source_sha,'dualImage':dual['image'],'kovaImage':kova['image'],
           'buildReceipts':{'dual':dual,'kova':kova},
@@ -129,9 +135,7 @@ def main(args):
     secrets=control.request('POST','/listSecrets')['value']
     if args.command=='configure-google':
         assert not any(x['name'] in (SECRET,RELAY_SECRET) for x in secrets)
-        client_id,client_secret=hidden_credentials(min(30,operation_end-time.monotonic()-45))
-        assert re.fullmatch(r'[A-Za-z0-9_-]+\.apps\.googleusercontent\.com',client_id)
-        assert 16<=len(client_secret)<=512
+        client_id,client_secret=staging_google_credentials()
         gate(args.guard,reserve)
         template=template_for(current,plan['dualImage'],'dual')
         template['containers'][0]['env']=[x for x in template['containers'][0]['env'] if x['name'] not in GOOGLE_FIELDS]+[
@@ -166,7 +170,7 @@ def main(args):
     raise TimeoutError('config_transition_not_verified')
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['plan','capture','configure-google','switch-kova','restore'])
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['plan','check-google','capture','configure-google','switch-kova','restore'])
     for name in ['plan','guard','baseline','dual-receipt','kova-receipt','source-sha']:p.add_argument('--'+name)
     try:main(p.parse_args())
     except Exception as error:print(json.dumps({'status':'FAILED','errorType':type(error).__name__}));raise SystemExit(2)
