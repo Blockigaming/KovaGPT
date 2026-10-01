@@ -217,6 +217,7 @@ test("actual handler, password crypto, store and PostgreSQL reject stale cookies
       passwordHash,
       email: current.email,
       at: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
     });
     const f = authHttp({
       crypto: testCrypto,
