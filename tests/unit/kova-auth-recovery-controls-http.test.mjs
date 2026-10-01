@@ -9,6 +9,8 @@ import * as contract from "../../src/lib/kova-auth-contract.mjs";
 import * as crypto from "../../src/lib/kova-auth-crypto.server.mjs";
 import * as security from "../../src/lib/auth-security.mjs";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
+import * as proxyOrigin from "../../src/lib/kova-auth-proxy-origin.mjs";
+import * as ownerRelay from "../../src/lib/s6-owner-relay.mjs";
 
 const compile = (path) =>
   ts.transpileModule(readFileSync(path, "utf8"), {
@@ -41,6 +43,8 @@ function fixture(options = {}) {
   const modules = {
     "node:crypto": nodeCrypto,
     "@/lib/kova-auth-crypto.server.mjs": crypto,
+    "@/lib/kova-auth-proxy-origin.mjs": proxyOrigin,
+    "@/lib/s6-owner-relay.mjs": ownerRelay,
     "@/integrations/supabase/client.server": {
       supabaseAdmin: {
         async rpc(name, args) {
