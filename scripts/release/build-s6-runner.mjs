@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { build, transform } from "esbuild";
 import { readFile } from "node:fs/promises";
 import { requiredDeployedChecks } from "./kova-auth-cutover-gate.mjs";
@@ -10,7 +11,12 @@ await build({
   format: "cjs",
   target: "node22",
   outfile: process.argv[2] ?? "/tmp/kova-s6-runner.cjs",
-  define: { S6_REALTIME_SOURCE: JSON.stringify(compiled.code) },
+  define: {
+    S6_REALTIME_SOURCE: JSON.stringify(compiled.code),
+    S6_HARNESS_SHA: JSON.stringify(
+      execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+    ),
+  },
   plugins: [
     {
       name: "gate-constants-only",

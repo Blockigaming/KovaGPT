@@ -124,3 +124,31 @@ test("stale, wrong-run, duplicate, source-only and future owner receipts cannot 
     assert.equal(f.run.records.length, 0);
   }
 });
+
+test("failed automation blocks dependent retirement and owner ceremony but still restores", async () => {
+  const f = fixture();
+  f.run.check = async (name, fn) => {
+    f.events.push(name);
+    if (name === "legacy_mfa_bridge") f.run.records.push({ check: name, status: "FAIL" });
+    else await fn();
+  };
+  await executeS6(f.run, f.options);
+  assert.ok(!f.events.includes("public_login_and_signup"));
+  assert.ok(!f.events.includes("hosted_bearer_denied_after_retirement"));
+  assert.ok(!f.events.includes("invite"));
+  assert.ok(!f.events.includes("switch-kova"));
+  assert.deepEqual(f.events.slice(-2), ["cleanup", "restore"]);
+  for (const check of [
+    ...OWNER_CHECKS,
+    "rollback_rehearsal",
+    "hosted_bearer_denied_after_retirement",
+  ])
+    assert.equal(f.run.records.find((r) => r.check === check).status, "BLOCKED");
+});
+
+test("owner invitation occurs only after the automated prerequisites and signup is not rerun", async () => {
+  const f = fixture();
+  await executeS6(f.run, f.options);
+  assert.ok(f.events.indexOf("invite") > f.events.indexOf("realtime_reauthorization"));
+  assert.ok(!f.events.includes("public_login_and_signup"));
+});

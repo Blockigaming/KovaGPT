@@ -9,6 +9,12 @@ import { SUPABASE } from "./s6-deployed-checks.mjs";
 // without changing constants or transport behavior. Only browser state/cookie
 // plumbing is supplied by this command-line fixture.
 const lifecycleSource = typeof S6_REALTIME_SOURCE === "undefined" ? null : S6_REALTIME_SOURCE;
+export function loadRealtimeLifecycle(source, context) {
+  const module = { exports: {} };
+  vm.runInNewContext(source, { ...context, module, exports: module.exports });
+  assert.equal(typeof module.exports.subscribeOwnedRealtime, "function");
+  return module.exports;
+}
 const wait = async (predicate, milliseconds = 25000) => {
   const end = Date.now() + milliseconds;
   while (Date.now() < end) {
@@ -45,9 +51,7 @@ export async function realtimeProbe(run) {
         super(url, { ...options, transport: Socket, timeout: 10000, heartbeatIntervalMs: 10000 });
       }
     }
-    const exports = {};
-    vm.runInNewContext(lifecycleSource, {
-      exports,
+    const lifecycle = loadRealtimeLifecycle(lifecycleSource, {
       Request,
       Response,
       Headers,
@@ -79,7 +83,7 @@ export async function realtimeProbe(run) {
       },
     });
     const subscribe = () =>
-      exports.subscribeOwnedRealtime({
+      lifecycle.subscribeOwnedRealtime({
         ownerId: owner,
         topic: "kova-collaboration:s6-" + run.runId,
         bind: (channel, invalidate) =>

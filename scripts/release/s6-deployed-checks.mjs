@@ -106,6 +106,7 @@ export class S6Run {
     this.runId = randomBytes(6).toString("hex");
     this.fixtures = [];
     this.objects = [];
+    this.projects = [];
     this.records = [];
     this.sockets = [];
     this.cleanupComplete = false;
@@ -143,6 +144,7 @@ export class S6Run {
       signal: AbortSignal.timeout(12000),
       dispatcher: this.dispatcher,
     });
+    this.lastHttpStatus = response.status;
     const bytes = Buffer.from(await response.arrayBuffer());
     const text = bytes.toString("utf8");
     let data;
@@ -198,6 +200,7 @@ export class S6Run {
         JSON.stringify(
           {
             runId: this.runId,
+            harnessSha: typeof S6_HARNESS_SHA === "undefined" ? null : S6_HARNESS_SHA,
             sourceSha: this.sourceSha,
             target: TARGET,
             deadline: new Date(this.liveDeadline).toISOString(),
@@ -212,6 +215,8 @@ export class S6Run {
       );
   }
   async check(name, fn) {
+    this.stage = name;
+    this.lastHttpStatus = undefined;
     try {
       await fn();
     } catch (error) {
@@ -221,6 +226,18 @@ export class S6Run {
         kind: "DEPLOYED",
         at: new Date().toISOString(),
         errorType: error.name,
+        stage: this.stage,
+        ...(Number.isInteger(this.lastHttpStatus) ? { httpStatus: this.lastHttpStatus } : {}),
+        // No response bodies, arbitrary messages, tokens, SQL or assertion strings.
+        ...(typeof error.actual === "number" || typeof error.actual === "boolean"
+          ? { actual: error.actual }
+          : {}),
+        ...(typeof error.expected === "number" || typeof error.expected === "boolean"
+          ? { expected: error.expected }
+          : {}),
+        sourceLocations: [
+          ...String(error.stack ?? "").matchAll(/s6-[a-z-]+\.(?:mjs|cjs):\d+:\d+/g),
+        ].map((m) => m[0]),
       });
       this.save();
     }
@@ -345,6 +362,7 @@ export class S6Run {
   }
   async legacyCheck() {
     const f = this.fixture("legacy");
+    this.stage = "legacy_hosted_create";
     const created = await this.service("/auth/v1/admin/users", {
       method: "POST",
       body: { email: f.email, password: f.password, email_confirm: true },
@@ -352,36 +370,51 @@ export class S6Run {
     assert.ok([200, 201].includes(created.status));
     f.id = created.data.user?.id ?? created.data.id;
     assert.match(f.id, /^[a-f0-9-]{36}$/i);
+    this.stage = "legacy_hosted_login";
     const signed = await this.bearer("/auth/v1/token?grant_type=password", this.apiKey, {
       method: "POST",
       body: { email: f.email, password: f.password },
     });
     assert.equal(signed.status, 200);
     const aal1 = signed.data.access_token;
+    this.stage = "legacy_hosted_enroll";
     const enrolled = await this.bearer("/auth/v1/factors", aal1, {
       method: "POST",
       body: { factor_type: "totp", friendly_name: "Disposable S6 hosted factor" },
     });
     assert.equal(enrolled.status, 200);
     assert.ok(enrolled.data.totp.secret);
+    this.stage = "legacy_hosted_challenge";
     const challenge = await this.bearer(`/auth/v1/factors/${enrolled.data.id}/challenge`, aal1, {
       method: "POST",
       body: {},
     });
     assert.equal(challenge.status, 200);
+    this.stage = "legacy_hosted_verify";
     const verified = await this.bearer(`/auth/v1/factors/${enrolled.data.id}/verify`, aal1, {
       method: "POST",
       body: { challenge_id: challenge.data.id, code: totp(enrolled.data.totp.secret) },
     });
     assert.equal(verified.status, 200);
     f.hostedBearer = verified.data.access_token;
+    this.stage = "legacy_fixture_mapping";
+    // Model the pre-existing adopted legacy population. The admin-created user
+    // is new to this run; no real identity or active owned credential is changed.
+    assert.match(f.email, fixtureEmail);
+    this.db
+      .query(`insert into kova_private.auth_accounts(id,legacy_supabase_user_id,primary_email,email_verified_at)
+      select id,id,lower(email),email_confirmed_at from auth.users
+      where id=${literal(f.id)}::uuid and email=${literal(f.email)} and email_confirmed_at is not null
+      and deleted_at is null and (banned_until is null or banned_until<=now())`);
     const h = { Authorization: `Bearer ${f.hostedBearer}`, "X-Kova-Owner": f.id };
+    this.stage = "legacy_aal1_denied";
     const denied = await this.app("/api/auth/mfa/enroll", {
       method: "POST",
       headers: { ...h, Authorization: `Bearer ${aal1}` },
       body: { legacyMigration: true, newPassword: f.password },
     });
     assert.equal(denied.status, 403);
+    this.stage = "legacy_owned_enroll";
     const next = await this.app("/api/auth/mfa/enroll", {
       method: "POST",
       headers: h,
@@ -393,6 +426,7 @@ export class S6Run {
     });
     assert.equal(next.status, 200);
     f.totp = next.data.secret;
+    this.stage = "legacy_owned_activate";
     const activate = await this.app("/api/auth/mfa/verify", {
       method: "POST",
       headers: h,
@@ -420,7 +454,7 @@ export class S6Run {
   }
   async hostedCheck() {
     const f = this.legacy;
-    assert.ok(f?.hostedBearer);
+    assert.ok(f?.hostedBearer, "legacy_mfa_bridge prerequisite missing");
     const owned = await this.token(f);
     assert.equal(
       (await this.bearer("/rest/v1/user_preferences?select=user_id", owned)).status,
@@ -460,7 +494,7 @@ export class S6Run {
     ]);
   }
   async storageCheck() {
-    const f = this.signupOwner ?? (await this.signup());
+    const f = this.signupOwner ?? (this.signupOwner = await this.signup());
     const other = await this.signup("other");
     const id = randomUUID(),
       path = `${f.principal.accountId}/${this.runId}/fixture.png`;
@@ -468,6 +502,7 @@ export class S6Run {
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2XcAAAAASUVORK5CYII=",
       "base64",
     );
+    this.stage = "storage_evidence_upload";
     const upload = await this.service("/storage/v1/object/agent-evidence/" + path, {
       method: "POST",
       raw: png,
@@ -475,19 +510,34 @@ export class S6Run {
     });
     assert.equal(upload.status, 200);
     this.objects.push(path);
-    this.db.query(
-      `insert into public.agent_jobs(id,owner_id,kind,status,input) values(${literal(id)}::uuid,${literal(f.principal.accountId)}::uuid,'team','cancelled','{}')`,
-    );
-    const row = this.db.json(
-      `with i as (insert into public.agent_job_events(job_id,event_type,payload) values(${literal(id)}::uuid,'s6_fixture',jsonb_build_object('storage_path',${literal(path)})) returning id,job_id,event_type,payload) select row_to_json(i) from i`,
-    );
-    const link = await ownedPrivateFileLink("evidence", f.principal.accountId, row),
+    this.stage = "storage_project_fixture";
+    // The agent runtime deliberately rejects new jobs. Use a supported private
+    // project file for the byte proxy while retaining agent-evidence JWT/sign
+    // probes below, including the original cache-boundary regression bucket.
+    this.projects.push({ id, owner: f.principal.accountId });
+    this.db.query(`insert into public.projects(id,owner_id,name)
+      values(${literal(id)}::uuid,${literal(f.principal.accountId)}::uuid,${literal("S6 " + this.runId)})`);
+    const projectPath = `${id}/${this.runId}/fixture.png`;
+    const projectUpload = await this.service("/storage/v1/object/project-files/" + projectPath, {
+      method: "POST",
+      raw: png,
+      headers: { "Content-Type": "image/png", "Cache-Control": "no-store" },
+    });
+    assert.equal(projectUpload.status, 200);
+    this.objects.push({ bucket: "project-files", path: projectPath, project: id });
+    const row = this.db.json(`with i as (insert into public.project_files
+      (project_id,name,storage_path,mime_type,size_bytes,kind,status,uploaded_by)
+      values(${literal(id)}::uuid,'fixture.png',${literal(projectPath)},'image/png',${png.length},'image','ready',${literal(f.principal.accountId)}::uuid)
+      returning id,project_id,name,storage_path,mime_type,size_bytes,kind,status,content_sha256) select row_to_json(i) from i`);
+    const link = await ownedPrivateFileLink("project", f.principal.accountId, row),
       jwt = await this.token(f);
+    this.stage = "storage_proxy_owner";
     const good = await this.app(link, { cookie: f.cookie });
     assert.equal(good.status, 200);
     assert.deepEqual(good.bytes, png);
     assert.match(good.headers.get("cache-control"), /no-store/);
     assert.ok([401, 403, 409].includes((await this.app(link, { cookie: other.cookie })).status));
+    this.stage = "storage_direct_bytes_denied";
     for (let n = 0; n < 2; n++)
       assert.ok(
         [400, 401, 403, 404].includes(
@@ -496,6 +546,7 @@ export class S6Run {
         ),
         "direct byte cache must not warm",
       );
+    this.stage = "storage_signed_capability";
     const signed = await this.bearer("/storage/v1/object/sign/agent-evidence/" + path, jwt, {
       method: "POST",
       body: { expiresIn: 20 },
@@ -610,18 +661,37 @@ export class S6Run {
     const old = this.deadline;
     this.deadline = Math.max(old, Date.now() + 125000);
     const errors = [];
-    for (const path of this.objects) {
+    for (const object of this.objects) {
+      const { bucket, path, project } =
+        typeof object === "string" ? { bucket: "agent-evidence", path: object } : object;
       try {
         assert.ok(
-          this.fixtures.some((f) => path.startsWith((f.principal?.accountId ?? f.id) + "/")),
+          bucket === "agent-evidence"
+            ? this.fixtures.some((f) => path.startsWith((f.principal?.accountId ?? f.id) + "/"))
+            : bucket === "project-files" &&
+                this.projects.some((p) => p.id === project && path.startsWith(p.id + "/")),
         );
-        const r = await this.service("/storage/v1/object/agent-evidence", {
+        const r = await this.service("/storage/v1/object/" + bucket, {
           method: "DELETE",
           body: { prefixes: [path] },
         });
         assert.equal(r.status, 200);
       } catch {
         errors.push("object_cleanup");
+      }
+    }
+    for (const project of this.projects) {
+      try {
+        assert.ok(this.fixtures.some((f) => f.principal?.accountId === project.owner));
+        this.db.query(`begin;
+          delete from public.project_storage_source_provenance
+          where project_id=${literal(project.id)}::uuid and owner_id=${literal(project.owner)}::uuid
+          and storage_path=${literal(project.id + "/" + this.runId + "/fixture.png")};
+          delete from public.projects where id=${literal(project.id)}::uuid
+          and owner_id=${literal(project.owner)}::uuid and name=${literal("S6 " + this.runId)};
+          commit;`);
+      } catch {
+        errors.push("project_cleanup");
       }
     }
     const emails = this.fixtures.map((f) => {
