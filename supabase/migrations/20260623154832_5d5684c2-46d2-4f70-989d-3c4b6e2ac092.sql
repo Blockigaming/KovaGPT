@@ -1,1 +1,0 @@
-REVOKE EXECUTE ON FUNCTION public.try_increment_daily_usage(uuid, text, int, int) FROM anon, authenticated;

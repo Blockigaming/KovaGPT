@@ -1,1 +1,0 @@
-ALTER TABLE public.daily_usage ADD COLUMN IF NOT EXISTS uploads integer NOT NULL DEFAULT 0;
