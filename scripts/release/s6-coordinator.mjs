@@ -54,28 +54,13 @@ export async function executeS6(
     const version = await run.app("/api/version");
     assert.equal(version.status, 200);
     assert.equal(version.data.sha, run.sourceSha, "unexpected deployed source");
+    await run.prepareRollbackFixture();
     // Only unresolved checks run. Signup remains a preserved deployed PASS;
     // any new account creation below is disposable fixture setup, not a rerun.
     for (const [name, check] of [
-      ["legacy_mfa_bridge", () => run.legacyCheck()],
-      ["hosted_bearer_denied_after_retirement", () => run.hostedCheck()],
       ["storage_revocation_and_url_lifetime", () => run.storageCheck()],
       ["realtime_reauthorization", () => realtime(run)],
     ]) {
-      if (
-        name === "hosted_bearer_denied_after_retirement" &&
-        run.records.some((r) => r.check === "legacy_mfa_bridge" && r.status !== "PASS")
-      ) {
-        run.records.push({
-          check: name,
-          status: "BLOCKED",
-          kind: "DEPLOYED",
-          reason: "legacy_mfa_bridge prerequisite failed",
-          at: new Date(clock()).toISOString(),
-        });
-        run.save();
-        continue;
-      }
       progress({ check: name, status: "running" });
       await run.check(name, check);
     }

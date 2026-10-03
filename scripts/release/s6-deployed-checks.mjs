@@ -16,7 +16,8 @@ export const TARGET =
   "/subscriptions/ab732127-11c3-46a7-a1cb-6ee8d86594f4/resourceGroups/rg-kovagpt-dev/providers/Microsoft.App/containerApps/ca-kovagpt-auth-rehearsal";
 const literal = (x) => "'" + String(x).replaceAll("'", "''") + "'";
 const password = () => randomBytes(30).toString("base64url") + "!S6";
-const fixtureEmail = /^s6-[a-f0-9]{12}-(signup|legacy|other|realtime)@example\.invalid$/;
+const fixtureEmail =
+  /^s6-[a-f0-9]{12}-(signup|legacy|other|realtime|rollback-hosted|rollback-owned)@example\.invalid$/;
 export function totp(secret, at = Date.now()) {
   let bits = "";
   for (const c of secret.toUpperCase().replace(/=+$/, "")) {
@@ -217,6 +218,7 @@ export class S6Run {
   async check(name, fn) {
     this.stage = name;
     this.lastHttpStatus = undefined;
+    this.failureDiagnostics = undefined;
     try {
       await fn();
     } catch (error) {
@@ -226,7 +228,25 @@ export class S6Run {
         kind: "DEPLOYED",
         at: new Date().toISOString(),
         errorType: error.name,
-        stage: this.stage,
+        stage: error.s6Stage ?? this.stage,
+        assertionId: error.s6Stage ?? this.stage,
+        diagnostics: Object.fromEntries(
+          Object.entries(this.failureDiagnostics ?? {}).filter(
+            ([key, value]) =>
+              [
+                "messages",
+                "denied",
+                "closed",
+                "subscribed",
+                "socketErrors",
+                "channelErrors",
+                "timedOut",
+                "socketOpen",
+              ].includes(key) &&
+              Number.isSafeInteger(value) &&
+              value >= 0,
+          ),
+        ),
         ...(Number.isInteger(this.lastHttpStatus) ? { httpStatus: this.lastHttpStatus } : {}),
         // No response bodies, arbitrary messages, tokens, SQL or assertion strings.
         ...(typeof error.actual === "number" || typeof error.actual === "boolean"
@@ -236,7 +256,9 @@ export class S6Run {
           ? { expected: error.expected }
           : {}),
         sourceLocations: [
-          ...String(error.stack ?? "").matchAll(/s6-[a-z-]+\.(?:mjs|cjs):\d+:\d+/g),
+          ...String(error.stack ?? "").matchAll(
+            /(?:[a-z0-9_-]*s6[a-z0-9_-]*|runner)\.(?:mjs|cjs):\d+:\d+/g,
+          ),
         ].map((m) => m[0]),
       });
       this.save();
@@ -493,7 +515,51 @@ export class S6Run {
       "revoked Kova cookie does not fall back",
     ]);
   }
+  async prepareRollbackFixture() {
+    // Fresh credentials are test inputs for rollback, not reruns of preserved gates.
+    const f = this.fixture("rollback-hosted");
+    this.stage = "rollback_fixture_hosted_create";
+    const created = await this.service("/auth/v1/admin/users", {
+      method: "POST",
+      body: { email: f.email, password: f.password, email_confirm: true },
+    });
+    assert.ok([200, 201].includes(created.status));
+    f.id = created.data.user?.id ?? created.data.id;
+    assert.match(f.id, /^[a-f0-9-]{36}$/i);
+    const signed = await this.bearer("/auth/v1/token?grant_type=password", this.apiKey, {
+      method: "POST",
+      body: { email: f.email, password: f.password },
+    });
+    assert.equal(signed.status, 200);
+    assert.equal(typeof signed.data.access_token, "string");
+    this.db.query(`select kova_private.retire_legacy_auth(id,now()) from auth.users
+      where id=${literal(f.id)}::uuid and email=${literal(f.email)} and deleted_at is null`);
+    const ownedFixture = await this.signup("rollback-owned");
+    const owned = await this.token(ownedFixture);
+    const cookie = ownedFixture.cookie;
+    assert.equal(
+      (
+        await this.app("/api/auth/logout", {
+          method: "POST",
+          body: {},
+          cookie,
+          principal: ownedFixture.principal,
+        })
+      ).status,
+      204,
+    );
+    this.retiredEvidence = { hosted: signed.data.access_token, cookie, owned };
+  }
+  storagePreflight() {
+    this.stage = "storage_fixture_preflight";
+    const state = this.db.json(`select json_build_object(
+      'bucket',exists(select 1 from storage.buckets where id='project-files' and public=false and file_size_limit=10485760 and 'image/png'=any(allowed_mime_types)),
+      'columns',(select count(*) from information_schema.columns where table_schema='public' and table_name='project_files' and column_name in ('status','content_sha256')))`);
+    assert.equal(state.bucket, true, "storage_private_project_bucket");
+    assert.equal(state.columns, 2, "storage_private_project_columns");
+  }
   async storageCheck() {
+    this.storagePreflight();
     const f = this.signupOwner ?? (this.signupOwner = await this.signup());
     const other = await this.signup("other");
     const id = randomUUID(),
@@ -598,6 +664,7 @@ export class S6Run {
       "rollback requires retained revoked credentials and synthetic owner",
     );
     const testAuthority = async (expectedSource) => {
+      this.stage = "rollback_version_" + expectedSource.slice(0, 7);
       const end = Math.min(Date.now() + 60000, this.deadline - 150000);
       let matched = false;
       while (Date.now() < end) {
@@ -609,17 +676,24 @@ export class S6Run {
         await new Promise((r) => setTimeout(r, 1000));
       }
       assert.equal(matched, true, "rollback image source not serving");
+      this.stage = "rollback_owned_login_" + expectedSource.slice(0, 7);
       await this.login(this.signupOwner);
       const valid = await this.token(this.signupOwner);
       assert.equal(
         (await this.bearer("/rest/v1/user_preferences?select=user_id", valid)).status,
         200,
       );
-      for (const token of [this.retiredEvidence.hosted, this.retiredEvidence.owned])
+      for (const [kind, token] of Object.entries({
+        hosted: this.retiredEvidence.hosted,
+        owned: this.retiredEvidence.owned,
+      })) {
+        this.stage = "rollback_revoked_" + kind + "_" + expectedSource.slice(0, 7);
         assert.equal(
           (await this.bearer("/rest/v1/user_preferences?select=user_id", token)).status,
           401,
         );
+      }
+      this.stage = "rollback_mcp_no_fallback_" + expectedSource.slice(0, 7);
       const denied = await this.app("/.mcp/invoke-tool/list_projects", {
         method: "POST",
         body: { limit: 1 },
@@ -641,6 +715,9 @@ export class S6Run {
       });
       assert.equal(noFallback.status, 200);
       assert.equal(noFallback.data.session, null);
+    } catch (error) {
+      error.s6Stage = this.stage;
+      throw error;
     } finally {
       const dual = await transition("restore");
       assert.equal(dual.mode, "dual");
@@ -684,9 +761,13 @@ export class S6Run {
       try {
         assert.ok(this.fixtures.some((f) => f.principal?.accountId === project.owner));
         this.db.query(`begin;
+          do $cleanup$ begin
+          if to_regclass('public.project_storage_source_provenance') is not null then
           delete from public.project_storage_source_provenance
           where project_id=${literal(project.id)}::uuid and owner_id=${literal(project.owner)}::uuid
           and storage_path=${literal(project.id + "/" + this.runId + "/fixture.png")};
+          end if;
+          end $cleanup$;
           delete from public.projects where id=${literal(project.id)}::uuid
           and owner_id=${literal(project.owner)}::uuid and name=${literal("S6 " + this.runId)};
           commit;`);

@@ -195,6 +195,7 @@ test("corrected Storage fixture uses real Project DDL and retains agent-evidence
       throw new Error("captured_project_fixture");
     },
   });
+  run.storagePreflight = () => {};
   run.signupOwner = { principal: { accountId: owner }, cookie: "test-cookie" };
   run.signup = async () => ({ principal: { accountId: "20000000-0000-4000-8000-000000000002" } });
   run.service = async (path) => {
@@ -227,5 +228,80 @@ test("corrected Storage fixture uses real Project DDL and retains agent-evidence
   } finally {
     await run.dispatcher.close();
     await db.close();
+  }
+});
+
+test("Realtime timeouts identify the exact phase and retain safe transport counters", async () => {
+  const { waitForRealtime } = await import("../../scripts/release/s6-realtime-probe.mjs");
+  const run = runFixture();
+  let now = 0;
+  try {
+    await run.check("realtime_reauthorization", () =>
+      waitForRealtime(
+        run,
+        "realtime_initial_owner_event",
+        () => false,
+        { subscribed: 1, messages: 0, socketErrors: 0, secret: "must-not-leak" },
+        200,
+        () => now,
+        async () => {
+          now += 100;
+        },
+      ),
+    );
+    const row = run.records[0];
+    assert.equal(row.assertionId, "realtime_initial_owner_event");
+    assert.equal(row.actual, false);
+    assert.equal(row.expected, true);
+    assert.deepEqual(row.diagnostics, { subscribed: 1, messages: 0, socketErrors: 0 });
+    assert.ok(!JSON.stringify(row).includes("must-not-leak"));
+  } finally {
+    await run.dispatcher.close();
+  }
+});
+
+test("Storage preflight fails before creating identities or objects for missing setup", async () => {
+  const run = runFixture({ json: () => ({ bucket: false, columns: 0 }) });
+  run.signup = () => assert.fail("must not create identity before preflight");
+  try {
+    await assert.rejects(run.storageCheck(), /storage_private_project_bucket/);
+  } finally {
+    await run.dispatcher.close();
+  }
+});
+
+test("project cleanup tolerates absent optional provenance and preserves unrelated projects", async () => {
+  for (const provenance of [false, true]) {
+    const db = new PGlite();
+    const run = runFixture();
+    const id = "30000000-0000-4000-8000-000000000003";
+    const statements = [];
+    run.fixtures = [
+      { email: `s6-${run.runId}-signup@example.invalid`, principal: { accountId: owner } },
+    ];
+    run.projects = [{ id, owner }];
+    run.db = {
+      query: (sql) => {
+        statements.push(sql);
+      },
+      json: () => ({ sessions: 0, activeAccounts: 0, queued: 0 }),
+    };
+    try {
+      await run.cleanup();
+      const sql = statements.find((x) => x.includes("delete from public.projects"));
+      await db.exec(`create table public.projects(id uuid,owner_id uuid,name text);
+        insert into public.projects values('${id}','${owner}','S6 ${run.runId}'),(gen_random_uuid(),'${owner}','unrelated');`);
+      if (provenance)
+        await db.exec(
+          "create table public.project_storage_source_provenance(project_id uuid,owner_id uuid,storage_path text)",
+        );
+      await db.exec(sql);
+      assert.deepEqual((await db.query("select name from public.projects")).rows, [
+        { name: "unrelated" },
+      ]);
+    } finally {
+      await run.dispatcher.close();
+      await db.close();
+    }
   }
 });

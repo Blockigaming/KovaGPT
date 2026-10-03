@@ -15,19 +15,38 @@ export function loadRealtimeLifecycle(source, context) {
   assert.equal(typeof module.exports.subscribeOwnedRealtime, "function");
   return module.exports;
 }
-const wait = async (predicate, milliseconds = 25000) => {
-  const end = Date.now() + milliseconds;
-  while (Date.now() < end) {
+export const waitForRealtime = async (
+  run,
+  assertionId,
+  predicate,
+  events,
+  milliseconds = 25000,
+  clock = Date.now,
+  pause = (ms) => new Promise((r) => setTimeout(r, ms)),
+) => {
+  run.stage = assertionId;
+  run.failureDiagnostics = events;
+  const end = clock() + milliseconds;
+  while (clock() < end) {
     if (predicate()) return;
-    await new Promise((r) => setTimeout(r, 100));
+    await pause(100);
   }
-  assert.fail("realtime_condition_timeout");
+  assert.equal(predicate(), true, assertionId);
 };
 export async function realtimeProbe(run) {
   assert.ok(lifecycleSource, "realtime probe must be built from the production module");
   const f = await run.signup("realtime");
   const owner = f.principal.accountId;
-  const events = { messages: 0, denied: 0, closed: 0, subscribed: 0 };
+  const events = {
+    messages: 0,
+    denied: 0,
+    closed: 0,
+    subscribed: 0,
+    socketErrors: 0,
+    channelErrors: 0,
+    timedOut: 0,
+    socketOpen: 0,
+  };
   let currentCookie = f.cookie;
   const db = run.db;
   // This dedicated table contains only synthetic test payloads. It is removed
@@ -38,17 +57,19 @@ export async function realtimeProbe(run) {
     create policy owner_read on public.kova_s6_realtime for select to authenticated using(owner_id=auth.uid());
     create policy live_session on public.kova_s6_realtime as restrictive for select to authenticated using(kova_auth_guard.session_is_active());
     alter publication supabase_realtime add table public.kova_s6_realtime;commit;`);
-  let stop;
+  let stop, primaryError;
   try {
     class Socket extends WebSocket {
       constructor(url, protocols) {
         super(url, { protocols, dispatcher: run.dispatcher });
         this.addEventListener("close", () => events.closed++);
+        this.addEventListener("error", () => events.socketErrors++);
+        this.addEventListener("open", () => events.socketOpen++);
       }
     }
     class Client extends RealtimeClient {
       constructor(url, options) {
-        super(url, { ...options, transport: Socket, timeout: 10000, heartbeatIntervalMs: 10000 });
+        super(url, { ...options, transport: Socket, timeout: 10000 });
       }
     }
     const lifecycle = loadRealtimeLifecycle(lifecycleSource, {
@@ -100,6 +121,8 @@ export async function realtimeProbe(run) {
         invalidate: () => events.messages++,
         onStatus: (s) => {
           if (s === "SUBSCRIBED") events.subscribed++;
+          if (s === "CHANNEL_ERROR") events.channelErrors++;
+          if (s === "TIMED_OUT") events.timedOut++;
         },
         onDenied: () => events.denied++,
       });
@@ -108,9 +131,14 @@ export async function realtimeProbe(run) {
         `insert into public.kova_s6_realtime values('${randomUUID()}','${owner}','synthetic')`,
       );
     stop = subscribe();
-    await wait(() => events.subscribed === 1);
+    await waitForRealtime(
+      run,
+      "realtime_initial_subscription",
+      () => events.subscribed === 1,
+      events,
+    );
     insert();
-    await wait(() => events.messages === 1);
+    await waitForRealtime(run, "realtime_initial_owner_event", () => events.messages === 1, events);
     const revoked = f.cookie;
     const logout = await run.app("/api/auth/logout", {
       method: "POST",
@@ -118,26 +146,53 @@ export async function realtimeProbe(run) {
       cookie: revoked,
       principal: f.principal,
     });
+    run.stage = "realtime_logout_status";
     assert.equal(logout.status, 204);
     insert();
-    await wait(() => events.denied === 1, 22000);
-    await wait(() => events.closed > 0, 5000);
+    await waitForRealtime(
+      run,
+      "realtime_revocation_lease_denied",
+      () => events.denied === 1,
+      events,
+      22000,
+    );
+    await waitForRealtime(
+      run,
+      "realtime_revoked_socket_closed",
+      () => events.closed > 0,
+      events,
+      5000,
+    );
     const delivered = events.messages;
+    run.stage = "realtime_no_event_after_revocation";
     assert.equal(delivered, 1, "event after committed revocation leaked");
     insert();
     await new Promise((r) => setTimeout(r, 1500));
+    run.stage = "realtime_no_late_revoked_event";
     assert.equal(events.messages, delivered);
     stop();
     stop = subscribe();
-    await wait(() => events.denied === 2, 8000);
+    await waitForRealtime(
+      run,
+      "realtime_revoked_reconnect_denied",
+      () => events.denied === 2,
+      events,
+      8000,
+    );
+    run.stage = "realtime_no_revoked_subscription";
     assert.equal(events.subscribed, 1, "revoked reconnect subscribed");
     stop();
     await run.login(f);
     currentCookie = f.cookie;
     stop = subscribe();
-    await wait(() => events.subscribed === 2);
+    await waitForRealtime(
+      run,
+      "realtime_fresh_subscription",
+      () => events.subscribed === 2,
+      events,
+    );
     insert();
-    await wait(() => events.messages === 2);
+    await waitForRealtime(run, "realtime_fresh_owner_event", () => events.messages === 2, events);
     run.note("realtime_reauthorization", [
       "real WebSocket and owner event delivered",
       "committed revocation blocks new row events",
@@ -145,8 +200,16 @@ export async function realtimeProbe(run) {
       "revoked reconnect rejected",
       "fresh owned authority receives events",
     ]);
+  } catch (error) {
+    primaryError = error;
+    throw error;
   } finally {
-    stop?.();
-    db.query("drop table public.kova_s6_realtime;");
+    try {
+      stop?.();
+      db.query("drop table public.kova_s6_realtime;");
+    } catch (error) {
+      run.realtimeCleanupFailed = true;
+      if (!primaryError) throw error;
+    }
   }
 }

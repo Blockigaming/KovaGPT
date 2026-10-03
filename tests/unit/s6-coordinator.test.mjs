@@ -25,6 +25,7 @@ function fixture() {
       events.push(name);
       await fn();
     },
+    prepareRollbackFixture: async () => {},
     signupCheck: async () => {},
     legacyCheck: async () => {},
     hostedCheck: async () => {},
@@ -129,7 +130,8 @@ test("failed automation blocks dependent retirement and owner ceremony but still
   const f = fixture();
   f.run.check = async (name, fn) => {
     f.events.push(name);
-    if (name === "legacy_mfa_bridge") f.run.records.push({ check: name, status: "FAIL" });
+    if (name === "storage_revocation_and_url_lifetime")
+      f.run.records.push({ check: name, status: "FAIL" });
     else await fn();
   };
   await executeS6(f.run, f.options);
@@ -138,11 +140,7 @@ test("failed automation blocks dependent retirement and owner ceremony but still
   assert.ok(!f.events.includes("invite"));
   assert.ok(!f.events.includes("switch-kova"));
   assert.deepEqual(f.events.slice(-2), ["cleanup", "restore"]);
-  for (const check of [
-    ...OWNER_CHECKS,
-    "rollback_rehearsal",
-    "hosted_bearer_denied_after_retirement",
-  ])
+  for (const check of [...OWNER_CHECKS, "rollback_rehearsal"])
     assert.equal(f.run.records.find((r) => r.check === check).status, "BLOCKED");
 });
 
@@ -151,4 +149,22 @@ test("owner invitation occurs only after the automated prerequisites and signup 
   await executeS6(f.run, f.options);
   assert.ok(f.events.indexOf("invite") > f.events.indexOf("realtime_reauthorization"));
   assert.ok(!f.events.includes("public_login_and_signup"));
+});
+
+test("preserved legacy and hosted gates are never rerun by the six-check cycle", async () => {
+  const f = fixture();
+  f.run.legacyCheck =
+    f.run.hostedCheck =
+    f.run.signupCheck =
+      () => assert.fail("preserved gate rerun");
+  let prepared = false;
+  f.run.prepareRollbackFixture = async () => {
+    prepared = true;
+  };
+  await executeS6(f.run, f.options);
+  assert.equal(prepared, true);
+  assert.deepEqual(
+    f.events.filter((x) => x.endsWith("_bridge") || x.includes("retirement")),
+    [],
+  );
 });
