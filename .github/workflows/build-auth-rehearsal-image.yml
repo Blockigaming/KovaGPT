@@ -16,6 +16,12 @@ on:
         required: true
         type: boolean
         default: false
+      auth_mode:
+        description: "Matching compiled browser/server mode for the isolated rehearsal"
+        required: true
+        type: choice
+        options: [dual, kova]
+        default: dual
 
 permissions:
   contents: read
@@ -131,8 +137,11 @@ jobs:
           SOURCE_TREE: ${{ steps.source.outputs.tree }}
           REHEARSAL_PUBLISHABLE_KEY: ${{ inputs.rehearsal_publishable_key }}
           ENABLE_OWNED_GOOGLE: ${{ inputs.enable_owned_google }}
+          AUTH_MODE: ${{ inputs.auth_mode }}
         run: |
           set -euo pipefail
+
+          case "$AUTH_MODE" in dual|kova) ;; *) exit 1 ;; esac
 
           if [ "$ENABLE_OWNED_GOOGLE" != "true" ] && [ "$ENABLE_OWNED_GOOGLE" != "false" ]; then
             echo "::error::enable_owned_google must be true or false."
@@ -149,8 +158,8 @@ jobs:
             --build-arg KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$PRODUCTION_PROJECT_REF" \
             --build-arg VITE_SUPABASE_URL="https://${REHEARSAL_PROJECT_REF}.supabase.co" \
             --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$REHEARSAL_PUBLISHABLE_KEY" \
-            --build-arg VITE_KOVA_AUTH_MODE=dual \
-            --build-arg KOVA_RUNTIME_AUTH_MODE=dual \
+            --build-arg VITE_KOVA_AUTH_MODE="$AUTH_MODE" \
+            --build-arg KOVA_RUNTIME_AUTH_MODE="$AUTH_MODE" \
             --build-arg VITE_KOVA_GOOGLE_AUTH_ENABLED="$ENABLE_OWNED_GOOGLE" \
             --tag "$IMAGE_REF" \
             .
@@ -182,3 +191,41 @@ jobs:
             echo "This workflow only builds and pushes an image."
             echo "It does not deploy or modify any Azure Container App."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record immutable rehearsal image and compiled modes
+        shell: bash
+        env:
+          IMAGE_REF: ${{ steps.source.outputs.image_ref }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_TREE: ${{ steps.source.outputs.tree }}
+          AUTH_MODE: ${{ inputs.auth_mode }}
+          GOOGLE_ENABLED: ${{ inputs.enable_owned_google }}
+        run: |
+          set -euo pipefail
+          docker image inspect "$IMAGE_REF" > "$RUNNER_TEMP/s6-image-inspect.json"
+          python3 - <<'PY'
+          import json, os, pathlib
+          data=json.loads(pathlib.Path(os.environ['RUNNER_TEMP'],'s6-image-inspect.json').read_text())[0]
+          env=dict(value.split('=',1) for value in data['Config']['Env'])
+          labels=data['Config']['Labels']
+          mode=os.environ['AUTH_MODE']
+          assert env['KOVA_AUTH_MODE']==mode and env['KOVA_COMPILED_AUTH_MODE']==mode
+          assert labels['org.opencontainers.image.revision']==os.environ['SOURCE_SHA']
+          assert labels['com.kovagpt.source.tree']==os.environ['SOURCE_TREE']
+          assert labels['com.kovagpt.browser.supabase-project-ref']==os.environ['REHEARSAL_PROJECT_REF']
+          assert labels['com.kovagpt.browser.config-verified']=='true'
+          prefix=os.environ['ACR_LOGIN_SERVER']+'/'+os.environ['IMAGE_REPOSITORY']+'@sha256:'
+          pinned=next(value for value in data['RepoDigests'] if value.startswith(prefix))
+          receipt={'image':pinned,'sourceSha':os.environ['SOURCE_SHA'],'sourceTree':os.environ['SOURCE_TREE'],
+            'mode':mode,'compiledMode':env['KOVA_COMPILED_AUTH_MODE'],'googleEnabled':os.environ['GOOGLE_ENABLED']=='true',
+            'projectRef':os.environ['REHEARSAL_PROJECT_REF']}
+          pathlib.Path(os.environ['RUNNER_TEMP'],'s6-image-receipt.json').write_text(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Preserve immutable rehearsal image receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: s6-image-${{ inputs.auth_mode }}-${{ steps.source.outputs.sha }}
+          path: ${{ runner.temp }}/s6-image-receipt.json
+          retention-days: 14
+          if-no-files-found: error

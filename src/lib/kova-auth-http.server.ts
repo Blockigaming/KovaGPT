@@ -1,3 +1,5 @@
+import { kovaAuthRequestUrl } from "@/lib/kova-auth-proxy-origin.mjs";
+import { s6GoogleIdentityAllowed } from "@/lib/s6-owner-relay.mjs";
 import { createHash, timingSafeEqual } from "node:crypto";
 import {
   clearKovaSessionCookie,
@@ -1467,7 +1469,7 @@ export async function handleKovaRecoveryReset(request: Request): Promise<Respons
 export async function handleKovaGoogleStart(request: Request): Promise<Response> {
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
-  const requestOrigin = new URL(request.url).origin;
+  const requestOrigin = kovaAuthRequestUrl(request, process.env).origin;
   if (requestOrigin !== publicOrigin() && requestOrigin !== authOrigin())
     return jsonError("Not found", 404);
   if (
@@ -1479,13 +1481,13 @@ export async function handleKovaGoogleStart(request: Request): Promise<Response>
   if (
     requestOrigin === authOrigin() &&
     requestOrigin !== publicOrigin() &&
-    !new URL(request.url).searchParams.has("init")
+    !kovaAuthRequestUrl(request, process.env).searchParams.has("init")
   ) {
     const target = new URL("/api/auth/google/start", publicOrigin());
     target.searchParams.set(
       "return_to",
       safeRelativeRedirect(
-        new URL(request.url).searchParams.get("return_to"),
+        kovaAuthRequestUrl(request, process.env).searchParams.get("return_to"),
         publicOrigin(),
         "/api/auth/google",
       ),
@@ -1500,7 +1502,7 @@ export async function handleKovaGoogleStart(request: Request): Promise<Response>
   try {
     const configuredAuthOrigin = authOrigin();
     const configuredPublicOrigin = publicOrigin();
-    const url = new URL(request.url);
+    const url = kovaAuthRequestUrl(request, process.env);
     if (![configuredAuthOrigin, configuredPublicOrigin].includes(url.origin))
       return jsonError("Not found", 404);
     const clientId = process.env.KOVA_GOOGLE_CLIENT_ID;
@@ -1600,11 +1602,12 @@ export async function handleKovaGoogleCallback(request: Request): Promise<Respon
   let candidateAccountId: string | null = null;
   try {
     const configuredAuthOrigin = authOrigin();
-    if (new URL(request.url).origin !== configuredAuthOrigin) return jsonError("Not found", 404);
+    if (kovaAuthRequestUrl(request, process.env).origin !== configuredAuthOrigin)
+      return jsonError("Not found", 404);
     const clientId = process.env.KOVA_GOOGLE_CLIENT_ID;
     const clientSecret = process.env.KOVA_GOOGLE_CLIENT_SECRET;
     if (!clientId || !clientSecret) throw new Error("Google OAuth is not configured");
-    const url = new URL(request.url);
+    const url = kovaAuthRequestUrl(request, process.env);
     const state = url.searchParams.get("state") ?? "";
     if (!googleStateMatches(request, state)) return googleFailureRedirect("google_invalid_state");
     const stateRecord = await consumeOAuthState(digestKovaToken(state));
@@ -1644,6 +1647,10 @@ export async function handleKovaGoogleCallback(request: Request): Promise<Respon
       clientId,
       expectedNonceDigest: stateRecord.nonceDigest,
     });
+
+    // The disposable owner rehearsal may only adopt its preflighted fixture.
+    // Check before creating a principal or touching an existing Google account.
+    if (!s6GoogleIdentityAllowed(identity.email)) return googleFailureRedirect("google_denied");
 
     candidateAccountId = await createCompatibilityPrincipal();
     const handoff = generateKovaToken();
@@ -1699,7 +1706,7 @@ export async function handleKovaGoogleExchange(request: Request): Promise<Respon
   if (unavailable) return unavailable;
   try {
     const configuredPublicOrigin = publicOrigin();
-    const url = new URL(request.url);
+    const url = kovaAuthRequestUrl(request, process.env);
     if (url.origin !== configuredPublicOrigin) return jsonError("Not found", 404);
     if (
       url.searchParams.getAll("handoff").length !== 1 ||

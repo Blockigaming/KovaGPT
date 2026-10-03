@@ -37,11 +37,20 @@ async function fixture() {
  `,
   });
   try {
-    const principal = await passwordAccount(db, { email: "site-owner@example.invalid" });
+    // These authorization RPCs use PostgreSQL now(), not the historical test clock.
+    const sessionTimes = {
+      at: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    };
+    const principal = await passwordAccount(db, {
+      email: "site-owner@example.invalid",
+      ...sessionTimes,
+    });
     const viewer = await passwordAccount(db, {
       id: other,
       email: "site-viewer@example.invalid",
       token: "viewer",
+      ...sessionTimes,
     });
     db.siteId = (
       await scalar(db, "mutate_kova_site", [
@@ -174,7 +183,7 @@ test("owned Sites recheck suspension, factors, session expiry, provider and view
       ["revocation", "update kova_private.auth_sessions set revoked_at=now() where account_id=$1"],
       [
         "expiry",
-        "update kova_private.auth_sessions set expires_at=now()-interval '1 second' where account_id=$1",
+        "update kova_private.auth_sessions set created_at=now()-interval '1 day',expires_at=now()-interval '1 second' where account_id=$1",
       ],
       ["epoch", "update kova_private.auth_accounts set session_epoch=session_epoch+1 where id=$1"],
       ["MFA requirement", "update kova_private.auth_accounts set mfa_required=true where id=$1"],

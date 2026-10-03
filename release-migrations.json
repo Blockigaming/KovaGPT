@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 186,
-  "latest": "20260927163950_kova_owned_auth_remaining_review_fixes.sql",
+  "count": 188,
+  "latest": "20261001003120_kova_owned_passkey_registration_primary_session.sql",
   "migrations": [
     {
       "order": 1,
@@ -3909,6 +3909,34 @@
         "kova_auth_legacy_mfa_gap_count"
       ],
       "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 187,
+      "filename": "20260930224000_kova_owned_storage_cache_boundary.sql",
+      "timestamp": "20260930224000",
+      "sha256": "0ce55846b9de680ee9132fce545770c68eadf0d982554adfebd8d3f19ae858f3",
+      "tables": [],
+      "functions": ["storage_operation_is_safe"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": ["kova_owned_storage_cache_boundary"],
+      "indexes": []
+    },
+    {
+      "order": 188,
+      "filename": "20261001003120_kova_owned_passkey_registration_primary_session.sql",
+      "timestamp": "20261001003120",
+      "sha256": "ed52d3aa90dcffe28f4199d4dd12dfdf713b14cd46f74a2f9af9d3218cd97ce5",
+      "tables": [],
+      "functions": ["kova_auth_finish_passkey_registration"],
+      "destructive": false,
       "dataBackfill": true,
       "reversible": false,
       "rls": [],

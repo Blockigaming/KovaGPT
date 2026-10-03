@@ -12,6 +12,15 @@ const workflow = readFileSync(
   "utf8",
 );
 
+test("Azure readiness accepts the guarded Node startup contract", () => {
+  const result = spawnSync(process.execPath, ["scripts/azure/validate.mjs"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Azure Container Apps readiness validation passed/u);
+});
+
 function runAuthModeGuard(serverMode, browserMode) {
   const instruction = dockerfile.match(
     /^RUN case "\$KOVA_RUNTIME_AUTH_MODE" in[\s\S]*?(?=\n\nRUN )/mu,
@@ -28,12 +37,13 @@ function runAuthModeGuard(serverMode, browserMode) {
   });
 }
 
-test("rehearsal image sets dual mode in both the browser and server", () => {
+test("rehearsal image binds browser and server to the same explicit dual/kova mode", () => {
   assert.match(dockerfile, /^ARG KOVA_RUNTIME_AUTH_MODE=supabase$/mu);
   assert.match(dockerfile, /^\s+KOVA_AUTH_MODE=\$\{KOVA_RUNTIME_AUTH_MODE\} \\/mu);
   assert.match(dockerfile, /^\s+KOVA_COMPILED_AUTH_MODE=\$\{VITE_KOVA_AUTH_MODE\}$/mu);
-  assert.match(workflow, /--build-arg VITE_KOVA_AUTH_MODE=dual \\/u);
-  assert.match(workflow, /--build-arg KOVA_RUNTIME_AUTH_MODE=dual \\/u);
+  assert.match(workflow, /options: \[dual, kova\]/u);
+  assert.match(workflow, /--build-arg VITE_KOVA_AUTH_MODE="\$AUTH_MODE" \\/u);
+  assert.match(workflow, /--build-arg KOVA_RUNTIME_AUTH_MODE="\$AUTH_MODE" \\/u);
 });
 
 test("image build guard accepts matching auth modes and rejects mismatches", () => {

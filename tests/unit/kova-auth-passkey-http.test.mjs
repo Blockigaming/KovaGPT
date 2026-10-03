@@ -21,8 +21,17 @@ import { hashKovaPassword } from "../../src/lib/kova-auth-crypto.server.mjs";
 
 const password = "synthetic current password only";
 const passwordHash = await hashKovaPassword(password);
+// Real HTTP handlers use wall-clock time; keep their session fixtures current.
+const sessionAt = new Date().toISOString();
+const sessionExpiry = new Date(Date.now() + 86400000).toISOString();
 async function account(db, id = owner, token = "s".repeat(43)) {
-  return passwordAccount(db, { id, token, passwordHash });
+  return passwordAccount(db, {
+    id,
+    token,
+    passwordHash,
+    at: sessionAt,
+    expiresAt: sessionExpiry,
+  });
 }
 async function register(db, f, fixture = passkeyFixture()) {
   await account(db);
@@ -157,7 +166,7 @@ test("password reauthentication is mandatory for AAL1 registration, while AAL2 u
     ).json();
     assert.equal(status.requiresPassword, true);
     assert.equal(status.canRegister, true);
-    await enableMfa(db, "s".repeat(43), "t".repeat(43));
+    await enableMfa(db, "s".repeat(43), "t".repeat(43), sessionAt, sessionExpiry);
     const begin = await f.handleKovaPasskeyRegisterOptions(
       await boundRequest(db, { friendlyName: "Security key" }, { token: "t".repeat(43) }),
     );
@@ -268,7 +277,7 @@ test("registration options and verification reject an account switch before crea
   try {
     const a = await account(db);
     await account(db, other, "o".repeat(43));
-    await enableMfa(db, "o".repeat(43), "b".repeat(43));
+    await enableMfa(db, "o".repeat(43), "b".repeat(43), sessionAt, sessionExpiry);
     const f = passkeyHttp(db);
     const capturedA = { "X-Kova-Owner": owner, "X-Kova-Session": a.session_id };
     const wrongCookie = { token: "b".repeat(43), headers: capturedA };

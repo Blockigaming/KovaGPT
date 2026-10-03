@@ -107,6 +107,9 @@ async function asCaller(claims, sql, params = [], role = "authenticated") {
     await tx.query("select set_config('request.jwt.claims',$1,true)", [
       typeof claims === "string" ? claims : JSON.stringify(claims),
     ]);
+    // These assertions exercise metadata RLS. Owned byte delivery must use the
+    // uncached application proxy; Storage's direct authenticated GET is closed.
+    await tx.query("select set_config('storage.operation','storage.object.list',true)");
     await tx.exec(`set local role ${role}`);
     return tx.query(sql, params);
   });
@@ -444,7 +447,10 @@ test("guard privileges expose no private auth data or caller-supplied account ch
     exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where a.grantee=0) as public_execute
     from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='kova_auth_guard' order by p.proname`)
   ).rows;
-  assert.equal(rows.length, 2);
+  assert.deepEqual(
+    rows.map((row) => row.proname),
+    ["check_request", "session_is_active", "storage_operation_is_safe"],
+  );
   for (const row of rows) {
     assert.equal(row.pronargs, 0);
     assert.equal(row.caller_execute, true);

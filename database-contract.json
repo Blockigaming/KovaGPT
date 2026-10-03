@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 186,
+  "migrationCount": 188,
   "tables": [
     "account_audit_entries",
     "account_deletion_fences",
@@ -549,6 +549,7 @@
     "kova_auth_finish_mfa_recovery_login",
     "kova_auth_finish_passkey_login",
     "kova_auth_finish_passkey_registration",
+    "kova_auth_finish_passkey_registration",
     "kova_auth_has_verified_legacy_mfa",
     "kova_auth_legacy_adoption_gap_count",
     "kova_auth_legacy_adoption_gap_count",
@@ -812,6 +813,7 @@
     "site_principal_current",
     "site_principal_current",
     "start_developer_checkout",
+    "storage_operation_is_safe",
     "touch_updated_at",
     "track_account_export_artifact_lifetime",
     "try_add_storage_bytes",
@@ -1293,6 +1295,7 @@
     "health owner read",
     "integration audit owner read",
     "kova_owned_session_guard",
+    "kova_owned_storage_cache_boundary",
     "library folders owner read",
     "library_delete_own",
     "library_insert_own",
@@ -1963,6 +1966,7 @@
     "execute on function %s to service_role', signature)",
     "execute on function kova_auth_guard.check_request() to anon, authenticated, service_role",
     "execute on function kova_auth_guard.session_is_active() to anon, authenticated, service_role",
+    "execute on function kova_auth_guard.storage_operation_is_safe() to anon, authenticated, service_role",
     "execute on function kova_private.accept_project_invite(uuid) to authenticated, service_role",
     "execute on function kova_private.account_export_direct_row_bytes(uuid, bigint)\n  to service_role",
     "execute on function kova_private.audit_lockdown_mode_change() to service_role",
@@ -2549,6 +2553,7 @@
     "all on function %s from public,anon',routine.signature)",
     "all on function kova_auth_guard.check_request() from public, anon, authenticated, service_role",
     "all on function kova_auth_guard.session_is_active() from public, anon, authenticated, service_role",
+    "all on function kova_auth_guard.storage_operation_is_safe() from public, anon, authenticated, service_role",
     "all on function kova_private.accept_project_invite(uuid) from public, anon",
     "all on function kova_private.account_export_direct_row_bytes(uuid, bigint)\n  from public, anon, authenticated",
     "all on function kova_private.adopt_compatibility_candidate() from public, anon, authenticated, service_role",
@@ -2999,5 +3004,5 @@
     "update on all sequences in schema public from public, anon, authenticated",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "0345e24536a83174695e34cd8d241b10343fd05e72664ff9396f91c96cf4256a"
+  "sha256": "107467660db728865ccfa6ffe9a766fe2f7d9ca3c14ef75fe48b190f8fcc78e5"
 }

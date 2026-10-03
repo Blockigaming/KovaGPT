@@ -1,0 +1,224 @@
+[
+  {
+    "number": 1,
+    "check": "server_client_mode_match",
+    "status": "PASS",
+    "evidence": "Fresh ARM binding to revision 0000023, pinned image and dual server configuration; /api/version returned c92fdbf\u2026 in all three phases. Reuses the pinned dual browser-build provenance.",
+    "freshness": "fresh + reused",
+    "remaining": "None for this unchanged revision.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 2,
+    "check": "signing_key_and_issuer",
+    "status": "PASS",
+    "evidence": "Live compatibility JWT: ES256, expected issuer with trailing slash, kid 57a2cb2a-99d2-493f-88a1-e6210f7aac45, 300-second lifetime. Valid token accepted by PostgREST/MCP; altered signature rejected with 401.",
+    "freshness": "fresh",
+    "remaining": "None.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 3,
+    "check": "origin_and_csrf",
+    "status": "PASS",
+    "evidence": "Cross-origin requests to login, signup, recovery, resend, password, MFA enroll, revoke-others and refresh returned 403. Same-origin login reached credential validation; bound security mutations succeeded.",
+    "freshness": "fresh",
+    "remaining": "None.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 4,
+    "check": "public_login_and_signup",
+    "status": "PASS",
+    "evidence": "Same public signup identity completed queued verification, non-consuming GET, one-time POST, denied replay, and owned login on revision 0000024.",
+    "freshness": "preserved deployed receipt",
+    "remaining": "None; do not rerun this check.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "5f8cdcf059643a2fa82257ef97773c87448f70d1",
+    "at": "2026-10-02T22:56:37.420Z",
+    "runId": "0ab755df4018"
+  },
+  {
+    "number": 5,
+    "check": "recovery_and_resend",
+    "status": "PASS",
+    "evidence": "Reuse S7 real recovery/consumption. Fresh resend returned non-enumerating 202; independent database readback showed the old proof consumed, one replacement proof live, and a new queue item.",
+    "freshness": "fresh + reused",
+    "remaining": "None; real delivery remains credited separately from S7.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 6,
+    "check": "password_rotation",
+    "status": "PASS",
+    "evidence": "Authenticated password change returned 200 and replaced cookie; old cookie and old password were denied; new password login succeeded. Old JWT lost PostgREST/RPC/MCP authority.",
+    "freshness": "fresh",
+    "remaining": "None.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 7,
+    "check": "totp_enrollment_and_login",
+    "status": "PASS",
+    "evidence": "Synthetic-account enrollment and activation succeeded; activation rotated the session and invalidated the old cookie. Password login issued a challenge; the valid TOTP completed an AAL2 session. Removal rotated back to AAL1.",
+    "freshness": "fresh",
+    "remaining": "None. No owner authenticator ceremony needed for this row.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 8,
+    "check": "totp_recovery",
+    "status": "PASS",
+    "evidence": "A generated recovery code completed the deployed MFA challenge; reuse against a fresh challenge was rejected with 401.",
+    "freshness": "fresh",
+    "remaining": "None.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 9,
+    "check": "legacy_mfa_bridge",
+    "status": "BLOCKED",
+    "evidence": "Prior migrations/ACL/census evidence retained. The actual deployed legacy-to-owned MFA bridge was not exercised.",
+    "freshness": "not executed",
+    "remaining": "Agent prepares and exercises a disposable legacy-MFA account; no real account modifications.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 10,
+    "check": "passkey_registration",
+    "status": "BLOCKED",
+    "evidence": "No physical-device ceremony was performed.",
+    "freshness": "not executed",
+    "remaining": "One owner session: register a physical passkey with user verification on a disposable staging identity and the exact RP ID.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 11,
+    "check": "passkey_login_and_removal",
+    "status": "BLOCKED",
+    "evidence": "No physical-device login/removal proof was performed.",
+    "freshness": "not executed",
+    "remaining": "In the same owner session, log in with that passkey; agent checks identity/session behavior and removal/rejection.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 12,
+    "check": "google_callback_and_consent",
+    "status": "BLOCKED",
+    "evidence": "Both KOVA_GOOGLE_CLIENT_ID and KOVA_GOOGLE_CLIENT_SECRET are absent from the app configuration. Deployed Google start returned 404 {error: Not found}, including a same-origin request.",
+    "freshness": "fresh failure + configuration blocker",
+    "remaining": "Provide a dedicated staging client securely, validate the exact origin/callback, diagnose the separate 404 boundary, then perform consent once with a disposable Google test identity.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 13,
+    "check": "owned_session_revocation",
+    "status": "PASS",
+    "evidence": "Revoke-others invalidated the sibling session while preserving the current one. Logout returned 204; subsequent session and token-refresh requests using the old cookie returned 401.",
+    "freshness": "fresh",
+    "remaining": "None.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 14,
+    "check": "owner_rpc_revocation",
+    "status": "PASS",
+    "evidence": "family_owner_of succeeded before revocation and returned 401 after committed password/session rotation with the same JWT.",
+    "freshness": "fresh",
+    "remaining": "None; this is the deployed owner-RPC path tested.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 15,
+    "check": "postgrest_request_hook",
+    "status": "PASS",
+    "evidence": "External PostgREST accepted the valid current JWT and rejected the same still-within-expiry JWT with 401 after revocation. Prior hook metadata is reused.",
+    "freshness": "fresh + reused",
+    "remaining": "None.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 16,
+    "check": "rls_owner_isolation",
+    "status": "PASS",
+    "evidence": "Two synthetic owners read only their own user_preferences row. Cross-owner read returned an empty result; attempted cross-owner update had no effect on independent readback. Reuses the 119-table guard proof.",
+    "freshness": "fresh + reused",
+    "remaining": "Coverage is a deployed two-owner read/write scenario, not a claim that every table was individually exercised.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 17,
+    "check": "storage_revocation_and_url_lifetime",
+    "status": "FAIL",
+    "evidence": "Direct authenticated object GET still returned 200 after session revocation. New signed-URL issuance was denied. A pre-issued 20-second signed URL remained usable until its bounded expiry and then returned 400.",
+    "freshness": "fresh",
+    "remaining": "Agent must distinguish cache behavior from authorization using response/cache metadata and uncached requests, then fix/retest as required. Caching is only a hypothesis, not an accepted waiver.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 18,
+    "check": "realtime_reauthorization",
+    "status": "BLOCKED",
+    "evidence": "Active-channel, reauthorization and teardown behavior was not exercised.",
+    "freshness": "not executed",
+    "remaining": "Agent runs a real authenticated WebSocket subscription, commits revocation, and verifies message/reauthorization behavior and channel teardown.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 19,
+    "check": "mcp_bearer_revocation",
+    "status": "PASS",
+    "evidence": "/.mcp/invoke-tool/list_projects returned a successful response with the live bearer. After password rotation, the same bearer yielded isError=true / Not authenticated and no protected result (HTTP 200 is the MCP envelope). Revoked cookie session fallback was denied.",
+    "freshness": "fresh",
+    "remaining": "None for the observed bearer path; no claim of exhaustive connector coverage.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 20,
+    "check": "hosted_bearer_denied_after_retirement",
+    "status": "BLOCKED",
+    "evidence": "Retirement markers/database guard evidence exists; an actual deployed unmarked hosted bearer was not exercised after retirement.",
+    "freshness": "not executed",
+    "remaining": "Agent uses a disposable hosted identity and retained pre-retirement bearer; verifies denial after the retirement transaction.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 21,
+    "check": "email_delivery",
+    "status": "PASS",
+    "evidence": "Reused authoritative S7 run on revision 0000023/build c92fdbf\u2026: provider accepted the recovery mail, queue drained, owner received/consumed the link and logged in during 2026-09-30 01:03\u201301:20 UTC.",
+    "freshness": "reused",
+    "remaining": "None. This run did not send another real recovery email.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  },
+  {
+    "number": 22,
+    "check": "rollback_rehearsal",
+    "status": "BLOCKED",
+    "evidence": "No complete deployed rollback evidence exists. Current pinned browser/server image is dual. Changing only the server mode would violate the mode contract.",
+    "freshness": "not executed / authorization boundary",
+    "remaining": "Needs an explicitly scoped staging dual \u2192 matching compiled kova \u2192 pinned dual rollback, with revoked-authority rejection after rollback. No production cutover; no waiver based on S8.",
+    "kind": "REUSED_DEPLOYED",
+    "sourceSha": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb"
+  }
+]

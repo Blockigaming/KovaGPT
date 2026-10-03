@@ -1,0 +1,6 @@
+{
+  "localBuiltRuntime": true,
+  "serverMode": "kova",
+  "callbackStatus": 303,
+  "location": "https://ca-kovagpt-auth-rehearsal.whitepebble-42e8ad60.eastus.azurecontainerapps.io/?auth_error=google_invalid_state"
+}
