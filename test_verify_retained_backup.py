@@ -160,7 +160,7 @@ class Checks(unittest.TestCase):
             with self.assertRaisesRegex(v.Stop,'ISOLATION'):v.require_network_isolation()
     def test_workflow_maps_only_original_secret_and_temporary_private_input(self):
         source=workflow_source()
-        self.assertEqual(set(re.findall(r'secrets\.([A-Z0-9_]+)',source)),{'KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926'} | {'M18_RETAINED_ZIP_PART'+str(i)+'_20261003' for i in range(1,5)})
+        self.assertEqual(set(re.findall(r'secrets\.([A-Z0-9_]+)',source)),{'KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926'} | {'M18_RETAINED_ZIP_PART'+str(i)+'_20261003' for i in range(1,7)})
         for forbidden in ('KOVA_PRODUCTION_DATABASE_URL','upload-artifact','actions/cache','azure/login','workflow_dispatch','supabase db','set -x','urllib','curl '):
             self.assertNotIn(forbidden,source)
         self.assertIn('timeout-minutes: 5',source);self.assertIn('permissions:\n  contents: read',source)
@@ -175,7 +175,7 @@ class Checks(unittest.TestCase):
         program=compile(textwrap.dedent(source),'<reviewed-input-step>','exec')
         raw=b'synthetic-encrypted-input'.ljust(152310,b'x')
         encoded=base64.b85encode(raw).decode('ascii')
-        env={'M18_ZIP_PART'+str(i+1):encoded[i*48000:(i+1)*48000] for i in range(4)}
+        env={'M18_ZIP_PART'+str(i+1):encoded[i*32000:(i+1)*32000] for i in range(6)}
         if mode=='missing':del env['M18_ZIP_PART2']
         with tempfile.TemporaryDirectory() as tmp:
             env['RUNNER_TEMP']=tmp
@@ -186,7 +186,7 @@ class Checks(unittest.TestCase):
                 else:
                     with self.assertRaises(SystemExit) as stopped:exec(program,{'__name__':'__main__'})
                     self.assertEqual(stopped.exception.code,1)
-                self.assertFalse(any('M18_ZIP_PART'+str(i) in os.environ for i in range(1,5)))
+                self.assertFalse(any('M18_ZIP_PART'+str(i) in os.environ for i in range(1,7)))
             file=Path(tmp)/'m18-retained-input/input.zip'
             if mode=='valid':
                 self.assertEqual(file.read_bytes(),raw);self.assertEqual(output.getvalue(),'')
