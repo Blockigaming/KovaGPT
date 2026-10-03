@@ -211,7 +211,12 @@ test("rollback restores pinned dual even when a pure-Kova authority assertion fa
   let phase = "dual";
   const transitions = [];
   run.signupOwner = {};
-  run.retiredEvidence = { hosted: "hosted", owned: "revoked", cookie: "revoked-cookie" };
+  run.retiredEvidence = {
+    hosted: "hosted",
+    owned: "revoked",
+    cookie: "revoked-cookie",
+    expiresAt: Date.now() + 3600000,
+  };
   run.login = async () => {};
   run.token = async () => "valid";
   run.app = async (path) =>
@@ -255,7 +260,12 @@ test("rollback accepts the real no-session response while denying every hosted f
   const h = authHttp({ env: { KOVA_AUTH_PUBLIC_ORIGIN: ORIGIN } });
   let phase = "dual";
   run.signupOwner = {};
-  run.retiredEvidence = { hosted: "hosted", owned: "revoked", cookie: "revoked-cookie" };
+  run.retiredEvidence = {
+    hosted: "hosted",
+    owned: "revoked",
+    cookie: "revoked-cookie",
+    expiresAt: Date.now() + 3600000,
+  };
   run.login = async () => {};
   run.token = async () => "valid";
   run.bearer = async (_path, token) => ({ status: token === "valid" ? 200 : 401 });

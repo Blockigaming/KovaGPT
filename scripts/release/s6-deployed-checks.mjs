@@ -548,7 +548,17 @@ export class S6Run {
       ).status,
       204,
     );
-    this.retiredEvidence = { hosted: signed.data.access_token, cookie, owned };
+    const expiry = (token) => {
+      const claims = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
+      assert.ok(Number.isSafeInteger(claims.exp));
+      return claims.exp * 1000;
+    };
+    this.retiredEvidence = {
+      hosted: signed.data.access_token,
+      cookie,
+      owned,
+      expiresAt: Math.min(expiry(signed.data.access_token), expiry(owned)),
+    };
   }
   storagePreflight() {
     this.stage = "storage_fixture_preflight";
@@ -682,6 +692,11 @@ export class S6Run {
       assert.equal(
         (await this.bearer("/rest/v1/user_preferences?select=user_id", valid)).status,
         200,
+      );
+      this.stage = "rollback_revoked_credentials_unexpired";
+      assert.ok(
+        this.retiredEvidence.expiresAt > Date.now() + 5000,
+        "rollback_revocation_must_not_be_expiry",
       );
       for (const [kind, token] of Object.entries({
         hosted: this.retiredEvidence.hosted,

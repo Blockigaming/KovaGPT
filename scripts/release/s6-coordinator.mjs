@@ -54,7 +54,6 @@ export async function executeS6(
     const version = await run.app("/api/version");
     assert.equal(version.status, 200);
     assert.equal(version.data.sha, run.sourceSha, "unexpected deployed source");
-    await run.prepareRollbackFixture();
     // Only unresolved checks run. Signup remains a preserved deployed PASS;
     // any new account creation below is disposable fixture setup, not a rerun.
     for (const [name, check] of [
@@ -124,7 +123,10 @@ export async function executeS6(
       }
       // Remove the transfer channel before a revision transition loses its memory.
       await closeRelay();
-      await run.check("rollback_rehearsal", () => run.rollbackCheck(transition));
+      await run.check("rollback_rehearsal", async () => {
+        await run.prepareRollbackFixture();
+        await run.rollbackCheck(transition);
+      });
     }
   } catch (error) {
     failures.push(error);

@@ -39,7 +39,8 @@ retirement/audit evidence remains. The original app image stayed stopped.
   contract remains HTTP 200 with session null. Offline tests cover restoration
   after denial-test failure and the real session route contract.
 - Coordinator runs only the six unresolved gates. It prepares fresh revoked
-  credentials as rollback inputs without rerunning Legacy MFA or hosted
+  credentials immediately before rollback, with expiry assertions preventing
+  expiry from masquerading as revocation. These are rollback inputs without rerunning Legacy MFA or hosted
   retirement acceptance checks. The 16 preserved results are not overwritten.
 
 ## Next bounded run (not authorized by this correction cycle)
