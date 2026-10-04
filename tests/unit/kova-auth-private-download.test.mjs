@@ -247,6 +247,43 @@ async function fixture(kind = "project", options = {}) {
       }),
   };
 }
+function nitroRequestWrapper(request) {
+  return new Proxy(request, {
+    get(target, key) {
+      const value = Reflect.get(target, key, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
+test("Nitro Request wrapper reaches owned private delivery without native Request private-state access", async () => {
+  const f = await fixture("project");
+  const request = nitroRequestWrapper(f.request());
+  // The Node server supplies a wrapped Request. Native construction from that
+  // object is not interoperable with Undici's branded private state.
+  assert.throws(() => new Request(request), TypeError);
+  const response = await f.handler(request);
+  assert.equal(response.status, 200);
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), f.bytes);
+  assert.equal(f.metadataReads(), 2);
+  assert.equal(f.sessionReads(), 3);
+});
+
+test("Nitro Request wrapper retains missing-cookie, revoked-session and foreign-owner denial", async () => {
+  for (const [options, headers, expected] of [
+    [{}, { Cookie: "" }, 401],
+    [{ revoked: true }, {}, 401],
+    [{ account: project }, {}, 409],
+    [{}, { Origin: "https://foreign.invalid" }, 403],
+  ]) {
+    const f = await fixture("project", options);
+    const response = await f.handler(nitroRequestWrapper(f.request(headers)));
+    assert.equal(response.status, expected);
+    assert.equal(f.metadataReads(), 0);
+    assert.ok(!f.events.some(([event]) => event === "sign" || event === "fetch"));
+  }
+});
+
 test("S6 project PNG fixture passes the immutable handler with visible metadata and current authority", async () => {
   const bytes = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2XcAAAAASUVORK5CYII=",
