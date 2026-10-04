@@ -54,12 +54,26 @@ export async function executeS6(
     const version = await run.app("/api/version");
     assert.equal(version.status, 200);
     assert.equal(version.data.sha, run.sourceSha, "unexpected deployed source");
+    const preservedRealtime = manifest?.preservedRealtime;
+    if (preservedRealtime) {
+      assert.equal(preservedRealtime.check, "realtime_reauthorization");
+      assert.equal(preservedRealtime.status, "PASS");
+      assert.equal(preservedRealtime.kind, "DEPLOYED");
+      assert.equal(preservedRealtime.sourceSha, run.sourceSha);
+      assert.match(preservedRealtime.runId, /^[a-f0-9]{12}$/);
+      assert.ok(Number.isFinite(Date.parse(preservedRealtime.at)));
+      assert.ok(Date.parse(preservedRealtime.at) <= clock());
+      assert.ok(preservedRealtime.assertions.length > 0);
+      run.records.push({ ...preservedRealtime, kind: "REUSED_DEPLOYED" });
+      run.save();
+    }
     // Only unresolved checks run. Signup remains a preserved deployed PASS;
     // any new account creation below is disposable fixture setup, not a rerun.
     for (const [name, check] of [
       ["storage_revocation_and_url_lifetime", () => run.storageCheck()],
       ["realtime_reauthorization", () => realtime(run)],
     ]) {
+      if (name === "realtime_reauthorization" && preservedRealtime) continue;
       progress({ check: name, status: "running" });
       await run.check(name, check);
     }

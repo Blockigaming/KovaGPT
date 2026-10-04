@@ -168,3 +168,47 @@ test("preserved legacy and hosted gates are never rerun by the six-check cycle",
     [],
   );
 });
+
+test("same-build deployed Realtime receipt is preserved without rerunning its check", async () => {
+  const f = fixture();
+  f.options.manifest.preservedRealtime = {
+    check: "realtime_reauthorization",
+    status: "PASS",
+    kind: "DEPLOYED",
+    sourceSha: f.run.sourceSha,
+    runId: "abcdef012345",
+    at: new Date(Date.now() - 1000).toISOString(),
+    assertions: ["real deployed lifecycle completed"],
+  };
+  f.options.realtime = () => assert.fail("preserved Realtime gate must not rerun");
+  await executeS6(f.run, f.options);
+  assert.ok(!f.events.includes("realtime_reauthorization"));
+  assert.equal(f.run.records.filter((r) => r.check === "realtime_reauthorization").length, 1);
+  assert.equal(f.run.records[0].kind, "REUSED_DEPLOYED");
+  assert.ok(f.events.indexOf("invite") > f.events.indexOf("storage_revocation_and_url_lifetime"));
+});
+
+test("wrong-build or non-deployed Realtime evidence cannot skip the gate or open an owner session", async () => {
+  for (const patch of [
+    { sourceSha: "b".repeat(40) },
+    { kind: "SOURCE" },
+    { status: "BLOCKED" },
+    { at: new Date(Date.now() + 60000).toISOString() },
+  ]) {
+    const f = fixture();
+    f.options.manifest.preservedRealtime = {
+      check: "realtime_reauthorization",
+      status: "PASS",
+      kind: "DEPLOYED",
+      sourceSha: f.run.sourceSha,
+      runId: "abcdef012345",
+      at: new Date(Date.now() - 1000).toISOString(),
+      assertions: ["deployed"],
+      ...patch,
+    };
+    await assert.rejects(executeS6(f.run, f.options), AggregateError);
+    assert.ok(!f.events.includes("invite"));
+    assert.ok(f.events.includes("cleanup"));
+    assert.ok(f.events.includes("restore"));
+  }
+});

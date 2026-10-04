@@ -87,8 +87,8 @@ function load(path, modules, fetchImpl = () => assert.fail("Unexpected external 
   return exports;
 }
 async function fixture(kind = "project", options = {}) {
-  const original = rows[kind],
-    bytes = kind === "evidence" ? image : text;
+  const original = options.fixtureRow ?? rows[kind],
+    bytes = options.fixtureBytes ?? (kind === "evidence" ? image : text);
   const link = await download.ownedPrivateFileLink(kind, owner, original);
   const events = [];
   let fetched = false,
@@ -247,6 +247,30 @@ async function fixture(kind = "project", options = {}) {
       }),
   };
 }
+test("S6 project PNG fixture passes the immutable handler with visible metadata and current authority", async () => {
+  const bytes = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2XcAAAAASUVORK5CYII=",
+    "base64",
+  );
+  const f = await fixture("project", {
+    fixtureRow: {
+      ...rows.project,
+      name: "fixture.png",
+      storage_path: `${project}/abcdef012345/fixture.png`,
+      mime_type: "image/png",
+      size_bytes: bytes.length,
+      kind: "image",
+      content_sha256: null,
+    },
+    fixtureBytes: bytes,
+  });
+  const result = await f.handler(f.request());
+  assert.equal(result.status, 200);
+  assert.deepEqual(Buffer.from(await result.arrayBuffer()), bytes);
+  assert.equal(f.metadataReads(), 2);
+  assert.equal(f.sessionReads(), 3);
+});
+
 test("S6 missing account fence reproduces owner 404 without Storage access; restored prerequisite permits delivery", async () => {
   const absent = await fixture("project", { fenceReadError: true });
   const response = await absent.handler(absent.request());

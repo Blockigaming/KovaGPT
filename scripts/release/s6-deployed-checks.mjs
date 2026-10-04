@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { fetch, EnvHttpProxyAgent } from "undici";
 import { ownedPrivateFileLink } from "../../src/lib/kova-auth-private-download.mjs";
 import { requiredDeployedChecks } from "./kova-auth-cutover-gate.mjs";
+import { captureStorageProxyFailure } from "./s6-storage-diagnostics.mjs";
 
 export const PROJECT = "oztdrjtdglkizlewnulh";
 export const ORIGIN =
@@ -244,6 +245,20 @@ export class S6Run {
                 "socketOpen",
                 "postgresReady",
                 "postgresErrors",
+                "storagePrivateDenial",
+                "storageJsonResponse",
+                "storageNoStore",
+                "storageDiagnosticErrors",
+                "storageSessionStatus",
+                "storageSessionSame",
+                "storageFenceStatus",
+                "storageFenceRows",
+                "storageMetadataStatus",
+                "storageMetadataPermissionDenied",
+                "storageMetadataSchemaMissing",
+                "storageMetadataRows",
+                "storageVersionMatch",
+                "storageMetadataInvalid",
               ].includes(key) &&
               Number.isSafeInteger(value) &&
               value >= 0,
@@ -622,6 +637,7 @@ export class S6Run {
       jwt = await this.token(f);
     this.stage = "storage_proxy_owner";
     const good = await this.app(link, { cookie: f.cookie });
+    if (good.status !== 200) await captureStorageProxyFailure(this, good, f, row, jwt, link);
     assert.equal(good.status, 200);
     assert.deepEqual(good.bytes, png);
     assert.match(good.headers.get("cache-control"), /no-store/);
