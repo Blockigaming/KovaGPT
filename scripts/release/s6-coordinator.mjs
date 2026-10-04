@@ -59,12 +59,25 @@ export async function executeS6(
       assert.equal(preservedRealtime.check, "realtime_reauthorization");
       assert.equal(preservedRealtime.status, "PASS");
       assert.equal(preservedRealtime.kind, "DEPLOYED");
-      assert.equal(preservedRealtime.sourceSha, run.sourceSha);
+      if (preservedRealtime.sourceSha !== run.sourceSha) {
+        // Realtime can survive the isolated private-download Request fix. Keep
+        // the original receipt source and require the reviewed image-source diff.
+        const reuse = manifest.preservedRealtimeReuse;
+        assert.equal(reuse?.fromSourceSha, preservedRealtime.sourceSha);
+        assert.equal(reuse?.toSourceSha, run.sourceSha);
+        assert.deepEqual(reuse?.applicationChangedPaths, [
+          "src/lib/kova-auth-private-download.server.ts",
+        ]);
+      }
       assert.match(preservedRealtime.runId, /^[a-f0-9]{12}$/);
       assert.ok(Number.isFinite(Date.parse(preservedRealtime.at)));
       assert.ok(Date.parse(preservedRealtime.at) <= clock());
       assert.ok(preservedRealtime.assertions.length > 0);
-      run.records.push({ ...preservedRealtime, kind: "REUSED_DEPLOYED" });
+      run.records.push({
+        ...preservedRealtime,
+        kind: "REUSED_DEPLOYED",
+        reusedForSourceSha: run.sourceSha,
+      });
       run.save();
     }
     // Only unresolved checks run. Signup remains a preserved deployed PASS;

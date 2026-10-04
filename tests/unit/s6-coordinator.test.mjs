@@ -212,3 +212,38 @@ test("wrong-build or non-deployed Realtime evidence cannot skip the gate or open
     assert.ok(f.events.includes("restore"));
   }
 });
+
+test("Realtime reuse across the private-download-only correction preserves original provenance", async () => {
+  for (const path of [
+    "src/lib/kova-auth-private-download.server.ts",
+    "src/lib/kova-auth-realtime.ts",
+  ]) {
+    const f = fixture(),
+      previous = "b".repeat(40);
+    f.options.manifest.preservedRealtime = {
+      check: "realtime_reauthorization",
+      status: "PASS",
+      kind: "DEPLOYED",
+      sourceSha: previous,
+      runId: "abcdef012345",
+      at: new Date(Date.now() - 1000).toISOString(),
+      assertions: ["deployed"],
+    };
+    f.options.manifest.preservedRealtimeReuse = {
+      fromSourceSha: previous,
+      toSourceSha: f.run.sourceSha,
+      applicationChangedPaths: [path],
+    };
+    f.options.realtime = () => assert.fail("preserved Realtime gate must not rerun");
+    if (path === "src/lib/kova-auth-realtime.ts") {
+      await assert.rejects(executeS6(f.run, f.options), AggregateError);
+      assert.ok(!f.events.includes("invite"));
+    } else {
+      await executeS6(f.run, f.options);
+      assert.equal(f.run.records[0].sourceSha, previous);
+      assert.equal(f.run.records[0].reusedForSourceSha, f.run.sourceSha);
+      assert.equal(f.run.records[0].kind, "REUSED_DEPLOYED");
+    }
+    assert.ok(!f.events.includes("realtime_reauthorization"));
+  }
+});
