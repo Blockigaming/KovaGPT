@@ -117,7 +117,9 @@ async function fixture(kind = "project", options = {}) {
             return {
               data:
                 options.fence || (fetched && options.fenceAfterRead) ? { user_id: owner } : null,
-              error: null,
+              error: options.fenceReadError
+                ? { code: "PGRST205", message: "PRIVATE_SCHEMA_DETAIL" }
+                : null,
             };
           }
           if (table === "agent_jobs") {
@@ -245,6 +247,22 @@ async function fixture(kind = "project", options = {}) {
       }),
   };
 }
+test("S6 missing account fence reproduces owner 404 without Storage access; restored prerequisite permits delivery", async () => {
+  const absent = await fixture("project", { fenceReadError: true });
+  const response = await absent.handler(absent.request());
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), { error: "Private file unavailable." });
+  assert.equal(absent.metadataReads(), 0);
+  assert.equal(
+    absent.events.some(([event]) => event === "sign" || event === "fetch"),
+    false,
+  );
+  const present = await fixture("project");
+  const restored = await present.handler(present.request());
+  assert.equal(restored.status, 200);
+  assert.deepEqual(new Uint8Array(await restored.arrayBuffer()), present.bytes);
+});
+
 for (const kind of Object.keys(rows))
   test(`${kind}: actual cookie boundary and private delivery recheck state without exposing Storage credentials`, async () => {
     const f = await fixture(kind),

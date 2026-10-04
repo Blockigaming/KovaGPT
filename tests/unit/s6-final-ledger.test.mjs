@@ -12,7 +12,7 @@ const baseline = requiredDeployedChecks.map((check) => ({
 const run = {
   target: TARGET,
   cleanupComplete: true,
-  cleanupReadback: { sessions: 0, activeAccounts: 0, queued: 0 },
+  cleanupReadback: { credentials: 0, sessions: 0, activeAccounts: 0, queued: 0 },
   deadline: "2026-09-30T22:20:00Z",
   records: [
     {
@@ -40,4 +40,10 @@ test("migration increments only with all 22 deployed passes, cleanup and timely 
       independentReadback: { id: TARGET, state: "Running" },
     }),
   );
+});
+
+test("finalization refuses tombstoned accounts with non-disabled credentials", () => {
+  const residual = structuredClone(run);
+  residual.cleanupReadback.credentials = 1;
+  assert.throws(() => finalizeS6(baseline, residual, stopped));
 });

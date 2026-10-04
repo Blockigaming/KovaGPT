@@ -284,7 +284,7 @@ test("project cleanup tolerates absent optional provenance and preserves unrelat
       query: (sql) => {
         statements.push(sql);
       },
-      json: () => ({ sessions: 0, activeAccounts: 0, queued: 0 }),
+      json: () => ({ credentials: 0, sessions: 0, activeAccounts: 0, queued: 0 }),
     };
     try {
       await run.cleanup();

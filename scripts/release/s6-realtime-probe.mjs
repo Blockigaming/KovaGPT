@@ -33,6 +33,41 @@ export const waitForRealtime = async (
   }
   assert.equal(predicate(), true, assertionId);
 };
+
+// SUBSCRIBED acknowledges the channel join, not PostgreSQL replication readiness.
+// Wait for this channel's system event before its first INSERT, including after
+// fresh-authority reconnect. Never retain the provider's arbitrary message text.
+export function postgresReadiness(events) {
+  let ready = false,
+    failed = false;
+  return {
+    bind(channel) {
+      return channel.on("system", {}, (payload) => {
+        if (payload.extension !== "postgres_changes") return;
+        if (payload.status === "ok" && !ready) {
+          ready = true;
+          events.postgresReady++;
+        }
+        if (payload.status === "error" && !failed) {
+          failed = true;
+          events.postgresErrors++;
+        }
+      });
+    },
+    wait(run, assertionId, ...timing) {
+      return waitForRealtime(
+        run,
+        assertionId,
+        () => {
+          assert.equal(failed, false, assertionId);
+          return ready;
+        },
+        events,
+        ...timing,
+      );
+    },
+  };
+}
 export async function realtimeProbe(run) {
   assert.ok(lifecycleSource, "realtime probe must be built from the production module");
   const f = await run.signup("realtime");
@@ -46,6 +81,8 @@ export async function realtimeProbe(run) {
     channelErrors: 0,
     timedOut: 0,
     socketOpen: 0,
+    postgresReady: 0,
+    postgresErrors: 0,
   };
   let currentCookie = f.cookie;
   const db = run.db;
@@ -103,12 +140,14 @@ export async function realtimeProbe(run) {
         assert.fail("unexpected_realtime_dependency");
       },
     });
-    const subscribe = () =>
-      lifecycle.subscribeOwnedRealtime({
+    let readiness;
+    const subscribe = () => {
+      readiness = postgresReadiness(events);
+      return lifecycle.subscribeOwnedRealtime({
         ownerId: owner,
         topic: "kova-collaboration:s6-" + run.runId,
         bind: (channel, invalidate) =>
-          channel.on(
+          readiness.bind(channel).on(
             "postgres_changes",
             {
               event: "INSERT",
@@ -126,6 +165,7 @@ export async function realtimeProbe(run) {
         },
         onDenied: () => events.denied++,
       });
+    };
     const insert = () =>
       db.query(
         `insert into public.kova_s6_realtime values('${randomUUID()}','${owner}','synthetic')`,
@@ -137,6 +177,7 @@ export async function realtimeProbe(run) {
       () => events.subscribed === 1,
       events,
     );
+    await readiness.wait(run, "realtime_initial_postgres_ready");
     insert();
     await waitForRealtime(run, "realtime_initial_owner_event", () => events.messages === 1, events);
     const revoked = f.cookie;
@@ -191,6 +232,7 @@ export async function realtimeProbe(run) {
       () => events.subscribed === 2,
       events,
     );
+    await readiness.wait(run, "realtime_fresh_postgres_ready");
     insert();
     await waitForRealtime(run, "realtime_fresh_owner_event", () => events.messages === 2, events);
     run.note("realtime_reauthorization", [

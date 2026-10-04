@@ -125,7 +125,7 @@ test("fixture cleanup SQL disables only exact run identities and drains their pr
   const run = new S6Run({
     database: {
       query: (q) => sql.push(q),
-      json: () => ({ sessions: 0, activeAccounts: 0, queued: 0 }),
+      json: () => ({ credentials: 0, sessions: 0, activeAccounts: 0, queued: 0 }),
     },
     serviceKey: "fixture",
     apiKey: "fixture",

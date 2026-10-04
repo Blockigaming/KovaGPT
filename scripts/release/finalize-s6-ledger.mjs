@@ -6,7 +6,12 @@ import { reconcileChecks, TARGET } from "./s6-deployed-checks.mjs";
 export function finalizeS6(baseline, run, stopped) {
   assert.equal(run.target, TARGET);
   assert.equal(run.cleanupComplete, true);
-  assert.deepEqual(run.cleanupReadback, { sessions: 0, activeAccounts: 0, queued: 0 });
+  assert.deepEqual(run.cleanupReadback, {
+    credentials: 0,
+    sessions: 0,
+    activeAccounts: 0,
+    queued: 0,
+  });
   assert.equal(stopped.independentReadback.id.toLowerCase(), TARGET.toLowerCase());
   assert.equal(stopped.independentReadback.state, "Stopped");
   assert.equal(stopped.watchdog.status, "stopped");

@@ -242,6 +242,8 @@ export class S6Run {
                 "channelErrors",
                 "timedOut",
                 "socketOpen",
+                "postgresReady",
+                "postgresErrors",
               ].includes(key) &&
               Number.isSafeInteger(value) &&
               value >= 0,
@@ -564,9 +566,20 @@ export class S6Run {
     this.stage = "storage_fixture_preflight";
     const state = this.db.json(`select json_build_object(
       'bucket',exists(select 1 from storage.buckets where id='project-files' and public=false and file_size_limit=10485760 and 'image/png'=any(allowed_mime_types)),
-      'columns',(select count(*) from information_schema.columns where table_schema='public' and table_name='project_files' and column_name in ('status','content_sha256')))`);
+      'columns',(select count(*) from information_schema.columns where table_schema='public' and table_name='project_files' and column_name in ('status','content_sha256')),
+      'accountFence',to_regclass('public.account_deletion_fences') is not null,
+      'accountFenceReadable',case when to_regclass('public.account_deletion_fences') is null then false
+        else has_table_privilege('service_role','public.account_deletion_fences','SELECT') end)`);
+    this.stage = "storage_private_project_bucket";
     assert.equal(state.bucket, true, "storage_private_project_bucket");
+    this.stage = "storage_private_project_columns";
     assert.equal(state.columns, 2, "storage_private_project_columns");
+    // The immutable private download handler fails closed when this security
+    // relation is absent or unreadable. Reject setup before creating fixtures.
+    this.stage = "storage_private_account_fence";
+    assert.equal(state.accountFence, true, "storage_private_account_fence");
+    this.stage = "storage_private_account_fence_readable";
+    assert.equal(state.accountFenceReadable, true, "storage_private_account_fence_readable");
   }
   async storageCheck() {
     this.storagePreflight();
@@ -806,6 +819,7 @@ export class S6Run {
         const list = emails.join(",");
         this.db.query(`begin;
         update kova_private.auth_accounts set deleted_at=coalesce(deleted_at,now()),updated_at=now() where primary_email in (${list});
+        update kova_private.auth_credentials set disabled_at=coalesce(disabled_at,now()),updated_at=now() where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));
         update kova_private.auth_sessions set revoked_at=coalesce(revoked_at,now()) where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));
         update kova_private.auth_passkeys set disabled_at=coalesce(disabled_at,now()) where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));
         update kova_private.auth_mfa_factors set state='disabled',disabled_at=coalesce(disabled_at,now()),updated_at=now() where account_id in (select id from kova_private.auth_accounts where primary_email in (${list}));
@@ -822,9 +836,9 @@ export class S6Run {
         delete from pgmq.q_auth_emails where message->>'to' in (${list});
         commit;`);
         const remaining = this.db.json(
-          `select json_build_object('sessions',(select count(*) from kova_private.auth_sessions s join kova_private.auth_accounts a on a.id=s.account_id where a.primary_email in (${list}) and s.revoked_at is null),'activeAccounts',(select count(*) from kova_private.auth_accounts where primary_email in (${list}) and deleted_at is null),'queued',(select count(*) from pgmq.q_auth_emails where message->>'to' in (${list})))`,
+          `select json_build_object('credentials',(select count(*) from kova_private.auth_credentials c join kova_private.auth_accounts a on a.id=c.account_id where a.primary_email in (${list}) and c.disabled_at is null),'sessions',(select count(*) from kova_private.auth_sessions s join kova_private.auth_accounts a on a.id=s.account_id where a.primary_email in (${list}) and s.revoked_at is null),'activeAccounts',(select count(*) from kova_private.auth_accounts where primary_email in (${list}) and deleted_at is null),'queued',(select count(*) from pgmq.q_auth_emails where message->>'to' in (${list})))`,
         );
-        assert.deepEqual(remaining, { sessions: 0, activeAccounts: 0, queued: 0 });
+        assert.deepEqual(remaining, { credentials: 0, sessions: 0, activeAccounts: 0, queued: 0 });
         this.cleanupReadback = remaining;
       } catch {
         errors.push("database_cleanup");
