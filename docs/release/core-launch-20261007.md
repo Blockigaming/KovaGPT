@@ -301,3 +301,37 @@ This artifact expires October 8 at 19:51:16 UTC under the existing one-day
 retention policy. Published source remains in the Git branch. Every later
 candidate needs its own matching source artifact; this proof is not silently
 rebound to a newer commit.
+
+## GitHub permissions and exact-action approvals
+
+GitHub tool access now defaults to View only. The Plugins tab can switch the
+assistant's access to View + write or Disabled temporarily. Stored preferences
+are owner-scoped; updates compare the previous JSON value so concurrent changes
+such as Lockdown Mode are not overwritten. Changing access invalidates previously
+prepared actions. Connection-management controls remain separate from assistant
+tool authority.
+
+Write preparation stores the exact operation, arguments, repository, account and
+access/grant versions in the existing server-only pending-action table. The
+Plugins tab displays complete details and Confirm/Cancel controls. Confirmation
+accepts only the stored action ID and decision; a caller-supplied `confirmed`
+flag or replacement arguments cannot execute a write. Confirmation rechecks
+account ownership, repository grant, provider write permission, archival and
+installation state, session, Lockdown Mode and access version. A conditional
+database update consumes an unexpired approval once. Uncertain provider or
+completion-storage outcomes remain consumed; they are never automatically retried.
+Merge preparation requires the exact reviewed head SHA, and patch operations
+retain the separate-branch and non-force-update requirements.
+
+Workflow/run/check listing now reads GitHub's actual named response collections;
+malformed payloads fail instead of masquerading as an empty list. Outbound calls
+have bounded timeouts and refuse redirects. The tool API validates bounded input
+and prevents search queries from widening repository scope.
+
+Fresh focused verification: 84 checks pass, covering the real route and UI event
+handlers, account/grant/access changes, concurrent confirmation, expiry,
+cancellation, uncertain outcomes, complete previews, and PostgreSQL-compatible
+queries against the existing schemas. This is local source evidence, not a live
+GitHub connection. No migration, real issue/comment/branch/merge, or deployment
+was performed. Accepted model-to-tool dispatch and disposable-repository
+connect/read/write/cancel/disconnect acceptance remain unfinished.

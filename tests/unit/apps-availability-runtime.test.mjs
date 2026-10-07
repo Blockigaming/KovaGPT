@@ -58,6 +58,7 @@ function apps(status, search = "") {
     "@/components/AppShell",
     "@/components/WorkspacePageHeader",
     "@/components/ConfirmActionDialog",
+    "@/components/ToolConfirmCard",
     "@/components/ui/button",
     "@/components/WorkflowSkillsPanel",
   ])

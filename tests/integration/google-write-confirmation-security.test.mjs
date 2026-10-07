@@ -149,7 +149,8 @@ test("ambiguous Gmail sends reconcile owner-scoped durable status", () => {
   assert.match(statusLookup, /\.eq\("id", actionId\)\s*\.eq\("user_id", userId\)/);
   assert.match(route, /GET: async \(\{ request \}\)/);
   assert.match(route, /getPendingActionStatus\(auth\.userId, id\)/);
-  assert.match(card, /\/api\/chat\/confirm\?action_id=/);
+  assert.match(card, /const endpoint = github \? "\/api\/github\/tool" : "\/api\/chat\/confirm"/);
+  assert.match(card, /\$\{endpoint\}\?action_id=\$\{encodeURIComponent\(confirm.actionId\)\}/);
   assert.match(card, /statusJson\.status === "confirmed"/);
   assert.match(card, /json\.error_code === "completion_persistence_ambiguous"/);
   assert.match(route, /error_code: result\.error_code/);

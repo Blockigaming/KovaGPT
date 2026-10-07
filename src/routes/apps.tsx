@@ -30,6 +30,8 @@ import {
   type GitHubManagement,
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
+import { ToolConfirmCard } from "@/components/ToolConfirmCard";
+import type { PendingConfirm } from "@/lib/chat-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import {
@@ -384,6 +386,44 @@ function GitHubManager() {
     grants = useServerFn(updateGitHubRepositoryGrants),
     disconnect = useServerFn(disconnectGitHub);
   const [data, setData] = useState<GitHubManagement | null>(null);
+  const [approvals, setApprovals] = useState<PendingConfirm[]>([]);
+  const [approvalError, setApprovalError] = useState(false);
+  const [accessMode, setAccessMode] = useState<"none" | "view" | "write">("view");
+  const [accessBusy, setAccessBusy] = useState(false);
+  const [writeAccessOpen, setWriteAccessOpen] = useState(false);
+  const loadApprovals = useCallback(async () => {
+    setApprovals([]);
+    setApprovalError(false);
+    try {
+      const response = await authFetch("/api/github/tool");
+      const body = await response.json();
+      if (!response.ok || !body.ok || !Array.isArray(body.actions)) throw new Error("unavailable");
+      if (!["none", "view", "write"].includes(body.access_mode)) throw new Error("invalid access");
+      setAccessMode(body.access_mode);
+      setApprovals(body.actions);
+    } catch {
+      setApprovalError(true);
+    }
+  }, []);
+  async function changeAccess(mode: "none" | "view" | "write") {
+    if (accessBusy) return;
+    setAccessBusy(true);
+    try {
+      const response = await authFetch("/api/github/tool", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_mode: mode }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok || result.access_mode !== mode) throw new Error("unverified");
+      setAccessMode(mode);
+      await loadApprovals();
+    } catch {
+      toast.error("GitHub access change could not be verified. Reload its status.");
+    } finally {
+      setAccessBusy(false);
+    }
+  }
   const [busyAction, setBusyAction] = useState<
     "connect" | "refresh" | "grant" | "disconnect" | null
   >(null);
@@ -432,7 +472,8 @@ function GitHubManager() {
   } | null>(null);
   useEffect(() => {
     void reload();
-  }, [reload]);
+    void loadApprovals();
+  }, [reload, loadApprovals]);
   if (!data && loadError)
     return (
       <section role="alert" className="rounded-xl border border-destructive/40 p-5">
@@ -764,6 +805,66 @@ function GitHubManager() {
           </ul>
         </div>
       )}
+      <div className="mt-5 border-t pt-4">
+        <label className="mb-2 flex flex-wrap items-center gap-3 text-sm">
+          Assistant access to GitHub
+          <select
+            aria-label="GitHub access"
+            value={accessMode}
+            disabled={accessBusy || approvalError}
+            className="min-h-11 rounded-full border bg-background px-3"
+            onChange={(event) => {
+              const mode = event.target.value as "none" | "view" | "write";
+              if (mode === "write") setWriteAccessOpen(true);
+              else void changeAccess(mode);
+            }}
+          >
+            <option value="none">Disabled temporarily</option>
+            <option value="view">View only</option>
+            <option value="write">View + write</option>
+          </select>
+        </label>
+        <p className="mb-3 text-xs text-muted-foreground">
+          View + write allows preparing changes. Every write still needs your approval of its exact
+          details.
+        </p>
+        <ConfirmActionDialog
+          open={writeAccessOpen}
+          onOpenChange={setWriteAccessOpen}
+          title="Allow GitHub write requests?"
+          description="GitHub changes can publish content, modify branches or merge code. You will review and approve each exact operation before it runs. Existing repository grants still apply."
+          confirmLabel="Allow write requests"
+          onConfirm={() => {
+            setWriteAccessOpen(false);
+            void changeAccess("write");
+          }}
+        />
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="font-medium">GitHub actions awaiting your approval</h3>
+          <Button variant="outline" onClick={() => void loadApprovals()}>
+            Refresh actions
+          </Button>
+        </div>
+        {approvalError ? (
+          <p role="alert" className="mt-2 text-sm">
+            Approval requests could not be loaded. Refresh to try again.
+          </p>
+        ) : approvals.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">No pending GitHub actions.</p>
+        ) : (
+          approvals.map((confirm) => (
+            <ToolConfirmCard
+              key={confirm.actionId}
+              confirm={confirm}
+              onUpdate={(next) =>
+                setApprovals((current) =>
+                  current.map((item) => (item.actionId === next.actionId ? next : item)),
+                )
+              }
+            />
+          ))
+        )}
+      </div>
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, X, Loader2, Mail, Calendar, FileEdit, AlertCircle } from "lucide-react";
+import { Check, X, Loader2, Mail, Calendar, FileEdit, AlertCircle, Github } from "lucide-react";
 import { toast } from "sonner";
 import { authFetch } from "@/lib/auth-fetch";
 import type { PendingConfirm } from "@/lib/chat-store";
@@ -9,6 +9,13 @@ const TOOL_LABEL: Record<string, { label: string; Icon: typeof Mail }> = {
   gmail_create_draft: { label: "Save draft", Icon: FileEdit },
   calendar_create_event: { label: "Create event", Icon: Calendar },
   calendar_delete_event: { label: "Delete event", Icon: Calendar },
+  "github.createIssue": { label: "Create GitHub issue", Icon: Github },
+  "github.commentIssue": { label: "Post GitHub comment", Icon: Github },
+  "github.createBranch": { label: "Create GitHub branch", Icon: Github },
+  "github.openPull": { label: "Open pull request", Icon: Github },
+  "github.requestReview": { label: "Request code review", Icon: Github },
+  "github.mergePull": { label: "Merge pull request", Icon: Github },
+  "github.proposePatch": { label: "Apply reviewed patch", Icon: Github },
 };
 
 export function ToolConfirmCard({
@@ -22,13 +29,16 @@ export function ToolConfirmCard({
   const meta = TOOL_LABEL[confirm.tool] ?? { label: confirm.tool, Icon: AlertCircle };
   const Icon = meta.Icon;
   const preview = confirm.argsPreview as Record<string, unknown>;
-  const reconnectRetry = confirm.status === "failed" && /reconnect/i.test(confirm.resultText ?? "");
+  const github = confirm.tool.startsWith("github.");
+  const endpoint = github ? "/api/github/tool" : "/api/chat/confirm";
+  const reconnectRetry =
+    !github && confirm.status === "failed" && /reconnect/i.test(confirm.resultText ?? "");
   const isTerminal = confirm.status !== "pending" && !reconnectRetry;
 
   const reconcileAmbiguousSend = async () => {
     try {
       const statusResponse = await authFetch(
-        `/api/chat/confirm?action_id=${encodeURIComponent(confirm.actionId)}`,
+        `${endpoint}?action_id=${encodeURIComponent(confirm.actionId)}`,
       );
       const statusJson = (await statusResponse.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -40,14 +50,19 @@ export function ToolConfirmCard({
           onUpdate({
             ...confirm,
             status: "confirmed",
-            resultText: statusJson.result_text || "Email sent.",
+            resultText:
+              statusJson.result_text || (github ? "GitHub action completed." : "Email sent."),
           });
-          toast.success("Email sent");
+          toast.success(github ? "GitHub action completed" : "Email sent");
           return;
         }
         if (statusJson.status === "pending") {
           onUpdate({ ...confirm, status: "pending", resultText: undefined });
-          toast.error("The send request did not complete. Review the email before trying again.");
+          toast.error(
+            github
+              ? "The action remains pending. Review its details before confirming."
+              : "The send request did not complete. Review the email before trying again.",
+          );
           return;
         }
         if (statusJson.status === "cancelled" || statusJson.status === "expired") {
@@ -57,7 +72,9 @@ export function ToolConfirmCard({
             resultText:
               statusJson.status === "cancelled"
                 ? "Cancelled."
-                : "This send request expired. Prepare the email again.",
+                : github
+                  ? "This GitHub approval expired. Prepare the action again."
+                  : "This send request expired. Prepare the email again.",
           });
           return;
         }
@@ -66,17 +83,18 @@ export function ToolConfirmCard({
       // The status check is best-effort. Fall through to a truthful ambiguous state.
     }
 
-    const message =
-      "KovaGPT could not verify whether Gmail sent this email. Check Sent mail before sending again.";
+    const message = github
+      ? "KovaGPT could not verify the GitHub outcome. Inspect the repository before creating another action."
+      : "KovaGPT could not verify whether Gmail sent this email. Check Sent mail before sending again.";
     onUpdate({ ...confirm, status: "uncertain", resultText: message });
-    toast.warning("Send result could not be verified", { description: message });
+    toast.warning("Action result could not be verified", { description: message });
   };
 
   const decide = async (decision: "confirm" | "cancel") => {
     if (busy || isTerminal) return;
     setBusy(decision);
     try {
-      const res = await authFetch("/api/chat/confirm", {
+      const res = await authFetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action_id: confirm.actionId, decision }),
@@ -91,7 +109,7 @@ export function ToolConfirmCard({
         const err = json.error || `Failed (${res.status})`;
         if (
           decision === "confirm" &&
-          confirm.tool === "gmail_send" &&
+          (confirm.tool === "gmail_send" || github) &&
           (json.error_code === "completion_persistence_ambiguous" ||
             /could not (?:confirm|verify).*completed/i.test(err))
         ) {
@@ -109,7 +127,7 @@ export function ToolConfirmCard({
       });
       toast.success(decision === "confirm" ? "Done" : "Cancelled");
     } catch (e) {
-      if (decision === "confirm" && confirm.tool === "gmail_send") {
+      if (decision === "confirm" && (confirm.tool === "gmail_send" || github)) {
         await reconcileAmbiguousSend();
       } else {
         const err = e instanceof Error ? e.message : "Network error";
@@ -133,6 +151,17 @@ export function ToolConfirmCard({
         </p>
       ) : null}
       <div className="mt-1 text-foreground">{confirm.summary}</div>
+      {github && (
+        <div className="mt-2 space-y-2 break-words text-xs">
+          <p>GitHub account: {String(preview.github_account ?? "")}</p>
+          <p>Repository: {String(preview.repository ?? "")}</p>
+          <p>Operation: {String(preview.operation ?? "")}</p>
+          <p>Confirm authorizes this exact action once. It does not authorize later changes.</p>
+          <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-background/60 p-3">
+            {JSON.stringify(preview.details, null, 2)}
+          </pre>
+        </div>
+      )}
       {Boolean(
         preview.to ||
         preview.subject ||
