@@ -1,0 +1,153 @@
+{
+  "projectRef": "oztdrjtdglkizlewnulh",
+  "observedAt": "2026-09-30",
+  "deployedSource": "c92fdbfea58a0917f34c25264d7b8b40a78a47fb",
+  "conclusion": "Post-revocation authenticated byte response was served as a CDN HIT. Fresh sign issuance was denied; no corresponding post-revocation byte request reached Storage origin.",
+  "gateway": [
+    {
+      "cache": "DYNAMIC",
+      "method": "POST",
+      "origin_time": "341",
+      "path": "/storage/v1/object/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "service_role",
+      "status": "200",
+      "subject": "",
+      "timestamp": "2026-09-30T22:03:38.000000"
+    },
+    {
+      "cache": "MISS",
+      "method": "GET",
+      "origin_time": "1166",
+      "path": "/storage/v1/object/authenticated/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "authenticated",
+      "status": "200",
+      "subject": "be602a4f-f9fd-4aa1-a28b-e3e021625ced",
+      "timestamp": "2026-09-30T22:03:38.373000"
+    },
+    {
+      "cache": "DYNAMIC",
+      "method": "POST",
+      "origin_time": "173",
+      "path": "/storage/v1/object/sign/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "authenticated",
+      "status": "200",
+      "subject": "be602a4f-f9fd-4aa1-a28b-e3e021625ced",
+      "timestamp": "2026-09-30T22:03:39.576000"
+    },
+    {
+      "cache": "MISS",
+      "method": "GET",
+      "origin_time": "543",
+      "path": "/storage/v1/object/sign/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "",
+      "status": "200",
+      "subject": "",
+      "timestamp": "2026-09-30T22:03:39.787000"
+    },
+    {
+      "cache": "HIT",
+      "method": "GET",
+      "origin_time": "28",
+      "path": "/storage/v1/object/authenticated/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "authenticated",
+      "status": "200",
+      "subject": "be602a4f-f9fd-4aa1-a28b-e3e021625ced",
+      "timestamp": "2026-09-30T22:03:45.462000"
+    },
+    {
+      "cache": "DYNAMIC",
+      "method": "POST",
+      "origin_time": "192",
+      "path": "/storage/v1/object/sign/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "authenticated",
+      "status": "400",
+      "subject": "be602a4f-f9fd-4aa1-a28b-e3e021625ced",
+      "timestamp": "2026-09-30T22:03:45.525000"
+    },
+    {
+      "cache": "REVALIDATED",
+      "method": "GET",
+      "origin_time": "208",
+      "path": "/storage/v1/object/sign/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "",
+      "status": "200",
+      "subject": "",
+      "timestamp": "2026-09-30T22:03:45.749000"
+    },
+    {
+      "cache": "BYPASS",
+      "method": "GET",
+      "origin_time": "178",
+      "path": "/storage/v1/object/sign/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "",
+      "status": "400",
+      "subject": "",
+      "timestamp": "2026-09-30T22:04:04.021000"
+    }
+  ],
+  "storageOrigin": [
+    {
+      "method": "POST",
+      "operation": "storage.object.upload",
+      "path": "/object/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "service_role",
+      "status": "200",
+      "timestamp": "2026-09-30T22:03:38.267000",
+      "version": "1.77.5"
+    },
+    {
+      "method": "",
+      "operation": "",
+      "path": "",
+      "role": "",
+      "status": "",
+      "timestamp": "2026-09-30T22:03:38.763000",
+      "version": "1.77.5"
+    },
+    {
+      "method": "GET",
+      "operation": "storage.object.get_authenticated",
+      "path": "/object/authenticated/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "authenticated",
+      "status": "200",
+      "timestamp": "2026-09-30T22:03:39.458000",
+      "version": "1.77.5"
+    },
+    {
+      "method": "GET",
+      "operation": "storage.object.get_signed",
+      "path": "/object/sign/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "",
+      "status": "200",
+      "timestamp": "2026-09-30T22:03:40.250000",
+      "version": "1.77.5"
+    },
+    {
+      "method": "POST",
+      "operation": "storage.object.sign",
+      "path": "/object/sign/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "authenticated",
+      "status": "400",
+      "timestamp": "2026-09-30T22:03:45.640000",
+      "version": "1.77.5"
+    },
+    {
+      "method": "GET",
+      "operation": "storage.object.get_signed",
+      "path": "/object/sign/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "",
+      "status": "304",
+      "timestamp": "2026-09-30T22:03:45.877000",
+      "version": "1.77.5"
+    },
+    {
+      "method": "GET",
+      "operation": "storage.object.get_signed",
+      "path": "/object/sign/agent-evidence/be602a4f-f9fd-4aa1-a28b-e3e021625ced/s6-20260930T220236.png",
+      "role": "",
+      "status": "400",
+      "timestamp": "2026-09-30T22:04:04.121000",
+      "version": "1.77.5"
+    }
+  ]
+}

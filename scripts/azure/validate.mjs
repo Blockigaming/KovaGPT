@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import assert from "node:assert/strict";
 
 const requiredFiles = [
   "Dockerfile",
@@ -10,14 +11,17 @@ const missing = requiredFiles.filter((file) => !existsSync(file));
 if (missing.length) throw new Error(`Missing Azure readiness files: ${missing.join(", ")}`);
 
 const dockerfile = readFileSync("Dockerfile", "utf8");
-for (const pattern of [
-  /FROM node:24-bookworm-slim/u,
-  /npm ci/u,
-  /USER kova/u,
-  /CMD \["node", "dist\/server\/index\.mjs"\]/u,
-]) {
+for (const pattern of [/FROM node:24-bookworm-slim/u, /npm ci/u, /USER kova/u]) {
   if (!pattern.test(dockerfile)) throw new Error(`Dockerfile failed validation: ${pattern}`);
 }
+
+const startup = dockerfile.match(/^CMD (\[.*\])$/mu);
+assert.ok(startup, "Dockerfile must define the guarded Node startup command");
+assert.deepEqual(JSON.parse(startup[1]), [
+  "sh",
+  "-c",
+  'if [ "$KOVA_AUTH_MODE" != "$KOVA_COMPILED_AUTH_MODE" ]; then echo \'Browser and server authentication modes must match\' >&2; exit 1; fi; exec node dist/server/index.mjs',
+]);
 
 const envExample = readFileSync(".env.example", "utf8");
 for (const name of [

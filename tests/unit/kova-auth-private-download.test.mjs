@@ -87,8 +87,8 @@ function load(path, modules, fetchImpl = () => assert.fail("Unexpected external 
   return exports;
 }
 async function fixture(kind = "project", options = {}) {
-  const original = rows[kind],
-    bytes = kind === "evidence" ? image : text;
+  const original = options.fixtureRow ?? rows[kind],
+    bytes = options.fixtureBytes ?? (kind === "evidence" ? image : text);
   const link = await download.ownedPrivateFileLink(kind, owner, original);
   const events = [];
   let fetched = false,
@@ -117,7 +117,9 @@ async function fixture(kind = "project", options = {}) {
             return {
               data:
                 options.fence || (fetched && options.fenceAfterRead) ? { user_id: owner } : null,
-              error: null,
+              error: options.fenceReadError
+                ? { code: "PGRST205", message: "PRIVATE_SCHEMA_DETAIL" }
+                : null,
             };
           }
           if (table === "agent_jobs") {
@@ -245,6 +247,83 @@ async function fixture(kind = "project", options = {}) {
       }),
   };
 }
+function nitroRequestWrapper(request) {
+  return new Proxy(request, {
+    get(target, key) {
+      const value = Reflect.get(target, key, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
+test("Nitro Request wrapper reaches owned private delivery without native Request private-state access", async () => {
+  const f = await fixture("project");
+  const request = nitroRequestWrapper(f.request());
+  // The Node server supplies a wrapped Request. Native construction from that
+  // object is not interoperable with Undici's branded private state.
+  assert.throws(() => new Request(request), TypeError);
+  const response = await f.handler(request);
+  assert.equal(response.status, 200);
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), f.bytes);
+  assert.equal(f.metadataReads(), 2);
+  assert.equal(f.sessionReads(), 3);
+});
+
+test("Nitro Request wrapper retains missing-cookie, revoked-session and foreign-owner denial", async () => {
+  for (const [options, headers, expected] of [
+    [{}, { Cookie: "" }, 401],
+    [{ revoked: true }, {}, 401],
+    [{ account: project }, {}, 409],
+    [{}, { Origin: "https://foreign.invalid" }, 403],
+  ]) {
+    const f = await fixture("project", options);
+    const response = await f.handler(nitroRequestWrapper(f.request(headers)));
+    assert.equal(response.status, expected);
+    assert.equal(f.metadataReads(), 0);
+    assert.ok(!f.events.some(([event]) => event === "sign" || event === "fetch"));
+  }
+});
+
+test("S6 project PNG fixture passes the immutable handler with visible metadata and current authority", async () => {
+  const bytes = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2XcAAAAASUVORK5CYII=",
+    "base64",
+  );
+  const f = await fixture("project", {
+    fixtureRow: {
+      ...rows.project,
+      name: "fixture.png",
+      storage_path: `${project}/abcdef012345/fixture.png`,
+      mime_type: "image/png",
+      size_bytes: bytes.length,
+      kind: "image",
+      content_sha256: null,
+    },
+    fixtureBytes: bytes,
+  });
+  const result = await f.handler(f.request());
+  assert.equal(result.status, 200);
+  assert.deepEqual(Buffer.from(await result.arrayBuffer()), bytes);
+  assert.equal(f.metadataReads(), 2);
+  assert.equal(f.sessionReads(), 3);
+});
+
+test("S6 missing account fence reproduces owner 404 without Storage access; restored prerequisite permits delivery", async () => {
+  const absent = await fixture("project", { fenceReadError: true });
+  const response = await absent.handler(absent.request());
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), { error: "Private file unavailable." });
+  assert.equal(absent.metadataReads(), 0);
+  assert.equal(
+    absent.events.some(([event]) => event === "sign" || event === "fetch"),
+    false,
+  );
+  const present = await fixture("project");
+  const restored = await present.handler(present.request());
+  assert.equal(restored.status, 200);
+  assert.deepEqual(new Uint8Array(await restored.arrayBuffer()), present.bytes);
+});
+
 for (const kind of Object.keys(rows))
   test(`${kind}: actual cookie boundary and private delivery recheck state without exposing Storage credentials`, async () => {
     const f = await fixture(kind),

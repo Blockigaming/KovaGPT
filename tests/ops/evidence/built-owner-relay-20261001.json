@@ -1,0 +1,12 @@
+{
+  "kind": "OFFLINE_BUILT_NODE_RELAY",
+  "status": "PASS",
+  "azureAppStarted": false,
+  "physicalOrGoogleChecksExecuted": false,
+  "checked": [
+    "actual Node proxy-origin mapping",
+    "one-use invitation claim",
+    "failure receipt transfer",
+    "in-memory cleanup"
+  ]
+}
