@@ -73,6 +73,9 @@ function ScheduledTasksPage() {
   const [creating, setCreating] = useState(false);
   const [editor, setEditor] = useState<ScheduledTask | "new" | null>(null);
   const mutations = useRef(new Map<string, { revision: number; mutationId: string }>());
+  const listRequest = useRef(0);
+  const activeRead = useRef<number | null>(null);
+  const pendingMutations = useRef(new Set<symbol>());
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TaskFilter>("all");
@@ -98,6 +101,9 @@ function ScheduledTasksPage() {
     setTasks([]);
     setEditor(null);
     mutations.current.clear();
+    listRequest.current += 1;
+    activeRead.current = null;
+    pendingMutations.current.clear();
     setLoading(false);
     setCreating(false);
     setLoadError(null);
@@ -138,35 +144,82 @@ function ScheduledTasksPage() {
     };
   }, [checkEligible, isSignedIn, lifecycleVersion, principal, userKey]);
 
-  const loadTasks = useCallback(async () => {
-    if (
-      !dataReady ||
-      dataGeneration !== generationRef.current ||
-      (plan !== "paid" && plan !== "free")
-    )
-      return;
-    const generation = generationRef.current;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const next = await list({ data: { expectedUserId: userKey! } });
-      if (generation !== generationRef.current || principalRef.current !== principal) return;
-      setTasks(next);
-    } catch (error) {
-      if (generation !== generationRef.current || principalRef.current !== principal) return;
-      const message = error instanceof Error ? error.message : "Failed to load tasks";
-      setLoadError(message);
-      toast.error(message);
-    } finally {
-      if (generation === generationRef.current && principalRef.current === principal) {
-        setLoading(false);
+  const loadTasks = useCallback(
+    async (background = false) => {
+      if (
+        !dataReady ||
+        dataGeneration !== generationRef.current ||
+        (plan !== "paid" && plan !== "free") ||
+        pendingMutations.current.size > 0 ||
+        (background && activeRead.current !== null)
+      )
+        return;
+      const generation = generationRef.current;
+      const request = ++listRequest.current;
+      activeRead.current = request;
+      if (!background) setLoading(true);
+      setLoadError(null);
+      try {
+        const next = await list({ data: { expectedUserId: userKey! } });
+        if (
+          generation !== generationRef.current ||
+          principalRef.current !== principal ||
+          request !== listRequest.current
+        )
+          return;
+        setTasks(next);
+      } catch (error) {
+        if (
+          generation !== generationRef.current ||
+          principalRef.current !== principal ||
+          request !== listRequest.current
+        )
+          return;
+        const message = error instanceof Error ? error.message : "Failed to load tasks";
+        setLoadError(message);
+        if (!background) toast.error(message);
+      } finally {
+        if (activeRead.current === request) activeRead.current = null;
+        if (
+          generation === generationRef.current &&
+          principalRef.current === principal &&
+          request === listRequest.current
+        ) {
+          setLoading(false);
+        }
       }
-    }
-  }, [dataGeneration, dataReady, list, plan, principal, userKey]);
+    },
+    [dataGeneration, dataReady, list, plan, principal, userKey],
+  );
 
   useEffect(() => {
     void loadTasks();
   }, [loadTasks]);
+
+  const hasPendingExecution = tasks.some((task) => ["scheduled", "running"].includes(task.status));
+  useEffect(() => {
+    if (!dataReady || (plan !== "paid" && plan !== "free")) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") void loadTasks(true);
+    };
+    // Read persisted worker results; this never starts or retries an execution.
+    const timer =
+      executionAvailable && hasPendingExecution ? window.setInterval(refresh, 15_000) : undefined;
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [dataReady, executionAvailable, hasPendingExecution, loadTasks, plan]);
+
+  useEffect(
+    () => () => {
+      listRequest.current += 1;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!dataReady || dataGeneration !== generationRef.current) return;
@@ -268,10 +321,21 @@ function ScheduledTasksPage() {
     };
   };
 
+  const beginMutation = () => {
+    const pending = Symbol();
+    pendingMutations.current.add(pending);
+    // A read begun before an edit must not restore an old status or deleted task.
+    listRequest.current += 1;
+    activeRead.current = null;
+    setLoading(false);
+    return pending;
+  };
+
   const togglePause = async (t: ScheduledTask) => {
     if (!dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
     const next = t.status === "paused" ? "scheduled" : "paused";
+    const pending = beginMutation();
     try {
       const updated = await update({ data: { ...identity(t, next), status: next } });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
@@ -280,6 +344,8 @@ function ScheduledTasksPage() {
       if (generation === generationRef.current && principalRef.current === principal) {
         toast.error(e instanceof Error ? e.message : "Failed to update");
       }
+    } finally {
+      pendingMutations.current.delete(pending);
     }
   };
 
@@ -290,6 +356,7 @@ function ScheduledTasksPage() {
       !window.confirm("Delete this task and its run history? Pending copy offers will be revoked.")
     )
       return;
+    const pending = beginMutation();
     try {
       await remove({ data: identity(t, "delete") });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
@@ -298,12 +365,15 @@ function ScheduledTasksPage() {
       if (generation === generationRef.current && principalRef.current === principal) {
         toast.error(e instanceof Error ? e.message : "Failed to delete");
       }
+    } finally {
+      pendingMutations.current.delete(pending);
     }
   };
 
   const retry = async (task: ScheduledTask) => {
     if (!dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
+    const pending = beginMutation();
     try {
       const updated = await update({
         data: { ...identity(task, "retry"), status: "scheduled", retry: true },
@@ -315,6 +385,8 @@ function ScheduledTasksPage() {
       if (generation === generationRef.current && principalRef.current === principal) {
         toast.error(error instanceof Error ? error.message : "Could not retry task");
       }
+    } finally {
+      pendingMutations.current.delete(pending);
     }
   };
 
@@ -349,12 +421,12 @@ function ScheduledTasksPage() {
               <p className="text-sm text-muted-foreground mb-4">
                 Sign in to review your saved tasks and background execution availability.
               </p>
-              <Link
-                to="/"
+              <a
+                href="/?sign-in=1"
                 className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium"
               >
                 Go to sign in
-              </Link>
+              </a>
             </div>
           )}
 
@@ -528,7 +600,7 @@ function ScheduledTasksPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={loadTasks}
+                  onClick={() => void loadTasks()}
                   disabled={loading}
                   className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm hover:bg-accent disabled:opacity-50"
                 >
@@ -576,7 +648,7 @@ function ScheduledTasksPage() {
                   <p className="mt-1 text-muted-foreground">{loadError}</p>
                   <button
                     className="mt-3 rounded-lg border border-border px-3 py-2 font-medium"
-                    onClick={loadTasks}
+                    onClick={() => void loadTasks()}
                   >
                     Try again
                   </button>
