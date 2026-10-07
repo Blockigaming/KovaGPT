@@ -1,3 +1,4 @@
+import * as coreLaunchPolicy from "../../src/lib/core-launch-policy.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -13,6 +14,7 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
   const module = loadUiModule(
     "src/components/CommandPalette.tsx",
     {
+      "@/lib/core-launch-policy.mjs": coreLaunchPolicy,
       react: { ...hooks.react, useDeferredValue: (value) => value, useMemo: (fn) => fn() },
       "@tanstack/react-router": { Link: "Link" },
       "lucide-react": Object.fromEntries(

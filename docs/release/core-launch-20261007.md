@@ -115,3 +115,21 @@ disabled until its acceptance gate passes. Do not infer production config from s
 6. On failure, restore traffic to the recorded verified revision/digest, repeat health
    and identity checks, and preserve data. Do not reverse migrations or replay
    uncertain charges or provider writes blindly.
+
+## Remote CI repair follow-up
+
+The initial published head `d4632931ef04baf9c7cb28b55f7451237c2a631e`
+passed hosted formatting, lint, TypeScript and release contracts. All three Shared
+UI Browser jobs passed (Chromium, Firefox and WebKit); these are component-fixture
+checks, not deployed assistant journeys. Main CI stopped at the dependency audit.
+
+The follow-up pins patched Seroval 1.6.3, Undici 8.10.2, Sharp 0.35.5 and fast-uri
+3.1.8, with compatible lockfile updates for brace-expansion, Engine.IO and
+source-map-js. `npm audit --omit=dev` reports zero findings after the changes.
+No forced major upgrade, dependency-audit suppression or CI gate removal is used.
+
+Broader verification also exposed old navigation/model expectations and stale
+fixed-expiry test accounts. UI expectations now match the unified launch scope.
+HTTP/Sites tests use live-clock accounts and MFA fixture sessions; historical SQL
+fixtures retain their fixed clock. Expired-session rejection remains asserted.
+No Auth application code, migrations, access rules or deployment settings changed.

@@ -6,7 +6,7 @@ KovaGPT is one unified assistant. Model selection and response effort are separa
 
 ## Pages
 
-- [Home](/): Chat with KovaGPT, choose an available response mode, and attach supported files.
+- [Home](/): Start a conversation with KovaGPT and attach supported files when available.
 - [Images](/images): Generate images when an image provider is configured.
 - [Pricing](/pricing): Compare Free, Plus, and Pro plans.
 - [Apps](/apps): Review the connections currently available to your account.
