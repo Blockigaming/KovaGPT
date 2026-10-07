@@ -59,8 +59,9 @@ test("only connectors with a wired provider flow may claim live status", () => {
 test("the vast majority of catalog entries are honestly marked as not yet available", () => {
   const items = entries();
   const live = items.filter((item) => item.status === "live");
-  assert.ok(live.length > 0, "at least one connector must actually work");
-  assert.ok(live.length < 20, `only genuinely wired connectors may be live, found ${live.length}`);
+  assert.equal(live.length, 0, "source wiring alone must not assert production availability");
+  assert.equal(items.filter((item) => item.status === "planned").length, 355);
+  assert.equal(items.filter((item) => item.status === "setup_required").length, 5);
 });
 
 test("no UI surface offers a fake notification signup for unavailable connectors", () => {

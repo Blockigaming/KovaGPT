@@ -40,7 +40,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google",
     description: "Sign in with your Google account.",
     category: "Productivity",
-    status: "live",
+    status: "setup_required",
     domain: "google.com",
     legacyProvider: "google",
   },
@@ -49,7 +49,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Gmail",
     description: "Read message context from Gmail.",
     category: "Email",
-    status: "live",
+    status: "setup_required",
     domain: "gmail.com",
     legacyProvider: "gmail",
   },
@@ -58,7 +58,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Drive",
     description: "Reference files from your Drive.",
     category: "Storage & Files",
-    status: "live",
+    status: "setup_required",
     domain: "drive.google.com",
     legacyProvider: "google-drive",
   },
@@ -149,7 +149,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Calendar",
     description: "Read and create events.",
     category: "Calendar",
-    status: "live",
+    status: "setup_required",
     domain: "calendar.google.com",
   },
   {
@@ -2938,7 +2938,7 @@ export const CONNECTOR_CATEGORIES: ConnectorCategory[] = [
   "Development",
 ];
 
-/** Connectors a user can actually connect today. */
+/** Entries with separately established production acceptance, never inferred from code. */
 export const LIVE_CONNECTOR_IDS: ReadonlySet<string> = new Set(
   CONNECTOR_CATALOG.filter((item) => item.status === "live").map((item) => item.id),
 );
@@ -2990,7 +2990,7 @@ export function connectorUnavailableLabel(item: ConnectorItem): string {
 /** Longer explanation, used for tooltips and screen-reader descriptions. */
 export function connectorUnavailableReason(item: ConnectorItem): string {
   if (item.status === "setup_required") {
-    return `${item.label} is implemented but this deployment has not been given ${item.label} credentials yet.`;
+    return `${item.label} is implemented but availability must be confirmed by this deployment before you connect.`;
   }
   return `${item.label} is listed in the catalog. KovaGPT does not have a ${item.label} connection yet.`;
 }

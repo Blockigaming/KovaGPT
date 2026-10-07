@@ -14,7 +14,7 @@ test("Apps navigation and composer connector entry are truthful and reachable", 
   const palette = await read("src/components/CommandPalette.tsx");
   assert.match(sidebar, /navLink\("\/apps", "Plugins", PlugZap\)/);
   assert.match(composer, /window\.location\.href = "\/apps"/);
-  assert.doesNotMatch(palette, /Open Apps|href: "\/apps"/);
+  assert.match(palette, /label: "Open plugins", href: "\/apps"/);
 });
 test("chat interaction primitives remain complete and animated", async () => {
   const input = await read("src/components/ChatInput.tsx");

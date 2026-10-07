@@ -1,3 +1,4 @@
+import { isCoreLaunchRoute } from "@/lib/core-launch-policy.mjs";
 import { Link } from "@tanstack/react-router";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -53,6 +54,8 @@ const fixedActions: PaletteAction[] = [
   },
   { label: "New project", href: "/projects", icon: FolderOpen },
   { label: "Open Library", href: "/library", icon: FolderOpen },
+  { label: "Open files", href: "/files", icon: FileSearch },
+  { label: "Open plugins", href: "/apps", icon: Boxes },
   { label: "Generate image", href: "/images", icon: ImageIcon },
   {
     label: "Temporary Chat",
@@ -73,6 +76,7 @@ const quickActions: PaletteAction[] = [
   ...fixedActions,
   ...CAPABILITIES.filter(
     (capability) =>
+      isCoreLaunchRoute(capability.route) &&
       !HIDDEN_PALETTE_ROUTES.has(capability.route) &&
       !fixedActions.some((action) => action.href === capability.route),
   ).map((capability) => ({
@@ -311,6 +315,7 @@ export function CommandPalette({
     () =>
       quickActions
         .slice(1)
+        .filter((action) => !action.href || isCoreLaunchRoute(action.href))
         .map((action) => ({
           ...action,
           score: fuzzyScore(`${action.label} ${(action.keywords ?? []).join(" ")}`, normalized),
@@ -329,6 +334,7 @@ export function CommandPalette({
   const visibleWorkspaceItems = useMemo(
     () =>
       workspaceItems
+        .filter((item) => isCoreLaunchRoute(item.href))
         .filter((item) =>
           normalized ? `${item.title} ${item.subtitle}`.toLowerCase().includes(normalized) : true,
         )

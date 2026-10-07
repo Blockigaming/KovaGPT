@@ -1,15 +1,12 @@
 import {
   Archive,
-  BriefcaseBusiness,
   Clock3,
   Copy as CopyIcon,
   Ellipsis,
   Folder,
-  Globe,
-  HeartPulse,
+  FileText,
   Images,
   LibraryBig,
-  Map,
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
@@ -22,12 +19,10 @@ import {
   ShoppingBag,
   SquarePen,
   Trash2,
-  WalletCards,
   X,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 
 import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
@@ -41,7 +36,6 @@ import {
 import { useTier } from "@/hooks/useTier";
 import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
-import { isScheduledTasksEligible } from "@/lib/scheduled-tasks.functions";
 
 const EXPANDED_WIDTH = 272;
 
@@ -63,7 +57,6 @@ export function Sidebar({
   open,
   onToggle,
   onOpenSettings,
-  mapsReleaseApproved = false,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -83,13 +76,10 @@ export function Sidebar({
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
-  const checkScheduled = useServerFn(isScheduledTasksEligible);
   const drawerRef = useRef<HTMLElement | null>(null);
   const expandButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
-  const [scheduledVisible, setScheduledVisible] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [renameChat, setRenameChat] = useState<Conversation | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
@@ -100,20 +90,6 @@ export function Sidebar({
     select: (state) => state.location.pathname,
   });
   const isOn = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
-
-  useEffect(() => {
-    if (!signedIn || !user?.id) {
-      setScheduledVisible(false);
-      return;
-    }
-    let active = true;
-    checkScheduled({ data: { expectedUserId: user.id } })
-      .then((result) => active && setScheduledVisible(result.eligible))
-      .catch(() => active && setScheduledVisible(false));
-    return () => {
-      active = false;
-    };
-  }, [checkScheduled, signedIn, user?.id]);
 
   useEffect(() => {
     const openSearch = () => {
@@ -361,24 +337,24 @@ export function Sidebar({
           >
             <SquarePen />
           </button>
-          <Link to="/work" className="kova-rail-button" aria-label="Work" title="Work">
-            <BriefcaseBusiness />
-          </Link>
           <Link to="/images" className="kova-rail-button" aria-label="Images" title="Images">
             <Images />
           </Link>
           <Link to="/library" className="kova-rail-button" aria-label="Library" title="Library">
             <LibraryBig />
           </Link>
+          <Link to="/files" className="kova-rail-button" aria-label="Files" title="Files">
+            <FileText />
+          </Link>
           <Link to="/projects" className="kova-rail-button" aria-label="Projects" title="Projects">
             <Folder />
           </Link>
-          {scheduledVisible ? (
+          {signedIn ? (
             <Link
               to="/scheduled-tasks"
               className="kova-rail-button"
-              aria-label="Scheduled tasks status"
-              title="Scheduled tasks status"
+              aria-label="Scheduled tasks"
+              title="Scheduled tasks"
             >
               <Clock3 />
             </Link>
@@ -386,23 +362,6 @@ export function Sidebar({
           <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
             <PlugZap />
           </Link>
-          {mapsReleaseApproved ? (
-            <Link to="/maps" className="kova-rail-button" aria-label="Maps" title="Maps">
-              <Map />
-            </Link>
-          ) : null}
-          <button
-            type="button"
-            className="kova-rail-button"
-            onClick={() => {
-              onToggle();
-              setMoreOpen(true);
-            }}
-            aria-label="More"
-            title="More"
-          >
-            <Ellipsis />
-          </button>
           <button
             type="button"
             className="kova-rail-account"
@@ -424,7 +383,6 @@ export function Sidebar({
         style={{ "--sidebar-expanded": `${EXPANDED_WIDTH}px` } as React.CSSProperties}
         className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 lg:w-[var(--sidebar-expanded)] ${collapsed ? "lg:!w-0" : ""} max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] ${open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"}`}
         aria-label="Primary navigation"
-        data-maps-release-approved={mapsReleaseApproved ? "true" : "false"}
         aria-modal={open && isMobileViewport() ? true : undefined}
         aria-hidden={collapsed ? true : undefined}
         inert={collapsed ? true : undefined}
@@ -497,53 +455,12 @@ export function Sidebar({
                 {icon(SquarePen)}
                 <span>New chat</span>
               </button>
-              {navLink("/work", "Work", BriefcaseBusiness)}
               {navLink("/images", "Images", Images)}
               {navLink("/library", "Library", LibraryBig)}
+              {navLink("/files", "Files", FileText)}
               {navLink("/projects", "Projects", Folder)}
-              {scheduledVisible
-                ? navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)
-                : null}
+              {signedIn ? navLink("/scheduled-tasks", "Scheduled tasks", Clock3) : null}
               {navLink("/apps", "Plugins", PlugZap)}
-              {mapsReleaseApproved ? navLink("/maps", "Maps", Map) : null}
-              {navLink("/discovery", "Discover", Globe)}
-              <button
-                type="button"
-                className={navRow()}
-                onClick={() => setMoreOpen((value) => !value)}
-                aria-expanded={moreOpen}
-                aria-controls="sidebar-more-items"
-              >
-                {icon(Ellipsis)}
-                <span className="kova-sidebar-label">More</span>
-              </button>
-              <div
-                id="sidebar-more-items"
-                className="kova-sidebar-more"
-                data-open={moreOpen || undefined}
-                aria-hidden={!moreOpen}
-              >
-                <button
-                  type="button"
-                  disabled={!moreOpen}
-                  className="kova-sidebar-subrow"
-                  title="Health is coming soon"
-                >
-                  {icon(HeartPulse)}
-                  <span>Health</span>
-                  <span className="kova-sidebar-badge">Coming soon</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={!moreOpen}
-                  className="kova-sidebar-subrow"
-                  title="Finances is coming soon"
-                >
-                  {icon(WalletCards)}
-                  <span>Finances</span>
-                  <span className="kova-sidebar-badge">Coming soon</span>
-                </button>
-              </div>
             </nav>
 
             {signedIn ? (

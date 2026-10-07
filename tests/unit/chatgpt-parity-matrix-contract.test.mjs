@@ -31,17 +31,12 @@ test("ChatGPT-parity verification covers every required width, theme, and auth s
 });
 
 test("required model-selector coverage uses an isolated authenticated fixture and cannot skip", () => {
-  // Free is deliberately upgrade-only; require explicit paid fixtures rather
-  // than asserting that every authenticated account can choose a model.
   for (const tier of ["free", "plus", "pro"]) {
-    assert.ok(
-      modelSelectorSpec.includes(`installAuthenticatedFixture(page, { tier: "${tier}" })`),
-      `model controls must exercise the ${tier} subscription independently`,
-    );
+    assert.ok(modelSelectorSpec.includes(`installAuthenticatedFixture(page, { tier: "${tier}" })`));
   }
-  assert.match(modelSelectorSpec, /thinking-upgrade-button/u);
-  assert.match(modelSelectorSpec, /Choose model: KovaGPT Thinking/u);
-  assert.match(modelSelectorSpec, /model-option-high/u);
+  assert.match(modelSelectorSpec, /kova-model-static/u);
+  assert.match(modelSelectorSpec, /model-selector-trigger/u);
+  assert.match(modelSelectorSpec, /toHaveCount\(0\)/u);
   assert.match(modelSelectorSpec, /expect\(chatRequests\)\.toBe\(0\)/u);
   assert.doesNotMatch(modelSelectorSpec, /test(?:Info)?\.(?:skip|fixme)/u);
   assert.doesNotMatch(modelSelectorSpec, /Model selector not present/u);

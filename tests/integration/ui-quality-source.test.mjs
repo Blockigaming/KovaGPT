@@ -158,10 +158,10 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   );
   assert.match(modelSelector, /kova-model-static/);
 
-  const lockedBranch = modelSelector.match(/if \(locked\)[\s\S]*?<\/span>\s*\);/)?.[0] ?? "";
-  assert.ok(lockedBranch, "locked model branch should remain explicit");
-  assert.doesNotMatch(lockedBranch, /ChevronDown|pointer-events-none|aria-hidden/);
-  assert.match(sidebar, /navLink\("\/discovery", "Discover", Globe\)/);
+  assert.doesNotMatch(modelSelector, /ChevronDown|<button|aria-hidden|model-selector-trigger/);
+  assert.match(modelSelector, /CORE_LAUNCH_MODE/);
+  assert.doesNotMatch(sidebar, /navLink\("\/discovery", "Discover", Globe\)/);
+  assert.match(sidebar, /navLink\("\/files", "Files", FileText\)/);
   assert.doesNotMatch(sidebar, /"Maps", Map, isOn\("\/maps"\), "New"/);
 });
 

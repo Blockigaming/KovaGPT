@@ -16,6 +16,7 @@ const makeAccount = (id: string, email: string) => ({
 const first = makeAccount(accountA, "first@example.test"),
   second = makeAccount(accountB, "second@example.test");
 const status = (accounts = [first, second], selected: string | null = accountA, revision = 7) => ({
+  configured: true,
   ...(accounts.find((account) => account.id === selected) ?? {
     connected: false,
     state: "disconnected",

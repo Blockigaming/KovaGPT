@@ -27,13 +27,11 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);
   const order = [
     'aria-label="New chat"',
-    'navLink("/work"',
     'navLink("/images"',
     'navLink("/library"',
     'navLink("/projects"',
     'navLink("/scheduled-tasks"',
     'navLink("/apps"',
-    'aria-controls="sidebar-more-items"',
   ];
   let cursor = -1;
   for (const marker of order) {
@@ -176,7 +174,7 @@ test("temporary chat changes create a clean privacy boundary", () => {
   assert.match(index, /temporary: tempChat/);
   assert.match(
     index,
-    /saveConversations\(\s*userKey,\s*conversations\.filter\(\(c\) => !c\.temporary\)/,
+    /const items = conversations\.filter\(\(c\) => !c\.temporary\)[\s\S]*saveConversations\(userKey, items, \{ snapshot \}\)/,
   );
 });
 

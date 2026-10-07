@@ -60,14 +60,13 @@ test("public capability copy excludes retired or unsupported claims", () => {
   const llms = read("public/llms.txt");
   const writer = read("src/routes/ai-writer.tsx");
 
-  assert.match(llms, /Free uses Lite/);
-  assert.match(llms, /Thinking control is an Upgrade to Plus action, not an executable Free mode/);
-  assert.match(llms, /Plus Chat includes Lite, Medium, and Thinking/);
-  assert.match(llms, /same underlying Chat model/);
-  assert.match(llms, /Pro Chat includes Lite, Medium, High, Extra High, Max, and Ultra/);
-  assert.doesNotMatch(llms, /Free includes Lite and Thinking modes/);
+  assert.match(llms, /one unified assistant/);
+  assert.match(llms, /Model selection and response effort are separate concepts/);
+  assert.match(llms, /Only capabilities confirmed by the deployed runtime are available/);
+  assert.match(llms, /Max remains single-agent/);
+  assert.doesNotMatch(llms, /Plus Chat includes|Free uses Lite|Upgrade to Plus action/);
   assert.match(llms, /Voice input is not currently part of the supported web product/);
-  assert.match(llms, /Scheduled background work and image editing are not currently available/);
+  assert.match(llms, /Scheduled tasks require an enabled worker and account access/);
   assert.doesNotMatch(llms, /Creative, Precise, Code, Study|use voice/);
 
   assert.match(writer, /exact voice match is not guaranteed/);

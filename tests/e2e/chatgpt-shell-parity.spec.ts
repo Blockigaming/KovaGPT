@@ -70,43 +70,30 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     ).toBe(0);
   });
 
-  test("signed-in desktop navigation keeps Chat and Work one step apart", async ({ page }) => {
+  test("signed-in desktop navigation opens Files and returns to the unified assistant", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await installAuthenticatedFixture(page);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
-
-    const chatNavigation = page.getByRole("navigation", { name: "Primary workspace" });
-    await expect(chatNavigation).toBeVisible();
-    await expect(chatNavigation.getByRole("link", { name: "Chat" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-
-    await chatNavigation.getByRole("link", { name: "Work" }).click();
-    await expect(page).toHaveURL(/\/work$/);
-    const workNavigation = page.getByRole("navigation", { name: "Primary workspace" });
-    await expect(workNavigation).toBeVisible();
-    await expect(workNavigation.getByRole("link", { name: "Work" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-
-    await workNavigation.getByRole("link", { name: "Chat" }).click();
+    await expect(page.getByRole("navigation", { name: "Primary workspace" })).toHaveCount(0);
+    await page.getByRole("link", { name: "Files", exact: true }).click();
+    await expect(page).toHaveURL(/\/files$/);
+    await page.getByRole("button", { name: "New chat", exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
   });
-
-  test("collapsed desktop navigation keeps Work one step away", async ({ page }) => {
+  test("collapsed desktop navigation keeps Files one step away", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await installAuthenticatedFixture(page);
     await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
-
-    const workLink = page.getByRole("link", { name: "Work" });
-    await expect(workLink).toBeVisible();
-    await workLink.click();
-    await expect(page).toHaveURL(/\/work$/);
+    const filesLink = page.getByRole("link", { name: "Files", exact: true });
+    await expect(filesLink).toBeVisible();
+    await filesLink.click();
+    await expect(page).toHaveURL(/\/files$/);
   });
 
   test("active desktop chat keeps secondary actions in one overflow menu", async ({

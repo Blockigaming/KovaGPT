@@ -29,7 +29,7 @@ export const Route = createFileRoute("/pricing")({
       {
         name: "description",
         content:
-          "Compare KovaGPT Free, Plus, and Pro plans. Get more messages, image generations and advanced reasoning modes.",
+          "Compare KovaGPT Free, Plus, and Pro plans. Review published allowances and billing options.",
       },
       { property: "og:title", content: "Pricing - KovaGPT Plus & Pro plans" },
       {

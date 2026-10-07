@@ -36,43 +36,24 @@ const [
   readFile("tests/e2e/chatgpt-shell-parity.spec.ts", "utf8"),
 ]);
 
-test("signed-in users can move clearly between Chat and Work", () => {
-  assert.match(workspaceModeSwitch, /aria-label="Primary workspace"/);
-  assert.match(workspaceModeSwitch, /aria-current=\{active === "chat" \? "page" : undefined\}/);
-  assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
-  assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
-  assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
-  assert.match(sidebar, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
-  assert.match(
-    sidebar,
-    /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
-  );
+test("core launch presents one unified assistant without a Chat/Work mode switch", () => {
+  assert.doesNotMatch(route, /WorkspaceModeSwitch/);
+  assert.doesNotMatch(workRoute, /WorkspaceModeSwitch/);
+  assert.doesNotMatch(sidebar, /navLink\("\/work"/);
+  assert.match(workspaceModeSwitch, /Primary workspace/); // historical component preserved
 });
-test("signed-in sidebar keeps core destinations visible and groups coming-soon items", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
-  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /navLink\("\/maps", "Maps", Map\)/);
-  assert.ok(
-    sidebar.indexOf('navLink("/library", "Library"') < sidebar.indexOf("sidebar-more-items"),
-  );
-  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < sidebar.indexOf("sidebar-more-items"));
-  assert.match(sidebar, /title="Health is coming soon"/);
-  assert.match(sidebar, /title="Finances is coming soon"/);
+test("core navigation exposes the real file and plugin destinations", () => {
+  assert.match(sidebar, /navLink\("\/files", "Files", FileText\)/);
+  assert.match(sidebar, /navLink\("\/apps", "Plugins", PlugZap\)/);
+  assert.match(sidebar, /navLink\("\/projects", "Projects", Folder\)/);
+});
+test("launch navigation does not advertise deferred content or placeholder controls", () => {
+  assert.doesNotMatch(sidebar, /sidebar-more-items|Health is coming soon|Finances is coming soon/);
+  assert.doesNotMatch(sidebar, /navLink\("\/(?:maps|discovery|academy)"/);
+  assert.match(sidebar, /kova-sidebar-history/);
 });
 
-test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
-  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /<span className="kova-sidebar-label">More<\/span>/);
-  const moreControl = sidebar.indexOf('aria-controls="sidebar-more-items"');
-  assert.ok(sidebar.indexOf('navLink("/work", "Work"') < moreControl);
-  assert.ok(sidebar.indexOf('navLink("/library", "Library"') < moreControl);
-  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < moreControl);
-  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Health<\/span>/);
-  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Finances<\/span>/);
-});
-
-test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
+test("KovaGPT keeps one inactive identity label in each responsive top bar", () => {
   assert.match(route, /const greeting = "What can I help with\?";/);
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /KovaGPT can make mistakes\. Check important info\./);
@@ -82,11 +63,9 @@ test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.match(mobileTopBar, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
   assert.match(modelSelector, /ResponsiveModelSelector/);
   assert.match(responsiveSelector, /placement\?: "composer" \| "topbar"/);
-  assert.equal((responsiveSelector.match(/data-testid="model-selector-trigger"/g) ?? []).length, 1);
-  assert.match(responsiveSelector, /const useSheet = !isDesktop \|\| interaction === "touch"/);
-  assert.match(responsiveSelector, /<MobileBottomSheet/);
-  assert.match(responsiveSelector, /role="dialog"\s+aria-label="Choose model"/);
-  assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
+  assert.match(responsiveSelector, /kova-model-static/);
+  assert.doesNotMatch(responsiveSelector, /<button|role="dialog"|model-selector-trigger/);
+  assert.match(responsiveSelector, /onChange\(CORE_LAUNCH_MODE\)/);
 });
 
 test("signed-in empty chat removes guest-only onboarding clutter", () => {

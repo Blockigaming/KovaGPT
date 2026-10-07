@@ -11,10 +11,9 @@ test("Nexus documents connector truth and hides unsupported connection claims", 
   ]);
   assert.match(report, /Google Drive\s+\| \*\*Already implemented\*\*/);
   assert.match(report, /Microsoft SharePoint \/ OneDrive \| \*\*OAuth \+ backend needed\*\*/);
-  assert.match(
-    apps,
-    /const WORKING_IDS = new Set<string>\(\[[\s\S]*"google"[\s\S]*"github"[\s\S]*\]\)/,
-  );
+  assert.match(apps, /connectorConnectFlow\(c\) === "google-oauth"/);
+  assert.match(apps, /visibleGoogleStatus\?\.configured === true/);
+  assert.doesNotMatch(apps, /const WORKING_IDS/);
 });
 
 test("Agent Workspace is plan-gated, approval-aware, local-only and explicit", async () => {

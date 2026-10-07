@@ -51,7 +51,8 @@ test("draft, pending-selection, archive, import, and export paths carry the curr
   );
   assert.doesNotMatch(home, /localStorage\.(?:getItem|setItem|removeItem)\(`kova-draft:/);
 
-  assert.match(shell, /savePendingActive\(userKey, id\)/);
+  assert.match(shell, /persistChatRoute\(userKey, conversations, id, current\)/);
+  assert.match(shell, /principalRef\.current === storagePrincipal/);
   assert.match(shell, /clearPendingActive\(userKey\)/);
   assert.doesNotMatch(
     shell,

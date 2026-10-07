@@ -56,7 +56,8 @@ test("commercial surfaces avoid fake success and preserve recoverable work", asy
     read("src/components/states.tsx"),
   ]);
   assert.doesNotMatch(apps, /connected and ready/);
-  assert.match(apps, /WORKING_IDS/);
+  assert.match(apps, /connectorConnectFlow/);
+  assert.match(apps, /visibleGoogleStatus\?\.configured === true/);
   assert.match(library, /Library could not be loaded/);
   assert.match(prompt, /PROMPT_DRAFT_KEY/);
   assert.match(timeout, /TimeoutError/);

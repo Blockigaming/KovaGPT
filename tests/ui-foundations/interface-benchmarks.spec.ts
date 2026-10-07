@@ -146,7 +146,6 @@ for (const width of [320, 390, 768, 1440]) {
         "Pro",
       ]);
       await expect(region.getByRole("rowheader")).toHaveText([
-        "Chat modes",
         "Chat",
         "Images",
         "Uploads",

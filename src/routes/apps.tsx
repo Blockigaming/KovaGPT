@@ -5,6 +5,7 @@ import {
   CONNECTOR_CATALOG,
   GOOGLE_CONNECT_IDS,
   type ConnectorItem,
+  connectorConnectFlow,
 } from "@/lib/connectors-catalog";
 import {
   Search,
@@ -62,17 +63,8 @@ import {
 // The catalog owns which ids the Google grant actually covers.
 const GOOGLE_IDS = GOOGLE_CONNECT_IDS;
 
-// Apps that are actually wired up end-to-end today. Non-working connectors are
-// intentionally hidden so navigation never exposes fake or decorative controls.
-const WORKING_IDS = new Set<string>([
-  "google",
-  "gmail",
-  "google-drive",
-  "google-calendar",
-  "github",
-]);
-
-const CONFIGURED_CONNECTORS = WORKING_IDS;
+// An implemented flow is not proof of deployment configuration or provider health.
+// Planned catalog entries never reach actionable cards.
 
 const RECOMMENDED_IDS = new Set([
   "google",
@@ -188,7 +180,7 @@ function AppLogo({ domain, label }: { domain: string; label: string }) {
 }
 
 function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
-  if (!configured) {
+  if (!configured && state !== "syncing" && state !== "temporarily_unavailable") {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
         <ShieldAlert className="w-3 h-3" /> Setup needed
@@ -282,10 +274,19 @@ function AppCard({
   onUseInChat: () => void;
 }) {
   const baseBtn =
-    "inline-flex min-h-11 items-center justify-center rounded-full px-3 text-xs font-medium transition-colors shrink-0";
+    "inline-flex min-h-11 items-center justify-center rounded-[9999px] px-3 text-xs font-medium transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
   let action: React.ReactNode;
-  if (!configured) {
+  if (state === "syncing" || state === "temporarily_unavailable") {
+    action = (
+      <button
+        disabled
+        className={`${baseBtn} border border-border text-muted-foreground opacity-70`}
+      >
+        {state === "syncing" ? "Checking connection…" : "Status unavailable"}
+      </button>
+    );
+  } else if (!configured) {
     action = (
       <button
         disabled
@@ -301,7 +302,7 @@ function AppCard({
         <button className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}>Connect</button>
       </SignInButton>
     );
-  } else if (state === "connecting" || state === "syncing") {
+  } else if (state === "connecting") {
     action = (
       <button
         disabled
@@ -790,6 +791,7 @@ function AppsPage() {
   const visibleGoogleStatus = activityReady ? googleStatus : null;
   const visibleGoogleLoading = activityReady ? googleLoading : true;
   const visibleSelectedApp = activityReady ? selectedApp : null;
+  const googleConfigured = visibleGoogleStatus?.configured === true;
 
   const resendWorkflowVerification = async () => {
     const email = user?.primaryEmailAddress?.emailAddress;
@@ -922,9 +924,9 @@ function AppsPage() {
     const ok = params.get("google_connected");
     const err = params.get("google_error");
     if (ok) {
-      toast.success("Google account connected");
-      recordActivity("Google", "Connected");
-      refreshGoogle();
+      // A callback URL is only a request to reload authenticated status. It is not
+      // a success receipt: it may be copied, replayed, or followed by revocation.
+      void refreshGoogle();
     } else if (err) {
       const msg =
         err === "access_denied"
@@ -947,7 +949,15 @@ function AppsPage() {
   const isGoogleId = (id: string) => GOOGLE_IDS.has(id);
 
   const connectGoogle = async (connectionId?: string, itemId = "google") => {
-    if (!activityReady || !principal || !userKey || googleBusyRef.current || googleLoading) return;
+    if (
+      !activityReady ||
+      !principal ||
+      !userKey ||
+      googleBusyRef.current ||
+      googleLoading ||
+      !googleConfigured
+    )
+      return;
     const generation = generationRef.current;
     const requestPrincipal = principal;
     const isCurrent = () =>
@@ -1061,7 +1071,7 @@ function AppsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CONNECTOR_CATALOG.filter((c) => WORKING_IDS.has(c.id) && c.id !== "github").filter(
+    return CONNECTOR_CATALOG.filter((c) => connectorConnectFlow(c) === "google-oauth").filter(
       (c) => {
         if (!q) return true;
         return (
@@ -1083,7 +1093,8 @@ function AppsPage() {
       if (visibleGoogleLoading || googleBusy) return "syncing";
       if (activityReady && connecting[id]) return "connecting";
       if (activityReady && failed[id]) return "failed";
-      if (visibleGoogleStatus?.state === "temporarily_unavailable")
+      if (visibleGoogleStatus?.configured === false) return "idle";
+      if (!googleConfigured || visibleGoogleStatus?.state === "temporarily_unavailable")
         return "temporarily_unavailable";
       if (visibleGoogleStatus?.state === "reauthorization_required") return "reauthorize";
       if (isGoogleConnected(id)) return "connected";
@@ -1100,7 +1111,7 @@ function AppsPage() {
           key={item.id}
           item={item}
           state={stateOf(item.id)}
-          configured={CONFIGURED_CONNECTORS.has(item.id)}
+          configured={googleConfigured}
           isSignedIn={!!isSignedIn}
           onConnect={() => handleConnect(item)}
           onDisconnect={() => handleDisconnect(item)}
@@ -1287,9 +1298,7 @@ function AppsPage() {
                 </div>
                 <Button
                   variant="outline"
-                  disabled={
-                    googleBusy || visibleGoogleLoading || !CONFIGURED_CONNECTORS.has("google")
-                  }
+                  disabled={googleBusy || visibleGoogleLoading || !googleConfigured}
                   onClick={() => void connectGoogle()}
                 >
                   Add Google account
@@ -1307,7 +1316,13 @@ function AppsPage() {
                   Updating Google accounts…
                 </p>
               ) : null}
-              {visibleGoogleStatus?.state === "temporarily_unavailable" ? (
+              {visibleGoogleStatus?.configured === false ? (
+                <p role="status" className="text-sm">
+                  Google connection setup is required for this deployment. Connecting is unavailable
+                  until setup is complete.
+                </p>
+              ) : visibleGoogleStatus?.state === "temporarily_unavailable" ||
+                (!visibleGoogleLoading && !googleConfigured) ? (
                 <p role="status" className="text-sm">
                   Google account status is unavailable. Refresh to try again.
                 </p>
@@ -1347,7 +1362,7 @@ function AppsPage() {
                         {account.state !== "connected" ? (
                           <Button
                             variant="outline"
-                            disabled={googleBusy || visibleGoogleLoading}
+                            disabled={googleBusy || visibleGoogleLoading || !googleConfigured}
                             onClick={() => void connectGoogle(account.id)}
                             aria-label={`Reconnect ${account.email || "Google account"}`}
                           >

@@ -81,6 +81,8 @@ export type GoogleAccountStatus = {
 
 export type GoogleConnection = GoogleAccountStatus & { id: string; connectionRevision: number };
 export type GoogleStatus = GoogleAccountStatus & {
+  /** Configuration is not a claim of live provider operation. Missing means unknown. */
+  configured?: boolean;
   accounts?: GoogleConnection[];
   selectedConnectionId?: string | null;
   selectionRevision?: number;
@@ -89,7 +91,12 @@ export type GoogleStatus = GoogleAccountStatus & {
 export async function getGoogleStatus(expectedUserId: string): Promise<GoogleStatus> {
   try {
     const { response, body } = await accountRequest("/api/google/status", {}, expectedUserId);
-    if (!response.ok || !body || typeof body.connected !== "boolean")
+    if (
+      !response.ok ||
+      !body ||
+      typeof body.connected !== "boolean" ||
+      (body.configured !== undefined && typeof body.configured !== "boolean")
+    )
       throw new Error("Unavailable");
     if (
       body.accounts !== undefined &&
