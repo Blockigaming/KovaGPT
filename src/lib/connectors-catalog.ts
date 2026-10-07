@@ -1,3 +1,6 @@
+import { LAUNCH_PLUGIN_IDS } from "./core-launch-policy.mjs";
+export { LAUNCH_PLUGIN_IDS } from "./core-launch-policy.mjs";
+
 // Catalog of connectable services shown in Apps and Settings.
 //
 // TRUTHFULNESS CONTRACT
@@ -2951,23 +2954,6 @@ export const SETUP_REQUIRED_CONNECTOR_IDS: ReadonlySet<string> = new Set(
 export function getConnector(id: string): ConnectorItem | undefined {
   return CONNECTOR_CATALOG.find((item) => item.id === id);
 }
-
-/** Owner-selected launch scope; the larger catalog remains preserved for later work. */
-export const LAUNCH_PLUGIN_IDS = [
-  "gmail",
-  "google-calendar",
-  "google-drive",
-  "outlook",
-  "onedrive",
-  "sharepoint",
-  "ms-teams",
-  "notion",
-  "github",
-  "linear",
-  "slack",
-  "salesforce",
-  "hubspot",
-] as const;
 
 export const LAUNCH_PLUGIN_CATALOG: readonly ConnectorItem[] = LAUNCH_PLUGIN_IDS.map((id) => {
   if (id === "sharepoint")

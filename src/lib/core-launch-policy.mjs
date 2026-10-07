@@ -28,3 +28,20 @@ export function isCoreLaunchRoute(path) {
 export const CORE_LAUNCH_MODE = "instant";
 // Advanced workflow creation is deferred; existing source and saved records remain intact.
 export const CORE_LAUNCH_ADVANCED_WORKFLOWS = false;
+
+/** Owner-selected launch scope; the larger catalog remains preserved for later work. */
+export const LAUNCH_PLUGIN_IDS = Object.freeze([
+  "gmail",
+  "google-calendar",
+  "google-drive",
+  "outlook",
+  "onedrive",
+  "sharepoint",
+  "ms-teams",
+  "notion",
+  "github",
+  "linear",
+  "slack",
+  "salesforce",
+  "hubspot",
+]);

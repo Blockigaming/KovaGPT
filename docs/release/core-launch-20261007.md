@@ -99,7 +99,9 @@ by accepted specialist runtime contracts and staging activation authority.
 
 ## Specialist dependencies and configuration
 
-Auth PR #443 remains `e43686bc123f2e5efcd32a69e843f3fd4bf61b49` at this review.
+Auth PR #443 (`e43686bc123f2e5efcd32a69e843f3fd4bf61b49`) merged into
+`codex/kova-owned-auth-foundation` as `026196593e9f3a9d2f8a00d8e1788dffb320b5e3`
+on October 7 at 18:21 UTC. It is not integrated into this Interface branch.
 Auth owns migration and storage/revocation acceptance. Regenerate the route tree
 from both accepted route sets during future integration; do not overwrite it.
 Security PR #444 is `74e2fba1e0fc74ab36c237b033b03d097c49b0ef`, still draft and
@@ -178,3 +180,29 @@ fixed-expiry test accounts. UI expectations now match the unified launch scope.
 HTTP/Sites tests use live-clock accounts and MFA fixture sessions; historical SQL
 fixtures retain their fixed clock. Expired-session rejection remains asserted.
 No Auth application code, migrations, access rules or deployment settings changed.
+
+## Reduced-scope acceptance gate
+
+The launch report and promotion guard now share the same acceptance rules and
+thirteen-plugin ID list as the Plugins tab. An aggregate connector pass cannot
+substitute for each selected service's connect, read, disconnect and account
+isolation evidence. Every required result must match the report's exact commit
+and staging target. Provider readiness, actual conversation streaming/reopening,
+authentication, projects/files, storage, executed scheduled tasks and essential
+settings/legal pages are mandatory. Deferred catalog entries and agent features
+do not block this reduced launch.
+
+Report schema 2 records `KOVA_LAUNCH_PAID_SUBSCRIPTIONS` and
+`KOVA_LAUNCH_IMAGE_GENERATION` as explicit 0/1 configuration choices (default 0).
+Paid launch additionally requires Stripe and server access-limit verification;
+image launch additionally requires generation and cost-control verification.
+These report flags do not enable either runtime. Runtime configuration must agree
+with the reviewed proposal before deployment.
+
+The protected acceptance automation supplies `KOVA_GATE_<NAME>` results and
+`KOVA_PLUGIN_<ID>_<OPERATION>` results, replacing hyphens with underscores in
+plugin IDs. Operations are CONNECT, READ, DISCONNECT and ISOLATION. Missing results
+remain not-run and block promotion. These fields summarize real acceptance
+receipts; setting them does not execute a journey or prove that one happened.
+Owner-approved report hashing, exact-commit checks, cleanup and explicit human
+promotion authority remain required. No promotion workflow is run here.
