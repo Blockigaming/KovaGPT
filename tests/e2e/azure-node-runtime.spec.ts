@@ -1,8 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 import { waitForKovaHydration } from "./hydration";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 
 const origin = "http://127.0.0.1:4189";
+const sourceSha = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+  timeout: 5000,
+}).trim();
 let forbiddenHosts: string[];
 
 test.beforeEach(async ({ context, page }) => {
@@ -36,6 +41,7 @@ test("Node liveness and build identity work; missing backend readiness fails clo
   const version = await request.get("/api/version");
   const identity = await version.json();
   expect(identity.sha).toMatch(/^[a-f0-9]{40}$/u);
+  expect(identity.sha).toBe(sourceSha);
   expect(version.headers()["x-kova-build"]).toBe(identity.sha);
   const readiness = await request.get("/api/readyz");
   expect(readiness.status()).toBe(503);

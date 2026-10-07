@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -10,6 +10,11 @@ const image = process.env.KOVA_LOCAL_NODE_IMAGE;
 assert.match(image ?? "", /^sha256:[a-f0-9]{64}$/u, "A cached local image ID is required");
 const dist = realpathSync(fileURLToPath(new URL("../../dist", import.meta.url)));
 assert.ok(existsSync(`${dist}/server/index.mjs`), "Run build:azure first");
+const sourceSha = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+  timeout: 5000,
+}).trim();
+assert.match(sourceSha, /^[a-f0-9]{40}$/u);
 const name = `kova-azure-node-check-${randomUUID().slice(0, 8)}`;
 let id;
 
@@ -137,6 +142,7 @@ try {
     const version = await get('/api/version');
     const identity = await version.json();
     assert.match(identity.sha, /^[a-f0-9]{40}$/u);
+    assert.equal(identity.sha, ${JSON.stringify(sourceSha)}, 'local_linux_stale_build');
     assert.equal(version.headers.get('x-kova-build'), identity.sha);
     stage = 'readiness';
     const readiness = await get('/api/readyz');
