@@ -5,7 +5,7 @@ const read = (path) => readFileSync(path, "utf8");
 
 test("workspace sources remain authorized while chat history stays searchable in the shell", () => {
   const fn = read("src/lib/workspace.functions.ts"),
-    home = read("src/routes/index.tsx"),
+    home = read("src/components/ChatWorkspace.tsx"),
     sidebar = read("src/components/Sidebar.tsx"),
     palette = read("src/components/CommandPalette.tsx");
   for (const table of ["projects", "user_library_items", "scheduled_tasks"])
@@ -28,7 +28,7 @@ test("Memory Center supports real edit delete merge and source explanations", ()
 test("Context Packs are owner scoped, persisted, and attach to chat", () => {
   const migration = read("supabase/migrations/20260727090000_context_packs.sql"),
     route = read("src/routes/context-packs.tsx"),
-    chat = read("src/routes/index.tsx");
+    chat = read("src/components/ChatWorkspace.tsx");
   assert.match(migration, /enable row level security/);
   assert.match(migration, /auth\.uid\(\) = user_id/);
   assert.match(route, /createContextPack/);

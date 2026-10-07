@@ -8,12 +8,11 @@ const read = (path) => readFileSync(join(root, path), "utf8");
 const memoryPayload = read("src/lib/chat-summary-snapshot.mjs");
 
 test("saved-memory reads and POSTs require explicit browser consent and paid entitlement", () => {
-  const settings = read("src/components/SettingsDialog.tsx");
-  const page = read("src/routes/index.tsx");
+  const page = read("src/components/ChatWorkspace.tsx");
   const chatApi = read("src/routes/api/chat.ts");
   const parser = read("src/lib/endpoint-reliability.mjs");
 
-  assert.match(settings, /rememberAcross: false/);
+  assert.match(read("src/lib/settings-types.ts"), /rememberAcross: false/);
   assert.match(page, /setSettingsPrincipal\(storagePrincipal\)/);
   assert.match(page, /if \(!settingsReady\) return;[\s\S]{0,120}blockMemoryWrites/);
   assert.match(
@@ -33,7 +32,7 @@ test("saved-memory reads and POSTs require explicit browser consent and paid ent
 });
 
 test("Temporary Chat enforces clean or personalized context without new memory", () => {
-  const page = read("src/routes/index.tsx");
+  const page = read("src/components/ChatWorkspace.tsx");
   const chatApi = read("src/routes/api/chat.ts");
   const dialog = read("src/components/TemporaryChatStartDialog.tsx");
   const chatStore = read("src/lib/chat-store.ts");

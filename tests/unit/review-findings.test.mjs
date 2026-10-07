@@ -88,7 +88,7 @@ test("model selectors only advertise backed intelligence modes", () => {
   const desktop = read("src/components/ModelSelector.tsx");
   const responsive = read("src/components/ResponsiveModelSelector.tsx");
   const chat = read("src/routes/api/chat.ts");
-  const shell = read("src/routes/index.tsx");
+  const shell = read("src/components/ChatWorkspace.tsx");
   assert.match(desktop, /ResponsiveModelSelector/);
   assert.match(responsive, /kova-model-static/);
   assert.doesNotMatch(responsive, /model-selector-trigger|<button/);

@@ -2952,6 +2952,38 @@ export function getConnector(id: string): ConnectorItem | undefined {
   return CONNECTOR_CATALOG.find((item) => item.id === id);
 }
 
+/** Owner-selected launch scope; the larger catalog remains preserved for later work. */
+export const LAUNCH_PLUGIN_IDS = [
+  "gmail",
+  "google-calendar",
+  "google-drive",
+  "outlook",
+  "onedrive",
+  "sharepoint",
+  "ms-teams",
+  "notion",
+  "github",
+  "linear",
+  "slack",
+  "salesforce",
+  "hubspot",
+] as const;
+
+export const LAUNCH_PLUGIN_CATALOG: readonly ConnectorItem[] = LAUNCH_PLUGIN_IDS.map((id) => {
+  if (id === "sharepoint")
+    return {
+      id,
+      label: "SharePoint",
+      description: "Reference authorized SharePoint sites and files.",
+      category: "Storage & Files",
+      status: "planned",
+      domain: "sharepoint.com",
+    };
+  const item = getConnector(id);
+  if (!item) throw new Error(`Launch plugin is missing from the catalog: ${id}`);
+  return item;
+});
+
 /**
  * The single source of truth for connectors reachable through the Google
  * account OAuth flow. `google-calendar` has no `legacyProvider` row of its own

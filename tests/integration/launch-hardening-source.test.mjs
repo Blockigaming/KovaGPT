@@ -18,7 +18,7 @@ test("sensitive one-time workspace handoffs use session storage", async () => {
     read("src/routes/context-packs.tsx"),
     read("src/routes/prompt-studio.tsx"),
     read("src/routes/apps.tsx"),
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
   ]);
   assert.match(handoffs, /writePrincipalHandoff\(safeBrowserStorage\("sessionStorage"\)/);
   assert.match(handoffs, /writeHandoff\("kova-context-candidates", userKey/);

@@ -7,7 +7,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8
 test("Temporary Chat is reachable and truthfully selected from the mobile top bar", async () => {
   const [topBar, route, temporaryControls] = await Promise.all([
     read("src/components/MobileTopBar.tsx"),
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
     read("src/components/TemporaryChatStartDialog.tsx"),
   ]);
 
@@ -32,7 +32,7 @@ test("Temporary Chat is reachable and truthfully selected from the mobile top ba
 });
 
 test("header progress never invents activity", async () => {
-  const route = await read("src/routes/index.tsx");
+  const route = await read("src/components/ChatWorkspace.tsx");
 
   assert.doesNotMatch(route, /AIStatus/);
   await assert.rejects(read("src/components/AIStatus.tsx"), /ENOENT/);

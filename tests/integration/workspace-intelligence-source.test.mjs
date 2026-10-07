@@ -32,7 +32,7 @@ test("workspace resources have reduced-click truthful handoffs", async () => {
 
 test("chat history is searchable from both the sidebar and command palette", async () => {
   const [home, sidebar, palette, search] = await Promise.all([
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
     read("src/components/Sidebar.tsx"),
     read("src/components/CommandPalette.tsx"),
     read("src/lib/conversation-search.ts"),

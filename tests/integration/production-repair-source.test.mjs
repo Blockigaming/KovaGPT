@@ -8,7 +8,7 @@ const projectSuggest = await readFile("src/routes/api/project-suggest.ts", "utf8
 const auth = await readFile("src/lib/api-auth.server.ts", "utf8");
 const recovery = await readFile("src/routes/reset-password.tsx", "utf8");
 const githubWebhook = await readFile("src/routes/api/github/webhook.ts", "utf8");
-const home = await readFile("src/routes/index.tsx", "utf8");
+const home = await readFile("src/components/ChatWorkspace.tsx", "utf8");
 
 test("AI routes reject untrusted message and attachment shapes", () => {
   assert.match(chat, /readChatRequest\(request, CHAT_BODY_LIMIT_BYTES, signal\)/);

@@ -4,7 +4,7 @@ import test from "node:test";
 
 const styles = await readFile("src/styles.css", "utf8");
 const finalParityStyles = await readFile("src/styles/chatgpt-final-parity.css", "utf8");
-const home = await readFile("src/routes/index.tsx", "utf8");
+const home = await readFile("src/components/ChatWorkspace.tsx", "utf8");
 const root = await readFile("src/routes/__root.tsx", "utf8");
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const composer = await readFile("src/components/ChatInput.tsx", "utf8");

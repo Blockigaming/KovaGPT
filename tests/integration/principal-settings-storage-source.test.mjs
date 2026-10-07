@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8
 
 test("settings wait for an authenticated principal and never render stale account state", async () => {
   const [home, root, images, shell, hook] = await Promise.all([
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
     read("src/routes/__root.tsx"),
     read("src/routes/images.tsx"),
     read("src/components/AppShell.tsx"),
@@ -63,7 +63,7 @@ test("the legacy settings fallback is gated to an explicit guest migration", asy
 test("account, memory, and local-device deletion keep their storage scopes distinct", async () => {
   const [settings, home, images] = await Promise.all([
     read("src/components/SettingsDialog.tsx"),
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
     read("src/routes/images.tsx"),
   ]);
 

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const topbar = await readFile("src/components/MobileTopBar.tsx", "utf8");
 const input = await readFile("src/components/ChatInput.tsx", "utf8");
-const index = await readFile("src/routes/index.tsx", "utf8");
+const index = await readFile("src/components/ChatWorkspace.tsx", "utf8");
 const temporaryControls = await readFile("src/components/TemporaryChatStartDialog.tsx", "utf8");
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const chatStore = await readFile("src/lib/chat-store.ts", "utf8");

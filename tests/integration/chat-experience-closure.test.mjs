@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 test("guest sign-in invitation waits for three prompts in the current tab", async () => {
-  const source = await read("src/routes/index.tsx");
+  const source = await read("src/components/ChatWorkspace.tsx");
   assert.match(source, /guestPromptTurns >= 3/);
   assert.match(source, /_retryAttempt === 0 && !isSignedIn/);
   assert.doesNotMatch(source, /userMsgCount >= 4/);

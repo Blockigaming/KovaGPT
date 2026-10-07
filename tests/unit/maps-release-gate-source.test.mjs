@@ -5,8 +5,8 @@ import test from "node:test";
 
 const expectedSidebarCallers = [
   "src/components/AppShell.tsx",
+  "src/components/ChatWorkspace.tsx",
   "src/routes/images.tsx",
-  "src/routes/index.tsx",
 ];
 
 test("MAN-09 keeps the release gate closed", () => {

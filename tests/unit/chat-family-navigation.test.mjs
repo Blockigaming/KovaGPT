@@ -172,7 +172,7 @@ test("Canvas rejects mismatched documents and ignores results after leaving the 
 test("publishing the current chat URL preserves queued attachments; switching chats clears them", () => {
   const source = ts.createSourceFile(
     "index.tsx",
-    readFileSync("src/routes/index.tsx", "utf8"),
+    readFileSync("src/components/ChatWorkspace.tsx", "utf8"),
     ts.ScriptTarget.Latest,
     true,
     ts.ScriptKind.TSX,

@@ -26,3 +26,5 @@ export function isCoreLaunchRoute(path) {
 // Legacy request compatibility only; this neither selects nor activates a model.
 // Models owns serving availability and the separate model/effort admission contract.
 export const CORE_LAUNCH_MODE = "instant";
+// Advanced workflow creation is deferred; existing source and saved records remain intact.
+export const CORE_LAUNCH_ADVANCED_WORKFLOWS = false;

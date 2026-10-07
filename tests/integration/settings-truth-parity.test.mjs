@@ -11,7 +11,7 @@ test("Send on Enter is shared, reactive, and applied across main and project cha
   const preferences = read("src/lib/composer-preferences.ts");
   const storage = read("src/lib/composer-preference-storage.mjs");
   const settings = read("src/components/SettingsDialog.tsx");
-  const main = read("src/routes/index.tsx");
+  const main = read("src/components/ChatWorkspace.tsx");
   const project = read("src/routes/projects.$projectId.chat.$chatId.tsx");
 
   assert.match(composer, /useSharedSendOnEnter\(user\?\.id \?\? null\)/);

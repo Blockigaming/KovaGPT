@@ -194,7 +194,7 @@ test("real fragmented SSE carries source refs into reloadable account-local mess
 test("actual route and UI bind attribution to prompt assembly, current generation, private inspection, and sanitized shares", () => {
   const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
   const route = read("src/routes/api/chat.ts"),
-    page = read("src/routes/index.tsx");
+    page = read("src/components/ChatWorkspace.tsx");
   assert.match(route, /\.select\("id, title, summary, updated_at"\)/);
   assert.match(route, /id: r\.id/);
   assert.doesNotMatch(route, /chat-memory-\$/);

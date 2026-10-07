@@ -19,7 +19,7 @@ const [
   onboarding,
   shellSpec,
 ] = await Promise.all([
-  readFile("src/routes/index.tsx", "utf8"),
+  readFile("src/components/ChatWorkspace.tsx", "utf8"),
   readFile("src/styles.css", "utf8"),
   readFile("src/components/AppShell.tsx", "utf8"),
   readFile("src/components/Sidebar.tsx", "utf8"),

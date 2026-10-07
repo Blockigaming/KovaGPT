@@ -9,6 +9,7 @@ import {
   deferred,
 } from "../helpers/ui-state-harness.mjs";
 import * as storage from "../../src/lib/principal-browser-storage.mjs";
+import * as launchPolicy from "../../src/lib/core-launch-policy.mjs";
 
 const catalog = loadUiModule("src/lib/connectors-catalog.ts", {});
 const owner = "11111111-1111-4111-8111-111111111111";
@@ -32,6 +33,7 @@ function apps(status, search = "") {
     "@tanstack/react-start": { useServerFn: (fn) => fn },
     "@/components/auth/ClerkSafe": { useUser: () => auth, SignInButton: "SignInButton" },
     "@/lib/connectors-catalog": catalog,
+    "@/lib/core-launch-policy.mjs": launchPolicy,
     "@/lib/github.functions": {},
     "@/lib/auth-fetch": {},
     "@/integrations/supabase/client": {},
@@ -122,8 +124,10 @@ test("unknown and unconfigured deployments cannot start Google authorization", a
     assert.equal(add.props.disabled, true);
     await add.props.onClick();
     assert.equal(h.connects.length, 0, "handler also enforces availability");
-    const googleCards = cards(tree);
-    assert.equal(googleCards.length, 4);
+    const googleCards = cards(tree).filter(
+      (card) => catalog.connectorConnectFlow(card.props.item) === "google-oauth",
+    );
+    assert.equal(googleCards.length, 3);
     for (const card of googleCards) {
       const rendered = card.type(card.props);
       assert.equal(button(rendered, "Connect"), undefined);
@@ -141,7 +145,48 @@ test("fresh authenticated configuration enables the existing account-bound conne
   await add.props.onClick();
   assert.equal(h.connects.length, 1);
   assert.equal(h.connects[0][1], owner);
-  assert.ok(cards(tree).every((card) => card.props.configured === true));
+  assert.ok(
+    cards(tree)
+      .filter((card) => catalog.connectorConnectFlow(card.props.item) === "google-oauth")
+      .every((card) => card.props.configured === true),
+  );
+  h.hooks.unmount();
+});
+
+test("launch lists exactly the thirteen selected plugins and never enables unfinished adapters", async () => {
+  assert.deepEqual(
+    Array.from(catalog.LAUNCH_PLUGIN_CATALOG, (item) => item.label),
+    [
+      "Gmail",
+      "Google Calendar",
+      "Google Drive",
+      "Outlook",
+      "OneDrive",
+      "SharePoint",
+      "Microsoft Teams",
+      "Notion",
+      "GitHub",
+      "Linear",
+      "Slack",
+      "Salesforce",
+      "HubSpot",
+    ],
+  );
+  const h = apps({ ...disconnected, configured: true });
+  const tree = await h.ready();
+  const entries = cards(tree);
+  assert.equal(entries.length, 12, "GitHub uses its existing account/repository manager");
+  const pending = entries.filter((card) => catalog.connectorConnectFlow(card.props.item) === null);
+  assert.equal(pending.length, 9);
+  for (const card of pending) {
+    const rendered = card.type(card.props);
+    assert.equal(button(rendered, "Not available yet").props.disabled, true);
+    assert.equal(button(rendered, "Connect"), undefined);
+    assert.equal(button(rendered, "Use in chat"), undefined);
+  }
+  assert.equal(elements(tree, (node) => node.type === "WorkflowSkillsPanel").length, 0);
+  assert.equal(button(tree, "Resend verification email"), undefined);
+  assert.equal(h.connects.length, 0);
   h.hooks.unmount();
 });
 

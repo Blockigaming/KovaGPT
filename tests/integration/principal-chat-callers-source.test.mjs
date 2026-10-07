@@ -11,7 +11,7 @@ const callerPaths = [
   "src/routes/knowledge-graph.tsx",
   "src/routes/library.tsx",
   "src/routes/summary.tsx",
-  "src/routes/index.tsx",
+  "src/components/ChatWorkspace.tsx",
 ];
 
 test("all remaining local chat callers carry the resolved principal", async () => {
@@ -67,7 +67,7 @@ test("the caller slice contains no direct legacy draft or pending-selection keys
 });
 
 test("home chat uses stable empty state and complete callback dependencies", async () => {
-  const home = await read("src/routes/index.tsx");
+  const home = await read("src/components/ChatWorkspace.tsx");
 
   assert.match(home, /const EMPTY_CONVERSATIONS: Conversation\[\] = \[\]/);
   assert.match(

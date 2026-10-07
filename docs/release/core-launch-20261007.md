@@ -45,12 +45,22 @@ that radius, centered text, balanced padding and focus/hover treatment. Pricing
 no longer sells unverified model choices. Required provider/legal attribution
 and truthful runtime identity disclosures remain intact.
 
+The owner's reduced launch scope selects exactly Gmail, Google Calendar, Google
+Drive, Outlook, OneDrive, SharePoint, Microsoft Teams, Notion, GitHub, Linear,
+Slack, Salesforce and HubSpot. The Plugins tab uses this explicit thirteen-entry
+list. The old catalog remains preserved; its other entries are deferred, not
+launch requirements. Advanced workflow creation is hidden, with its component,
+server code and browser regressions preserved for later work.
+
 Google Connect/Add/reconnect requires authenticated configured status, including
 in event handlers. Callback query strings cannot manufacture connection success.
-The catalog retains all 360 entries: 355 planned and unconnectable, five source
-integrations requiring setup/runtime proof, **zero certified operational**.
-Google/Gmail/Drive/Calendar share the existing OAuth contract; GitHub uses its
-existing installation/repository manager. Planned entries remain unfinished scope.
+The original catalog retains all 360 entries. Within the selected launch list,
+four integrations have source implementations (Gmail, Calendar, Drive, GitHub)
+and nine still need adapters and provider authorization contracts. All nine are
+inactive in the UI; **zero integrations are certified operational**. Google
+services share the existing OAuth contract; GitHub uses its existing
+installation/repository manager. SharePoint is an explicit launch entry and does
+not falsely inherit Google's configuration or connection state.
 
 ## Verification and launch gates
 
@@ -61,17 +71,31 @@ head. Local browser capture is not attempted; hosted CI follows the owner's
 explicit remote-check authorization. Mocked fixtures do not prove deployed flows.
 The final receipt records exact commands, source/tree IDs, results and artifacts.
 
-| Journey                                 | Existing application implementation                                         | Remaining real acceptance                                                                                                |
-| --------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Sign in → prompt → stream → save/reopen | Auth wrapper, chat SSE, principal-scoped history, recovered routes          | Accepted Auth session/storage and affordable Models runtime; actual stream, stop/retry, reload and second-device history |
-| Projects/files                          | Authenticated CRUD/membership, private uploads, bounded document extraction | Create/upload/read/reopen/delete, two-owner isolation and revoked downloads on deployed storage                          |
-| Images                                  | Image request and library persistence paths                                 | Approved provider/budget, generate/save/reopen/download and failure accounting                                           |
-| Scheduled tasks                         | Task CRUD, grants, worker protocol and run history                          | Enabled worker/trigger; due-time execution, deduplication, delivery and cancellation                                     |
-| Plugins                                 | Five catalog entries with Google/GitHub implementations                     | Consent/status/permitted operation/disconnect/denied reuse; 355 planned entries still unimplemented                      |
-| Subscriptions/access                    | Checkout, portal, webhook and entitlement code                              | Accepted Stripe configuration and sandbox proof, webhook-backed upgrade/downgrade, direct API denial                     |
+| Journey                                 | Existing application implementation                                         | Remaining real acceptance                                                                                                  |
+| --------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Sign in → prompt → stream → save/reopen | Auth wrapper, chat SSE, principal-scoped history, recovered routes          | Accepted Auth session/storage and affordable Models runtime; actual stream, stop/retry, reload and second-device history   |
+| Projects/files                          | Authenticated CRUD/membership, private uploads, bounded document extraction | Create/upload/read/reopen/delete, two-owner isolation and revoked downloads on deployed storage                            |
+| Images                                  | Image request and library persistence paths                                 | Approved provider/budget, generate/save/reopen/download and failure accounting                                             |
+| Scheduled tasks                         | Task CRUD, grants, worker protocol and run history                          | Enabled worker/trigger; due-time execution, deduplication, delivery and cancellation                                       |
+| Plugins                                 | Four selected integrations with Google/GitHub implementations               | Live consent/operation/disconnect proof for four; provider adapters and authorization contracts for nine selected services |
+| Subscriptions/access                    | Checkout, portal, webhook and entitlement code                              | Accepted Stripe configuration and sandbox proof, webhook-backed upgrade/downgrade, direct API denial                       |
 
 No deployed end-to-end journey is certified by this source candidate. Retained
 account, billing, privacy and terms routes remain part of launch scope.
+Every journey above is implementation-only; none is staging-verified or
+production-verified by Interface. Signup, login, logout, password recovery and
+two-account isolation require Auth's accepted environment. Image generation is
+conditional on verified provider accounting and cost controls. Subscription
+checkout and server-enforced limits are mandatory if paid subscriptions are
+accepted; keep paid runtime disabled until that evidence exists.
+
+First integrated staging acceptance: use a disposable account to sign up,
+complete verification, log in, send one bounded prompt, observe incremental
+streaming, wait for durable save, reopen the conversation after reload and login,
+then prove a second account cannot read it. Record the exact app image, Auth
+mode, Models endpoint contract, request identity, storage readback and cleanup.
+This is a real staging journey, not a mocked-browser substitute. It is blocked
+by accepted specialist runtime contracts and staging activation authority.
 
 ## Specialist dependencies and configuration
 
@@ -103,6 +127,27 @@ account, prices, portal and webhook references. `STRIPE_BILLING_RUNTIME` remains
 disabled until its acceptance gate passes. Do not infer production config from samples.
 
 ## Deployment and rollback proposal (not authorized)
+
+Use the existing isolated staging application for the first integrated journey;
+leave the production host and traffic unchanged. The image must include the
+accepted Interface and Auth source together, with the deferred advanced UI
+disabled and only the measured single model enabled. Never reuse the stopped
+Auth rehearsal's activation grant for this separate release test.
+
+Required task inputs are `SCHEDULED_TASK_SECRET` (or `CRON_SECRET`),
+`KOVA_TASK_POLICY_VERSION`, accepted provider/accounting configuration and an
+active scheduler heartbeat. A saved task alone is not execution evidence.
+Validate one due task, one persisted result and one cancellation without a
+duplicate provider operation before reporting scheduled tasks staging-verified.
+
+Costs: this Interface run adds no Azure/provider/paid operation. Models' saved
+October 7 proposal estimates $272.86/month against a $280 total planning ceiling,
+including $132.86 for the proposed model server and $140 in other allowances.
+Those are proposal figures, not current invoices, an accepted serving option or
+permission to spend. Current rates, actual overhead, staging duration and the
+incremental image/provider cost must be reconciled before deployment approval;
+the exact bounded staging price and measured model capacity remain unresolved.
+No new recurring resource is proposed by Interface.
 
 1. Finish exact-head remote checks and accepted Auth/Models/Azure contracts.
 2. Record the currently serving revision/digest/config as the actual rollback target.

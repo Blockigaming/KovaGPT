@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8
 
 test("home chat and shared shell hide stale account state before loading the next principal", async () => {
   const [home, shell] = await Promise.all([
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
     read("src/components/AppShell.tsx"),
   ]);
 
@@ -30,7 +30,7 @@ test("home chat and shared shell hide stale account state before loading the nex
 
 test("draft, pending-selection, archive, import, and export paths carry the current principal", async () => {
   const [home, shell, settings] = await Promise.all([
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
     read("src/components/AppShell.tsx"),
     read("src/components/SettingsDialog.tsx"),
   ]);

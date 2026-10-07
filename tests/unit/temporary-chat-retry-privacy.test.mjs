@@ -4,7 +4,10 @@ import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 
-const source = await readFile(new URL("../../src/routes/index.tsx", import.meta.url), "utf8");
+const source = await readFile(
+  new URL("../../src/components/ChatWorkspace.tsx", import.meta.url),
+  "utf8",
+);
 const ast = ts.createSourceFile(
   "index.tsx",
   source,

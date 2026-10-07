@@ -10,7 +10,7 @@ const visibleCoreFiles = [
   "src/components/MobileTopBar.tsx",
   "src/components/SettingsDialog.tsx",
   "src/components/OperationalState.tsx",
-  "src/routes/index.tsx",
+  "src/components/ChatWorkspace.tsx",
 ];
 const voiceCriticalFiles = [
   "src/components/ChatInput.tsx",
@@ -20,7 +20,7 @@ const voiceCriticalFiles = [
   "src/components/CommandPalette.tsx",
   "src/components/SettingsDialog.tsx",
   "src/components/ResponsiveModelSelector.tsx",
-  "src/routes/index.tsx",
+  "src/components/ChatWorkspace.tsx",
 ];
 const deadControlPatterns = [
   { label: "empty click handler", pattern: /onClick\s*=\s*\{\s*\(\)\s*=>\s*\{\s*\}\s*\}/u },

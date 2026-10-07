@@ -321,7 +321,9 @@ function RootThemeManager() {
   return null;
 }
 
-const ChatWorkspace = lazy(() => import("./index").then(({ KovaGPT }) => ({ default: KovaGPT })));
+const ChatWorkspace = lazy(() =>
+  import("@/components/ChatWorkspace").then(({ KovaGPT }) => ({ default: KovaGPT })),
+);
 function WorkspaceOutlet() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const savedChat = pathname.match(/^\/c\/([^/]+)\/?$/);

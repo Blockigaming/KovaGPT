@@ -25,8 +25,7 @@ export function SignUpPrompt({
           </div>
           <DialogTitle className="text-center">Sign in to continue</DialogTitle>
           <DialogDescription className="text-center">
-            Sign in or create an account to continue working, access smarter agents, and save your
-            work.
+            Sign in or create an account to continue the conversation and save your work.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 mt-2">

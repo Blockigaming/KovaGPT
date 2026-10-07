@@ -2,11 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import {
-  CONNECTOR_CATALOG,
+  LAUNCH_PLUGIN_CATALOG,
   GOOGLE_CONNECT_IDS,
   type ConnectorItem,
   connectorConnectFlow,
+  connectorUnavailableReason,
 } from "@/lib/connectors-catalog";
+import { CORE_LAUNCH_ADVANCED_WORKFLOWS } from "@/lib/core-launch-policy.mjs";
 import {
   Search,
   Check,
@@ -66,17 +68,6 @@ const GOOGLE_IDS = GOOGLE_CONNECT_IDS;
 // An implemented flow is not proof of deployment configuration or provider health.
 // Planned catalog entries never reach actionable cards.
 
-const RECOMMENDED_IDS = new Set([
-  "google",
-  "gmail",
-  "google-drive",
-  "google-calendar",
-  "icloud-mail",
-  "ms-word",
-  "youtube",
-  "apple",
-]);
-
 export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
@@ -84,7 +75,7 @@ export const Route = createFileRoute("/apps")({
       { title: "KovaGPT Apps & Plugins" },
       {
         name: "description",
-        content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",
+        content: "Manage KovaGPT plugin connections and check their availability.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -277,7 +268,17 @@ function AppCard({
     "inline-flex min-h-11 items-center justify-center rounded-[9999px] px-3 text-xs font-medium transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
   let action: React.ReactNode;
-  if (state === "syncing" || state === "temporarily_unavailable") {
+  if (connectorConnectFlow(item) === null) {
+    action = (
+      <button
+        disabled
+        title={connectorUnavailableReason(item)}
+        className={`${baseBtn} border border-border text-muted-foreground cursor-not-allowed opacity-70`}
+      >
+        Not available yet
+      </button>
+    );
+  } else if (state === "syncing" || state === "temporarily_unavailable") {
     action = (
       <button
         disabled
@@ -342,12 +343,17 @@ function AppCard({
   }
 
   return (
-    <li className="kova-card kova-connector-card flex h-full flex-col items-start gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-foreground/20 sm:flex-row">
+    <li
+      data-plugin-id={item.id}
+      className="kova-card kova-connector-card flex h-full flex-col items-start gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-foreground/20 sm:flex-row"
+    >
       <AppLogo domain={item.domain} label={item.label} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-semibold truncate">{item.label}</div>
-          <StatusBadge state={state} configured={configured} />
+          {connectorConnectFlow(item) !== null && (
+            <StatusBadge state={state} configured={configured} />
+          )}
         </div>
         <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description}</div>
       </div>
@@ -1069,23 +1075,26 @@ function AppsPage() {
     return false;
   };
 
-  const filtered = useMemo(() => {
+  const matchingPlugins = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CONNECTOR_CATALOG.filter((c) => connectorConnectFlow(c) === "google-oauth").filter(
-      (c) => {
-        if (!q) return true;
-        return (
-          c.label.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q) ||
-          c.category.toLowerCase().includes(q)
-        );
-      },
-    );
+    return LAUNCH_PLUGIN_CATALOG.filter((c) => {
+      if (!q) return true;
+      return (
+        c.label.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q) ||
+        c.category.toLowerCase().includes(q)
+      );
+    });
   }, [query]);
+  const filtered = matchingPlugins.filter((item) => item.id !== "github");
+  const showGitHub = matchingPlugins.some((item) => item.id === "github");
 
   const isConnected = (id: string) => isGoogleId(id) && isGoogleConnected(id);
   const connectedList = filtered.filter((c) => isConnected(c.id));
-  const recommendedList = filtered.filter((c) => !isConnected(c.id) && RECOMMENDED_IDS.has(c.id));
+  const recommendedList = filtered.filter(
+    (c) => !isConnected(c.id) && connectorConnectFlow(c) !== null,
+  );
+  const unavailableList = filtered.filter((c) => connectorConnectFlow(c) === null);
 
   const stateOf = (id: string): ConnState => {
     if (!isSignedIn) return "idle";
@@ -1111,7 +1120,7 @@ function AppsPage() {
           key={item.id}
           item={item}
           state={stateOf(item.id)}
-          configured={googleConfigured}
+          configured={isGoogleId(item.id) && googleConfigured}
           isSignedIn={!!isSignedIn}
           onConnect={() => handleConnect(item)}
           onDisconnect={() => handleDisconnect(item)}
@@ -1188,7 +1197,7 @@ function AppsPage() {
                         ? "Read calendars and propose events. Creating an event requires explicit confirmation."
                         : visibleSelectedApp.id === "google-drive"
                           ? "Search and read files covered by the Drive scopes you granted."
-                          : "Manage the Google connection shared by supported Google apps."}
+                          : connectorUnavailableReason(visibleSelectedApp)}
                   </p>
                   {isGoogleId(visibleSelectedApp.id) && visibleGoogleStatus?.email ? (
                     <p className="mt-2 text-xs text-muted-foreground">
@@ -1210,11 +1219,19 @@ function AppsPage() {
                 <section>
                   <h3 className="font-medium">Recent activity</h3>
                   {visibleActivity.filter((entry) =>
-                    [visibleSelectedApp.label, "Google"].includes(entry.app),
+                    (isGoogleId(visibleSelectedApp.id)
+                      ? [visibleSelectedApp.label, "Google"]
+                      : [visibleSelectedApp.label]
+                    ).includes(entry.app),
                   ).length ? (
                     <ul className="mt-2 space-y-2">
                       {visibleActivity
-                        .filter((entry) => [visibleSelectedApp.label, "Google"].includes(entry.app))
+                        .filter((entry) =>
+                          (isGoogleId(visibleSelectedApp.id)
+                            ? [visibleSelectedApp.label, "Google"]
+                            : [visibleSelectedApp.label]
+                          ).includes(entry.app),
+                        )
                         .slice(0, 5)
                         .map((entry, index) => (
                           <li key={`${entry.at}:${index}`} className="rounded-lg bg-muted/60 p-2">
@@ -1262,8 +1279,7 @@ function AppsPage() {
               Sign in to connect services
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-              Connect Google, Gmail, Drive, Calendar, and GitHub to use authorized context across
-              your workspace.
+              Manage your plugin connections and see which services are available for your account.
             </p>
             <SignInButton mode="modal">
               <Button className="mt-5 min-h-11">Sign in</Button>
@@ -1387,31 +1403,36 @@ function AppsPage() {
               ) : null}
             </section>
 
-            <GitHubManager key={principal ?? "unresolved"} />
-
-            {workflowSkillsAvailable ? (
-              <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
-            ) : (
-              <section className="rounded-2xl border bg-card p-5" aria-labelledby="skills-title">
-                <h2 id="skills-title" className="text-base font-semibold">
-                  Workflow skills
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Verify your primary email, then refresh this page to create or use workflow
-                  skills.
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-4 min-h-11"
-                  disabled={verificationBusy || !user?.primaryEmailAddress?.emailAddress}
-                  onClick={() => void resendWorkflowVerification()}
-                >
-                  {verificationBusy ? "Sending…" : "Resend verification email"}
-                </Button>
-              </section>
+            {showGitHub && (
+              <div data-plugin-id="github">
+                <GitHubManager key={principal ?? "unresolved"} />
+              </div>
             )}
 
-            {filtered.length === 0 ? (
+            {CORE_LAUNCH_ADVANCED_WORKFLOWS &&
+              (workflowSkillsAvailable ? (
+                <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
+              ) : (
+                <section className="rounded-2xl border bg-card p-5" aria-labelledby="skills-title">
+                  <h2 id="skills-title" className="text-base font-semibold">
+                    Workflow skills
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Verify your primary email, then refresh this page to create or use workflow
+                    skills.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="mt-4 min-h-11"
+                    disabled={verificationBusy || !user?.primaryEmailAddress?.emailAddress}
+                    onClick={() => void resendWorkflowVerification()}
+                  >
+                    {verificationBusy ? "Sending…" : "Resend verification email"}
+                  </Button>
+                </section>
+              ))}
+
+            {matchingPlugins.length === 0 ? (
               <section className="kova-empty-state" aria-labelledby="apps-empty-title">
                 <Search className="mx-auto h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 <h2 id="apps-empty-title" className="mt-3 text-sm font-medium">
@@ -1436,10 +1457,15 @@ function AppsPage() {
                   items={connectedList}
                 />
                 <Section
-                  title="Available connections"
+                  title="Google services"
                   subtitle="Connect only the access you want to use."
                   icon={<Sparkles className="h-3.5 w-3.5 text-foreground/70" aria-hidden="true" />}
                   items={recommendedList}
+                />
+                <Section
+                  title="Not available yet"
+                  subtitle="These services cannot be connected yet."
+                  items={unavailableList}
                 />
               </>
             )}

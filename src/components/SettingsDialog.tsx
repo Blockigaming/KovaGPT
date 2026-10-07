@@ -107,63 +107,11 @@ import {
 import { getUsage } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
-import { applyThemeMode, DEFAULT_THEME, type ThemeColors, type ThemeMode } from "@/lib/theme";
+import { applyThemeMode, type ThemeMode } from "@/lib/theme";
 import { authFetch } from "@/lib/auth-fetch";
 
-export type Mood = "neutral" | "friendly" | "professional" | "concise";
-
-export type Settings = {
-  displayName: string;
-  email: string;
-  extraFacts: string;
-  customInstructions: string;
-  mood: Mood;
-  responseLength: "short" | "medium" | "long";
-  rememberAcross: boolean;
-  webSearch: boolean;
-  sendOnEnter: boolean;
-  mode: ThemeMode;
-  // Notifications
-  notifyEmail?: boolean;
-  notifyProduct?: boolean;
-  // Parental controls
-  parentalMode?: boolean;
-  // Deprecated local-only value retained so old device exports still import safely.
-  // It is not exposed as an account- or provider-level training control.
-  trainingOptOut?: boolean;
-  // deprecated fields kept so old localStorage payloads still load
-  preferredPronouns?: string;
-  phone?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  region?: string;
-  postalCode?: string;
-  country?: string;
-  language?: string;
-  showTimestamps?: boolean;
-  theme?: ThemeColors;
-};
-
-// Shared persisted-settings default; exported here until the settings schema is separated from the dialog.
-// eslint-disable-next-line react-refresh/only-export-components
-export const DEFAULT_SETTINGS: Settings = {
-  displayName: "",
-  email: "",
-  extraFacts: "",
-  customInstructions: "",
-  mood: "neutral",
-  responseLength: "medium",
-  rememberAcross: false,
-  webSearch: true,
-  sendOnEnter: true,
-  mode: "system",
-  notifyEmail: true,
-  notifyProduct: true,
-  parentalMode: false,
-  trainingOptOut: false,
-  theme: DEFAULT_THEME,
-};
+import { DEFAULT_SETTINGS, type Settings, type Mood } from "@/lib/settings-types";
+export type { Settings, Mood } from "@/lib/settings-types";
 
 const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "neutral", label: "Neutral", hint: "Balanced and helpful" },

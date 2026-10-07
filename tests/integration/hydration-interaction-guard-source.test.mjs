@@ -150,7 +150,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
   const [helper, guardSpec, home, ...specs] = await Promise.all([
     read("tests/e2e/hydration.ts"),
     read("tests/e2e/hydration-interaction-guard.spec.ts"),
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
     ...paths.map(read),
   ]);
 
