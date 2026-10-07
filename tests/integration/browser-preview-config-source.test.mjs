@@ -53,7 +53,7 @@ test("browser CI uses the Node preview without changing the production preset", 
   assert.match(browserJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
   assert.match(
     browserJob,
-    /if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
+    /if: \$\{\{ !cancelled\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
   );
   assert.match(browserJob, /- name: Browser preview build(?:\s+if:[^\n]+)?\s+run: npm run build/);
   assert.match(
@@ -63,7 +63,7 @@ test("browser CI uses the Node preview without changing the production preset", 
   assert.match(releaseE2eJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
   assert.match(
     releaseE2eJob,
-    /if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
+    /if: \$\{\{ !cancelled\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/,
   );
   assert.match(
     releaseE2eJob,

@@ -113,7 +113,7 @@ link's destination and cannot create nested anchors. No image request occurs on
 streaming, completed rendering, focus or hover. Explicit clicks use a new tab
 without referrer or opener access. The PR itself has not been merged.
 
-The recorded Models source handoff is `05bd4a159aa476067b91c49559b702643386f9e4`,
+The original Models source handoff is `05bd4a159aa476067b91c49559b702643386f9e4`,
 with `current-product-policy.v4.json` and `kova-assistant.v3` request fields
 `model_id` and `effort_id`. Trusted entitlements do not establish availability.
 The owner's current launch policy allows three Kova identities (Cosmo, Orion and
@@ -125,6 +125,15 @@ quality must be measured rather than inferred from names or response delays.
 The accepted affordable serving endpoint, streaming/cancellation, admission,
 usage/cost and error contracts remain required. No Models infrastructure, hosting,
 evaluation or backend policy is duplicated here. No Interface spending is authorized.
+
+The October 7 follow-up records shared-profile source
+`9a25f78bdbc46d73043b68f9668cbdb2ce3edd00`, preserved in a verified source
+bundle but not yet published. It implements three launch identities on one
+proposed deployment. Template and runtime preparation are source evidence;
+weights, actual inference, quality and Azure serving performance remain
+unmeasured. This handoff does not supply an accepted live endpoint. Auth's
+concurrent rehearsal remains in preparation; its activation and acceptance
+must not be inferred from the already-built images or foundation branch.
 
 The owner authorized starting the existing production app at its normal running
 cost; that operation does not authorize deploying this candidate. Required release inputs
@@ -270,3 +279,25 @@ remain not-run and block promotion. These fields summarize real acceptance
 receipts; setting them does not execute a journey or prove that one happened.
 Owner-approved report hashing, exact-commit checks, cleanup and explicit human
 promotion authority remain required. No promotion workflow is run here.
+
+## Hosted assertion repair and verified recovery
+
+Azure CI on `d5f9f64b1157b8d971b733546982f1ff718ac040` passed formatting,
+lint and typecheck, then failed one of 3,450 unit tests because an older test
+still expected job-level `always()`. Both affected source-test files now expect
+the cancellation-aware expression while retaining every required scope and
+success condition. Fresh local verification: **3,450/3,450 unit tests pass**,
+plus **13/13 focused workflow and browser-preview checks**, with no skips.
+Hosted final-head CI remains a separate required result.
+
+The actual GitHub source artifact from run `37677607559`, artifact
+`11507580855`, was downloaded and both `SHA256SUMS` entries verified. Its
+`candidate.bundle` SHA-256 is
+`9c31db4f9b563b5f1ed8968880514619d65da8007d143de9b3bb3de23ffc6aaf`.
+An independent bare clone of `evidence-candidate` restored exact commit
+`d5f9f64b1157b8d971b733546982f1ff718ac040` and tree
+`8f343083aa6bbd165600427491af979adb40d9fe`; full Git object verification passed.
+This artifact expires October 8 at 19:51:16 UTC under the existing one-day
+retention policy. Published source remains in the Git branch. Every later
+candidate needs its own matching source artifact; this proof is not silently
+rebound to a newer commit.
