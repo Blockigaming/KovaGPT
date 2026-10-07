@@ -22,7 +22,18 @@ import {
   History,
   TextSelect,
 } from "lucide-react";
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
@@ -105,6 +116,22 @@ function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   );
 }
 
+const MarkdownLinkContext = createContext(false);
+
+function MarkdownImage({ alt, src }: React.ComponentProps<"img">) {
+  const insideLink = useContext(MarkdownLinkContext);
+  // Preserve a linked image's existing destination without nesting anchors.
+  if (insideLink) return <span>{alt || "Open image"}</span>;
+  // Model output is untrusted. Loading its images automatically can disclose
+  // connector results embedded in the URL. Require an explicit link click.
+  return (
+    <a href={src} target="_blank" rel="noreferrer noopener">
+      {alt || "Open image"}
+      <span className="sr-only"> (opens in a new tab)</span>
+    </a>
+  );
+}
+
 const markdownComponents = {
   pre: ({ children }: React.ComponentProps<"pre">) => <>{children}</>,
   code: MarkdownCode,
@@ -115,10 +142,11 @@ const markdownComponents = {
   ),
   a: ({ children, ...props }: React.ComponentProps<"a">) => (
     <a {...props} target="_blank" rel="noreferrer noopener">
-      {children}
+      <MarkdownLinkContext.Provider value={true}>{children}</MarkdownLinkContext.Provider>
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   ),
+  img: MarkdownImage,
 };
 
 const MarkdownContent = memo(function MarkdownContent({ children }: { children: string }) {

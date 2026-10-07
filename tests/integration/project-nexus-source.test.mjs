@@ -11,7 +11,11 @@ test("Nexus documents connector truth and hides unsupported connection claims", 
   ]);
   assert.match(report, /Google Drive\s+\| \*\*Already implemented\*\*/);
   assert.match(report, /Microsoft SharePoint \/ OneDrive \| \*\*OAuth \+ backend needed\*\*/);
-  assert.match(apps, /connectorConnectFlow\(c\) === "google-oauth"/);
+  assert.match(apps, /!isConnected\(c\.id\) && connectorConnectFlow\(c\) !== null/);
+  assert.match(
+    apps,
+    /const unavailableList = filtered\.filter\(\(c\) => connectorConnectFlow\(c\) === null\)/,
+  );
   assert.match(apps, /visibleGoogleStatus\?\.configured === true/);
   assert.doesNotMatch(apps, /const WORKING_IDS/);
 });

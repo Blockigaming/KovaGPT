@@ -67,8 +67,9 @@ not falsely inherit Google's configuration or connection state.
 Fresh Node tests execute the actual persistence helper and component code with
 controlled storage/auth/provider boundaries. Typecheck, lint, formatting and a
 production build are separate gates. Remote CI must run against the published
-head. Local browser capture is not attempted; hosted CI follows the owner's
-explicit remote-check authorization. Mocked fixtures do not prove deployed flows.
+head. The local Chromium Markdown regression uses a synthetic page and intercepted
+network requests; it is not the owner's Academy capture workflow. Hosted CI follows
+the owner's explicit remote-check authorization. Mocked fixtures do not prove deployed flows.
 The final receipt records exact commands, source/tree IDs, results and artifacts.
 
 | Journey                                 | Existing application implementation                                         | Remaining real acceptance                                                                                                  |
@@ -104,17 +105,29 @@ Auth PR #443 (`e43686bc123f2e5efcd32a69e843f3fd4bf61b49`) merged into
 on October 7 at 18:21 UTC. It is not integrated into this Interface branch.
 Auth owns migration and storage/revocation acceptance. Regenerate the route tree
 from both accepted route sets during future integration; do not overwrite it.
-Security PR #444 is `74e2fba1e0fc74ab36c237b033b03d097c49b0ef`, still draft and
-not integrated here. Its assistant-Markdown image repair remains a launch dependency.
+Security PR #444 is `74e2fba1e0fc74ab36c237b033b03d097c49b0ef`, still draft.
+Its assistant-Markdown image repair and regressions are now ported into this
+candidate. The runtime fixture also stubs the current feedback server boundary.
+Images render as explicit links; images already inside a link preserve that
+link's destination and cannot create nested anchors. No image request occurs on
+streaming, completed rendering, focus or hover. Explicit clicks use a new tab
+without referrer or opener access. The PR itself has not been merged.
 
 The recorded Models source handoff is `05bd4a159aa476067b91c49559b702643386f9e4`,
 with `current-product-policy.v4.json` and `kova-assistant.v3` request fields
 `model_id` and `effort_id`. Trusted entitlements do not establish availability.
-The accepted single affordable model endpoint, streaming/cancellation, admission,
+The owner's current launch policy allows three Kova identities (Cosmo, Orion and
+Nova) backed by one affordable base model/runtime with genuinely different
+inference budgets. Three separately trained or hosted models are not a launch
+prerequisite. Effort and identity remain separate controls, free access stays
+locked to Instant, and only Ultra may use subagents. Availability and increased
+quality must be measured rather than inferred from names or response delays.
+The accepted affordable serving endpoint, streaming/cancellation, admission,
 usage/cost and error contracts remain required. No Models infrastructure, hosting,
 evaluation or backend policy is duplicated here. No Interface spending is authorized.
 
-Azure retains the validation-only activation freeze. Required production inputs
+The owner authorized starting the existing production app at its normal running
+cost; that operation does not authorize deploying this candidate. Required release inputs
 include the exact Git SHA/tree, immutable image digest, matching browser/server
 build identity, approved origins and Auth mode, complete secret/config preservation,
 origin protection, capacity and a verified rollback revision. No deployment occurs.
@@ -133,7 +146,7 @@ disabled until its acceptance gate passes. Do not infer production config from s
 Use the existing isolated staging application for the first integrated journey;
 leave the production host and traffic unchanged. The image must include the
 accepted Interface and Auth source together, with the deferred advanced UI
-disabled and only the measured single model enabled. Never reuse the stopped
+disabled and only measured serving configurations enabled. Never reuse the stopped
 Auth rehearsal's activation grant for this separate release test.
 
 Required task inputs are `SCHEDULED_TASK_SECRET` (or `CRON_SECRET`),
@@ -198,6 +211,23 @@ Paid launch additionally requires Stripe and server access-limit verification;
 image launch additionally requires generation and cost-control verification.
 These report flags do not enable either runtime. Runtime configuration must agree
 with the reviewed proposal before deployment.
+
+## Connector CI and Markdown repair verification
+
+The Nexus assertion no longer assumes every connectable plugin uses Google OAuth.
+It checks the current supported-connection filter and the separate unavailable
+filter; authenticated Google configuration checks remain intact. Existing runtime
+tests still enforce unavailable providers and reject fabricated callback success.
+
+For this repair, typecheck, changed-file lint/format, production build and bundle
+budget pass. The build used `NODE_OPTIONS=--max-old-space-size=6144` after the
+local default heap was exhausted. The zero-Lovable source/build audit passes.
+Integration: 502/503 pass; the only failure is the local worker's
+`uv_interface_addresses` host-runtime error, before route assertions. No test is
+skipped or weakened. Chromium's actual assistant-component regression passes.
+Local Firefox times out during page setup and WebKit lacks host libraries; neither
+is reported as a pass. Hosted exact-head CI remains required for these gates.
+These checks do not certify a deployed user journey or the complete migration.
 
 The protected acceptance automation supplies `KOVA_GATE_<NAME>` results and
 `KOVA_PLUGIN_<ID>_<OPERATION>` results, replacing hyphens with underscores in
