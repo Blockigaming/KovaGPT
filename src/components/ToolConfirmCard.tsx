@@ -134,9 +134,24 @@ export function ToolConfirmCard({
       ) : null}
       <div className="mt-1 text-foreground">{confirm.summary}</div>
       {Boolean(
-        preview.to || preview.subject || preview.body_preview || preview.start || preview.location,
+        preview.to ||
+        preview.subject ||
+        preview.body_preview ||
+        preview.summary ||
+        preview.start ||
+        preview.location,
       ) && (
-        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+        <div className="mt-2 space-y-1 break-words text-xs text-muted-foreground">
+          {typeof preview.summary === "string" && (
+            <div>
+              <span className="font-medium text-foreground">Event:</span> {preview.summary}
+            </div>
+          )}
+          {typeof preview.calendar === "string" && (
+            <div>
+              <span className="font-medium text-foreground">Calendar:</span> {preview.calendar}
+            </div>
+          )}
           {typeof preview.to === "string" && (
             <div>
               <span className="font-medium text-foreground">To:</span> {preview.to}
@@ -173,6 +188,11 @@ export function ToolConfirmCard({
               <span className="font-medium text-foreground">End:</span> {preview.end}
             </div>
           )}
+          {typeof preview.timezone === "string" && preview.timezone.length > 0 && (
+            <div>
+              <span className="font-medium text-foreground">Time zone:</span> {preview.timezone}
+            </div>
+          )}
           {typeof preview.location === "string" && preview.location.length > 0 && (
             <div>
               <span className="font-medium text-foreground">Where:</span> {preview.location}
@@ -182,6 +202,12 @@ export function ToolConfirmCard({
             <div>
               <span className="font-medium text-foreground">Attendees:</span>{" "}
               {(preview.attendees as string[]).join(", ")}
+            </div>
+          )}
+          {typeof preview.description === "string" && preview.description.length > 0 && (
+            <div className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md bg-background/60 p-2">
+              <span className="font-medium text-foreground">Description: </span>
+              {preview.description}
             </div>
           )}
         </div>

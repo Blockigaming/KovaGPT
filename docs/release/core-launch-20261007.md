@@ -221,13 +221,32 @@ tests still enforce unavailable providers and reject fabricated callback success
 
 For this repair, typecheck, changed-file lint/format, production build and bundle
 budget pass. The build used `NODE_OPTIONS=--max-old-space-size=6144` after the
-local default heap was exhausted. The zero-Lovable source/build audit passes.
+local default heap was exhausted. The source/build dependency-removal audit passes.
 Integration: 502/503 pass; the only failure is the local worker's
 `uv_interface_addresses` host-runtime error, before route assertions. No test is
 skipped or weakened. Chromium's actual assistant-component regression passes.
 Local Firefox times out during page setup and WebKit lacks host libraries; neither
 is reported as a pass. Hosted exact-head CI remains required for these gates.
 These checks do not certify a deployed user journey or the complete migration.
+
+## Complete Calendar approval details
+
+Newly prepared Calendar actions now show the full validated event title,
+description, location, start/end instants, specified time zone, primary-calendar
+destination and all attendees. The previous preview shortened the title/location/
+description and omitted attendees after the tenth; the card did not render the
+description or time zone. The short summary remains only a heading. Long
+descriptions scroll without discarding text, and the selected Google account
+remains visible.
+
+The existing owner/account-bound pending action, confirmation, cancellation and
+atomic execution path is reused without changing its authorization or database
+contract. Rendering does not execute a provider action. The new regression uses
+13 attendees and long field values, executes the actual preview builder and card,
+and checks both Confirm and Cancel requests. It passes with the existing Google
+write/confirmation regressions: 24/24 focused checks. Typecheck and changed-file
+lint/format pass. The Azure/Node production build, bundle budget and source/build
+dependency-removal audit also pass. A live Google event operation is still unverified.
 
 The protected acceptance automation supplies `KOVA_GATE_<NAME>` results and
 `KOVA_PLUGIN_<ID>_<OPERATION>` results, replacing hyphens with underscores in
