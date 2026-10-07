@@ -29,4 +29,9 @@ printf '%s\n' \
   'Acquire::https::Timeout "20";' \
   | sudo -n tee /etc/apt/apt.conf.d/99-kova-ci-download-timeouts >/dev/null
 
-timeout --signal=TERM --kill-after=10s 360s npx --no-install playwright install --with-deps "$@"
+# Three engines need the union of their native packages. The six-minute limit
+# interrupted healthy package downloads in the combined verify job. Keep the
+# smaller single-engine limit and bound the full dependency set to 12 minutes.
+install_timeout_seconds=360
+if [[ "$#" -gt 1 ]]; then install_timeout_seconds=720; fi
+timeout --signal=TERM --kill-after=10s "${install_timeout_seconds}s" npx --no-install playwright install --with-deps "$@"

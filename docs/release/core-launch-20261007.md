@@ -142,8 +142,8 @@ build identity, approved origins and Auth mode, complete secret/config preservat
 origin protection, capacity and a verified rollback revision. No deployment occurs.
 
 Configuration names (never values): the Auth-approved Supabase/browser and Kova
-Auth settings; Models' accepted endpoint/authentication; `AI_GENERATION_ENABLED`
-(keep disabled pending acceptance); `GOOGLE_OAUTH_CLIENT_ID`,
+Auth settings; Models' accepted endpoint/authentication; `KOVA_GENERATION_DISABLED`
+(keep `true` pending acceptance); `GOOGLE_OAUTH_CLIENT_ID`,
 `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `CONNECTOR_ENCRYPTION_KEY`;
 GitHub OAuth/App credentials, callback, webhook and explicit repository grants;
 the approved `CRON_SECRET`/`SCHEDULED_TASK_SECRET` worker path; approved Stripe
