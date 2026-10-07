@@ -248,6 +248,21 @@ write/confirmation regressions: 24/24 focused checks. Typecheck and changed-file
 lint/format pass. The Azure/Node production build, bundle budget and source/build
 dependency-removal audit also pass. A live Google event operation is still unverified.
 
+## Superseded CI cancellation
+
+The database, browser and release-E2E compute jobs now use `!cancelled()` instead
+of job-level `always()`. An obsolete database job was observed continuing after
+its verify job failed and while the next head's workflow waited. Current-head
+database evidence still runs after an unrelated verify failure; browser/E2E
+success, scope and draft conditions are unchanged. Artifact-upload cleanup keeps
+its existing cancellation behavior. This change does not retroactively alter
+jobs already running with the previous workflow definition.
+
+Nine focused CI-budget/migration tests pass, including actual workflow-expression
+evaluation for current, cancelled, failed, irrelevant and draft cases. Formatting
+and affected lint pass. Application source is unchanged from the verified
+Calendar repair. Reference: [GitHub workflow cancellation](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-cancellation).
+
 The protected acceptance automation supplies `KOVA_GATE_<NAME>` results and
 `KOVA_PLUGIN_<ID>_<OPERATION>` results, replacing hyphens with underscores in
 plugin IDs. Operations are CONNECT, READ, DISCONNECT and ISOLATION. Missing results
