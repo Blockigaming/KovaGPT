@@ -152,10 +152,15 @@ test("every deployable build requires the strict built-output audit after Vite",
 
   for (const scriptName of ["build", "build:dev"]) {
     const script = pkg.scripts[scriptName];
-    assert.match(script, /vite build/u, scriptName);
+    assert.match(
+      script,
+      /node --max-old-space-size=3072 node_modules\/vite\/bin\/vite\.js build/u,
+      scriptName,
+    );
     assert.match(script, /npm run release:zero-lovable:built/u, scriptName);
     assert.ok(
-      script.indexOf("vite build") < script.indexOf("npm run release:zero-lovable:built"),
+      script.indexOf("node_modules/vite/bin/vite.js build") <
+        script.indexOf("npm run release:zero-lovable:built"),
       scriptName,
     );
   }

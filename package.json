@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "node scripts/clean-build.mjs && vite build && node work-runner/build.mjs && npm run release:zero-lovable:built",
-    "build:dev": "node scripts/clean-build.mjs && vite build --mode development && node work-runner/build.mjs && npm run release:zero-lovable:built",
+    "build": "node scripts/clean-build.mjs && node --max-old-space-size=3072 node_modules/vite/bin/vite.js build && node work-runner/build.mjs && npm run release:zero-lovable:built",
+    "build:dev": "node scripts/clean-build.mjs && node --max-old-space-size=3072 node_modules/vite/bin/vite.js build --mode development && node work-runner/build.mjs && npm run release:zero-lovable:built",
+    "build:azure": "KOVA_BROWSER_PREVIEW=node npm run build",
+    "test:azure:local": "playwright test --config=playwright.azure.config.ts",
     "preview": "vite preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
