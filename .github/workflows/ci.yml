@@ -137,7 +137,7 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.scope.outputs.run_ci == 'true'
-        run: npx playwright install --with-deps chromium firefox webkit
+        run: bash scripts/ci/install-playwright.sh chromium firefox webkit
 
       - name: Integration tests
         id: integration
@@ -253,7 +253,7 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - run: bash scripts/ci/install-playwright.sh chromium
       - name: Complete public route and detail checks
         run: npm run test:e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3 --reporter=list,blob --workers=2
       - name: Preserve public suite evidence
@@ -321,7 +321,7 @@ jobs:
         run: npm run build
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: bash scripts/ci/install-playwright.sh chromium
 
       - name: Browser tests
         env:
@@ -362,7 +362,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
+      - run: bash scripts/ci/install-playwright.sh chromium
       - run: npm run test:e2e -- --shard=${{ matrix.shard }}/3 --reporter=blob --workers=2
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
