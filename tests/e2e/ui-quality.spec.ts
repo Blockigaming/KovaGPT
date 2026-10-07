@@ -49,7 +49,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
   expect(focused.borderColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.outlineStyle).toBe("solid");
   expect(focused.outlineWidth).toBe(2);
-  expect(focused.outlineOffset).toBe(1);
+  expect(focused.outlineOffset).toBe(2);
   expect(focused.outlineColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.outlineColor).not.toBe(focused.color);
   expect(unfocused.boxShadow).not.toBe("none");
@@ -69,9 +69,8 @@ test("empty workspace remains contained and composer focus is deliberate", async
           ? Number.parseFloat(value) * rootFontSize
           : Number.parseFloat(value);
       return {
-        shell: { width: shell.width, height: shell.height },
+        shell: { x: shell.x, y: shell.y, width: shell.width, height: shell.height },
         axisWidth: axis?.width ?? 0,
-        composerHeight: toPixels(style.getPropertyValue("--composer-height")),
         controlSize: toPixels(style.getPropertyValue("--composer-control")),
         borderBlock:
           Number.parseFloat(style.borderTopWidth) + Number.parseFloat(style.borderBottomWidth),
@@ -84,11 +83,14 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.shell.width).toBeCloseTo(metrics.axisWidth, 1);
     expect(metrics.shell.width).toBeLessThanOrEqual(768);
     expect(metrics.shell.width).toBeGreaterThanOrEqual(640);
-    expect(metrics.composerHeight).toBe(50);
     expect(metrics.controlSize).toBe(44);
-    expect(metrics.shell.height).toBeCloseTo(metrics.composerHeight + metrics.borderBlock, 1);
-    expect(metrics.row?.height).toBeCloseTo(metrics.composerHeight, 1);
-    expect(metrics.input?.height).toBeCloseTo(metrics.composerHeight, 1);
+    // The two-row composer reserves a full text row above its touch controls.
+    expect(metrics.row?.height).toBeCloseTo(metrics.shell.height - metrics.borderBlock, 1);
+    expect(metrics.input?.height).toBeGreaterThanOrEqual(56);
+    expect(metrics.input!.bottom).toBeLessThanOrEqual(metrics.plus!.top);
+    expect(metrics.input!.left).toBeGreaterThan(metrics.shell.x);
+    expect(metrics.input!.right).toBeLessThan(metrics.shell.x + metrics.shell.width);
+    expect(metrics.send!.bottom).toBeLessThan(metrics.shell.y + metrics.shell.height);
     expect(metrics.plus?.width).toBe(metrics.controlSize);
     expect(metrics.plus?.height).toBe(metrics.controlSize);
     expect(metrics.send?.width).toBe(metrics.controlSize);
@@ -128,15 +130,13 @@ test("empty workspace remains contained and composer focus is deliberate", async
       }));
     return {
       display: style.display,
-      flexWrap: style.flexWrap,
-      justifyContent: style.justifyContent,
+      columns: style.gridTemplateColumns.split(" ").length,
       visibleLabels,
     };
   });
-  expect(starterLayout.display).toBe("flex");
-  expect(starterLayout.flexWrap).toBe("wrap");
-  expect(starterLayout.justifyContent).toBe("center");
-  expect(starterLayout.visibleLabels.length).toBeGreaterThan(0);
+  expect(starterLayout.display).toBe("grid");
+  expect(starterLayout.columns).toBe(2);
+  expect(starterLayout.visibleLabels.length).toBe(4);
   for (const label of starterLayout.visibleLabels) {
     expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth + 1);
   }
@@ -186,80 +186,82 @@ for (const theme of ["light", "dark"] as const) {
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`guest core shell visual baseline in ${theme} mode`, async ({ page }, testInfo) => {
-    test.skip(!new Set(["phone-390x844", "desktop-1440x900"]).has(testInfo.project.name));
-    const hydrationErrors: string[] = [];
-    page.on("console", (message) => {
-      if (
-        message.type() === "error" &&
-        /(?:Minified React error #418|hydration failed|didn't match)/i.test(message.text())
-      ) {
-        hydrationErrors.push(message.text());
-      }
-    });
-    page.on("pageerror", (error) => {
-      if (/(?:Minified React error #418|hydration failed|didn't match)/i.test(error.message)) {
-        hydrationErrors.push(error.message);
-      }
-    });
+  for (const font of ["dmsans", "fallback"] as const) {
+    test(`guest core shell visual baseline in ${theme} mode with ${font}`, async ({
+      page,
+    }, testInfo) => {
+      test.skip(!new Set(["phone-390x844", "desktop-1440x900"]).has(testInfo.project.name));
+      const hydrationErrors: string[] = [];
+      page.on("console", (message) => {
+        if (
+          message.type() === "error" &&
+          /(?:Minified React error #418|hydration failed|didn't match)/i.test(message.text())
+        ) {
+          hydrationErrors.push(message.text());
+        }
+      });
+      page.on("pageerror", (error) => {
+        if (/(?:Minified React error #418|hydration failed|didn't match)/i.test(error.message)) {
+          hydrationErrors.push(error.message);
+        }
+      });
 
-    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    let rasterLogoRequests = 0;
-    await page.route("**/kova-logo.png*", (route) => {
-      rasterLogoRequests += 1;
-      return route.abort();
-    });
-    await page.addInitScript((selectedTheme) => {
-      localStorage.setItem("kova-theme-mode", selectedTheme);
-    }, theme);
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    await waitForKovaHydration(page);
-    const usesInter = await page.evaluate(async () => {
-      await document.fonts.ready;
-      return Array.from(document.fonts).some(
-        (face) => face.family.replaceAll('"', "") === "Inter" && face.status === "loaded",
-      );
-    });
+      await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+      await page.route("https://fonts.googleapis.com/**", (route) => route.abort());
+      await page.route("https://fonts.gstatic.com/**", (route) => route.abort());
+      if (font === "fallback")
+        await page.route("**/fonts/dm-sans-variable.woff2", (route) => route.abort());
+      let rasterLogoRequests = 0;
+      await page.route("**/kova-logo.png*", (route) => {
+        rasterLogoRequests += 1;
+        return route.abort();
+      });
+      await page.addInitScript((selectedTheme) => {
+        localStorage.setItem("kova-theme-mode", selectedTheme);
+      }, theme);
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+      await waitForKovaHydration(page);
+      const usesBundledFont = await page.evaluate(async () => {
+        await document.fonts.ready;
+        return Array.from(document.fonts).some(
+          (face) => face.family.replaceAll('"', "") === "Kova DM Sans" && face.status === "loaded",
+        );
+      });
+      expect(usesBundledFont).toBe(font === "dmsans");
 
-    await expect(page.getByRole("main")).toHaveCount(1);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    await expect(page.locator(".kova-model-static:visible")).toHaveCount(1);
-    await expect(page.locator(".kova-model-static:visible svg")).toHaveCount(0);
-    // The guest starter grid is lazy loaded after hydration. Capture its rendered
-    // state, not Suspense's same-height placeholder during a slower chunk request.
-    await expect(page.getByRole("button", { name: "Start with Brainstorm ideas" })).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(page.getByRole("button", { name: "Start with Explore a topic" })).toBeVisible();
-    const greetingMark = page.locator(".kova-greeting-mark .kova-logo-mark");
-    await expect(greetingMark).toBeHidden();
-    await expect(greetingMark).toHaveAttribute("aria-hidden", "true");
-    await expect(greetingMark).toHaveAttribute("data-logo-variant", "mark");
-    expect(await greetingMark.getAttribute("role")).toBeNull();
-    expect(await greetingMark.getAttribute("aria-label")).toBeNull();
-    expect(await greetingMark.locator("circle, path").count()).toBeGreaterThanOrEqual(2);
-    if (page.viewportSize()!.width >= 1024) {
-      const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand:visible");
-      await expect(sidebarBrand).toHaveCount(1);
-      await expect(sidebarBrand).toHaveText("KovaGPT");
-    }
-    expect(rasterLogoRequests).toBe(0);
-    expect(hydrationErrors).toEqual([]);
-    await expect(page).toHaveScreenshot(
-      `guest-core-shell-${theme}-${usesInter ? "inter" : "fallback"}.png`,
-      {
+      await expect(page.getByRole("main")).toHaveCount(1);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      await expect(page.locator(".kova-model-static:visible")).toHaveCount(1);
+      await expect(page.locator(".kova-model-static:visible svg")).toHaveCount(0);
+      // The guest starter grid is lazy loaded after hydration. Capture its rendered
+      // state, not Suspense's same-height placeholder during a slower chunk request.
+      await expect(page.getByRole("button", { name: "Start with Brainstorm ideas" })).toBeVisible({
+        timeout: 15_000,
+      });
+      await expect(page.getByRole("button", { name: "Start with Explore a topic" })).toBeVisible();
+      const greetingMark = page.locator(".kova-greeting-mark .kova-logo-mark");
+      await expect(greetingMark).toBeVisible();
+      await expect(greetingMark).toHaveAttribute("aria-hidden", "true");
+      await expect(greetingMark).toHaveAttribute("data-logo-variant", "mark");
+      expect(await greetingMark.getAttribute("role")).toBeNull();
+      expect(await greetingMark.getAttribute("aria-label")).toBeNull();
+      expect(await greetingMark.locator("circle, path").count()).toBeGreaterThanOrEqual(2);
+      if (page.viewportSize()!.width >= 1024) {
+        const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand:visible");
+        await expect(sidebarBrand).toHaveCount(1);
+        await expect(sidebarBrand).toHaveText("KovaGPT");
+      }
+      expect(rasterLogoRequests).toBe(0);
+      expect(hydrationErrors).toEqual([]);
+      await expect(page).toHaveScreenshot(`guest-core-shell-${theme}-${font}.png`, {
         animations: "disabled",
         caret: "hide",
         maxDiffPixelRatio: 0.005,
         scale: "css",
-      },
-    );
-    await captureCandidateVisual(
-      page,
-      testInfo,
-      `guest-core-shell-${theme}-${usesInter ? "inter" : "fallback"}`,
-    );
-  });
+      });
+      await captureCandidateVisual(page, testInfo, `guest-core-shell-${theme}-${font}`);
+    });
+  }
 }
 
 test("mobile greeting and composer actions fit the viewport", async ({ page }) => {

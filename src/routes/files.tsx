@@ -58,6 +58,9 @@ function FilesPage() {
     list({})
       .then((nextItems) => {
         if (!active) return;
+        // A failed server boundary can resolve to an error envelope. Keep the
+        // workspace navigation usable instead of crashing on items.filter().
+        if (!Array.isArray(nextItems)) throw new Error("Files could not be loaded");
         setItems(nextItems);
         setResolvedUserKey(userKey);
       })

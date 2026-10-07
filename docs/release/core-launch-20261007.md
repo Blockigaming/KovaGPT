@@ -3,6 +3,78 @@
 Academy remains paused and unapproved (0/637 pages, 0/28 registered families).
 This is source preparation, not a deployed release or visual acceptance.
 
+## Main-assistant UI-first continuation
+
+Continues the published `ccd8f26eeba93e05ad8b97479e53cd1da9e90064` candidate
+without repeating recovery or changing the reduced launch scope. The selected
+thirteen integrations, projects/files, executed scheduled tasks, authentication,
+conversations and essential settings/legal remain required. Paid subscriptions
+and image generation retain their conditional acceptance and cost gates.
+
+The main assistant and login now share scoped typography, a bundled DM Sans
+variable font, blue primary controls, a two-row composer, calmer conversation
+spacing, and light/dark surfaces. Guest starter cards include short descriptions;
+returning users retain the quiet empty state. Mobile navigation, keyboard focus,
+44px composer targets, reduced motion, and full-width phone login are retained.
+Other product pages retain their existing styles pending the owner's explicit
+visual decision. Implemented and rendered does **not** mean owner-approved.
+
+The browser failures on the parent were traced to three runtime boundaries:
+
+- A Files server-function error envelope reached `items.filter()`, crashing the
+  whole workspace. Invalid list responses now produce the local retryable Files
+  error state while preserving navigation.
+- Guest history is intentionally cleared on a fresh page load, yet it received
+  a saved-chat URL. Guest sessions now remain at `/`; signed-in conversations
+  retain acknowledged durable save/readback before publishing `/c/:id`.
+- Auth context could update before the lazy workspace finished hydrating,
+  replacing server-rendered controls and racing guest-store initialization.
+  Router startup preloads the same workspace component on assistant routes;
+  the mounted workspace still survives root-to-saved-chat navigation.
+
+System theme now follows device changes while explicit Light/Dark preferences
+remain authoritative. No provider, permission, entitlement, migration, or
+production configuration is changed. Actual-app browser fixtures cover rendered
+streaming/completion, non-retryable provider failure, Files recovery, guest reload,
+and keyboard/mobile login behavior. These are local implementation evidence,
+not proof of live Auth, Models, storage, or connected-provider acceptance.
+
+The publication receipt records exact local and hosted results, source/tree
+identities, screenshots and independently verified recovery. UI approval is
+outstanding; Academy and marketing remain deferred.
+
+Local evidence for this visual pass:
+
+- Final Node and Cloudflare production builds, typecheck, changed-file lint and
+  formatting, bundle limits, and source/build dependency-removal audits pass.
+- Final actual-app visual/interaction runs: 27 pass, with one existing
+  mobile-only case inapplicable on desktop; 8 narrow/landscape cases pass;
+  8 phone/tablet geometry cases pass; 16 screenshot, archive, auth-focus and
+  accessibility confirmation cases pass; 2 isolated auth visual cases pass.
+  Hydration, guest reload, stop/retry and auth-entry regression runs have 29
+  passes and one existing desktop-only case inapplicable on phone. Their two
+  stale description assertions were corrected and both pass in the confirmation
+  run. Screenshot baselines were rendered from the app, including explicit
+  bundled-font and unavailable-font coverage; they are not owner approval.
+- The full unit run passed 3,486/3,486 with no skips before the final sidebar and
+  notification placement refinements. Exact published-head hosted CI remains
+  required; that earlier local result is not relabeled as a final-head CI pass.
+- Final integration: 502/503 pass, no skips. The generated Worker artifact check
+  passes; local workerd startup still fails with `uv_interface_addresses`, before
+  route checks. No application assertion is waived. An earlier concurrent build
+  was killed; sequential production builds replaced that incomplete output.
+- One additional full shell-matrix process ended without a completion receipt
+  after six passing cases. Its two matrix results are not claimed as passes;
+  the completed viewport and focused navigation checks above remain the local
+  evidence. Hosted browser/release matrices remain separate required checks.
+
+Parent CI run `37685029488` passed verify, isolated database, and all nine public
+surface jobs; six browser groups and three release-E2E shards failed. The
+specific Files, guest reload, archive and hydration failure cases pass locally
+after these repairs. The publication receipt records the new head's actual CI
+state separately. No deployment, live customer journey, or new paid resource
+activation occurred. Actual GitHub Actions charges are not available here.
+
 ## Provenance and recovery
 
 - Recorded base: `de5277b5c6f021a7495910b879e58dbc4da6f21d`.

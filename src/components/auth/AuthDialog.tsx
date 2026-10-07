@@ -238,7 +238,7 @@ export function AuthDialog({
           <DialogDescription className="mt-2 max-w-[320px] text-[15px]">
             {step === "magic-sent"
               ? `We asked our email provider to send a sign-in link to ${email}. Delivery can take a few minutes — check your spam folder too.`
-              : "You'll get smarter responses, save your chats, and access KovaGPT across devices."}
+              : "A place for your ideas, conversations, and next steps."}
           </DialogDescription>
         </div>
 

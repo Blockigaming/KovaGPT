@@ -63,11 +63,9 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
 
     expect(await page.locator(".kova-greeting-mark").count()).toBe(0);
     expect(await page.locator(".kova-starter-grid").count()).toBe(0);
-    expect(
-      await page
-        .getByText("Think through a question, shape an idea, or get a polished first draft.")
-        .count(),
-    ).toBe(0);
+    expect(await page.getByText("Bring a question, an idea, or a rough first draft.").count()).toBe(
+      0,
+    );
   });
 
   test("signed-in desktop navigation opens Files and returns to the unified assistant", async ({
@@ -171,7 +169,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
         await expect(page.locator(".kova-greeting-mark")).toHaveCount(0);
         await expect(page.locator(".kova-starter-grid")).toHaveCount(0);
         await expect(
-          page.getByText("Think through a question, shape an idea, or get a polished first draft."),
+          page.getByText("Bring a question, an idea, or a rough first draft."),
         ).toHaveCount(0);
         if (width < 1024) {
           await expect(page.getByRole("button", { name: "Log in" })).toHaveCount(0);

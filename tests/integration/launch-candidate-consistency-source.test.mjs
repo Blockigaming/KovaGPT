@@ -26,7 +26,8 @@ test("major workspaces share one accessible page header contract", async () => {
 
 test("toast presentation uses one mobile-safe launch candidate configuration", async () => {
   const source = await read("src/components/ui/sonner.tsx");
-  assert.match(source, /position="bottom-right"/);
+  assert.match(source, /position=\{assistantRoute \? "top-right" : "bottom-right"\}/);
+  assert.match(source, /safe-area-inset-top/);
   assert.match(source, /closeButton/);
   assert.match(source, /safe-area-inset-bottom/);
   assert.match(source, /visibleToasts=\{4\}/);

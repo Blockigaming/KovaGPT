@@ -17,7 +17,8 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
+import { Suspense, useEffect, useLayoutEffect } from "react";
+import { AssistantWorkspace } from "@/components/AssistantWorkspace";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
@@ -311,6 +312,15 @@ function RootThemeManager() {
   }, []);
 
   useEffect(() => {
+    const preference = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => {
+      if (loadThemeMode() === "system") applyThemeMode("system");
+    };
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
     if (!isLoaded) return;
     const loaded = loadSettings(userKey, {
       migrateLegacyGuest: userKey === null,
@@ -321,9 +331,6 @@ function RootThemeManager() {
   return null;
 }
 
-const ChatWorkspace = lazy(() =>
-  import("@/components/ChatWorkspace").then(({ KovaGPT }) => ({ default: KovaGPT })),
-);
 function WorkspaceOutlet() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const savedChat = pathname.match(/^\/c\/([^/]+)\/?$/);
@@ -344,7 +351,7 @@ function WorkspaceOutlet() {
         </main>
       }
     >
-      <ChatWorkspace routeConversationId={conversationId} />
+      <AssistantWorkspace routeConversationId={conversationId} />
     </Suspense>
   );
 }

@@ -534,7 +534,9 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
       if (!current()) return;
       const items = conversations.filter((c) => !c.temporary);
       const target = items.find((c) => c.id === activeId);
-      if (target && target.id !== routeConversationId) {
+      // Guest history is intentionally cleared on a fresh load. It cannot
+      // truthfully publish a durable saved-chat URL.
+      if (userKey && target && target.id !== routeConversationId) {
         const saved = await persistChatRoute(userKey, items, target.id, current, snapshot);
         if (saved && current())
           void navigate({
@@ -1664,7 +1666,7 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
 
   return (
     <div
-      className="flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
+      className="kova-assistant flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       style={{ height: "100dvh" }}
     >
       <p className="sr-only" aria-live="polite">
@@ -1963,6 +1965,7 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
                 {isLoaded && !isSignedIn ? (
                   <div className="kova-greeting-mark" aria-hidden="true">
                     <NovaLogo decorative mark className="h-5 w-5" />
+                    <span>Your space to think</span>
                   </div>
                 ) : null}
                 <h1
@@ -1973,7 +1976,7 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
                 </h1>
                 {isLoaded && !isSignedIn ? (
                   <p className="max-w-md px-4 text-center text-sm leading-6 text-muted-foreground sm:text-[15px]">
-                    Think through a question, shape an idea, or get a polished first draft.
+                    Bring a question, an idea, or a rough first draft.
                   </p>
                 ) : null}
               </div>

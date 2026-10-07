@@ -1,0 +1,470 @@
+@font-face {
+  font-family: "Kova DM Sans";
+  src: url("/fonts/dm-sans-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 1000;
+  font-display: swap;
+}
+
+/* Main-assistant design candidate. Secondary product pages retain their current
+   design until the owner accepts this desktop/mobile direction. */
+.kova-assistant,
+.kova-auth-page,
+.kova-auth-surface {
+  --assistant-accent: #3655d6;
+  --assistant-accent-ink: #ffffff;
+  --assistant-canvas: #fcfcfd;
+  --assistant-panel: #f3f5f9;
+  --assistant-card: #ffffff;
+  --assistant-line: #dfe3ed;
+  --assistant-muted: #60697b;
+  --sidebar: var(--assistant-panel);
+  --font-sans: "Kova DM Sans", Arial, sans-serif;
+  --font-display: "Kova DM Sans", Arial, sans-serif;
+  font-family: var(--font-sans);
+}
+
+.dark .kova-assistant,
+.dark .kova-auth-page,
+.dark .kova-auth-surface {
+  --assistant-accent: #9caeff;
+  --assistant-accent-ink: #16204e;
+  --assistant-canvas: #171a22;
+  --assistant-panel: #1e222d;
+  --assistant-card: #222734;
+  --assistant-line: #373f51;
+  --assistant-muted: #a9b3c8;
+}
+
+.kova-assistant .kova-chat-main {
+  background: var(--assistant-canvas);
+}
+
+.kova-assistant
+  :is(
+    .kova-sidebar,
+    .kova-sidebar-inner,
+    .kova-sidebar-rail,
+    .kova-sidebar-footer,
+    .kova-sidebar-header
+  ) {
+  background: var(--assistant-panel);
+}
+
+.kova-assistant .kova-sidebar {
+  --sidebar-gutter: 1rem;
+  --sidebar-row-height: 2.75rem;
+  --sidebar-icon-slot: 1.25rem;
+}
+
+.kova-assistant .kova-sidebar-header {
+  min-height: calc(5rem + var(--safe-top));
+  padding: calc(1rem + var(--safe-top)) 1rem 1rem 1.5rem;
+}
+
+.kova-assistant .kova-sidebar-brand {
+  font-family: var(--font-sans);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.06em;
+}
+
+.kova-assistant .kova-sidebar-primary {
+  gap: 0.2rem;
+}
+
+.kova-assistant .kova-sidebar .kova-new-chat {
+  min-height: 2.875rem;
+  height: 2.875rem;
+  flex-basis: 2.875rem;
+  justify-content: center;
+  gap: 0.625rem;
+  margin-bottom: 1.125rem;
+  padding: 0 1rem;
+  border-radius: 9999px;
+  background: var(--assistant-accent);
+  color: var(--assistant-accent-ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.kova-assistant .kova-sidebar .kova-new-chat:hover,
+.kova-assistant .kova-auth-primary:hover {
+  filter: brightness(0.92);
+}
+
+.kova-assistant .kova-sidebar .kova-nav-row {
+  min-height: 2.75rem !important;
+  height: 2.75rem;
+  gap: 0.75rem;
+  padding-inline: 0.875rem !important;
+  border-radius: 0.75rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 500;
+}
+
+.kova-assistant .kova-sidebar-icon svg,
+.kova-assistant .kova-sidebar .kova-new-chat svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  stroke-width: 1.7;
+}
+
+.kova-assistant .kova-sidebar-history {
+  margin-top: 1.5rem;
+  padding-inline: 1rem;
+  mask-image: none;
+}
+
+.kova-assistant .kova-sidebar-history h2 {
+  padding-left: 0.875rem;
+  color: var(--assistant-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.kova-assistant .kova-sidebar-empty {
+  color: var(--assistant-muted);
+  font-size: 0.8125rem;
+}
+
+.kova-assistant .kova-chat-row-main {
+  min-height: 2.75rem;
+  font-size: 0.875rem;
+}
+
+.kova-assistant .kova-sidebar-footer {
+  min-height: 5rem;
+  padding: 1rem 1rem max(1rem, var(--safe-bottom));
+}
+
+.kova-assistant .kova-sidebar-footer p {
+  color: var(--assistant-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.kova-assistant .kova-topbar {
+  min-height: calc(4.25rem + var(--safe-top));
+  background: var(--assistant-canvas) !important;
+  border-bottom-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.kova-assistant .kova-desktop-topbar {
+  flex-basis: 4.25rem;
+  padding-inline: 1.75rem;
+}
+
+.kova-assistant .kova-auth-primary {
+  color: var(--assistant-accent-ink);
+  background: var(--assistant-accent);
+  box-shadow: none;
+}
+
+.kova-assistant .kova-sign-in {
+  color: var(--assistant-accent-ink);
+  background: var(--assistant-accent);
+}
+
+.kova-assistant .kova-auth-secondary {
+  border-color: var(--assistant-line);
+  background: var(--assistant-card);
+  box-shadow: none;
+}
+
+.kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
+  flex: 1 0 auto;
+  justify-content: center;
+  padding-block: 2rem 5rem !important;
+}
+
+.kova-assistant .kova-empty-chat .kova-greeting {
+  align-items: flex-start;
+  width: 100%;
+  max-width: 46rem;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.kova-assistant .kova-empty-chat .kova-greeting-mark {
+  display: flex;
+  width: auto;
+  height: auto;
+  gap: 0.625rem;
+  margin-bottom: 0.625rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--assistant-accent);
+  box-shadow: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.kova-assistant .kova-empty-chat .kova-greeting h1 {
+  padding: 0;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: clamp(1.875rem, 3.3vw, 2.75rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 1.12;
+}
+
+.kova-assistant .kova-empty-chat .kova-greeting > p {
+  display: block;
+  padding: 0;
+  color: var(--assistant-muted);
+  text-align: left;
+  font-size: 0.9375rem;
+}
+
+.kova-assistant .kova-empty-chat-content > div:has(> .kova-chat-input),
+.kova-assistant .kova-chat-input > div,
+.kova-assistant .kova-message {
+  max-width: 46rem;
+}
+
+.kova-assistant .kova-composer {
+  --composer-control: 2.75rem !important;
+  border: 1px solid var(--assistant-line) !important;
+  border-radius: 1.5rem !important;
+  background: var(--assistant-card) !important;
+  box-shadow: 0 8px 32px -18px rgb(28 41 84 / 25%) !important;
+}
+
+.kova-assistant .kova-composer:focus-within {
+  border-color: var(--assistant-accent) !important;
+  outline: 2px solid var(--assistant-accent) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 8px 32px -12px rgb(28 41 84 / 32%) !important;
+}
+
+.kova-assistant .kova-composer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  gap: 0.25rem;
+  padding: 0.5rem;
+}
+
+.kova-assistant .kova-composer-input {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  min-height: 3.5rem !important;
+  padding: 0.875rem 0.875rem 0.5rem !important;
+  font-family: inherit;
+  font-size: 1rem !important;
+  line-height: 1.6 !important;
+}
+
+.kova-assistant .kova-composer-input::placeholder {
+  color: var(--assistant-muted);
+  opacity: 1;
+}
+
+.kova-assistant .kova-composer-leading {
+  grid-row: 2;
+  grid-column: 1;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.kova-assistant .kova-composer-trailing {
+  grid-row: 2;
+  grid-column: 2;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.kova-assistant .kova-send-button.is-enabled {
+  color: var(--assistant-accent-ink) !important;
+  background: var(--assistant-accent) !important;
+}
+
+.kova-assistant .kova-chat-input > p {
+  margin-top: 0.75rem;
+  color: var(--assistant-muted);
+  font-size: 0.6875rem;
+}
+
+.kova-assistant .kova-empty-chat .kova-starter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  max-width: 46rem;
+  gap: 0.625rem;
+  padding: 1.125rem 0 0;
+}
+
+.kova-assistant .kova-empty-chat .kova-starter-prompt:nth-child(n) {
+  min-height: 4.25rem;
+  justify-content: flex-start;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border-color: var(--assistant-line);
+  border-radius: 1rem;
+  background: var(--assistant-card);
+}
+
+.kova-assistant .kova-empty-chat .kova-starter-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-basis: 1.5rem;
+  color: var(--assistant-accent);
+}
+
+.kova-assistant .kova-starter-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.kova-assistant .kova-starter-copy strong {
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.kova-assistant .kova-starter-copy small {
+  color: var(--assistant-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.kova-assistant .kova-empty-chat .kova-starter-prompt:hover {
+  border-color: var(--assistant-accent);
+  background: color-mix(in srgb, var(--assistant-accent) 5%, var(--assistant-card));
+}
+
+.kova-assistant .kova-disclaimer {
+  max-width: 43rem;
+  padding-bottom: 1rem;
+  color: var(--assistant-muted);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+.kova-assistant .kova-user-message {
+  background: var(--assistant-panel);
+  border-color: var(--assistant-line);
+  border-radius: 1.25rem;
+  box-shadow: none;
+}
+
+.kova-assistant .kova-assistant-message .prose-chat {
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.kova-assistant .kova-chat-input[data-composer-surface="conversation"] {
+  background: var(--assistant-canvas);
+  padding-inline: 1rem;
+}
+
+.kova-auth-surface.kova-auth-surface {
+  border: 1px solid var(--assistant-line);
+  border-radius: 1.75rem !important;
+  background: var(--assistant-card);
+  box-shadow: 0 24px 80px -24px rgb(13 24 60 / 30%) !important;
+}
+
+@media (max-width: 639px) {
+  .kova-auth-surface.kova-auth-surface {
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100vw !important;
+    border-radius: 1.75rem 1.75rem 0 0 !important;
+  }
+}
+
+.kova-auth-page.kova-auth-page {
+  background: var(--assistant-canvas);
+}
+
+.kova-auth-page > main {
+  max-width: 29rem;
+  margin-top: clamp(1rem, 6vh, 4rem);
+  padding: 2.5rem;
+  border: 1px solid var(--assistant-line);
+  border-radius: 1.75rem;
+  background: var(--assistant-card);
+}
+
+:is(.kova-auth-page, .kova-auth-surface) .kova-logo-mark {
+  color: var(--assistant-accent);
+}
+
+:is(.kova-auth-page, .kova-auth-surface) button[type="submit"] {
+  min-height: 3.125rem;
+  border-radius: 9999px;
+  color: var(--assistant-accent-ink);
+  background: var(--assistant-accent);
+}
+
+@media (max-width: 1023px) {
+  .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
+    flex: 1 0 auto;
+    justify-content: center;
+    padding-block: clamp(1.75rem, 6vh, 3rem) 2rem !important;
+  }
+
+  .kova-assistant .kova-empty-chat {
+    padding-inline: max(1.25rem, var(--safe-left));
+  }
+
+  .kova-assistant .kova-empty-chat .kova-greeting {
+    margin-bottom: 1.5rem;
+  }
+
+  .kova-assistant .kova-empty-chat .kova-greeting h1 {
+    max-width: 18rem;
+    font-size: 2rem;
+  }
+
+  .kova-assistant .kova-empty-chat .kova-greeting > p {
+    max-width: 19rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  .kova-assistant .kova-empty-chat .kova-starter-prompt:nth-child(n) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.875rem;
+  }
+
+  .kova-assistant .kova-starter-copy small {
+    font-size: 0.6875rem;
+  }
+
+  .kova-auth-page > main {
+    max-width: calc(100% - 2rem);
+    padding: 2rem 1.25rem;
+  }
+}
+
+@media (max-height: 550px) and (max-width: 1023px) {
+  .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
+    justify-content: flex-start;
+    padding-block: 1rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-assistant *,
+  .kova-auth-surface * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

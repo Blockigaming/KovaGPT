@@ -3,6 +3,7 @@
 @import "tw-animate-css";
 @import "./styles/chatgpt-parity.css";
 @import "./styles/chatgpt-final-parity.css";
+@import "./styles/assistant.css";
 
 @custom-variant dark (&:is(.dark *));
 
