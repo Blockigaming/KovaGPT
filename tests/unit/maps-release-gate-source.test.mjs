@@ -39,13 +39,12 @@ test("every Sidebar caller supplies the Maps release decision", () => {
   }
 });
 
-test("Sidebar exposes and applies the Maps release decision", () => {
+test("Core launch omits Maps navigation while retaining the compatibility input", () => {
   const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
 
-  assert.match(sidebar, /mapsReleaseApproved = false/u);
-  assert.match(sidebar, /data-maps-release-approved=\{mapsReleaseApproved \? "true" : "false"\}/u);
-  assert.match(sidebar, /\{mapsReleaseApproved \? \(\s*<Link to="\/maps"/u);
-  assert.match(sidebar, /mapsReleaseApproved \? navLink\("\/maps", "Maps", Map\) : null/u);
+  assert.match(sidebar, /mapsReleaseApproved\?: boolean/u);
+  assert.doesNotMatch(sidebar, /<Link\s+to="\/maps"/u);
+  assert.doesNotMatch(sidebar, /navLink\("\/maps"/u);
 });
 
 test("Maps route metadata does not advertise an unapproved provider experience", () => {

@@ -253,6 +253,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
             </div>
             <Link
               to={item.primaryAction.to as never}
+              style={{ borderRadius: "9999px" }}
               className="inline-flex min-h-11 min-w-0 max-w-full shrink-0 items-center justify-center gap-2 rounded-full bg-background px-5 py-2.5 text-center text-sm font-medium text-foreground outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground md:max-w-xs"
             >
               {item.primaryAction.label}
