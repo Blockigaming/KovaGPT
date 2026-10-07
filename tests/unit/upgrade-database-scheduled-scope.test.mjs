@@ -64,8 +64,12 @@ test("scheduled scope: source query projects array dimensionality", () => {
 });
 
 test("scheduled scope: declared array dimensions are observed rather than rejected", () => {
-  assert.ok(target);
-  assert.doesNotMatch(target, /a\.attndims\s*<>\s*0/u);
+  // Only the metadata projection may reference dimensions anywhere in the query.
+  const withoutDimensionsProjection = SCHEDULED_TABLE_SQL.replace(
+    /'dimensions'\s*,\s*a\.attndims\s*,/iu,
+    "",
+  );
+  assert.doesNotMatch(withoutDimensionsProjection, /\battndims\b/iu);
 });
 
 function capture() {
