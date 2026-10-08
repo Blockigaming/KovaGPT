@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   authDatabase,
-  passwordAccount,
+  livePasswordAccount as passwordAccount,
   digest,
   owner,
   other,
@@ -174,7 +174,7 @@ test("owned Sites recheck suspension, factors, session expiry, provider and view
       ["revocation", "update kova_private.auth_sessions set revoked_at=now() where account_id=$1"],
       [
         "expiry",
-        "update kova_private.auth_sessions set expires_at=now()-interval '1 second' where account_id=$1",
+        "update kova_private.auth_sessions set created_at=least(created_at,now()-interval '2 seconds'), expires_at=now()-interval '1 second' where account_id=$1",
       ],
       ["epoch", "update kova_private.auth_accounts set session_epoch=session_epoch+1 where id=$1"],
       ["MFA requirement", "update kova_private.auth_accounts set mfa_required=true where id=$1"],

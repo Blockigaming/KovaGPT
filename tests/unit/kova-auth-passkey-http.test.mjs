@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   authDatabase,
-  passwordAccount,
+  livePasswordAccount as passwordAccount,
   digest,
   owner,
   other,
-  enableMfa,
+  liveEnableMfa as enableMfa,
 } from "../helpers/kova-auth-database.mjs";
 import { passkeyFixture } from "../helpers/kova-passkey-fixture.mjs";
 import {
