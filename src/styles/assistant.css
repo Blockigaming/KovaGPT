@@ -11,13 +11,18 @@
 .kova-assistant,
 .kova-auth-page,
 .kova-auth-surface {
-  --assistant-accent: #3655d6;
-  --assistant-accent-ink: #ffffff;
-  --assistant-canvas: #fcfcfd;
-  --assistant-panel: #f3f5f9;
+  --assistant-accent: #ffffff;
+  --assistant-accent-ink: #171717;
+  --assistant-canvas: #ffffff;
+  --assistant-panel: #f7f7f7;
   --assistant-card: #ffffff;
-  --assistant-line: #dfe3ed;
-  --assistant-muted: #60697b;
+  --assistant-line: #dedede;
+  --assistant-muted: #666666;
+  --assistant-focus: #404040;
+  --foreground: #171717;
+  --primary: #ffffff;
+  --primary-foreground: #171717;
+  --ring: var(--assistant-focus);
   --sidebar: var(--assistant-panel);
   --font-sans: "Kova DM Sans", Arial, sans-serif;
   --font-display: "Kova DM Sans", Arial, sans-serif;
@@ -27,13 +32,13 @@
 .dark .kova-assistant,
 .dark .kova-auth-page,
 .dark .kova-auth-surface {
-  --assistant-accent: #9caeff;
-  --assistant-accent-ink: #16204e;
-  --assistant-canvas: #171a22;
-  --assistant-panel: #1e222d;
-  --assistant-card: #222734;
-  --assistant-line: #373f51;
-  --assistant-muted: #a9b3c8;
+  --assistant-canvas: #171717;
+  --assistant-panel: #111111;
+  --assistant-card: #242424;
+  --assistant-line: #3b3b3b;
+  --assistant-muted: #aaaaaa;
+  --assistant-focus: #d4d4d4;
+  --foreground: #f5f5f5;
 }
 
 .kova-assistant .kova-chat-main {
@@ -82,6 +87,7 @@
   margin-bottom: 1.125rem;
   padding: 0 1rem;
   border-radius: 9999px;
+  border: 1px solid var(--assistant-line);
   background: var(--assistant-accent);
   color: var(--assistant-accent-ink);
   font-size: 0.875rem;
@@ -146,6 +152,16 @@
   font-weight: 500;
 }
 
+.kova-guest-account-options {
+  display: grid;
+  gap: 0.125rem;
+  margin: 0 -0.125rem 1rem;
+}
+
+.kova-guest-account-options > * {
+  width: 100%;
+}
+
 .kova-assistant .kova-topbar {
   min-height: calc(4.25rem + var(--safe-top));
   background: var(--assistant-canvas) !important;
@@ -160,12 +176,14 @@
 }
 
 .kova-assistant .kova-auth-primary {
+  border: 1px solid var(--assistant-line);
   color: var(--assistant-accent-ink);
   background: var(--assistant-accent);
   box-shadow: none;
 }
 
 .kova-assistant .kova-sign-in {
+  border: 1px solid var(--assistant-line);
   color: var(--assistant-accent-ink);
   background: var(--assistant-accent);
 }
@@ -199,7 +217,7 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: var(--assistant-accent);
+  color: var(--foreground);
   box-shadow: none;
   font-size: 0.75rem;
   font-weight: 600;
@@ -235,14 +253,14 @@
   border: 1px solid var(--assistant-line) !important;
   border-radius: 1.5rem !important;
   background: var(--assistant-card) !important;
-  box-shadow: 0 8px 32px -18px rgb(28 41 84 / 25%) !important;
+  box-shadow: 0 8px 32px -18px rgb(0 0 0 / 16%) !important;
 }
 
 .kova-assistant .kova-composer:focus-within {
-  border-color: var(--assistant-accent) !important;
-  outline: 2px solid var(--assistant-accent) !important;
+  border-color: var(--assistant-focus) !important;
+  outline: 2px solid var(--assistant-focus) !important;
   outline-offset: 2px !important;
-  box-shadow: 0 8px 32px -12px rgb(28 41 84 / 32%) !important;
+  box-shadow: 0 8px 32px -12px rgb(0 0 0 / 20%) !important;
 }
 
 .kova-assistant .kova-composer-row {
@@ -285,6 +303,7 @@
 }
 
 .kova-assistant .kova-send-button.is-enabled {
+  border: 1px solid var(--assistant-line);
   color: var(--assistant-accent-ink) !important;
   background: var(--assistant-accent) !important;
 }
@@ -318,7 +337,7 @@
   width: 1.5rem;
   height: 1.5rem;
   flex-basis: 1.5rem;
-  color: var(--assistant-accent);
+  color: var(--foreground);
 }
 
 .kova-assistant .kova-starter-copy {
@@ -340,8 +359,8 @@
 }
 
 .kova-assistant .kova-empty-chat .kova-starter-prompt:hover {
-  border-color: var(--assistant-accent);
-  background: color-mix(in srgb, var(--assistant-accent) 5%, var(--assistant-card));
+  border-color: var(--assistant-focus);
+  background: var(--assistant-panel);
 }
 
 .kova-assistant .kova-disclaimer {
@@ -373,7 +392,7 @@
   border: 1px solid var(--assistant-line);
   border-radius: 1.75rem !important;
   background: var(--assistant-card);
-  box-shadow: 0 24px 80px -24px rgb(13 24 60 / 30%) !important;
+  box-shadow: 0 24px 80px -24px rgb(0 0 0 / 30%) !important;
 }
 
 @media (max-width: 639px) {
@@ -404,6 +423,7 @@
 }
 
 :is(.kova-auth-page, .kova-auth-surface) button[type="submit"] {
+  border: 1px solid var(--assistant-line);
   min-height: 3.125rem;
   border-radius: 9999px;
   color: var(--assistant-accent-ink);

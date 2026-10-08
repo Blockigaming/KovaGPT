@@ -37,13 +37,14 @@ test("every tier gets an inactive brand label and stale effort resets without an
     const { ResponsiveModelSelector } = loadUiModule("src/components/ResponsiveModelSelector.tsx", {
       react: hooks.react,
       "@/lib/core-launch-policy.mjs": policy,
+      "@/components/NovaLogo": { NovaLogo: "NovaLogo" },
     });
     const tree = hooks.render(ResponsiveModelSelector, {
       mode: "ultra",
       userTier: tier,
       onChange: (mode) => changes.push(mode),
     });
-    assert.equal(text(tree), "KovaGPT");
+    assert.equal(text(tree).trim(), "KovaGPT");
     assert.equal(
       elements(tree, (node) => node.type === "button" || node.props.role === "dialog").length,
       0,
@@ -69,6 +70,7 @@ function sidebar(signedIn) {
       }),
     },
     "@/hooks/useTier": { useTier: () => ({ tier: "free" }) },
+    "@/components/NovaLogo": { NovaLogo: "NovaLogo" },
     "@/lib/conversation-search": {
       searchConversations: (items) => items.map((conversation) => ({ conversation })),
     },
@@ -99,9 +101,10 @@ function sidebar(signedIn) {
 test("core sidebar keeps real navigation and invokes new, settings and saved-history actions", () => {
   const { tree, events, hooks } = sidebar(true);
   const routes = elements(tree, (node) => node.type === "Link").map((node) => node.props.to);
-  for (const route of ["/images", "/library", "/files", "/projects", "/scheduled-tasks", "/apps"])
+  for (const route of ["/images", "/library", "/projects", "/scheduled-tasks", "/apps"])
     assert.ok(routes.includes(route), route);
-  for (const route of ["/work", "/maps", "/discovery"]) assert.ok(!routes.includes(route));
+  for (const route of ["/files", "/work", "/maps", "/discovery"])
+    assert.ok(!routes.includes(route));
   const buttons = elements(tree, (node) => node.type === "button");
   buttons.find((node) => text(node).trim() === "New chat").props.onClick();
   buttons.find((node) => node.props["aria-label"] === "Open chat Saved chat").props.onClick();

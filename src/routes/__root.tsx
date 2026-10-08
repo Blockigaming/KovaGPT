@@ -227,9 +227,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       links: [
         { rel: "stylesheet", href: appCss },
         { rel: "manifest", href: "/manifest.webmanifest" },
-        { rel: "icon", type: "image/png", sizes: "64x64", href: "/kova-favicon-20260807.png" },
-        { rel: "shortcut icon", type: "image/png", href: "/kova-favicon-20260807.png" },
-        { rel: "apple-touch-icon", sizes: "180x180", href: "/kova-touch-icon-20260807.png" },
+        { rel: "icon", type: "image/png", sizes: "1024x1024", href: "/kova-logo.png" },
+        { rel: "shortcut icon", type: "image/png", href: "/kova-logo.png" },
+        { rel: "apple-touch-icon", sizes: "1024x1024", href: "/kova-logo.png" },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         {
           rel: "preconnect",

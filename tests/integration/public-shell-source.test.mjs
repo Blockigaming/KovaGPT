@@ -46,9 +46,10 @@ test("public navigation exposes mobile and current-page semantics", async () => 
   assert.match(logo, /alt = "KovaGPT"/);
   assert.match(logo, /aria-hidden=\{decorative \|\| undefined\}/);
   assert.match(logo, /aria-label=\{decorative \? undefined : alt\}/);
-  assert.match(logo, /role=\{decorative \? undefined : "img"\}/);
+  assert.match(logo, /alt=\{decorative \? "" : alt\}/);
   assert.match(logo, /data-logo-variant=\{mark \? "mark" : "standard"\}/);
-  assert.doesNotMatch(logo, /<img|kova-logo\.png/);
+  assert.match(logo, /<img[\s\S]*?src="\/kova-logo\.png"/);
+  assert.doesNotMatch(logo, /<svg|<path/);
 });
 
 test("public layouts provide a single skip-link destination", async () => {

@@ -2,9 +2,9 @@ import {
   Archive,
   Clock3,
   Copy as CopyIcon,
+  CreditCard,
   Ellipsis,
   Folder,
-  FileText,
   Images,
   LibraryBig,
   MessageCircle,
@@ -12,7 +12,7 @@ import {
   PanelLeftOpen,
   Pin,
   PinOff,
-  PlugZap,
+  Puzzle,
   Search,
   Settings as SettingsIcon,
   Share2,
@@ -26,6 +26,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
+import { NovaLogo } from "@/components/NovaLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -343,9 +344,6 @@ export function Sidebar({
           <Link to="/library" className="kova-rail-button" aria-label="Library" title="Library">
             <LibraryBig />
           </Link>
-          <Link to="/files" className="kova-rail-button" aria-label="Files" title="Files">
-            <FileText />
-          </Link>
           <Link to="/projects" className="kova-rail-button" aria-label="Projects" title="Projects">
             <Folder />
           </Link>
@@ -360,7 +358,7 @@ export function Sidebar({
             </Link>
           ) : null}
           <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
-            <PlugZap />
+            <Puzzle />
           </Link>
           <button
             type="button"
@@ -390,7 +388,10 @@ export function Sidebar({
       >
         <div className="kova-sidebar-inner flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
           <header className="kova-sidebar-header">
-            <span className="kova-sidebar-brand">KovaGPT</span>
+            <span className="kova-sidebar-brand flex items-center gap-2">
+              <NovaLogo decorative className="h-7 w-7" />
+              KovaGPT
+            </span>
             <button
               type="button"
               className="kova-header-button"
@@ -457,10 +458,9 @@ export function Sidebar({
               </button>
               {navLink("/images", "Images", Images)}
               {navLink("/library", "Library", LibraryBig)}
-              {navLink("/files", "Files", FileText)}
               {navLink("/projects", "Projects", Folder)}
               {signedIn ? navLink("/scheduled-tasks", "Scheduled tasks", Clock3) : null}
-              {navLink("/apps", "Plugins", PlugZap)}
+              {navLink("/apps", "Plugins", Puzzle)}
             </nav>
 
             {signedIn ? (
@@ -513,6 +513,21 @@ export function Sidebar({
               </>
             ) : isLoaded ? (
               <div className="w-full">
+                <nav className="kova-guest-account-options" aria-label="Account options">
+                  {navLink("/pricing", "Billing", CreditCard)}
+                  <button
+                    type="button"
+                    className={navRow()}
+                    aria-label="Settings"
+                    onClick={() => {
+                      closeAfterMobileNavigation();
+                      onOpenSettings("general");
+                    }}
+                  >
+                    {icon(SettingsIcon)}
+                    <span>Settings</span>
+                  </button>
+                </nav>
                 <p className="mb-3 text-sm font-semibold">Get responses tailored to you</p>
                 <div className="flex items-center gap-2">
                   <SignInButton mode="modal">
@@ -520,15 +535,6 @@ export function Sidebar({
                       Log in to KovaGPT
                     </button>
                   </SignInButton>
-                  <button
-                    type="button"
-                    className="kova-account-action"
-                    onClick={() => onOpenSettings("general")}
-                    aria-label="Settings"
-                    title="Settings"
-                  >
-                    <SettingsIcon aria-hidden="true" />
-                  </button>
                 </div>
               </div>
             ) : null}

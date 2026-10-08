@@ -419,6 +419,11 @@ function LibraryPage() {
       const { listMySharedChats, listSharedWithMe } = await import("@/lib/shared-chats.functions");
       const [received, sent] = await Promise.all([listSharedWithMe(), listMySharedChats()]);
       if (!isCurrent()) return;
+      // A failed server function can resolve to an error envelope. Keep that
+      // failure in the shared-chat panel instead of crashing workspace navigation.
+      if (!Array.isArray(received) || !Array.isArray(sent)) {
+        throw new Error("Shared chats are temporarily unavailable. Please retry.");
+      }
       setShareState({
         principal: requestPrincipal,
         received,

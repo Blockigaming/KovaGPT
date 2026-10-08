@@ -59,16 +59,16 @@ test("core chat surfaces use shared workspace primitives", () => {
   assert.match(sidebar, /kova-new-chat/);
   assert.match(styles, /overflow-anchor: auto/);
   assert.match(logo, /kova-logo-mark/);
-  assert.match(logo, /<svg[\s\S]*?viewBox="0 0 24 24"[\s\S]*?<circle[\s\S]*?<path/);
+  assert.match(logo, /<img[\s\S]*?src="\/kova-logo\.png"/);
   assert.match(logo, /decorative = false/);
   assert.match(logo, /alt = "KovaGPT"/);
   assert.match(logo, /aria-hidden=\{decorative \|\| undefined\}/);
   assert.match(logo, /aria-label=\{decorative \? undefined : alt\}/);
-  assert.match(logo, /role=\{decorative \? undefined : "img"\}/);
+  assert.match(logo, /alt=\{decorative \? "" : alt\}/);
   assert.match(logo, /data-logo-variant=\{mark \? "mark" : "standard"\}/);
-  assert.doesNotMatch(logo, /<img|kova-logo\.png/);
+  assert.doesNotMatch(logo, /<svg|<path/);
   assert.doesNotMatch(styles, /\.kova-logo-mark\s*\{[\s\S]*?mask: url/);
-  assert.match(sidebar, /<span className="kova-sidebar-brand">KovaGPT<\/span>/);
+  assert.match(sidebar, /kova-sidebar-brand[\s\S]*?<NovaLogo decorative className="h-7 w-7"/);
   assert.match(home, /<NovaLogo decorative mark className="h-5 w-5" \/>/);
   assert.match(publicSite, /<PublicShell>/);
   assert.doesNotMatch(publicSite, /<NovaLogo/);
@@ -81,9 +81,9 @@ test("core chat surfaces use shared workspace primitives", () => {
   assert.match(resetPassword, /<NovaLogo decorative className="w-4 h-4" \/>/);
   assert.match(
     uiQuality,
-    /page\.route\("\*\*\/kova-logo\.png\*"[\s\S]*?rasterLogoRequests \+= 1;[\s\S]*?route\.abort\(\)/,
+    /page\.route\("\*\*\/kova-logo\.png\*"[\s\S]*?rasterLogoRequests \+= 1;[\s\S]*?route\.continue\(\)/,
   );
-  assert.match(uiQuality, /expect\(rasterLogoRequests\)\.toBe\(0\)/);
+  assert.match(uiQuality, /toHaveJSProperty\("naturalWidth", 1024\)/);
 });
 
 test("the core workspace layer owns shell and composer visual contracts", () => {
@@ -161,7 +161,8 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.doesNotMatch(modelSelector, /ChevronDown|<button|aria-hidden|model-selector-trigger/);
   assert.match(modelSelector, /CORE_LAUNCH_MODE/);
   assert.doesNotMatch(sidebar, /navLink\("\/discovery", "Discover", Globe\)/);
-  assert.match(sidebar, /navLink\("\/files", "Files", FileText\)/);
+  assert.match(sidebar, /navLink\("\/library", "Library", LibraryBig\)/);
+  assert.doesNotMatch(sidebar, /navLink\("\/files"/);
   assert.doesNotMatch(sidebar, /"Maps", Map, isOn\("\/maps"\), "New"/);
 });
 

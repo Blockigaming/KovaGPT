@@ -11,6 +11,9 @@ async function capture(page: Page, info: TestInfo, state: string) {
   if (!directory) return;
   await mkdir(directory, { recursive: true });
   await page.evaluate(() => document.fonts.ready);
+  await page
+    .locator("img.kova-logo:visible")
+    .evaluateAll((logos) => Promise.all(logos.map((logo) => (logo as HTMLImageElement).decode())));
   await page.mouse.move(page.viewportSize()!.width - 4, page.viewportSize()!.height / 2);
   await page.screenshot({
     path: path.join(directory, `${info.project.name}-${state}.png`),
@@ -39,6 +42,14 @@ test("assistant and login render in both themes with usable mobile navigation", 
     await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Send message" })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Start with Make a plan" })).toBeVisible();
+    await expect(page.locator(".kova-auth-primary:visible")).toHaveCSS(
+      "background-color",
+      "rgb(255, 255, 255)",
+    );
+    for (const logo of await page.locator("img.kova-logo:visible").all()) {
+      await expect(logo).toHaveAttribute("src", "/kova-logo.png");
+      await expect(logo).toHaveJSProperty("naturalWidth", 1024);
+    }
     await noOverflow(page);
     await capture(page, info, `${theme}-empty`);
 
@@ -51,6 +62,11 @@ test("assistant and login render in both themes with usable mobile navigation", 
       const menu = page.getByRole("button", { name: "Open menu" });
       await menu.click();
       await expect(page.getByRole("link", { name: "Projects", exact: true })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Files", exact: true })).toHaveCount(0);
+      const billing = await page.getByRole("link", { name: "Billing", exact: true }).boundingBox();
+      const login = await page.getByRole("button", { name: "Log in to KovaGPT" }).boundingBox();
+      expect(billing!.y + billing!.height).toBeLessThan(login!.y);
+      await expect(page.getByRole("button", { name: "Settings", exact: true })).toBeVisible();
       await capture(page, info, `${theme}-navigation`);
       await page.keyboard.press("Escape");
       await expect(menu).toBeFocused();
@@ -67,6 +83,37 @@ test("assistant and login render in both themes with usable mobile navigation", 
     await expect(page.getByRole("heading", { name: "Enter your password" })).toBeVisible();
     await capture(page, info, `${theme}-password`);
   }
+});
+
+test("shared-chat error envelopes keep Library and assistant navigation usable", async ({
+  page,
+}) => {
+  await installAuthenticatedFixture(page);
+  await page.route("**/_serverFn/**", (route) =>
+    route.fulfill({
+      json: { result: { error: "service_unavailable" } },
+    }),
+  );
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  if (page.viewportSize()!.width < 1024)
+    await page.getByRole("button", { name: "Open menu" }).click();
+  await page.getByRole("link", { name: "Library", exact: true }).click();
+  await expect(page.getByText("Could not load shared chats", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Shared chats are temporarily unavailable. Please retry.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "KovaGPT couldn't load this page" })).toHaveCount(
+    0,
+  );
+  if (page.viewportSize()!.width < 1024)
+    await page.getByRole("button", { name: "Open menu" }).click();
+  await page
+    .getByRole("navigation", { name: /KovaGPT features|Collapsed navigation/ })
+    .getByRole("button", { name: "New chat", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
 });
 
 test("streaming and completion keep the composer usable", async ({ page }, info) => {
@@ -137,9 +184,8 @@ test("Files error envelopes retain navigation back to the assistant", async ({ p
   await page.goto("/");
   await waitForKovaHydration(page);
   await capture(page, info, "signed-in-empty");
-  if (page.viewportSize()!.width < 1024)
-    await page.getByRole("button", { name: "Open menu" }).click();
-  await page.getByRole("link", { name: "Files", exact: true }).click();
+  // Existing file deep links remain supported; new navigation lives in Library.
+  await page.goto("/files");
   await expect(page.getByRole("heading", { name: "Files could not be loaded" })).toBeVisible();
   await capture(page, info, "files-error");
   if (page.viewportSize()!.width < 1024)

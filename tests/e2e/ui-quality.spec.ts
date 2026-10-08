@@ -214,7 +214,7 @@ for (const theme of ["light", "dark"] as const) {
       let rasterLogoRequests = 0;
       await page.route("**/kova-logo.png*", (route) => {
         rasterLogoRequests += 1;
-        return route.abort();
+        return route.continue();
       });
       await page.addInitScript((selectedTheme) => {
         localStorage.setItem("kova-theme-mode", selectedTheme);
@@ -228,6 +228,27 @@ for (const theme of ["light", "dark"] as const) {
         );
       });
       expect(usesBundledFont).toBe(font === "dmsans");
+
+      if (font === "fallback" && process.platform === "linux") {
+        // Chromium's Arial substitute differs between Linux images. These
+        // baselines use fonts-liberation 2.1.5, installed by Playwright in CI.
+        // Fail with the actual font name rather than accepting unrelated pixels.
+        const session = await page.context().newCDPSession(page);
+        await session.send("DOM.enable");
+        await session.send("CSS.enable");
+        const { root } = await session.send("DOM.getDocument");
+        const { nodeId } = await session.send("DOM.querySelector", {
+          nodeId: root.nodeId,
+          selector: ".kova-assistant h1",
+        });
+        const { fonts } = await session.send("CSS.getPlatformFontsForNode", { nodeId });
+        expect(
+          fonts.filter((face) => face.glyphCount > 0).map((face) => face.familyName),
+          "Linux fallback screenshots require Playwright's fonts-liberation dependency",
+        ).toEqual(["Liberation Sans"]);
+        expect(fonts.every((face) => !face.isCustomFont)).toBe(true);
+        await session.detach();
+      }
 
       await expect(page.getByRole("main")).toHaveCount(1);
       await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
@@ -245,13 +266,14 @@ for (const theme of ["light", "dark"] as const) {
       await expect(greetingMark).toHaveAttribute("data-logo-variant", "mark");
       expect(await greetingMark.getAttribute("role")).toBeNull();
       expect(await greetingMark.getAttribute("aria-label")).toBeNull();
-      expect(await greetingMark.locator("circle, path").count()).toBeGreaterThanOrEqual(2);
+      await expect(greetingMark).toHaveAttribute("src", "/kova-logo.png");
+      await expect(greetingMark).toHaveJSProperty("naturalWidth", 1024);
       if (page.viewportSize()!.width >= 1024) {
         const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand:visible");
         await expect(sidebarBrand).toHaveCount(1);
         await expect(sidebarBrand).toHaveText("KovaGPT");
       }
-      expect(rasterLogoRequests).toBe(0);
+      expect(rasterLogoRequests).toBeGreaterThan(0);
       expect(hydrationErrors).toEqual([]);
       await expect(page).toHaveScreenshot(`guest-core-shell-${theme}-${font}.png`, {
         animations: "disabled",

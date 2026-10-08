@@ -3,6 +3,80 @@
 Academy remains paused and unapproved (0/637 pages, 0/28 registered families).
 This is source preparation, not a deployed release or visual acceptance.
 
+## Owner interface corrections — 8 October 2026 UTC
+
+Continues `777b655007334be5755f455033f2718840b0dd2f`, including the independent
+fallback-font correction published during this continuation. The reduced launch
+scope, main-assistant-first priority, permissions and specialist boundaries stay
+in force. The following corrections supersede the earlier blue visual candidate:
+
+- Main assistant and login use neutral white/ink/gray surfaces and white primary
+  buttons in both themes. Focus, disabled states and pill geometry remain usable.
+- Every shared brand placement uses the owner's exact `/kova-logo.png` asset,
+  including navigation, login, browser/install metadata and notifications. Its
+  SHA-256 is `566cd64480ac25307146106efc073064f2c2161935babb9625a370469dc24ae2`,
+  matching the attached logo. The approximated vector has been removed.
+- Plugins uses a puzzle icon. Library is the single sidebar destination for
+  files; existing file deep links and storage behavior are preserved. Guest
+  Billing and Settings appear immediately above the login area.
+- A shared-chat server error envelope previously reached `.map()` and replaced
+  Library with the page error boundary. Both shared-chat list responses are now
+  checked before entering render state. Failure stays in its retryable panel,
+  with principal/request-generation guards and workspace navigation preserved.
+- The four fallback screenshots failed because the old local browser used
+  DejaVu Sans while hosted Chromium used Liberation Sans 2.1.5. The parent fixes
+  those baselines; this visual update regenerates them for the neutral design
+  using the same system font. A browser font assertion now diagnoses a mismatched
+  Linux font environment before pixel comparison. No snapshot tolerance is raised.
+
+The final isolated local browser run passed all 22 focused cases without skips:
+both themes and fonts, phone/desktop navigation, login focus, streaming/completion,
+provider failure, legacy Files recovery and resolved shared-chat error envelopes.
+The regression uses the server-function result envelope, so it exercises the
+malformed resolved-list path instead of only a transport exception. Twenty-six
+actual application renders support the updated owner review. The earlier test
+fixture's duplicate mobile button locator and transport-envelope mismatch were
+corrected before this completed run.
+
+The separate visual/accessibility run completed with 28 passes and 8 existing
+viewport-specific exclusions, with no failures or retries. It covers phone,
+tablet and desktop geometry, focus, rich conversation content and accessibility;
+overlapping checks are not added to the focused run as unique coverage.
+
+The separate auth fixture passed both complementary desktop/light and phone/dark
+snapshots after the old purple phone baseline was replaced with the inspected
+neutral render. The exact fixture origin, one settings read, zero auth writes,
+candidate-build isolation and pixel tolerance were preserved.
+
+Typecheck, affected lint/format, 36 focused source/runtime contracts, the final
+sequential Node build, bundle budgets and source/build dependency-removal audit
+pass. One earlier build exited 137 while typecheck also ran; the completed
+sequential build replaces that incomplete output. Partial browser processes
+without complete result receipts are not counted as passes. Hosted exact-head
+CI remains required and is reported separately in the publication receipt.
+
+Main UI is implemented and rendered, not owner-approved. Other core pages await
+that visual decision. These are local fixtures, not staging or production
+acceptance. Accepted Auth/Models runtime contracts and separate integrated staging
+authority still block signup → login → live stream → durable reopen → account
+isolation. No merge, deployment, real provider write or new paid resource was
+activated. Actual GitHub Actions charges are unavailable.
+
+The latest specialist checkpoints were refreshed during this continuation:
+Auth version 40 still records 14/20 verified, S6 17/22 historical passes and no
+new acceptance credit; its registry-authentication cause remains unresolved.
+Models version 36 records no accepted live endpoint and unmeasured 4B latency,
+throughput, concurrency and profile differences. Its same one-allocation $2
+benchmark grant remains unused and is not authority for Interface to provision
+or deploy. Historical consumed grants and specialist boundaries are preserved.
+
+On parent `777b6550`, Candidate Source Evidence, Work Sandbox Isolation and Azure
+Container Readiness passed. Shared UI's first WebKit attempt failed an existing
+offline pricing-navigation assertion; the latest same-head rerun passed Chromium,
+Firefox and WebKit. Main CI was still running at this reconciliation. These
+parent results do not certify this new candidate; its exact-head results belong
+in the publication receipt.
+
 ## Main-assistant UI-first continuation
 
 Continues the published `ccd8f26eeba93e05ad8b97479e53cd1da9e90064` candidate

@@ -122,6 +122,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
 
   await page.evaluate(() => document.fonts.ready);
+  await dialog.locator("img.kova-logo").evaluate((logo) => (logo as HTMLImageElement).decode());
   await dialog.evaluate(async (element) => {
     await Promise.all(
       element

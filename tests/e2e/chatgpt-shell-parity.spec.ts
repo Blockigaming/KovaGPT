@@ -68,7 +68,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     );
   });
 
-  test("signed-in desktop navigation opens Files and returns to the unified assistant", async ({
+  test("signed-in desktop navigation opens Library and returns to the unified assistant", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -76,22 +76,23 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
     await expect(page.getByRole("navigation", { name: "Primary workspace" })).toHaveCount(0);
-    await page.getByRole("link", { name: "Files", exact: true }).click();
-    await expect(page).toHaveURL(/\/files$/);
+    await expect(page.getByRole("link", { name: "Files", exact: true })).toHaveCount(0);
+    await page.getByRole("link", { name: "Library", exact: true }).click();
+    await expect(page).toHaveURL(/\/library$/);
     await page.getByRole("button", { name: "New chat", exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
   });
-  test("collapsed desktop navigation keeps Files one step away", async ({ page }) => {
+  test("collapsed desktop navigation keeps Library one step away", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await installAuthenticatedFixture(page);
     await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
-    const filesLink = page.getByRole("link", { name: "Files", exact: true });
-    await expect(filesLink).toBeVisible();
-    await filesLink.click();
-    await expect(page).toHaveURL(/\/files$/);
+    const libraryLink = page.getByRole("link", { name: "Library", exact: true });
+    await expect(libraryLink).toBeVisible();
+    await libraryLink.click();
+    await expect(page).toHaveURL(/\/library$/);
   });
 
   test("active desktop chat keeps secondary actions in one overflow menu", async ({
