@@ -1,4 +1,4 @@
-import { Menu, MessageSquareDashed, Sliders, SquarePen } from "lucide-react";
+import { PanelLeft, MessageSquareDashed, Sliders, SquarePen } from "lucide-react";
 import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 import { NovaLogo } from "@/components/NovaLogo";
@@ -49,7 +49,7 @@ export function MobileTopBar({
           aria-label="Open menu"
           className="kova-action w-11 h-11 text-foreground"
         >
-          <Menu className="w-5 h-5" />
+          <PanelLeft className="w-5 h-5" aria-hidden="true" />
         </button>
         <div className="flex min-w-0 items-center justify-start gap-1 pl-1">
           {mode && onModeChange ? (

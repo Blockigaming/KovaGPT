@@ -1974,11 +1974,6 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
                 >
                   {greeting}
                 </h1>
-                {isLoaded && !isSignedIn ? (
-                  <p className="max-w-md px-4 text-center text-sm leading-6 text-muted-foreground sm:text-[15px]">
-                    Bring a question, an idea, or a rough first draft.
-                  </p>
-                ) : null}
               </div>
 
               <div className="mx-auto w-full max-w-[48rem] px-1 sm:px-2">

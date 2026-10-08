@@ -4,6 +4,42 @@ Academy remains paused and unapproved (0/637 pages, 0/28 registered families).
 This is source preparation, not a deployed release. Visual approval scope is
 recorded below.
 
+## Centered greeting and sidebar preview — 8 October 2026
+
+The owner approved the phone refinement and requested centered greeting text,
+removal of the “Bring a question…” subtitle, retention of “Your space to think”
+on iPhone, and a different sidebar trigger icon. The greeting is now centered
+above the composer on all screen sizes, the subtitle is removed, the guest
+tagline is visible on phones, and the mobile trigger uses the same clean panel
+icon vocabulary as desktop. This explicitly requested greeting adjustment
+supersedes the earlier unchanged-desktop statement. The exact logo, neutral
+colors, approved navigation and all permission paths are preserved.
+
+Actual application screenshots show the iPhone greeting and open sidebars in
+both themes on phone and desktop. The four viewport interaction cases passed
+in both themes, including greeting alignment, starter actions, menu opening,
+Escape/focus return, login and password entry. The separate visual/accessibility
+run passed 22 cases with eight existing viewport-specific exclusions and no
+failures. Eight shell baselines were regenerated for the requested changes and
+then passed normal comparison; both isolated auth visual cases also passed.
+Pixel tolerances, fixture-origin and zero-auth-write guards are unchanged.
+Typecheck, affected lint/format and the Node production build passed.
+
+Parent `2844efc3` passed Azure Readiness, Shared UI Browser, Source Evidence and
+Sandbox Isolation. Main CI passed unit/API/build gates but failed five stale
+integration assertions: removed Files navigation, the old Plugins icon and an
+old two-file logo count. The navigation contracts now follow the approved
+Library/Puzzle structure. The icon contract verifies the actual PNG bytes,
+declared dimensions, square shape and sufficient resolution instead of requiring
+duplicate icon files. All 33 cases in the five affected integration files pass.
+
+A broader local integration run completed with 501 passes and two failures
+because it ran against the Node preview build while those two checks require a
+Cloudflare Worker artifact. They are not credited as passes. An initial broad
+attempt produced no final summary and is not counted. Hosted checks for the new
+head remain required; this UI change does not certify live Auth/Models acceptance
+or authorize deployment. Earlier evidence below remains historical.
+
 ## Four-page approval and phone refinement — 8 October 2026
 
 At 07:32 EDT the owner approved the four pages in the `4a75bf50` review and

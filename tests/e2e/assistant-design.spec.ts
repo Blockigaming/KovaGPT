@@ -51,6 +51,15 @@ test("assistant and login render in both themes with usable mobile navigation", 
       await expect(logo).toHaveJSProperty("naturalWidth", 1024);
     }
     await noOverflow(page);
+    await expect(page.getByText("Your space to think", { exact: true })).toBeVisible();
+    await expect(page.getByText("Bring a question", { exact: false })).toHaveCount(0);
+    const heading = await page
+      .getByRole("heading", { name: "What can I help with?" })
+      .boundingBox();
+    const composer = await page.locator(".kova-composer").first().boundingBox();
+    expect(
+      Math.abs(heading!.x + heading!.width / 2 - composer!.x - composer!.width / 2),
+    ).toBeLessThan(1);
     await capture(page, info, `${theme}-empty`);
 
     await page.getByRole("button", { name: "Start with Make a plan" }).click();
@@ -70,6 +79,9 @@ test("assistant and login render in both themes with usable mobile navigation", 
       await capture(page, info, `${theme}-navigation`);
       await page.keyboard.press("Escape");
       await expect(menu).toBeFocused();
+    } else {
+      await expect(page.getByRole("navigation", { name: "KovaGPT features" })).toBeVisible();
+      await capture(page, info, `${theme}-navigation`);
     }
 
     await page.getByRole("button", { name: "Log in", exact: true }).click();

@@ -85,7 +85,16 @@ test("install metadata is complete and support identity is consistent", () => {
   assert.equal(manifest.name, "KovaGPT");
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.start_url, "/");
-  assert.ok(manifest.icons.length >= 2);
+  assert.ok(manifest.icons.length >= 1);
+  for (const icon of manifest.icons) {
+    const bytes = readFileSync(join(root, "public", icon.src));
+    assert.equal(bytes.subarray(1, 4).toString(), "PNG");
+    const width = bytes.readUInt32BE(16);
+    const height = bytes.readUInt32BE(20);
+    assert.equal(icon.sizes, `${width}x${height}`);
+    assert.equal(width, height);
+    assert.ok(width >= 512, "install icon must support a large square render");
+  }
   assert.ok(manifest.icons.every((icon) => icon.src.startsWith("/") && icon.type === "image/png"));
 
   for (const source of [help, unsubscribe, helpNotification]) {

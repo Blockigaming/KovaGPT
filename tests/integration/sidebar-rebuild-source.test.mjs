@@ -10,10 +10,9 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
   const ordered = [
     'navLink("/images", "Images", Images)',
     'navLink("/library", "Library", LibraryBig)',
-    'navLink("/files", "Files", FileText)',
     'navLink("/projects", "Projects", Folder)',
     'navLink("/scheduled-tasks", "Scheduled tasks", Clock3)',
-    'navLink("/apps", "Plugins", PlugZap)',
+    'navLink("/apps", "Plugins", Puzzle)',
     ">Pinned</h2>",
     ">Recents</h2>",
   ];
@@ -24,6 +23,7 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
     cursor = next;
   }
   assert.match(sidebar, /KovaGPT/);
+  assert.doesNotMatch(sidebar, /navLink\("\/files"/);
   assert.doesNotMatch(sidebar, /Health is coming soon|Finances is coming soon|navLink\("\/work"/);
   assert.doesNotMatch(sidebar, /research-planner|Deep research|Telescope/);
   assert.doesNotMatch(sidebar, /🖼️|📁|⏰|🧩|❤️|💰/u);

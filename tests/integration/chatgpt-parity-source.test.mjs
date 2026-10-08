@@ -43,8 +43,9 @@ test("core launch presents one unified assistant without a Chat/Work mode switch
   assert.match(workspaceModeSwitch, /Primary workspace/); // historical component preserved
 });
 test("core navigation exposes the real file and plugin destinations", () => {
-  assert.match(sidebar, /navLink\("\/files", "Files", FileText\)/);
-  assert.match(sidebar, /navLink\("\/apps", "Plugins", PlugZap\)/);
+  assert.match(sidebar, /navLink\("\/library", "Library", LibraryBig\)/);
+  assert.doesNotMatch(sidebar, /navLink\("\/files"/);
+  assert.match(sidebar, /navLink\("\/apps", "Plugins", Puzzle\)/);
   assert.match(sidebar, /navLink\("\/projects", "Projects", Folder\)/);
 });
 test("launch navigation does not advertise deferred content or placeholder controls", () => {
@@ -70,10 +71,7 @@ test("KovaGPT keeps one inactive identity label in each responsive top bar", () 
 
 test("signed-in empty chat removes guest-only onboarding clutter", () => {
   assert.match(route, /\{isLoaded && !isSignedIn \? \(\s*<div className="kova-greeting-mark"/);
-  assert.match(
-    route,
-    /\{isLoaded && !isSignedIn \? \(\s*<p className="max-w-md[\s\S]*?Bring a question/,
-  );
+  assert.doesNotMatch(route, /Bring a question, an idea, or a rough first draft/);
   assert.match(
     route,
     /\{isLoaded && !isSignedIn \? \(\s*<Suspense[\s\S]*?<HomeChatStarters setInput=\{setInput\}/,
