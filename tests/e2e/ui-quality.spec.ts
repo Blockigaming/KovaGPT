@@ -261,7 +261,14 @@ for (const theme of ["light", "dark"] as const) {
       });
       await expect(page.getByRole("button", { name: "Start with Explore a topic" })).toBeVisible();
       const greetingMark = page.locator(".kova-greeting-mark .kova-logo-mark");
-      await expect(greetingMark).toBeVisible();
+      if (page.viewportSize()!.width < 640) {
+        await expect(greetingMark).toBeHidden();
+        const phoneBrand = page.locator(".kova-topbar:visible img.kova-logo");
+        await expect(phoneBrand).toBeVisible();
+        await expect(phoneBrand).toHaveAttribute("src", "/kova-logo.png");
+      } else {
+        await expect(greetingMark).toBeVisible();
+      }
       await expect(greetingMark).toHaveAttribute("aria-hidden", "true");
       await expect(greetingMark).toHaveAttribute("data-logo-variant", "mark");
       expect(await greetingMark.getAttribute("role")).toBeNull();

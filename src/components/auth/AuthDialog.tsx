@@ -211,6 +211,7 @@ export function AuthDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         aria-modal="true"
+        data-auth-step={step}
         className={cn(
           "kova-auth-surface gap-0 overflow-y-auto border-border/60 bg-card shadow-xl",
           "p-7 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:max-w-[440px] sm:p-9 sm:pb-9",
@@ -223,7 +224,7 @@ export function AuthDialog({
         }}
       >
         {/* Header */}
-        <div className="flex flex-col items-center text-center">
+        <div className="kova-auth-heading flex flex-col items-center text-center">
           <div className="mb-5 animate-in fade-in-0 duration-100">
             <NovaLogo mark className="h-11 w-11 text-foreground" />
           </div>
@@ -235,7 +236,7 @@ export function AuthDialog({
                 ? "Create your account"
                 : "Log in or sign up"}
           </DialogTitle>
-          <DialogDescription className="mt-2 max-w-[320px] text-[15px]">
+          <DialogDescription className="kova-auth-description mt-2 max-w-[320px] text-[15px]">
             {step === "magic-sent"
               ? `We asked our email provider to send a sign-in link to ${email}. Delivery can take a few minutes — check your spam folder too.`
               : "A place for your ideas, conversations, and next steps."}
@@ -243,7 +244,7 @@ export function AuthDialog({
         </div>
 
         {/* Body */}
-        <div className="mt-7 space-y-3">
+        <div className="kova-auth-body mt-7 space-y-3">
           {step === "identify" && (
             <>
               <form onSubmit={handleContinueEmail} className="space-y-3">
@@ -417,7 +418,7 @@ export function AuthDialog({
 
         {/* Footer toggle */}
         {step !== "magic-sent" && (
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="kova-auth-footer mt-6 text-center text-sm text-muted-foreground">
             {isSignUp ? (
               <>
                 Already have an account?{" "}

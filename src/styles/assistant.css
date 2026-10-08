@@ -6,8 +6,8 @@
   font-display: swap;
 }
 
-/* Main-assistant design candidate. Secondary product pages retain their current
-   design until the owner accepts this desktop/mobile direction. */
+/* Owner-approved main-assistant direction. Phone refinements stay scoped to
+   these surfaces; secondary product pages retain their current design. */
 .kova-assistant,
 .kova-auth-page,
 .kova-auth-surface {
@@ -477,6 +477,145 @@
   .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
     justify-content: flex-start;
     padding-block: 1rem !important;
+  }
+}
+
+/* Keep phone screens focused on the next action, with comfortable touch targets. */
+@media (max-width: 639px) {
+  .kova-assistant .kova-topbar {
+    min-height: calc(3.5rem + var(--safe-top));
+  }
+
+  .kova-assistant .kova-empty-chat {
+    padding-inline: max(1rem, var(--safe-left)) max(1rem, var(--safe-right));
+  }
+
+  .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
+    padding-block: 1.5rem 2rem !important;
+  }
+
+  .kova-assistant .kova-empty-chat .kova-greeting {
+    margin-bottom: 1.25rem;
+  }
+
+  .kova-assistant .kova-empty-chat .kova-greeting h1 {
+    max-width: 100%;
+    font-size: clamp(1.625rem, 7vw, 1.875rem);
+    line-height: 1.2;
+    letter-spacing: -0.04em;
+  }
+
+  .kova-assistant .kova-empty-chat .kova-greeting-mark,
+  .kova-assistant .kova-empty-chat .kova-greeting > p,
+  .kova-assistant .kova-starter-copy small,
+  .kova-assistant .kova-empty-chat .kova-starter-icon,
+  .kova-assistant .kova-guest-account-options + p {
+    display: none;
+  }
+
+  .kova-assistant .kova-empty-chat .kova-starter-grid {
+    gap: 0.5rem;
+    padding-top: 1rem;
+  }
+
+  .kova-assistant .kova-empty-chat .kova-starter-prompt:nth-child(n) {
+    min-height: 3rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem;
+    border-radius: 9999px;
+  }
+
+  .kova-assistant .kova-starter-copy strong {
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .kova-assistant .kova-sidebar-header {
+    min-height: calc(3.75rem + var(--safe-top));
+    padding: calc(0.5rem + var(--safe-top)) 1rem 0.5rem;
+  }
+
+  .kova-assistant .kova-sidebar-brand {
+    font-size: 1.125rem;
+  }
+
+  .kova-assistant .kova-sidebar .kova-nav-row {
+    min-height: 3rem !important;
+    height: 3rem;
+  }
+
+  .kova-assistant .kova-sidebar-footer {
+    padding: 0.75rem 1rem max(1rem, var(--safe-bottom));
+  }
+
+  .kova-assistant .kova-guest-account-options {
+    margin-bottom: 0.75rem;
+  }
+
+  .kova-assistant .kova-assistant-message .prose-chat {
+    line-height: 1.65;
+  }
+
+  .kova-auth-surface.kova-auth-surface {
+    padding: 1.25rem 1.25rem max(1.25rem, var(--safe-bottom));
+    border-radius: 1.25rem 1.25rem 0 0 !important;
+  }
+
+  .kova-auth-surface .kova-auth-heading {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    padding-right: 2rem;
+    text-align: left;
+  }
+
+  .kova-auth-surface .kova-auth-heading > div {
+    margin-bottom: 0;
+  }
+
+  .kova-auth-surface .kova-auth-heading .kova-logo {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .kova-auth-surface .kova-auth-heading h2 {
+    font-size: 1.375rem;
+  }
+
+  .kova-auth-surface .kova-auth-description {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+
+  .kova-auth-surface[data-auth-step="identify"] .kova-auth-description {
+    display: none;
+  }
+
+  .kova-auth-surface .kova-auth-body,
+  .kova-auth-surface .kova-auth-footer {
+    margin-top: 1.25rem;
+  }
+
+  .kova-auth-surface .kova-auth-body :is(input, button) {
+    height: 3rem;
+    min-height: 3rem;
+    font-size: 1rem;
+  }
+
+  .kova-auth-surface .kova-auth-footer button {
+    min-height: 2.75rem;
+  }
+
+  .kova-auth-page > main {
+    margin-top: 1rem;
+    padding: 1.5rem 1.25rem;
+  }
+
+  .kova-auth-page input {
+    font-size: 1rem;
   }
 }
 

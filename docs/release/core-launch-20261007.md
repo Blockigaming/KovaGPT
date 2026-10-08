@@ -1,7 +1,49 @@
 # Core launch source candidate — 7 October 2026
 
 Academy remains paused and unapproved (0/637 pages, 0/28 registered families).
-This is source preparation, not a deployed release or visual acceptance.
+This is source preparation, not a deployed release. Visual approval scope is
+recorded below.
+
+## Four-page approval and phone refinement — 8 October 2026
+
+At 07:32 EDT the owner approved the four pages in the `4a75bf50` review and
+requested a simpler phone experience. That visual approval is recorded here;
+it does not certify live runtime acceptance or authorize deployment. The new
+phone refinement is implemented in response to that instruction, while the
+approved desktop presentation remains unchanged.
+
+Phone screens use a shorter header, one greeting, compact suggestion buttons,
+larger navigation rows and a smaller login sheet. Redundant decorative copy is
+hidden only on phones; legal/privacy links, all four starter actions, provider
+status, recovery options and focus behavior remain available. Login inputs use
+16px text and 48px controls to avoid mobile input zoom and retain touch targets.
+The email-delivery confirmation remains visible; only introductory login copy
+is condensed. The exact logo and neutral theme are preserved.
+
+The previous published head's hosted unit gate found eight failures: one stale
+Files-sidebar expectation and seven renderer-fixture failures caused by the
+new shared logo dependency. Both are corrected to test the approved Library
+navigation and load the actual logo module. Model availability/entitlement
+assertions remain unchanged. Both previous CI failures stopped at this same
+unit gate; their downstream skipped checks are not counted as passes.
+
+This refinement passed 20 interaction cases across narrow/standard phones,
+phone landscape and desktop without skips. The separate visual/accessibility
+run passed 28 cases with eight existing viewport-specific exclusions and no
+failures. Both auth visual cases passed: the desktop baseline was unchanged,
+and the phone baseline was regenerated and visually inspected. The four phone
+shell baselines were also updated; existing desktop shell baselines still match.
+No pixel tolerance was increased.
+
+Typecheck, affected lint/format, 80 focused source/unit contracts, the sequential
+Node production build, bundle budgets and dependency-removal audit passed.
+Browser runs overlap and are not added together as unique coverage. Fresh-runtime
+browser/font setup failures and an intermediate locator mismatch were resolved
+before the completed runs. Hosted checks for the new published head remain a
+separate gate; local fixtures do not certify live auth/provider acceptance.
+
+The exact published source and hosted status are recorded in this update's
+review and publication receipt. The earlier evidence below remains historical.
 
 ## Owner interface corrections — 8 October 2026 UTC
 
@@ -55,8 +97,9 @@ sequential build replaces that incomplete output. Partial browser processes
 without complete result receipts are not counted as passes. Hosted exact-head
 CI remains required and is reported separately in the publication receipt.
 
-Main UI is implemented and rendered, not owner-approved. Other core pages await
-that visual decision. These are local fixtures, not staging or production
+At that prior checkpoint, the main UI was implemented and rendered but awaited
+owner approval; the four-page approval above now supersedes that visual status.
+These are local fixtures, not staging or production
 acceptance. Accepted Auth/Models runtime contracts and separate integrated staging
 authority still block signup → login → live stream → durable reopen → account
 isolation. No merge, deployment, real provider write or new paid resource was

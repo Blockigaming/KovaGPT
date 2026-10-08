@@ -20,6 +20,7 @@ function fixture({ signedIn = true, loaded = true, desktop = true } = {}) {
     ["@/lib/billing-plans", "src/lib/billing-plans.ts"],
     ["@/lib/capability-registry", "src/lib/capability-registry.ts"],
     ["@/components/ResponsiveModelSelector", "src/components/ResponsiveModelSelector.tsx"],
+    ["@/components/NovaLogo", "src/components/NovaLogo.tsx"],
   ]);
   function load(id) {
     if (id === "@/lib/core-launch-policy.mjs") return launch;
