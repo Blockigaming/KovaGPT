@@ -10,9 +10,11 @@ import {
 } from "../helpers/ui-state-harness.mjs";
 import * as storage from "../../src/lib/principal-browser-storage.mjs";
 import * as launchPolicy from "../../src/lib/core-launch-policy.mjs";
+import * as launchContracts from "../../src/integrations/launch-contracts.mjs";
 
 const catalog = loadUiModule("src/lib/connectors-catalog.ts", {
   "./core-launch-policy.mjs": launchPolicy,
+  "@/integrations/launch-contracts.mjs": launchContracts,
 });
 const owner = "11111111-1111-4111-8111-111111111111";
 function apps(status, search = "") {
