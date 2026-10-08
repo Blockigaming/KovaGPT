@@ -984,7 +984,7 @@ function ChatMessageInner({
               <button
                 type="button"
                 onClick={copy}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
+                className="kova-message-icon-action inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
                 title={copied ? "Copied" : "Copy"}
                 aria-label={copied ? "Copied" : "Copy"}
               >
@@ -999,7 +999,7 @@ function ChatMessageInner({
                 type="button"
                 onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
                 disabled={feedbackSaving || feedbackLoadFailed}
-                className={`inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
+                className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
                   feedback === "up" ? "bg-accent text-foreground" : ""
                 }`}
                 title="Good response"
@@ -1013,7 +1013,7 @@ function ChatMessageInner({
                 type="button"
                 onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
                 disabled={feedbackSaving || feedbackLoadFailed}
-                className={`inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
+                className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
                   feedback === "down" ? "bg-accent text-foreground" : ""
                 }`}
                 title="Bad response"
@@ -1027,7 +1027,7 @@ function ChatMessageInner({
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
+                  className="kova-message-icon-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
                   title={retryActionLabel}
                   aria-label={retryActionLabel}
                 >
@@ -1112,7 +1112,7 @@ function ChatMessageInner({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                    className="kova-message-icon-action inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
                     title="More actions"
                     aria-label="More actions"
                   >

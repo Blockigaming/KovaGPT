@@ -12,7 +12,7 @@ test("Apps navigation and composer connector entry are truthful and reachable", 
   const sidebar = await read("src/components/Sidebar.tsx");
   const composer = await read("src/components/ChatInput.tsx");
   const palette = await read("src/components/CommandPalette.tsx");
-  assert.match(sidebar, /navLink\("\/apps", "Plugins", Puzzle\)/);
+  assert.match(sidebar, /navLink\("\/apps", "Connections", Puzzle\)/);
   assert.match(composer, /window\.location\.href = "\/apps"/);
   assert.match(palette, /label: "Open plugins", href: "\/apps"/);
 });

@@ -53,7 +53,7 @@ test("settings navigation is centralized and routes every rendered category", ()
     "General",
     "Personalization",
     "Memory",
-    "Billing",
+    "Subscriptions",
     "Usage",
     "Email",
     "Appearance",

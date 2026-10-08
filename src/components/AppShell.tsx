@@ -211,32 +211,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div
-      className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
-      onTouchStart={(e) => {
-        const t = e.touches[0];
-        if (t && t.clientX < 24 && window.innerWidth < 1024) {
-          (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
-          (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
-        }
-      }}
-      onTouchMove={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
-        const start = el.dataset.swipeStart ? parseFloat(el.dataset.swipeStart) : NaN;
-        const startY = el.dataset.swipeY ? parseFloat(el.dataset.swipeY) : NaN;
-        if (!isNaN(start) && e.touches[0]) {
-          const dx = e.touches[0].clientX - start;
-          const dy = Math.abs(e.touches[0].clientY - startY);
-          if (dx > 60 && dy < 40) {
-            setSidebarOpen(true);
-            delete el.dataset.swipeStart;
-          }
-        }
-      }}
-      onTouchEnd={(e) => {
-        delete (e.currentTarget as HTMLDivElement).dataset.swipeStart;
-      }}
-    >
+    <div className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground">
       <Sidebar
         conversations={conversations}
         activeId={null}
@@ -255,15 +230,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
         {!sidebarOpen && (
           <button
-            onClick={() => {
+            onClick={(event) => {
+              const keyboardActivated = event.detail === 0;
               setSidebarOpen(true);
+              if (!keyboardActivated) return;
               window.requestAnimationFrame(() => {
                 document
                   .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
                   ?.focus({ preventScroll: true });
               });
             }}
-            className="kova-floating-sidebar-trigger hidden lg:flex fixed top-3 left-3 z-30 h-10 w-10 rounded-xl bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
+            className="kova-floating-sidebar-trigger kova-sidebar-toggle hidden lg:flex fixed top-3 left-3 z-30 h-10 w-10 rounded-xl transition items-center justify-center"
             aria-label="Open sidebar"
           >
             <PanelLeft className="w-4 h-4" />

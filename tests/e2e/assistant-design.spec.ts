@@ -51,7 +51,27 @@ test("assistant and login render in both themes with usable mobile navigation", 
       await expect(logo).toHaveJSProperty("naturalWidth", 1024);
     }
     await noOverflow(page);
-    await expect(page.getByText("Your space to think", { exact: true })).toBeVisible();
+    const brand = await page.locator(".kova-model-static:visible > span").evaluate((element) => ({
+      width: element.clientWidth,
+      content: element.scrollWidth,
+    }));
+    expect(brand.content).toBeLessThanOrEqual(brand.width + 1);
+    const desktop = page.viewportSize()!.width >= 1024;
+    const tagline = page.getByText("Your space to think", { exact: true });
+    if (desktop) await expect(tagline).toBeVisible();
+    else await expect(tagline).toBeHidden();
+    const signup = page.getByRole("button", {
+      name: desktop ? "Sign up for free" : "Sign up",
+      exact: true,
+    });
+    await expect(signup).toBeVisible();
+    await expect(signup).toHaveCSS("background-color", "rgb(0, 0, 0)");
+    await expect(signup).toHaveCSS("color", "rgb(255, 255, 255)");
+    const loginBox = await page.getByRole("button", { name: "Log in", exact: true }).boundingBox();
+    const signupBox = await signup.boundingBox();
+    expect(signupBox!.x).toBeGreaterThanOrEqual(loginBox!.x + loginBox!.width);
+    expect(signupBox!.x + signupBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    expect(signupBox!.height).toBeGreaterThanOrEqual(desktop ? 40 : 44);
     await expect(page.getByText("Bring a question", { exact: false })).toHaveCount(0);
     const heading = await page
       .getByRole("heading", { name: "What can I help with?" })
@@ -72,9 +92,11 @@ test("assistant and login render in both themes with usable mobile navigation", 
       await menu.click();
       await expect(page.getByRole("link", { name: "Projects", exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: "Files", exact: true })).toHaveCount(0);
-      const billing = await page.getByRole("link", { name: "Billing", exact: true }).boundingBox();
+      const subscriptions = await page
+        .getByRole("link", { name: "Subscriptions", exact: true })
+        .boundingBox();
       const login = await page.getByRole("button", { name: "Log in to KovaGPT" }).boundingBox();
-      expect(billing!.y + billing!.height).toBeLessThan(login!.y);
+      expect(subscriptions!.y + subscriptions!.height).toBeLessThan(login!.y);
       await expect(page.getByRole("button", { name: "Settings", exact: true })).toBeVisible();
       await capture(page, info, `${theme}-navigation`);
       await page.keyboard.press("Escape");
@@ -90,6 +112,11 @@ test("assistant and login render in both themes with usable mobile navigation", 
     await capture(page, info, `${theme}-login`);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeFocused();
+    await signup.click();
+    await expect(dialog.getByRole("textbox", { name: "Email address" })).toBeFocused();
+    await expect(dialog.getByRole("heading", { name: /Create/ })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(signup).toBeFocused();
     await page.goto("/auth?mode=sign-in&email=preview%40example.invalid");
     await waitForKovaHydration(page);
     await expect(page.getByRole("heading", { name: "Enter your password" })).toBeVisible();
@@ -238,3 +265,37 @@ test("provider failure stays visible and leaves the composer usable", async ({ p
   await page.getByRole("button", { name: "Send message" }).click({ trial: true });
   expect(requests).toBe(1);
 });
+
+for (const theme of ["light", "dark"] as const) {
+  test(`sent prompts use a readable ${theme} bubble`, async ({ page }, info) => {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.route("**/api/chat", (route) =>
+      route.fulfill({
+        contentType: "text/event-stream",
+        body: `data: ${JSON.stringify({ choices: [{ delta: { content: "Of course. What would you like to make?" } }] })}\n\ndata: [DONE]\n\n`,
+      }),
+    );
+    await page.route("**/api/title", (route) => route.fulfill({ json: { title: "A fresh idea" } }));
+    await page.goto("/");
+    await waitForKovaHydration(page);
+    await page
+      .getByRole("textbox", { name: "Message KovaGPT" })
+      .fill("Help me turn an idea into something real.");
+    await page.getByRole("button", { name: "Send message" }).click();
+    const bubble = page.locator(".kova-user-message");
+    await expect(bubble).toBeVisible();
+    await expect(bubble).toHaveCSS(
+      "background-color",
+      theme === "light" ? "rgb(0, 0, 0)" : "rgb(48, 48, 48)",
+    );
+    await expect(bubble).toHaveCSS(
+      "color",
+      theme === "light" ? "rgb(255, 255, 255)" : "rgb(245, 245, 245)",
+    );
+    await expect(page.locator(".kova-assistant-message")).toContainText(
+      "What would you like to make?",
+    );
+    await noOverflow(page);
+    await capture(page, info, `${theme}-sent-prompt`);
+  });
+}

@@ -6,9 +6,7 @@ export type LaunchRead = Principal & {
   cursor?: string | null;
 };
 export type LaunchRuntime = {
-  begin(
-    input: Principal & { browserNonce: string; origin: string; returnPath?: string },
-  ): Promise<{
+  begin(input: Principal & { browserNonce: string; origin: string; returnPath?: string }): Promise<{
     url: string;
     consent: { provider: string; mode: string; scopes: readonly string[] };
   }>;
@@ -22,11 +20,7 @@ export type LaunchRuntime = {
   execute(
     input: LaunchRead,
   ): Promise<{ items: unknown[]; nextCursor: string | null; contentIsUntrusted: boolean }>;
-  disconnect(input: {
-    ownerId: string;
-    connector: string;
-    accountId: string;
-  }): Promise<{
+  disconnect(input: { ownerId: string; connector: string; accountId: string }): Promise<{
     localDisconnected: boolean;
     providerRevoked: boolean;
     remoteStatus: string;

@@ -69,7 +69,7 @@
 
 .kova-assistant .kova-sidebar-header {
   min-height: calc(5rem + var(--safe-top));
-  padding: calc(1rem + var(--safe-top)) 1rem 1rem 1.5rem;
+  padding: calc(1rem + var(--safe-top)) 0.5rem 1rem 1.5rem;
 }
 
 .kova-assistant .kova-sidebar-brand {
@@ -142,7 +142,7 @@
 }
 
 .kova-assistant .kova-chat-row-main {
-  min-height: 2.75rem;
+  min-height: 2.25rem;
   font-size: 0.875rem;
 }
 
@@ -199,6 +199,14 @@
   box-shadow: none;
 }
 
+/* Signup stays black in both themes, including the shared mobile top bar. */
+:is(.kova-assistant, .kova-app-shell) .kova-auth-sign-up {
+  border: 1px solid #555555;
+  color: #ffffff;
+  background: #000000;
+  box-shadow: none;
+}
+
 .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
   flex: 1 0 auto;
   justify-content: center;
@@ -243,6 +251,14 @@
 .kova-assistant .kova-chat-input > div,
 .kova-assistant .kova-message {
   max-width: 46rem;
+}
+
+.kova-assistant .kova-message {
+  margin-inline: auto;
+}
+
+.kova-assistant .kova-conversation-scroll {
+  scrollbar-gutter: stable both-edges;
 }
 
 .kova-assistant .kova-composer {
@@ -369,10 +385,17 @@
 }
 
 .kova-assistant .kova-user-message {
-  background: var(--assistant-panel);
-  border-color: var(--assistant-line);
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
   border-radius: 1.25rem;
   box-shadow: none;
+}
+
+.dark .kova-assistant .kova-user-message {
+  background: #303030;
+  color: #f5f5f5;
+  border-color: #303030;
 }
 
 .kova-assistant .kova-assistant-message .prose-chat {
@@ -428,6 +451,15 @@
 }
 
 @media (max-width: 1023px) {
+  .kova-topbar .kova-model-static {
+    gap: 0.375rem;
+    padding-inline: 0;
+  }
+
+  .kova-assistant .kova-empty-chat .kova-greeting-mark {
+    display: none;
+  }
+
   .kova-assistant section.kova-empty-chat > .kova-empty-chat-content {
     flex: 1 0 auto;
     justify-content: center;
@@ -523,7 +555,7 @@
 
   .kova-assistant .kova-sidebar-header {
     min-height: calc(3.75rem + var(--safe-top));
-    padding: calc(0.5rem + var(--safe-top)) 1rem 0.5rem;
+    padding: calc(0.5rem + var(--safe-top)) 0.5rem 0.5rem 1rem;
   }
 
   .kova-assistant .kova-sidebar-brand {

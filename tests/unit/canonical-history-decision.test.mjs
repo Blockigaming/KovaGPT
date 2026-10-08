@@ -56,7 +56,7 @@ test("canonical inputs use the supplied source readers and work outside the chec
     if (args.includes("--dry-run")) {
       const result = JSON.parse(run.stdout);
       assert.equal(result.baselineVersions, 98);
-      assert.equal(result.canonicalHistoryProposal.expectedFinalLedgerCount, 209);
+      assert.equal(result.canonicalHistoryProposal.expectedFinalLedgerCount, 210);
       assert.equal(result.executed, false);
     }
   }
@@ -68,12 +68,12 @@ test("the decision accounts for each current source-only and remote-only version
   assert.deepEqual(decision.counts, {
     shared: 74,
     remoteOnly: 24,
-    sourceOnly: 111,
+    sourceOnly: 112,
     equivalentRemoteRows: 5,
     blockedRemoteRows: 19,
-    conditionalForwardBodies: 107,
+    conditionalForwardBodies: 108,
     conditionalRecordOnlyVersions: 4,
-    proposedFinalLedgerCount: 209,
+    proposedFinalLedgerCount: 210,
   });
   assert.deepEqual(
     decision.sourceOnly
@@ -99,6 +99,17 @@ test("the decision accounts for each current source-only and remote-only version
       .every((item) => item.reviewStatus === "blocked_requires_schema_proof"),
   );
   assert.equal(decision.status, "proposed_only_no_history_repair_or_production_action");
+});
+
+test("the launch connector body is pinned and remains blocked for production review", () => {
+  const decision = buildCanonicalHistoryDecision();
+  const entry = decision.sourceOnly.find((item) => item.version === "20261008153032");
+  assert.ok(entry);
+  assert.equal(entry.path, "supabase/migrations/20261008153032_launch_connector_runtime.sql");
+  assert.equal(entry.sha256, createHash("sha256").update(readFileSync(entry.path)).digest("hex"));
+  assert.equal(entry.proposedAction, "execute_pinned_source_body_then_record_version");
+  assert.equal(entry.reviewStatus, "blocked_pending_per_version_prestate_and_effect_review");
+  assert.equal(entry.captured98RowRehearsal, "not_rehearsed_in_historical_98_row_upgrade");
 });
 
 test("capture validation rejects historical statement drift and wrong projects", () => {
@@ -191,7 +202,7 @@ test("checked-out migration validation rejects edited and additional SQL files",
   );
 });
 
-test("the auth extension cannot rewrite the pinned 157 migrations", () => {
+test("the forward extension cannot rewrite the pinned 157 migrations or admit arbitrary launch files", () => {
   const baseline = JSON.parse(
     spawnSync("git", ["show", "5734b9e3d96224b06cdf2bc6f824078738b86ce1:release-migrations.json"], {
       cwd: ROOT,
@@ -202,6 +213,23 @@ test("the auth extension cannot rewrite the pinned 157 migrations", () => {
   const files = readdirSync("supabase/migrations");
   const readMigration = (name) => readFileSync(join(ROOT, "supabase/migrations", name));
   assert.doesNotThrow(() => validateForwardExtension(baseline, current, files, readMigration));
+  const launchName = "20261008153032_launch_connector_runtime.sql";
+  const unapprovedName = "20261008153032_launch_unreviewed.sql";
+  assert.throws(
+    () =>
+      validateForwardExtension(
+        baseline,
+        {
+          ...current,
+          migrations: current.migrations.map((entry) =>
+            entry.filename === launchName ? { ...entry, filename: unapprovedName } : entry,
+          ),
+        },
+        files.map((name) => (name === launchName ? unapprovedName : name)),
+        (name) => readMigration(name === unapprovedName ? launchName : name),
+      ),
+    /canonical_history_forward_extension_changed/u,
+  );
   assert.throws(
     () =>
       validateForwardExtension(

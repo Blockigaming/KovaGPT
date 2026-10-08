@@ -78,13 +78,13 @@ test("launch plugin search contains only the selected services and keeps unfinis
   await expect(unavailable).toHaveCount(9);
   for (const control of await unavailable.all()) await expect(control).toBeDisabled();
   await expect(page.getByRole("button", { name: "New skill", exact: true })).toHaveCount(0);
-  const search = page.getByRole("textbox", { name: "Search apps and plugins" });
+  const search = page.getByRole("textbox", { name: "Search connections" });
   await search.fill("Slack");
   await expect(entries).toHaveCount(1);
   await expect(entries).toHaveAttribute("data-plugin-id", "slack");
   await search.fill("Dropbox");
   await expect(entries).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "No matching apps or plugins" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No matching connections" })).toBeVisible();
 });
 
 test("Google account selection, refresh, disconnect and reauthorization retain the displayed account", async ({

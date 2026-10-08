@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "status": "proposed_only_no_history_repair_or_production_action",
   "targetProjectRef": "mfbycmbjygcfkrsuepxf",
-  "sourceCheckpointCommit": "3ffdde6fe80e6511ab1e2f76b405c71a2858edfd",
-  "sourceMigrationTree": "3b688ddbfaa4b91ae2a85506915a959d66f85cd9",
-  "sourceManifestSha256": "20e9d9556e501ee30322e70f4a92325ff328299c01cc8f45574eb7daf740562c",
+  "sourceCheckpointCommit": "41a25b6e39de66327707cb4ee2ff85508f381a51",
+  "sourceMigrationTree": "01ceb3f40e1a73546f13dfd5005119e9703ace86",
+  "sourceManifestSha256": "64687deb04ce5e6396b7401e5d1401c4a7d682287056349546167e5937d7eabd",
   "lineageSha256": "7dc2d49507cddcaa72bb553907a22e9c20092e8c445adda068ec2080f15e5c70",
   "historicalFixtureManifestSha256": "5ccccc2a81c1c630cfffa7eb741c1aa046a4d4fa63b55bd8f9181381e5825baa",
   "currentSupplementSha256": "79c1e9688f11e6662db306a725e5bb3480c547725073f8a141907a14b037cc51",
@@ -13,12 +13,12 @@
   "counts": {
     "shared": 74,
     "remoteOnly": 24,
-    "sourceOnly": 111,
+    "sourceOnly": 112,
     "equivalentRemoteRows": 5,
     "blockedRemoteRows": 19,
-    "conditionalForwardBodies": 107,
+    "conditionalForwardBodies": 108,
     "conditionalRecordOnlyVersions": 4,
-    "proposedFinalLedgerCount": 209
+    "proposedFinalLedgerCount": 210
   },
   "remoteOnly": [
     {
@@ -2346,6 +2346,23 @@
       "captured98RowRehearsal": "not_rehearsed_in_historical_98_row_upgrade",
       "reviewStatus": "blocked_pending_per_version_prestate_and_effect_review",
       "expectedLedgerAddition": "20260925143706"
+    },
+    {
+      "version": "20261008153032",
+      "path": "supabase/migrations/20261008153032_launch_connector_runtime.sql",
+      "sha256": "25fb40a6a18a051ec4724cf8c924957f05bde98ea7e75d16ad44a295b741fc27",
+      "linkedRemoteOnlyVersions": [],
+      "proposedAction": "execute_pinned_source_body_then_record_version",
+      "equivalentRemoteVersions": [],
+      "manifestDataBackfillFlag": true,
+      "manifestDestructiveFlag": true,
+      "requiredPrestateEvidence": "fresh_ledger_and_exact_prior_schema_data_acl_rls_function_state",
+      "requiredDataReview": "migration_specific_before_after_transformations_and_no_unintended_loss",
+      "requiredValidation": "exact_ledger_delta_and_scoped_catalog_and_synthetic_two_user_contract",
+      "requiredRecoveryGate": "verified_actual_backup_restore_and_approved_rollback",
+      "captured98RowRehearsal": "not_rehearsed_in_historical_98_row_upgrade",
+      "reviewStatus": "blocked_pending_per_version_prestate_and_effect_review",
+      "expectedLedgerAddition": "20261008153032"
     }
   ]
 }

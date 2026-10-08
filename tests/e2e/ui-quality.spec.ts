@@ -261,7 +261,8 @@ for (const theme of ["light", "dark"] as const) {
       });
       await expect(page.getByRole("button", { name: "Start with Explore a topic" })).toBeVisible();
       const greetingMark = page.locator(".kova-greeting-mark .kova-logo-mark");
-      await expect(greetingMark).toBeVisible();
+      if (page.viewportSize()!.width >= 1024) await expect(greetingMark).toBeVisible();
+      else await expect(greetingMark).toBeHidden();
       if (page.viewportSize()!.width < 640) {
         const phoneBrand = page.locator(".kova-topbar:visible img.kova-logo");
         await expect(phoneBrand).toBeVisible();
@@ -393,11 +394,10 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
     const artifactBox = await artifactAction.boundingBox();
     expect(box).not.toBeNull();
     expect(artifactBox).not.toBeNull();
-    // Chromium can report an exact 44 CSS-pixel target a few millionths below 44
-    // after device-scale rounding. Keep the WCAG target while tolerating only that noise.
+    // Allow device-scale rounding in the approved compact 32 × 40 action controls.
     const subpixelTolerance = 0.01;
-    expect(box!.width + subpixelTolerance).toBeGreaterThanOrEqual(44);
-    expect(box!.height + subpixelTolerance).toBeGreaterThanOrEqual(44);
+    expect(Math.abs(box!.width - 32)).toBeLessThanOrEqual(subpixelTolerance);
+    expect(Math.abs(box!.height - 40)).toBeLessThanOrEqual(subpixelTolerance);
     expect(artifactBox!.width).toBeGreaterThan(70);
     expect(artifactBox!.height + subpixelTolerance).toBeGreaterThanOrEqual(44);
     expect(artifactBox!.height).toBeLessThanOrEqual(48);
@@ -405,7 +405,8 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
       "nowrap",
     );
   }
-  await expect(page.locator(".kova-chat-row")).toHaveCount(0);
+  await expect(page.locator(".kova-chat-row")).toHaveCount(1);
+  await expect(page.locator(".kova-chat-row")).toContainText("Workspace quality review");
   await expect
     .poll(() =>
       page.evaluate(() =>

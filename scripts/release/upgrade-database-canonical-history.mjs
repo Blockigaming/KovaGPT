@@ -57,14 +57,14 @@ export function extendProposedCanonicalHistory(
   if (
     decision.targetProjectRef !== plan.currentHistory.projectRef ||
     decision.capturedLedgerMetadataSha256 !== plan.currentHistory.ledgerMetadataSha256 ||
-    decision.counts.conditionalForwardBodies !== 107 ||
+    decision.counts.conditionalForwardBodies !== 108 ||
     decision.counts.conditionalRecordOnlyVersions !== 4 ||
-    decision.counts.proposedFinalLedgerCount !== 209
+    decision.counts.proposedFinalLedgerCount !== 210
   )
     throw new Error("upgrade_canonical_history_inventory_mismatch");
 
   const pending = new Map(plan.forward.map((row) => [row.version, row]));
-  if (pending.size !== 111 || decision.sourceOnly.length !== 111)
+  if (pending.size !== 112 || decision.sourceOnly.length !== 112)
     throw new Error("upgrade_canonical_history_pending_mismatch");
   const recordOnly = [];
   const executionForward = [];
@@ -113,7 +113,7 @@ export function extendProposedCanonicalHistory(
   }
   if (
     pending.size ||
-    executionForward.length !== 108 ||
+    executionForward.length !== 109 ||
     JSON.stringify(recordOnly.sort()) !== JSON.stringify(RECORD_ONLY)
   )
     throw new Error("upgrade_canonical_history_action_counts_invalid");
@@ -155,7 +155,7 @@ export function extendScheduledRecordOnlyHypothesis(plan) {
   if (
     plan.canonicalHistoryProposal?.status ===
       "synthetic_revised_scheduled_proposal_pending_remote_effect_review" &&
-    plan.executionForward?.length === 107 &&
+    plan.executionForward?.length === 108 &&
     plan.recordOnlyVersions?.length === 4
   )
     return {
@@ -169,7 +169,7 @@ export function extendScheduledRecordOnlyHypothesis(plan) {
     plan.canonicalHistoryProposal?.status !==
       "synthetic_proposal_only_no_production_history_repair" ||
     plan.baseline?.length !== 98 ||
-    plan.executionForward?.length !== 108 ||
+    plan.executionForward?.length !== 109 ||
     plan.recordOnlyVersions?.length !== 3
   )
     throw new Error("upgrade_scheduled_hypothesis_plan_invalid");
@@ -192,7 +192,7 @@ export function extendScheduledRecordOnlyHypothesis(plan) {
 
   const executionForward = plan.executionForward.filter((row) => row !== scheduled[0]);
   const recordOnlyVersions = [...plan.recordOnlyVersions, scheduled[0].version].sort();
-  if (executionForward.length !== 107 || recordOnlyVersions.length !== 4)
+  if (executionForward.length !== 108 || recordOnlyVersions.length !== 4)
     throw new Error("upgrade_scheduled_hypothesis_counts_invalid");
   return {
     ...plan,
@@ -218,7 +218,7 @@ export function extendScheduledRecordOnlyHypothesis(plan) {
 
 // A disposable counterfactual: preserve the first remote ledger version but
 // replay a harmless statement in its place, then let the pinned second remote
-// body and the 107+4 source sequence run as before. This can compare final
+// body and the 108+4 source sequence run as before. This can compare final
 // scoped catalogs; it cannot prove what happened to production rows or grants.
 export const FIRST_REMOTE_NOOP = "select 1;\n";
 export function extendFirstRemoteScheduledOmission(plan) {
@@ -226,7 +226,7 @@ export function extendFirstRemoteScheduledOmission(plan) {
     plan.canonicalHistoryProposal?.status !==
       "synthetic_scheduled_record_only_hypothesis_no_production_history_repair" ||
     plan.baseline?.length !== 98 ||
-    plan.executionForward?.length !== 107 ||
+    plan.executionForward?.length !== 108 ||
     plan.recordOnlyVersions?.length !== 4
   )
     throw new Error("upgrade_first_remote_omission_plan_invalid");

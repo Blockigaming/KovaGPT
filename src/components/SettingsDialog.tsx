@@ -136,7 +136,7 @@ const TAB_GROUPS: TabGroup[] = [
       { v: "memory", label: "Memory", icon: Brain },
       {
         v: "billing",
-        label: "Billing",
+        label: "Subscriptions",
         icon: CreditCard,
         keywords: ["plan", "subscription", "payment", "invoice"],
       },

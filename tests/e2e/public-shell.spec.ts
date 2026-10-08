@@ -64,7 +64,7 @@ test("public routes share one landmark and a working skip target", async ({ page
     .getByRole("link", { name: "Pricing" })
     .click();
   await expect(page).toHaveURL(/\/pricing$/);
-  await expect(page).toHaveTitle("KovaGPT Billing");
+  await expect(page).toHaveTitle("KovaGPT Subscriptions");
   await page
     .getByRole("navigation", { name: "Footer navigation" })
     .getByRole("link", { name: "Privacy" })

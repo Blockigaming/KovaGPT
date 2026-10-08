@@ -40,7 +40,7 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
     cursor = next;
   }
 
-  assert.match(sidebar, /navLink\("\/apps", "Plugins", Puzzle\)/);
+  assert.match(sidebar, /navLink\("\/apps", "Connections", Puzzle\)/);
 });
 
 test("mobile header and sidebar controls meet touch and accessible-name contracts", () => {

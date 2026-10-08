@@ -4,6 +4,117 @@ Academy remains paused and unapproved (0/637 pages, 0/28 registered families).
 This is source preparation, not a deployed release. Visual approval scope is
 recorded below.
 
+## Owner approval and continued CI repair — 8 October 2026
+
+At 15:06 EDT the owner approved the revised interface and continuation to the
+next batch, including publication of the saved changes to PR #445. This
+supersedes the earlier pending-publication notes below. The approved sidebar
+uses 36px chat rows. The latest connector implementation and route-by-route
+E2E timeout correction are preserved while the current CI blockers are repaired.
+Approval covers source publication; no merge or deployment is performed here.
+
+The current head's connector migration raised the source count to 186. The
+canonical inventory now pins that exact committed source tree, includes its
+108 forward bodies and four conditional records, and projects 210 ledger
+versions. The 157-version baseline, captured remote history, and blocked
+production reviews are unchanged. A regression check rejects arbitrary launch
+filenames. The two connector files failing hosted formatting are formatted.
+
+Local verification: the canonical check and dry run pass; 18 canonical-history
+tests, 55 launch-connector tests, and 27 sidebar/source checks pass. TypeScript,
+targeted ESLint, changed-file formatting, and the production build/audit pass.
+The phone/desktop UI suite passes 21 cases with three mobile-only desktop skips,
+including all eight theme/font snapshot comparisons at unchanged tolerances.
+The guest conversation and compact action-size expectations match the approved
+interface. Full Docker database rehearsal requires hosted CI.
+
+## Comfortable sidebar chat height — 8 October 2026
+
+The owner found the 30px chat rows too small. Rows, title buttons and options
+buttons are now 36px tall on phone and desktop. Other navigation and response
+control spacing is preserved. This remains a local source revision.
+
+## Sidebar controls and compact response actions — 8 October 2026
+
+Search and Close now share a zero-gap group at the sidebar's right edge, with
+36px-wide controls and an 8px inset. The closed guest desktop header no longer
+shows Search. Opening and closing uses a 200ms panel transition with a 150ms
+linear content fade, reflecting the quiet fade observed in ChatGPT's guest
+sidebar. Reduced-motion preferences disable both transitions. Pointer activation
+no longer transfers keyboard focus to the opposite desktop toggle; keyboard
+activation still restores focus and its visible indicator. The floating toggle
+on secondary pages also loses its persistent border, background and shadow.
+
+Chat rows and their buttons are now 30px tall, a further 25% reduction from 40px;
+the older 36px minimum has been removed. Response icon controls use contiguous
+30px-wide desktop targets and 32px-wide phone targets, with 40px phone height.
+Labelled source and artifact controls retain their own sizing. GitHub publication
+remains pending explicit approval following the prior automatic review block.
+
+## Compact chat rows and centered conversations — 8 October 2026
+
+The guest empty-state instruction is now “Log in to view saved chats.” Sidebar
+chat rows are 40px tall instead of 53.6px, approximately one quarter shorter.
+The conversation message column now has automatic horizontal margins, correcting
+the left alignment caused by its existing 46rem maximum width. Message text and
+sent-bubble alignment within that centered column are preserved. Publication
+remains pending the previously requested explicit GitHub approval.
+
+## Sidebar Chats section — 8 October 2026
+
+The owner requested a Chats section in the middle of the sidebar. The shared
+sidebar now always shows that heading below feature navigation, including for
+guests. It lists the current principal's available conversations with pinned
+chats first, followed by recent chats. The owner's follow-up replaces the blank
+empty state with “No saved chats here.” Guests also see “Log in to access saved
+memories.” Their bottom account navigation is Subscriptions, Help, Settings, in
+that order. Help opens the existing help page. The old empty Pinned/Recents
+sections are removed. Search still reports no matches when a nonempty history
+has no matching results. Existing principal
+isolation, temporary-chat exclusion, conversation actions and footer placement
+remain intact. This change and the preceding mobile revision remain local while
+GitHub publication awaits the explicit permission required by automatic review.
+
+## Mobile signup, swipe navigation and naming — 8 October 2026
+
+The owner requested Connections instead of Plugins and Subscriptions instead of
+Billing in navigation. Those names now appear in the sidebar, settings navigation,
+page titles and relevant discovery copy. Routes, financial terminology, underlying
+identifiers and all existing permissions are preserved.
+
+The mobile header now offers Log in followed by a black Sign up button. The existing
+desktop Sign up for free button is also black. Both use the existing signup dialog;
+authentication logic is unchanged. Header spacing keeps the full brand readable at
+320px. “Your space to think” is now desktop only, explicitly superseding the earlier
+instruction to keep it on iPhone. Sent prompts are black with white text in light
+mode and gray with light text in dark mode. Centered headings, the approved icon,
+exact logo and rounded sidebar remain intact.
+
+One shared mobile gesture opens the sidebar from anywhere in the assistant or
+workspace shell after a deliberate right swipe (96px within 700ms with limited
+vertical movement). It replaces both edge-only implementations. Vertical scrolling,
+short/left swipes, interrupted or multi-touch gestures, text editing, selection,
+horizontal scrollers and modal dialogs retain their normal behavior.
+
+Local verification: 13 interaction cases passed across 320px/390px phones and
+1440px desktop; two desktop-only exclusions apply to the mobile gesture tests.
+Browser-generated touch input verifies opening from the middle of both the assistant
+and Library pages. Signup, focus return, full header text, tagline visibility and
+sent-message colors pass. The combined visual/accessibility/discovery run passed
+14 cases; a subsequent normal comparison passed all eight shell baselines. The
+79 affected unit/integration/visual contracts, typecheck, lint and Node production
+build pass. Actual phone/desktop screenshots accompany the source checkpoint.
+The auth-dialog background baselines are refreshed for the requested header,
+wording and greeting changes; dialog controls, provider guards and pixel comparison
+tolerances remain unchanged. Both isolated auth visual comparisons then passed,
+with no auth writes. Exact final results are in the publication receipt.
+
+Parent `33401a35` passed Azure Readiness, Shared UI Browser, Source Evidence and
+Sandbox Isolation; main CI was still running at reconciliation. These are parent
+results, not acceptance credit for the new head. Reduced launch scope and the
+separate live Auth/Models and integrated staging blockers remain unchanged. This
+is source publication only; no merge, deployment or live provider writes occurred.
+
 ## Nine required connector read implementations — 8 October 2026
 
 Continued from `33401a35d85edc34b1980b7f8a78317ec2b5b027`. The nine remaining

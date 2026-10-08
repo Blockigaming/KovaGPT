@@ -45,7 +45,7 @@ test("core launch presents one unified assistant without a Chat/Work mode switch
 test("core navigation exposes the real file and plugin destinations", () => {
   assert.match(sidebar, /navLink\("\/library", "Library", LibraryBig\)/);
   assert.doesNotMatch(sidebar, /navLink\("\/files"/);
-  assert.match(sidebar, /navLink\("\/apps", "Plugins", Puzzle\)/);
+  assert.match(sidebar, /navLink\("\/apps", "Connections", Puzzle\)/);
   assert.match(sidebar, /navLink\("\/projects", "Projects", Folder\)/);
 });
 test("launch navigation does not advertise deferred content or placeholder controls", () => {

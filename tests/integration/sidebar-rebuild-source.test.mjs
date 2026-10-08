@@ -12,9 +12,10 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
     'navLink("/library", "Library", LibraryBig)',
     'navLink("/projects", "Projects", Folder)',
     'navLink("/scheduled-tasks", "Scheduled tasks", Clock3)',
-    'navLink("/apps", "Plugins", Puzzle)',
-    ">Pinned</h2>",
-    ">Recents</h2>",
+    'navLink("/apps", "Connections", Puzzle)',
+    ">Chats</h2>",
+    "pinned.map(chatRow)",
+    "recents.map(chatRow)",
   ];
   let cursor = -1;
   for (const marker of ordered) {

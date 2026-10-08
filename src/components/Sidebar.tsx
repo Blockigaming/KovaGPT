@@ -1,5 +1,6 @@
 import {
   Archive,
+  CircleHelp,
   Clock3,
   Copy as CopyIcon,
   CreditCard,
@@ -58,6 +59,7 @@ export function Sidebar({
   open,
   onToggle,
   onOpenSettings,
+  onOpenHelp,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -91,6 +93,74 @@ export function Sidebar({
     select: (state) => state.location.pathname,
   });
   const isOn = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
+
+  const swipeToggleRef = useRef(onToggle);
+  useEffect(() => {
+    swipeToggleRef.current = onToggle;
+  }, [onToggle]);
+
+  useEffect(() => {
+    if (open) return;
+    let gesture: { id: number; x: number; y: number; time: number } | null = null;
+    const reset = () => {
+      gesture = null;
+    };
+    const start = (event: TouchEvent) => {
+      reset();
+      const target = event.target;
+      if (
+        !isMobileViewport() ||
+        event.touches.length !== 1 ||
+        !(target instanceof Element) ||
+        !target.closest(".kova-assistant, .kova-app-shell") ||
+        target.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+        ) ||
+        document.querySelector('[aria-modal="true"], dialog[open]') ||
+        !window.getSelection()?.isCollapsed
+      )
+        return;
+      // Native horizontal scrollers (code, tables, carousels) retain their gesture.
+      for (let element: Element | null = target; element; element = element.parentElement) {
+        if (
+          element.scrollWidth > element.clientWidth + 1 &&
+          /^(auto|scroll)$/.test(getComputedStyle(element).overflowX)
+        )
+          return;
+      }
+      const touch = event.touches[0];
+      gesture = { id: touch.identifier, x: touch.clientX, y: touch.clientY, time: event.timeStamp };
+    };
+    const move = (event: TouchEvent) => {
+      if (!gesture) return;
+      const touch = event.touches[0];
+      if (event.touches.length !== 1 || touch.identifier !== gesture.id || !isMobileViewport()) {
+        reset();
+        return;
+      }
+      const dx = touch.clientX - gesture.x;
+      const dy = Math.abs(touch.clientY - gesture.y);
+      if (event.timeStamp - gesture.time > 700 || dx < -24 || (dy > 24 && dy > Math.abs(dx))) {
+        reset();
+        return;
+      }
+      // A clear, quick right swipe can start anywhere on the page.
+      if (dx >= 96 && dy <= 48 && dx >= dy * 2) {
+        reset();
+        swipeToggleRef.current();
+      }
+    };
+    document.addEventListener("touchstart", start, { passive: true });
+    document.addEventListener("touchmove", move, { passive: true });
+    document.addEventListener("touchend", reset);
+    document.addEventListener("touchcancel", reset);
+    return () => {
+      document.removeEventListener("touchstart", start);
+      document.removeEventListener("touchmove", move);
+      document.removeEventListener("touchend", reset);
+      document.removeEventListener("touchcancel", reset);
+    };
+  }, [open]);
 
   useEffect(() => {
     const openSearch = () => {
@@ -322,8 +392,17 @@ export function Sidebar({
           <button
             ref={expandButtonRef}
             type="button"
-            onClick={onToggle}
-            className="kova-rail-button"
+            onClick={(event) => {
+              const keyboardActivated = event.detail === 0;
+              onToggle();
+              if (!keyboardActivated) return;
+              requestAnimationFrame(() =>
+                drawerRef.current
+                  ?.querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
+                  ?.focus({ preventScroll: true }),
+              );
+            }}
+            className="kova-rail-button kova-sidebar-toggle"
             aria-label="Expand sidebar"
             title="Expand sidebar"
           >
@@ -357,7 +436,12 @@ export function Sidebar({
               <Clock3 />
             </Link>
           ) : null}
-          <Link to="/apps" className="kova-rail-button" aria-label="Plugins" title="Plugins">
+          <Link
+            to="/apps"
+            className="kova-rail-button"
+            aria-label="Connections"
+            title="Connections"
+          >
             <Puzzle />
           </Link>
           <button
@@ -381,6 +465,7 @@ export function Sidebar({
         style={{ "--sidebar-expanded": `${EXPANDED_WIDTH}px` } as React.CSSProperties}
         className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 lg:w-[var(--sidebar-expanded)] ${collapsed ? "lg:!w-0" : ""} max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] ${open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"}`}
         aria-label="Primary navigation"
+        data-state={open ? "open" : "closed"}
         aria-modal={open && isMobileViewport() ? true : undefined}
         aria-hidden={collapsed ? true : undefined}
         inert={collapsed ? true : undefined}
@@ -392,39 +477,44 @@ export function Sidebar({
               <NovaLogo decorative className="h-7 w-7" />
               KovaGPT
             </span>
-            <button
-              type="button"
-              className="kova-header-button"
-              onClick={() => setSearchOpen((value) => !value)}
-              aria-label="Search chats"
-              title="Search chats"
-            >
-              <Search />
-            </button>
-            <button
-              type="button"
-              className="kova-header-button lg:hidden"
-              onClick={onToggle}
-              aria-label="Close sidebar"
-              title="Close sidebar"
-            >
-              <X />
-            </button>
-            <button
-              type="button"
-              className="kova-header-button hidden lg:flex"
-              onClick={() => {
-                onToggle();
-                requestAnimationFrame(() => {
-                  if (signedIn) expandButtonRef.current?.focus();
-                  else document.querySelector<HTMLElement>('[aria-label="Open sidebar"]')?.focus();
-                });
-              }}
-              aria-label="Collapse sidebar"
-              title="Collapse sidebar"
-            >
-              <PanelLeftClose />
-            </button>
+            <div className="kova-sidebar-header-actions">
+              <button
+                type="button"
+                className="kova-header-button flex"
+                onClick={() => setSearchOpen((value) => !value)}
+                aria-label="Search chats"
+                title="Search chats"
+              >
+                <Search />
+              </button>
+              <button
+                type="button"
+                className="kova-header-button kova-sidebar-toggle flex lg:hidden"
+                onClick={onToggle}
+                aria-label="Close sidebar"
+                title="Close sidebar"
+              >
+                <X />
+              </button>
+              <button
+                type="button"
+                className="kova-header-button kova-sidebar-toggle hidden lg:flex"
+                onClick={(event) => {
+                  const keyboardActivated = event.detail === 0;
+                  onToggle();
+                  if (!keyboardActivated) return;
+                  requestAnimationFrame(() => {
+                    if (signedIn) expandButtonRef.current?.focus();
+                    else
+                      document.querySelector<HTMLElement>('[aria-label="Open sidebar"]')?.focus();
+                  });
+                }}
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
+              >
+                <PanelLeftClose />
+              </button>
+            </div>
           </header>
 
           {searchOpen ? (
@@ -460,25 +550,25 @@ export function Sidebar({
               {navLink("/library", "Library", LibraryBig)}
               {navLink("/projects", "Projects", Folder)}
               {signedIn ? navLink("/scheduled-tasks", "Scheduled tasks", Clock3) : null}
-              {navLink("/apps", "Plugins", Puzzle)}
+              {navLink("/apps", "Connections", Puzzle)}
             </nav>
 
-            {signedIn ? (
-              <section className="kova-sidebar-history" aria-label="Chats">
-                <h2>Pinned</h2>
-                {pinned.length ? (
-                  pinned.map(chatRow)
-                ) : (
-                  <p className="kova-sidebar-empty">No pinned chats</p>
-                )}
-                <h2 className="kova-recents-heading">Recents</h2>
-                {recents.length ? (
-                  recents.map(chatRow)
-                ) : (
-                  <p className="kova-sidebar-empty">{query ? "No matches" : "No recent chats"}</p>
-                )}
-              </section>
-            ) : null}
+            <section className="kova-sidebar-history" aria-label="Chats">
+              <h2>Chats</h2>
+              {pinned.map(chatRow)}
+              {recents.map(chatRow)}
+              {conversations.length === 0 ? (
+                <p className="kova-sidebar-empty">
+                  No saved chats here.
+                  {isLoaded && !signedIn ? (
+                    <span className="mt-1 block">Log in to view saved chats.</span>
+                  ) : null}
+                </p>
+              ) : null}
+              {query && conversations.length > 0 && filtered.length === 0 ? (
+                <p className="kova-sidebar-empty">No matches</p>
+              ) : null}
+            </section>
           </div>
 
           <footer className="kova-sidebar-footer">
@@ -514,7 +604,18 @@ export function Sidebar({
             ) : isLoaded ? (
               <div className="w-full">
                 <nav className="kova-guest-account-options" aria-label="Account options">
-                  {navLink("/pricing", "Billing", CreditCard)}
+                  {navLink("/pricing", "Subscriptions", CreditCard)}
+                  <button
+                    type="button"
+                    className={navRow()}
+                    onClick={() => {
+                      closeAfterMobileNavigation();
+                      onOpenHelp();
+                    }}
+                  >
+                    {icon(CircleHelp)}
+                    <span>Help</span>
+                  </button>
                   <button
                     type="button"
                     className={navRow()}

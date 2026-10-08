@@ -96,18 +96,16 @@ export function createLaunchRuntime({
       state = random(),
       verifier = contract.pkce ? random() : null;
     const transaction = { version: 1, ownerId, sessionId, connector, verifier, redirectUri };
-    const result = await db
-      .from("integration_oauth_states")
-      .insert({
-        owner_id: ownerId,
-        provider_id: connector,
-        state_hash: digest(state),
-        nonce_hash: digest(browserNonce),
-        pkce_verifier_ciphertext: await encrypt(JSON.stringify(transaction)),
-        requested_scopes: contract.scopes,
-        return_path: safeReturn(returnPath),
-        expires_at: new Date(Date.now() + 600_000).toISOString(),
-      });
+    const result = await db.from("integration_oauth_states").insert({
+      owner_id: ownerId,
+      provider_id: connector,
+      state_hash: digest(state),
+      nonce_hash: digest(browserNonce),
+      pkce_verifier_ciphertext: await encrypt(JSON.stringify(transaction)),
+      requested_scopes: contract.scopes,
+      return_path: safeReturn(returnPath),
+      expires_at: new Date(Date.now() + 600_000).toISOString(),
+    });
     if (result.error) throw new ConnectorError("oauth_state_store_failed", 503);
     return {
       url: authorizationUrl(connector, config, { state, verifier, redirectUri }),

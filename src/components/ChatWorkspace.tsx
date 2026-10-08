@@ -22,7 +22,7 @@ import {
 } from "react";
 import { AppShell } from "@/components/AppShell";
 import { persistChatRoute } from "@/lib/chat-route-persistence";
-import { PanelLeft, Search, Share2, Download, Sliders, MoreHorizontal } from "lucide-react";
+import { PanelLeft, Share2, Download, Sliders, MoreHorizontal } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import {
   DropdownMenu,
@@ -1672,37 +1672,6 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
       <p className="sr-only" aria-live="polite">
         {streamAnnouncement}
       </p>
-      {/* Mobile edge-swipe zone: swipe right from the left edge to open the sidebar. */}
-      {!sidebarOpen && (
-        <div
-          aria-hidden="true"
-          className="lg:hidden fixed left-0 top-0 bottom-0 w-4 z-20"
-          onTouchStart={(e) => {
-            const startX = e.touches[0].clientX;
-            const startY = e.touches[0].clientY;
-            if (startX > 24) return;
-            let opened = false;
-            const onMove = (ev: TouchEvent) => {
-              const dx = ev.touches[0].clientX - startX;
-              const dy = Math.abs(ev.touches[0].clientY - startY);
-              if (!opened && dx > 40 && dy < 40) {
-                opened = true;
-                setSidebarOpen(true);
-                cleanup();
-              }
-            };
-            const cleanup = () => {
-              window.removeEventListener("touchmove", onMove);
-              window.removeEventListener("touchend", cleanup);
-              window.removeEventListener("touchcancel", cleanup);
-            };
-            window.addEventListener("touchmove", onMove, { passive: true });
-            window.addEventListener("touchend", cleanup);
-            window.addEventListener("touchcancel", cleanup);
-          }}
-        />
-      )}
-
       <Sidebar
         conversations={historyConversations}
         activeId={activeId}
@@ -1792,27 +1761,21 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
             className="flex items-center gap-1 mr-2 shrink-0"
           >
             <button
-              onClick={() => {
+              onClick={(event) => {
+                const keyboardActivated = event.detail === 0;
                 setSidebarOpen(true);
+                if (!keyboardActivated) return;
                 window.requestAnimationFrame(() => {
                   document
                     .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
                     ?.focus({ preventScroll: true });
                 });
               }}
-              className="kova-topbar-button shrink-0 rounded-xl p-2 hover:bg-accent transition"
+              className="kova-topbar-button kova-sidebar-toggle shrink-0 rounded-xl p-2 transition"
               aria-label="Open sidebar"
               title="Open sidebar"
             >
               <PanelLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={openCommandPalette}
-              className="kova-topbar-button shrink-0 rounded-xl p-2 hover:bg-accent transition"
-              aria-label="Search chats"
-              title="Search chats"
-            >
-              <Search className="w-5 h-5" />
             </button>
           </div>
 
@@ -1927,7 +1890,7 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="kova-auth-secondary h-10 whitespace-nowrap rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground hover:bg-accent active:scale-[0.98] transition">
+                  <button className="kova-auth-sign-up h-10 whitespace-nowrap rounded-full px-4 text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition">
                     Sign up for free
                   </button>
                 </SignUpButton>

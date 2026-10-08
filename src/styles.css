@@ -2289,6 +2289,19 @@ body {
   --sidebar-row-height: 3.5rem;
   --sidebar-icon-slot: 1.75rem;
   border-right: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+  transition:
+    width 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    translate 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kova-sidebar-inner {
+  opacity: 1;
+  transition: opacity 150ms linear;
+}
+
+.kova-sidebar[data-state="closed"] .kova-sidebar-inner {
+  opacity: 0;
 }
 
 .kova-sidebar-header {
@@ -2296,8 +2309,40 @@ body {
   min-height: calc(4.75rem + var(--safe-top));
   align-items: center;
   gap: 0.125rem;
-  padding: calc(1rem + var(--safe-top)) 1.25rem 0.5rem 1.75rem;
+  padding: calc(1rem + var(--safe-top)) 0.5rem 0.5rem 1.75rem;
   background: var(--sidebar);
+}
+
+.kova-sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-left: auto;
+}
+
+.kova-sidebar-header .kova-header-button {
+  min-width: 2.25rem;
+  width: 2.25rem;
+  flex-basis: 2.25rem;
+}
+
+.kova-sidebar-toggle,
+.kova-sidebar-toggle:active {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  transform: none;
+}
+
+.kova-sidebar-toggle:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-sidebar,
+  .kova-sidebar-inner {
+    transition: none !important;
+  }
 }
 
 .kova-sidebar-brand {
@@ -2542,7 +2587,7 @@ body {
 .kova-chat-row {
   position: relative;
   display: flex;
-  height: 3.35rem;
+  height: 2.25rem;
   align-items: center;
   border-radius: 0.85rem;
   transition: background-color 150ms ease;
@@ -2551,6 +2596,10 @@ body {
 .kova-chat-row:hover,
 .kova-chat-row.is-active {
   background: var(--sidebar-hover);
+}
+
+.kova-sidebar .kova-chat-row > button {
+  min-height: 2.25rem;
 }
 
 .kova-chat-row-main {
@@ -2571,7 +2620,7 @@ body {
 .kova-chat-options {
   display: flex;
   width: 2.35rem;
-  height: 2.35rem;
+  height: 2.25rem;
   flex: 0 0 2.35rem;
   align-items: center;
   justify-content: center;
@@ -3012,6 +3061,19 @@ body {
   background: var(--accent);
 }
 
+/* Keep icon actions compact without squeezing labelled source/artifact actions. */
+.kova-message-actions {
+  gap: 0 !important;
+}
+
+.kova-message-actions button.kova-message-icon-action {
+  width: 30px !important;
+  height: 32px !important;
+  min-width: 30px !important;
+  min-height: 32px !important;
+  flex: 0 0 30px !important;
+}
+
 @media (min-width: 1024px) {
   .kova-empty-chat > .kova-empty-chat-content {
     padding-bottom: clamp(1.5rem, 5vh, 3rem);
@@ -3036,6 +3098,14 @@ body {
     min-height: var(--kova-touch) !important;
     flex: 0 0 auto !important;
     white-space: nowrap;
+  }
+
+  .kova-message-actions button.kova-message-icon-action {
+    width: 32px !important;
+    height: 40px !important;
+    min-width: 32px !important;
+    min-height: 40px !important;
+    flex-basis: 32px !important;
   }
 }
 

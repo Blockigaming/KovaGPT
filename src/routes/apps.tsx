@@ -74,7 +74,7 @@ export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
     meta: [
-      { title: "KovaGPT Apps & Plugins" },
+      { title: "KovaGPT Connections" },
       {
         name: "description",
         content: "Manage KovaGPT plugin connections and check their availability.",
@@ -1350,7 +1350,7 @@ function AppsPage() {
         </Dialog>
         <WorkspacePageHeader
           icon={PanelsTopLeft}
-          title="Apps & plugins"
+          title="Connections"
           titleId="apps-title"
           description="Connect the services you want KovaGPT to use. You control permissions, and write actions still require confirmation."
         />
@@ -1363,7 +1363,7 @@ function AppsPage() {
         {!isLoaded ? (
           <section role="status" aria-labelledby="apps-loading-title" className="space-y-3">
             <h2 id="apps-loading-title" className="sr-only">
-              Loading apps and plugins
+              Loading connections
             </h2>
             <div
               aria-hidden="true"
@@ -1380,7 +1380,7 @@ function AppsPage() {
               Sign in to connect services
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-              Manage your plugin connections and see which services are available for your account.
+              Manage your connections and see which services are available for your account.
             </p>
             <SignInButton mode="modal">
               <Button className="mt-5 min-h-11">Sign in</Button>
@@ -1389,12 +1389,12 @@ function AppsPage() {
         ) : (
           <>
             <label className="relative block max-w-md">
-              <span className="sr-only">Search apps and plugins</span>
+              <span className="sr-only">Search connections</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search apps and plugins"
+                placeholder="Search connections"
                 className="h-11 pl-9"
               />
             </label>
@@ -1537,7 +1537,7 @@ function AppsPage() {
               <section className="kova-empty-state" aria-labelledby="apps-empty-title">
                 <Search className="mx-auto h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 <h2 id="apps-empty-title" className="mt-3 text-sm font-medium">
-                  No matching apps or plugins
+                  No matching connections
                 </h2>
                 <p className="mt-1 text-xs text-muted-foreground">Try another service name.</p>
                 <Button
