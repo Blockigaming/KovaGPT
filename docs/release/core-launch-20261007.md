@@ -4,6 +4,35 @@ Academy remains paused and unapproved (0/637 pages, 0/28 registered families).
 This is source preparation, not a deployed release. Visual approval scope is
 recorded below.
 
+## Rounded sidebar and approved icon — 8 October 2026
+
+The owner approved the sidebar icon and requested rounded sidebar edges before
+continuing. The sidebar and collapsed rail now have 24px upper/lower exposed
+right corners, with their contents clipped inside the outline. The attached
+screen edge stays flush. The approved icon, centered greeting, phone tagline,
+navigation, permissions and reduced launch scope remain unchanged.
+
+The four viewport interaction cases pass in both themes, including the open
+sidebar, keyboard close and focus return. Actual phone and desktop renders show
+the rounded outline. The Node production build and two visual source contracts
+pass. The shell baselines were refreshed for the approved shape; normal visual
+comparison and accessibility checks then passed all 12 cases without skips.
+
+Parent `a0207ed7` passed all integration checks, confirming the five stale
+assertions are resolved. Azure Readiness, Shared UI Browser, Source Evidence and
+Sandbox Isolation also passed. Main CI reached visual checks and failed only
+four fallback-font screenshots. The local font configuration had replaced the
+system rules when adding Liberation Sans; retaining system fontconfig defaults
+fixes the mismatch. Against the downloaded hosted captures, corrected phone
+renders have zero pixels differing by more than 16 RGB levels; desktop renders
+have only 36–37 such pixels on the sidebar's newly rounded right border. No
+comparison tolerance was increased. Future local captures must preserve the
+system font configuration when adding the Liberation Sans font directory.
+
+The exact published head and completed local/hosted results are retained in the
+publication receipt. Earlier results below remain historical; live Auth/Models
+acceptance and deployment authority are still separate.
+
 ## Centered greeting and sidebar preview — 8 October 2026
 
 The owner approved the phone refinement and requested centered greeting text,
