@@ -24,6 +24,7 @@ import {
   runGoogleTool,
   stagePendingAction,
 } from "@/lib/google-tools.server";
+import { getLaunchToolContext } from "@/integrations/launch-service.server";
 import {
   chatCompletions,
   imageGenerations,
@@ -1324,9 +1325,22 @@ export const Route = createFileRoute("/api/chat")({
                     { required: false },
                   )) ?? null)
                 : null;
+            const launchContext =
+              auth &&
+              usesExistingContext &&
+              !customKova &&
+              !hasAttachments &&
+              m.id !== "instant" &&
+              lastText.length > 0
+                ? ((await preflight.run(
+                    "launch_connector_tools",
+                    () => getLaunchToolContext(auth, request),
+                    { required: false },
+                  )) ?? null)
+                : null;
             const availableTools = customKova
               ? customKova.filterTools(googleContext?.tools ?? [])
-              : (googleContext?.tools ?? []);
+              : [...(googleContext?.tools ?? []), ...(launchContext?.tools ?? [])];
             const googleBinding = googleContext?.binding ?? undefined;
             const enableTools = availableTools.length > 0;
 
@@ -1720,7 +1734,10 @@ export const Route = createFileRoute("/api/chat")({
                     } catch {
                       /* keep empty */
                     }
-                    const activityLabel = TOOL_ACTIVITY[tc.function.name]?.done ?? tc.function.name;
+                    const activityLabel =
+                      TOOL_ACTIVITY[tc.function.name]?.done ??
+                      launchContext?.labels[tc.function.name] ??
+                      tc.function.name;
                     activityEvents.push({
                       tool: tc.function.name,
                       label: activityLabel,
@@ -1729,7 +1746,7 @@ export const Route = createFileRoute("/api/chat")({
                     // Dedup identical (name+args) within this request.
                     const key = dedupKey(tc.function.name, parsedArgs);
                     const cached = dedupCache.get(key);
-                    if (cached) {
+                    if (cached && !launchContext?.hasTool(tc.function.name)) {
                       return {
                         role: "tool",
                         tool_call_id: tc.id,
@@ -1770,12 +1787,14 @@ export const Route = createFileRoute("/api/chat")({
                       }
                     }
                     try {
-                      const out = await runGoogleTool(
-                        auth!.userId,
-                        tc.function.name,
-                        parsedArgs,
-                        googleBinding,
-                      );
+                      const out = launchContext?.hasTool(tc.function.name)
+                        ? await launchContext.execute(tc.function.name, parsedArgs)
+                        : await runGoogleTool(
+                            auth!.userId,
+                            tc.function.name,
+                            parsedArgs,
+                            googleBinding,
+                          );
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };

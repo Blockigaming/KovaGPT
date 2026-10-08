@@ -204,6 +204,7 @@ import { Route as ApiAuthRecoveryResetRouteImport } from './routes/api/auth/reco
 import { Route as ApiAuthSessionsRevokeOthersRouteImport } from './routes/api/auth/sessions/revoke-others'
 import { Route as ApiAuthVerifyResendRouteImport } from './routes/api/auth/verify/resend'
 import { Route as ApiDeveloperPaymentsWebhookRouteImport } from './routes/api/developer/payments/webhook'
+import { Route as ApiIntegrationsLaunchConnectorRouteImport } from './routes/api/integrations/launch/$connector'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -1215,6 +1216,12 @@ const ApiDeveloperPaymentsWebhookRoute =
     path: '/api/developer/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiIntegrationsLaunchConnectorRoute =
+  ApiIntegrationsLaunchConnectorRouteImport.update({
+    id: '/api/integrations/launch/$connector',
+    path: '/api/integrations/launch/$connector',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiIntegrationsOauthDisconnectRoute =
   ApiIntegrationsOauthDisconnectRouteImport.update({
     id: '/api/integrations/oauth/disconnect',
@@ -1488,6 +1495,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
+  '/api/integrations/launch/$connector': typeof ApiIntegrationsLaunchConnectorRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1698,6 +1706,7 @@ export interface FileRoutesByTo {
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
+  '/api/integrations/launch/$connector': typeof ApiIntegrationsLaunchConnectorRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1909,6 +1918,7 @@ export interface FileRoutesById {
   '/api/auth/sessions/revoke-others': typeof ApiAuthSessionsRevokeOthersRoute
   '/api/auth/verify/resend': typeof ApiAuthVerifyResendRoute
   '/api/developer/payments/webhook': typeof ApiDeveloperPaymentsWebhookRoute
+  '/api/integrations/launch/$connector': typeof ApiIntegrationsLaunchConnectorRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -2121,6 +2131,7 @@ export interface FileRouteTypes {
     | '/api/auth/sessions/revoke-others'
     | '/api/auth/verify/resend'
     | '/api/developer/payments/webhook'
+    | '/api/integrations/launch/$connector'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -2331,6 +2342,7 @@ export interface FileRouteTypes {
     | '/api/auth/sessions/revoke-others'
     | '/api/auth/verify/resend'
     | '/api/developer/payments/webhook'
+    | '/api/integrations/launch/$connector'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -2541,6 +2553,7 @@ export interface FileRouteTypes {
     | '/api/auth/sessions/revoke-others'
     | '/api/auth/verify/resend'
     | '/api/developer/payments/webhook'
+    | '/api/integrations/launch/$connector'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
     | '/api/public/payments/webhook'
@@ -2743,6 +2756,7 @@ export interface RootRouteChildren {
   ApiAuthRecoveryResetRoute: typeof ApiAuthRecoveryResetRoute
   ApiAuthSessionsRevokeOthersRoute: typeof ApiAuthSessionsRevokeOthersRoute
   ApiDeveloperPaymentsWebhookRoute: typeof ApiDeveloperPaymentsWebhookRoute
+  ApiIntegrationsLaunchConnectorRoute: typeof ApiIntegrationsLaunchConnectorRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -4125,6 +4139,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDeveloperPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/integrations/launch/$connector': {
+      id: '/api/integrations/launch/$connector'
+      path: '/api/integrations/launch/$connector'
+      fullPath: '/api/integrations/launch/$connector'
+      preLoaderRoute: typeof ApiIntegrationsLaunchConnectorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/integrations/oauth/disconnect': {
       id: '/api/integrations/oauth/disconnect'
       path: '/api/integrations/oauth/disconnect'
@@ -4515,6 +4536,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthRecoveryResetRoute: ApiAuthRecoveryResetRoute,
   ApiAuthSessionsRevokeOthersRoute: ApiAuthSessionsRevokeOthersRoute,
   ApiDeveloperPaymentsWebhookRoute: ApiDeveloperPaymentsWebhookRoute,
+  ApiIntegrationsLaunchConnectorRoute: ApiIntegrationsLaunchConnectorRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,

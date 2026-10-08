@@ -1,3 +1,4 @@
+import { isLaunchConnector } from "@/integrations/launch-contracts.mjs";
 import { LAUNCH_PLUGIN_IDS } from "./core-launch-policy.mjs";
 export { LAUNCH_PLUGIN_IDS } from "./core-launch-policy.mjs";
 
@@ -3007,6 +3008,8 @@ export function connectorUnavailableLabel(item: ConnectorItem): string {
 
 /** Longer explanation, used for tooltips and screen-reader descriptions. */
 export function connectorUnavailableReason(item: ConnectorItem): string {
+  if (isLaunchConnector(item.id))
+    return `${item.label} connections are not available until its connection and read operations have been verified.`;
   if (item.status === "setup_required") {
     return `${item.label} is implemented but availability must be confirmed by this deployment before you connect.`;
   }

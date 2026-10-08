@@ -3,6 +3,8 @@ import { decryptCredential, encryptCredential, sha256 } from "./credential-vault
 import { OAUTH_PROVIDERS, type OAuthProviderId } from "./oauth-providers.server";
 import { normalizeOAuthReturnPath } from "@/lib/oauth-security.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
+import { isLaunchConnector } from "./launch-contracts.mjs";
+import { launchConnectorService } from "./launch-service.server";
 
 const admin = () =>
   createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -23,6 +25,9 @@ export async function beginOAuth(input: {
   optionalScopes?: string[];
   returnPath?: string;
 }) {
+  // Legacy generic OAuth must not bypass the per-service certification gate.
+  if (input.providerId === "microsoft" || isLaunchConnector(input.providerId))
+    throw new Error("connector_not_certified");
   await assertLockdownAllows(admin(), input.ownerId, "connector_write");
   const provider = OAUTH_PROVIDERS[input.providerId];
   const clientId = process.env[provider.clientIdEnv];
@@ -88,6 +93,8 @@ export async function completeOAuth(input: {
   request: Request;
   browserNonce: string;
 }) {
+  if (input.providerId === "microsoft" || isLaunchConnector(input.providerId))
+    throw new Error("connector_not_certified");
   const provider = OAUTH_PROVIDERS[input.providerId];
   const db = admin();
   const { data: record } = await db
@@ -205,6 +212,12 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     .eq("owner_id", ownerId)
     .maybeSingle();
   if (!account) throw new Error("linked_account_not_found");
+  if (isLaunchConnector(account.provider_id))
+    return launchConnectorService().disconnect({
+      ownerId,
+      connector: account.provider_id,
+      accountId,
+    });
   const provider = OAUTH_PROVIDERS[account.provider_id as OAuthProviderId];
   if (!provider) throw new Error("unsupported_linked_account_provider");
   const clientId = process.env[provider.clientIdEnv];

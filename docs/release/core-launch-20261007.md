@@ -4,6 +4,40 @@ Academy remains paused and unapproved (0/637 pages, 0/28 registered families).
 This is source preparation, not a deployed release. Visual approval scope is
 recorded below.
 
+## Nine required connector read implementations — 8 October 2026
+
+Continued from `33401a35d85edc34b1980b7f8a78317ec2b5b027`. The nine remaining
+required plugins now have read-only provider adapters, shared OAuth contracts,
+and a server runtime: Outlook, OneDrive, SharePoint, Microsoft Teams, Notion,
+Linear, Slack, Salesforce and HubSpot. There are 19 real read operations. The
+four existing Google/GitHub integrations and exact 13-plugin scope remain.
+
+The implementation reuses the vault and connector tables, adds single-use
+owner/session-bound consent, identity/scope-checked refresh, encrypted pagination,
+and local-first disconnect with SQL guards against credential resurrection.
+The source-only migration removes browser reads of credential ciphertext and
+limits new invoker RPCs to the service role. It has not been applied live.
+The assistant tool loop is wired, but the certification allowlist is empty.
+
+Verification: 138 focused checks passed, including 55 new provider/runtime/HTTP/tool
+cases. SQL lifecycle and privilege tests execute the actual migration in PGlite
+with two owners. Typecheck, affected lint, migration/schema/database-reference
+checks, the Node production build (`KOVA_BROWSER_PREVIEW=node`), and its built
+artifact audit passed. These are synthetic source checks, not live provider
+operational evidence.
+
+**Not launch-ready:** every new provider's live checks remain NOT RUN. This first
+version requires Kova-owned cookie sessions and supports reads only; file tools
+return metadata, not bytes. Apps-page connection/management and custom-Kova policy
+mapping still need acceptance. Microsoft and HubSpot remote cleanup is explicitly
+manual/unconfirmed; no broad account sign-out or portal uninstall is performed.
+See [the implementation/certification record](../integrations/launch-nine.md) for
+operations, permissions, official references and remaining requirements.
+
+Source publication only: no merge, deployment, live provider action, credential
+disclosure, or paid-resource activation. Earlier results below are historical
+and are not upgraded by these source changes.
+
 ## Rounded sidebar and approved icon — 8 October 2026
 
 The owner approved the sidebar icon and requested rounded sidebar edges before
