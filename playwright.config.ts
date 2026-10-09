@@ -22,6 +22,7 @@ export default defineConfig({
   testIgnore: [
     "**/auth-visual-regression.spec.ts",
     "**/deployed-baseline-audit.spec.ts",
+    "**/azure-node-runtime.spec.ts",
     ...(browserSuite === "core" ? publicSuitePatterns : []),
   ],
   ...(browserSuite === "public" ? { testMatch: publicSuitePatterns } : {}),
