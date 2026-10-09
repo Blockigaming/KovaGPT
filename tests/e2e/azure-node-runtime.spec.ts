@@ -75,6 +75,37 @@ test("home hydrates and serves its scripts and styles from the Node origin", asy
   expect(failures).toEqual([]);
 });
 
+test("public catalog loads on navigation while missing public pages remain unavailable", async ({
+  page,
+}) => {
+  const catalogRequests: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (/\/assets\/public-content-[^/]+\.js$/u.test(path)) catalogRequests.push(path);
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  expect(catalogRequests).toEqual([]);
+
+  await page.goto("/privacy", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await page
+    .getByRole("navigation", { name: "Public navigation", exact: true })
+    .getByRole("link", { name: "Features", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/features$/u);
+  await expect(page).toHaveTitle("KovaGPT features | KovaGPT");
+  await expect(page.getByRole("heading", { name: "KovaGPT features", exact: true })).toBeVisible();
+  expect(catalogRequests.length).toBeGreaterThan(0);
+
+  const missing = await page.goto("/azure-missing-public-page", { waitUntil: "domcontentloaded" });
+  expect(missing?.status()).toBe(404);
+  await waitForKovaHydration(page);
+  await expect(
+    page.getByRole("heading", { name: "We couldn't find that page", exact: true }),
+  ).toBeVisible();
+});
+
 test("hosted-auth integration opens and validates the existing password flow without sending credentials", async ({
   page,
 }) => {
