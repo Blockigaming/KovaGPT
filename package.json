@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "node scripts/clean-build.mjs && vite build && node work-runner/build.mjs && npm run release:zero-lovable:built",
-    "build:dev": "node scripts/clean-build.mjs && vite build --mode development && node work-runner/build.mjs && npm run release:zero-lovable:built",
+    "build": "node scripts/clean-build.mjs && node --max-old-space-size=3072 node_modules/vite/bin/vite.js build && node work-runner/build.mjs && npm run release:zero-lovable:built",
+    "build:dev": "node scripts/clean-build.mjs && node --max-old-space-size=3072 node_modules/vite/bin/vite.js build --mode development && node work-runner/build.mjs && npm run release:zero-lovable:built",
+    "build:azure": "KOVA_BROWSER_PREVIEW=node npm run build",
+    "test:azure:local": "playwright test --config=playwright.azure.config.ts",
     "preview": "vite preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -157,7 +159,7 @@
     "react-resizable-panels": "^4.6.5",
     "recharts": "^2.15.4",
     "remark-gfm": "^4.0.1",
-    "seroval": "^1.5.6",
+    "seroval": "1.6.3",
     "sonner": "^2.0.7",
     "srvx": "^0.11.22",
     "stripe": "22.6.0",
@@ -192,14 +194,14 @@
     "overrides": {
       "entities": "4.5.0",
       "js-yaml": "4.3.2",
-      "sharp": "0.35.4"
+      "sharp": "0.35.5"
     }
   },
   "overrides": {
     "nanoid": "3.3.18",
-    "undici": "8.9.0",
-    "fast-uri": "3.1.7",
+    "undici": "8.10.2",
+    "fast-uri": "3.1.8",
     "js-yaml": "4.3.2",
-    "sharp": "0.35.4"
+    "sharp": "0.35.5"
   }
 }

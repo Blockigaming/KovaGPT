@@ -1,5 +1,4 @@
 import { createFileRoute, notFound, Link, redirect } from "@tanstack/react-router";
-import { PUBLIC_PAGE_BY_SLUG } from "@/lib/public-content";
 import { PUBLICATIONS, PUBLICATION_SECTIONS } from "@/lib/publications";
 import { PublicPageView, PublicSite } from "@/components/public/PublicSite";
 import { ProductOverview } from "@/components/public/ProductOverview";
@@ -256,6 +255,7 @@ export const Route = createFileRoute("/$slug")({
         locale,
         copy: translations[locale],
       };
+    const { PUBLIC_PAGE_BY_SLUG } = await import("@/lib/public-content");
     let item = PUBLIC_PAGE_BY_SLUG.get(params.slug);
     if (!item) {
       const { EXPANDED_PUBLIC_PAGE_BY_SLUG } = await import("@/lib/public-content-expanded");

@@ -85,6 +85,14 @@ export async function passwordAccount(
   return { ...session, credential, token, digest: digest(token) };
 }
 
+// HTTP and Site integration fixtures execute real Date/SQL now(). Their sessions
+// must use the same clock. Historical SQL tests keep passwordAccount's fixed clock.
+export function livePasswordAccount(db, options = {}) {
+  const at = options.at ?? new Date().toISOString();
+  const expiresAt = options.expiresAt ?? new Date(Date.parse(at) + 10 * 86400000).toISOString();
+  return passwordAccount(db, { ...options, at, expiresAt });
+}
+
 export async function pendingFactor(db, token = "session", at = now) {
   const credential = (
     await db.query(
@@ -131,4 +139,10 @@ export async function enableMfa(
     ])
   ).rows[0];
   return { ...session, factorId, token: next, digest: digest(next) };
+}
+
+// Use the real clock only for HTTP tests; SQL time-travel fixtures stay deterministic.
+export function liveEnableMfa(db, token = "session", next = "mfa-session") {
+  const at = new Date().toISOString();
+  return enableMfa(db, token, next, at, new Date(Date.parse(at) + 10 * 86400000).toISOString());
 }

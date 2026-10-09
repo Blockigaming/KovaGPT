@@ -23,15 +23,19 @@ function evaluateGeneralConfig(source, suite) {
 }
 
 test("the general Playwright matrix excludes dedicated QA specs", async () => {
-  const [generalConfig, authVisualConfig, deployedAuditConfig] = await Promise.all([
-    readRootFile("playwright.config.ts"),
-    readRootFile("playwright.auth-visual.config.ts"),
-    readRootFile("playwright.deployed-audit.config.ts"),
-  ]);
+  const [generalConfig, authVisualConfig, deployedAuditConfig, azureConfig, azureWorkflow] =
+    await Promise.all([
+      readRootFile("playwright.config.ts"),
+      readRootFile("playwright.auth-visual.config.ts"),
+      readRootFile("playwright.deployed-audit.config.ts"),
+      readRootFile("playwright.azure.config.ts"),
+      readRootFile(".github/workflows/azure-container-ci.yml"),
+    ]);
 
   const dedicatedSpecs = [
     "**/auth-visual-regression.spec.ts",
     "**/deployed-baseline-audit.spec.ts",
+    "**/azure-node-runtime.spec.ts",
   ];
   const publicSpecs = [
     "**/public-surface-matrix.spec.ts",
@@ -40,7 +44,7 @@ test("the general Playwright matrix excludes dedicated QA specs", async () => {
     "**/translation-family.spec.ts",
   ];
   // Check the evaluated exclusions, not the spelling of a literal array. The
-  // core suite may omit only the public specs exercised by its dedicated jobs.
+  // core suite additionally omits public specs exercised by its dedicated jobs.
   for (const suite of [undefined, "all", "core", "public"]) {
     const config = evaluateGeneralConfig(generalConfig, suite);
     assert.deepEqual(
@@ -56,6 +60,12 @@ test("the general Playwright matrix excludes dedicated QA specs", async () => {
   assert.match(authVisualConfig, /testMatch:\s*"auth-visual-regression\.spec\.ts"/u);
   assert.match(deployedAuditConfig, /testMatch:\s*"deployed-baseline-audit\.spec\.ts"/u);
   assert.match(deployedAuditConfig, /timeout:\s*90_000/u);
+  const azure = evaluateGeneralConfig(azureConfig);
+  assert.equal(azure.testDir, "./tests/e2e");
+  assert.equal(azure.testMatch, "azure-node-runtime.spec.ts");
+  assert.equal(azure.use.baseURL, "http://127.0.0.1:4189");
+  assert.equal(azure.webServer.reuseExistingServer, false);
+  assert.match(azureWorkflow, /run: npm run test:azure:local/u);
 });
 
 test("visual evidence contains screenshots rendered by the candidate", async () => {
