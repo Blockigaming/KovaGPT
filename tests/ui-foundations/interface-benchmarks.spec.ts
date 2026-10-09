@@ -37,7 +37,9 @@ for (const width of [390, 1440]) {
         await expect(page.locator("#main-content")).toBeFocused();
         await menu.click();
         await mobileNavigation.getByRole("link", { name: "Pricing", exact: true }).click();
-        await expect(menu).toHaveAttribute("aria-expanded", "false");
+        // Pricing uses the compact core header, so the public menu is removed.
+        await expect(menu).toHaveCount(0);
+        await expect(mobileNavigation).toHaveCount(0);
       } else {
         await page
           .locator(".public-plan-band")
@@ -50,26 +52,31 @@ for (const width of [390, 1440]) {
         "aria-current",
         "page",
       );
-      if (width < 1024) {
-        const menu = page.locator('button[aria-controls="public-mobile-navigation"]');
-        const mobileNavigation = page.locator("#public-mobile-navigation");
-        await menu.click();
-        await mobileNavigation.getByRole("link", { name: "Pricing", exact: true }).click();
-        await expect(menu).toHaveAttribute("aria-expanded", "false");
-        await expect(page.locator("#main-content")).toBeFocused();
-        await menu.click();
-        const about = mobileNavigation.getByRole("link", { name: "About", exact: true });
-        await about.focus();
-        await expect(about).toBeFocused();
-        await page.keyboard.press("Enter");
-        await expect(menu).toHaveAttribute("aria-expanded", "false");
-      } else {
-        const overview = page.getByRole("link", { name: "Overview", exact: true });
-        await overview.focus();
-        await expect(overview).toBeFocused();
-        await page.keyboard.press("Enter");
-      }
+      const coreNavigation = page.getByRole("navigation", {
+        name: "Account and help navigation",
+      });
+      const plans = coreNavigation.getByRole("link", { name: "Plans", exact: true });
+      await expect(plans).toHaveAttribute("aria-current", "page");
+      await plans.focus();
+      await expect(plans).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("region", { name: "Plan comparison" })).toBeVisible();
+      await expect(page.locator("#main-content")).toBeFocused();
+      const help = coreNavigation.getByRole("link", { name: "Help", exact: true });
+      await help.focus();
+      await page.keyboard.press("Enter");
+      await expect(dialog).toContainText("You selected /help");
+      await page.keyboard.press("Escape");
+      await expect(dialog).not.toBeVisible();
+      await expect(help).toBeFocused();
+      const overview = page
+        .getByRole("navigation", { name: "Preview navigation" })
+        .getByRole("link", { name: "Back to overview", exact: true });
+      await overview.focus();
+      await expect(overview).toBeFocused();
+      await page.keyboard.press("Enter");
       await expect(hero).toBeVisible();
+      await expect(page.locator("#main-content")).toBeFocused();
       await expect(page.locator('a[href="/overview"]').first()).toHaveAttribute(
         "aria-current",
         "page",

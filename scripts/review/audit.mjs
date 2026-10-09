@@ -25,6 +25,7 @@ const launchBrowser = () =>
 const failures = [],
   cases = [],
   screenshots = [],
+  mobileHeaderTargets = [],
   pageErrors = [],
   externalRequests = [];
 const filter = process.env.KOVA_REVIEW_ROUTES?.split(",");
@@ -107,6 +108,21 @@ async function ensureSidebar(frame) {
       .first()
       .click();
   await expect(sidebar).toHaveAttribute("data-state", "open");
+}
+async function mobileHeaderChecks(frame, item) {
+  if (item.width >= 768) return;
+  await ensureSidebar(frame);
+  const sidebar = frame.locator(".kova-sidebar");
+  for (const name of ["Search chats", "Close sidebar"]) {
+    const button = sidebar.getByRole("button", { name, exact: true });
+    await expect(button).toBeVisible();
+    const bounds = await button.boundingBox();
+    expect(bounds.width).toBeGreaterThanOrEqual(44);
+    expect(bounds.height).toBeGreaterThanOrEqual(44);
+    mobileHeaderTargets.push({ case: item.name, name, width: bounds.width, height: bounds.height });
+  }
+  await sidebar.getByRole("button", { name: "Close sidebar", exact: true }).click();
+  await expect(sidebar).toHaveAttribute("data-state", "closed");
 }
 async function checkSwitch(frame) {
   const item = frame.getByRole("switch").first();
@@ -290,6 +306,7 @@ for (const item of matrix) {
       .toBe(item.theme === "dark");
     if (!filter) {
       await composerChecks(page, frame, item);
+      await mobileHeaderChecks(frame, item);
       if (item.populated) {
         await populatedChatChecks(page, frame, item);
         await navigate(page, frame, "/");
@@ -407,6 +424,7 @@ const report = {
   failures,
   pageErrors,
   externalRequests,
+  mobileHeaderTargets,
   screenshotCount: screenshots.length,
   limitations: [
     "Synthetic offline data; live providers, auth, billing, AI, camera hardware and Safari not certified.",

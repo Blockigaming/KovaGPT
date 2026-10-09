@@ -37,8 +37,8 @@ for (const route of ["/", "/library"]) {
     await page.getByRole("button", { name: "Open menu" }).focus();
     await swipe(page, 130, 8);
     await expect(close).toBeVisible();
-    await expect(page.getByRole("link", { name: "Connections", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Subscriptions", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Plugins", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Plans", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(close).toBeHidden();
     await expect(page.getByRole("button", { name: "Open menu" })).toBeFocused();
