@@ -1,0 +1,147 @@
+/* Shared core surfaces: neutral typography, balanced rhythm, clear controls. */
+:root {
+  color-scheme: light;
+}
+
+.kova-app-shell {
+  --assistant-accent: #171717;
+  --assistant-accent-ink: #ffffff;
+  --assistant-canvas: #ffffff;
+  --assistant-panel: #f7f7f7;
+  --assistant-card: #ffffff;
+  --assistant-line: #dedede;
+  --assistant-muted: #666666;
+  --assistant-focus: #404040;
+  --primary: var(--assistant-accent);
+  --primary-foreground: var(--assistant-accent-ink);
+  --ring: var(--assistant-focus);
+  --sidebar: var(--assistant-panel);
+  font-family:
+    "Kova DM Sans",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.dark .kova-app-shell {
+  --assistant-accent: #ffffff;
+  --assistant-accent-ink: #171717;
+  --assistant-canvas: #171717;
+  --assistant-panel: #111111;
+  --assistant-card: #242424;
+  --assistant-line: #3b3b3b;
+  --assistant-muted: #aaaaaa;
+  --assistant-focus: #d4d4d4;
+}
+
+.kova-assistant .kova-chat-main,
+.kova-app-shell > .kova-shell-main {
+  min-width: 0;
+  background: var(--assistant-canvas);
+}
+
+.kova-assistant .kova-empty-chat .kova-greeting h1 {
+  color: var(--foreground);
+  font-size: clamp(1.75rem, 2.7vw, 2.25rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.25;
+}
+
+.kova-assistant .kova-empty-chat .kova-greeting {
+  margin-bottom: 1.5rem;
+}
+
+.kova-assistant .kova-empty-chat .kova-starter-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  padding-top: 1.25rem;
+}
+
+.kova-assistant .kova-empty-chat .kova-starter-prompt:nth-child(n) {
+  min-height: 2.5rem;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.kova-assistant .kova-starter-copy small {
+  display: none;
+}
+
+.kova-assistant .kova-empty-chat .kova-starter-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-basis: 1rem;
+}
+
+.kova-assistant .kova-starter-copy strong {
+  font-weight: 450;
+}
+
+.kova-assistant .kova-message-actions button:not(.kova-message-icon-action) {
+  width: auto !important;
+  height: auto !important;
+  min-height: 2rem;
+  flex: 0 0 auto !important;
+  padding-inline: 0.5rem !important;
+  white-space: nowrap;
+}
+
+.kova-assistant .kova-message-actions {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.kova-assistant .kova-temporary-banner {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.kova-temporary-banner details {
+  min-width: 0;
+  flex: 1 1 15rem;
+}
+
+.kova-temporary-banner summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.kova-temporary-banner details p {
+  margin: 0.5rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 639px) {
+  .kova-assistant .kova-empty-chat .kova-starter-prompt:nth-child(n) {
+    min-height: 2.75rem;
+    padding-inline: 0.75rem;
+  }
+  .kova-assistant .kova-starter-copy strong {
+    font-size: 0.75rem;
+  }
+  .kova-assistant .kova-empty-chat .kova-greeting-mark {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :is(.kova-app-shell, .kova-assistant) :is(.kova-topbar, .kova-composer-menu) {
+    background: var(--background) !important;
+    backdrop-filter: none !important;
+  }
+}

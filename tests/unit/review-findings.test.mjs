@@ -141,7 +141,7 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
     /scheduled_task_runtime_ready/,
   );
   assert.match(route, /Scheduled Tasks Status/);
-  assert.match(route, /Upgrading will not enable scheduled/);
+  assert.match(route, /Upgrading your plan won.t change this availability/);
   assert.doesNotMatch(route, /Schedule KovaGPT to do something for you later/);
   assert.match(sidebar, /Scheduled tasks/);
   assert.match(palette, /Scheduled Tasks status/);

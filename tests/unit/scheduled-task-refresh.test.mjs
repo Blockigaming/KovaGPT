@@ -61,9 +61,15 @@ function fixture({ signedIn = true } = {}) {
     "src/routes/scheduled-tasks.tsx",
     {
       react: hooks.react,
-      "@tanstack/react-router": { createFileRoute: () => (options) => options, Link: "Link" },
+      "@tanstack/react-router": {
+        createFileRoute: () => (options) => ({ ...options, useSearch: () => ({}) }),
+        Link: "Link",
+      },
       "@tanstack/react-start": { useServerFn: (fn) => fn },
-      "@/components/auth/ClerkSafe": { useUser: () => auth },
+      "@/components/auth/ClerkSafe": { useUser: () => auth, SignInButton: "SignInButton" },
+      "@/components/ConfirmActionDialog": { ConfirmActionDialog: "ConfirmActionDialog" },
+      "@/components/WorkspacePageHeader": { WorkspacePageHeader: "WorkspacePageHeader" },
+      "@/lib/core-launch-policy.mjs": { CORE_LAUNCH_ADVANCED_WORKFLOWS: false },
       "@/components/AppShell": { AppShell: "AppShell" },
       "@/lib/scheduled-tasks.functions": server,
       "lucide-react": new Proxy({}, { get: (_, name) => String(name) }),
@@ -180,11 +186,15 @@ test("a pre-delete read cannot resurrect a removed task and polling pauses durin
   const f = fixture();
   const tree = await f.ready();
   f.tick();
-  const deletion = f.button(tree, "Delete").props.onClick();
+  f.button(tree, "Delete").props.onClick();
+  assert.equal(f.writes.length, 0, "opening the dialog must not delete the task");
+  const confirmation = elements(f.render(), (node) => node.type === "ConfirmActionDialog")[0];
+  assert.equal(confirmation.props.open, true);
+  confirmation.props.onConfirm();
   f.tick();
   assert.equal(f.reads.length, 2);
   f.writes[0].resolve();
-  await deletion;
+  await settle();
   f.reads[1].resolve([{ ...task }]);
   await settle();
   assert.doesNotMatch(text(f.render()), /Morning summary/);
@@ -207,15 +217,30 @@ test("account changes discard in-flight task results and refresh only the new ow
   f.hooks.unmount();
 });
 
+test("cancelling task deletion keeps the task and sends no mutation", async () => {
+  const f = fixture();
+  const tree = await f.ready();
+  f.button(tree, "Delete").props.onClick();
+  const confirmation = elements(f.render(), (node) => node.type === "ConfirmActionDialog")[0];
+  assert.equal(confirmation.props.open, true);
+  confirmation.props.onOpenChange(false);
+  const current = f.render();
+  assert.equal(
+    elements(current, (node) => node.type === "ConfirmActionDialog")[0].props.open,
+    false,
+  );
+  assert.match(text(current), /Morning summary/);
+  assert.equal(f.writes.length, 0);
+  f.hooks.unmount();
+});
+
 test("the signed-out task action opens the actual sign-in entry", async () => {
   const f = fixture({ signedIn: false });
   f.render();
   await settle();
-  const action = elements(
-    f.render(),
-    (node) => node.type === "a" && text(node).trim() === "Go to sign in",
-  )[0];
-  assert.equal(action.props.href, "/?sign-in=1");
+  const action = elements(f.render(), (node) => node.type === "SignInButton")[0];
+  assert.equal(action.props.mode, "modal");
+  assert.equal(text(action).trim(), "Log in");
   assert.equal(f.reads.length, 0);
   f.hooks.unmount();
 });

@@ -45,7 +45,7 @@ test("core launch presents one unified assistant without a Chat/Work mode switch
 test("core navigation exposes the real file and plugin destinations", () => {
   assert.match(sidebar, /navLink\("\/library", "Library", LibraryBig\)/);
   assert.doesNotMatch(sidebar, /navLink\("\/files"/);
-  assert.match(sidebar, /navLink\("\/apps", "Connections", Puzzle\)/);
+  assert.match(sidebar, /navLink\("\/apps", "Plugins", Puzzle\)/);
   assert.match(sidebar, /navLink\("\/projects", "Projects", Folder\)/);
 });
 test("launch navigation does not advertise deferred content or placeholder controls", () => {
@@ -135,7 +135,10 @@ test("composer actions, message editing, and markdown stay reachable and lossles
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
-  assert.match(chatInput, /COMPOSER_TOOLS\.map\(toolRow\)/);
+  assert.match(chatInput, /renderComposerActions/);
+  for (const label of ["Photos", "Camera", "Files", "Library", "Drawings", "Create Image"])
+    assert.match(chatInput, new RegExp(label));
+  assert.match(chatInput, /onClick=\{\(\) => chooseTool\(imageTool\)\}/);
   assert.doesNotMatch(chatInput, /deep_research/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);

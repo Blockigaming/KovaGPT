@@ -4,6 +4,11 @@
 @import "./styles/chatgpt-parity.css";
 @import "./styles/chatgpt-final-parity.css";
 @import "./styles/assistant.css";
+@import "./styles/core-system.css";
+@import "./styles/sidebar-core.css";
+@import "./styles/composer-core.css";
+@import "./styles/core-pages.css";
+@import "./components/account-surfaces.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -37,10 +42,9 @@
   --color-sidebar-active: var(--sidebar-active);
   --color-user-bubble: var(--user-bubble);
   --font-sans:
-    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
-  --font-display:
-    "Inter", "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    "Kova DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-display: "Kova DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 @layer components {
@@ -60,7 +64,7 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 1rem;
   /* KovaGPT uses ChatGPT's quiet neutral hierarchy with Kova branding. */
   --background: oklch(1 0 0);
   --foreground: oklch(0.19 0.008 255);
@@ -162,9 +166,9 @@
   --link: oklch(0.45 0.18 255);
 
   /* Kova brand system */
-  --kova-blue: oklch(0.64 0.19 258);
-  --kova-blue-glow: oklch(0.72 0.17 258);
-  --kova-violet: oklch(0.6 0.2 295);
+  --kova-blue: var(--foreground);
+  --kova-blue-glow: var(--muted-foreground);
+  --kova-violet: var(--foreground);
   --gradient-kova: linear-gradient(135deg, var(--kova-blue), var(--kova-violet));
   --gradient-kova-soft: linear-gradient(
     135deg,
@@ -242,9 +246,9 @@
   --link: oklch(0.78 0.14 235);
 
   /* Kova brand system - dark */
-  --kova-blue: oklch(0.72 0.18 258);
-  --kova-blue-glow: oklch(0.8 0.16 258);
-  --kova-violet: oklch(0.7 0.2 295);
+  --kova-blue: var(--foreground);
+  --kova-blue-glow: var(--muted-foreground);
+  --kova-violet: var(--foreground);
   --gradient-kova: linear-gradient(135deg, var(--kova-blue), var(--kova-violet));
   --gradient-kova-soft: linear-gradient(
     135deg,

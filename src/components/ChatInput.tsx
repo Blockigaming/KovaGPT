@@ -9,15 +9,15 @@ import {
   Globe,
   FileText,
   Camera,
-  Search,
-  Sparkles,
+  LibraryBig,
+  Pencil,
   AlertCircle,
   RotateCcw,
   type LucideIcon,
 } from "lucide-react";
 
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
-import { useUser } from "@/components/auth/ClerkSafe";
+import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { useLibraryAttachmentAutoSave } from "@/hooks/use-library-attachment-auto-save";
 import { useLayout } from "@/hooks/use-mobile";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
@@ -29,6 +29,17 @@ import { ResponsiveModelSelector as ModelSelector } from "@/components/Responsiv
 import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 import type { ComposerToolId } from "@/lib/chat-store";
+
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ComposerDrawingDialog } from "@/components/ComposerDrawingDialog";
+import { ComposerPluginList } from "@/components/ComposerPluginList";
 
 const ComposerPasteOffer = lazy(() => import("@/components/ComposerPasteOffer"));
 
@@ -70,15 +81,6 @@ const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
 
-const PROMPT_SHORTCUTS = [
-  { label: "Brainstorm ideas", prompt: "Help me brainstorm ideas about " },
-  { label: "Make a plan", prompt: "Create a practical step-by-step plan for " },
-  {
-    label: "Improve writing",
-    prompt: "Help me rewrite this clearly while preserving the meaning:\n\n",
-  },
-] as const;
-
 const TEXT_LIKE_EXT =
   /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
 const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
@@ -115,7 +117,6 @@ export function ChatInput({
   canChangeAgent = true,
   onUploadLimit,
   placeholder,
-  onPromptShortcut,
   selectedTool,
   onToolSelect,
   recentLibraryFiles = [],
@@ -126,7 +127,7 @@ export function ChatInput({
 }: {
   value: string;
   onChange: (v: string) => void;
-  onSubmit: (tool?: ComposerToolId | null) => void;
+  onSubmit: (tool?: ComposerToolId | null) => void | Promise<unknown>;
   onStop: () => void;
   isStreaming: boolean;
 
@@ -175,6 +176,11 @@ export function ChatInput({
   } | null>(null);
   const composerStateRef = useRef({ value, attachments });
   composerStateRef.current = { value, attachments };
+  const updateAttachments = (next: PendingAttachment[]) => {
+    composerStateRef.current.attachments = next;
+    onAttachmentsChange(next);
+  };
+  const uploadBatchRef = useRef(false);
   useEffect(() => {
     setPasteOffer(null);
   }, [attachmentAutoSave.scope]);
@@ -205,12 +211,13 @@ export function ChatInput({
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
-  const plusWrapRef = useRef<HTMLDivElement>(null);
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
   const selectedToolRef = useRef(selectedTool);
   selectedToolRef.current = selectedTool;
 
   const [plusOpen, setPlusOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [drawingOpen, setDrawingOpen] = useState(false);
   const online = useSyncExternalStore(
     subscribeToOnlineStatus,
     getOnlineStatusSnapshot,
@@ -218,34 +225,31 @@ export function ChatInput({
   );
   const [kbOffset, setKbOffset] = useState(0);
   const submittingRef = useRef(false);
+  const streamingRef = useRef(isStreaming);
+  streamingRef.current = isStreaming;
   const composingRef = useRef(false);
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
   useEffect(() => {
-    if (!plusOpen || isMobileLayout) return;
-    const onDoc = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!plusWrapRef.current?.contains(target)) setPlusOpen(false);
-    };
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setPlusOpen(false);
-        window.requestAnimationFrame(() => plusTriggerRef.current?.focus());
-      }
-    };
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [isMobileLayout, plusOpen]);
-
-  useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+    const resize = () => {
+      el.style.height = "0px";
+      const height = Math.min(Math.max(el.scrollHeight, 28), 200);
+      el.style.height = `${height}px`;
+      el.style.overflowY = el.scrollHeight > 200 ? "auto" : "hidden";
+    };
+    resize();
+    let width = el.getBoundingClientRect().width;
+    const observer = new ResizeObserver(() => {
+      const nextWidth = el.getBoundingClientRect().width;
+      if (nextWidth !== width) {
+        width = nextWidth;
+        resize();
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
   }, [value]);
 
   // Track on-screen keyboard on mobile so the composer floats above it.
@@ -294,7 +298,24 @@ export function ChatInput({
     }
     submittingRef.current = true;
     setUploadAnnouncement("Message submitted");
-    onSubmit(selectedToolRef.current);
+    try {
+      const result = onSubmit(selectedToolRef.current);
+      if (result && typeof result.then === "function")
+        void result.then(
+          () => {
+            if (!streamingRef.current) submittingRef.current = false;
+          },
+          () => {
+            submittingRef.current = false;
+            setUploadAnnouncement("Message could not be sent. Your draft is still available.");
+            toast.error("Message could not be sent. Please try again.");
+          },
+        );
+    } catch {
+      submittingRef.current = false;
+      setUploadAnnouncement("Message could not be sent. Your draft is still available.");
+      toast.error("Message could not be sent. Please try again.");
+    }
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -319,211 +340,231 @@ export function ChatInput({
     triggerSubmit();
   };
 
-  async function addFiles(files: File[]) {
-    if (disabled || !showAddMenu || files.length === 0) return;
+  async function addFiles(files: File[]): Promise<boolean> {
+    if (disabled || !showAddMenu || files.length === 0) return false;
+    if (uploadBatchRef.current) {
+      toast.message("Wait for the current files to finish before adding more.");
+      return false;
+    }
     const readScope = attachmentAutoSave.scope;
     const currentRead = () => attachmentScopeRef.current === readScope;
     const availableSlots = Math.max(0, 2 - attachments.length);
     if (availableSlots === 0) {
       setUploadAnnouncement("Remove an attachment before adding another.");
       toast.error("You can attach up to 2 files per message.");
-      return;
+      return false;
     }
     if (files.length > availableSlots) {
       toast.message(
         `Only the first ${availableSlots} file${availableSlots === 1 ? "" : "s"} was added.`,
       );
     }
-    let nextAttachments = [...attachments];
-    const seen = new Set(nextAttachments.map((a) => `${a.name}:${a.size ?? 0}`));
-    const uploadLimit = DAILY_UPLOAD_LIMIT_BY_TIER[userTier];
+    uploadBatchRef.current = true;
+    const acceptedIds = new Set<string>();
+    try {
+      let nextAttachments = [...composerStateRef.current.attachments];
+      const seen = new Set(nextAttachments.map((a) => `${a.name}:${a.size ?? 0}`));
+      const uploadLimit = DAILY_UPLOAD_LIMIT_BY_TIER[userTier];
 
-    for (const f of files.slice(0, availableSlots)) {
-      const isImage = f.type.startsWith("image/");
-      const isTextLike =
-        f.type.startsWith("text/") || f.type === "application/json" || TEXT_LIKE_EXT.test(f.name);
+      for (const f of files.slice(0, availableSlots)) {
+        const isImage = f.type.startsWith("image/");
+        const isTextLike =
+          f.type.startsWith("text/") || f.type === "application/json" || TEXT_LIKE_EXT.test(f.name);
 
-      const isDocument = /\.(pdf|docx|xlsx|pptx)$/i.test(f.name);
-      if (!isImage && !isTextLike && !isDocument) {
-        const failed: PendingAttachment = {
-          kind: "image",
-          dataUrl: "",
-          name: f.name,
-          size: f.size,
-          status: "failed",
-          error: "Unsupported file type",
-        };
-        nextAttachments = [...nextAttachments, failed];
-        setUploadAnnouncement(`${f.name}: unsupported file type`);
-        continue;
-      }
-
-      const duplicateKey = `${f.name}:${f.size}`;
-      if (seen.has(duplicateKey)) {
-        setUploadAnnouncement(`${f.name} is already attached`);
-        toast.message(`${f.name} is already attached.`);
-        continue;
-      }
-
-      if (isImage) {
-        if (f.size > MAX_IMAGE_FILE_BYTES) {
-          nextAttachments = [
-            ...nextAttachments,
-            {
-              kind: "image",
-              dataUrl: "",
-              name: f.name,
-              size: f.size,
-              status: "failed",
-              error: "Image is larger than 3 MB",
-            },
-          ];
-          setUploadAnnouncement(`${f.name}: image is larger than 3 MB`);
-          continue;
-        }
-        if (!tryUseUpload(uploadLimit)) {
-          onUploadLimit?.();
-          break;
-        }
-        const uploading: PendingAttachment = {
-          clientId: crypto.randomUUID(),
-          source: "file_upload",
-          kind: "image",
-          dataUrl: "",
-          name: f.name,
-          size: f.size,
-          status: "uploading",
-        };
-        nextAttachments = [...nextAttachments, uploading];
-        onAttachmentsChange(nextAttachments);
-        setUploadAnnouncement(`Uploading ${f.name}`);
-        try {
-          const dataUrl = await new Promise<string>((res, rej) => {
-            const r = new FileReader();
-            r.onload = () => res(r.result as string);
-            r.onerror = () => rej(new Error("Could not read image"));
-            r.readAsDataURL(f);
-          });
-          if (!currentRead()) return;
-          const completed: PendingAttachment = { ...uploading, dataUrl, status: "complete" };
-          nextAttachments = nextAttachments.map((a) => (a === uploading ? completed : a));
-          void attachmentAutoSave.save(completed, readScope);
-          seen.add(duplicateKey);
-          setUploadAnnouncement(`${f.name} attached`);
-        } catch (error) {
-          if (!currentRead()) return;
-          nextAttachments = nextAttachments.map((a) =>
-            a === uploading
-              ? {
-                  ...uploading,
-                  status: "failed" as const,
-                  error: error instanceof Error ? error.message : "Could not read image",
-                }
-              : a,
-          );
-          setUploadAnnouncement(`${f.name}: upload failed`);
-        }
-        onAttachmentsChange(nextAttachments);
-      } else {
-        if (f.size > (isDocument ? 10 * 1024 * 1024 : MAX_TEXT_FILE_BYTES)) {
-          nextAttachments = [
-            ...nextAttachments,
-            {
-              kind: "text_file",
-              dataUrl: "",
-              name: f.name,
-              size: f.size,
-              fileType: f.type || "text/plain",
-              status: "failed",
-              error: isDocument
-                ? "Document is larger than 10 MB"
-                : "Text file is larger than 256 KB",
-            },
-          ];
-          setUploadAnnouncement(`${f.name}: text file is larger than 256 KB`);
-          continue;
-        }
-        if (!tryUseUpload(uploadLimit)) {
-          onUploadLimit?.();
-          break;
-        }
-        const uploading: PendingAttachment = {
-          clientId: crypto.randomUUID(),
-          source: "file_upload",
-          kind: "text_file",
-          dataUrl: "",
-          name: f.name,
-          size: f.size,
-          fileType: f.type || "text/plain",
-          status: "uploading",
-        };
-        nextAttachments = [...nextAttachments, uploading];
-        onAttachmentsChange(nextAttachments);
-        setUploadAnnouncement(`Reading ${f.name}`);
-        try {
-          let textContent: string;
-          let extractionNote = "";
-          if (isDocument) {
-            const controller = new AbortController();
-            documentReadsRef.current.add(controller);
-            documentReadIdsRef.current.set(uploading.clientId!, controller);
-            try {
-              const { extractDocumentFile } = await import("@/lib/document-extraction/client");
-              if (!currentRead()) return;
-              const result = await extractDocumentFile(f, controller.signal);
-              if (controller.signal.aborted) return;
-              textContent = result.text;
-              extractionNote = result.note;
-            } finally {
-              documentReadsRef.current.delete(controller);
-              documentReadIdsRef.current.delete(uploading.clientId!);
-            }
-          } else textContent = await f.text();
-          if (!currentRead()) return;
-          const completed: PendingAttachment = {
-            ...uploading,
-            textContent,
-            status: "complete",
-            ...(isDocument
-              ? {
-                  name: `${f.name}.extracted.txt`,
-                  fileType: "text/plain",
-                  size: new TextEncoder().encode(textContent).length,
-                }
-              : {}),
+        const isDocument = /\.(pdf|docx|xlsx|pptx)$/i.test(f.name);
+        if (!isImage && !isTextLike && !isDocument) {
+          const failed: PendingAttachment = {
+            kind: "image",
+            dataUrl: "",
+            name: f.name,
+            size: f.size,
+            status: "failed",
+            error: "Unsupported file type",
           };
-          if (extractionNote) toast.message(extractionNote);
-
-          nextAttachments = nextAttachments.map((attachment) =>
-            attachment === uploading ? completed : attachment,
-          );
-          void attachmentAutoSave.save(completed, readScope, isDocument ? f : undefined);
-          seen.add(duplicateKey);
-          setUploadAnnouncement(`${f.name} ready for analysis`);
-        } catch (error) {
-          if (!currentRead() || (error instanceof DOMException && error.name === "AbortError"))
-            return;
-          nextAttachments = nextAttachments.map((attachment) =>
-            attachment === uploading
-              ? {
-                  ...uploading,
-                  status: "failed" as const,
-                  error: error instanceof Error ? error.message : "Could not read file",
-                }
-              : attachment,
-          );
-          setUploadAnnouncement(`${f.name}: file could not be read`);
+          nextAttachments = [...nextAttachments, failed];
+          setUploadAnnouncement(`${f.name}: unsupported file type`);
+          continue;
         }
-        onAttachmentsChange(nextAttachments);
+
+        const duplicateKey = `${f.name}:${f.size}`;
+        if (seen.has(duplicateKey)) {
+          setUploadAnnouncement(`${f.name} is already attached`);
+          toast.message(`${f.name} is already attached.`);
+          continue;
+        }
+
+        if (isImage) {
+          if (f.size > MAX_IMAGE_FILE_BYTES) {
+            nextAttachments = [
+              ...nextAttachments,
+              {
+                kind: "image",
+                dataUrl: "",
+                name: f.name,
+                size: f.size,
+                status: "failed",
+                error: "Image is larger than 3 MB",
+              },
+            ];
+            setUploadAnnouncement(`${f.name}: image is larger than 3 MB`);
+            continue;
+          }
+          if (!tryUseUpload(uploadLimit)) {
+            onUploadLimit?.();
+            break;
+          }
+          const uploading: PendingAttachment = {
+            clientId: crypto.randomUUID(),
+            source: "file_upload",
+            kind: "image",
+            dataUrl: "",
+            name: f.name,
+            size: f.size,
+            status: "uploading",
+          };
+          nextAttachments = [...nextAttachments, uploading];
+          updateAttachments(nextAttachments);
+          setUploadAnnouncement(`Reading ${f.name}`);
+          try {
+            const dataUrl = await new Promise<string>((res, rej) => {
+              const r = new FileReader();
+              r.onload = () => res(r.result as string);
+              r.onerror = () => rej(new Error("Could not read image"));
+              r.readAsDataURL(f);
+            });
+            if (!currentRead()) return false;
+            nextAttachments = composerStateRef.current.attachments;
+            if (!nextAttachments.some((item) => item.clientId === uploading.clientId)) continue;
+            const completed: PendingAttachment = { ...uploading, dataUrl, status: "complete" };
+            nextAttachments = nextAttachments.map((a) => (a === uploading ? completed : a));
+            acceptedIds.add(completed.clientId!);
+            void attachmentAutoSave.save(completed, readScope);
+            seen.add(duplicateKey);
+            setUploadAnnouncement(`${f.name} attached`);
+          } catch (error) {
+            if (!currentRead()) return false;
+            nextAttachments = composerStateRef.current.attachments.map((a) =>
+              a === uploading
+                ? {
+                    ...uploading,
+                    status: "failed" as const,
+                    error: error instanceof Error ? error.message : "Could not read image",
+                  }
+                : a,
+            );
+            setUploadAnnouncement(`${f.name}: upload failed`);
+          }
+          updateAttachments(nextAttachments);
+        } else {
+          if (f.size > (isDocument ? 10 * 1024 * 1024 : MAX_TEXT_FILE_BYTES)) {
+            nextAttachments = [
+              ...nextAttachments,
+              {
+                kind: "text_file",
+                dataUrl: "",
+                name: f.name,
+                size: f.size,
+                fileType: f.type || "text/plain",
+                status: "failed",
+                error: isDocument
+                  ? "Document is larger than 10 MB"
+                  : "Text file is larger than 256 KB",
+              },
+            ];
+            setUploadAnnouncement(`${f.name}: text file is larger than 256 KB`);
+            continue;
+          }
+          if (!tryUseUpload(uploadLimit)) {
+            onUploadLimit?.();
+            break;
+          }
+          const uploading: PendingAttachment = {
+            clientId: crypto.randomUUID(),
+            source: "file_upload",
+            kind: "text_file",
+            dataUrl: "",
+            name: f.name,
+            size: f.size,
+            fileType: f.type || "text/plain",
+            status: "uploading",
+          };
+          nextAttachments = [...nextAttachments, uploading];
+          updateAttachments(nextAttachments);
+          setUploadAnnouncement(`Reading ${f.name}`);
+          try {
+            let textContent: string;
+            let extractionNote = "";
+            if (isDocument) {
+              const controller = new AbortController();
+              documentReadsRef.current.add(controller);
+              documentReadIdsRef.current.set(uploading.clientId!, controller);
+              try {
+                const { extractDocumentFile } = await import("@/lib/document-extraction/client");
+                if (!currentRead()) return false;
+                const result = await extractDocumentFile(f, controller.signal);
+                if (controller.signal.aborted) return false;
+                textContent = result.text;
+                extractionNote = result.note;
+              } finally {
+                documentReadsRef.current.delete(controller);
+                documentReadIdsRef.current.delete(uploading.clientId!);
+              }
+            } else textContent = await f.text();
+            if (!currentRead()) return false;
+            nextAttachments = composerStateRef.current.attachments;
+            if (!nextAttachments.some((item) => item.clientId === uploading.clientId)) continue;
+            const completed: PendingAttachment = {
+              ...uploading,
+              textContent,
+              status: "complete",
+              ...(isDocument
+                ? {
+                    name: `${f.name}.extracted.txt`,
+                    fileType: "text/plain",
+                    size: new TextEncoder().encode(textContent).length,
+                  }
+                : {}),
+            };
+            if (extractionNote) toast.message(extractionNote);
+
+            nextAttachments = nextAttachments.map((attachment) =>
+              attachment === uploading ? completed : attachment,
+            );
+            acceptedIds.add(completed.clientId!);
+            void attachmentAutoSave.save(completed, readScope, isDocument ? f : undefined);
+            seen.add(duplicateKey);
+            setUploadAnnouncement(`${f.name} ready for analysis`);
+          } catch (error) {
+            if (!currentRead() || (error instanceof DOMException && error.name === "AbortError"))
+              return false;
+            nextAttachments = composerStateRef.current.attachments.map((attachment) =>
+              attachment === uploading
+                ? {
+                    ...uploading,
+                    status: "failed" as const,
+                    error: error instanceof Error ? error.message : "Could not read file",
+                  }
+                : attachment,
+            );
+            setUploadAnnouncement(`${f.name}: file could not be read`);
+          }
+          updateAttachments(nextAttachments);
+        }
       }
+      if (!currentRead()) return false;
+      updateAttachments(nextAttachments);
+      return composerStateRef.current.attachments.some(
+        (item) => item.status === "complete" && !!item.clientId && acceptedIds.has(item.clientId),
+      );
+    } finally {
+      uploadBatchRef.current = false;
     }
-    if (nextAttachments !== attachments) onAttachmentsChange(nextAttachments);
   }
 
   const removeAttachment = (index: number) => {
     const id = attachments[index]?.clientId;
     if (id) documentReadIdsRef.current.get(id)?.abort();
-    onAttachmentsChange(attachments.filter((_, position) => position !== index));
+    updateAttachments(attachments.filter((_, position) => position !== index));
   };
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -571,7 +612,7 @@ export function ChatInput({
       return;
     }
     const id = crypto.randomUUID();
-    onAttachmentsChange([
+    updateAttachments([
       ...attachments,
       {
         clientId: id,
@@ -591,7 +632,7 @@ export function ChatInput({
     if (!pasteOffer || disabled) return;
     const current = composerStateRef.current;
     if (pasteOffer.attachedId)
-      onAttachmentsChange(
+      updateAttachments(
         current.attachments.filter((item) => item.clientId !== pasteOffer.attachedId),
       );
     onChange(
@@ -633,7 +674,7 @@ export function ChatInput({
       toast.error("You can attach up to 2 files per message.");
       return;
     }
-    onAttachmentsChange([
+    updateAttachments([
       ...attachments,
       {
         kind: "library_file",
@@ -648,30 +689,26 @@ export function ChatInput({
       },
     ]);
     setPlusOpen(false);
+    setLibraryOpen(false);
     setUploadAnnouncement(`${name} attached from Library`);
     ref.current?.focus();
   };
 
-  const visibleRecentLibraryFiles = recentLibraryFiles
-    .filter((item) => {
-      const q = recentQuery.trim().toLowerCase();
-      if (!q) return true;
-      return (
-        (item.fileName || item.title).toLowerCase().includes(q) ||
-        (item.fileType ?? "").toLowerCase().includes(q) ||
-        (item.projectName ?? "").toLowerCase().includes(q)
-      );
-    })
-    .slice(0, 8);
+  const visibleRecentLibraryFiles = recentLibraryFiles.filter((item) => {
+    const q = recentQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (item.fileName || item.title).toLowerCase().includes(q) ||
+      (item.fileType ?? "").toLowerCase().includes(q) ||
+      (item.projectName ?? "").toLowerCase().includes(q)
+    );
+  });
 
   const renderRecentLibraryFiles = () => (
-    <div className="mt-1 border-t border-border/70 pt-1" aria-label="Recent Library files">
-      <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        Recent Library files
-      </div>
-      {recentLibraryFiles.length > 4 ? (
+    <div className="kova-composer-library" aria-label="Saved Library files">
+      {recentLibraryFiles.length > 0 ? (
         <label className="mx-2 mb-1 block">
-          <span className="sr-only">Search recent Library files</span>
+          <span className="sr-only">Search Library files</span>
           <input
             value={recentQuery}
             onChange={(event) => setRecentQuery(event.target.value)}
@@ -696,7 +733,9 @@ export function ChatInput({
           ) : null}
         </div>
       ) : visibleRecentLibraryFiles.length === 0 ? (
-        <div className="px-3 py-3 text-sm text-muted-foreground">No reusable files yet.</div>
+        <div className="px-3 py-3 text-sm text-muted-foreground">
+          No saved files yet. Files you save to your Library will appear here.
+        </div>
       ) : (
         <div className="max-h-64 overflow-y-auto p-1">
           {visibleRecentLibraryFiles.map((item) => {
@@ -741,132 +780,89 @@ export function ChatInput({
     window.requestAnimationFrame(() => ref.current?.focus());
   };
 
-  const choosePromptShortcut = (label: string, prompt: string) => {
-    onPromptShortcut?.(prompt);
-    setPlusOpen(false);
-    setUploadAnnouncement(`${label} added`);
-    window.requestAnimationFrame(() => ref.current?.focus());
-  };
-
   const renderComposerActions = (mobile: boolean) => {
-    const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-      mobile ? "min-h-14 px-4 py-3 text-base" : "min-h-11 px-3 py-2.5 text-sm"
-    }`;
-    const iconClass = mobile
-      ? "h-5 w-5 shrink-0 text-muted-foreground"
-      : "h-4 w-4 shrink-0 text-muted-foreground";
-    const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
-    const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
-
-    const photosRow = (
-      <button
-        type="button"
-        onClick={() => {
-          setPlusOpen(false);
-          photoRef.current?.click();
-        }}
-        className={rowClass}
-      >
-        <ImageIcon className={iconClass} />
-        <span>Photos</span>
-      </button>
-    );
-
-    const filesRow = (
-      <button
-        type="button"
-        onClick={() => {
-          setPlusOpen(false);
-          fileRef.current?.click();
-        }}
-        className={rowClass}
-      >
-        <Paperclip className={iconClass} />
-        <span>Files</span>
-      </button>
-    );
-
-    const cameraRow = mobile ? (
-      <button
-        type="button"
-        onClick={() => {
-          setPlusOpen(false);
-          cameraRef.current?.click();
-        }}
-        className={rowClass}
-      >
-        <Camera className={iconClass} />
-        <span>Camera</span>
-      </button>
-    ) : null;
-
-    const toolRow = (tool: ComposerAction) => {
-      const Icon = tool.icon;
-      const active = selectedTool === tool.id;
-      return (
-        <button
-          key={tool.id}
-          type="button"
-          aria-pressed={active}
-          disabled={disabled || isStreaming}
-          onClick={() => chooseTool(tool)}
-          className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
-        >
-          <Icon className={iconClass} />
-          <span>{tool.label}</span>
-        </button>
-      );
+    const rowClass = "kova-composer-action";
+    const pickFile = (input: React.RefObject<HTMLInputElement | null>) => {
+      setPlusOpen(false);
+      input.current?.click();
     };
-
-    if (!user) {
-      const lockedRow = (
-        key: string,
-        Icon: React.ComponentType<{ className?: string }>,
-        label: string,
-      ) => (
-        <div
-          key={key}
-          aria-disabled="true"
-          className={`kova-composer-locked ${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
-        >
-          <Icon className={`${iconClass} opacity-70`} />
-          <span className="opacity-70">{label}</span>
-        </div>
-      );
-      return (
-        <>
-          {photosRow}
-          {filesRow}
-          {cameraRow}
-          {webSearchTool ? toolRow(webSearchTool) : null}
-          <p className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}>
-            Log in to use...
-          </p>
-          {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
+    const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image")!;
+    return (
+      <>
+        <div className="kova-composer-primary-actions" aria-label="Attachment options">
+          <button type="button" className={rowClass} onClick={() => pickFile(photoRef)}>
+            <ImageIcon aria-hidden="true" />
+            <span>Photos</span>
+          </button>
+          {mobile && (
+            <button type="button" className={rowClass} onClick={() => pickFile(cameraRef)}>
+              <Camera aria-hidden="true" />
+              <span>Camera</span>
+            </button>
+          )}
+          <button type="button" className={rowClass} onClick={() => pickFile(fileRef)}>
+            <Paperclip aria-hidden="true" />
+            <span>Files</span>
+          </button>
           <button
             type="button"
             className={rowClass}
             onClick={() => {
-              window.location.href = "/apps";
+              setPlusOpen(false);
+              setLibraryOpen(true);
+              if (user) onRecentLibraryRetry?.();
             }}
           >
-            <Sparkles className={iconClass} />
-            <span>Explore Apps and connectors</span>
+            <LibraryBig aria-hidden="true" />
+            <span>Library</span>
           </button>
-        </>
-      );
-    }
-
-    return (
-      <>
-        {photosRow}
-        {filesRow}
-        {cameraRow}
-        {COMPOSER_TOOLS.map(toolRow)}
-        <button type="button" className={rowClass} onClick={() => (window.location.href = "/apps")}>
-          <Sparkles className={iconClass} />
-          <span>Apps and connectors</span>
-        </button>
+          {!mobile && (
+            <>
+              <button
+                type="button"
+                className={rowClass}
+                onClick={() => {
+                  setPlusOpen(false);
+                  setDrawingOpen(true);
+                }}
+              >
+                <Pencil aria-hidden="true" />
+                <span>Drawings</span>
+              </button>
+              <button
+                type="button"
+                className={rowClass}
+                aria-label="Create Image"
+                disabled={!user || !onToolSelect || disabled || isStreaming}
+                title={
+                  !user
+                    ? "Log in to create images"
+                    : !onToolSelect
+                      ? "Image creation is unavailable in this conversation"
+                      : "Create an image in this chat"
+                }
+                onClick={() => chooseTool(imageTool)}
+              >
+                <ImagePlus aria-hidden="true" />
+                <span>
+                  Create Image
+                  {!user ? (
+                    <small>Log in to create images</small>
+                  ) : !onToolSelect ? (
+                    <small>Unavailable in this conversation</small>
+                  ) : null}
+                </span>
+              </button>
+            </>
+          )}
+        </div>
+        {!mobile && (
+          <ComposerPluginList
+            userId={isLoaded ? (user?.id ?? null) : null}
+            authLoaded={isLoaded}
+            onNavigate={() => setPlusOpen(false)}
+          />
+        )}
       </>
     );
   };
@@ -978,11 +974,10 @@ export function ChatInput({
           {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect ? (
             <div className="flex px-3 pt-2">
               <button
-                ref={plusTriggerRef}
                 type="button"
                 disabled={disabled || isStreaming}
                 onClick={() => chooseTool(selectedToolOption)}
-                className="kova-tool-button flex h-8 items-center gap-2 rounded-xl bg-accent px-2.5 text-xs font-medium text-foreground transition hover:bg-accent/80 disabled:opacity-60"
+                className="kova-tool-button flex h-8 items-center gap-2 rounded-full border border-border bg-transparent px-2.5 text-xs font-medium text-foreground transition disabled:opacity-60"
                 aria-label={`Remove ${selectedToolOption.label}`}
               >
                 <ActiveToolIcon className="h-3.5 w-3.5" />
@@ -997,10 +992,10 @@ export function ChatInput({
           <div className="kova-composer-row flex items-end">
             <div
               className={`${showAddMenu ? "flex" : "hidden"} kova-composer-leading relative self-end items-center`}
-              ref={plusWrapRef}
             >
               <input
                 ref={fileRef}
+                aria-label="Choose files"
                 type="file"
                 accept="image/*,text/*,.pdf,.docx,.xlsx,.pptx,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
                 multiple
@@ -1008,11 +1003,12 @@ export function ChatInput({
                 onChange={onFileChange}
               />
               <span className="sr-only" id="file-upload-guidance">
-                Text, code, CSV, JSON, and image files. Text files may be up to 256 KB and images up
-                to 3 MB.
+                Text and code up to 256 KB, images up to 3 MB, and PDF or Office documents up to 10
+                MB. Up to two files per message.
               </span>
               <input
                 ref={photoRef}
+                aria-label="Choose photos"
                 type="file"
                 accept="image/*"
                 multiple
@@ -1021,37 +1017,64 @@ export function ChatInput({
               />
               <input
                 ref={cameraRef}
+                aria-label="Take a photo"
                 type="file"
                 accept="image/*"
                 capture="environment"
                 className="hidden"
                 onChange={onFileChange}
               />
-              <button
-                type="button"
-                onClick={() => setPlusOpen((v) => !v)}
-                disabled={disabled || isStreaming}
-                className={`kova-composer-button kova-attach-button flex items-center justify-center rounded-full ${plusOpen && !isMobileLayout ? "is-open" : ""}`}
-                aria-label="Add files, tools, or prompts"
-                aria-haspopup="dialog"
-                aria-expanded={plusOpen}
-                title="Add"
-              >
-                <Plus className="kova-attach-icon" strokeWidth={2} />
-              </button>
-              {plusOpen && !isMobileLayout && (
-                <div
-                  role="dialog"
-                  aria-label="Add files, tools, or prompts"
-                  className={`kova-composer-menu kova-glass absolute left-0 z-50 max-h-[70vh] min-w-[280px] overflow-y-auto rounded-2xl p-1.5 animate-in fade-in ${
-                    surface === "empty"
-                      ? "top-[calc(100%+1.25rem)] origin-top-left"
-                      : "bottom-[calc(100%+1.25rem)] origin-bottom-left"
-                  }`}
-                >
-                  {renderComposerActions(false)}
-                </div>
-              )}
+              <Popover open={plusOpen && !isMobileLayout} onOpenChange={setPlusOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    ref={plusTriggerRef}
+                    type="button"
+                    disabled={disabled || isStreaming}
+                    className={`kova-composer-button kova-attach-button flex items-center justify-center rounded-full ${plusOpen && !isMobileLayout ? "is-open" : ""}`}
+                    aria-label="Add files, tools, or prompts"
+                    aria-haspopup="dialog"
+                    aria-expanded={plusOpen}
+                    title="Add"
+                  >
+                    <Plus className="kova-attach-icon" strokeWidth={2} />
+                  </button>
+                </PopoverTrigger>
+                {!isMobileLayout && (
+                  <PopoverContent
+                    role="dialog"
+                    aria-label="Add files, tools, or prompts"
+                    className="kova-composer-menu"
+                    side={surface === "empty" ? "bottom" : "top"}
+                    align="start"
+                    sideOffset={10}
+                    collisionPadding={12}
+                    onCloseAutoFocus={(event) => {
+                      if (libraryOpen || drawingOpen) event.preventDefault();
+                    }}
+                    onKeyDown={(event) => {
+                      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+                      const controls = Array.from(
+                        event.currentTarget.querySelectorAll<HTMLElement>(
+                          "button:not(:disabled),a[href]",
+                        ),
+                      );
+                      if (!controls.length) return;
+                      event.preventDefault();
+                      const index = controls.indexOf(document.activeElement as HTMLElement);
+                      const next =
+                        event.key === "Home"
+                          ? 0
+                          : event.key === "End"
+                            ? controls.length - 1
+                            : (index + (event.key === "ArrowDown" ? 1 : -1) + controls.length) %
+                              controls.length;
+                      controls[next]?.focus();
+                    }}
+                  >
+                    {renderComposerActions(false)}
+                  </PopoverContent>
+                )}
+              </Popover>
             </div>
             {showAddMenu && isMobileLayout && (
               <MobileBottomSheet
@@ -1145,6 +1168,49 @@ export function ChatInput({
           </div>
         </div>
       </div>
+      <Dialog open={libraryOpen} onOpenChange={setLibraryOpen}>
+        <DialogContent
+          className="sm:max-w-lg"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            ref.current?.focus();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Add from Library</DialogTitle>
+            <DialogDescription>
+              {user
+                ? "Choose a saved file to use in this conversation."
+                : "Log in to access your saved files and images."}
+            </DialogDescription>
+          </DialogHeader>
+          {user && onRecentLibraryRetry ? (
+            <button
+              type="button"
+              className="kova-library-refresh"
+              onClick={onRecentLibraryRetry}
+              disabled={recentLibraryLoading}
+            >
+              Refresh Library
+            </button>
+          ) : null}
+          {user ? (
+            renderRecentLibraryFiles()
+          ) : (
+            <SignInButton mode="modal">
+              <button type="button" className="kova-library-sign-in">
+                Log in
+              </button>
+            </SignInButton>
+          )}
+        </DialogContent>
+      </Dialog>
+      <ComposerDrawingDialog
+        open={drawingOpen}
+        onOpenChange={setDrawingOpen}
+        onAttach={addFiles}
+        onReturnFocus={() => ref.current?.focus()}
+      />
       <p className="mt-2 text-center text-[11px] text-muted-foreground">
         KovaGPT can make mistakes. Check important information.
       </p>

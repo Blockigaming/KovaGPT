@@ -6,13 +6,12 @@
   font-display: swap;
 }
 
-/* Owner-approved main-assistant direction. Phone refinements stay scoped to
-   these surfaces; secondary product pages retain their current design. */
+/* Shared assistant typography and neutral surfaces. */
 .kova-assistant,
 .kova-auth-page,
 .kova-auth-surface {
-  --assistant-accent: #ffffff;
-  --assistant-accent-ink: #171717;
+  --assistant-accent: #171717;
+  --assistant-accent-ink: #ffffff;
   --assistant-canvas: #ffffff;
   --assistant-panel: #f7f7f7;
   --assistant-card: #ffffff;
@@ -20,8 +19,8 @@
   --assistant-muted: #666666;
   --assistant-focus: #404040;
   --foreground: #171717;
-  --primary: #ffffff;
-  --primary-foreground: #171717;
+  --primary: var(--assistant-accent);
+  --primary-foreground: var(--assistant-accent-ink);
   --ring: var(--assistant-focus);
   --sidebar: var(--assistant-panel);
   --font-sans: "Kova DM Sans", Arial, sans-serif;
@@ -32,6 +31,8 @@
 .dark .kova-assistant,
 .dark .kova-auth-page,
 .dark .kova-auth-surface {
+  --assistant-accent: #ffffff;
+  --assistant-accent-ink: #171717;
   --assistant-canvas: #171717;
   --assistant-panel: #111111;
   --assistant-card: #242424;

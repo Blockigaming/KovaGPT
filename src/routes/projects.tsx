@@ -99,7 +99,11 @@ function ProjectsPage() {
   const [sortBy, setSortBy] = useState<"recent" | "name" | "created" | "members">("recent");
   const [view, setView] = useState<"grid" | "list">(() => {
     if (typeof window === "undefined") return "grid";
-    return localStorage.getItem("kova-projects-view") === "list" ? "list" : "grid";
+    try {
+      return localStorage.getItem("kova-projects-view") === "list" ? "list" : "grid";
+    } catch {
+      return "grid";
+    }
   });
   const [showArchived, setShowArchived] = useState(false);
   const [scope, setScope] = useState<"all" | "owned" | "shared">("all");
@@ -111,7 +115,11 @@ function ProjectsPage() {
   currentUserKeyRef.current = userKey;
 
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("kova-projects-view", view);
+    try {
+      if (typeof window !== "undefined") localStorage.setItem("kova-projects-view", view);
+    } catch {
+      /* The current view still works when storage is unavailable. */
+    }
   }, [view]);
 
   const colorClass = (c?: string | null) => {
@@ -125,7 +133,7 @@ function ProjectsPage() {
       pink: "text-pink-500 bg-pink-500/10",
       teal: "text-teal-500 bg-teal-500/10",
     };
-    return map[c ?? "blue"] ?? map.blue;
+    return c ? (map[c] ?? "text-foreground bg-transparent") : "text-foreground bg-transparent";
   };
 
   const fnList = useServerFn(listProjects);
@@ -442,13 +450,13 @@ function ProjectsPage() {
         tabIndex={-1}
         aria-labelledby="projects-title"
         aria-busy={isLoading || undefined}
-        className="kova-page kova-secondary-page pb-24 lg:pb-8"
+        className="kova-page kova-secondary-page kova-core-page kova-projects-page pb-24 lg:pb-8"
       >
         <WorkspacePageHeader
           icon={FolderKanban}
           title="Projects"
           titleId="projects-title"
-          description="Shared workspaces for your chats, files, instructions, and team."
+          description="Keep related chats, files, and instructions together."
           actions={
             isSignedIn && !isLoading ? (
               <div className="flex flex-wrap gap-2">
@@ -534,7 +542,7 @@ function ProjectsPage() {
               Sign in to use Projects
             </h2>
             <p className="mb-6 text-muted-foreground">
-              Create shared workspaces, invite teammates, and collaborate on chats.
+              Organize your conversations, files, and instructions in one place.
             </p>
             <SignInButton mode="modal">
               <Button className="min-h-11">Sign in</Button>
@@ -550,7 +558,7 @@ function ProjectsPage() {
           <EmptyState
             icon={FolderKanban}
             title="No projects yet"
-            description="Create a project to collaborate on chats, files, notes, and tasks with your team."
+            description="Create a project to keep related chats, files, and instructions together."
             tip="Create one project for each long-running goal or team workspace."
             action={
               <Button className="min-h-11" onClick={() => setCreateOpen(true)}>
@@ -656,7 +664,7 @@ function ProjectsPage() {
                         <Pin className="w-3.5 h-3.5 text-muted-foreground fill-current" />
                       )}
                     </div>
-                    <span className="text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                    <span className="kova-project-role mr-14 text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
                       {p.role}
                     </span>
                   </div>

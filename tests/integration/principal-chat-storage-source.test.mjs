@@ -25,7 +25,15 @@ test("home chat and shared shell hide stale account state before loading the nex
   assert.match(shell, /const storagePrincipal = chatStoragePrincipal\(userKey\)/);
   assert.match(shell, /const conversations = principalReady \? conversationState\.items : \[\]/);
   assert.match(shell, /loadConversations\(userKey\)/);
-  assert.match(shell, /saveConversations\(userKey, next\)/);
+  assert.match(
+    shell,
+    /const saved = await saveConversations\(userKey, next, \{\s*snapshot: chatHistorySnapshot\(userKey\)/,
+  );
+  assert.match(shell, /if \(!current\(\)\) return false;\s*if \(!saved\)/);
+  assert.match(
+    shell,
+    /principalRef\.current === storagePrincipal && selectionRef\.current === selection/,
+  );
 });
 
 test("draft, pending-selection, archive, import, and export paths carry the current principal", async () => {

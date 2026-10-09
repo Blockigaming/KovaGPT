@@ -11,8 +11,8 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
     'navLink("/images", "Images", Images)',
     'navLink("/library", "Library", LibraryBig)',
     'navLink("/projects", "Projects", Folder)',
-    'navLink("/scheduled-tasks", "Scheduled tasks", Clock3)',
-    'navLink("/apps", "Connections", Puzzle)',
+    'navLink("/scheduled-tasks", "Scheduled tasks", CalendarCheck2)',
+    'navLink("/apps", "Plugins", Puzzle)',
     ">Chats</h2>",
     "pinned.map(chatRow)",
     "recents.map(chatRow)",
@@ -45,7 +45,8 @@ test("sidebar interaction and layout contracts are accessible and responsive", (
 
 test("Scheduled navigation stays discoverable while data access enforces server eligibility", () => {
   assert.doesNotMatch(sidebar, /useServerFn\(isScheduledTasksEligible\)/);
-  assert.match(sidebar, /signedIn[\s\S]{0,80}navLink\("\/scheduled-tasks"/);
+  assert.match(sidebar, /const canSchedule = signedIn && \(tier === "plus" \|\| tier === "pro"\)/);
+  assert.match(sidebar, /canSchedule[\s\S]{0,80}navLink\("\/scheduled-tasks"/);
   assert.match(scheduled, /function scheduledPlanEligible\(tier: unknown\)/);
   assert.match(scheduled, /tier !== "free"/);
   assert.match(scheduled, /if \(requireEligiblePlan\)/);

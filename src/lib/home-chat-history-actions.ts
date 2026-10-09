@@ -4,6 +4,7 @@ import {
   loadConversations,
   removeArchivedConversation,
   saveConversations,
+  newId,
   type Conversation,
 } from "./chat-store";
 import type { Dispatch, SetStateAction } from "react";
@@ -15,7 +16,63 @@ type Context = {
   setItems: Dispatch<SetStateAction<Conversation[]>>;
   activeId: string | null;
   setActive(id: string | null): void;
+  restore?: (chat: Conversation, archived: boolean) => Promise<void>;
 };
+export async function renameHomeChat(context: Context, id: string, value: string) {
+  const title = value.trim().slice(0, 160);
+  const chat = context.items.find((item) => item.id === id);
+  if (!context.current() || !chat || !title) return false;
+  const updatedAt = Date.now();
+  try {
+    const next = context.items.map((item) =>
+      item.id === id ? { ...item, title, updatedAt } : item,
+    );
+    const saved =
+      chat.temporary ||
+      (await saveConversations(
+        context.ownerId,
+        next.filter((item) => !item.temporary),
+      ));
+    if (!context.current()) return false;
+    if (!saved) throw new Error("Save unavailable");
+    context.setItems((items) =>
+      items.map((item) => (item.id === id ? { ...item, title, updatedAt } : item)),
+    );
+    return true;
+  } catch {
+    if (context.current()) toast.error("This chat could not be renamed. Please retry.");
+    return false;
+  }
+}
+
+export async function duplicateHomeChat(context: Context, id: string) {
+  const chat = context.items.find((item) => item.id === id);
+  if (!context.current() || !chat) return false;
+  const copy: Conversation = {
+    ...chat,
+    id: newId(),
+    title: `${chat.title} (copy)`,
+    messages: chat.messages.map((message) => ({ ...message, id: newId() })),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  try {
+    const saved =
+      copy.temporary ||
+      (await saveConversations(
+        context.ownerId,
+        [copy, ...context.items].filter((item) => !item.temporary),
+      ));
+    if (!context.current()) return false;
+    if (!saved) throw new Error("Save unavailable");
+    context.setItems((items) => [copy, ...items]);
+    toast.success("Chat duplicated");
+    return true;
+  } catch {
+    if (context.current()) toast.error("This chat could not be duplicated. Please retry.");
+    return false;
+  }
+}
 export async function titleHomeChat(context: Context, chat: Conversation) {
   if (!context.current()) return;
   try {
@@ -67,7 +124,7 @@ export async function removeHomeChat(context: Context, id: string, archive = fal
     : chat.temporary ||
       (await saveConversations(
         context.ownerId,
-        context.items.filter((item) => item.id !== id),
+        context.items.filter((item) => item.id !== id && !item.temporary),
       ));
   if (!context.current()) return;
   if (!saved) {
@@ -79,6 +136,10 @@ export async function removeHomeChat(context: Context, id: string, archive = fal
   context.setItems((current) => current.filter((item) => item.id !== id));
   if (context.activeId === id) context.setActive(null);
   toast.success(archive ? "Chat archived" : "Chat deleted", {
-    action: { label: "Undo", onClick: () => restoreHomeChat(context, chat, archive) },
+    action: {
+      label: "Undo",
+      onClick: () =>
+        context.restore ? context.restore(chat, archive) : restoreHomeChat(context, chat, archive),
+    },
   });
 }

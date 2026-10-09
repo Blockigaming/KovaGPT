@@ -74,5 +74,7 @@ test("home chat uses stable empty state and complete callback dependencies", asy
     home,
     /const conversations = principalReady \? conversationState\.items : EMPTY_CONVERSATIONS/,
   );
-  assert.match(home, /\[activeId, conversations, setConversations, userKey\]/);
+  assert.match(home, /\[activeId, conversations, setConversations, userKey, storagePrincipal\]/);
+  assert.match(home, /if \(storagePrincipalRef\.current !== storagePrincipal\) return/);
+  assert.match(home, /epoch === historyActionEpochRef\.current/);
 });

@@ -1,6 +1,6 @@
 import "./public-foundation.css";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Menu, X } from "lucide-react";
+import { ArrowLeft, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -13,6 +13,43 @@ const navigation = [
   { label: "Pricing", to: "/pricing" },
   { label: "Download", to: "/download" },
 ] as const;
+
+const coreRoutes = new Set([
+  "/pricing",
+  "/help",
+  "/terms",
+  "/privacy",
+  "/refund",
+  "/contact-support",
+]);
+function CoreHeader({ pathname }: { pathname: string }) {
+  return (
+    <header className="kova-core-header">
+      <Link to="/" className="kova-core-return" aria-label="Back to KovaGPT chat">
+        <ArrowLeft aria-hidden="true" />
+        <NovaLogo decorative className="h-7 w-7" />
+        <span>KovaGPT</span>
+      </Link>
+      <nav aria-label="Account and help navigation">
+        <Link to="/pricing" aria-current={pathname === "/pricing" ? "page" : undefined}>
+          Plans
+        </Link>
+        <Link to="/help" aria-current={pathname === "/help" ? "page" : undefined}>
+          Help
+        </Link>
+      </nav>
+    </header>
+  );
+}
+function CoreFooter() {
+  return (
+    <footer className="kova-core-footer" aria-label="Legal and support">
+      <Link to="/terms">Terms of Service</Link>
+      <Link to="/privacy">Privacy Policy</Link>
+      <Link to="/help">Help</Link>
+    </footer>
+  );
+}
 
 function isCurrentPath(pathname: string, to: string) {
   return pathname === to || (to !== "/" && pathname.startsWith(`${to}/`));
@@ -157,6 +194,8 @@ export function PublicHeader() {
 }
 
 export function PublicShell({ children }: { children: ReactNode }) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const core = coreRoutes.has(pathname);
   const shellRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const shell = shellRef.current;
@@ -181,11 +220,12 @@ export function PublicShell({ children }: { children: ReactNode }) {
     <div
       ref={shellRef}
       data-public-shell
+      data-core-shell={core || undefined}
       className="flex min-h-[100dvh] min-w-0 flex-col bg-background text-foreground"
     >
-      <PublicHeader />
+      {core ? <CoreHeader pathname={pathname} /> : <PublicHeader />}
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
-      <PublicFooter />
+      {core ? <CoreFooter /> : <PublicFooter />}
     </div>
   );
 }

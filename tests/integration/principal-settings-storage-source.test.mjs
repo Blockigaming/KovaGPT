@@ -27,7 +27,8 @@ test("settings wait for an authenticated principal and never render stale accoun
   );
   assert.doesNotMatch(root, /loadSettings\(null\)/);
 
-  assert.match(images, /useNovaSettings\(userKey, isLoaded\)/);
+  assert.match(images, /<AppShell>/);
+  assert.doesNotMatch(images, /useNovaSettings|<Sidebar/);
   assert.match(shell, /useNovaSettings\(userKey, isLoaded\)/);
   assert.doesNotMatch(shell, /setSettings\(DEFAULT_SETTINGS\)/);
   assert.match(hook, /principalResolved \? settingsKey\(userKey\) : null/);

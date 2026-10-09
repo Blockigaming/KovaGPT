@@ -52,9 +52,8 @@ test("empty workspace remains contained and composer focus is deliberate", async
   expect(focused.outlineOffset).toBe(2);
   expect(focused.outlineColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.outlineColor).not.toBe(focused.color);
-  expect(unfocused.boxShadow).not.toBe("none");
-  expect(focused.boxShadow).not.toBe("none");
-  expect(focused.boxShadow).not.toBe(unfocused.boxShadow);
+  expect(unfocused.boxShadow).toBe("none");
+  expect(focused.boxShadow).toBe("none");
 
   if (page.viewportSize()!.width >= 1024) {
     const metrics = await composer.evaluate((element) => {
@@ -84,10 +83,15 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.shell.width).toBeLessThanOrEqual(768);
     expect(metrics.shell.width).toBeGreaterThanOrEqual(640);
     expect(metrics.controlSize).toBe(44);
-    // The two-row composer reserves a full text row above its touch controls.
+    // Short prompts start on one line between circular controls.
     expect(metrics.row?.height).toBeCloseTo(metrics.shell.height - metrics.borderBlock, 1);
-    expect(metrics.input?.height).toBeGreaterThanOrEqual(56);
-    expect(metrics.input!.bottom).toBeLessThanOrEqual(metrics.plus!.top);
+    expect(metrics.input?.height).toBeGreaterThanOrEqual(24);
+    expect(metrics.input?.height).toBeLessThanOrEqual(32);
+    expect(metrics.shell.height).toBeLessThanOrEqual(64);
+    expect(metrics.input!.y + metrics.input!.height / 2).toBeCloseTo(
+      metrics.plus!.y + metrics.plus!.height / 2,
+      1,
+    );
     expect(metrics.input!.left).toBeGreaterThan(metrics.shell.x);
     expect(metrics.input!.right).toBeLessThan(metrics.shell.x + metrics.shell.width);
     expect(metrics.send!.bottom).toBeLessThan(metrics.shell.y + metrics.shell.height);
@@ -97,24 +101,63 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.send?.height).toBe(metrics.controlSize);
     expect(metrics.plus?.y).toBe(metrics.send?.y);
 
-    await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+    for (const selector of [".kova-attach-button", ".kova-send-button"]) {
+      expect(
+        await composer
+          .locator(selector)
+          .evaluate((control) => getComputedStyle(control).borderRadius),
+      ).toBe("50%");
+    }
+    await input.fill("First line\nSecond line");
+    await expect
+      .poll(async () => (await input.boundingBox())!.height)
+      .toBeGreaterThan(metrics.input!.height);
+    await expect
+      .poll(async () => (await composer.boundingBox())!.height)
+      .toBeGreaterThan(metrics.shell.height);
+    await input.fill("A focused prompt");
+    await expect
+      .poll(async () => (await composer.boundingBox())!.height)
+      .toBeCloseTo(metrics.shell.height, 1);
+
+    const addButton = page.getByRole("button", { name: "Add files, tools, or prompts" });
+    await addButton.click();
     const menu = page.getByRole("dialog", { name: "Add files, tools, or prompts" });
     await expect(menu).toBeVisible();
-    await expect(page.getByRole("button", { name: "Start with Make a plan" })).toBeHidden();
-    const [menuBox, composerBox, headingBox] = await Promise.all([
-      menu.boundingBox(),
-      composer.boundingBox(),
-      page.getByRole("heading", { level: 1 }).boundingBox(),
-    ]);
+    // The portal may flip above the composer when there is less room below it.
+    // Either placement must keep every action accessible within the viewport.
+    const menuBox = await menu.boundingBox();
     expect(menuBox).not.toBeNull();
-    expect(composerBox).not.toBeNull();
-    expect(headingBox).not.toBeNull();
-    expect(menuBox!.y).toBeGreaterThanOrEqual(composerBox!.y + composerBox!.height + 8);
-    expect(menuBox!.y).toBeGreaterThan(headingBox!.y + headingBox!.height);
-    const webSearchBox = await menu.getByRole("button", { name: "Search the web" }).boundingBox();
-    expect(webSearchBox).not.toBeNull();
-    expect(webSearchBox!.height).toBeGreaterThanOrEqual(44);
-    await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+    expect(menuBox!.x).toBeGreaterThanOrEqual(0);
+    expect(menuBox!.y).toBeGreaterThanOrEqual(0);
+    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    const primaryActions = menu.locator(".kova-composer-primary-actions");
+    await expect(primaryActions.getByRole("button")).toHaveCount(5);
+    for (const name of ["Photos", "Files", "Library", "Drawings", "Create Image"]) {
+      const action = primaryActions.getByRole("button", { name, exact: true });
+      await expect(action).toBeVisible();
+      await expect
+        .poll(async () => (await action.boundingBox())!.height)
+        .toBeGreaterThanOrEqual(44);
+    }
+    await expect(
+      primaryActions.getByRole("button", { name: "Create Image", exact: true }),
+    ).toBeDisabled();
+    const plugins = menu.getByRole("region", { name: "Supported plugins" });
+    await expect(plugins).toBeVisible();
+    const pluginList = plugins.locator(".kova-composer-plugin-list");
+    const pluginScroll = await pluginList.evaluate((list) => ({
+      overflow: getComputedStyle(list).overflowY,
+      content: list.scrollHeight,
+      height: list.clientHeight,
+    }));
+    expect(pluginScroll.overflow).toBe("auto");
+    expect(pluginScroll.content).toBeGreaterThan(pluginScroll.height);
+    await expect(plugins.getByRole("link").first()).toHaveAttribute("href", /^\/apps\?plugin=/);
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await expect(addButton).toBeFocused();
     await expect(page.getByRole("button", { name: "Start with Make a plan" })).toBeVisible();
   }
 
@@ -130,12 +173,12 @@ test("empty workspace remains contained and composer focus is deliberate", async
       }));
     return {
       display: style.display,
-      columns: style.gridTemplateColumns.split(" ").length,
+      wrap: style.flexWrap,
       visibleLabels,
     };
   });
-  expect(starterLayout.display).toBe("grid");
-  expect(starterLayout.columns).toBe(2);
+  expect(starterLayout.display).toBe("flex");
+  expect(starterLayout.wrap).toBe("wrap");
   expect(starterLayout.visibleLabels.length).toBe(4);
   for (const label of starterLayout.visibleLabels) {
     expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth + 1);
@@ -318,7 +361,20 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   const sheet = page.getByTestId("mobile-bottom-sheet");
   await expect(sheet).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Search the web" })).toBeVisible();
+  const primaryActions = sheet.locator(".kova-composer-primary-actions");
+  await expect(primaryActions.getByRole("button")).toHaveText([
+    "Photos",
+    "Camera",
+    "Files",
+    "Library",
+  ]);
+  for (const name of ["Photos", "Camera", "Files", "Library"]) {
+    const action = primaryActions.getByRole("button", { name, exact: true });
+    await expect(action).toBeVisible();
+    await expect.poll(async () => (await action.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  await expect(sheet.getByRole("button", { name: "Drawings", exact: true })).toHaveCount(0);
+  await expect(sheet.getByRole("button", { name: "Create Image", exact: true })).toHaveCount(0);
   await sheet.getByRole("button", { name: "Close sheet" }).click();
   await expect(sheet).toBeHidden();
 });

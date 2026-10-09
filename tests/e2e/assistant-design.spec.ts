@@ -36,6 +36,7 @@ test("assistant and login render in both themes with usable mobile navigation", 
   page,
 }, info) => {
   for (const theme of ["light", "dark"] as const) {
+    await page.addInitScript((mode) => localStorage.setItem("kova-theme-mode", mode), theme);
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
     await page.goto("/");
     await waitForKovaHydration(page);
@@ -44,7 +45,7 @@ test("assistant and login render in both themes with usable mobile navigation", 
     await expect(page.getByRole("button", { name: "Start with Make a plan" })).toBeVisible();
     await expect(page.locator(".kova-auth-primary:visible")).toHaveCSS(
       "background-color",
-      "rgb(255, 255, 255)",
+      theme === "dark" ? "rgb(255, 255, 255)" : "rgb(23, 23, 23)",
     );
     for (const logo of await page.locator("img.kova-logo:visible").all()) {
       await expect(logo).toHaveAttribute("src", "/kova-logo.png");
@@ -93,7 +94,7 @@ test("assistant and login render in both themes with usable mobile navigation", 
       await expect(page.getByRole("link", { name: "Projects", exact: true })).toBeVisible();
       await expect(page.getByRole("link", { name: "Files", exact: true })).toHaveCount(0);
       const subscriptions = await page
-        .getByRole("link", { name: "Subscriptions", exact: true })
+        .getByRole("link", { name: "Plans", exact: true })
         .boundingBox();
       const login = await page.getByRole("button", { name: "Log in to KovaGPT" }).boundingBox();
       expect(subscriptions!.y + subscriptions!.height).toBeLessThan(login!.y);
@@ -138,6 +139,7 @@ test("shared-chat error envelopes keep Library and assistant navigation usable",
   if (page.viewportSize()!.width < 1024)
     await page.getByRole("button", { name: "Open menu" }).click();
   await page.getByRole("link", { name: "Library", exact: true }).click();
+  await page.locator('details[aria-labelledby="shared-chats-title"] > summary').click();
   await expect(page.getByText("Could not load shared chats", { exact: true })).toBeVisible();
   await expect(
     page.getByText("Shared chats are temporarily unavailable. Please retry.", { exact: true }),
@@ -223,9 +225,15 @@ test("Files error envelopes retain navigation back to the assistant", async ({ p
   await page.goto("/");
   await waitForKovaHydration(page);
   await capture(page, info, "signed-in-empty");
-  // Existing file deep links remain supported; new navigation lives in Library.
+  // Existing file deep links redirect to the shared Library, including its recovery state.
   await page.goto("/files");
-  await expect(page.getByRole("heading", { name: "Files could not be loaded" })).toBeVisible();
+  await expect(page).toHaveURL(/\/library$/);
+  const error = page.getByRole("alert");
+  await expect(error.getByRole("heading", { name: "Could not load Library" })).toBeVisible();
+  await expect(error.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "KovaGPT couldn't load this page" })).toHaveCount(
+    0,
+  );
   await capture(page, info, "files-error");
   if (page.viewportSize()!.width < 1024)
     await page.getByRole("button", { name: "Open menu" }).click();
@@ -268,6 +276,7 @@ test("provider failure stays visible and leaves the composer usable", async ({ p
 
 for (const theme of ["light", "dark"] as const) {
   test(`sent prompts use a readable ${theme} bubble`, async ({ page }, info) => {
+    await page.addInitScript((mode) => localStorage.setItem("kova-theme-mode", mode), theme);
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
     await page.route("**/api/chat", (route) =>
       route.fulfill({

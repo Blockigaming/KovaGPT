@@ -18,7 +18,7 @@ test("workspace discovery routes expose one deliberate main landmark contract", 
 });
 
 test("apps and plugins use one name and one truthful signed-out action", () => {
-  assert.match(routes.apps, /title="Connections"/);
+  assert.match(routes.apps, /title="Plugins"/);
   assert.match(routes.apps, /\{!isLoaded \? \([\s\S]*: !isSignedIn \? \(/);
   assert.match(routes.apps, /Sign in to connect services/);
   assert.doesNotMatch(routes.apps, /FILTER_CATEGORIES|setCategory|You haven't connected any apps/);
@@ -74,7 +74,8 @@ test("Images gives every repeated control a single contextual accessible name", 
   assert.match(routes.images, /aria-label=\{`Remove image: \$\{h\.prompt\}`\}/);
   assert.match(routes.images, /Image history/);
   assert.match(routes.images, /!isSignedIn \? \([\s\S]*Sign in to generate images/);
-  assert.match(routes.images, /role="status"[\s\S]{0,420}Generating image/);
+  assert.match(routes.images, /role="status"\s+aria-labelledby="image-generating-label"/);
+  assert.match(routes.images, /<p id="image-generating-label"[^>]*>\s*Generating image/);
   assert.doesNotMatch(routes.images, /aria-busy=\{loading \|\| undefined\}/);
   assert.match(routes.images, /The image could not be generated\. Please try again\./);
   assert.doesNotMatch(routes.images, /Check your prompt and try again/);

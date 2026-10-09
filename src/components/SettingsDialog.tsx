@@ -105,7 +105,7 @@ import {
   parseDeviceDataExport,
 } from "@/lib/device-data-portability";
 import { getUsage } from "@/lib/limits";
-import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, type ThemeMode } from "@/lib/theme";
 import { authFetch } from "@/lib/auth-fetch";
@@ -195,7 +195,6 @@ export function SettingsDialog({
   onChange,
   onClearAll,
   initialTab,
-  onOpenHelp,
   returnFocusTarget,
 }: {
   open: boolean;
@@ -224,7 +223,7 @@ export function SettingsDialog({
   currentAuthUserKeyRef.current = isLoaded ? userKey : undefined;
   const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const clerk = useClerk();
-  const loggedIn = !clerkEnabled || isSignedIn;
+  const loggedIn = isLoaded && isSignedIn;
   const { tier } = useTier();
   const adaptiveMemoryUnlocked = tierRank(tier) >= 1;
   const normalizedInitialTab = initialTab === "subscription" ? "billing" : initialTab;
@@ -255,6 +254,9 @@ export function SettingsDialog({
     deletionOperationRef.current++;
     setUsage(null);
     setUsageLoaded(false);
+    setSubSummary(null);
+    setSubscriptionError(null);
+    setSubscriptionLoading(false);
     setDeletionStatus(null);
     setDeleteAccountBusy(false);
     setDeleteAccountOpen(false);
@@ -315,7 +317,7 @@ export function SettingsDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, tab, loggedIn]);
+  }, [open, tab, loggedIn, userKey]);
 
   useEffect(() => {
     if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn) return;
@@ -341,20 +343,29 @@ export function SettingsDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, tab, loggedIn]);
+  }, [open, tab, loggedIn, userKey]);
 
   const handleManageBilling = async () => {
-    if (portalLoading || !subSummary?.hasBillingAccount || !subSummary.billingPortalAvailable)
+    if (
+      !loggedIn ||
+      !userKey ||
+      portalLoading ||
+      !subSummary?.hasBillingAccount ||
+      !subSummary.billingPortalAvailable
+    )
       return;
+    const requestOwner = userKey;
     setPortalLoading(true);
     try {
       const res = await createPortalSession({ data: {} });
+      if (currentAuthUserKeyRef.current !== requestOwner) return;
       if ("error" in res) throw new Error("billing_portal_unavailable");
       const portalUrl = parseAllowedBillingPortalUrl(res.url);
       if (!portalUrl) throw new Error("billing_portal_url_rejected");
       window.location.assign(portalUrl);
     } catch {
-      toast.error("The billing portal couldn't be opened. Try again.");
+      if (currentAuthUserKeyRef.current === requestOwner)
+        toast.error("The billing portal couldn't be opened. Try again.");
     } finally {
       setPortalLoading(false);
     }
@@ -541,13 +552,15 @@ export function SettingsDialog({
   };
 
   const handleRestore = async () => {
-    if (subscriptionLoading) return;
+    if (subscriptionLoading || !loggedIn || !userKey) return;
+    const requestOwner = userKey;
     setSubscriptionLoading(true);
     setSubscriptionError(null);
     try {
       const summary = await getSubscriptionSummary({
         data: { environment: getStripeEnvironment() },
       });
+      if (currentAuthUserKeyRef.current !== requestOwner) return;
       setSubSummary(summary);
       if (summary.billingConflict) {
         toast.error("A billing conflict needs support review.");
@@ -557,13 +570,14 @@ export function SettingsDialog({
         toast.success(`${summary.effectiveTier === "pro" ? "Pro" : "Plus"} plan refreshed.`);
       }
     } catch {
+      if (currentAuthUserKeyRef.current !== requestOwner) return;
       setSubSummary(null);
       setSubscriptionError(
         "Billing details couldn't be verified. Select Refresh billing status to retry.",
       );
       toast.error("Couldn't check your subscription. Try again.");
     } finally {
-      setSubscriptionLoading(false);
+      if (currentAuthUserKeyRef.current === requestOwner) setSubscriptionLoading(false);
     }
   };
 
@@ -661,7 +675,7 @@ export function SettingsDialog({
               <p className="text-xs text-muted-foreground mt-1">
                 {loggedIn
                   ? "Changes save automatically."
-                  : "Sign in to view and change your settings."}
+                  : "Appearance and preferences for this browser."}
               </p>
             </div>
             {loggedIn && (
@@ -714,7 +728,15 @@ export function SettingsDialog({
                   <section key={group.title} aria-label={group.title}>
                     <p className="kova-settings-nav-group">{group.title}</p>
                     {group.tabs.map(({ v, icon: Icon, label }) => (
-                      <TabsTrigger key={v} value={v} className="kova-settings-nav-item">
+                      <TabsTrigger
+                        key={v}
+                        value={v}
+                        className="kova-settings-nav-item"
+                        onClick={() => {
+                          // An already-selected Radix tab does not emit onValueChange.
+                          if (mobileHome && v === tab) selectTab(v);
+                        }}
+                      >
                         <Icon aria-hidden="true" />
                         <span>{label}</span>
                       </TabsTrigger>
@@ -1630,15 +1652,11 @@ export function SettingsDialog({
                 <p className="text-xs text-muted-foreground">
                   Found a bug or something off? Send it to our team and we'll take a look.
                 </p>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    onOpenChange(false);
-                    onOpenHelp?.();
-                  }}
-                >
-                  <Bug className="w-4 h-4 mr-2" />
-                  Open bug report form
+                <Button size="sm" asChild>
+                  <Link to="/help" hash="support-form" onClick={() => onOpenChange(false)}>
+                    <Bug className="w-4 h-4 mr-2" />
+                    Open bug report form
+                  </Link>
                 </Button>
               </TabsContent>
 
@@ -1648,15 +1666,11 @@ export function SettingsDialog({
                 <p className="text-xs text-muted-foreground">
                   Get help, contact support, or browse common questions.
                 </p>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    onOpenChange(false);
-                    onOpenHelp?.();
-                  }}
-                >
-                  <LifeBuoy className="w-4 h-4 mr-2" />
-                  Open help center
+                <Button size="sm" asChild>
+                  <Link to="/help" onClick={() => onOpenChange(false)}>
+                    <LifeBuoy className="w-4 h-4 mr-2" />
+                    Open help center
+                  </Link>
                 </Button>
               </TabsContent>
 
@@ -2322,7 +2336,7 @@ function SignedOutSettings({
   onSignIn: () => void;
   onClose: () => void;
 }) {
-  const [section, setSection] = useState<"general" | "data">("general");
+  const [section, setSection] = useState<"general" | "data" | "help">("general");
 
   return (
     <div className="kova-settings-surface flex max-h-[78vh] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--surface-modal)] md:flex-row">
@@ -2334,6 +2348,7 @@ function SignedOutSettings({
           [
             ["general", "General", Cog],
             ["data", "Data controls", Database],
+            ["help", "Help & legal", LifeBuoy],
           ] as const
         ).map(([value, label, Icon]) => (
           <button
@@ -2360,7 +2375,7 @@ function SignedOutSettings({
               <span className="text-sm">Appearance</span>
               <div className="w-44">
                 <Select
-                  value={settings.mode ?? "system"}
+                  value={settings.mode ?? "dark"}
                   onValueChange={(v) => setMode(v as ThemeMode)}
                 >
                   <SelectTrigger aria-label="Appearance">
@@ -2387,7 +2402,7 @@ function SignedOutSettings({
               </Button>
             </div>
           </div>
-        ) : (
+        ) : section === "data" ? (
           <div className="space-y-5">
             <ArchivedChatsPanel userKey={null} />
             <div className="rounded-xl border border-border/60 bg-card/40 p-4">
@@ -2407,6 +2422,27 @@ function SignedOutSettings({
               </p>
             </div>
           </div>
+        ) : (
+          <section className="kova-settings-help-links" aria-labelledby="guest-help-title">
+            <h2 id="guest-help-title" className="text-lg font-semibold">
+              Help & legal
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Get answers, review plans, or read how KovaGPT works.
+            </p>
+            <Link to="/help" onClick={onClose}>
+              Help center <ExternalLink aria-hidden="true" />
+            </Link>
+            <Link to="/pricing" onClick={onClose}>
+              Plans and subscriptions <ExternalLink aria-hidden="true" />
+            </Link>
+            <Link to="/terms" onClick={onClose}>
+              Terms of Service <ExternalLink aria-hidden="true" />
+            </Link>
+            <Link to="/privacy" onClick={onClose}>
+              Privacy Policy <ExternalLink aria-hidden="true" />
+            </Link>
+          </section>
         )}
       </div>
     </div>

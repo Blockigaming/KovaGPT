@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useUser } from "@/components/auth/ClerkSafe";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
+import { CORE_LAUNCH_ADVANCED_WORKFLOWS } from "@/lib/core-launch-policy.mjs";
+import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import {
   listScheduledTasks,
@@ -11,13 +14,12 @@ import {
   type ScheduledTask,
 } from "@/lib/scheduled-tasks.functions";
 import {
-  Calendar,
+  CalendarClock,
   Clock,
   Plus,
   Trash2,
   Pause,
   Play,
-  ArrowLeft,
   Lock,
   RefreshCw,
   Search,
@@ -40,6 +42,9 @@ import {
 
 export const Route = createFileRoute("/scheduled-tasks")({
   component: ScheduledTasksPage,
+  validateSearch: (search: Record<string, unknown>): { task?: string } => ({
+    task: typeof search.task === "string" && search.task.length <= 100 ? search.task : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "KovaGPT Tasks" },
@@ -56,6 +61,8 @@ type PlanState = "loading" | "free" | "paid" | "signed-out" | "error";
 type TaskFilter = "all" | "active" | "paused" | "history" | "failed";
 
 function ScheduledTasksPage() {
+  const { task: requestedTask } = Route.useSearch();
+  const handledTaskRef = useRef<string | null>(null);
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
@@ -71,6 +78,7 @@ function ScheduledTasksPage() {
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<ScheduledTask | null>(null);
   const [editor, setEditor] = useState<ScheduledTask | "new" | null>(null);
   const mutations = useRef(new Map<string, { revision: number; mutationId: string }>());
   const listRequest = useRef(0);
@@ -100,6 +108,8 @@ function ScheduledTasksPage() {
     setPlan("loading");
     setTasks([]);
     setEditor(null);
+    setPendingDelete(null);
+    handledTaskRef.current = null;
     mutations.current.clear();
     listRequest.current += 1;
     activeRead.current = null;
@@ -283,6 +293,15 @@ function ScheduledTasksPage() {
   }, [dataReady, filter, query, tasks]);
 
   const visiblePlan: PlanState = dataReady ? plan : "loading";
+  useEffect(() => {
+    if (!dataReady || !requestedTask || loading) return;
+    const target = tasks.find((task) => task.id === requestedTask);
+    const key = `${principal}:${requestedTask}`;
+    if (target && handledTaskRef.current !== key) {
+      handledTaskRef.current = key;
+      setEditor(target);
+    }
+  }, [dataReady, loading, principal, requestedTask, tasks]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -352,10 +371,6 @@ function ScheduledTasksPage() {
   const del = async (t: ScheduledTask) => {
     if (!dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
-    if (
-      !window.confirm("Delete this task and its run history? Pending copy offers will be revoked.")
-    )
-      return;
     const pending = beginMutation();
     try {
       await remove({ data: identity(t, "delete") });
@@ -393,23 +408,17 @@ function ScheduledTasksPage() {
   return (
     <AppShell>
       <div className="min-h-screen bg-background text-foreground">
-        <div className="kova-page kova-secondary-page max-w-3xl">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to chat
-          </Link>
-
-          <div className="flex items-center gap-3 mb-2">
-            <Calendar className="w-6 h-6" />
-            <h1 className="font-display text-2xl font-semibold tracking-tight">Tasks</h1>
-          </div>
-          <p className="text-sm text-muted-foreground mb-8">
-            Review scheduled work and its real execution status. New tasks are available only when a
-            background runner is configured.
-          </p>
-
+        <main
+          id="main-content"
+          tabIndex={-1}
+          aria-labelledby="scheduled-tasks-title"
+          className="kova-page kova-secondary-page kova-core-page max-w-3xl"
+        >
+          <WorkspacePageHeader
+            title="Scheduled tasks"
+            titleId="scheduled-tasks-title"
+            description="Let KovaGPT follow up at the right time. Manage schedules and review completed results."
+          />
           {visiblePlan === "loading" && (
             <div className="text-sm text-muted-foreground">Loading…</div>
           )}
@@ -419,14 +428,16 @@ function ScheduledTasksPage() {
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
               <div className="font-medium mb-1">Sign in to review task history</div>
               <p className="text-sm text-muted-foreground mb-4">
-                Sign in to review your saved tasks and background execution availability.
+                Log in to view your tasks and saved results.
               </p>
-              <a
-                href="/?sign-in=1"
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium"
-              >
-                Go to sign in
-              </a>
+              <SignInButton mode="modal">
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background"
+                >
+                  Log in
+                </button>
+              </SignInButton>
             </div>
           )}
 
@@ -437,14 +448,13 @@ function ScheduledTasksPage() {
                 Running tasks requires an active Plus or Pro plan
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                Your existing history and pause/delete controls remain available below. A plan alone
-                does not activate an unconfigured background runner.
+                You can still review past results and pause or delete existing tasks.
               </p>
               <Link
-                to="/"
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium"
+                to="/pricing"
+                className="inline-flex min-h-11 items-center justify-center px-5 py-2 rounded-full bg-foreground text-background text-sm font-medium"
               >
-                Back to chat
+                View plans
               </Link>
             </div>
           )}
@@ -454,8 +464,7 @@ function ScheduledTasksPage() {
               <AlertCircle className="mx-auto mb-3 h-6 w-6 text-destructive" />
               <div className="font-medium mb-1">Plan status is unavailable</div>
               <p className="text-sm text-muted-foreground mb-4">
-                KovaGPT could not safely verify access to Scheduled Tasks. No plan restriction was
-                inferred.
+                We couldn’t load your plan details. Try again to check task availability.
               </p>
               <button
                 type="button"
@@ -475,16 +484,14 @@ function ScheduledTasksPage() {
                   role="status"
                   aria-label="Scheduled Tasks Status"
                 >
-                  <div className="font-medium">Scheduled execution is not available yet</div>
+                  <div className="font-medium">Scheduled tasks are temporarily unavailable</div>
                   <p className="mt-1 text-muted-foreground">
-                    Background execution is not ready in this deployment. KovaGPT will not accept
-                    new tasks or claim that saved tasks will run. You can still review, pause, or
-                    delete previously saved tasks below. Upgrading will not enable scheduled
-                    execution until this deployment is ready.
+                    New tasks and retries are unavailable right now. You can still review, pause, or
+                    delete saved tasks. Upgrading your plan won’t change this availability.
                   </p>
                 </div>
               ) : null}
-              {executionAvailable && visiblePlan === "paid" ? (
+              {CORE_LAUNCH_ADVANCED_WORKFLOWS && executionAvailable && visiblePlan === "paid" ? (
                 <div className="mb-4 flex justify-end">
                   <button
                     type="button"
@@ -503,11 +510,14 @@ function ScheduledTasksPage() {
               {executionAvailable && visiblePlan === "paid" ? (
                 <form
                   onSubmit={submit}
-                  className="kova-card kova-form-surface p-4 sm:p-5 mb-8 space-y-3"
+                  className="kova-card kova-task-form kova-form-surface p-4 sm:p-5 mb-8 space-y-3"
                 >
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground">Title</label>
+                    <label htmlFor="task-title" className="text-sm font-medium">
+                      Title
+                    </label>
                     <input
+                      id="task-title"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Morning market summary"
@@ -518,10 +528,11 @@ function ScheduledTasksPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground">
+                    <label htmlFor="task-prompt" className="text-sm font-medium">
                       What should Kova do?
                     </label>
                     <textarea
+                      id="task-prompt"
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
                       placeholder="Summarize the top 5 AI news stories from the last 24 hours."
@@ -533,8 +544,11 @@ function ScheduledTasksPage() {
 
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground">When</label>
+                      <label htmlFor="task-when" className="text-sm font-medium">
+                        When
+                      </label>
                       <input
+                        id="task-when"
                         type="datetime-local"
                         value={when}
                         onChange={(e) => setWhen(e.target.value)}
@@ -544,8 +558,11 @@ function ScheduledTasksPage() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground">Repeat</label>
+                      <label htmlFor="task-repeat" className="text-sm font-medium">
+                        Repeat
+                      </label>
                       <select
+                        id="task-repeat"
                         value={repeat}
                         onChange={(e) => setRepeat(e.target.value as ScheduledTask["repeat"])}
                         className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
@@ -607,7 +624,7 @@ function ScheduledTasksPage() {
                   <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
                 </button>
               </div>
-              <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+              <div className="mb-4 flex min-w-0 flex-col gap-2">
                 <label className="relative min-w-0 flex-1">
                   <span className="sr-only">Search scheduled tasks</span>
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -619,7 +636,7 @@ function ScheduledTasksPage() {
                   />
                 </label>
                 <div
-                  className="flex gap-1 overflow-x-auto"
+                  className="kova-task-filters flex gap-1 overflow-x-auto"
                   role="tablist"
                   aria-label="Task filters"
                 >
@@ -631,7 +648,7 @@ function ScheduledTasksPage() {
                         role="tab"
                         aria-selected={filter === value}
                         onClick={() => setFilter(value)}
-                        className={`min-h-10 shrink-0 rounded-lg px-3 text-sm capitalize ${filter === value ? "bg-foreground text-background" : "bg-accent/50 hover:bg-accent"}`}
+                        className={`min-h-10 shrink-0 rounded-lg px-3 text-sm capitalize ${filter === value ? "bg-foreground text-background" : "bg-transparent hover:bg-accent"}`}
                       >
                         {value}
                       </button>
@@ -667,7 +684,7 @@ function ScheduledTasksPage() {
               ) : tasks.length === 0 ? (
                 <div className="kova-empty-state">
                   <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Calendar className="w-5 h-5 text-muted-foreground" />
+                    <CalendarClock className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <div className="text-base font-medium mb-1">Nothing scheduled yet</div>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
@@ -692,7 +709,7 @@ function ScheduledTasksPage() {
                     >
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{t.title}</div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                        <div className="kova-task-meta text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
                           <Clock className="w-3.5 h-3.5" />
                           {t.next_run_at
                             ? `Next ${new Date(t.next_run_at).toLocaleString()}`
@@ -718,7 +735,7 @@ function ScheduledTasksPage() {
                           </p>
                         ) : null}
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="kova-task-actions flex items-center gap-1">
                         <button
                           className="rounded border border-border px-3 py-2 text-sm"
                           onClick={() => setEditor(t)}
@@ -755,7 +772,7 @@ function ScheduledTasksPage() {
                           </button>
                         ) : null}
                         <button
-                          onClick={() => del(t)}
+                          onClick={() => setPendingDelete(t)}
                           className="p-2 rounded-md hover:bg-destructive/10 text-destructive transition"
                           aria-label="Delete"
                           title="Delete"
@@ -769,11 +786,27 @@ function ScheduledTasksPage() {
               )}
             </>
           )}
-        </div>
-        <RelatedWorkspaceItems
-          kinds={["project", "context_pack", "file", "memory"]}
-          title="Context for automations"
+        </main>
+        <ConfirmActionDialog
+          open={Boolean(pendingDelete)}
+          onOpenChange={(open) => {
+            if (!open) setPendingDelete(null);
+          }}
+          title="Delete scheduled task?"
+          description={`Delete “${pendingDelete?.title ?? "this task"}” and its run history? Pending copy offers will be revoked.`}
+          confirmLabel="Delete task"
+          destructive
+          onConfirm={() => {
+            if (pendingDelete) void del(pendingDelete);
+            setPendingDelete(null);
+          }}
         />
+        {CORE_LAUNCH_ADVANCED_WORKFLOWS && (
+          <RelatedWorkspaceItems
+            kinds={["project", "context_pack", "file", "memory"]}
+            title="Context for automations"
+          />
+        )}
       </div>
     </AppShell>
   );

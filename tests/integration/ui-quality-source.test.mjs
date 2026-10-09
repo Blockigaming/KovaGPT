@@ -38,7 +38,8 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(home, /What can I help with\?/);
   assert.match(home, /placement="topbar"/);
   assert.match(composer, /COMPOSER_TOOLS/);
-  assert.match(composer, /PROMPT_SHORTCUTS/);
+  assert.match(composer, /ComposerPluginList/);
+  assert.match(composer, /setLibraryOpen\(true\)/);
 
   // A blocked attachment may explain the blocker, but it must not submit the message.
   assert.match(composer, /const blockedAttachmentMessage = blockedAttachment/);
@@ -143,9 +144,14 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.doesNotMatch(composer, /outlineWidth:\s*"2px"/);
   assert.doesNotMatch(composer, /outlineColor:\s*"currentColor"/);
   assert.match(composer, /surface\?: "empty" \| "conversation"/);
-  assert.match(composer, /top-\[calc\(100%\+1\.25rem\)\]/);
-  assert.match(composer, /bottom-\[calc\(100%\+1\.25rem\)\]/);
-  assert.match(composer, /mobile \? "min-h-14[^"\n]+" : "min-h-11/);
+  assert.match(composer, /<PopoverContent/);
+  assert.match(composer, /side=\{surface === "empty" \? "bottom" : "top"\}/);
+  assert.match(composer, /collisionPadding=\{12\}/);
+  assert.match(composer, /onCloseAutoFocus/);
+  assert.match(composer, /ArrowDown/);
+  assert.match(composer, /ArrowUp/);
+  assert.match(composer, /renderComposerActions\(true\)/);
+  assert.match(composer, /renderComposerActions\(false\)/);
   assert.match(home, /surface="empty"/);
   assert.match(home, /<HomeChatStarters setInput=\{setInput\}/);
   assert.match(

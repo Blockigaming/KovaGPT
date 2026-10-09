@@ -11,9 +11,12 @@ test("guest sign-in invitation waits for three prompts in the current tab", asyn
 test("Apps navigation and composer connector entry are truthful and reachable", async () => {
   const sidebar = await read("src/components/Sidebar.tsx");
   const composer = await read("src/components/ChatInput.tsx");
+  const plugins = await read("src/components/ComposerPluginList.tsx");
   const palette = await read("src/components/CommandPalette.tsx");
-  assert.match(sidebar, /navLink\("\/apps", "Connections", Puzzle\)/);
-  assert.match(composer, /window\.location\.href = "\/apps"/);
+  assert.match(sidebar, /navLink\("\/apps", "Plugins", Puzzle\)/);
+  assert.match(composer, /<ComposerPluginList/);
+  assert.match(plugins, /to="\/apps"/);
+  assert.match(plugins, /search=\{\{ plugin: plugin\.id \}\}/);
   assert.match(palette, /label: "Open plugins", href: "\/apps"/);
 });
 test("chat interaction primitives remain complete and animated", async () => {

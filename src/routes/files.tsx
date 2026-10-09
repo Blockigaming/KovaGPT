@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { File, Files, HardDrive, Search } from "lucide-react";
@@ -14,6 +14,9 @@ import {
   openInWork,
 } from "@/lib/workspace-handoffs";
 export const Route = createFileRoute("/files")({
+  beforeLoad: () => {
+    throw redirect({ to: "/library", replace: true });
+  },
   component: FilesPage,
   head: () => ({ meta: [{ title: "KovaGPT Files" }, { name: "robots", content: "noindex" }] }),
 });

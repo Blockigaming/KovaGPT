@@ -20,7 +20,10 @@ import {
   loadConversations,
   subscribeToConversationChanges,
   saveConversations,
+  archiveConversation,
+  newId,
 } from "@/lib/chat-store";
+import { chatHistorySnapshot } from "@/lib/chat-history-bridge";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { saveStoredSettings } from "@/lib/settings-storage";
 import { stageOnboardingHandoff } from "@/lib/onboarding-handoff";
@@ -44,6 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const principalRef = useRef(storagePrincipal);
   principalRef.current = isLoaded ? storagePrincipal : "loading";
   const selectionRef = useRef(0);
+  const historyWriteRef = useRef<object | null>(null);
   useEffect(
     () => () => {
       selectionRef.current += 1;
@@ -87,6 +91,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     selectionRef.current += 1;
+    historyWriteRef.current = null;
     if (!isLoaded) {
       setConversationState({ principal: null, items: [] });
       setSettingsOpen(false);
@@ -203,12 +208,78 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/" });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!principalReady) return;
-    const next = conversations.filter((c) => c.id !== id);
-    if (!(await saveConversations(userKey, next))) return;
-    setConversationState({ principal: storagePrincipal, items: next });
+  const updateHistory = async (
+    update: (items: Conversation[]) => Conversation[],
+    failureMessage: string,
+    beforeSave?: (items: Conversation[]) => boolean | Promise<boolean>,
+  ) => {
+    if (!principalReady || historyWriteRef.current) return false;
+    const operation = {};
+    historyWriteRef.current = operation;
+    const selection = selectionRef.current;
+    const current = () =>
+      principalRef.current === storagePrincipal && selectionRef.current === selection;
+    try {
+      if (beforeSave && !(await beforeSave(loadConversations(userKey)))) {
+        if (current()) toast.error(failureMessage);
+        return false;
+      }
+      if (!current()) return false;
+      const next = update(loadConversations(userKey));
+      const saved = await saveConversations(userKey, next, {
+        snapshot: chatHistorySnapshot(userKey),
+      });
+      if (!current()) return false;
+      if (!saved) {
+        toast.error(failureMessage);
+        return false;
+      }
+      setConversationState({ principal: storagePrincipal, items: next });
+      return true;
+    } catch {
+      if (current()) toast.error(failureMessage);
+      return false;
+    } finally {
+      if (historyWriteRef.current === operation) historyWriteRef.current = null;
+    }
   };
+  const handleDelete = (id: string) =>
+    updateHistory(
+      (items) => items.filter((item) => item.id !== id),
+      "This chat could not be deleted. Please retry.",
+    );
+  const handleRename = (id: string, value: string) => {
+    const title = value.trim().slice(0, 160);
+    if (!title) return false;
+    return updateHistory(
+      (items) =>
+        items.map((item) => (item.id === id ? { ...item, title, updatedAt: Date.now() } : item)),
+      "This chat could not be renamed. Please retry.",
+    );
+  };
+  const handleArchive = (id: string) =>
+    updateHistory(
+      (items) => items.filter((item) => item.id !== id),
+      "This chat could not be archived. Please retry.",
+      (items) => {
+        const chat = items.find((item) => item.id === id);
+        return chat ? archiveConversation(userKey, chat) : false;
+      },
+    );
+  const handleDuplicate = (id: string) =>
+    updateHistory((items) => {
+      const source = items.find((item) => item.id === id);
+      if (!source) throw new Error("Chat unavailable");
+      const copy = {
+        ...source,
+        id: newId(),
+        title: `${source.title} (copy)`,
+        messages: source.messages.map((message) => ({ ...message, id: newId() })),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      return [copy, ...items];
+    }, "This chat could not be duplicated. Please retry.");
 
   return (
     <div className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground">
@@ -218,6 +289,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         onSelect={goToConversation}
         onNew={handleNew}
         onDelete={handleDelete}
+        onRename={handleRename}
+        onArchive={handleArchive}
+        onDuplicate={handleDuplicate}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
@@ -225,10 +299,20 @@ export function AppShell({ children }: { children: ReactNode }) {
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
       />
 
-      <div className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div
+        className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]"
+        data-sidebar={sidebarOpen ? "open" : "closed"}
+      >
         <OfflineBanner />
         <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
-        {!sidebarOpen && (
+        <div className="kova-core-utilities flex shrink-0 justify-end px-4 py-2 lg:px-8">
+          <TimersWidget
+            userKey={userKey}
+            principalResolved={isLoaded}
+            mobileSidebarOpen={sidebarOpen}
+          />
+        </div>
+        {!sidebarOpen && !user && (
           <button
             onClick={(event) => {
               const keyboardActivated = event.detail === 0;
@@ -278,11 +362,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           }}
         />
       </Suspense>
-      <TimersWidget
-        userKey={userKey}
-        principalResolved={isLoaded}
-        mobileSidebarOpen={sidebarOpen}
-      />
     </div>
   );
 }

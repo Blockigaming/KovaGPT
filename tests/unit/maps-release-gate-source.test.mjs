@@ -3,11 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
-const expectedSidebarCallers = [
-  "src/components/AppShell.tsx",
-  "src/components/ChatWorkspace.tsx",
-  "src/routes/images.tsx",
-];
+const expectedSidebarCallers = ["src/components/AppShell.tsx", "src/components/ChatWorkspace.tsx"];
 
 test("MAN-09 keeps the release gate closed", () => {
   const gate = readFileSync("src/lib/maps-release-gate.ts", "utf8");
@@ -29,6 +25,7 @@ test("every Sidebar caller supplies the Maps release decision", () => {
     .sort();
 
   assert.deepEqual(callers, expectedSidebarCallers);
+  assert.match(readFileSync("src/routes/images.tsx", "utf8"), /<AppShell>/u);
   for (const path of callers) {
     const source = readFileSync(path, "utf8");
     assert.match(source, /import \{ MAPS_RELEASE_APPROVED \} from "@\/lib\/maps-release-gate";/u);

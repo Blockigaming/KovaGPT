@@ -1,3 +1,4 @@
+import { PluginLogo } from "@/components/PluginLogo";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
@@ -72,9 +73,16 @@ const GOOGLE_IDS = GOOGLE_CONNECT_IDS;
 
 export const Route = createFileRoute("/apps")({
   component: AppsPage,
+  validateSearch: (search: Record<string, unknown>): { plugin?: string } => ({
+    plugin:
+      typeof search.plugin === "string" &&
+      LAUNCH_PLUGIN_CATALOG.some((item) => item.id === search.plugin)
+        ? search.plugin
+        : undefined,
+  }),
   head: () => ({
     meta: [
-      { title: "KovaGPT Connections" },
+      { title: "KovaGPT Plugins" },
       {
         name: "description",
         content: "Manage KovaGPT plugin connections and check their availability.",
@@ -149,47 +157,24 @@ function parseGitHubAuthorizationUrl(value: unknown): string | null {
   }
 }
 
-function AppLogo({ domain, label }: { domain: string; label: string }) {
-  // Locally rendered brand mark using the domain's own favicon as a fallback.
-  // Avoids Logo.dev entirely.
-  const [failed, setFailed] = useState(false);
-  const src = `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(domain)}`;
-  if (!failed) {
-    return (
-      <img
-        src={src}
-        alt=""
-        loading="lazy"
-        onError={() => setFailed(true)}
-        className="w-10 h-10 rounded-lg object-contain bg-white border border-border shrink-0 p-1.5"
-      />
-    );
-  }
-  return (
-    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-xs font-semibold text-muted-foreground border border-border">
-      {label.slice(0, 2).toUpperCase()}
-    </div>
-  );
-}
-
 function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
   if (!configured && state !== "syncing" && state !== "temporarily_unavailable") {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
         <ShieldAlert className="w-3 h-3" /> Setup needed
       </span>
     );
   }
   if (state === "connected") {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
         <Check className="w-3 h-3" /> Connected
       </span>
     );
   }
   if (state === "connecting") {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-transparent text-muted-foreground border border-border">
         <Loader2 className="w-3 h-3 animate-spin" /> Connecting
       </span>
     );
@@ -198,7 +183,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
   if (state === "expired" || state === "reauthorize") {
     return (
       <span
-        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20"
+        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20"
         aria-label="Reauthorization required"
       >
         <ShieldAlert className="w-3 h-3" /> Reconnect
@@ -208,7 +193,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
   if (state === "permission_incomplete") {
     return (
       <span
-        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20"
+        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20"
         aria-label="Permission incomplete"
       >
         <ShieldAlert className="w-3 h-3" /> More access needed
@@ -218,7 +203,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
   if (state === "syncing") {
     return (
       <span
-        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20"
+        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-transparent text-muted-foreground border border-border"
         aria-live="polite"
       >
         <Loader2 className="w-3 h-3 animate-spin" /> Syncing
@@ -237,7 +222,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
   }
   if (state === "failed") {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
         <AlertCircle className="w-3 h-3" /> Failed
       </span>
     );
@@ -302,7 +287,9 @@ function AppCard({
   } else if (!isSignedIn) {
     action = (
       <SignInButton mode="modal">
-        <button className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}>Connect</button>
+        <button className={`${baseBtn} bg-foreground text-background hover:opacity-90`}>
+          Connect
+        </button>
       </SignInButton>
     );
   } else if (state === "connecting") {
@@ -337,7 +324,7 @@ function AppCard({
     action = (
       <button
         onClick={onConnect}
-        className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}
+        className={`${baseBtn} bg-foreground text-background hover:opacity-90`}
       >
         Connect
       </button>
@@ -349,7 +336,7 @@ function AppCard({
       data-plugin-id={item.id}
       className="kova-card kova-connector-card flex h-full flex-col items-start gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-foreground/20 sm:flex-row"
     >
-      <AppLogo domain={item.domain} label={item.label} />
+      <PluginLogo id={item.id} label={item.label} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-semibold truncate">{item.label}</div>
@@ -870,6 +857,8 @@ function GitHubManager() {
 }
 
 function AppsPage() {
+  const { plugin: requestedPlugin } = Route.useSearch();
+  const handledPluginRef = useRef<string | null>(null);
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const workflowSkillsAvailable = user?.primaryEmailAddress?.verification?.status === "verified";
@@ -899,6 +888,16 @@ function AppsPage() {
   const visibleGoogleLoading = activityReady ? googleLoading : true;
   const visibleSelectedApp = activityReady ? selectedApp : null;
   const googleConfigured = visibleGoogleStatus?.configured === true;
+  useEffect(() => {
+    if (!activityReady || !requestedPlugin) {
+      handledPluginRef.current = null;
+      return;
+    }
+    const request = `${principal}:${requestedPlugin}`;
+    if (handledPluginRef.current === request) return;
+    handledPluginRef.current = request;
+    setSelectedApp(LAUNCH_PLUGIN_CATALOG.find((item) => item.id === requestedPlugin) ?? null);
+  }, [activityReady, principal, requestedPlugin]);
 
   const resendWorkflowVerification = async () => {
     const email = user?.primaryEmailAddress?.emailAddress;
@@ -1279,12 +1278,17 @@ function AppsPage() {
         id="main-content"
         tabIndex={-1}
         aria-labelledby="apps-title"
-        className="kova-page kova-secondary-page max-w-5xl space-y-8"
+        className="kova-page kova-secondary-page kova-core-page max-w-5xl space-y-8"
       >
         <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>{visibleSelectedApp?.label}</DialogTitle>
+              <DialogTitle className="flex items-center gap-3">
+                {visibleSelectedApp && (
+                  <PluginLogo id={visibleSelectedApp.id} label={visibleSelectedApp.label} />
+                )}
+                {visibleSelectedApp?.label}
+              </DialogTitle>
               <DialogDescription>{visibleSelectedApp?.description}</DialogDescription>
             </DialogHeader>
             {visibleSelectedApp && (
@@ -1298,7 +1302,9 @@ function AppsPage() {
                         ? "Read calendars and propose events. Creating an event requires explicit confirmation."
                         : visibleSelectedApp.id === "google-drive"
                           ? "Search and read files covered by the Drive scopes you granted."
-                          : connectorUnavailableReason(visibleSelectedApp)}
+                          : visibleSelectedApp.id === "github"
+                            ? "Choose Disabled, View only, or View + write. Write access still requires your approval for each specific action."
+                            : connectorUnavailableReason(visibleSelectedApp)}
                   </p>
                   {isGoogleId(visibleSelectedApp.id) && visibleGoogleStatus?.email ? (
                     <p className="mt-2 text-xs text-muted-foreground">
@@ -1317,6 +1323,26 @@ function AppsPage() {
                     </button>
                   ) : null}
                 </section>
+                {visibleSelectedApp.id === "github" && isSignedIn ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedApp(null);
+                      requestAnimationFrame(() =>
+                        document
+                          .querySelector<HTMLElement>('[data-plugin-id="github"]')
+                          ?.scrollIntoView({
+                            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                              ? "auto"
+                              : "smooth",
+                            block: "start",
+                          }),
+                      );
+                    }}
+                  >
+                    Manage GitHub connection
+                  </Button>
+                ) : null}
                 <section>
                   <h3 className="font-medium">Recent activity</h3>
                   {visibleActivity.filter((entry) =>
@@ -1350,7 +1376,7 @@ function AppsPage() {
         </Dialog>
         <WorkspacePageHeader
           icon={PanelsTopLeft}
-          title="Connections"
+          title="Plugins"
           titleId="apps-title"
           description="Connect the services you want KovaGPT to use. You control permissions, and write actions still require confirmation."
         />
@@ -1389,12 +1415,12 @@ function AppsPage() {
         ) : (
           <>
             <label className="relative block max-w-md">
-              <span className="sr-only">Search connections</span>
+              <span className="sr-only">Search plugins</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search connections"
+                placeholder="Search plugins"
                 className="h-11 pl-9"
               />
             </label>
@@ -1537,7 +1563,7 @@ function AppsPage() {
               <section className="kova-empty-state" aria-labelledby="apps-empty-title">
                 <Search className="mx-auto h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 <h2 id="apps-empty-title" className="mt-3 text-sm font-medium">
-                  No matching connections
+                  No matching plugins
                 </h2>
                 <p className="mt-1 text-xs text-muted-foreground">Try another service name.</p>
                 <Button

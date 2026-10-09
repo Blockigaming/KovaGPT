@@ -39,7 +39,15 @@ function LegalTocList({
     <ol className="legal-toc-list">
       {sections.map((section, index) => (
         <li key={section.id}>
-          <a href={`#${section.id}`} data-active={activeId === section.id || undefined}>
+          <a
+            href={`#${section.id}`}
+            data-active={activeId === section.id || undefined}
+            aria-current={activeId === section.id ? "location" : undefined}
+            onClick={(event) => {
+              const menu = event.currentTarget.closest("details");
+              if (menu) menu.open = false;
+            }}
+          >
             <span className="legal-toc-index" aria-hidden="true">
               {String(index + 1).padStart(2, "0")}
             </span>

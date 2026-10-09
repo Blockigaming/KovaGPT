@@ -28,10 +28,10 @@ const HYDRATION_READY_EVENT = "kova:hydrated";
 // markup. Change CSSOM selectors, not React-owned nodes or stylesheet text.
 // applyThemeMode restores them atomically after setting the hydrated root class.
 const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
-  let mode = "system";
+  let mode = "dark";
   try {
     const stored = localStorage.getItem("kova-theme-mode");
-    if (stored === "light" || stored === "dark") mode = stored;
+    if (stored === "light" || stored === "dark" || stored === "system") mode = stored;
   } catch {}
   if (!(mode === "dark" || (mode === "system" &&
     window.matchMedia?.("(prefers-color-scheme: dark)").matches))) return;
@@ -230,15 +230,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { rel: "icon", type: "image/png", sizes: "1024x1024", href: "/kova-logo.png" },
         { rel: "shortcut icon", type: "image/png", href: "/kova-logo.png" },
         { rel: "apple-touch-icon", sizes: "1024x1024", href: "/kova-logo.png" },
-        { rel: "preconnect", href: "https://fonts.googleapis.com" },
         {
-          rel: "preconnect",
-          href: "https://fonts.gstatic.com",
+          rel: "preload",
+          href: "/fonts/dm-sans-variable.woff2",
+          as: "font",
+          type: "font/woff2",
           crossOrigin: "anonymous",
-        },
-        {
-          rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
         },
       ],
       scripts: indexable

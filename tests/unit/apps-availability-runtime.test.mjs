@@ -33,7 +33,12 @@ function apps(status, search = "") {
   };
   const dependencies = {
     react: { ...hooks.react, useMemo: (fn) => fn() },
-    "@tanstack/react-router": { createFileRoute: () => (config) => config },
+    "@tanstack/react-router": {
+      createFileRoute: () => (config) => ({
+        ...config,
+        useSearch: () => config.validateSearch(Object.fromEntries(new URLSearchParams(search))),
+      }),
+    },
     "@tanstack/react-start": { useServerFn: (fn) => fn },
     "@/components/auth/ClerkSafe": { useUser: () => auth, SignInButton: "SignInButton" },
     "@/lib/connectors-catalog": catalog,
@@ -63,6 +68,7 @@ function apps(status, search = "") {
     "@/components/ToolConfirmCard",
     "@/components/ui/button",
     "@/components/WorkflowSkillsPanel",
+    "@/components/PluginLogo",
   ])
     dependencies[module] = new Proxy({}, { get: (_, name) => String(name) });
   const location = { search, pathname: "/apps" };

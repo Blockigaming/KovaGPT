@@ -164,6 +164,7 @@ function PricingPage() {
   }, [isOpen]);
 
   const startCheckout = (priceId: string, trigger: HTMLButtonElement) => {
+    if (!isLoaded) return;
     if (isLoaded && !isSignedIn) {
       try {
         openSignIn();
@@ -227,6 +228,7 @@ function PricingPage() {
             taxNotice
             description={CAPABILITY_REGISTRY.plans.plus.description}
             cta="Start Plus"
+            ctaDisabled={!isLoaded}
             highlight
             note={`${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial for eligible first-time subscribers`}
             onCta={(event) =>
@@ -243,6 +245,7 @@ function PricingPage() {
             taxNotice
             description={CAPABILITY_REGISTRY.plans.pro.description}
             cta="Upgrade to Pro"
+            ctaDisabled={!isLoaded}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!, event.currentTarget)
             }
@@ -400,7 +403,7 @@ function PlanCard({
       </div>
       <div className="mt-3 flex items-center gap-2.5">
         {Icon ? (
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted">
+          <span className="grid h-9 w-9 place-items-center">
             <Icon className="h-4 w-4" aria-hidden="true" />
           </span>
         ) : null}

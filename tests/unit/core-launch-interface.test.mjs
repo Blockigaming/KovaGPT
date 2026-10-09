@@ -54,11 +54,11 @@ test("every tier gets an inactive brand label and stale effort resets without an
   }
 });
 
-function sidebar(signedIn) {
+function sidebar(signedIn, tier = "plus") {
   const hooks = createHookHarness();
   const events = [];
   const dependencies = {
-    react: hooks.react,
+    react: { ...hooks.react, lazy: () => "ChatProjectDialog", Suspense: "Suspense" },
     "lucide-react": new Proxy({}, { get: (_, key) => String(key) }),
     "@tanstack/react-router": { Link: "Link", useRouterState: () => "/" },
     "@/components/auth/ClerkSafe": {
@@ -69,7 +69,7 @@ function sidebar(signedIn) {
         user: signedIn ? { id: "owner", firstName: "Owner" } : null,
       }),
     },
-    "@/hooks/useTier": { useTier: () => ({ tier: "free" }) },
+    "@/hooks/useTier": { useTier: () => ({ tier }) },
     "@/components/NovaLogo": { NovaLogo: "NovaLogo" },
     "@/lib/conversation-search": {
       searchConversations: (items) => items.map((conversation) => ({ conversation })),
@@ -77,11 +77,15 @@ function sidebar(signedIn) {
     "@/components/ui/dropdown-menu": new Proxy({}, { get: (_, key) => String(key) }),
   };
   const window = {
-    matchMedia: () => ({ matches: false }),
+    matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
     addEventListener() {},
     removeEventListener() {},
   };
-  const { Sidebar } = loadUiModule("src/components/Sidebar.tsx", dependencies, { window });
+  const document = new EventTarget();
+  const { Sidebar } = loadUiModule("src/components/Sidebar.tsx", dependencies, {
+    window,
+    document,
+  });
   const tree = hooks.render(Sidebar, {
     conversations: signedIn
       ? [{ id: "saved", title: "Saved chat", pinned: true, updatedAt: 1 }]
@@ -121,5 +125,14 @@ test("guest sidebar provides sign-in without scheduled-task access or fabricated
     elements(tree, (node) => node.props["aria-label"] === "Open chat Saved chat").length,
     0,
   );
+  hooks.unmount();
+});
+
+test("free accounts retain ordinary navigation without paid task shortcuts", () => {
+  const { tree, hooks } = sidebar(true, "free");
+  const routes = elements(tree, (node) => node.type === "Link").map((node) => node.props.to);
+  for (const route of ["/images", "/library", "/projects", "/apps"])
+    assert.ok(routes.includes(route), route);
+  assert.ok(!routes.includes("/scheduled-tasks"));
   hooks.unmount();
 });

@@ -51,7 +51,7 @@ export const Route = createFileRoute("/checkout/return")({
 
 function CheckoutReturn() {
   const { session_id } = Route.useSearch();
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const { openSignIn } = useClerkSafe();
   const [attempt, setAttempt] = useState(0);
   const [verification, setVerification] = useState<VerificationState>({ kind: "checking" });
@@ -70,7 +70,7 @@ function CheckoutReturn() {
     return () => {
       cancelled = true;
     };
-  }, [attempt, isLoaded, isSignedIn, session_id]);
+  }, [attempt, isLoaded, isSignedIn, session_id, user?.id]);
 
   const status = (() => {
     if (!session_id) {
@@ -200,7 +200,9 @@ function CheckoutReturn() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
       <main
-        className="max-w-md text-center"
+        id="main-content"
+        tabIndex={-1}
+        className="max-w-md py-12 text-center"
         aria-live="polite"
         aria-busy={Boolean(
           session_id && (!isLoaded || (isSignedIn && verification.kind === "checking")),

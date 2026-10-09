@@ -222,4 +222,31 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
       44,
     );
   }
+  // A selected Radix tab must still open its mobile panel from the index.
+  await settingsDialog.getByRole("tab", { name: "General", exact: true }).click();
+  await expect(settingsDialog.getByRole("heading", { name: "General", exact: true })).toBeVisible();
+  const toggle = settingsDialog.getByRole("switch").first();
+  const switchBox = await toggle.boundingBox();
+  expect(switchBox?.width).toBe(44);
+  expect(switchBox?.height).toBe(24);
+  for (let state = 0; state < 2; state += 1) {
+    const bounds = await toggle.evaluate((element) => {
+      const track = element.getBoundingClientRect();
+      const thumb = element.querySelector("span")!.getBoundingClientRect();
+      return {
+        left: thumb.left - track.left,
+        right: track.right - thumb.right,
+        top: thumb.top - track.top,
+        bottom: track.bottom - thumb.bottom,
+      };
+    });
+    expect(Math.min(bounds.left, bounds.right, bounds.top, bounds.bottom)).toBeGreaterThanOrEqual(
+      2,
+    );
+    await toggle.click();
+  }
+  await settingsDialog.getByRole("button", { name: "Back to settings", exact: true }).click();
+  await expect(settingsDialog.getByRole("textbox", { name: "Search settings" })).toBeFocused();
+  await settingsDialog.getByRole("tab", { name: "About", exact: true }).click();
+  await expect(settingsDialog.getByRole("heading", { name: "About", exact: true })).toBeVisible();
 });

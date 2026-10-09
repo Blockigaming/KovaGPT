@@ -45,7 +45,7 @@ export const DEFAULT_SETTINGS: Settings = {
   rememberAcross: false,
   webSearch: true,
   sendOnEnter: true,
-  mode: "system",
+  mode: "dark",
   notifyEmail: true,
   notifyProduct: true,
   parentalMode: false,

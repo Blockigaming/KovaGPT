@@ -8,7 +8,7 @@ import {
 import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat-store";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
 import {
   lazy,
@@ -169,6 +169,8 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
   const storagePrincipalRef = useRef(storagePrincipal);
   storagePrincipalRef.current = storagePrincipal;
   const storageGenerationRef = useRef(0);
+  const historyMutationRef = useRef<object | null>(null);
+  const historyActionEpochRef = useRef(0);
   const [conversationState, setConversationState] = useState<{
     principal: string | null;
     items: Conversation[];
@@ -265,8 +267,13 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
       if (!isCurrent()) return;
       setRecentLibraryFiles(
         rows
-          .filter((item) => item.file_name || item.content_text || item.file_type)
-          .slice(0, 12)
+          .filter(
+            (item) =>
+              item.file_name ||
+              item.content_text ||
+              item.file_type ||
+              (item.item_type === "image" && item.file_url),
+          )
           .map((item) => ({
             id: item.id,
             title: item.title,
@@ -408,6 +415,7 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
   // account gets its own personalization, behavior, appearance, etc.
   useEffect(() => {
     lastRouteRef.current = null;
+    historyMutationRef.current = null;
     if (!isLoaded) {
       storageGenerationRef.current += 1;
       setConversationState({ principal: null, items: [] });
@@ -447,7 +455,7 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
     const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
     setSettings(loaded);
     setSettingsPrincipal(storagePrincipal);
-    applyThemeMode(userKey === null ? loadThemeMode() : (loaded.mode ?? "system"));
+    applyThemeMode(userKey === null ? loadThemeMode() : (loaded.mode ?? "dark"));
     // Keep each signed-in account and the guest workspace in a separate
     // browser namespace. Switching accounts must render empty until the new
     // principal's data has loaded.
@@ -504,7 +512,7 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
   // overwritten by the default settings state during hydration.
   useEffect(() => {
     if (!settingsReady) return;
-    applyThemeMode(userKey === null ? loadThemeMode() : (settings.mode ?? "system"));
+    applyThemeMode(userKey === null ? loadThemeMode() : (settings.mode ?? "dark"));
   }, [settings.mode, settingsReady, userKey]);
 
   // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
@@ -1069,10 +1077,64 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [commandOpen, newChat, openCommandPalette]);
 
-  const historyAction = useCallback(
-    async (kind: "delete" | "archive" | "restore" | "title", item: string | Conversation) => {
+  const mutateHistory = useCallback(
+    async (kind: "rename" | "duplicate", id: string, title = "") => {
+      if (!principalReady || historyMutationRef.current || inFlightRef.current) {
+        toast.message("Wait for the current chat action to finish, then try again.");
+        return false;
+      }
+      const operation = {};
+      historyMutationRef.current = operation;
+      historyActionEpochRef.current += 1;
       const generation = storageGenerationRef.current;
-      const current = () => generation === storageGenerationRef.current;
+      const current = () =>
+        generation === storageGenerationRef.current &&
+        storagePrincipalRef.current === storagePrincipal &&
+        historyMutationRef.current === operation;
+      try {
+        const actions = await import("@/lib/home-chat-history-actions");
+        if (!current()) return false;
+        const context = {
+          ownerId: userKey,
+          items: conversations,
+          current,
+          setItems: setConversations,
+          activeId,
+          setActive: setActiveId,
+        };
+        return kind === "rename"
+          ? await actions.renameHomeChat(context, id, title)
+          : await actions.duplicateHomeChat(context, id);
+      } finally {
+        if (historyMutationRef.current === operation) historyMutationRef.current = null;
+      }
+    },
+    [principalReady, conversations, storagePrincipal, userKey, setConversations, activeId],
+  );
+
+  const historyAction = useCallback(
+    async (
+      kind: "delete" | "archive" | "restore" | "title",
+      item: string | Conversation,
+      archived = true,
+    ): Promise<void> => {
+      if (storagePrincipalRef.current !== storagePrincipal) return;
+      if (historyMutationRef.current || (kind !== "title" && inFlightRef.current)) {
+        if (kind !== "title")
+          toast.message("Wait for the current chat action to finish, then try again.");
+        return;
+      }
+      const operation = {};
+      if (kind !== "title") {
+        historyMutationRef.current = operation;
+        historyActionEpochRef.current += 1;
+      }
+      const epoch = historyActionEpochRef.current;
+      const generation = storageGenerationRef.current;
+      const current = () =>
+        generation === storageGenerationRef.current &&
+        storagePrincipalRef.current === storagePrincipal &&
+        epoch === historyActionEpochRef.current;
       const context = {
         ownerId: userKey,
         items: conversations,
@@ -1080,14 +1142,23 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
         setItems: setConversations,
         activeId,
         setActive: setActiveId,
+        restore: async (chat: Conversation, fromArchive: boolean) => {
+          if (generation !== storageGenerationRef.current) return;
+          await historyAction("restore", chat, fromArchive);
+        },
       };
-      const actions = await import("@/lib/home-chat-history-actions");
-      if (!current()) return;
-      if (kind === "title") await actions.titleHomeChat(context, item as Conversation);
-      else if (kind === "restore") await actions.restoreHomeChat(context, item as Conversation);
-      else await actions.removeHomeChat(context, item as string, kind === "archive");
+      try {
+        const actions = await import("@/lib/home-chat-history-actions");
+        if (!current()) return;
+        if (kind === "title") await actions.titleHomeChat(context, item as Conversation);
+        else if (kind === "restore")
+          await actions.restoreHomeChat(context, item as Conversation, archived);
+        else await actions.removeHomeChat(context, item as string, kind === "archive");
+      } finally {
+        if (historyMutationRef.current === operation) historyMutationRef.current = null;
+      }
     },
-    [activeId, conversations, setConversations, userKey],
+    [activeId, conversations, setConversations, userKey, storagePrincipal],
   );
   const deleteChat = useCallback((id: string) => historyAction("delete", id), [historyAction]);
 
@@ -1108,6 +1179,10 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
       const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
       if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
+      if (historyMutationRef.current) {
+        toast.message("Your chat change is still saving. Try sending again in a moment.");
+        return;
+      }
       if (!canWriteChatHistory(userKey)) {
         toast.error("Chat history is not ready for editing. Check the sync status.");
         return;
@@ -1678,15 +1753,7 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
         onSelect={setActiveId}
         onNew={newChat}
         onDelete={deleteChat}
-        onRename={(id, title) =>
-          setConversations((previous) =>
-            previous.map((conversation) =>
-              conversation.id === id
-                ? { ...conversation, title, updatedAt: Date.now() }
-                : conversation,
-            ),
-          )
-        }
+        onRename={(id, title) => mutateHistory("rename", id, title)}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
@@ -1701,20 +1768,7 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
           setShareChatId(id);
         }}
         onDuplicate={(id) => {
-          setConversations((prev) => {
-            const src = prev.find((c) => c.id === id);
-            if (!src) return prev;
-            const copy: Conversation = {
-              ...src,
-              id: newId(),
-              title: `${src.title} (copy)`,
-              messages: src.messages.map((m) => ({ ...m, id: newId() })),
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            };
-            return [copy, ...prev];
-          });
-          toast.success("Chat duplicated");
+          void mutateHistory("duplicate", id);
         }}
         onArchive={(id) => historyAction("archive", id)}
         onTogglePin={(id) => {
@@ -1974,23 +2028,6 @@ export function KovaGPT({ routeConversationId = null }: { routeConversationId?: 
                 </Suspense>
               ) : null}
             </div>
-            {!isLoaded || isSignedIn ? null : (
-              <p className="kova-disclaimer mx-auto w-full max-w-[48rem] px-4 pb-3 text-center text-[11px] leading-4 text-muted-foreground/80">
-                KovaGPT is AI. By using it, you agree to our{" "}
-                <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">
-                  Terms
-                </Link>{" "}
-                &amp;{" "}
-                <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
-                  Privacy Policy
-                </Link>
-                . Chats may be processed by configured AI providers and reviewed when needed for
-                safety, support, or reliability.{" "}
-                <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
-                  Learn more.
-                </Link>
-              </p>
-            )}
           </section>
         ) : (
           <>
