@@ -18,10 +18,11 @@ const checkpoint = "5734b9e3d96224b06cdf2bc6f824078738b86ce1";
 const decisionCommit = "bd0d2878ea41b4972bae13494288bd15c24b51aa";
 const decisionSha256 = "6c0aa894709e131dade3c93e3597fbd45c3a55ec8cdde8130babfdfb34552df0";
 const mergedMainMigration = "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4.sql";
+const launchConnectorMigration = "20261008153032_launch_connector_runtime.sql";
 const pinnedMigrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
-const migrationTree = "3b688ddbfaa4b91ae2a85506915a959d66f85cd9";
-const currentSourceCommit = "3ffdde6fe80e6511ab1e2f76b405c71a2858edfd";
-const currentSourceCount = 185;
+const migrationTree = "01ceb3f40e1a73546f13dfd5005119e9703ace86";
+const currentSourceCommit = "41a25b6e39de66327707cb4ee2ff85508f381a51";
+const currentSourceCount = 186;
 const targetProjectRef = "mfbycmbjygcfkrsuepxf";
 const capturedAtPattern =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
@@ -112,7 +113,8 @@ export function validateForwardExtension(baseline, current, filenames, readBytes
       (index > 0 && entry.timestamp <= current.migrations[index - 1].timestamp) ||
       (index >= baseline.count &&
         !entry.filename.includes("_kova_") &&
-        entry.filename !== mergedMainMigration)
+        entry.filename !== mergedMainMigration &&
+        entry.filename !== launchConnectorMigration)
     )
       throw new Error("canonical_history_forward_extension_changed");
   }
@@ -276,7 +278,7 @@ export function buildCanonicalHistoryDecision({
   if (
     source.migrations.length !== currentSourceCount ||
     remote.length !== 98 ||
-    sourceOnly.length !== 111 ||
+    sourceOnly.length !== 112 ||
     remoteOnly.length !== 24 ||
     remoteOnly.filter((entry) => entry.mappingStatus === "equivalent").length !== 5 ||
     remoteOnly.filter((entry) => entry.mappingStatus === "requires_schema_proof").length !== 19 ||

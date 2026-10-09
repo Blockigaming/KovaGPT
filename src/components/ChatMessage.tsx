@@ -22,7 +22,18 @@ import {
   History,
   TextSelect,
 } from "lucide-react";
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
@@ -105,6 +116,22 @@ function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   );
 }
 
+const MarkdownLinkContext = createContext(false);
+
+function MarkdownImage({ alt, src }: React.ComponentProps<"img">) {
+  const insideLink = useContext(MarkdownLinkContext);
+  // Preserve a linked image's existing destination without nesting anchors.
+  if (insideLink) return <span>{alt || "Open image"}</span>;
+  // Model output is untrusted. Loading its images automatically can disclose
+  // connector results embedded in the URL. Require an explicit link click.
+  return (
+    <a href={src} target="_blank" rel="noreferrer noopener">
+      {alt || "Open image"}
+      <span className="sr-only"> (opens in a new tab)</span>
+    </a>
+  );
+}
+
 const markdownComponents = {
   pre: ({ children }: React.ComponentProps<"pre">) => <>{children}</>,
   code: MarkdownCode,
@@ -115,10 +142,11 @@ const markdownComponents = {
   ),
   a: ({ children, ...props }: React.ComponentProps<"a">) => (
     <a {...props} target="_blank" rel="noreferrer noopener">
-      {children}
+      <MarkdownLinkContext.Provider value={true}>{children}</MarkdownLinkContext.Provider>
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   ),
+  img: MarkdownImage,
 };
 
 const MarkdownContent = memo(function MarkdownContent({ children }: { children: string }) {
@@ -956,7 +984,7 @@ function ChatMessageInner({
               <button
                 type="button"
                 onClick={copy}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
+                className="kova-message-icon-action inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
                 title={copied ? "Copied" : "Copy"}
                 aria-label={copied ? "Copied" : "Copy"}
               >
@@ -971,7 +999,7 @@ function ChatMessageInner({
                 type="button"
                 onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
                 disabled={feedbackSaving || feedbackLoadFailed}
-                className={`inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
+                className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
                   feedback === "up" ? "bg-accent text-foreground" : ""
                 }`}
                 title="Good response"
@@ -985,7 +1013,7 @@ function ChatMessageInner({
                 type="button"
                 onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
                 disabled={feedbackSaving || feedbackLoadFailed}
-                className={`inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
+                className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
                   feedback === "down" ? "bg-accent text-foreground" : ""
                 }`}
                 title="Bad response"
@@ -999,7 +1027,7 @@ function ChatMessageInner({
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
+                  className="kova-message-icon-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
                   title={retryActionLabel}
                   aria-label={retryActionLabel}
                 >
@@ -1084,7 +1112,7 @@ function ChatMessageInner({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                    className="kova-message-icon-action inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
                     title="More actions"
                     aria-label="More actions"
                   >

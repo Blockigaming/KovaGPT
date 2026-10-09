@@ -47,6 +47,7 @@ export function AuthDialog({
   const [loadingMethod, setLoadingMethod] = useState<"email" | "google" | "passkey" | null>(null);
   const [emailTouched, setEmailTouched] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [formError, setFormError] = useState<string | null>(null);
   const submittingRef = useRef(false);
   const navigate = useNavigate();
   const providers = useAuthProviders(open);
@@ -63,6 +64,7 @@ export function AuthDialog({
     setEmail("");
     setEmailTouched(false);
     setCooldown(0);
+    setFormError(null);
   }, [initialMode, open]);
 
   useEffect(() => {
@@ -82,9 +84,15 @@ export function AuthDialog({
     : providers.resolved && !providers.google;
   const googleCheckFailed = !useKovaAuth && Boolean(providers.error);
 
+  const reportError = useCallback((message: string) => {
+    setFormError(message);
+    toast.error(message);
+  }, []);
+
   const guard = (method: "email" | "google" | "passkey") => {
     if (submittingRef.current) return false;
     submittingRef.current = true;
+    setFormError(null);
     setLoading(true);
     setLoadingMethod(method);
     return true;
@@ -136,7 +144,7 @@ export function AuthDialog({
         console.error("[KovaAuth] Google authentication could not start", {
           error: result.error instanceof Error ? result.error.name : "provider_error",
         });
-        toast.error("Google sign in could not start. Please try again.");
+        reportError("Google sign in could not start. Please try again.");
         release();
         return;
       }
@@ -146,7 +154,7 @@ export function AuthDialog({
       console.error("[KovaAuth] Google authentication failed", {
         error: err instanceof Error ? err.name : "unknown_error",
       });
-      toast.error("Google sign in could not start. Please try again.");
+      reportError("Google sign in could not start. Please try again.");
     } finally {
       release();
     }
@@ -170,7 +178,7 @@ export function AuthDialog({
       if (error) throw error;
       onOpenChange(false);
     } catch {
-      toast.error("Passkey sign-in was cancelled or could not be completed.");
+      reportError("Passkey sign-in was cancelled or could not be completed.");
     } finally {
       release();
     }
@@ -199,18 +207,19 @@ export function AuthDialog({
         console.error("[KovaAuth] Magic-link request failed", {
           error: err instanceof Error ? err.name : "unknown_error",
         });
-        toast.error("The sign-in link could not be requested. Please try again.");
+        reportError("The sign-in link could not be requested. Please try again.");
       } finally {
         release();
       }
     },
-    [cooldown, email],
+    [cooldown, email, reportError],
   );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         aria-modal="true"
+        data-auth-step={step}
         className={cn(
           "kova-auth-surface gap-0 overflow-y-auto border-border/60 bg-card shadow-xl",
           "p-7 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:max-w-[440px] sm:p-9 sm:pb-9",
@@ -223,7 +232,7 @@ export function AuthDialog({
         }}
       >
         {/* Header */}
-        <div className="flex flex-col items-center text-center">
+        <div className="kova-auth-heading flex flex-col items-center text-center">
           <div className="mb-5 animate-in fade-in-0 duration-100">
             <NovaLogo mark className="h-11 w-11 text-foreground" />
           </div>
@@ -235,15 +244,23 @@ export function AuthDialog({
                 ? "Create your account"
                 : "Log in or sign up"}
           </DialogTitle>
-          <DialogDescription className="mt-2 max-w-[320px] text-[15px]">
+          <DialogDescription className="kova-auth-description mt-2 max-w-[320px] text-[15px]">
             {step === "magic-sent"
               ? `We asked our email provider to send a sign-in link to ${email}. Delivery can take a few minutes — check your spam folder too.`
-              : "You'll get smarter responses, save your chats, and access KovaGPT across devices."}
+              : "A place for your ideas, conversations, and next steps."}
           </DialogDescription>
         </div>
 
         {/* Body */}
-        <div className="mt-7 space-y-3">
+        <div className="kova-auth-body mt-7 space-y-3">
+          {formError ? (
+            <p
+              role="alert"
+              className="rounded-2xl border border-destructive/30 p-3 text-sm text-destructive"
+            >
+              {formError}
+            </p>
+          ) : null}
           {step === "identify" && (
             <>
               <form onSubmit={handleContinueEmail} className="space-y-3">
@@ -255,6 +272,9 @@ export function AuthDialog({
                     id="kova-auth-email"
                     type="email"
                     autoComplete="email"
+                    name="email"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     autoFocus
                     placeholder="Email address"
                     value={email}
@@ -275,7 +295,7 @@ export function AuthDialog({
                       emailTouched && !emailValid ? "kova-auth-email-error" : undefined
                     }
                     className={cn(
-                      "h-14 rounded-xl text-[15px] px-4",
+                      "h-14 rounded-full text-[15px] px-4",
                       emailTouched &&
                         !emailValid &&
                         "border-destructive focus-visible:ring-destructive",
@@ -290,7 +310,7 @@ export function AuthDialog({
                 <Button
                   type="submit"
                   disabled={loading || !emailValid}
-                  className="w-full h-14 rounded-xl text-[15px] font-medium"
+                  className="w-full h-14 rounded-full text-[15px] font-medium"
                 >
                   Continue
                 </Button>
@@ -315,7 +335,7 @@ export function AuthDialog({
                   onClick={() => void handlePasskey()}
                   disabled={loading}
                   aria-busy={loadingMethod === "passkey"}
-                  className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-border bg-background text-[15px] font-medium transition hover:bg-accent disabled:opacity-60"
+                  className="flex h-14 w-full items-center justify-center gap-3 rounded-full border border-border bg-background text-[15px] font-medium transition hover:bg-accent disabled:opacity-60"
                 >
                   {loadingMethod === "passkey" ? (
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -329,7 +349,7 @@ export function AuthDialog({
               {googleUnavailable || googleCheckFailed ? (
                 <div
                   role="status"
-                  className="flex items-start gap-2.5 rounded-xl border border-border bg-muted/40 px-4 py-3 text-left text-[13px] text-muted-foreground"
+                  className="flex items-start gap-2.5 rounded-xl border border-border bg-transparent px-4 py-3 text-left text-[13px] text-muted-foreground"
                 >
                   <AlertTriangle
                     className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
@@ -347,7 +367,7 @@ export function AuthDialog({
                   onClick={handleGoogle}
                   disabled={loading || !googleAvailable}
                   aria-busy={loading || (!useKovaAuth && !providers.resolved)}
-                  className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                  className="w-full h-14 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                 >
                   {loadingMethod === "google" || (!useKovaAuth && !providers.resolved) ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -382,7 +402,7 @@ export function AuthDialog({
                   type="button"
                   onClick={() => void requestMagicLink(false)}
                   disabled={loading || !emailValid}
-                  className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                  className="w-full h-14 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                 >
                   Email me a sign-in link
                 </button>
@@ -397,7 +417,7 @@ export function AuthDialog({
                 variant="outline"
                 disabled={loading || cooldown > 0}
                 onClick={() => void requestMagicLink(true)}
-                className="w-full h-12 rounded-xl text-sm"
+                className="w-full h-12 rounded-full text-sm"
               >
                 {cooldown > 0 ? `Resend available in ${cooldown}s` : "Resend the link"}
               </Button>
@@ -407,7 +427,7 @@ export function AuthDialog({
                   setStep("identify");
                   setCooldown(0);
                 }}
-                className="w-full h-12 rounded-xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
+                className="w-full h-12 rounded-full text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" /> Use a different email
               </button>
@@ -415,9 +435,21 @@ export function AuthDialog({
           )}
         </div>
 
+        <p className="kova-auth-legal mt-5 text-center text-xs leading-5 text-muted-foreground">
+          By continuing, you agree to our{" "}
+          <a href="/terms" target="_blank" rel="noopener noreferrer">
+            Terms of Service
+          </a>{" "}
+          and acknowledge our{" "}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer">
+            Privacy Policy
+          </a>
+          .
+        </p>
+
         {/* Footer toggle */}
         {step !== "magic-sent" && (
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="kova-auth-footer mt-6 text-center text-sm text-muted-foreground">
             {isSignUp ? (
               <>
                 Already have an account?{" "}

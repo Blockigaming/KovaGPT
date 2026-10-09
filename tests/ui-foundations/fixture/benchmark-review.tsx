@@ -46,6 +46,13 @@ export function BenchmarkReview({ initialSurface }: { initialSurface: string }) 
   }
   return (
     <div onClickCapture={follow}>
+      {surface === "public-comparison" ? (
+        <nav aria-label="Preview navigation" className="border-b px-4 py-2">
+          <Button asChild variant="ghost">
+            <a href="/overview">Back to overview</a>
+          </Button>
+        </nav>
+      ) : null}
       <PublicFixture key={`${surface}:${surfaceRevision}`} surface={surface} />
       <Dialog
         open={destination !== null}

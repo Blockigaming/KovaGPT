@@ -51,7 +51,7 @@ test("overview example selection updates the response and exposes a single selec
   assert.equal(options().filter((node) => node.props["aria-pressed"]).length, 1);
 });
 
-test("comparison keeps each tier's mode and allowance data in the correct column", () => {
+test("comparison keeps each tier's allowances in the correct column without selling unverified modes", () => {
   const tiers = ["free", "plus", "pro"];
   const plans = Object.fromEntries(tiers.map((tier) => [tier, { name: tier }]));
   const modesByTier = Object.fromEntries(tiers.map((tier) => [tier, [{ label: `${tier}-mode` }]]));
@@ -71,7 +71,7 @@ test("comparison keeps each tier's mode and allowance data in the correct column
   });
   const tree = PlanComparison();
   const rows = elements(tree, (node) => node.type === "tbody")[0].props.children.flat();
-  for (const [index, key] of ["mode", "chat", "image", "upload", "storage"].entries()) {
+  for (const [index, key] of ["chat", "image", "upload", "storage"].entries()) {
     assert.deepEqual(
       elements(rows[index], (node) => node.type === "td").map(text),
       tiers.map((tier) => `${tier}-${key}`),

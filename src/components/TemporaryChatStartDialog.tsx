@@ -111,15 +111,15 @@ export function TemporaryChatBanner({
   onTurnOff: () => void;
 }) {
   return (
-    <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
-      <div className="flex min-w-0 items-center gap-2">
-        <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span>
+    <div className="kova-temporary-banner mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
+      <details>
+        <summary>Temporary Chat: Not Saved To Library</summary>
+        <p>
           {tempChatContext === "personalized"
             ? "Temporary chat is on with existing context. It is not saved to history and will not create new saved memories."
             : "Temporary chat is on. It is not saved to history and does not use or update saved memory, profile details, custom instructions, personality settings, or connected apps."}
-        </span>
-      </div>
+        </p>
+      </details>
       <div className="flex shrink-0 items-center gap-1">
         {canSave ? (
           <button

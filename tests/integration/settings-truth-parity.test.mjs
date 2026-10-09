@@ -11,7 +11,7 @@ test("Send on Enter is shared, reactive, and applied across main and project cha
   const preferences = read("src/lib/composer-preferences.ts");
   const storage = read("src/lib/composer-preference-storage.mjs");
   const settings = read("src/components/SettingsDialog.tsx");
-  const main = read("src/routes/index.tsx");
+  const main = read("src/components/ChatWorkspace.tsx");
   const project = read("src/routes/projects.$projectId.chat.$chatId.tsx");
 
   assert.match(composer, /useSharedSendOnEnter\(user\?\.id \?\? null\)/);
@@ -55,7 +55,7 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   const billing = read("src/utils/payments.functions.ts");
   const pricing = read("src/routes/pricing.tsx");
 
-  assert.match(settings, /v: "billing",\s*label: "Billing"/);
+  assert.match(settings, /v: "billing",\s*label: "Subscriptions"/);
   assert.doesNotMatch(settings, /hideBilling|tabs\.filter\(\(t\) => t\.v !== "billing"\)/);
   assert.match(settings, /onClick=\{handleRestore\}/);
   assert.match(settings, /Refresh billing status/);

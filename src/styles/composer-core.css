@@ -1,0 +1,229 @@
+/* The shared composer owns its geometry, independent of surrounding route layouts. */
+@layer components {
+  .kova-chat-input[data-composer-surface] .kova-composer {
+    --composer-control: 2.75rem !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 1.75rem !important;
+    background: var(--background) !important;
+    box-shadow: none !important;
+  }
+  .kova-chat-input[data-composer-surface] .kova-composer-row {
+    display: flex !important;
+    align-items: flex-end !important;
+    gap: 0.5rem !important;
+    min-height: 0 !important;
+    padding: 0.375rem !important;
+  }
+  .kova-chat-input[data-composer-surface] .kova-composer-input {
+    flex: 1 1 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    min-height: 1.75rem !important;
+    max-height: 12.5rem !important;
+    margin-block: 0.5rem !important;
+    padding: 0.125rem 0 !important;
+    font-family: inherit;
+    font-size: 1rem !important;
+    line-height: 1.5rem !important;
+  }
+  .kova-chat-input[data-composer-surface] .kova-composer-leading,
+  .kova-chat-input[data-composer-surface] .kova-composer-trailing {
+    flex: 0 0 auto !important;
+    align-self: flex-end !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+  .kova-chat-input[data-composer-surface] .kova-composer-button {
+    box-sizing: border-box !important;
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+    min-width: 2.75rem !important;
+    min-height: 2.75rem !important;
+    flex: 0 0 2.75rem !important;
+    aspect-ratio: 1 !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    box-shadow: none !important;
+    background-image: none !important;
+  }
+  .kova-chat-input[data-composer-surface] .kova-attach-button {
+    border: 1px solid var(--border) !important;
+    background: transparent !important;
+    color: var(--foreground) !important;
+  }
+  .kova-chat-input[data-composer-surface] .kova-attach-icon,
+  .kova-chat-input[data-composer-surface] .kova-send-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  .kova-chat-input[data-composer-surface] .kova-send-button {
+    border: 1px solid #111 !important;
+    background: #111 !important;
+    color: #fff !important;
+    opacity: 1 !important;
+  }
+  .dark .kova-chat-input[data-composer-surface] .kova-send-button {
+    border-color: #fff !important;
+    background: #fff !important;
+    color: #111 !important;
+  }
+  .kova-chat-input[data-composer-surface] .kova-send-button:disabled svg,
+  .kova-chat-input[data-composer-surface] .kova-send-button[aria-disabled="true"] svg {
+    opacity: 0.4;
+  }
+  .kova-chat-input[data-composer-surface] .kova-composer-button:focus-visible {
+    outline: 2px solid var(--foreground) !important;
+    outline-offset: 3px !important;
+  }
+}
+.kova-composer-menu {
+  width: 18rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 10px 32px rgb(0 0 0 / 12%);
+}
+.kova-composer-action,
+.kova-composer-plugin {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 0;
+  border-radius: 0.875rem;
+  background: transparent;
+  background-image: none;
+  color: inherit;
+  box-shadow: none;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: left;
+  text-decoration: none;
+}
+.kova-composer-action > svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+}
+.kova-composer-action small,
+.kova-composer-plugin small {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+.kova-composer-action:disabled {
+  cursor: not-allowed;
+  color: var(--muted-foreground);
+}
+.kova-composer-action:not(:disabled):hover,
+.kova-composer-plugin:hover {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+.kova-composer-action:focus-visible,
+.kova-composer-plugin:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: -2px;
+}
+.kova-composer-plugins {
+  border-top: 1px solid var(--border);
+  margin-top: 0.375rem;
+  padding-top: 0.5rem;
+}
+.kova-composer-plugins h3 {
+  margin: 0.25rem 0.75rem 0.375rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.kova-composer-plugin-list {
+  max-height: 11rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.kova-composer-plugin > span {
+  min-width: 0;
+}
+.kova-composer-plugin-logo {
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  flex: none;
+  padding: 0.125rem;
+  border-radius: 0.375rem;
+}
+.kova-composer-library {
+  min-width: 0;
+}
+.kova-library-refresh {
+  align-self: flex-start;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.8125rem;
+}
+.kova-drawing-tools,
+.kova-drawing-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.kova-drawing-tools label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+.kova-drawing-tools input {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: transparent;
+}
+.kova-drawing-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  cursor: crosshair;
+}
+.kova-drawing-tools button,
+.kova-drawing-actions button,
+.kova-library-sign-in {
+  min-height: 2.75rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+.kova-drawing-actions .kova-drawing-attach,
+.kova-library-sign-in {
+  background: var(--foreground);
+  color: var(--background);
+}
+@media (max-width: 1023px) {
+  .kova-composer-primary-actions .kova-composer-action {
+    min-height: 3rem;
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+  }
+}

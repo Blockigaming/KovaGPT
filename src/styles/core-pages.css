@@ -1,0 +1,166 @@
+.kova-core-page {
+  width: 100%;
+  min-width: 0;
+  max-width: 1120px;
+  margin-inline: auto;
+  padding: clamp(20px, 3vw, 40px) clamp(16px, 3vw, 36px) 48px;
+}
+.kova-core-page .kova-page-header {
+  margin-bottom: 28px;
+}
+.kova-core-page .kova-page-title {
+  font-size: clamp(26px, 3vw, 32px);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+.kova-core-page .kova-page-description {
+  max-width: 66ch;
+  line-height: 1.6;
+}
+.kova-core-page .kova-card {
+  box-shadow: none;
+  background: transparent;
+}
+.kova-core-page .kova-empty-state {
+  border: 0;
+  background: transparent;
+  padding: 48px 16px;
+}
+.kova-core-page .kova-toolbar {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.kova-core-page .kova-row {
+  min-width: 0;
+}
+.kova-core-page .kova-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+.kova-core-page .kova-grid .kova-card {
+  overflow: hidden;
+  border-radius: 16px;
+}
+.kova-core-page .kova-connector-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 20px;
+}
+.kova-core-page .kova-connector-card > :last-child {
+  grid-column: 1/-1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+.kova-core-page .kova-connector-card > :last-child > button {
+  min-height: 36px;
+}
+.kova-core-page .kova-connector-card > :last-child > button:last-child {
+  margin-left: auto;
+}
+.kova-core-page .kova-page-header > div:first-child > span[aria-hidden] {
+  border: 0;
+  background: transparent;
+}
+.kova-core-page .kova-task-meta {
+  flex-wrap: wrap;
+  line-height: 1.7;
+}
+.kova-core-page .kova-task-actions {
+  flex-wrap: wrap;
+}
+.kova-core-page .kova-task-actions button {
+  min-height: 40px;
+  min-width: 40px;
+  border-radius: 999px;
+}
+.kova-core-page .kova-task-form :is(input, textarea, select) {
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 12px;
+  min-height: 44px;
+}
+.kova-core-page .kova-task-form :is(input, textarea, select):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-core-page .kova-library-select input[type="checkbox"] {
+  appearance: auto;
+  inline-size: 16px;
+  block-size: 16px;
+  min-inline-size: 16px;
+  min-block-size: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--foreground);
+}
+.kova-core-page > details.kova-library-disclosure {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+.kova-core-page > details.kova-library-disclosure > summary {
+  min-height: 40px;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  list-style-position: inside;
+}
+.kova-core-page > details.kova-library-disclosure > summary h2 {
+  display: inline;
+}
+.kova-core-page > details.kova-library-disclosure > .kova-card {
+  border: 0;
+  background: transparent;
+  padding: 8px 0 16px;
+}
+.kova-core-page .kova-task-filters [role="tab"][aria-selected="true"] {
+  background: var(--foreground) !important;
+  color: var(--background) !important;
+  box-shadow: none;
+}
+.kova-core-page .kova-project-tabs {
+  justify-content: flex-start;
+  scroll-padding-inline: 4px;
+}
+.kova-core-page .kova-project-tabs > [role="tab"] {
+  flex-shrink: 0;
+}
+.kova-core-page .kova-project-role {
+  margin-inline-end: 56px;
+}
+@media (max-width: 639px) {
+  .kova-core-page .kova-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .kova-core-page .kova-grid .kova-card {
+    padding: 10px;
+  }
+  .kova-core-page .kova-toolbar > label {
+    min-width: 100%;
+  }
+  .kova-core-page .kova-project-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .kova-core-page.kova-projects-page .kova-toolbar > div:first-child {
+    flex-basis: 100%;
+    min-width: 100%;
+  }
+  .kova-core-page.kova-projects-page .kova-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 359px) {
+  .kova-core-page .kova-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

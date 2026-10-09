@@ -88,7 +88,9 @@ test("retired modes and unsupported product promises stay off public routes", ()
 test("known limitations and required unavailable Voice remain explicit", () => {
   assert.match(registry, /voiceScope: "required_unavailable"/);
   assert.match(registry, /voice:[\s\S]*availability: "unavailable"/);
-  assert.match(registry, /PDF, Word, PowerPoint, and Excel extraction is not currently supported/);
+  assert.match(registry, /text extracted from PDF, DOCX, XLSX, and PPTX/);
+  assert.match(registry, /files up to 10 MB, PDFs up to 100 pages/);
+  assert.match(registry, /Scanned-page OCR is unavailable/);
   assert.match(registry, /Editing an uploaded or generated image is not currently available/);
   assert.match(
     registry,

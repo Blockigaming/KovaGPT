@@ -20,8 +20,10 @@ import {
   loadConversations,
   subscribeToConversationChanges,
   saveConversations,
-  savePendingActive,
+  archiveConversation,
+  newId,
 } from "@/lib/chat-store";
+import { chatHistorySnapshot } from "@/lib/chat-history-bridge";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { saveStoredSettings } from "@/lib/settings-storage";
 import { stageOnboardingHandoff } from "@/lib/onboarding-handoff";
@@ -29,6 +31,8 @@ import {
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
 } from "@/lib/principal-browser-storage.mjs";
+import { persistChatRoute } from "@/lib/chat-route-persistence";
+import { toast } from "sonner";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 
 /**
@@ -40,6 +44,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
   const storagePrincipal = chatStoragePrincipal(userKey);
+  const principalRef = useRef(storagePrincipal);
+  principalRef.current = isLoaded ? storagePrincipal : "loading";
+  const selectionRef = useRef(0);
+  const historyWriteRef = useRef<object | null>(null);
+  useEffect(
+    () => () => {
+      selectionRef.current += 1;
+    },
+    [],
+  );
   const [conversationState, setConversationState] = useState<{
     principal: string | null;
     items: Conversation[];
@@ -76,6 +90,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
 
   useEffect(() => {
+    selectionRef.current += 1;
+    historyWriteRef.current = null;
     if (!isLoaded) {
       setConversationState({ principal: null, items: [] });
       setSettingsOpen(false);
@@ -99,6 +115,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!isLoaded) return;
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      selectionRef.current += 1;
       setConversationState({ principal: null, items: [] });
       setSettingsOpen(false);
     };
@@ -110,6 +127,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return installShortcutListener(
       {
         "new-chat": () => {
+          selectionRef.current += 1;
           try {
             clearPendingActive(userKey);
           } catch {
@@ -165,17 +183,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("kova-open-settings", handleOpenSettings);
   }, [openSettings]);
 
-  const goToConversation = (id: string) => {
+  const goToConversation = async (id: string) => {
     if (!principalReady) return;
-    try {
-      savePendingActive(userKey, id);
-    } catch {
-      /* ignore */
+    const selection = ++selectionRef.current;
+    const current = () =>
+      principalRef.current === storagePrincipal && selectionRef.current === selection;
+    const saved = await persistChatRoute(userKey, conversations, id, current);
+    if (!current()) return;
+    if (!saved) {
+      toast.error("This chat could not be saved. Please retry.");
+      return;
     }
-    navigate({ to: "/" });
+    clearPendingActive(userKey);
+    void navigate({ to: "/c/$conversationId", params: { conversationId: id } });
   };
 
   const handleNew = () => {
+    selectionRef.current += 1;
     try {
       clearPendingActive(userKey);
     } catch {
@@ -184,46 +208,90 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/" });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!principalReady) return;
-    const next = conversations.filter((c) => c.id !== id);
-    if (!(await saveConversations(userKey, next))) return;
-    setConversationState({ principal: storagePrincipal, items: next });
+  const updateHistory = async (
+    update: (items: Conversation[]) => Conversation[],
+    failureMessage: string,
+    beforeSave?: (items: Conversation[]) => boolean | Promise<boolean>,
+  ) => {
+    if (!principalReady || historyWriteRef.current) return false;
+    const operation = {};
+    historyWriteRef.current = operation;
+    const selection = selectionRef.current;
+    const current = () =>
+      principalRef.current === storagePrincipal && selectionRef.current === selection;
+    try {
+      if (beforeSave && !(await beforeSave(loadConversations(userKey)))) {
+        if (current()) toast.error(failureMessage);
+        return false;
+      }
+      if (!current()) return false;
+      const next = update(loadConversations(userKey));
+      const saved = await saveConversations(userKey, next, {
+        snapshot: chatHistorySnapshot(userKey),
+      });
+      if (!current()) return false;
+      if (!saved) {
+        toast.error(failureMessage);
+        return false;
+      }
+      setConversationState({ principal: storagePrincipal, items: next });
+      return true;
+    } catch {
+      if (current()) toast.error(failureMessage);
+      return false;
+    } finally {
+      if (historyWriteRef.current === operation) historyWriteRef.current = null;
+    }
   };
+  const handleDelete = (id: string) =>
+    updateHistory(
+      (items) => items.filter((item) => item.id !== id),
+      "This chat could not be deleted. Please retry.",
+    );
+  const handleRename = (id: string, value: string) => {
+    const title = value.trim().slice(0, 160);
+    if (!title) return false;
+    return updateHistory(
+      (items) =>
+        items.map((item) => (item.id === id ? { ...item, title, updatedAt: Date.now() } : item)),
+      "This chat could not be renamed. Please retry.",
+    );
+  };
+  const handleArchive = (id: string) =>
+    updateHistory(
+      (items) => items.filter((item) => item.id !== id),
+      "This chat could not be archived. Please retry.",
+      (items) => {
+        const chat = items.find((item) => item.id === id);
+        return chat ? archiveConversation(userKey, chat) : false;
+      },
+    );
+  const handleDuplicate = (id: string) =>
+    updateHistory((items) => {
+      const source = items.find((item) => item.id === id);
+      if (!source) throw new Error("Chat unavailable");
+      const copy = {
+        ...source,
+        id: newId(),
+        title: `${source.title} (copy)`,
+        messages: source.messages.map((message) => ({ ...message, id: newId() })),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      return [copy, ...items];
+    }, "This chat could not be duplicated. Please retry.");
 
   return (
-    <div
-      className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
-      onTouchStart={(e) => {
-        const t = e.touches[0];
-        if (t && t.clientX < 24 && window.innerWidth < 1024) {
-          (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
-          (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
-        }
-      }}
-      onTouchMove={(e) => {
-        const el = e.currentTarget as HTMLDivElement;
-        const start = el.dataset.swipeStart ? parseFloat(el.dataset.swipeStart) : NaN;
-        const startY = el.dataset.swipeY ? parseFloat(el.dataset.swipeY) : NaN;
-        if (!isNaN(start) && e.touches[0]) {
-          const dx = e.touches[0].clientX - start;
-          const dy = Math.abs(e.touches[0].clientY - startY);
-          if (dx > 60 && dy < 40) {
-            setSidebarOpen(true);
-            delete el.dataset.swipeStart;
-          }
-        }
-      }}
-      onTouchEnd={(e) => {
-        delete (e.currentTarget as HTMLDivElement).dataset.swipeStart;
-      }}
-    >
+    <div className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground">
       <Sidebar
         conversations={conversations}
         activeId={null}
         onSelect={goToConversation}
         onNew={handleNew}
         onDelete={handleDelete}
+        onRename={handleRename}
+        onArchive={handleArchive}
+        onDuplicate={handleDuplicate}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
@@ -231,20 +299,32 @@ export function AppShell({ children }: { children: ReactNode }) {
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
       />
 
-      <div className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div
+        className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]"
+        data-sidebar={sidebarOpen ? "open" : "closed"}
+      >
         <OfflineBanner />
         <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
-        {!sidebarOpen && (
+        <div className="kova-core-utilities flex shrink-0 justify-end px-4 py-2 lg:px-8">
+          <TimersWidget
+            userKey={userKey}
+            principalResolved={isLoaded}
+            mobileSidebarOpen={sidebarOpen}
+          />
+        </div>
+        {!sidebarOpen && !user && (
           <button
-            onClick={() => {
+            onClick={(event) => {
+              const keyboardActivated = event.detail === 0;
               setSidebarOpen(true);
+              if (!keyboardActivated) return;
               window.requestAnimationFrame(() => {
                 document
                   .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
                   ?.focus({ preventScroll: true });
               });
             }}
-            className="kova-floating-sidebar-trigger hidden lg:flex fixed top-3 left-3 z-30 h-10 w-10 rounded-xl bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
+            className="kova-floating-sidebar-trigger kova-sidebar-toggle hidden lg:flex fixed top-3 left-3 z-30 h-10 w-10 rounded-xl transition items-center justify-center"
             aria-label="Open sidebar"
           >
             <PanelLeft className="w-4 h-4" />
@@ -282,11 +362,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           }}
         />
       </Suspense>
-      <TimersWidget
-        userKey={userKey}
-        principalResolved={isLoaded}
-        mobileSidebarOpen={sidebarOpen}
-      />
     </div>
   );
 }

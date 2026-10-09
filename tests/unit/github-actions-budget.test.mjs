@@ -2,8 +2,40 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
+import { runInNewContext } from "node:vm";
+import { load as parseYaml } from "js-yaml";
 
 const read = (path) => readFile(path, "utf8");
+
+test("superseded CI computations cancel without suppressing current-head evidence", async () => {
+  const workflow = parseYaml(await read(".github/workflows/ci.yml"));
+  function admits(
+    job,
+    { cancelled = false, verify = "success", scope = "true", draft = false } = {},
+  ) {
+    const expression = workflow.jobs[job].if;
+    assert.match(expression, /^\$\{\{ !cancelled\(\)/u);
+    return runInNewContext(expression.slice(3, -2).trim(), {
+      cancelled: () => cancelled,
+      needs: { verify: { result: verify, outputs: { run_ci: scope, run_database: scope } } },
+      github: { event_name: "pull_request", event: { pull_request: { draft } } },
+    });
+  }
+  for (const job of ["isolated-database", "browser", "release-e2e"]) {
+    assert.equal(admits(job), true, `${job} must retain current-head checks`);
+    assert.equal(admits(job, { cancelled: true }), false, `${job} must release a cancelled run`);
+    assert.equal(admits(job, { scope: "false" }), false, `${job} must retain scope gating`);
+  }
+  assert.equal(admits("isolated-database", { verify: "failure" }), true);
+  for (const job of ["browser", "release-e2e"]) {
+    assert.equal(admits(job, { verify: "failure" }), false);
+    assert.equal(admits(job, { draft: true }), false);
+  }
+  const evidence = workflow.jobs["isolated-database"].steps.find(
+    (step) => step.name === "Upload upgrade rehearsal evidence",
+  );
+  assert.equal(evidence.if, "always()", "preserve available failure/cancellation evidence");
+});
 
 test("primary CI avoids duplicate branch runs and gates expensive work", async () => {
   const workflow = await read(".github/workflows/ci.yml");
@@ -57,11 +89,11 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
   );
   assert.match(
     workflow,
-    /browser:\s+if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/u,
+    /browser:\s+if: \$\{\{ !cancelled\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/u,
   );
   assert.match(
     workflow,
-    /release-e2e:\s+if: always\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/u,
+    /release-e2e:\s+if: \$\{\{ !cancelled\(\) && needs\.verify\.result == 'success' && needs\.verify\.outputs\.run_ci == 'true' && \(github\.event_name != 'pull_request' \|\| github\.event\.pull_request\.draft == false\)/u,
   );
   assert.match(
     workflow,

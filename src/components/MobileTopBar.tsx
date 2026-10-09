@@ -1,13 +1,14 @@
-import { Menu, MessageSquareDashed, Sliders, SquarePen } from "lucide-react";
-import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { PanelLeft, MessageSquareDashed, Sliders, SquarePen } from "lucide-react";
+import { useUser, SignInButton, SignUpButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
+import { NovaLogo } from "@/components/NovaLogo";
 import type { ModeId, Tier } from "@/lib/modes";
 
 /**
  * Compact sticky top bar shown on phones and tablets (any viewport below the
  * desktop breakpoint). Provides a menu trigger to open the off-canvas sidebar,
  * brand identity, and a quick "new chat" action. Signed-out users see a
- * compact login action instead of the new-chat icon so they can always
+ * compact login and signup actions instead of the new-chat icon so they can always
  * reach auth from the top bar. Honors safe-area-inset-top and uses
  * translucent blur so content underneath eases through as it scrolls.
  */
@@ -46,9 +47,9 @@ export function MobileTopBar({
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
-          className="kova-action w-11 h-11 text-foreground"
+          className="kova-action kova-sidebar-toggle w-11 h-11 text-foreground"
         >
-          <Menu className="w-5 h-5" />
+          <PanelLeft className="w-5 h-5" aria-hidden="true" />
         </button>
         <div className="flex min-w-0 items-center justify-start gap-1 pl-1">
           {mode && onModeChange ? (
@@ -60,7 +61,8 @@ export function MobileTopBar({
               compact
             />
           ) : (
-            <div className="flex min-w-0 items-center justify-start">
+            <div className="flex min-w-0 items-center justify-start gap-2">
+              <NovaLogo decorative className="h-6 w-6" />
               <span className="font-display font-semibold tracking-tight text-base truncate">
                 {title || "KovaGPT"}
               </span>
@@ -80,11 +82,18 @@ export function MobileTopBar({
           ) : null}
         </div>
         {showAuth ? (
-          <SignInButton mode="modal">
-            <button className="mr-1 min-h-11 justify-self-end whitespace-nowrap rounded-full bg-foreground px-4 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 active:opacity-80">
-              Log in
-            </button>
-          </SignInButton>
+          <div className="flex items-center justify-end gap-1">
+            <SignInButton mode="modal">
+              <button className="kova-auth-primary min-h-11 whitespace-nowrap rounded-full bg-foreground px-3 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 active:opacity-80">
+                Log in
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="kova-auth-sign-up min-h-11 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold transition-opacity hover:opacity-90 active:opacity-80">
+                Sign up
+              </button>
+            </SignUpButton>
+          </div>
         ) : (
           <div className="flex items-center justify-end gap-0.5">
             {onOpenChatSettings ? (

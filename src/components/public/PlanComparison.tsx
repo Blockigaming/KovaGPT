@@ -14,8 +14,7 @@ export function PlanComparison() {
       <p className="public-eyebrow">Find your fit</p>
       <h2 id="plan-comparison-title">Compare the essentials</h2>
       <p className="mb-6 mt-3 text-sm leading-6 text-muted-foreground">
-        Published allowances and modes for individual plans. Check the plan cards for additional
-        details.
+        Published allowances for individual plans. Check the plan cards for additional details.
       </p>
       <div className="public-table-scroll" role="region" aria-label="Plan comparison" tabIndex={0}>
         <table>
@@ -31,14 +30,6 @@ export function PlanComparison() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <th scope="row">Chat modes</th>
-              {tiers.map((tier) => (
-                <td key={tier}>
-                  {CAPABILITY_REGISTRY.modesByTier[tier].map((mode) => mode.label).join(", ")}
-                </td>
-              ))}
-            </tr>
             {rows.map((row) => (
               <tr key={row.label}>
                 <th scope="row">{row.label}</th>

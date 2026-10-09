@@ -1,37 +1,30 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 
+import { LAUNCH_PLUGIN_IDS } from "../../src/lib/core-launch-policy.mjs";
+import {
+  CORE_LAUNCH_SCOPE,
+  CORE_LAUNCH_REQUIRED_GATES,
+  PLUGIN_OPERATIONS,
+  coreLaunchBlockers,
+} from "./core-launch-gates.mjs";
+
 const statuses = new Set(["passed", "failed", "unavailable", "skipped", "not-run"]);
 const categories = [
-  "repository",
-  "isolatedDatabase",
+  ...CORE_LAUNCH_REQUIRED_GATES,
   "localBrowser",
-  "deployedEdge",
-  "unauthenticatedSmoke",
-  "authenticatedCrud",
-  "ownerIsolation",
-  "administratorDiagnostics",
   "stripe",
-  "connectors",
   "agentRunner",
-  "providers",
-  "scheduledTasks",
-  "storage",
-  "stagingE2e",
   "production",
+  "accessLimits",
+  "images",
+  "imageCostControls",
 ];
-const required = new Set([
-  "repository",
-  "isolatedDatabase",
-  "deployedEdge",
-  "unauthenticatedSmoke",
-  "authenticatedCrud",
-  "ownerIsolation",
-  "administratorDiagnostics",
-  "stagingE2e",
-]);
-const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+const commit = execFileSync("git", ["rev-parse", "HEAD"], {
+  encoding: "utf8",
+  timeout: 10_000,
+}).trim();
 const correlationId = process.env.KOVA_RELEASE_CORRELATION_ID ?? randomUUID();
 const entries = Object.fromEntries(
   categories.map((name) => {
@@ -57,28 +50,59 @@ const entries = Object.fromEntries(
     ];
   }),
 );
-const launchReady =
-  [...required].every((name) => entries[name].status === "passed") &&
-  entries.production.status !== "passed";
+const target = process.env.KOVA_RELEASE_TARGET ?? "unassigned";
+function enabled(name) {
+  const value = process.env[name];
+  if (value !== undefined && value !== "0" && value !== "1")
+    throw new Error(`Invalid flag: ${name}`);
+  return value === "1";
+}
+const scope = {
+  id: CORE_LAUNCH_SCOPE,
+  paidSubscriptions: enabled("KOVA_LAUNCH_PAID_SUBSCRIPTIONS"),
+  imageGeneration: enabled("KOVA_LAUNCH_IMAGE_GENERATION"),
+  plugins: [...LAUNCH_PLUGIN_IDS],
+};
+const plugins = Object.fromEntries(
+  LAUNCH_PLUGIN_IDS.map((id) => [
+    id,
+    {
+      commit,
+      target,
+      ...Object.fromEntries(
+        PLUGIN_OPERATIONS.map((operation) => {
+          const name = `KOVA_PLUGIN_${id.replaceAll("-", "_").toUpperCase()}_${operation.toUpperCase()}`;
+          const status = process.env[name] ?? "not-run";
+          if (!statuses.has(status)) throw new Error(`Invalid plugin status: ${name}`);
+          return [operation, status];
+        }),
+      ),
+    },
+  ]),
+);
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   commit,
+  target,
   generatedAt: new Date().toISOString(),
   correlationId,
-  launchReady,
+  scope,
   entries,
+  plugins,
 };
+report.blockers = coreLaunchBlockers(report);
+report.launchReady = report.blockers.length === 0;
 await mkdir("artifacts/release", { recursive: true });
 const json = JSON.stringify(report, null, 2) + "\n";
 await writeFile("artifacts/release/launch-report.json", json);
 await writeFile(
   "artifacts/release/launch-report.md",
-  `# KovaGPT launch report\n\nCommit: \`${commit}\`\n\n${categories.map((name) => `- **${name}**: ${entries[name].status}`).join("\n")}\n\nProduction validated: **no**\n`,
+  `# KovaGPT launch report\n\nCommit: \`${commit}\`\n\n${categories.map((name) => `- **${name}**: ${entries[name].status}`).join("\n")}\n\nProduction validated: **${entries.production.productionValidated ? "yes" : "no"}**\n\nCore launch blockers:\n${report.blockers.map((name) => `- ${name}`).join("\n")}\n`,
 );
 await writeFile(
   "artifacts/release/launch-report.sha256",
   `${createHash("sha256").update(json).digest("hex")}  launch-report.json\n`,
 );
 console.log(
-  `Launch report written; mandatory staging gates ${launchReady ? "passed" : "not satisfied"}.`,
+  `Launch report written; mandatory staging gates ${report.launchReady ? "passed" : "not satisfied"}.`,
 );

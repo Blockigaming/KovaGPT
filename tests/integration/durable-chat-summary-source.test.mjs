@@ -5,7 +5,7 @@ const read = (path) => readFile(path, "utf8");
 const [chat, memory, client, worker, server, exports, snapshot] = await Promise.all([
   read("src/routes/api/chat.ts"),
   read("src/routes/api/memory.ts"),
-  read("src/routes/index.tsx"),
+  read("src/components/ChatWorkspace.tsx"),
   read("src/routes/api/internal/chat-summaries.ts"),
   read("src/lib/chat-summary.server.ts"),
   read("src/lib/account-export-policy.mjs"),

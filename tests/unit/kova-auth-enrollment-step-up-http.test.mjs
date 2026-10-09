@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
 import test from "node:test";
 import { authHttp, authRequest, postgresTransport } from "../helpers/kova-auth-http.mjs";
-import { authDatabase, passwordAccount, owner, other } from "../helpers/kova-auth-database.mjs";
+import {
+  authDatabase,
+  livePasswordAccount as passwordAccount,
+  owner,
+  other,
+} from "../helpers/kova-auth-database.mjs";
 import * as crypto from "../../src/lib/kova-auth-crypto.server.mjs";
 
 const currentPassword = "test-only current primary password";

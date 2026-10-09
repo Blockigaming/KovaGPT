@@ -382,8 +382,8 @@ function ProjectDetailPage() {
 
   return (
     <AppShell>
-      <main id="main-content" tabIndex={-1} className="max-w-6xl mx-auto p-4 md:p-8 w-full">
-        <div className="flex items-center justify-between gap-2 mb-4">
+      <main id="main-content" tabIndex={-1} className="kova-core-page">
+        <div className="kova-project-actions flex flex-wrap items-center justify-between gap-3 mb-6">
           <Link
             to="/projects"
             className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
@@ -459,7 +459,7 @@ function ProjectDetailPage() {
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList
-            className="h-auto max-w-full flex-nowrap overflow-x-auto rounded-[var(--kova-radius-input)]"
+            className="kova-project-tabs flex h-auto w-full max-w-full flex-nowrap justify-start overflow-x-auto rounded-[var(--kova-radius-input)]"
             aria-label="Project workspace sections"
           >
             <TabsTrigger value="overview">

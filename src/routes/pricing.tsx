@@ -25,11 +25,11 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "KovaGPT Billing" },
+      { title: "KovaGPT Subscriptions" },
       {
         name: "description",
         content:
-          "Compare KovaGPT Free, Plus, and Pro plans. Get more messages, image generations and advanced reasoning modes.",
+          "Compare KovaGPT Free, Plus, and Pro plans. Review published allowances and billing options.",
       },
       { property: "og:title", content: "Pricing - KovaGPT Plus & Pro plans" },
       {
@@ -85,7 +85,7 @@ export const Route = createFileRoute("/pricing")({
               name: "Can I cancel anytime?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Open Billing in Settings to see the available subscription-management options and their effective dates.",
+                text: "Open Subscriptions in Settings to see the available subscription-management options and their effective dates.",
               },
             },
             {
@@ -164,6 +164,7 @@ function PricingPage() {
   }, [isOpen]);
 
   const startCheckout = (priceId: string, trigger: HTMLButtonElement) => {
+    if (!isLoaded) return;
     if (isLoaded && !isSignedIn) {
       try {
         openSignIn();
@@ -227,6 +228,7 @@ function PricingPage() {
             taxNotice
             description={CAPABILITY_REGISTRY.plans.plus.description}
             cta="Start Plus"
+            ctaDisabled={!isLoaded}
             highlight
             note={`${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial for eligible first-time subscribers`}
             onCta={(event) =>
@@ -243,6 +245,7 @@ function PricingPage() {
             taxNotice
             description={CAPABILITY_REGISTRY.plans.pro.description}
             cta="Upgrade to Pro"
+            ctaDisabled={!isLoaded}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!, event.currentTarget)
             }
@@ -282,8 +285,8 @@ function PricingPage() {
             <article className="border-t border-border pt-5">
               <h3 className="font-medium mb-1">Can I cancel anytime?</h3>
               <p className="leading-6 text-muted-foreground">
-                Open Billing in Settings to see the options available for your subscription and when
-                a change takes effect.
+                Open Subscriptions in Settings to see the options available for your subscription
+                and when a change takes effect.
               </p>
             </article>
             <article className="border-t border-border pt-5">
@@ -295,8 +298,8 @@ function PricingPage() {
             <article className="border-t border-border pt-5">
               <h3 className="font-medium mb-1">Can I switch plans?</h3>
               <p className="leading-6 text-muted-foreground">
-                Available plan changes appear in Billing. Review the portal or checkout confirmation
-                for timing and price before accepting.
+                Available plan changes appear in Subscriptions. Review the portal or checkout
+                confirmation for timing and price before accepting.
               </p>
             </article>
             <article className="border-t border-border pt-5">
@@ -400,7 +403,7 @@ function PlanCard({
       </div>
       <div className="mt-3 flex items-center gap-2.5">
         {Icon ? (
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted">
+          <span className="grid h-9 w-9 place-items-center">
             <Icon className="h-4 w-4" aria-hidden="true" />
           </span>
         ) : null}

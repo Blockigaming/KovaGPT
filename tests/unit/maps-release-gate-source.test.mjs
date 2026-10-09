@@ -3,11 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
-const expectedSidebarCallers = [
-  "src/components/AppShell.tsx",
-  "src/routes/images.tsx",
-  "src/routes/index.tsx",
-];
+const expectedSidebarCallers = ["src/components/AppShell.tsx", "src/components/ChatWorkspace.tsx"];
 
 test("MAN-09 keeps the release gate closed", () => {
   const gate = readFileSync("src/lib/maps-release-gate.ts", "utf8");
@@ -29,6 +25,7 @@ test("every Sidebar caller supplies the Maps release decision", () => {
     .sort();
 
   assert.deepEqual(callers, expectedSidebarCallers);
+  assert.match(readFileSync("src/routes/images.tsx", "utf8"), /<AppShell>/u);
   for (const path of callers) {
     const source = readFileSync(path, "utf8");
     assert.match(source, /import \{ MAPS_RELEASE_APPROVED \} from "@\/lib\/maps-release-gate";/u);
@@ -39,13 +36,12 @@ test("every Sidebar caller supplies the Maps release decision", () => {
   }
 });
 
-test("Sidebar exposes and applies the Maps release decision", () => {
+test("Core launch omits Maps navigation while retaining the compatibility input", () => {
   const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
 
-  assert.match(sidebar, /mapsReleaseApproved = false/u);
-  assert.match(sidebar, /data-maps-release-approved=\{mapsReleaseApproved \? "true" : "false"\}/u);
-  assert.match(sidebar, /\{mapsReleaseApproved \? \(\s*<Link to="\/maps"/u);
-  assert.match(sidebar, /mapsReleaseApproved \? navLink\("\/maps", "Maps", Map\) : null/u);
+  assert.match(sidebar, /mapsReleaseApproved\?: boolean/u);
+  assert.doesNotMatch(sidebar, /<Link\s+to="\/maps"/u);
+  assert.doesNotMatch(sidebar, /navLink\("\/maps"/u);
 });
 
 test("Maps route metadata does not advertise an unapproved provider experience", () => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,22 +17,45 @@ import { browserKovaAuthEnabled, kovaPublicAuthJson } from "@/lib/kova-auth-brow
 export function ForgotPasswordDialog({
   open,
   onOpenChange,
+  initialEmail = "",
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  initialEmail?: string;
 }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const submitting = useRef(false);
+  const requestVersion = useRef(0);
+  useEffect(() => {
+    requestVersion.current += 1;
+    submitting.current = false;
+    setLoading(false);
+    setSent(false);
+    setError(null);
+    if (open) setEmail(initialEmail);
+  }, [open, initialEmail]);
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((value) => value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current || cooldown > 0) return;
     const normalizedEmail = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       toast.error("Please enter a valid email address.");
       return;
     }
+    submitting.current = true;
+    const version = requestVersion.current;
     setLoading(true);
+    setError(null);
     try {
       if (browserKovaAuthEnabled()) {
         const response = await kovaPublicAuthJson("/api/auth/recovery/request", {
@@ -45,15 +68,20 @@ export function ForgotPasswordDialog({
         });
         if (error) throw error;
       }
+      if (version !== requestVersion.current) return;
       setSent(true);
-      toast.success("Reset link sent. Check your inbox & spam folder.");
+      setCooldown(45);
     } catch (err) {
       console.error("[KovaAuth] Password reset request failed", {
         error: err instanceof Error ? err.name : "unknown_error",
       });
-      toast.error("A reset link could not be requested. Please try again.");
+      if (version === requestVersion.current)
+        setError("A reset link could not be requested. Please try again.");
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) {
+        submitting.current = false;
+        setLoading(false);
+      }
     }
   };
 
@@ -68,45 +96,47 @@ export function ForgotPasswordDialog({
         }
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="kova-auth-surface sm:max-w-md">
         <DialogHeader className="text-center">
           <div className="flex justify-center mb-3">
             <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center">
               <KeyRound className="w-6 h-6" />
             </div>
           </div>
-          <DialogTitle className="text-center text-xl">Reset your password</DialogTitle>
+          <DialogTitle className="text-center text-xl">
+            {sent ? "Check your email" : "Reset your password"}
+          </DialogTitle>
           <DialogDescription className="text-center">
             {sent
-              ? "We sent a secure reset link to your email. Open it on this device to set a new password."
+              ? "If this email has an account, a reset link has been requested. Check your inbox and spam folder, then open the newest link on this device."
               : "Enter the email you used to sign up and we'll send you a reset link."}
           </DialogDescription>
         </DialogHeader>
 
         {sent ? (
           <div className="space-y-3">
-            <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm flex items-start gap-2">
+            <div className="rounded-2xl border border-border p-4 text-sm flex items-start gap-2">
               <Mail className="w-4 h-4 mt-0.5 text-muted-foreground" />
               <div>
-                <p className="font-medium">{email}</p>
+                <p className="break-all font-medium">{email}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Reset links expire. If you requested more than one, use the newest link.
                 </p>
               </div>
             </div>
-            <Button className="w-full" onClick={() => onOpenChange(false)}>
+            <Button className="h-12 w-full" onClick={() => onOpenChange(false)}>
               Done
             </Button>
             <button
               type="button"
-              className="w-full text-xs text-muted-foreground hover:text-foreground"
+              className="min-h-11 w-full rounded-full text-sm text-muted-foreground hover:text-foreground"
               onClick={() => setSent(false)}
             >
               Use a different email
             </button>
           </div>
         ) : (
-          <form onSubmit={submit} className="space-y-3">
+          <form onSubmit={submit} className="space-y-3" aria-busy={loading}>
             <div className="space-y-1.5">
               <Label htmlFor="fp-email">Email</Label>
               <Input
@@ -115,17 +145,24 @@ export function ForgotPasswordDialog({
                 autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
+                disabled={loading}
+                className="h-12 rounded-2xl"
                 onChange={(e) => setEmail(e.target.value)}
                 maxLength={320}
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            {error ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+            <Button type="submit" className="h-12 w-full" disabled={loading || cooldown > 0}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Send reset link
+              {cooldown > 0 ? `Try again in ${cooldown}s` : "Send reset link"}
             </Button>
             <p className="text-[11px] text-center text-muted-foreground">
-              If an account exists for that email, you'll get the link in a minute.
+              For your privacy, the response is the same whether or not an account exists.
             </p>
           </form>
         )}

@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8
 
 test("home chat and shared shell hide stale account state before loading the next principal", async () => {
   const [home, shell] = await Promise.all([
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
     read("src/components/AppShell.tsx"),
   ]);
 
@@ -25,12 +25,20 @@ test("home chat and shared shell hide stale account state before loading the nex
   assert.match(shell, /const storagePrincipal = chatStoragePrincipal\(userKey\)/);
   assert.match(shell, /const conversations = principalReady \? conversationState\.items : \[\]/);
   assert.match(shell, /loadConversations\(userKey\)/);
-  assert.match(shell, /saveConversations\(userKey, next\)/);
+  assert.match(
+    shell,
+    /const saved = await saveConversations\(userKey, next, \{\s*snapshot: chatHistorySnapshot\(userKey\)/,
+  );
+  assert.match(shell, /if \(!current\(\)\) return false;\s*if \(!saved\)/);
+  assert.match(
+    shell,
+    /principalRef\.current === storagePrincipal && selectionRef\.current === selection/,
+  );
 });
 
 test("draft, pending-selection, archive, import, and export paths carry the current principal", async () => {
   const [home, shell, settings] = await Promise.all([
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
     read("src/components/AppShell.tsx"),
     read("src/components/SettingsDialog.tsx"),
   ]);
@@ -51,7 +59,8 @@ test("draft, pending-selection, archive, import, and export paths carry the curr
   );
   assert.doesNotMatch(home, /localStorage\.(?:getItem|setItem|removeItem)\(`kova-draft:/);
 
-  assert.match(shell, /savePendingActive\(userKey, id\)/);
+  assert.match(shell, /persistChatRoute\(userKey, conversations, id, current\)/);
+  assert.match(shell, /principalRef\.current === storagePrincipal/);
   assert.match(shell, /clearPendingActive\(userKey\)/);
   assert.doesNotMatch(
     shell,

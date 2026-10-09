@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 185,
+  "migrationCount": 186,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -422,6 +422,7 @@
     "deliver_developer_billing_alerts",
     "disconnect_github_account",
     "disconnect_github_account",
+    "disconnect_launch_connector",
     "dispatch_developer_billing",
     "dispatch_developer_billing",
     "dispatch_developer_billing_with_files",
@@ -788,6 +789,7 @@
     "settle_chat_context_summary",
     "settle_interrupted_agent_job",
     "settle_interrupted_agent_job",
+    "settle_launch_connector",
     "settle_library_file_replacement",
     "settle_library_file_upload",
     "settle_library_image_upload",
@@ -2021,6 +2023,7 @@
     "execute on function public.deliver_developer_billing_alerts(uuid[],integer) to service_role",
     "execute on function public.disconnect_github_account(uuid, boolean) to authenticated, service_role",
     "execute on function public.disconnect_github_account(uuid,boolean) to authenticated",
+    "execute on function public.disconnect_launch_connector(uuid,text,uuid) to service_role",
     "execute on function public.dispatch_developer_billing_with_files(uuid,uuid,jsonb) to service_role",
     "execute on function public.effective_user_plan_tier(uuid)\n  to service_role",
     "execute on function public.enforce_family_member_cap() to service_role",
@@ -2192,6 +2195,7 @@
     "execute on function public.settle_chat_context_summary(uuid,bigint,uuid,text) to service_role",
     "execute on function public.settle_interrupted_agent_job(uuid, text) to service_role",
     "execute on function public.settle_interrupted_agent_job(uuid,text) to service_role",
+    "execute on function public.settle_launch_connector(uuid,text,uuid,text,jsonb) to service_role",
     "execute on function public.settle_scheduled_task_failure(\n  uuid,\n  text,\n  text,\n  text,\n  text,\n  boolean\n) to service_role",
     "execute on function public.settle_scheduled_task_success(\n  uuid,\n  text,\n  timestamptz,\n  text,\n  text\n) to service_role",
     "execute on function public.settle_work_accounting(uuid,uuid,uuid,bigint,uuid,text,text,text,bigint,bigint,bigint,bigint,numeric,integer) to service_role",
@@ -2223,6 +2227,7 @@
     "record",
     "references it.\ncreate function kova_private.guard_mcp_client() returns trigger language plpgsql security definer set search_path='' as $$\nbegin\n if new.id<>old.id or new.metadata is distinct from old.metadata or new.created_at<>old.created_at\n  or (new.registered_by is distinct from old.registered_by and new.registered_by is not null)\n  or (new.active and not old.active) or new.expires_at>old.expires_at then raise exception 'mcp_oauth_client_immutable'",
     "revocation disables the ordinary metering key, so it is enforced\n-- again by canonical admission and dispatch even after an MCP authentication.\ncreate function kova_private.mcp_disable_grant_key()\nreturns trigger language plpgsql security definer set search_path='' as $$\nbegin\n perform pg_advisory_xact_lock(hashtextextended('developer_billing',0))",
+    "select (id, owner_id, workspace_id, provider_id, provider_account_id,\n  account_label, status, granted_scopes, token_expires_at, health_checked_at,\n  last_success_at, last_error_code, deleted_at, created_at, updated_at)\n  on public.integration_linked_accounts to authenticated",
     "select on public.ai_usage_events to authenticated",
     "select on public.api_profitability_admin to service_role",
     "select on public.billing_plan_tiers to service_role",
@@ -2620,6 +2625,7 @@
     "all on function public.delete_work_saved_record(uuid,uuid,uuid,bigint) from public, anon, authenticated",
     "all on function public.deliver_developer_billing_alerts(uuid[],integer) from public,anon,authenticated",
     "all on function public.disconnect_github_account(uuid, boolean) from public, anon, authenticated",
+    "all on function public.disconnect_launch_connector(uuid,text,uuid) from public,anon,authenticated",
     "all on function public.dispatch_developer_billing_with_files(uuid,uuid,jsonb) from public,anon,authenticated",
     "all on function public.enforce_family_member_cap() from public, anon, authenticated",
     "all on function public.enforce_project_owner_membership() from public, anon, authenticated",
@@ -2796,6 +2802,7 @@
     "all on function public.settle_chat_context_summary(uuid,bigint,uuid,text) from public,anon,authenticated",
     "all on function public.settle_interrupted_agent_job(uuid, text)\n  from public, anon, authenticated",
     "all on function public.settle_interrupted_agent_job(uuid,text) from public, anon, authenticated",
+    "all on function public.settle_launch_connector(uuid,text,uuid,text,jsonb) from public,anon,authenticated",
     "all on function public.settle_scheduled_task_failure(\n  uuid,\n  text,\n  text,\n  text,\n  text,\n  boolean\n) from public, anon, authenticated",
     "all on function public.settle_scheduled_task_success(\n  uuid,\n  text,\n  timestamptz,\n  text,\n  text\n) from public, anon, authenticated",
     "all on function public.settle_work_accounting(uuid,uuid,uuid,bigint,uuid,text,text,text,bigint,bigint,bigint,bigint,numeric,integer) from public,anon,authenticated",
@@ -2942,6 +2949,7 @@
     "invites, but only a verified recipient can accept or decline.\n\ncreate or replace function public.accept_project_invite(_invite_id uuid)\nreturns uuid\nlanguage plpgsql\nsecurity definer\nset search_path = pg_catalog\nas $$\ndeclare\n  caller_id uuid := auth.uid()",
     "maintain on all tables in schema public from public, anon, authenticated'",
     "queued/terminal job downloads and recover processing jobs whose\n  -- leases have already expired. A genuinely live worker keeps its lease so\n  -- deletion cannot race an upload",
+    "select on public.integration_linked_accounts from authenticated",
     "select on table public.feature_flags from authenticated",
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "truncate, trigger, references on all tables in schema public from public, anon, authenticated",
@@ -3111,7 +3119,7 @@
     { "table": "public.integration_audit_events", "role": "authenticated", "granted": true },
     { "table": "public.integration_consents", "role": "authenticated", "granted": true },
     { "table": "public.integration_deletion_requests", "role": "authenticated", "granted": true },
-    { "table": "public.integration_linked_accounts", "role": "authenticated", "granted": true },
+    { "table": "public.integration_linked_accounts", "role": "authenticated", "granted": false },
     { "table": "public.integration_sync_jobs", "role": "authenticated", "granted": true },
     { "table": "public.knowledge_relationships", "role": "anon", "granted": false },
     { "table": "public.knowledge_relationships", "role": "authenticated", "granted": true },
@@ -3427,5 +3435,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "75afa942efba97cd7708ff0c8c78550e0b61ccd19e3d07ec1cdb658947dc4f39"
+  "sha256": "ec95fc29160714d49185f256bb3cee24e89d1ee3a4c1b0f14b0ee1cb8db7e313"
 }

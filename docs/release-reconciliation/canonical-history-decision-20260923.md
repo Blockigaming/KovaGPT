@@ -4,10 +4,15 @@ Status: **proposed for independent review; no production action approved**. This
 decision uses the 97-version captured fixture in
 `tests/fixtures/production-migration-history-20260904/manifest.json`, its
 98th-row `current-supplement-20260918.json` in the same directory, and the
-185-version source set in `release-migrations.json` at commit `3ffdde6`. The 24 remote-only mappings
+186-version source set in `release-migrations.json` at commit `41a25b6`. The 24 remote-only mappings
 and blocked proof states are in `release-migration-lineage.json`. Refresh the
 actual ledger and source manifest before accepting an execution plan. A source
 timestamp absent from production is not an execution instruction.
+
+The October 8 inventory refresh adds the exact
+`20261008153032_launch_connector_runtime.sql` source file. The historical baseline,
+remote records, and blocked review states remain unchanged. The refreshed
+108-body/4-record replay still requires a new CI receipt.
 
 ## Exact inventory and disposition
 
@@ -15,15 +20,15 @@ timestamp absent from production is not an execution instruction.
 | -------------------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Shared source and captured remote timestamps |    74 | Retain; verify full statement identity and current ledger before application.                                                                                |
 | Remote-only versions                         |    24 | Retain all 24. Five have reviewed content equivalence; 19 remain `requires_schema_proof`. Never delete or silently relabel them.                             |
-| Source-only timestamps                       |   111 | Preserve as the raw gap. Four have conditional history-only disposition, including one still-unproven scheduled mapping; 107 bodies require separate review. |
-| Prior isolated control ledger                |   180 | 98 existing + 82 older forward executions. This disposable result did not include the 28 later source migrations and is not current production history.      |
+| Source-only timestamps                       |   112 | Preserve as the raw gap. Four have conditional history-only disposition, including one still-unproven scheduled mapping; 108 bodies require separate review. |
+| Prior isolated control ledger                |   180 | 98 existing + 82 older forward executions. This disposable result did not include the 29 later source migrations and is not current production history.      |
 
-The full, machine-checked **proposed** action for each of the 111 source-only
+The full, machine-checked **proposed** action for each of the 112 source-only
 versions and the retain decision for each of the 24 remote-only versions is in
 `canonical-history-actions-20260923.json`. Generate and verify that inventory
 without a database connection using
 `node scripts/release/canonical-history-decision.mjs --check`. It pins the
-185-version source manifest and migration Git tree, the immutable 157-version baseline, all source-file hashes,
+186-version source manifest and migration Git tree, the immutable 157-version baseline, all source-file hashes,
 the 97-row historical fixture manifest, the 98th-row supplement, 23 remote
 structural fixture hashes, the supplement hash, and the captured ledger metadata digest. The
 capture in that file is dated September 18; it must be refreshed before any
@@ -37,18 +42,18 @@ Three source-only versions (`20260822122000`, `20260823113000`, and
 `20260903145843`) have reviewed content-equivalent remote bodies. A fourth,
 `20260822143000`, is **conditionally proposed** for history-only recording:
 its pinned source statement matches the second recorded scheduled statement
-after removing one blank line, and a disposable 107-body/4-record rehearsal
-keeps `next_scheduled_task_occurrence` `STABLE`. The first scheduled remote
+after removing one blank line, and the prior disposable 107-body/4-record rehearsal
+kept `next_scheduled_task_occurrence` `STABLE`. The first scheduled remote
 effect, live grants, dependencies, and data compatibility remain unproven;
 both scheduled entries remain `requires_schema_proof`. No history-only action
-is approved. The other 107 are **proposed** for execution and recording only after
+is approved. The other 108 are **proposed** for execution and recording only after
 their individual pre-state, data transformation, and schema contracts are
 reviewed. The 98-row synthetic rehearsal executed 82 source bodies (including
 the earlier two equivalent goals/settlement files) and skipped only the
-security body, so it does **not** validate the conditional 107-body execution
-sequence, including 28 migrations added after the earlier pinned source set. A complete canonical ledger would contain 209 versions (98 existing
-plus 111 canonical versions) if all these proposed actions were separately
-accepted and applied. Neither the 180-row rehearsal nor the 209-row projection
+security body, so it does **not** validate the conditional 108-body execution
+sequence, including 29 migrations added after the earlier pinned source set. A complete canonical ledger would contain 210 versions (98 existing
+plus 112 canonical versions) if all these proposed actions were separately
+accepted and applied. Neither the 180-row rehearsal nor the 210-row projection
 is a claim about current production. Every source action in the inventory
 remains blocked pending its per-version effect review and a rehearsal of the
 exact proposed sequence.
@@ -79,7 +84,7 @@ do not constitute 19 accepted proofs.
    target. Preserve any unexplained privilege or function difference as a
    blocker. Promote entries only through the reviewed proof contract and
    independent approval.
-3. Review the **proposed per-source-version action** for all 111 absent source
+3. Review the **proposed per-source-version action** for all 112 absent source
    timestamps in the checked inventory. For each, approve or revise its
    already-executed-equivalent versus forward-execution disposition, pin the
    expected prior state and intended row transformations, then demonstrate the
@@ -107,7 +112,7 @@ authorization for M20. No
 production SQL write, history repair, restore, deployment, or mapping promotion was
 performed to prepare it.
 
-## Local rehearsal of the conditional 107+4 action sequence
+## Local rehearsal of the conditional 108+4 action sequence
 
 Run `node scripts/release/upgrade-database.mjs --canonical-history --dry-run`
 to verify the pinned inventory without starting a database. The full command
@@ -119,28 +124,29 @@ four timestamps, so only the disposable project receives matching filenames
 whose SQL deliberately raises an error if run. Source files stay unchanged;
 an unexpected replay fails instead of re-executing equivalent bodies. It checks
 that 102-row ledger, inserts
-synthetic two-user data, applies only the other 107 source migration bodies with
-`migration up --local --include-all`, and requires exactly 209 rows before
+synthetic two-user data, applies only the other 108 source migration bodies with
+`migration up --local --include-all`, and requires exactly 210 rows before
 cleaning up. The proposed result is written separately to
-`artifacts/release/upgrade-canonical-history.json`; the refreshed 110-body
-control rehearsal records 208 local rows in `upgrade-database.json`. CI must run the refreshed sequence
+`artifacts/release/upgrade-canonical-history.json`; the prior 110-body
+control rehearsal recorded 208 local rows in `upgrade-database.json`, before the
+launch connector migration. CI must run the refreshed sequence
 and upload its receipt. A failed repair, changed recorded statement, changed
 inventory, or recurrence volatility regression fails the rehearsal.
 
 The repair mechanism is demonstrated **only against disposable local history**.
 The pinned September 18 production capture, remote-only structural gaps,
 actual production rows, managed Auth/Storage configuration, and recovery
-package still require separate verification. Even a passing local 209-row
+package still require separate verification. Even a passing local 210-row
 receipt does not accept this canonical decision or authorize production repair.
 
-The observed 98-row production ledger has 111 absent source timestamps. A
+The observed 98-row production ledger has 112 absent source timestamps. A
 default linked `db push` may skip older out-of-order versions, while an
-`--include-all` push would include the already-applied security body among all 111. Neither produces the conditional 107+4 sequence. The source guard makes
+`--include-all` push would include the already-applied security body among all 112. Neither produces the conditional 108+4 sequence. The source guard makes
 `scripts/release/supabase-db-push.mjs` reject a write invocation for the exact
 production project **before linking**, while allowing only the exact
 `--dry-run` and `--include-all --dry-run` preview forms. There is no environment
 bypass. A later production write needs
 accepted M12/M13 and real-backup recovery evidence, a separate approval for
 history-only recording, a verified 102-row pre-state, a read-only dry run that
-selects exactly 107 approved bodies using `--include-all --dry-run`, and a new reviewed source change to enable
+selects exactly 108 approved bodies using `--include-all --dry-run`, and a new reviewed source change to enable
 the guarded execution. The local rehearsal is not that production mechanism.

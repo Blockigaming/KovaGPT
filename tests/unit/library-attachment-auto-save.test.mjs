@@ -96,7 +96,7 @@ test("a failed text save keeps a stable retry and cannot cross a privacy or acco
 
 test("composer assigns IDs at file selection and passes its captured privacy scope after each read", () => {
   const composer = readFileSync("src/components/ChatInput.tsx", "utf8");
-  const route = readFileSync("src/routes/index.tsx", "utf8");
+  const route = readFileSync("src/components/ChatWorkspace.tsx", "utf8");
   assert.equal((composer.match(/clientId: crypto.randomUUID\(\)/g) || []).length, 2);
   assert.equal(
     (

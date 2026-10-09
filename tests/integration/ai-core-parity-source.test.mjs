@@ -28,7 +28,7 @@ test("chat API delegates model routing, activity, memory, web search, and failur
 
 test("web-search responses stream bounded source records to the message UI", () => {
   const chat = read("src/routes/api/chat.ts");
-  const home = read("src/routes/index.tsx");
+  const home = read("src/components/ChatWorkspace.tsx");
   const message = read("src/components/ChatMessage.tsx");
   const history = read("src/lib/chat-history-policy.mjs");
   const projectChat = read("src/routes/projects.$projectId.chat.$chatId.tsx");

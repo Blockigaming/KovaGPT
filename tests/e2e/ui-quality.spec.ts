@@ -49,12 +49,11 @@ test("empty workspace remains contained and composer focus is deliberate", async
   expect(focused.borderColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.outlineStyle).toBe("solid");
   expect(focused.outlineWidth).toBe(2);
-  expect(focused.outlineOffset).toBe(1);
+  expect(focused.outlineOffset).toBe(2);
   expect(focused.outlineColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.outlineColor).not.toBe(focused.color);
-  expect(unfocused.boxShadow).not.toBe("none");
-  expect(focused.boxShadow).not.toBe("none");
-  expect(focused.boxShadow).not.toBe(unfocused.boxShadow);
+  expect(unfocused.boxShadow).toBe("none");
+  expect(focused.boxShadow).toBe("none");
 
   if (page.viewportSize()!.width >= 1024) {
     const metrics = await composer.evaluate((element) => {
@@ -69,9 +68,8 @@ test("empty workspace remains contained and composer focus is deliberate", async
           ? Number.parseFloat(value) * rootFontSize
           : Number.parseFloat(value);
       return {
-        shell: { width: shell.width, height: shell.height },
+        shell: { x: shell.x, y: shell.y, width: shell.width, height: shell.height },
         axisWidth: axis?.width ?? 0,
-        composerHeight: toPixels(style.getPropertyValue("--composer-height")),
         controlSize: toPixels(style.getPropertyValue("--composer-control")),
         borderBlock:
           Number.parseFloat(style.borderTopWidth) + Number.parseFloat(style.borderBottomWidth),
@@ -84,35 +82,82 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.shell.width).toBeCloseTo(metrics.axisWidth, 1);
     expect(metrics.shell.width).toBeLessThanOrEqual(768);
     expect(metrics.shell.width).toBeGreaterThanOrEqual(640);
-    expect(metrics.composerHeight).toBe(50);
     expect(metrics.controlSize).toBe(44);
-    expect(metrics.shell.height).toBeCloseTo(metrics.composerHeight + metrics.borderBlock, 1);
-    expect(metrics.row?.height).toBeCloseTo(metrics.composerHeight, 1);
-    expect(metrics.input?.height).toBeCloseTo(metrics.composerHeight, 1);
+    // Short prompts start on one line between circular controls.
+    expect(metrics.row?.height).toBeCloseTo(metrics.shell.height - metrics.borderBlock, 1);
+    expect(metrics.input?.height).toBeGreaterThanOrEqual(24);
+    expect(metrics.input?.height).toBeLessThanOrEqual(32);
+    expect(metrics.shell.height).toBeLessThanOrEqual(64);
+    expect(metrics.input!.y + metrics.input!.height / 2).toBeCloseTo(
+      metrics.plus!.y + metrics.plus!.height / 2,
+      1,
+    );
+    expect(metrics.input!.left).toBeGreaterThan(metrics.shell.x);
+    expect(metrics.input!.right).toBeLessThan(metrics.shell.x + metrics.shell.width);
+    expect(metrics.send!.bottom).toBeLessThan(metrics.shell.y + metrics.shell.height);
     expect(metrics.plus?.width).toBe(metrics.controlSize);
     expect(metrics.plus?.height).toBe(metrics.controlSize);
     expect(metrics.send?.width).toBe(metrics.controlSize);
     expect(metrics.send?.height).toBe(metrics.controlSize);
     expect(metrics.plus?.y).toBe(metrics.send?.y);
 
-    await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+    for (const selector of [".kova-attach-button", ".kova-send-button"]) {
+      expect(
+        await composer
+          .locator(selector)
+          .evaluate((control) => getComputedStyle(control).borderRadius),
+      ).toBe("50%");
+    }
+    await input.fill("First line\nSecond line");
+    await expect
+      .poll(async () => (await input.boundingBox())!.height)
+      .toBeGreaterThan(metrics.input!.height);
+    await expect
+      .poll(async () => (await composer.boundingBox())!.height)
+      .toBeGreaterThan(metrics.shell.height);
+    await input.fill("A focused prompt");
+    await expect
+      .poll(async () => (await composer.boundingBox())!.height)
+      .toBeCloseTo(metrics.shell.height, 1);
+
+    const addButton = page.getByRole("button", { name: "Add files, tools, or prompts" });
+    await addButton.click();
     const menu = page.getByRole("dialog", { name: "Add files, tools, or prompts" });
     await expect(menu).toBeVisible();
-    await expect(page.getByRole("button", { name: "Start with Make a plan" })).toBeHidden();
-    const [menuBox, composerBox, headingBox] = await Promise.all([
-      menu.boundingBox(),
-      composer.boundingBox(),
-      page.getByRole("heading", { level: 1 }).boundingBox(),
-    ]);
+    // The portal may flip above the composer when there is less room below it.
+    // Either placement must keep every action accessible within the viewport.
+    const menuBox = await menu.boundingBox();
     expect(menuBox).not.toBeNull();
-    expect(composerBox).not.toBeNull();
-    expect(headingBox).not.toBeNull();
-    expect(menuBox!.y).toBeGreaterThanOrEqual(composerBox!.y + composerBox!.height + 8);
-    expect(menuBox!.y).toBeGreaterThan(headingBox!.y + headingBox!.height);
-    const webSearchBox = await menu.getByRole("button", { name: "Search the web" }).boundingBox();
-    expect(webSearchBox).not.toBeNull();
-    expect(webSearchBox!.height).toBeGreaterThanOrEqual(44);
-    await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+    expect(menuBox!.x).toBeGreaterThanOrEqual(0);
+    expect(menuBox!.y).toBeGreaterThanOrEqual(0);
+    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    const primaryActions = menu.locator(".kova-composer-primary-actions");
+    await expect(primaryActions.getByRole("button")).toHaveCount(5);
+    for (const name of ["Photos", "Files", "Library", "Drawings", "Create Image"]) {
+      const action = primaryActions.getByRole("button", { name, exact: true });
+      await expect(action).toBeVisible();
+      await expect
+        .poll(async () => (await action.boundingBox())!.height)
+        .toBeGreaterThanOrEqual(44);
+    }
+    await expect(
+      primaryActions.getByRole("button", { name: "Create Image", exact: true }),
+    ).toBeDisabled();
+    const plugins = menu.getByRole("region", { name: "Supported plugins" });
+    await expect(plugins).toBeVisible();
+    const pluginList = plugins.locator(".kova-composer-plugin-list");
+    const pluginScroll = await pluginList.evaluate((list) => ({
+      overflow: getComputedStyle(list).overflowY,
+      content: list.scrollHeight,
+      height: list.clientHeight,
+    }));
+    expect(pluginScroll.overflow).toBe("auto");
+    expect(pluginScroll.content).toBeGreaterThan(pluginScroll.height);
+    await expect(plugins.getByRole("link").first()).toHaveAttribute("href", /^\/apps\?plugin=/);
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await expect(addButton).toBeFocused();
     await expect(page.getByRole("button", { name: "Start with Make a plan" })).toBeVisible();
   }
 
@@ -128,15 +173,13 @@ test("empty workspace remains contained and composer focus is deliberate", async
       }));
     return {
       display: style.display,
-      flexWrap: style.flexWrap,
-      justifyContent: style.justifyContent,
+      wrap: style.flexWrap,
       visibleLabels,
     };
   });
   expect(starterLayout.display).toBe("flex");
-  expect(starterLayout.flexWrap).toBe("wrap");
-  expect(starterLayout.justifyContent).toBe("center");
-  expect(starterLayout.visibleLabels.length).toBeGreaterThan(0);
+  expect(starterLayout.wrap).toBe("wrap");
+  expect(starterLayout.visibleLabels.length).toBe(4);
   for (const label of starterLayout.visibleLabels) {
     expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth + 1);
   }
@@ -186,80 +229,110 @@ for (const theme of ["light", "dark"] as const) {
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`guest core shell visual baseline in ${theme} mode`, async ({ page }, testInfo) => {
-    test.skip(!new Set(["phone-390x844", "desktop-1440x900"]).has(testInfo.project.name));
-    const hydrationErrors: string[] = [];
-    page.on("console", (message) => {
-      if (
-        message.type() === "error" &&
-        /(?:Minified React error #418|hydration failed|didn't match)/i.test(message.text())
-      ) {
-        hydrationErrors.push(message.text());
-      }
-    });
-    page.on("pageerror", (error) => {
-      if (/(?:Minified React error #418|hydration failed|didn't match)/i.test(error.message)) {
-        hydrationErrors.push(error.message);
-      }
-    });
+  for (const font of ["dmsans", "fallback"] as const) {
+    test(`guest core shell visual baseline in ${theme} mode with ${font}`, async ({
+      page,
+    }, testInfo) => {
+      test.skip(!new Set(["phone-390x844", "desktop-1440x900"]).has(testInfo.project.name));
+      const hydrationErrors: string[] = [];
+      page.on("console", (message) => {
+        if (
+          message.type() === "error" &&
+          /(?:Minified React error #418|hydration failed|didn't match)/i.test(message.text())
+        ) {
+          hydrationErrors.push(message.text());
+        }
+      });
+      page.on("pageerror", (error) => {
+        if (/(?:Minified React error #418|hydration failed|didn't match)/i.test(error.message)) {
+          hydrationErrors.push(error.message);
+        }
+      });
 
-    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    let rasterLogoRequests = 0;
-    await page.route("**/kova-logo.png*", (route) => {
-      rasterLogoRequests += 1;
-      return route.abort();
-    });
-    await page.addInitScript((selectedTheme) => {
-      localStorage.setItem("kova-theme-mode", selectedTheme);
-    }, theme);
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    await waitForKovaHydration(page);
-    const usesInter = await page.evaluate(async () => {
-      await document.fonts.ready;
-      return Array.from(document.fonts).some(
-        (face) => face.family.replaceAll('"', "") === "Inter" && face.status === "loaded",
-      );
-    });
+      await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+      await page.route("https://fonts.googleapis.com/**", (route) => route.abort());
+      await page.route("https://fonts.gstatic.com/**", (route) => route.abort());
+      if (font === "fallback")
+        await page.route("**/fonts/dm-sans-variable.woff2", (route) => route.abort());
+      let rasterLogoRequests = 0;
+      await page.route("**/kova-logo.png*", (route) => {
+        rasterLogoRequests += 1;
+        return route.continue();
+      });
+      await page.addInitScript((selectedTheme) => {
+        localStorage.setItem("kova-theme-mode", selectedTheme);
+      }, theme);
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+      await waitForKovaHydration(page);
+      const usesBundledFont = await page.evaluate(async () => {
+        await document.fonts.ready;
+        return Array.from(document.fonts).some(
+          (face) => face.family.replaceAll('"', "") === "Kova DM Sans" && face.status === "loaded",
+        );
+      });
+      expect(usesBundledFont).toBe(font === "dmsans");
 
-    await expect(page.getByRole("main")).toHaveCount(1);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    await expect(page.locator(".kova-model-static:visible")).toHaveCount(1);
-    await expect(page.locator(".kova-model-static:visible svg")).toHaveCount(0);
-    // The guest starter grid is lazy loaded after hydration. Capture its rendered
-    // state, not Suspense's same-height placeholder during a slower chunk request.
-    await expect(page.getByRole("button", { name: "Start with Brainstorm ideas" })).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(page.getByRole("button", { name: "Start with Explore a topic" })).toBeVisible();
-    const greetingMark = page.locator(".kova-greeting-mark .kova-logo-mark");
-    await expect(greetingMark).toBeHidden();
-    await expect(greetingMark).toHaveAttribute("aria-hidden", "true");
-    await expect(greetingMark).toHaveAttribute("data-logo-variant", "mark");
-    expect(await greetingMark.getAttribute("role")).toBeNull();
-    expect(await greetingMark.getAttribute("aria-label")).toBeNull();
-    expect(await greetingMark.locator("circle, path").count()).toBeGreaterThanOrEqual(2);
-    if (page.viewportSize()!.width >= 1024) {
-      const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand:visible");
-      await expect(sidebarBrand).toHaveCount(1);
-      await expect(sidebarBrand).toHaveText("KovaGPT");
-    }
-    expect(rasterLogoRequests).toBe(0);
-    expect(hydrationErrors).toEqual([]);
-    await expect(page).toHaveScreenshot(
-      `guest-core-shell-${theme}-${usesInter ? "inter" : "fallback"}.png`,
-      {
+      if (font === "fallback" && process.platform === "linux") {
+        // Chromium's Arial substitute differs between Linux images. These
+        // baselines use fonts-liberation 2.1.5, installed by Playwright in CI.
+        // Fail with the actual font name rather than accepting unrelated pixels.
+        const session = await page.context().newCDPSession(page);
+        await session.send("DOM.enable");
+        await session.send("CSS.enable");
+        const { root } = await session.send("DOM.getDocument");
+        const { nodeId } = await session.send("DOM.querySelector", {
+          nodeId: root.nodeId,
+          selector: ".kova-assistant h1",
+        });
+        const { fonts } = await session.send("CSS.getPlatformFontsForNode", { nodeId });
+        expect(
+          fonts.filter((face) => face.glyphCount > 0).map((face) => face.familyName),
+          "Linux fallback screenshots require Playwright's fonts-liberation dependency",
+        ).toEqual(["Liberation Sans"]);
+        expect(fonts.every((face) => !face.isCustomFont)).toBe(true);
+        await session.detach();
+      }
+
+      await expect(page.getByRole("main")).toHaveCount(1);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      await expect(page.locator(".kova-model-static:visible")).toHaveCount(1);
+      await expect(page.locator(".kova-model-static:visible svg")).toHaveCount(0);
+      // The guest starter grid is lazy loaded after hydration. Capture its rendered
+      // state, not Suspense's same-height placeholder during a slower chunk request.
+      await expect(page.getByRole("button", { name: "Start with Brainstorm ideas" })).toBeVisible({
+        timeout: 15_000,
+      });
+      await expect(page.getByRole("button", { name: "Start with Explore a topic" })).toBeVisible();
+      const greetingMark = page.locator(".kova-greeting-mark .kova-logo-mark");
+      if (page.viewportSize()!.width >= 1024) await expect(greetingMark).toBeVisible();
+      else await expect(greetingMark).toBeHidden();
+      if (page.viewportSize()!.width < 640) {
+        const phoneBrand = page.locator(".kova-topbar:visible img.kova-logo");
+        await expect(phoneBrand).toBeVisible();
+        await expect(phoneBrand).toHaveAttribute("src", "/kova-logo.png");
+      }
+      await expect(greetingMark).toHaveAttribute("aria-hidden", "true");
+      await expect(greetingMark).toHaveAttribute("data-logo-variant", "mark");
+      expect(await greetingMark.getAttribute("role")).toBeNull();
+      expect(await greetingMark.getAttribute("aria-label")).toBeNull();
+      await expect(greetingMark).toHaveAttribute("src", "/kova-logo.png");
+      await expect(greetingMark).toHaveJSProperty("naturalWidth", 1024);
+      if (page.viewportSize()!.width >= 1024) {
+        const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand:visible");
+        await expect(sidebarBrand).toHaveCount(1);
+        await expect(sidebarBrand).toHaveText("KovaGPT");
+      }
+      expect(rasterLogoRequests).toBeGreaterThan(0);
+      expect(hydrationErrors).toEqual([]);
+      await expect(page).toHaveScreenshot(`guest-core-shell-${theme}-${font}.png`, {
         animations: "disabled",
         caret: "hide",
         maxDiffPixelRatio: 0.005,
         scale: "css",
-      },
-    );
-    await captureCandidateVisual(
-      page,
-      testInfo,
-      `guest-core-shell-${theme}-${usesInter ? "inter" : "fallback"}`,
-    );
-  });
+      });
+      await captureCandidateVisual(page, testInfo, `guest-core-shell-${theme}-${font}`);
+    });
+  }
 }
 
 test("mobile greeting and composer actions fit the viewport", async ({ page }) => {
@@ -288,7 +361,20 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   const sheet = page.getByTestId("mobile-bottom-sheet");
   await expect(sheet).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Search the web" })).toBeVisible();
+  const primaryActions = sheet.locator(".kova-composer-primary-actions");
+  await expect(primaryActions.getByRole("button")).toHaveText([
+    "Photos",
+    "Camera",
+    "Files",
+    "Library",
+  ]);
+  for (const name of ["Photos", "Camera", "Files", "Library"]) {
+    const action = primaryActions.getByRole("button", { name, exact: true });
+    await expect(action).toBeVisible();
+    await expect.poll(async () => (await action.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  await expect(sheet.getByRole("button", { name: "Drawings", exact: true })).toHaveCount(0);
+  await expect(sheet.getByRole("button", { name: "Create Image", exact: true })).toHaveCount(0);
   await sheet.getByRole("button", { name: "Close sheet" }).click();
   await expect(sheet).toBeHidden();
 });
@@ -364,11 +450,10 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
     const artifactBox = await artifactAction.boundingBox();
     expect(box).not.toBeNull();
     expect(artifactBox).not.toBeNull();
-    // Chromium can report an exact 44 CSS-pixel target a few millionths below 44
-    // after device-scale rounding. Keep the WCAG target while tolerating only that noise.
+    // Allow device-scale rounding in the approved compact 32 × 40 action controls.
     const subpixelTolerance = 0.01;
-    expect(box!.width + subpixelTolerance).toBeGreaterThanOrEqual(44);
-    expect(box!.height + subpixelTolerance).toBeGreaterThanOrEqual(44);
+    expect(Math.abs(box!.width - 32)).toBeLessThanOrEqual(subpixelTolerance);
+    expect(Math.abs(box!.height - 40)).toBeLessThanOrEqual(subpixelTolerance);
     expect(artifactBox!.width).toBeGreaterThan(70);
     expect(artifactBox!.height + subpixelTolerance).toBeGreaterThanOrEqual(44);
     expect(artifactBox!.height).toBeLessThanOrEqual(48);
@@ -376,7 +461,8 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
       "nowrap",
     );
   }
-  await expect(page.locator(".kova-chat-row")).toHaveCount(0);
+  await expect(page.locator(".kova-chat-row")).toHaveCount(1);
+  await expect(page.locator(".kova-chat-row")).toContainText("Workspace quality review");
   await expect
     .poll(() =>
       page.evaluate(() =>

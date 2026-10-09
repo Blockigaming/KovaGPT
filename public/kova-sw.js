@@ -338,8 +338,8 @@ self.addEventListener("push", (event) =>
         await set("delivered", delivered);
         await self.registration.showNotification("KovaGPT", {
           body: "You have a new update. Open KovaGPT to view it.",
-          icon: "/favicon.png",
-          badge: "/favicon.png",
+          icon: "/kova-logo.png",
+          badge: "/kova-logo.png",
           tag: "kova-update",
           data: { subscriptionId: binding.id },
           renotify: false,

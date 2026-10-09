@@ -131,7 +131,7 @@ test("public shards retain the three viewports and feed fail-closed existing req
     ["release-e2e", "e2e-report"],
   ]) {
     const job = section(name, next);
-    assert.match(job, /if: always\(\) && needs\.verify\.result == 'success'/);
+    assert.match(job, /if: \$\{\{ !cancelled\(\) && needs\.verify\.result == 'success'/);
     assert.match(job, /needs\.verify\.outputs\.run_ci == 'true'/);
     assert.match(job, /github\.event\.pull_request\.draft == false/);
     assert.match(job, /needs: \[verify, public-surface\]/);

@@ -56,6 +56,7 @@ export function PublicPageView({
               <Link
                 to={primaryAction.to as never}
                 data-public-primary
+                style={{ borderRadius: "9999px" }}
                 className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {primaryAction.label} <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -146,6 +147,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               <Link
                 to={item.primaryAction.to as never}
                 data-public-primary
+                style={{ borderRadius: "9999px" }}
                 className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {item.primaryAction.label}
@@ -251,6 +253,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
             </div>
             <Link
               to={item.primaryAction.to as never}
+              style={{ borderRadius: "9999px" }}
               className="inline-flex min-h-11 min-w-0 max-w-full shrink-0 items-center justify-center gap-2 rounded-full bg-background px-5 py-2.5 text-center text-sm font-medium text-foreground outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground md:max-w-xs"
             >
               {item.primaryAction.label}

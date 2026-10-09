@@ -32,15 +32,13 @@ test("unknown provider information stays unknown instead of being invented", () 
 });
 
 test("current topology is product design, not proof of deployed weights or completed training", () => {
+  assert.match(base, /KovaGPT is one unified assistant/);
+  assert.match(base, /Model selection and response effort are separate concepts/);
   assert.match(
     base,
-    /The product design is that Chat effort modes share one underlying Chat model/,
+    /Subagents are permitted only for a verified Ultra request; Max remains single-agent/,
   );
-  assert.match(base, /Cosmo, Orion, and Nova are distinct Work model families/);
-  assert.match(
-    base,
-    /their active provider and pinned upstream revisions must come from trusted runtime information/,
-  );
+  assert.doesNotMatch(base, /distinct Work model families/);
   assert.match(
     base,
     /Product design is not evidence that any model is loaded, fine-tuned, or serving/,

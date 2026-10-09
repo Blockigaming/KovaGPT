@@ -1,4 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
+import { createFileRoute } from "@tanstack/react-router";
 import { imageApiRequest } from "@/lib/image-api-client";
 import ImageEditControls, { type ImageEditSelection } from "@/components/ImageEditControls";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,7 +19,6 @@ import {
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
 } from "@/lib/principal-browser-storage.mjs";
 import {
-  PanelLeft,
   ArrowUp,
   ChevronLeft,
   ChevronRight,
@@ -29,18 +30,14 @@ import {
   RefreshCw,
   Copy,
 } from "lucide-react";
-import { Sidebar } from "@/components/Sidebar";
-import { SettingsDialog } from "@/components/SettingsDialog";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { getUsage } from "@/lib/limits";
-import { useNovaSettings } from "@/lib/use-nova-settings";
-import { SignInButton, SignUpButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
+import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
 import { cn } from "@/lib/utils";
-import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/images")({
@@ -348,27 +345,8 @@ async function imageUrlForLibrary(imageUrl: string): Promise<string> {
 }
 
 function ImagesPage() {
-  const navigate = useNavigate();
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = (user as { id?: string } | null)?.id ?? null;
-  const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
-  const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
-  const openSettings = (tab?: string) => {
-    settingsReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setSettingsTab(tab);
-    setSettingsOpen(true);
-  };
-  useEffect(() => {
-    const h = (e: Event) => openSettings((e as CustomEvent<{ tab?: string }>).detail?.tab);
-    window.addEventListener("kova-open-settings", h);
-    return () => window.removeEventListener("kova-open-settings", h);
-  }, []);
-  const openHelp = () => navigate({ to: "/help" as never });
-
   const [editSelection, setEditSelection] = useState<ImageEditSelection>(null);
   const [aspectRatio, setAspectRatio] = useState<"1:1" | "2:3" | "3:2">("1:1");
   const [prompt, setPrompt] = useState("");
@@ -391,7 +369,10 @@ function ImagesPage() {
   const scrollPresets = (direction: 1 | -1) => {
     const el = presetsRef.current;
     if (!el) return;
-    el.scrollBy({ left: direction * Math.max(320, el.clientWidth * 0.8), behavior: "smooth" });
+    el.scrollBy({
+      left: direction * Math.max(320, el.clientWidth * 0.8),
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
   };
   const lightboxInitialFocusRef = useRef<HTMLButtonElement>(null);
   const lightboxReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -635,408 +616,310 @@ function ImagesPage() {
   };
 
   return (
-    <div className="flex h-dvh w-full bg-background text-foreground">
-      <Sidebar
-        conversations={[]}
-        activeId={null}
-        onSelect={() => {}}
-        onNew={() => navigate({ to: "/" })}
-        onDelete={() => {}}
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen((v) => !v)}
-        onOpenSettings={openSettings}
-        onOpenHelp={openHelp}
-        mapsReleaseApproved={MAPS_RELEASE_APPROVED}
-      />
-
+    <AppShell>
       <main
         id="main-content"
         tabIndex={-1}
         aria-labelledby="images-title"
-        className="flex min-w-0 flex-1 flex-col"
+        className="kova-core-page"
       >
-        <header className="h-14 flex items-center px-3 shrink-0">
-          {!sidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="mr-1 flex h-11 w-11 items-center justify-center rounded-lg transition hover:bg-accent"
-              aria-label="Toggle sidebar"
-            >
-              <PanelLeft className="w-5 h-5" />
-            </button>
-          )}
-          <div className="ml-auto flex items-center gap-2">
-            {!isLoaded ? (
-              <div
-                aria-hidden="true"
-                className="h-11 w-36 animate-pulse rounded-full bg-muted motion-reduce:animate-none"
-              />
-            ) : isSignedIn ? (
-              <UserButton />
-            ) : (
-              <>
-                <SignInButton mode="modal">
-                  <button className="min-h-11 rounded-full bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90">
-                    Log in
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="min-h-11 whitespace-nowrap rounded-full bg-muted px-3 text-sm font-medium text-foreground transition hover:bg-accent sm:px-4">
-                    Sign up for free
-                  </button>
-                </SignUpButton>
-              </>
-            )}
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
-            <h1
-              id="images-title"
-              className="text-[34px] font-semibold tracking-tight sm:text-[40px]"
-            >
-              Images
-            </h1>
-
-            {/* Prompt */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                generate(prompt);
+        <WorkspacePageHeader
+          title="Images"
+          titleId="images-title"
+          description="Create something new, or revisit images you’ve made."
+        />
+        {/* Prompt */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            generate(prompt);
+          }}
+          className="mt-5"
+        >
+          <div className="kova-composer flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2">
+            <input
+              ref={inputRef}
+              value={prompt}
+              aria-label={
+                editSelection ? "Describe the image edit" : "Describe the image to generate"
+              }
+              maxLength={2000}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(event) => {
+                if (event.nativeEvent.isComposing && event.key === "Enter") {
+                  event.preventDefault();
+                }
               }}
-              className="mt-5"
+              placeholder={
+                editSelection ? "Describe the change to your image" : "Describe a new image"
+              }
+              spellCheck={false}
+              autoComplete="off"
+              className="min-w-0 flex-1 border-0 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+            />
+            <button
+              type="submit"
+              disabled={!prompt.trim() || loading}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
+              aria-label={editSelection ? "Create edited image" : "Generate"}
             >
-              <div className="kova-composer flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2">
-                <input
-                  ref={inputRef}
-                  value={prompt}
-                  aria-label={
-                    editSelection ? "Describe the image edit" : "Describe the image to generate"
-                  }
-                  maxLength={2000}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.nativeEvent.isComposing && event.key === "Enter") {
-                      event.preventDefault();
-                    }
-                  }}
-                  placeholder={
-                    editSelection ? "Describe the change to your image" : "Describe a new image"
-                  }
-                  spellCheck={false}
-                  autoComplete="off"
-                  className="min-w-0 flex-1 border-0 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0"
-                />
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+              ) : (
+                <ArrowUp className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </form>
+        <label className="mt-3 flex items-center gap-2 text-sm">
+          Output shape
+          <select
+            aria-label="Output image shape"
+            value={aspectRatio}
+            onChange={(event) => setAspectRatio(event.target.value as typeof aspectRatio)}
+            disabled={loading}
+            className="rounded border bg-background p-2"
+          >
+            <option value="1:1">Square 1:1</option>
+            <option value="2:3">Portrait 2:3</option>
+            <option value="3:2">Landscape 3:2</option>
+          </select>
+        </label>
+        {isSignedIn && userKey && (
+          <ImageEditControls
+            key={userKey}
+            ownerId={userKey}
+            disabled={loading}
+            value={editSelection}
+            onChange={setEditSelection}
+          />
+        )}
+
+        {/* Create an image */}
+        <section className="mt-10">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-medium tracking-tight">Start with an idea</h2>
+            <div className="hidden items-center gap-2 sm:flex">
+              <button
+                type="button"
+                onClick={() => scrollPresets(-1)}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                aria-label="Scroll styles left"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollPresets(1)}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                aria-label="Scroll styles right"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <div
+            ref={presetsRef}
+            className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto scroll-smooth scrollbar-none"
+          >
+            <div className="flex gap-3 pb-2 min-w-max">
+              {PRESETS.map((p) => (
                 <button
-                  type="submit"
-                  disabled={!prompt.trim() || loading}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
-                  aria-label={editSelection ? "Create edited image" : "Generate"}
+                  key={p.label}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  aria-label={`Use ${p.label} style`}
+                  className="group flex flex-col items-start w-[160px] shrink-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-                  ) : (
-                    <ArrowUp className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </form>
-            <label className="mt-3 flex items-center gap-2 text-sm">
-              Output shape
-              <select
-                aria-label="Output image shape"
-                value={aspectRatio}
-                onChange={(event) => setAspectRatio(event.target.value as typeof aspectRatio)}
-                disabled={loading}
-                className="rounded border bg-background p-2"
-              >
-                <option value="1:1">Square 1:1</option>
-                <option value="2:3">Portrait 2:3</option>
-                <option value="3:2">Landscape 3:2</option>
-              </select>
-            </label>
-            {isSignedIn && userKey && (
-              <ImageEditControls
-                key={userKey}
-                ownerId={userKey}
-                disabled={loading}
-                value={editSelection}
-                onChange={setEditSelection}
-              />
-            )}
-
-            {/* Create an image */}
-            <section className="mt-10">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="text-[22px] font-semibold tracking-tight">Create an image</h2>
-                <div className="hidden items-center gap-2 sm:flex">
-                  <button
-                    type="button"
-                    onClick={() => scrollPresets(-1)}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
-                    aria-label="Scroll styles left"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => scrollPresets(1)}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
-                    aria-label="Scroll styles right"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <div
-                ref={presetsRef}
-                className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto scroll-smooth scrollbar-none"
-              >
-                <div className="flex gap-3 pb-2 min-w-max">
-                  {PRESETS.map((p) => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => applyPreset(p)}
-                      aria-label={`Use ${p.label} style`}
-                      className="group flex flex-col items-start w-[160px] shrink-0 focus:outline-none"
-                    >
-                      <div className="relative w-[160px] h-[160px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted">
-                        <img
-                          src={p.image}
-                          alt=""
-                          loading="lazy"
-                          width={512}
-                          height={512}
-                          className="absolute inset-0 w-full h-full object-cover transition duration-200 group-hover:scale-[1.02]"
-                        />
-                        <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-2 pt-8 text-left text-sm font-medium text-white">
-                          {p.label}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* Current result */}
-            {(loading || result || error) && (
-              <section className="mt-8">
-                {loading && !result && (
-                  <div
-                    role="status"
-                    aria-labelledby="image-generating-label"
-                    className="relative mx-auto aspect-square max-w-md overflow-hidden rounded-2xl bg-gradient-to-br from-fuchsia-500/20 via-violet-500/20 to-cyan-500/20 ring-1 ring-border"
-                  >
-                    <span id="image-generating-label" className="sr-only">
-                      Generating image
-                    </span>
-                    <div className="absolute inset-0 animate-[imgAura_6s_ease-in-out_infinite] bg-[radial-gradient(circle_at_30%_20%,hsl(280_90%_60%/0.35),transparent_55%),radial-gradient(circle_at_70%_80%,hsl(190_90%_55%/0.35),transparent_55%),radial-gradient(circle_at_50%_50%,hsl(320_90%_60%/0.25),transparent_60%)] motion-reduce:animate-none" />
-                    <div
-                      className="absolute inset-0 animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/25 to-transparent motion-reduce:animate-none"
-                      style={{ backgroundSize: "200% 100%" }}
-                    />
-                    <div className="absolute inset-0 backdrop-blur-2xl" />
-                    <div className="pointer-events-none absolute inset-0">
-                      {Array.from({ length: 14 }).map((_, i) => (
-                        <span
-                          key={i}
-                          className="absolute animate-[floatUp_5s_linear_infinite] rounded-full bg-white/70 shadow-[0_0_12px_rgba(255,255,255,0.9)] motion-reduce:animate-none"
-                          style={{
-                            left: `${(i * 37) % 100}%`,
-                            bottom: `-${(i * 13) % 40}px`,
-                            width: `${4 + (i % 4) * 2}px`,
-                            height: `${4 + (i % 4) * 2}px`,
-                            animationDelay: `${(i * 0.3).toFixed(2)}s`,
-                            opacity: 0.6,
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-white drop-shadow-lg">
-                      <div className="relative w-14 h-14">
-                        <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" />
-                        <Sparkles
-                          className="absolute inset-0 m-auto h-6 w-6 animate-pulse text-white motion-reduce:animate-none"
-                          aria-hidden="true"
-                        />
-                      </div>
-                      <div className="text-sm font-medium tracking-wide">Generating image…</div>
-                    </div>
-                  </div>
-                )}
-                {result && (
-                  <div className="max-w-md mx-auto">
+                  <div className="relative w-[160px] h-[160px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted">
                     <img
-                      src={result}
-                      alt={resultPrompt || "Generated image"}
-                      decoding="async"
-                      className="w-full rounded-2xl ring-1 ring-border"
+                      src={p.image}
+                      alt=""
+                      loading="lazy"
+                      width={512}
+                      height={512}
+                      className="absolute inset-0 w-full h-full object-cover transition duration-200 group-hover:scale-[1.02]"
                     />
-                    <div className="flex justify-center mt-3 gap-2 flex-wrap">
+                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-2 pt-8 text-left text-sm font-medium text-white">
+                      {p.label}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Current result */}
+        {(loading || result || error) && (
+          <section className="mt-8">
+            {loading && !result && (
+              <div
+                role="status"
+                aria-labelledby="image-generating-label"
+                className="relative mx-auto flex aspect-square max-w-md flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-border bg-transparent"
+              >
+                <Loader2
+                  className="h-7 w-7 animate-spin text-foreground motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+                <p id="image-generating-label" className="text-sm text-muted-foreground">
+                  Generating image…
+                </p>
+              </div>
+            )}
+            {result && (
+              <div className="max-w-md mx-auto">
+                <img
+                  src={result}
+                  alt={resultPrompt || "Generated image"}
+                  decoding="async"
+                  className="w-full rounded-2xl ring-1 ring-border"
+                />
+                <div className="flex justify-center mt-3 gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => saveGeneratedImage({ prompt: resultPrompt, imageUrl: result })}
+                    disabled={savingImage}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
+                  >
+                    <Bookmark className="h-4 w-4" /> {savingImage ? "Saving…" : "Save to Library"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => generate(resultPrompt)}
+                    disabled={loading}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
+                  >
+                    <RefreshCw className="h-4 w-4" /> Generate again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyGeneratedImage(result)}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent"
+                  >
+                    <Copy className="h-4 w-4" /> Copy image
+                  </button>
+                  <a
+                    href={result}
+                    download="kovagpt-image.png"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent"
+                  >
+                    <Download className="w-4 h-4" /> Download
+                  </a>
+                </div>
+              </div>
+            )}
+            {error && (
+              <div role="alert" className="mt-3 text-center text-sm text-destructive">
+                The image could not be generated. Please try again.
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* My images */}
+        <section className="mt-10" aria-labelledby="image-history-title">
+          <h2 id="image-history-title" className="mb-3 text-[22px] font-semibold tracking-tight">
+            Image history
+          </h2>
+          {isLoaded && isSignedIn && (
+            <p className="mb-3 text-sm text-muted-foreground">
+              This browser keeps your image history across sessions. Save an image to Library to use
+              it on other devices.
+            </p>
+          )}
+          {!isLoaded ? (
+            <div
+              role="status"
+              className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground"
+            >
+              Loading image history…
+            </div>
+          ) : !isSignedIn ? (
+            <div className="rounded-2xl border border-dashed border-border p-8 text-center sm:p-10">
+              <Sparkles className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
+              <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+                Sign in to generate images and keep your image history in this browser across
+                sessions. Save images to Library to use them on other devices.
+              </p>
+              <SignInButton mode="modal">
+                <Button className="mt-5 min-h-11">Sign in</Button>
+              </SignInButton>
+            </div>
+          ) : history.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border p-10 text-center">
+              <div className="mx-auto w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center mb-3">
+                <Sparkles className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Your generated images will appear here. Pick a style or describe an image above.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+              {history.map((h) => (
+                <article
+                  key={h.id}
+                  className="group relative aspect-square overflow-hidden rounded-2xl bg-muted ring-1 ring-border"
+                >
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      lightboxReturnFocusRef.current = event.currentTarget;
+                      setLightbox(h);
+                    }}
+                    className="absolute inset-0 w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foreground/60"
+                    aria-label={`Open image: ${h.prompt}`}
+                  >
+                    <img
+                      src={h.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 h-full w-full object-cover "
+                    />
+                  </button>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-1.5 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-2 opacity-100 transition md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                    <p className="line-clamp-2 text-[11px] text-white" title={h.prompt}>
+                      {h.prompt}
+                    </p>
+                    <div className="pointer-events-auto relative z-10 flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() =>
-                          saveGeneratedImage({ prompt: resultPrompt, imageUrl: result })
-                        }
-                        disabled={savingImage}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
+                        onClick={() => {
+                          setPrompt(h.prompt);
+                          inputRef.current?.focus();
+                        }}
+                        className="min-h-11 flex-1 rounded-full bg-white px-2 text-[11px] font-medium text-black hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                        aria-label={`Reuse prompt: ${h.prompt}`}
                       >
-                        <Bookmark className="h-4 w-4" />{" "}
-                        {savingImage ? "Saving…" : "Save to Library"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => generate(resultPrompt)}
-                        disabled={loading}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
-                      >
-                        <RefreshCw className="h-4 w-4" /> Generate again
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => copyGeneratedImage(result)}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent"
-                      >
-                        <Copy className="h-4 w-4" /> Copy image
+                        Reuse
                       </button>
                       <a
-                        href={result}
-                        download="kovagpt-image.png"
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent"
+                        href={h.imageUrl}
+                        download={`kovagpt-${h.id}.png`}
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                        aria-label={`Download image: ${h.prompt}`}
                       >
-                        <Download className="w-4 h-4" /> Download
+                        <Download className="h-3.5 w-3.5" />
                       </a>
-                    </div>
-                  </div>
-                )}
-                {error && (
-                  <div role="alert" className="mt-3 text-center text-sm text-destructive">
-                    The image could not be generated. Please try again.
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* My images */}
-            <section className="mt-10" aria-labelledby="image-history-title">
-              <h2
-                id="image-history-title"
-                className="mb-3 text-[22px] font-semibold tracking-tight"
-              >
-                Image history
-              </h2>
-              {isLoaded && isSignedIn && (
-                <p className="mb-3 text-sm text-muted-foreground">
-                  This browser keeps your image history across sessions. Save an image to Library to
-                  use it on other devices.
-                </p>
-              )}
-              {!isLoaded ? (
-                <div
-                  role="status"
-                  className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground"
-                >
-                  Loading image history…
-                </div>
-              ) : !isSignedIn ? (
-                <div className="rounded-2xl border border-dashed border-border p-8 text-center sm:p-10">
-                  <Sparkles className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
-                  <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-                    Sign in to generate images and keep your image history in this browser across
-                    sessions. Save images to Library to use them on other devices.
-                  </p>
-                  <SignInButton mode="modal">
-                    <Button className="mt-5 min-h-11">Sign in</Button>
-                  </SignInButton>
-                </div>
-              ) : history.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-                  <div className="mx-auto w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center mb-3">
-                    <Sparkles className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Your generated images will appear here. Pick a style or describe an image above.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-                  {history.map((h) => (
-                    <article
-                      key={h.id}
-                      className="group relative aspect-square overflow-hidden rounded-2xl bg-muted ring-1 ring-border"
-                    >
                       <button
                         type="button"
-                        onClick={(event) => {
-                          lightboxReturnFocusRef.current = event.currentTarget;
-                          setLightbox(h);
-                        }}
-                        className="absolute inset-0 w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foreground/60"
-                        aria-label={`Open image: ${h.prompt}`}
+                        onClick={() => removeFromHistory(h.id)}
+                        className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                        aria-label={`Remove image: ${h.prompt}`}
                       >
-                        <img
-                          src={h.imageUrl}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          className="absolute inset-0 h-full w-full object-cover "
-                        />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
-                      <div className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-1.5 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-2 opacity-100 transition md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
-                        <p className="line-clamp-2 text-[11px] text-white" title={h.prompt}>
-                          {h.prompt}
-                        </p>
-                        <div className="pointer-events-auto relative z-10 flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPrompt(h.prompt);
-                              inputRef.current?.focus();
-                            }}
-                            className="min-h-11 flex-1 rounded-full bg-white px-2 text-[11px] font-medium text-black hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                            aria-label={`Reuse prompt: ${h.prompt}`}
-                          >
-                            Reuse
-                          </button>
-                          <a
-                            href={h.imageUrl}
-                            download={`kovagpt-${h.id}.png`}
-                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                            aria-label={`Download image: ${h.prompt}`}
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => removeFromHistory(h.id)}
-                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                            aria-label={`Remove image: ${h.prompt}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
-          </div>
-        </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
-
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        onChange={setSettings}
-        initialTab={settingsTab}
-        returnFocusTarget={settingsReturnFocusRef.current}
-        onClearAll={resetVisibleImageData}
-      />
 
       <LoginPromptDialog
         open={loginOpen}
@@ -1138,6 +1021,6 @@ function ImagesPage() {
           </DialogContent>
         )}
       </Dialog>
-    </div>
+    </AppShell>
   );
 }

@@ -53,7 +53,7 @@ test("settings navigation is centralized and routes every rendered category", ()
     "General",
     "Personalization",
     "Memory",
-    "Billing",
+    "Subscriptions",
     "Usage",
     "Email",
     "Appearance",
@@ -167,8 +167,10 @@ test("workspace sizing is authenticated-only and mobile safe areas are applied o
 test("Settings polish retains the billing portal safety gates", () => {
   assert.match(
     settingsSource,
-    /if \(portalLoading \|\| !subSummary\?\.hasBillingAccount \|\| !subSummary\.billingPortalAvailable\)/,
+    /if \(\s*!loggedIn \|\|\s*!userKey \|\|\s*portalLoading \|\|\s*!subSummary\?\.hasBillingAccount \|\|\s*!subSummary\.billingPortalAvailable\s*\)/,
   );
+  assert.match(settingsSource, /const requestOwner = userKey;/);
+  assert.match(settingsSource, /if \(currentAuthUserKeyRef\.current !== requestOwner\) return;/);
   assert.match(settingsSource, /const portalUrl = parseAllowedBillingPortalUrl\(res\.url\);/);
   assert.match(
     settingsSource,

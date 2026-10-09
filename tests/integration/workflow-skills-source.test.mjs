@@ -38,7 +38,7 @@ const [
   read("src/components/WorkflowSkillsPanel.tsx"),
   read("src/routes/apps.tsx"),
   read("src/lib/workflow-skills-retry.mjs"),
-  read("src/routes/index.tsx"),
+  read("src/components/ChatWorkspace.tsx"),
   read("src/components/MobileTopBar.tsx"),
   read("src/lib/principal-browser-storage.mjs"),
   read("src/lib/account-export.server.ts"),

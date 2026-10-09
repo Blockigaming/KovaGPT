@@ -6,6 +6,7 @@ import vm from "node:vm";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
+import * as launch from "../../src/lib/core-launch-policy.mjs";
 import * as entitlements from "../../src/lib/mode-entitlements.mjs";
 
 const nativeRequire = createRequire(import.meta.url);
@@ -19,8 +20,10 @@ function fixture({ signedIn = true, loaded = true, desktop = true } = {}) {
     ["@/lib/billing-plans", "src/lib/billing-plans.ts"],
     ["@/lib/capability-registry", "src/lib/capability-registry.ts"],
     ["@/components/ResponsiveModelSelector", "src/components/ResponsiveModelSelector.tsx"],
+    ["@/components/NovaLogo", "src/components/NovaLogo.tsx"],
   ]);
   function load(id) {
+    if (id === "@/lib/core-launch-policy.mjs") return launch;
     if (id === "@/lib/mode-entitlements.mjs") return entitlements;
     if (id === "@/hooks/use-mobile")
       return {
@@ -64,11 +67,12 @@ function fixture({ signedIn = true, loaded = true, desktop = true } = {}) {
 }
 
 for (const desktop of [true, false]) {
-  test(`Plus selected High is displayed as Thinking (${desktop ? "desktop" : "touch"})`, () => {
+  test(`Plus stale High remains inactive (${desktop ? "desktop" : "touch"})`, () => {
     const f = fixture({ desktop });
     for (const placement of ["topbar", "composer"]) {
       const html = f.render("plus", "high", placement);
-      assert.match(html, /aria-label="Choose model: KovaGPT Thinking"/);
+      assert.match(html, /kova-model-static/);
+      assert.doesNotMatch(html, /<button|model-selector-trigger|Thinking/);
       assert.doesNotMatch(html, /KovaGPT High/);
     }
     assert.equal(f.modes.getMode("high").id, "high");
@@ -79,13 +83,14 @@ for (const desktop of [true, false]) {
       f.modes.getMode("high").systemPrompt,
     );
   });
-  test(`Pro keeps High and all six authorized modes (${desktop ? "desktop" : "touch"})`, () => {
+  test(`Pro retains historical modes without advertising availability (${desktop ? "desktop" : "touch"})`, () => {
     const f = fixture({ desktop });
     assert.deepEqual(
       Array.from(f.modes.modesForTier("pro"), (mode) => mode.id),
       ["instant", "medium", "high", "extra_high", "max", "ultra"],
     );
-    assert.match(f.render("pro", "high"), /aria-label="Choose model: KovaGPT High"/);
+    assert.match(f.render("pro", "high"), /kova-model-static/);
+    assert.doesNotMatch(f.render("pro", "ultra"), /<button|model-selector-trigger|Ultra/);
   });
 }
 
@@ -135,10 +140,10 @@ test("published Chat copy does not disguise remaining aggregate limits as unlimi
   }
 });
 
-test("pricing features use the exact tier labels and singular Free mode", () => {
+test("pricing does not sell unverified model choices", () => {
   const { registry } = fixture();
-  assert.equal(registry.plans.free.features[0], "Lite mode");
-  assert.equal(registry.plans.plus.features[0], "Lite, Medium, and Thinking modes");
+  assert.equal(registry.plans.free.features[0], "One KovaGPT assistant");
+  assert.equal(registry.plans.plus.features[0], "One KovaGPT assistant");
   assert.doesNotMatch(registry.plans.free.features[0], /Thinking/);
   assert.doesNotMatch(registry.plans.plus.features[0], /High/);
 });

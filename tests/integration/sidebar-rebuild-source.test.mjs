@@ -11,13 +11,11 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
     'navLink("/images", "Images", Images)',
     'navLink("/library", "Library", LibraryBig)',
     'navLink("/projects", "Projects", Folder)',
-    'navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)',
-    'navLink("/apps", "Plugins", PlugZap)',
-    'navLink("/maps", "Maps", Map)',
-    'navLink("/discovery", "Discover", Globe)',
-    ">More</span>",
-    ">Pinned</h2>",
-    ">Recents</h2>",
+    'navLink("/scheduled-tasks", "Scheduled tasks", CalendarCheck2)',
+    'navLink("/apps", "Plugins", Puzzle)',
+    ">Chats</h2>",
+    "pinned.map(chatRow)",
+    "recents.map(chatRow)",
   ];
   let cursor = -1;
   for (const marker of ordered) {
@@ -26,9 +24,8 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
     cursor = next;
   }
   assert.match(sidebar, /KovaGPT/);
-  assert.match(sidebar, /Health is coming soon/);
-  assert.match(sidebar, /Finances is coming soon/);
-  assert.match(sidebar, /<Link to="\/maps" className="kova-rail-button" aria-label="Maps"/);
+  assert.doesNotMatch(sidebar, /navLink\("\/files"/);
+  assert.doesNotMatch(sidebar, /Health is coming soon|Finances is coming soon|navLink\("\/work"/);
   assert.doesNotMatch(sidebar, /research-planner|Deep research|Telescope/);
   assert.doesNotMatch(sidebar, /🖼️|📁|⏰|🧩|❤️|💰/u);
 });
@@ -37,8 +34,8 @@ test("sidebar interaction and layout contracts are accessible and responsive", (
   assert.match(sidebar, /aria-label="Search chats"/);
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
   assert.match(sidebar, /aria-label="Expand sidebar"/);
-  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
+  assert.match(sidebar, /aria-hidden=\{collapsed/);
+  assert.match(sidebar, /inert=\{collapsed/);
   assert.match(sidebar, /event\.key === "Escape"/);
   assert.match(styles, /--sidebar-row-height: 3\.5rem/);
   assert.match(styles, /--sidebar-icon-slot: 1\.75rem/);
@@ -46,9 +43,10 @@ test("sidebar interaction and layout contracts are accessible and responsive", (
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("Scheduled visibility and data access both use server-authoritative eligibility", () => {
-  assert.match(sidebar, /useServerFn\(isScheduledTasksEligible\)/);
-  assert.match(sidebar, /scheduledVisible[\s\S]{0,80}navLink\("\/scheduled-tasks"/);
+test("Scheduled navigation stays discoverable while data access enforces server eligibility", () => {
+  assert.doesNotMatch(sidebar, /useServerFn\(isScheduledTasksEligible\)/);
+  assert.match(sidebar, /const canSchedule = signedIn && \(tier === "plus" \|\| tier === "pro"\)/);
+  assert.match(sidebar, /canSchedule[\s\S]{0,80}navLink\("\/scheduled-tasks"/);
   assert.match(scheduled, /function scheduledPlanEligible\(tier: unknown\)/);
   assert.match(scheduled, /tier !== "free"/);
   assert.match(scheduled, /if \(requireEligiblePlan\)/);

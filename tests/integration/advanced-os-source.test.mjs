@@ -28,7 +28,7 @@ test("Knowledge Graph uses only authorized records and explicit edges", () => {
 test("Prompt Studio persists variables favorites projects packs and launches chat", () => {
   const route = read("src/routes/prompt-studio.tsx"),
     migration = read("supabase/migrations/20260727120000_professional_os.sql"),
-    chat = read("src/routes/index.tsx");
+    chat = read("src/components/ChatWorkspace.tsx");
   assert.match(migration, /prompt_templates/);
   assert.match(migration, /user_id=auth\.uid/);
   assert.match(route, /variables/);

@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { CORE_LAUNCH_ADVANCED_WORKFLOWS } from "@/lib/core-launch-policy.mjs";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { WorkOutputDownloadAction } from "@/components/WorkOutputDownloadAction";
 import {
   lazy,
@@ -419,6 +420,11 @@ function LibraryPage() {
       const { listMySharedChats, listSharedWithMe } = await import("@/lib/shared-chats.functions");
       const [received, sent] = await Promise.all([listSharedWithMe(), listMySharedChats()]);
       if (!isCurrent()) return;
+      // A failed server function can resolve to an error envelope. Keep that
+      // failure in the shared-chat panel instead of crashing workspace navigation.
+      if (!Array.isArray(received) || !Array.isArray(sent)) {
+        throw new Error("Shared chats are temporarily unavailable. Please retry.");
+      }
       setShareState({
         principal: requestPrincipal,
         received,
@@ -468,20 +474,22 @@ function LibraryPage() {
       const controller = new AbortController();
       pageRequests.current.add(controller);
       const localItems: LibItem[] = [
-        ...loadConversations(userKey).map((chat): LibItem => ({
-          id: `chat:${chat.id}`,
-          title: chat.title,
-          item_type: "chat_artifact",
-          source: "chat",
-          content_text: chat.messages
-            .map((message) => `${message.role}: ${message.content}`)
-            .join("\n\n"),
-          file_url: null,
-          file_name: null,
-          file_type: "application/x-kova-chat",
-          file_size: null,
-          created_at: new Date(chat.updatedAt).toISOString(),
-        })),
+        ...loadConversations(userKey)
+          .filter((chat) => !chat.temporary)
+          .map((chat): LibItem => ({
+            id: `chat:${chat.id}`,
+            title: chat.title,
+            item_type: "chat_artifact",
+            source: "chat",
+            content_text: chat.messages
+              .map((message) => `${message.role}: ${message.content}`)
+              .join("\n\n"),
+            file_url: null,
+            file_name: null,
+            file_type: "application/x-kova-chat",
+            file_size: null,
+            created_at: new Date(chat.updatedAt).toISOString(),
+          })),
         ...savedWorkLibraryItems(userKey),
       ];
       if (!isSignedIn) {
@@ -919,8 +927,16 @@ function LibraryPage() {
         if (filter === "chats" && !item.id.startsWith("chat:")) return false;
         if (filter === "work" && !item.id.startsWith("work:")) return false;
         if (filter === "images" && !isImageItem(item)) return false;
-        if (filter === "documents" && !isDocumentItem(item)) return false;
-        if (filter === "other" && (isImageItem(item) || isDocumentItem(item))) return false;
+        if (filter === "documents" && (!isDocumentItem(item) || item.id.startsWith("chat:")))
+          return false;
+        if (
+          filter === "other" &&
+          (isImageItem(item) ||
+            isDocumentItem(item) ||
+            item.id.startsWith("chat:") ||
+            item.id.startsWith("workspace:"))
+        )
+          return false;
         if (!q || (isSignedIn && UUID_PATTERN.test(item.id) && searchQuery === query.trim()))
           return true;
         return [
@@ -949,12 +965,10 @@ function LibraryPage() {
 
   const filters: Array<{ id: FilterId; label: string }> = [
     { id: "all", label: "All" },
-    { id: "favorites", label: "Favorites" },
     { id: "chats", label: "Chats" },
-    { id: "work", label: "Work" },
     { id: "images", label: "Images" },
-    { id: "documents", label: "Documents" },
-    { id: "other", label: "Other" },
+    { id: "documents", label: "Files" },
+    { id: "other", label: "Text" },
   ];
 
   const renderActions = (item: LibItem) => (
@@ -981,11 +995,13 @@ function LibraryPage() {
         <DropdownMenuItem onClick={() => void withItem(item, reuseInChat)}>
           <MessageSquarePlus className="mr-2 h-4 w-4" /> Reuse in chat
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => void withItem(item, (value) => openInWork(toHandoff(value), userKey))}
-        >
-          Open in Work
-        </DropdownMenuItem>
+        {CORE_LAUNCH_ADVANCED_WORKFLOWS && (
+          <DropdownMenuItem
+            onClick={() => void withItem(item, (value) => openInWork(toHandoff(value), userKey))}
+          >
+            Open in Work
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           onClick={() => void withItem(item, (value) => continueInChat(toHandoff(value), userKey))}
         >
@@ -1128,7 +1144,16 @@ function LibraryPage() {
             {image ? <ImageIcon className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium">{item.title}</div>
+            <button
+              type="button"
+              className="block max-w-full truncate text-left text-sm font-medium hover:underline"
+              onClick={(event) => {
+                previewReturnFocusRef.current = event.currentTarget;
+                void withItem(item, setPreviewItem);
+              }}
+            >
+              {item.title}
+            </button>
             <div className="truncate text-xs text-muted-foreground">{meta}</div>
           </div>
           {visibleFavorites.has(item.id) ? (
@@ -1145,23 +1170,6 @@ function LibraryPage() {
         className="group kova-card relative overflow-hidden"
         data-library-item={item.item_type}
       >
-        {!workspaceReference ? (
-          <label className="absolute z-10 m-3 grid h-11 w-11 place-items-center rounded-lg bg-background/85">
-            <span className="sr-only">Select {item.title}</span>
-            <input
-              type="checkbox"
-              checked={selected.includes(item.id)}
-              onChange={() =>
-                setSelected((current) =>
-                  current.includes(item.id)
-                    ? current.filter((id) => id !== item.id)
-                    : [...current, item.id],
-                )
-              }
-              className="h-4 w-4"
-            />
-          </label>
-        ) : null}
         {image ? (
           <div className="aspect-square overflow-hidden bg-[var(--surface-secondary)]">
             <LibraryImageMedia item={item} className="h-full w-full object-cover" />
@@ -1176,9 +1184,37 @@ function LibraryPage() {
             </div>
           </div>
         )}
-        <div className="flex items-start gap-2 p-3">
+        <button
+          type="button"
+          title={item.title}
+          className="block min-h-10 w-full max-w-full truncate px-2 text-left text-sm font-medium hover:underline"
+          onClick={(event) => {
+            previewReturnFocusRef.current = event.currentTarget;
+            void withItem(item, setPreviewItem);
+          }}
+        >
+          {item.title}
+        </button>
+        <div className="flex items-start gap-1 p-2">
+          {!workspaceReference ? (
+            <label className="kova-library-select grid h-10 w-8 shrink-0 cursor-pointer place-items-center">
+              <span className="sr-only">Select {item.title}</span>
+              <input
+                type="checkbox"
+                checked={selected.includes(item.id)}
+                onChange={() =>
+                  setSelected((current) =>
+                    current.includes(item.id)
+                      ? current.filter((id) => id !== item.id)
+                      : [...current, item.id],
+                  )
+                }
+                className="h-4 w-4"
+              />
+            </label>
+          ) : null}
+
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium">{item.title}</div>
             <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{meta}</div>
           </div>
           {visibleFavorites.has(item.id) ? (
@@ -1198,13 +1234,13 @@ function LibraryPage() {
       <main
         id="main-content"
         tabIndex={-1}
-        className="kova-page kova-secondary-page"
+        className="kova-page kova-secondary-page kova-core-page"
         aria-labelledby="library-title"
       >
         <WorkspacePageHeader
-          title="Library"
+          title={isSignedIn && user?.firstName ? `${user.firstName}’s Library` : "Library"}
           titleId="library-title"
-          description="Chats, work, files, images, responses, and reusable context in one place."
+          description="Your saved content in one place. Archived chats won’t appear here."
           meta={
             storageTotal !== null ? `Loaded file sizes: ${humanBytes(storageTotal)}` : undefined
           }
@@ -1252,15 +1288,12 @@ function LibraryPage() {
         ) : null}
 
         {isSignedIn && isLoaded ? (
-          <section className="kova-card space-y-4 p-4 sm:p-5" aria-labelledby="shared-chats-title">
-            <div>
+          <details className="kova-library-disclosure" aria-labelledby="shared-chats-title">
+            <summary className="cursor-pointer">
               <h2 id="shared-chats-title" className="font-medium">
                 Shared chats
               </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Open read-only snapshots shared with you, or revoke snapshots you sent.
-              </p>
-            </div>
+            </summary>
             {sharesError ? (
               <div role="alert" className="rounded-xl border border-destructive/30 p-4">
                 <p className="text-sm font-medium text-destructive">Could not load shared chats</p>
@@ -1349,43 +1382,46 @@ function LibraryPage() {
                 </div>
               </div>
             )}
-          </section>
+          </details>
         ) : null}
 
         {isSignedIn && isLoaded && principal ? (
-          <LibraryFolderOrganizer
-            key={principal}
-            enabled
-            principalKey={principal}
-            refreshKey={folderRefreshKey}
-            itemStateUnavailable={loading || Boolean(loadError)}
-            scope={folderScope}
-            selectedItemIds={selectedDurableIds}
-            onScopeChange={setFolderScope}
-            onBusyChange={setFolderBusy}
-            onRefresh={refreshLibrary}
-            onMoved={(itemIds, folderId) => {
-              loadGenerationRef.current += 1;
-              setLoading(false);
-              const moved = new Set(itemIds);
-              setItems((current) =>
-                current.map((item) =>
-                  moved.has(item.id) ? { ...item, folder_id: folderId } : item,
-                ),
-              );
-              setSelected([]);
-            }}
-            onFoldersDeleted={() => {
-              setSelected([]);
-              void load();
-            }}
-          />
+          <details className="kova-library-disclosure" key={`folders:${principal}`}>
+            <summary>Folders{folderScope !== "all" ? " · Filter active" : ""}</summary>
+            <LibraryFolderOrganizer
+              key={principal}
+              enabled
+              principalKey={principal}
+              refreshKey={folderRefreshKey}
+              itemStateUnavailable={loading || Boolean(loadError)}
+              scope={folderScope}
+              selectedItemIds={selectedDurableIds}
+              onScopeChange={setFolderScope}
+              onBusyChange={setFolderBusy}
+              onRefresh={refreshLibrary}
+              onMoved={(itemIds, folderId) => {
+                loadGenerationRef.current += 1;
+                setLoading(false);
+                const moved = new Set(itemIds);
+                setItems((current) =>
+                  current.map((item) =>
+                    moved.has(item.id) ? { ...item, folder_id: folderId } : item,
+                  ),
+                );
+                setSelected([]);
+              }}
+              onFoldersDeleted={() => {
+                setSelected([]);
+                void load();
+              }}
+            />
+          </details>
         ) : null}
 
         {(isSignedIn || items.length > 0) && !loadError ? (
           <>
             <section className="kova-toolbar" aria-label="Library toolbar">
-              <label className="relative min-w-[220px] flex-1">
+              <label className="relative min-w-0 flex-1">
                 <span className="sr-only">Search Library</span>
                 <Search
                   aria-hidden="true"
@@ -1399,6 +1435,16 @@ function LibraryPage() {
                   className="h-11 rounded-[var(--kova-radius-input)] pl-9"
                 />
               </label>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 shrink-0 rounded-full"
+                aria-label="Show favorites"
+                aria-pressed={filter === "favorites"}
+                onClick={() => setFilter(filter === "favorites" ? "all" : "favorites")}
+              >
+                <Star className={`h-4 w-4 ${filter === "favorites" ? "fill-current" : ""}`} />
+              </Button>
               <select
                 value={sort}
                 onChange={(event) => setSort(event.target.value as SortId)}
@@ -1447,7 +1493,7 @@ function LibraryPage() {
                   type="button"
                   aria-pressed={filter === item.id}
                   onClick={() => setFilter(item.id)}
-                  className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-medium transition ${filter === item.id ? "border-foreground bg-foreground text-background" : "border-border bg-[var(--surface-secondary)] text-muted-foreground hover:text-foreground"}`}
+                  className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-medium transition ${filter === item.id ? "border-foreground bg-foreground text-background" : "border-border bg-transparent text-muted-foreground hover:text-foreground"}`}
                 >
                   {item.label}
                 </button>
@@ -1714,6 +1760,13 @@ function LibraryPage() {
                   Read-only snapshot · {visibleSharedPreview.snapshot.messages.length} messages ·{" "}
                   shared {new Date(visibleSharedPreview.created_at).toLocaleDateString()}
                 </DialogDescription>
+                <Link
+                  to="/share/$shareId"
+                  params={{ shareId: visibleSharedPreview.id }}
+                  className="mt-3 inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-4"
+                >
+                  Open full page
+                </Link>
               </header>
               <ol className="max-h-[70dvh] space-y-4 overflow-auto p-4 sm:p-6">
                 {visibleSharedPreview.snapshot.messages.map((message, index) => (

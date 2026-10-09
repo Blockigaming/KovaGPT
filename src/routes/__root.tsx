@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   ScriptOnce,
   Scripts,
@@ -16,7 +17,8 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect } from "react";
+import { Suspense, useEffect, useLayoutEffect } from "react";
+import { AssistantWorkspace } from "@/components/AssistantWorkspace";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
@@ -26,10 +28,10 @@ const HYDRATION_READY_EVENT = "kova:hydrated";
 // markup. Change CSSOM selectors, not React-owned nodes or stylesheet text.
 // applyThemeMode restores them atomically after setting the hydrated root class.
 const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
-  let mode = "system";
+  let mode = "dark";
   try {
     const stored = localStorage.getItem("kova-theme-mode");
-    if (stored === "light" || stored === "dark") mode = stored;
+    if (stored === "light" || stored === "dark" || stored === "system") mode = stored;
   } catch {}
   if (!(mode === "dark" || (mode === "system" &&
     window.matchMedia?.("(prefers-color-scheme: dark)").matches))) return;
@@ -225,18 +227,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       links: [
         { rel: "stylesheet", href: appCss },
         { rel: "manifest", href: "/manifest.webmanifest" },
-        { rel: "icon", type: "image/png", sizes: "64x64", href: "/kova-favicon-20260807.png" },
-        { rel: "shortcut icon", type: "image/png", href: "/kova-favicon-20260807.png" },
-        { rel: "apple-touch-icon", sizes: "180x180", href: "/kova-touch-icon-20260807.png" },
-        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "icon", type: "image/png", sizes: "1024x1024", href: "/kova-logo.png" },
+        { rel: "shortcut icon", type: "image/png", href: "/kova-logo.png" },
+        { rel: "apple-touch-icon", sizes: "1024x1024", href: "/kova-logo.png" },
         {
-          rel: "preconnect",
-          href: "https://fonts.gstatic.com",
+          rel: "preload",
+          href: "/fonts/dm-sans-variable.woff2",
+          as: "font",
+          type: "font/woff2",
           crossOrigin: "anonymous",
-        },
-        {
-          rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
         },
       ],
       scripts: indexable
@@ -310,6 +309,15 @@ function RootThemeManager() {
   }, []);
 
   useEffect(() => {
+    const preference = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => {
+      if (loadThemeMode() === "system") applyThemeMode("system");
+    };
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
     if (!isLoaded) return;
     const loaded = loadSettings(userKey, {
       migrateLegacyGuest: userKey === null,
@@ -318,6 +326,31 @@ function RootThemeManager() {
   }, [isLoaded, userKey]);
 
   return null;
+}
+
+function WorkspaceOutlet() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const savedChat = pathname.match(/^\/c\/([^/]+)\/?$/);
+  if (pathname !== "/" && !savedChat) return <Outlet />;
+  let conversationId: string | null = null;
+  if (savedChat) {
+    try {
+      conversationId = decodeURIComponent(savedChat[1]);
+    } catch {
+      return <NotFoundComponent />;
+    }
+  }
+  return (
+    <Suspense
+      fallback={
+        <main id="main-content" className="p-8" role="status">
+          Loading workspace…
+        </main>
+      }
+    >
+      <AssistantWorkspace routeConversationId={conversationId} />
+    </Suspense>
+  );
 }
 
 function RootComponent() {
@@ -333,7 +366,7 @@ function RootComponent() {
         </a>
         <RootThemeManager />
         <PlatformRuntime />
-        <Outlet />
+        <WorkspaceOutlet />
         <Toaster />
       </QueryClientProvider>
     </ClerkProvider>

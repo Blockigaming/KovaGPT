@@ -188,7 +188,7 @@ test("automatic memory summarization never consumes the foreground chat quota", 
   assert.match(source, /status: 204/);
 
   const clientSource = await readFile(
-    new URL("../../src/routes/index.tsx", import.meta.url),
+    new URL("../../src/components/ChatWorkspace.tsx", import.meta.url),
     "utf8",
   );
   const memoryPayload = await readFile(

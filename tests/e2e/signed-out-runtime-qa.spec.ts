@@ -60,14 +60,6 @@ for (const theme of themes) {
       .filter({ visible: true })
       .first();
     await expect(logInButton).toBeVisible();
-    await expect(page.getByRole("link", { name: "Terms", exact: true })).toHaveAttribute(
-      "href",
-      "/terms",
-    );
-    await expect(page.getByRole("link", { name: "Privacy Policy", exact: true })).toHaveAttribute(
-      "href",
-      "/privacy",
-    );
 
     const guestModel = page.locator(".kova-model-static:visible");
     await expect(guestModel).toHaveCount(1);
@@ -110,5 +102,29 @@ for (const theme of themes) {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/#main-content$/u);
     await expect(page.locator("#main-content")).toBeFocused();
+
+    // The compact home no longer has a legal footer. Guests can still reach both
+    // documents through Settings, with a keyboard-operable Help & legal section.
+    if (testInfo.project.name.startsWith("phone-"))
+      await page.getByRole("button", { name: "Open menu" }).click();
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    const settings = page.getByRole("dialog", { name: "Settings", exact: true });
+    await expect(settings).toBeVisible();
+    const help = settings.getByRole("button", { name: "Help & legal", exact: true });
+    await help.focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      settings.getByRole("heading", { name: "Help & legal", exact: true }),
+    ).toBeVisible();
+    for (const [name, href] of [
+      ["Terms of Service", "/terms"],
+      ["Privacy Policy", "/privacy"],
+    ]) {
+      const link = settings.getByRole("link", { name, exact: true });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute("href", href);
+    }
+    await page.keyboard.press("Escape");
+    await expect(settings).toBeHidden();
   });
 }

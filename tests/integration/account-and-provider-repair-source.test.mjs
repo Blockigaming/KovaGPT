@@ -9,7 +9,7 @@ const write = await readFile("src/routes/api/write.ts", "utf8");
 const image = await readFile("src/routes/api/generate-image.ts", "utf8");
 const stripe = await readFile("src/lib/stripe.server.ts", "utf8");
 const paymentWebhook = await readFile("src/routes/api/public/payments/webhook.ts", "utf8");
-const home = await readFile("src/routes/index.tsx", "utf8");
+const home = await readFile("src/components/ChatWorkspace.tsx", "utf8");
 
 test("account deletion is authenticated, explicit, billing-safe, and server executed", () => {
   assert.match(account, /requireUser\(request\)/);

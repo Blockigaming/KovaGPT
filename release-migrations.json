@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 185,
-  "latest": "20260925143706_kova_restore_legacy_private_helper_usage.sql",
+  "count": 186,
+  "latest": "20261008153032_launch_connector_runtime.sql",
   "migrations": [
     {
       "order": 1,
@@ -3887,6 +3887,20 @@
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 186,
+      "filename": "20261008153032_launch_connector_runtime.sql",
+      "timestamp": "20261008153032",
+      "sha256": "25fb40a6a18a051ec4724cf8c924957f05bde98ea7e75d16ad44a295b741fc27",
+      "tables": [],
+      "functions": ["settle_launch_connector", "disconnect_launch_connector"],
+      "destructive": true,
+      "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],

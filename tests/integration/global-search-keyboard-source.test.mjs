@@ -4,7 +4,7 @@ import test from "node:test";
 
 const [source, indexSource] = await Promise.all([
   readFile("src/components/CommandPalette.tsx", "utf8"),
-  readFile("src/routes/index.tsx", "utf8"),
+  readFile("src/components/ChatWorkspace.tsx", "utf8"),
 ]);
 
 test("workspace results use the keyboard index", () => {

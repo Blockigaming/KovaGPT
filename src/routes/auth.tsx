@@ -86,6 +86,8 @@ function AuthPage() {
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [verificationSent, setVerificationSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState("");
@@ -102,6 +104,9 @@ function AuthPage() {
     setEditingEmail(!search.email);
     setEmailTouched(false);
     setPasswordTouched(false);
+    setPassword("");
+    setFormError(null);
+    setVerificationSent(false);
     setMfaChallengeToken(null);
     setMfaCode("");
     setMfaMethod("totp");
@@ -118,8 +123,14 @@ function AuthPage() {
   const showEmailError = editingEmail && emailTouched && !emailValid;
   const showPasswordError = passwordTouched && password.length < minimumPasswordLength;
 
+  const reportError = (message: string) => {
+    setFormError(message);
+    toast.error(message);
+  };
+
   const guard = () => {
     if (submittingRef.current) return false;
+    setFormError(null);
     submittingRef.current = true;
     setLoading(true);
     return true;
@@ -134,11 +145,11 @@ function AuthPage() {
     setEmailTouched(true);
     setPasswordTouched(true);
     if (!emailValid) {
-      toast.error("Please enter a valid email address.");
+      reportError("Please enter a valid email address.");
       return;
     }
     if (password.length < minimumPasswordLength) {
-      toast.error(`Password must be at least ${minimumPasswordLength} characters.`);
+      reportError(`Password must be at least ${minimumPasswordLength} characters.`);
       return;
     }
     if (!guard()) return;
@@ -159,7 +170,7 @@ function AuthPage() {
           challengeToken?: unknown;
         };
         if (!response.ok) {
-          toast.error(
+          reportError(
             typeof payload.error === "string"
               ? payload.error
               : "Authentication could not be completed. Please try again.",
@@ -168,7 +179,8 @@ function AuthPage() {
         }
         if (isSignUp) {
           toast.success("If this address can be registered, check your inbox to continue.");
-          void navigate({ to: "/" });
+          setPassword("");
+          setVerificationSent(true);
           return;
         }
         if (payload.mfaRequired === true && typeof payload.challengeToken === "string") {
@@ -196,7 +208,8 @@ function AuthPage() {
           return;
         }
         toast.success("If this address can be registered, check your inbox to continue.");
-        void navigate({ to: "/" });
+        setPassword("");
+        setVerificationSent(true);
         return;
       }
       const { error } = await supabase.auth.signInWithPassword({
@@ -207,7 +220,7 @@ function AuthPage() {
         console.error("[KovaAuth] Password authentication was rejected", {
           error: error.name || "auth_error",
         });
-        toast.error("That email and password could not be verified.");
+        reportError("That email and password could not be verified.");
         return;
       }
       toast.success("Welcome back.");
@@ -216,7 +229,7 @@ function AuthPage() {
       console.error("[KovaAuth] Email authentication failed", {
         error: err instanceof Error ? err.name : "unknown_error",
       });
-      toast.error("Authentication could not be completed. Please try again.");
+      reportError("Authentication could not be completed. Please try again.");
     } finally {
       release();
     }
@@ -233,7 +246,7 @@ function AuthPage() {
       });
       const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
       if (!response.ok) {
-        toast.error(
+        reportError(
           typeof payload.error === "string"
             ? payload.error
             : "Two-factor verification could not be completed.",
@@ -248,7 +261,7 @@ function AuthPage() {
       console.error("[KovaAuth] MFA authentication failed", {
         error: error instanceof Error ? error.name : "unknown_error",
       });
-      toast.error("Two-factor verification could not be completed.");
+      reportError("Two-factor verification could not be completed.");
     } finally {
       release();
     }
@@ -264,7 +277,7 @@ function AuthPage() {
       setMfaMethod("totp");
       window.location.replace(getSafePostAuthRedirect());
     } catch {
-      toast.error("Passkey sign-in was cancelled or could not be completed.");
+      reportError("Passkey sign-in was cancelled or could not be completed.");
     } finally {
       release();
     }
@@ -272,7 +285,7 @@ function AuthPage() {
 
   const sendMagicLink = async (resend = false) => {
     if (!emailValid) {
-      toast.error("Enter a valid email first.");
+      reportError("Enter a valid email first.");
       return;
     }
     if (cooldown > 0) return;
@@ -290,7 +303,7 @@ function AuthPage() {
       console.error("[KovaAuth] Magic-link request failed", {
         error: err instanceof Error ? err.name : "unknown_error",
       });
-      toast.error("The sign-in link could not be requested. Please try again.");
+      reportError("The sign-in link could not be requested. Please try again.");
     } finally {
       release();
     }
@@ -306,7 +319,7 @@ function AuthPage() {
       setCooldown(60);
       toast.success("If verification is available for this address, check your inbox.");
     } catch {
-      toast.error("Verification could not be requested. Please try again.");
+      reportError("Verification could not be requested. Please try again.");
     } finally {
       release();
     }
@@ -332,13 +345,15 @@ function AuthPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <NovaLogo mark className="mb-6 h-10 w-10 text-foreground" />
           <h1 className="text-[30px] font-semibold leading-tight tracking-tight">
-            {hasMfaChallenge
-              ? "Two-factor verification"
-              : magicSent
-                ? "Sign-in link requested"
-                : isSignUp
-                  ? "Create your account"
-                  : "Enter your password"}
+            {verificationSent
+              ? "Check your email"
+              : hasMfaChallenge
+                ? "Two-factor verification"
+                : magicSent
+                  ? "Sign-in link requested"
+                  : isSignUp
+                    ? "Create your account"
+                    : "Enter your password"}
           </h1>
           {hasMfaChallenge ? (
             <p className="mt-3 text-[15px] text-muted-foreground">
@@ -355,7 +370,47 @@ function AuthPage() {
           ) : null}
         </div>
 
-        {useKovaAuth && !isSignUp && !hasMfaChallenge && passkeySupported ? (
+        {formError ? (
+          <p
+            role="alert"
+            className="mb-4 rounded-2xl border border-destructive/30 p-4 text-sm text-destructive"
+          >
+            {formError}
+          </p>
+        ) : null}
+        {verificationSent ? (
+          <div className="space-y-4 text-center">
+            <p className="text-sm leading-6 text-muted-foreground">
+              If this address can be registered, check your inbox at{" "}
+              <strong className="break-all font-medium text-foreground">{email}</strong> to
+              continue. Check your spam folder if the message does not arrive.
+            </p>
+            {useKovaAuth ? (
+              <Button
+                variant="outline"
+                className="h-12 w-full"
+                disabled={loading || cooldown > 0}
+                onClick={() => void resendVerification()}
+              >
+                {cooldown > 0 ? `Resend available in ${cooldown}s` : "Resend verification email"}
+              </Button>
+            ) : null}
+            <Button className="h-12 w-full" onClick={() => void navigate({ to: "/" })}>
+              Back to KovaGPT
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-12 w-full"
+              onClick={() => {
+                setVerificationSent(false);
+                setEditingEmail(true);
+              }}
+            >
+              Use a different email
+            </Button>
+          </div>
+        ) : null}
+        {!verificationSent && useKovaAuth && !isSignUp && !hasMfaChallenge && passkeySupported ? (
           <Button
             type="button"
             variant="outline"
@@ -366,7 +421,7 @@ function AuthPage() {
             Continue with a passkey
           </Button>
         ) : null}
-        {hasMfaChallenge ? (
+        {verificationSent ? null : hasMfaChallenge ? (
           <form onSubmit={submitMfa} className="space-y-3">
             <Label htmlFor="kova-auth-page-mfa" className="sr-only">
               {mfaMethod === "totp" ? "Authenticator code" : "Recovery code"}
@@ -462,6 +517,9 @@ function AuthPage() {
                   id="kova-auth-page-email"
                   type="email"
                   autoComplete="email"
+                  name="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   value={email}
                   readOnly={!editingEmail}
                   onChange={(event) => setEmail(event.target.value)}
@@ -522,6 +580,7 @@ function AuthPage() {
                 <Input
                   id="kova-auth-page-password"
                   type={showPassword ? "text" : "password"}
+                  name="password"
                   autoComplete={isSignUp ? "new-password" : "current-password"}
                   autoFocus
                   placeholder="Password"
@@ -595,9 +654,20 @@ function AuthPage() {
             ) : null}
           </form>
         )}
+        <p className="kova-auth-legal mt-5 text-center text-xs leading-5 text-muted-foreground">
+          By continuing, you agree to our{" "}
+          <a href="/terms" target="_blank" rel="noopener noreferrer">
+            Terms of Service
+          </a>{" "}
+          and acknowledge our{" "}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer">
+            Privacy Policy
+          </a>
+          .
+        </p>
       </main>
 
-      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} initialEmail={email} />
     </div>
   );
 }

@@ -137,7 +137,7 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.scope.outputs.run_ci == 'true'
-        run: npx playwright install --with-deps chromium firefox webkit
+        run: bash scripts/ci/install-playwright.sh chromium firefox webkit
 
       - name: Integration tests
         id: integration
@@ -253,7 +253,7 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - run: bash scripts/ci/install-playwright.sh chromium
       - name: Complete public route and detail checks
         run: npm run test:e2e -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}/3 --reporter=list,blob --workers=2
       - name: Preserve public suite evidence
@@ -265,7 +265,7 @@ jobs:
           if-no-files-found: error
 
   browser:
-    if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: ${{ !cancelled() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     name: Browser (${{ matrix.id }})
     needs: [verify, public-surface]
     runs-on: ubuntu-latest
@@ -321,7 +321,7 @@ jobs:
         run: npm run build
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: bash scripts/ci/install-playwright.sh chromium
 
       - name: Browser tests
         env:
@@ -339,7 +339,7 @@ jobs:
           if-no-files-found: ignore
 
   release-e2e:
-    if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: ${{ !cancelled() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     needs: [verify, public-surface]
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -362,7 +362,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
+      - run: bash scripts/ci/install-playwright.sh chromium
       - run: npm run test:e2e -- --shard=${{ matrix.shard }}/3 --reporter=blob --workers=2
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -437,7 +437,8 @@ jobs:
     needs: verify
     # The isolated local PostgreSQL rehearsal can provide source evidence even
     # when an unrelated unit test fails. A failed verify job still blocks merge.
-    if: always() && needs.verify.outputs.run_database == 'true'
+    # Superseded runs must release concurrency instead of ignoring cancellation.
+    if: ${{ !cancelled() && needs.verify.outputs.run_database == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

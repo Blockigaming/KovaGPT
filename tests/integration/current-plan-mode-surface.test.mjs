@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("current Chat packaging stays consistent across server, picker, composer and public copy", () => {
+test("inactive launch UI does not change historical server entitlement enforcement", () => {
   const entitlements = read("src/lib/mode-entitlements.mjs");
   const modes = read("src/lib/modes.ts");
   const selector = read("src/components/ResponsiveModelSelector.tsx");
@@ -23,13 +23,10 @@ test("current Chat packaging stays consistent across server, picker, composer an
 
   assert.match(modes, /id: "instant",[\s\S]*label: "Lite"/);
   assert.match(modes, /tier === "plus" && id === "high"[\s\S]*label: "Thinking"/);
-  assert.match(selector, /const locked = !isLoaded \|\| !isSignedIn \|\| userTier === "free"/);
-  assert.match(selector, /isSignedIn && userTier !== "free"/);
-
-  assert.match(composer, /data-testid="thinking-upgrade-button"/);
-  assert.match(composer, /to="\/pricing"/);
-  assert.match(composer, /userTier === "free" && !isStreaming/);
-  assert.doesNotMatch(composer, /onModeChange\("thinking"\)/);
+  assert.match(selector, /kova-model-static/);
+  assert.match(selector, /onChange\(CORE_LAUNCH_MODE\)/);
+  assert.doesNotMatch(selector, /<button|model-selector-trigger/);
+  assert.doesNotMatch(composer, /thinking-upgrade-button|Upgrade to Plus for Thinking/);
 
   assert.match(
     chat,
@@ -38,5 +35,6 @@ test("current Chat packaging stays consistent across server, picker, composer an
   assert.doesNotMatch(chat, /enforceQuota\(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER\[callerTier\]/);
 
   assert.match(study, /mode: "instant",[\s\S]*clientTool: "study"/);
-  assert.match(publicCopy, /Thinking control is an Upgrade to Plus action/);
+  assert.match(publicCopy, /one unified assistant/);
+  assert.match(publicCopy, /Model selection and response effort are separate/);
 });
