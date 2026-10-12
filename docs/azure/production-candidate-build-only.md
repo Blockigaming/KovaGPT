@@ -10,8 +10,10 @@ build/push within the existing budget and verifies the protected settings.
 At implementation baseline `b964d1bc9fcd81fcfc70e97a22cbf4a516605c94`, the production
 PLAN workflow requires an existing digest-pinned image with matching source SHA,
 Git tree, production browser configuration, and version-3 `acr-git` provenance.
-The production Dockerfile already creates that provenance and runs the built
-artifact removal check. Neither file is changed by this path.
+The production Dockerfile creates that provenance and runs the built artifact
+removal check. The independent October 12 correction additionally binds explicit
+browser Auth choices through build arguments, image labels and PLAN. It does not
+select an Auth mode, change serving configuration or establish Auth acceptance.
 
 Do not run, reuse, or retarget the `ca-kovagpt-dev` deployment workflow. Its browser
 configuration and target are for development. Do not rerun the completed Auth
@@ -33,7 +35,7 @@ The builder:
    unique candidate tag or a tag-list authorization error.
 3. Uses `az acr build` with the exact remote Git commit, the existing Dockerfile,
    Linux/AMD64, and a 1,800-second ACR timeout. Browser verification cannot be disabled.
-   Build logs are not streamed. Only seven explicitly allowed build arguments are sent.
+   Build logs are not streamed. Only nine explicitly allowed build arguments are sent.
 4. Gets the immutable digest from that successful build's output image, with a
    separate tag consistency check. A tag lookup is never the source of the digest.
 5. Pulls by digest; verifies source/tree/project/config labels; extracts the browser
@@ -66,12 +68,25 @@ Verify these existing `production` environment settings privately:
 | `KOVA_PRODUCTION_IMAGE_REPOSITORY`       | `kovagpt-web`                                                                 |
 | `KOVA_PRODUCTION_SUPABASE_PROJECT_REF`   | `mfbycmbjygcfkrsuepxf`                                                        |
 | `KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY` | The existing approved live publishable key, or intentionally empty as in PLAN |
+| `KOVA_PRODUCTION_BROWSER_AUTH_MODE`      | Explicit reviewed `supabase`, `dual` or `kova`; no build-time fallback        |
+| `KOVA_PRODUCTION_GOOGLE_AUTH_ENABLED`    | Explicit reviewed `true` or `false`; no implicit enablement                   |
 
 `KOVA_PRODUCTION_BICEP_PARAMETERS_JSON` must contain `parameters.acrName.value`
 matching the registry, `parameters.supabaseUrl.value` equal to
 `https://mfbycmbjygcfkrsuepxf.supabase.co`, and the approved browser-safe
 `parameters.supabasePublishableKey.value`. Do not paste keys or the parameters
 secret into chat. No new browser-config secret is necessary.
+
+Missing Auth choices now fail before Azure login. PLAN rejects a candidate whose
+Auth labels differ from those protected choices. Labels record requested build
+inputs, not deployed behavior: actual compiled-browser and matching server-mode
+tests remain required under the Auth cutover contract. Preserve the candidate
+currently under Auth review; integrate this separate Azure correction only after
+source review. Do not set protected variables as part of a source-only review.
+
+The paid build remains held. Its 1,800-second timeout is not a proven all-in cost
+cap: compute allocation, egress and image retention still need bounded approval.
+Do not dispatch an obsolete source while Interface/Auth integration is pending.
 
 The existing protected `KOVAGPTPROD_AZURE_CLIENT_ID`,
 `KOVAGPTPROD_AZURE_TENANT_ID`, and `KOVAGPTPROD_AZURE_SUBSCRIPTION_ID` are used for

@@ -30,6 +30,8 @@ env:
   KOVA_EXPECTED_SUPABASE_PROJECT_REF: ${{ vars.KOVA_PRODUCTION_SUPABASE_PROJECT_REF }}
   RESOURCE_GROUP: ${{ vars.KOVA_PRODUCTION_RESOURCE_GROUP }}
   CONTAINER_APP_NAME: ${{ vars.KOVA_PRODUCTION_CONTAINER_APP_NAME }}
+  BROWSER_AUTH_MODE: ${{ vars.KOVA_PRODUCTION_BROWSER_AUTH_MODE }}
+  GOOGLE_AUTH_ENABLED: ${{ vars.KOVA_PRODUCTION_GOOGLE_AUTH_ENABLED }}
 
 jobs:
   plan-only:
@@ -49,12 +51,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in ACR_NAME ACR_LOGIN_SERVER ACR_RESOURCE_GROUP IMAGE_REPOSITORY IMAGE_REFERENCE KOVA_EXPECTED_SUPABASE_PROJECT_REF RESOURCE_GROUP CONTAINER_APP_NAME; do
+          for name in ACR_NAME ACR_LOGIN_SERVER ACR_RESOURCE_GROUP IMAGE_REPOSITORY IMAGE_REFERENCE KOVA_EXPECTED_SUPABASE_PROJECT_REF RESOURCE_GROUP CONTAINER_APP_NAME BROWSER_AUTH_MODE GOOGLE_AUTH_ENABLED; do
             if [[ -z "${!name:-}" ]]; then
               echo "::error::Required protected production setting ${name} is missing."
               exit 1
             fi
           done
+          case "$BROWSER_AUTH_MODE" in
+            supabase|dual|kova) ;;
+            *) echo '::error::An explicit approved browser Auth mode is required.'; exit 1 ;;
+          esac
+          case "$GOOGLE_AUTH_ENABLED" in
+            true|false) ;;
+            *) echo '::error::An explicit approved Google Auth choice is required.'; exit 1 ;;
+          esac
           if [[ ! "$ACR_NAME" =~ ^[a-z0-9]{5,50}$ ]]; then
             echo "::error::The production ACR name is invalid."
             exit 1
@@ -137,6 +147,19 @@ jobs:
             docker image inspect "$IMAGE_REFERENCE" \
               --format '{{ index .Config.Labels "com.kovagpt.browser.config-verified" }}'
           )"
+          browser_auth_label="$(
+            docker image inspect "$IMAGE_REFERENCE" \
+              --format '{{ index .Config.Labels "com.kovagpt.browser.auth-mode" }}'
+          )"
+          google_auth_label="$(
+            docker image inspect "$IMAGE_REFERENCE" \
+              --format '{{ index .Config.Labels "com.kovagpt.browser.google-auth-enabled" }}'
+          )"
+
+          [[ "$browser_auth_label" == "$BROWSER_AUTH_MODE" && "$google_auth_label" == "$GOOGLE_AUTH_ENABLED" ]] || {
+            echo '::error::The candidate Auth build inputs differ from the protected PLAN choices.'
+            exit 1
+          }
 
           [[ "$revision_label" == "$GITHUB_SHA" ]] || {
             echo "::error::The candidate revision label does not match the selected main SHA."

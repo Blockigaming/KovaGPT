@@ -41,6 +41,8 @@ function environment(overrides = {}) {
     KOVA_PRODUCTION_IMAGE_REPOSITORY: "kovagpt-web",
     KOVA_PRODUCTION_SUPABASE_PROJECT_REF: projectRef,
     KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY: stripeKey,
+    KOVA_PRODUCTION_BROWSER_AUTH_MODE: "kova",
+    KOVA_PRODUCTION_GOOGLE_AUTH_ENABLED: "false",
     KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: JSON.stringify({ parameters: params }),
     ...overrides,
   };
@@ -68,9 +70,13 @@ test("only the explicit production browser argument allowlist reaches a commit-p
       "VITE_SUPABASE_URL",
       "VITE_SUPABASE_PUBLISHABLE_KEY",
       "VITE_PAYMENTS_CLIENT_TOKEN",
+      "VITE_KOVA_AUTH_MODE",
+      "VITE_KOVA_GOOGLE_AUTH_ENABLED",
     ],
   );
   assert.ok(args.includes("KOVA_VERIFY_BROWSER_CONFIG=true"));
+  assert.ok(args.includes("VITE_KOVA_AUTH_MODE=kova"));
+  assert.ok(args.includes("VITE_KOVA_GOOGLE_AUTH_ENABLED=false"));
   assert.ok(args.includes("linux/amd64"));
   assert.ok(args.includes("--no-logs"));
   assert.ok(args.includes("1800"));
@@ -96,6 +102,10 @@ for (const [name, overrides] of [
   ["sandbox Stripe key", { KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY: `pk_test_${"x".repeat(20)}` }],
   ["unsafe run identity", { GITHUB_RUN_ID: "1\ncommand" }],
   ["missing protected parameters", { KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: "" }],
+  ["implicit legacy Auth fallback", { KOVA_PRODUCTION_BROWSER_AUTH_MODE: undefined }],
+  ["unknown browser Auth mode", { KOVA_PRODUCTION_BROWSER_AUTH_MODE: "fallback" }],
+  ["implicit Google Auth default", { KOVA_PRODUCTION_GOOGLE_AUTH_ENABLED: undefined }],
+  ["nonboolean Google Auth choice", { KOVA_PRODUCTION_GOOGLE_AUTH_ENABLED: "1" }],
 ]) {
   test(`refuses ${name} before any cloud build`, () => {
     assert.throws(
@@ -127,6 +137,22 @@ test("an explicitly empty Stripe browser key remains supported without enabling 
       .stripeKey,
     "",
   );
+});
+
+test("all explicit Auth choices are forwarded without selecting a production mode", () => {
+  for (const mode of ["supabase", "dual", "kova"]) {
+    for (const enabled of ["false", "true"]) {
+      const config = productionCandidateConfig(
+        environment({
+          KOVA_PRODUCTION_BROWSER_AUTH_MODE: mode,
+          KOVA_PRODUCTION_GOOGLE_AUTH_ENABLED: enabled,
+        }),
+      );
+      const args = productionCandidateBuildArgs(config, sourceTree, false);
+      assert.ok(args.includes(`VITE_KOVA_AUTH_MODE=${mode}`));
+      assert.ok(args.includes(`VITE_KOVA_GOOGLE_AUTH_ENABLED=${enabled}`));
+    }
+  }
 });
 test("uses only one successful build output digest; rejects output confusion", () => {
   const config = productionCandidateConfig(environment());
@@ -202,6 +228,10 @@ function harness(t, options = {}) {
             "com.kovagpt.browser.supabase-project-ref": projectRef,
             "com.kovagpt.browser.config-verified": "true",
             "com.kovagpt.browser.config-provenance": "/app/dist/browser-config-provenance.json",
+            "com.kovagpt.browser.auth-mode": options.wrongAuthLabel
+              ? "supabase"
+              : config.browserAuthMode,
+            "com.kovagpt.browser.google-auth-enabled": config.googleAuthEnabled,
           },
         });
       if (args[0] === "cp") {
@@ -262,6 +292,9 @@ test("build-only orchestration verifies pulled bytes and emits key-free PLAN evi
   assert.equal(report.databaseMutated, false);
   assert.equal(report.containerAppUpdated, false);
   assert.equal(report.trafficShifted, false);
+  assert.equal(report.requestedBrowserAuthMode, "kova");
+  assert.equal(report.requestedGoogleAuthEnabled, "false");
+  assert.equal(report.authRuntimeAcceptanceEstablished, false);
   const artifact =
     readFileSync(`${output}/candidate.json`, "utf8") +
     readFileSync(`${output}/browser-config-provenance.json`, "utf8");
@@ -346,6 +379,8 @@ test("existing PLAN and Dockerfile require the same provenance context and label
     "com.kovagpt.source.tree",
     "com.kovagpt.browser.supabase-project-ref",
     "com.kovagpt.browser.config-verified",
+    "com.kovagpt.browser.auth-mode",
+    "com.kovagpt.browser.google-auth-enabled",
   ]) {
     assert.ok(plan.includes(label));
     assert.ok(dockerfile.includes(label));
@@ -357,7 +392,42 @@ test("existing PLAN and Dockerfile require the same provenance context and label
     "KOVA_PRODUCTION_SUPABASE_PROJECT_REF",
     "KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY",
     "KOVA_PRODUCTION_BICEP_PARAMETERS_JSON",
+    "KOVA_PRODUCTION_BROWSER_AUTH_MODE",
+    "KOVA_PRODUCTION_GOOGLE_AUTH_ENABLED",
   ]) {
     assert.ok(plan.includes(setting));
   }
+});
+
+test("mismatched Auth label fails the mocked image inspection without starting a container", (t) => {
+  const { env, run, calls } = harness(t, { wrongAuthLabel: true });
+  assert.throws(() => buildProductionCandidate(env, run), /production_candidate_labels_mismatch/u);
+  assert.ok(
+    !calls.some(
+      ([program, sub]) => program === "docker" && ["create", "run", "start"].includes(sub),
+    ),
+  );
+});
+
+test("protected Auth choices are explicit in both workflow consumers and validated by Docker", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/build-azure-production-candidate.yml", import.meta.url),
+    "utf8",
+  );
+  const plan = readFileSync(
+    new URL("../../.github/workflows/validate-azure-production.yml", import.meta.url),
+    "utf8",
+  );
+  for (const variable of [
+    "KOVA_PRODUCTION_BROWSER_AUTH_MODE",
+    "KOVA_PRODUCTION_GOOGLE_AUTH_ENABLED",
+  ]) {
+    assert.ok(workflow.includes(`vars.${variable}`));
+    assert.ok(plan.includes(`vars.${variable}`));
+  }
+  assert.ok(plan.includes('"$browser_auth_label" == "$BROWSER_AUTH_MODE"'));
+  assert.ok(plan.includes('"$google_auth_label" == "$GOOGLE_AUTH_ENABLED"'));
+  const dockerfile = readFileSync(new URL("../../Dockerfile", import.meta.url), "utf8");
+  assert.match(dockerfile, /RUN case "\$VITE_KOVA_AUTH_MODE"/u);
+  assert.match(dockerfile, /supabase\|dual\|kova\)/u);
 });
