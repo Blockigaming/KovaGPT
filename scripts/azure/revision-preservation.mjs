@@ -5,8 +5,10 @@ import { isDeepStrictEqual } from "node:util";
 
 const SHA = /^[a-f0-9]{40}$/u;
 const IMAGE = /^kovagptacr-dte9hugbhjghcyb8\.azurecr\.io\/kovagpt-web@sha256:[a-f0-9]{64}$/u;
-const TARGET =
+const PRODUCTION_TARGET =
   "/subscriptions/ab732127-11c3-46a7-a1cb-6ee8d86594f4/resourceGroups/rg-kovagpt-prod/providers/Microsoft.App/containerApps/kovagpt-prod-web";
+const STAGING_TARGET =
+  "/subscriptions/ab732127-11c3-46a7-a1cb-6ee8d86594f4/resourceGroups/rg-kovagpt-staging/providers/Microsoft.App/containerApps/ca-kovagpt-staging";
 const fail = (code) => {
   throw new Error(`revision_preservation_${code}`);
 };
@@ -18,6 +20,16 @@ const require = (condition, code) => {
 // not render an ARM request, call Azure, authorize a change, or establish that
 // observations are current/authentic. Unknown properties are compared too.
 export function reviewRevisionPreservation({ baseline, desired, scope, previousRevision }) {
+  return reviewForTarget({ baseline, desired, scope, previousRevision }, PRODUCTION_TARGET);
+}
+
+export function reviewStagingRevisionPreservation(input) {
+  require(input.scope?.stagingRolloutOptIn === true, "staging_opt_in_required");
+  return reviewForTarget(input, STAGING_TARGET);
+}
+
+function reviewForTarget({ baseline, desired, scope, previousRevision }, TARGET) {
+  const appName = TARGET.split("/").at(-1);
   require(scope?.schemaVersion === 1 && SHA.test(scope.sourceSha ?? ""), "scope_invalid");
   require(scope.targetResourceId?.toLowerCase() === TARGET.toLowerCase(), "target_invalid");
   require(IMAGE.test(scope.previousImage ?? "") &&
@@ -29,13 +41,13 @@ export function reviewRevisionPreservation({ baseline, desired, scope, previousR
   require(typeof scope.containerName === "string" &&
     /^[a-z][a-z0-9-]*$/u.test(scope.containerName), "container_invalid");
   require(typeof scope.previousRevision === "string" &&
-    /^kovagpt-prod-web--[a-z][a-z0-9-]{0,62}$/u.test(scope.previousRevision) &&
+    new RegExp(`^${appName}--[a-z][a-z0-9-]{0,62}$`, "u").test(scope.previousRevision) &&
     !scope.previousRevision.endsWith("-") &&
     scope.previousRevision !==
-      `kovagpt-prod-web--${scope.candidateSuffix}`, "revision_binding_invalid");
+      `${appName}--${scope.candidateSuffix}`, "revision_binding_invalid");
   for (const document of [baseline, desired]) {
     require(document?.id?.toLowerCase() === TARGET.toLowerCase() &&
-      document.name === "kovagpt-prod-web" &&
+      document.name === appName &&
       document.type?.toLowerCase() === "microsoft.app/containerapps", "resource_binding_invalid");
     require(document.identity &&
       (document.properties?.environmentId || document.properties?.managedEnvironmentId) &&
@@ -96,11 +108,13 @@ export function reviewRevisionPreservation({ baseline, desired, scope, previousR
   require(isDeepStrictEqual(desired, expected), "unapproved_property_change");
 
   return {
-    kind: "offline-production-revision-preservation-review",
+    kind: TARGET === PRODUCTION_TARGET
+      ? "offline-production-revision-preservation-review"
+      : "offline-staging-revision-preservation-review",
     result: "PASS",
     sourceSha: scope.sourceSha,
     targetResourceId: TARGET,
-    candidateRevision: `kovagpt-prod-web--${scope.candidateSuffix}`,
+    candidateRevision: `${appName}--${scope.candidateSuffix}`,
     candidateImage: scope.candidateImage,
     previousRevision: scope.previousRevision,
     previousImage: scope.previousImage,
@@ -115,7 +129,7 @@ export function reviewRevisionPreservation({ baseline, desired, scope, previousR
     ],
     rollbackTraffic: [
       { revisionName: scope.previousRevision, weight: 100 },
-      { revisionName: `kovagpt-prod-web--${scope.candidateSuffix}`, weight: 0 },
+      { revisionName: `${appName}--${scope.candidateSuffix}`, weight: 0 },
     ],
     rollbackExercised: false,
     authorizationGranted: false,

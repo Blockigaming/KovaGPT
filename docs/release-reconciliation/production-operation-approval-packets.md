@@ -89,11 +89,14 @@ versions in approved order. Review every pre-state contract before presenting
 a runnable production push. Reject a raw `db:migrate` invocation against a
 98-row ledger; a failed push could leave partial production changes.
 
-The M19 command is **not runnable under the current single-revision production
-template**. Multi-revision strategy, prior healthy image, maintenance window, and
-specific approval must precede it. The current staging template is also
-single-revision. A reviewed source change and separately approved staging mutation
-must first establish two revisions and exercise an actual nonzero candidate weight
+The production migration template and staging bootstrap remain single-revision.
+The separate source-only `revision-rollout-plan.mjs` generator and opt-in
+`infra/azure/staging/rollout.bicep` now prepare ordered Multiple-mode candidate,
+canary and rollback requests; see [the request contract](rollback-plan.md#offline-rollout-request-generation-m19--m22--m23-source-prerequisite).
+They perform no Azure operation and award no live acceptance. Prior healthy image,
+current complete configuration, maintenance window, cost bound and specific
+approval must precede execution. A separately approved staging mutation must
+first establish two revisions and exercise an actual nonzero candidate weight
 returning to the previous revision. A separate, limited production pre-cutover
 setup must establish a healthy previous revision, protected candidate revision,
 multi-revision ingress with explicit traffic weights, and a bounded canary under

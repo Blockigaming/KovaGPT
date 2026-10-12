@@ -50,6 +50,108 @@ must still prove the candidate. Never apply the cost-frozen zero-replica/no-ingr
 Bicep to the running service. No template, replica, traffic or environment change
 is authorized by this check.
 
+### Offline rollout request generation (M19 / M22 / M23 source prerequisite)
+
+The preservation checker now has a separate request generator. It makes **zero
+cloud requests**, does not execute the requests it generates, and does not use
+Azure credentials:
+
+```bash
+node scripts/azure/revision-rollout-plan.mjs /private/path/rollout-input.json /private/path/new-rollout-plan.json
+```
+
+Input must be an owner-only regular file, at most 4 MiB. Output must not exist and
+its parent must be owner-only (0700). The new plan is written with mode 0600.
+Neither configuration nor errors containing private values are printed. Do not
+put this plan, input, or its secure-object parameters in Git, logs or artifacts:
+they preserve supplied secret values/references and other private configuration.
+
+Required input contract:
+
+- `baseline`: complete supplied Container App document, including location, tags,
+  identity, registries, complete secrets, ingress/origin controls, containers,
+  environment, probes, scale and optional sidecars/init containers/volumes.
+  An ordinary redacted secret-name inventory is insufficient. A secret needs
+  either its supplied value or a versioned Key Vault URI and identity. No secret
+  is retrieved by this tool.
+- `previousRevision`: the exact previous revision document, active, healthy,
+  running, with at least one observed replica and the same template as baseline.
+- `scope`: the preservation checker's source/target/container/image/revision
+  bindings plus `environment: "production" | "staging"` and `rolloutOptIn: true`.
+  Staging additionally requires `stagingRolloutOptIn: true`. Production remains
+  pinned to `rg-kovagpt-prod/kovagpt-prod-web`; staging is pinned to the separate
+  `rg-kovagpt-staging/ca-kovagpt-staging` app, never the Auth rehearsal app.
+- `inventory`: `complete: true`, `apiVersion: "2025-01-01"`, UTC `observedAt`,
+  collector `receiptSha256`, and `baselineSha256` / `previousRevisionSha256`.
+  Document hashes use the exported `documentSha256` (recursively sorted JSON
+  object keys, unchanged array order). The snapshot must be at most five minutes
+  old and not expire before the planned start. Hash agreement proves binding,
+  **not collector authenticity or live acceptance**; independent review remains.
+- `canary`: UTC `windowStart` / `windowEnd` (future start, at most one hour total),
+  integer `candidateWeight` / `maximumCandidateWeight` (1–99; requested weight
+  cannot exceed the bound), and positive `maximumRecoveryMs` shorter than the
+  window. The recovery reserve determines `rollbackMustStartBy`.
+- Optional `desired`: independently prepared full document. If supplied, the
+  existing checker must accept it without any extra property change.
+
+The output contains five ordered, reviewable ARM group-deployment PUT requests,
+exact target IDs and deterministic deployment names. Each request is Incremental,
+targets only the existing app, uses the pinned 2025-01-01 Container Apps API, and
+places all private values in a `secureObject` parameter. Parameter strings that
+look like ARM expressions remain literal data. The planner never uses the
+cost-frozen production bootstrap Bicep as the running app's desired state.
+
+1. `prepare-multiple`: preserve the old template/image, enable Multiple mode and
+   pin the named healthy previous revision at 100%. Verify completion before
+   candidate creation, so Single mode cannot deactivate the rollback target.
+2. `create-candidate-zero-traffic`: change only the primary image/suffix, retaining
+   named previous=100. Candidate has no traffic allocation. This request does not
+   reference a candidate revision before Azure has created it.
+3. `pin-initial-traffic`: after candidate existence/digest/health verification,
+   explicitly record named previous=100 / candidate=0.
+4. `bounded-canary`: set named previous=(100−approved candidate weight) and the
+   bounded candidate weight, only after separate Auth/database/origin/edge gates.
+5. `rollback-traffic`: restore named previous=100 / candidate=0 without rewriting
+   either revision's template, deleting data or changing Auth/schema. It can run
+   after initial pinning even if the canary outcome is uncertain, but the actual
+   current configuration and operation outcome must first be reconciled.
+
+Requests carry a 60-second client limit, one attempt and zero retries. Those are
+requirements for a future separately approved executor, **not an executor or a
+server-side timeout/cost guarantee**. Revalidate complete property fingerprints
+and both revision identities before each mutation; stop on concurrent changes,
+stale observations or uncertain outcomes. Never replay an uncertain deployment.
+Finish rollback and its verification inside the window. A candidate may still
+cost money at 0% traffic; its subsequent deactivation/retention needs explicit
+cleanup authority. Keep the previous healthy revision and both pinned images.
+
+For staging, `infra/azure/staging/rollout.bicep` is an explicit opt-in alternative
+to bootstrap: `enableRevisionRollout` defaults false. Its secure `rolloutResource`
+parameter is the generated step's private resource body. It changes only the
+existing staging app and creates no environment, registry, role or secret store.
+Offline tests compile it and compare the emitted resource with the generator.
+Unsupported staging root extensions fail closed rather than being dropped.
+The original staging Single/latest=100 defaults and production Single/no-ingress
+migration template remain unchanged.
+
+Every writable setting is preserved, including unrecognized nested fields.
+Only enumerated response metadata (resource identity envelope, system data,
+revision/status/FQDN outputs and managed-identity principal/client IDs) is omitted
+from the write body; assigned identity resource IDs remain unchanged. Unknown
+root fields are rejected. This projection follows the pinned
+[Container Apps resource contract](https://learn.microsoft.com/en-us/azure/templates/microsoft.app/2025-01-01/containerapps).
+
+This closes the **source** gaps for M19's ordered two-revision canary/traffic
+rollback, M22's opt-in staging rollout, and M23's configuration-preserving
+zero-traffic production candidate preparation. It does not close any live gate.
+Still required: exact accepted integrated source and image provenance; fresh
+complete private captures and healthy previous evidence; independent property
+review; Auth/database backward compatibility; candidate health/version and
+protected-origin/edge/application checks; least-privilege execution authority;
+proven zero incremental entitlement or a separately approved cost ceiling;
+measured live rollback/recovery and independently verified cleanup. Final 100%
+candidate promotion is not generated or authorized by this bounded canary plan.
+
 1. Keep the previous healthy revision and digest available.
 2. Deploy the candidate by immutable digest to a revision-specific endpoint.
 3. Validate health and `/api/version` against that exact revision.
