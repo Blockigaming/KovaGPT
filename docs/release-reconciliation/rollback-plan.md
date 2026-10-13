@@ -42,7 +42,16 @@ The offline `capturedRolloutInput(capture, scope, canary)` bridge validates the
 receipt and document hashes, then invokes the **unchanged** rollout checker.
 Supply the real approved release SHA, immutable previous/candidate images and
 canary window. Do not invent those inputs to turn capture into rollout readiness.
-Captured app settings are never normalized or defaulted. Azure's
+Captured app settings are never normalized or defaulted. Explicit ARM `null`
+values for optional IP restrictions and client-certificate mode are preserved
+exactly; an absent field still fails the full-capture contract. An empty registry
+password reference is accepted only alongside that registry's explicit managed
+identity, and is likewise preserved. Neither rule accepts empty environment
+secret references, missing secret material, an `Activating` revision, or app/revision
+template drift. In particular, do not silently equate missing ephemeral storage
+or null scale timing with a current app's populated defaults.
+
+Azure's
 [2025-01-01 secret contract](https://github.com/Azure/azure-rest-api-specs/blob/main/specification/app/resource-manager/Microsoft.App/ContainerApps/stable/2025-01-01/CommonDefinitions.json)
 marks inline secret values create/update-only. If GET omits a needed inline value,
 or a Key Vault reference is unversioned/incomplete, the existing full-resource

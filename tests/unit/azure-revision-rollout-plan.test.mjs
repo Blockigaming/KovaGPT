@@ -168,6 +168,85 @@ test("inline secrets and unknown nested properties stay private parameter data",
   );
 });
 
+test("explicit ARM null origin fields are preserved rather than defaulted", () => {
+  const input = rolloutFixture();
+  input.baseline.properties.configuration.ingress.ipSecurityRestrictions = null;
+  input.baseline.properties.configuration.ingress.clientCertificateMode = null;
+  bindCapture(input);
+  const plan = generate(input);
+  for (const step of plan.steps) {
+    assert.equal(body(step).properties.configuration.ingress.ipSecurityRestrictions, null);
+    assert.equal(body(step).properties.configuration.ingress.clientCertificateMode, null);
+  }
+  const desired = structuredClone(input.baseline);
+  desired.properties.configuration.activeRevisionsMode = "Multiple";
+  desired.properties.configuration.ingress.traffic = [
+    { revisionName: input.scope.previousRevision, weight: 100 },
+  ];
+  desired.properties.template.revisionSuffix = input.scope.candidateSuffix;
+  desired.properties.template.containers[0].image = input.scope.candidateImage;
+  desired.properties.configuration.ingress.clientCertificateMode = "ignore";
+  input.desired = desired;
+  assert.throws(() => generate(input), /unapproved_property_change/u);
+});
+
+test("absent origin fields remain incomplete even when another field is explicitly null", () => {
+  for (const field of ["ipSecurityRestrictions", "clientCertificateMode"]) {
+    const input = rolloutFixture();
+    input.baseline.properties.configuration.ingress.ipSecurityRestrictions = null;
+    input.baseline.properties.configuration.ingress.clientCertificateMode = null;
+    delete input.baseline.properties.configuration.ingress[field];
+    bindCapture(input);
+    assert.throws(() => generate(input), /complete_origin_controls_required/u);
+  }
+});
+
+test("empty ARM registry password reference is preserved only for explicit managed identity", () => {
+  const input = rolloutFixture();
+  input.baseline.properties.configuration.registries[0].passwordSecretRef = "";
+  bindCapture(input);
+  const plan = generate(input);
+  for (const step of plan.steps)
+    assert.equal(body(step).properties.configuration.registries[0].passwordSecretRef, "");
+  delete input.baseline.properties.configuration.registries[0].identity;
+  bindCapture(input);
+  assert.throws(() => generate(input), /unresolved_secret_reference/u);
+});
+
+test("empty env secret reference and unknown nonempty registry reference remain invalid", () => {
+  const input = rolloutFixture();
+  input.baseline.properties.template.containers[0].env[0].secretRef = "";
+  bindCapture(input);
+  assert.throws(() => generate(input), /unresolved_secret_reference/u);
+  const registry = rolloutFixture();
+  registry.baseline.properties.configuration.registries[0].passwordSecretRef = "missing";
+  bindCapture(registry);
+  assert.throws(() => generate(registry), /unresolved_secret_reference/u);
+});
+
+test("ARM representation fixes do not waive activating state, template drift or missing secrets", () => {
+  for (const gate of ["state", "template", "secret", "unversioned-keyvault"]) {
+    const input = rolloutFixture();
+    input.baseline.properties.configuration.ingress.ipSecurityRestrictions = null;
+    input.baseline.properties.configuration.ingress.clientCertificateMode = null;
+    input.baseline.properties.configuration.registries[0].passwordSecretRef = "";
+    if (gate === "state") input.previousRevision.properties.runningState = "Activating";
+    if (gate === "template") input.previousRevision.properties.template.scale.cooldownPeriod = null;
+    if (gate === "secret")
+      input.baseline.properties.configuration.secrets[0] = { name: "synthetic-auth" };
+    if (gate === "unversioned-keyvault")
+      input.baseline.properties.configuration.secrets[0].keyVaultUrl =
+        "https://synthetic.vault.azure.net/secrets/auth";
+    bindCapture(input);
+    assert.throws(
+      () => generate(input),
+      gate === "secret" || gate === "unversioned-keyvault"
+        ? /secret_inventory_incomplete/u
+        : /previous_revision_unverified/u,
+    );
+  }
+});
+
 test("independent production guard cannot be redirected to staging by a scope flag", () => {
   const input = rolloutFixture();
   input.scope.environment = "staging";

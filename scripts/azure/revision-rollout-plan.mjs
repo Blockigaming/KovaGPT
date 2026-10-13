@@ -40,7 +40,9 @@ const time = (v) =>
     ? Date.parse(v)
     : NaN;
 
-function validateCompleteCapture(input) {
+// Also usable for private capture assessment before any candidate image exists.
+// This validates input completeness only; it never creates or executes a plan.
+export function validateCompleteCapture(input) {
   const { baseline: b, previousRevision: previous, inventory } = input;
   require(object(b) && object(previous) && object(inventory), "capture_required");
   require(inventory.complete === true &&
@@ -70,9 +72,13 @@ function validateCompleteCapture(input) {
   require(configuration.ingress?.allowInsecure === false &&
     typeof configuration.ingress.external === "boolean" &&
     Array.isArray(configuration.ingress.customDomains) &&
-    Array.isArray(configuration.ingress.ipSecurityRestrictions) &&
-    typeof configuration.ingress.clientCertificateMode ===
-      "string", "complete_origin_controls_required");
+    Object.hasOwn(configuration.ingress, "ipSecurityRestrictions") &&
+    (configuration.ingress.ipSecurityRestrictions === null ||
+      Array.isArray(configuration.ingress.ipSecurityRestrictions)) &&
+    Object.hasOwn(configuration.ingress, "clientCertificateMode") &&
+    (configuration.ingress.clientCertificateMode === null ||
+      typeof configuration.ingress.clientCertificateMode ===
+        "string"), "complete_origin_controls_required");
   require(b.properties.provisioningState === "Succeeded" &&
     Number.isInteger(previous.properties?.replicas) &&
     previous.properties.replicas > 0, "healthy_previous_replica_required");
@@ -115,6 +121,17 @@ function validateCompleteCapture(input) {
     if (Array.isArray(v)) return v.forEach(checkReferences);
     if (!object(v)) return;
     for (const [key, value] of Object.entries(v)) {
+      // ARM returns an empty password reference for a managed-identity
+      // registry. Preserve that exact response, but never waive an empty env
+      // secretRef or a registry reference without an explicit identity.
+      if (
+        key === "passwordSecretRef" &&
+        value === "" &&
+        configuration.registries.includes(v) &&
+        typeof v.identity === "string" &&
+        v.identity.length > 0
+      )
+        continue;
       if (key === "secretRef" || key === "passwordSecretRef")
         require(names.has(value), "unresolved_secret_reference");
       else checkReferences(value);
