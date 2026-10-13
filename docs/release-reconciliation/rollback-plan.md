@@ -1,5 +1,61 @@
 # KovaGPT production rollback plan
 
+## Private configuration capture (separate read approval)
+
+`scripts/azure/capture-production-configuration.mjs` fills the collection gap
+between a private ARM response and the offline rollout generator. Importing it
+and running its mocked tests make no cloud requests. Collection is **not**
+authorized by source publication or by this document.
+
+After approval of an exact clean source commit, use this bounded command with a
+new destination beneath an existing owner-only directory outside Git:
+
+```bash
+perl -e 'alarm 90; exec @ARGV' node scripts/azure/capture-production-configuration.mjs \
+  --execute-approved-read APPROVED_40_CHARACTER_SOURCE_SHA /private/approved-parent/new-capture
+```
+
+The executable is fixed to `kovagpt-prod-web` in `rg-kovagpt-prod`, subscription
+`ab732127-11c3-46a7-a1cb-6ee8d86594f4`. It does not touch the Auth rehearsal app.
+It uses the existing Azure CLI session to obtain an in-memory ARM token (15s),
+then at most three single-attempt HTTPS GETs (20s each, 80s overall collection):
+
+1. Container App GET, API `2025-01-01`.
+2. GET the exact `latestReadyRevisionName` from that response, under the same app.
+3. Repeat the same app GET once to detect configuration drift, **not as a retry**.
+
+TLS verification stays enabled. There are no redirects, retries, pagination,
+`listSecrets`, Key Vault reads, registry pulls, database/app requests, starts,
+configuration writes, builds, or deployments. A stopped/unhealthy revision is
+evidence of a blocked prerequisite, never authority to start it. No charges are
+incurred by these control-plane metadata reads; existing app runtime is unchanged.
+
+The directory is 0700; three full response files and the incrementally durable
+receipt are 0600. Inline environment configuration may be sensitive: never print,
+publish, commit, or upload these files. Tokens are never stored in them or passed
+in arguments. CLI errors are fixed sanitized codes. Preserve partial captures;
+an existing destination is rejected and an uncertain dispatch must not be replayed.
+The token reference is released and the process exits; this does not claim
+cryptographic JavaScript memory erasure. No credential reset or sign-in is run.
+
+The offline `capturedRolloutInput(capture, scope, canary)` bridge validates the
+receipt and document hashes, then invokes the **unchanged** rollout checker.
+Supply the real approved release SHA, immutable previous/candidate images and
+canary window. Do not invent those inputs to turn capture into rollout readiness.
+Captured app settings are never normalized or defaulted. Azure's
+[2025-01-01 secret contract](https://github.com/Azure/azure-rest-api-specs/blob/main/specification/app/resource-manager/Microsoft.App/ContainerApps/stable/2025-01-01/CommonDefinitions.json)
+marks inline secret values create/update-only. If GET omits a needed inline value,
+or a Key Vault reference is unversioned/incomplete, the existing full-resource
+generator continues to reject it. A separately reviewed protected value source or
+reference-preserving operation would be necessary; `listSecrets` is not implicit.
+
+Likewise a mutable image tag, missing probes/origin controls, unhealthy previous
+revision, mismatched template or configuration drift remains blocked. Capture
+does not accept M19/M22/M23. Its five-minute observation freshness must be renewed
+under a future exact release authorization immediately before any rollout, even
+if this earlier read resolves configuration preparation. This operation creates
+no cloud resource to roll back; cleanup retains private evidence only.
+
 ## Required evidence
 
 Before promotion, create a JSON evidence file and validate it with:
