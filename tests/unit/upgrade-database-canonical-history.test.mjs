@@ -45,9 +45,17 @@ test("revised history proposal rehearses 107 bodies and four conditional history
   const extensionVersions = JSON.parse(readFileSync(join(ROOT, "release-migrations.json")))
     .migrations.slice(157)
     .map((entry) => entry.timestamp);
-  assert.equal(extensionVersions.length, 28);
-  assert.deepEqual(dry.canonicalHistoryProposal.deferredExtensionVersions, []);
-  assert.ok(extensionVersions.every((version) => dry.replayPendingVersions.includes(version)));
+  assert.ok([28, 29, 31, 32].includes(extensionVersions.length));
+  assert.deepEqual(
+    dry.canonicalHistoryProposal.deferredExtensionVersions,
+    extensionVersions.slice(28),
+  );
+  assert.ok(
+    extensionVersions.slice(0, 28).every((version) => dry.replayPendingVersions.includes(version)),
+  );
+  assert.ok(
+    extensionVersions.slice(28).every((version) => !dry.replayPendingVersions.includes(version)),
+  );
   assert.deepEqual(dry.canonicalHistoryProposal.recordOnlyVersions, REPAIRED);
   assert.equal(
     dry.canonicalHistoryProposal.scheduledRecordOnlyHypothesis.sourceActionApproved,

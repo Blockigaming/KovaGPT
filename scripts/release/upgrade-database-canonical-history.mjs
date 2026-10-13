@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildCanonicalHistoryDecision } from "./canonical-history-decision.mjs";
+import {
+  buildCanonicalHistoryDecision,
+  deferredAuthCandidate,
+  deferredInterfaceCandidate,
+} from "./canonical-history-decision.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const DECISION = "docs/release-reconciliation/canonical-history-actions-20260923.json";
@@ -64,6 +68,21 @@ export function extendProposedCanonicalHistory(
     throw new Error("upgrade_canonical_history_inventory_mismatch");
 
   const pending = new Map(plan.forward.map((row) => [row.version, row]));
+  const deferred = [];
+  for (const group of [deferredAuthCandidate, deferredInterfaceCandidate]) {
+    const included = [];
+    for (const [version, expectedHash] of group) {
+      const entry = pending.get(version);
+      if (!entry) continue;
+      if (entry.sha256 !== expectedHash || sha256(entry.content) !== expectedHash)
+        throw new Error("upgrade_canonical_history_extension_mismatch");
+      pending.delete(version);
+      included.push(version);
+    }
+    if (included.length !== 0 && included.length !== group.length)
+      throw new Error("upgrade_canonical_history_extension_incomplete");
+    deferred.push(...included);
+  }
   if (pending.size !== 111 || decision.sourceOnly.length !== 111)
     throw new Error("upgrade_canonical_history_pending_mismatch");
   const recordOnly = [];
@@ -130,7 +149,7 @@ export function extendProposedCanonicalHistory(
       recordOnlyVersions: recordOnly,
       historyOnlySentinelSha256: sha256(HISTORY_ONLY_SENTINEL),
       forwardVersions: executionForward.map((row) => row.version),
-      deferredExtensionVersions: [],
+      deferredExtensionVersions: deferred,
       expectedFinalLedgerCount: decision.counts.proposedFinalLedgerCount,
       productionReleaseReady: false,
       productionRowsRestored: false,

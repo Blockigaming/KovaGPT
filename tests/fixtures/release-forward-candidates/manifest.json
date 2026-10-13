@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Public source-only compatibility fixtures; not applied migrations or historical evidence",
+  "authSource": "e43686bc123f2e5efcd32a69e843f3fd4bf61b49",
+  "authCandidateManifestSha256": "3ad46f711f371dbfe4504919197b35f8819afcf33f923a67034c9426062a8d93",
+  "interfaceSource": "54ae00a4ae37b1929fd25e610ad22ddef8bd99c0",
+  "interfaceManifestSha256": "64687deb04ce5e6396b7401e5d1401c4a7d682287056349546167e5937d7eabd",
+  "combinedManifestSha256": "f433e696e75e46f942fe09eb8cdb06e4e20701cd7c550b00aa39d225bfec1d5e",
+  "extensions": [
+    {
+      "order": 186,
+      "filename": "20260927163950_kova_owned_auth_remaining_review_fixes.sql",
+      "timestamp": "20260927163950",
+      "sha256": "b07344cc8d8217358622e335428af3a54c27b17194c0def495c2fec17cc1bfa5",
+      "tables": ["kova_private"],
+      "functions": [
+        "legacy_mfa_required",
+        "recent_primary_session",
+        "kova_auth_passkey_recent_primary_session",
+        "kova_auth_begin_passkey_challenge",
+        "kova_auth_activate_totp_with_session",
+        "kova_auth_remove_totp_with_session",
+        "kova_auth_finalize_account_deletion",
+        "kova_auth_legacy_mfa_gap_count"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 187,
+      "filename": "20260930224000_kova_owned_storage_cache_boundary.sql",
+      "timestamp": "20260930224000",
+      "sha256": "0ce55846b9de680ee9132fce545770c68eadf0d982554adfebd8d3f19ae858f3",
+      "tables": [],
+      "functions": ["storage_operation_is_safe"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": ["kova_owned_storage_cache_boundary"],
+      "indexes": []
+    },
+    {
+      "order": 188,
+      "filename": "20261001003120_kova_owned_passkey_registration_primary_session.sql",
+      "timestamp": "20261001003120",
+      "sha256": "ed52d3aa90dcffe28f4199d4dd12dfdf713b14cd46f74a2f9af9d3218cd97ce5",
+      "tables": [],
+      "functions": ["kova_auth_finish_passkey_registration"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 189,
+      "filename": "20261008153032_launch_connector_runtime.sql",
+      "timestamp": "20261008153032",
+      "sha256": "25fb40a6a18a051ec4724cf8c924957f05bde98ea7e75d16ad44a295b741fc27",
+      "tables": [],
+      "functions": ["settle_launch_connector", "disconnect_launch_connector"],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    }
+  ]
+}

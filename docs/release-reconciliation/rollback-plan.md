@@ -257,19 +257,75 @@ No live preservation or concurrency guarantee is claimed. Execution still needs
 fresh preceding-state checks, an exclusive writer, post-write reconciliation,
 bounded authorization and cost approval. Unknown outcomes must be reconciled,
 never retried. The retained production capture remains blocked by its Activating
-previous revision and nine unproven app/revision template differences; this
-alternative does not normalize either away.
+previous revision. The separate opt-in comparison below addresses the nine
+response representation differences; it does not waive live health or freshness.
 
 The public API bindings reviewed for this remedy are Microsoft's
 `ContainerApps.json` blob `c1beb74e4ddf085861000eaf2e9c70537cdb9c87`
 and `CommonDefinitions.json` blob `f848c0bae6efd28e8ffe3c57d3052838c00cc8ba`
 under `specification/app/resource-manager/Microsoft.App/ContainerApps/stable/2025-01-01`
 in `Azure/azure-rest-api-specs`. The latter also documents 300-second cooldown and
-30-second polling defaults. Those defaults are explanatory evidence, not a
-substitute for proving the captured previous revision's complete effective
-configuration; the strict template equality check has not been relaxed.
+30-second polling defaults. The default comparison remains raw-exact.
+
+### Explicit API-bound effective-template comparison
+
+`scope.templateComparisonPolicy: "azure-containerapps-2025-01-01"` enables the
+offline comparison in `revision-template-equivalence.mjs` only for captures
+bound to that API version. It leaves both original documents and generated
+writable configuration unchanged. Every field outside these narrow rules must
+still compare exactly, including unknown fields, probes, sidecars, identities,
+references, scaling rules and array order:
+
+- Empty/null/absent suffix hints are equivalent only after the full revision
+  name, resource ID and latest-ready identity bind the same revision. A nonempty
+  conflicting suffix fails; the naming hint is not a substitute for identity.
+- Empty/absent `value` is equivalent only on the same uniquely named environment
+  entry with the same nonempty `secretRef`. Nonempty/null competing values,
+  changed references and literal non-secret empty values are not normalized.
+- A missing response-only `ephemeralStorage` can match an observed string; two
+  conflicting observed capacities fail. CPU and memory are always exact.
+- Unset cooldown/polling match only their documented 300/30-second defaults.
+
+These rules apply the pinned public API definitions and Microsoft's
+[environment-variable contract](https://learn.microsoft.com/en-us/azure/container-apps/environment-variables)
+and [revision identity contract](https://learn.microsoft.com/en-us/azure/container-apps/revisions).
+They establish effective writable-template equality, not secret-value/version
+identity, current health, deployed compatibility or milestone acceptance. The
+full generator still enforces original capture hashes, five-minute freshness,
+stable Running/Healthy previous state, immutable images and exact desired-state
+preservation. A plan must record its comparison policy and normalized paths for
+independent release review; unknown policies fail closed.
 
 ## Database rollback
+
+### Combined source integration: keep forward additions out of historical proof
+
+The frozen Auth candidate (PR443 `e43686bc123f2e5efcd32a69e843f3fd4bf61b49`)
+adds three migrations; Interface PR445 `54ae00a4ae37b1929fd25e610ad22ddef8bd99c0`
+adds `20261008153032_launch_connector_runtime.sql`. Both preserve the exact first
+185 source entries. They must be combined in timestamp order (189 entries), not
+by choosing one manifest or rewriting the historical decision to 210 entries.
+
+`canonical-history-decision.mjs` accepts only the existing exact Auth/Interface
+manifest hashes or the reviewed combined manifest hash
+`f433e696e75e46f942fe09eb8cdb06e4e20701cd7c550b00aa39d225bfec1d5e`.
+Its historical result remains byte-semantically unchanged: 98 remote entries,
+185 source entries, 111 pending historical versions, 107 conditional bodies,
+four conditional record-only versions and a hypothetical 209-entry endpoint.
+The four new versions are hash-checked and deferred; the Auth trio is all-or-none.
+No historical decision, lineage, actual migration manifest or database has been
+rewritten by this source correction. The fixture manifest records exact public
+SQL/source bindings; those copies are test inputs, not installed migrations.
+
+When forming the final integrated source, retain these Azure history guards and
+all current historical tests, use the ordered union manifest above, and keep
+the new migrations in the separate forward phase. The AuthDialog three-way
+combination is text-clean but still needs Auth/Interface behavior acceptance;
+the database contract matches the frozen Auth candidate. Text compatibility and
+mocked source tests do not supply the missing 19 historical proofs or authorize
+applying any forward migration. Auth's live deletion/revocation and shared-plan
+entitlement requirements remain binding; family creation/invitations remain
+outside reduced launch.
 
 Database migrations are treated as forward-only unless an explicit tested down path exists. Use expand/contract changes so the previous application remains compatible during the rollback window. For destructive or incompatible migrations, restore from the recorded backup/PITR point only under a separate incident decision; never improvise a reverse SQL script in production.
 

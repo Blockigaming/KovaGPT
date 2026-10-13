@@ -22,6 +22,22 @@ const pinnedMigrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
 const migrationTree = "3b688ddbfaa4b91ae2a85506915a959d66f85cd9";
 const currentSourceCommit = "3ffdde6fe80e6511ab1e2f76b405c71a2858edfd";
 const currentSourceCount = 185;
+// Exact forward candidates are not amendments to the historical 185/98
+// decision. Keep the frozen Auth candidate and Interface addition separate.
+const candidateManifestHashes = new Set([
+  "3ad46f711f371dbfe4504919197b35f8819afcf33f923a67034c9426062a8d93",
+  "64687deb04ce5e6396b7401e5d1401c4a7d682287056349546167e5937d7eabd",
+  "f433e696e75e46f942fe09eb8cdb06e4e20701cd7c550b00aa39d225bfec1d5e",
+]);
+export const deferredAuthCandidate = Object.freeze([
+  ["20260927163950", "b07344cc8d8217358622e335428af3a54c27b17194c0def495c2fec17cc1bfa5"],
+  ["20260930224000", "0ce55846b9de680ee9132fce545770c68eadf0d982554adfebd8d3f19ae858f3"],
+  ["20261001003120", "ed52d3aa90dcffe28f4199d4dd12dfdf713b14cd46f74a2f9af9d3218cd97ce5"],
+]);
+export const deferredInterfaceCandidate = Object.freeze([
+  ["20261008153032", "25fb40a6a18a051ec4724cf8c924957f05bde98ea7e75d16ad44a295b741fc27"],
+]);
+const interfaceMigration = "20261008153032_launch_connector_runtime.sql";
 const targetProjectRef = "mfbycmbjygcfkrsuepxf";
 const capturedAtPattern =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/u;
@@ -112,7 +128,10 @@ export function validateForwardExtension(baseline, current, filenames, readBytes
       (index > 0 && entry.timestamp <= current.migrations[index - 1].timestamp) ||
       (index >= baseline.count &&
         !entry.filename.includes("_kova_") &&
-        entry.filename !== mergedMainMigration)
+        entry.filename !== mergedMainMigration &&
+        !(
+          entry.filename === interfaceMigration && entry.sha256 === deferredInterfaceCandidate[0][1]
+        ))
     )
       throw new Error("canonical_history_forward_extension_changed");
   }
@@ -146,22 +165,29 @@ export function buildCanonicalHistoryDecision({
   const bytes = (path) => readFile(join(repositoryRoot, path));
   const json = (path) => JSON.parse(bytes(path).toString("utf8"));
   const pinned = (commit, path) =>
-    execFileSync("git", ["show", `${commit}:${path}`], { cwd: repositoryRoot });
+    execFileSync("git", ["show", `${commit}:${path}`], { cwd: repositoryRoot, timeout: 10000 });
   if (
     execFileSync("git", ["rev-parse", `${checkpoint}:supabase/migrations`], {
       cwd: repositoryRoot,
       encoding: "utf8",
+      timeout: 10000,
     }).trim() !== pinnedMigrationTree
   )
     throw new Error("canonical_history_migration_tree_changed");
   const pinnedSource = pinned(checkpoint, sourcePath);
   const pinnedSourceManifest = JSON.parse(pinnedSource);
-  const source = json(sourcePath);
+  const historicalSource = pinned(currentSourceCommit, sourcePath);
+  const source = JSON.parse(historicalSource);
+  const candidate = json(sourcePath);
   if (
-    !bytes(sourcePath).equals(pinned(currentSourceCommit, sourcePath)) ||
+    (!bytes(sourcePath).equals(historicalSource) &&
+      !candidateManifestHashes.has(sha256(bytes(sourcePath)))) ||
+    JSON.stringify(candidate.migrations.slice(0, currentSourceCount)) !==
+      JSON.stringify(source.migrations) ||
     execFileSync("git", ["rev-parse", `${currentSourceCommit}:supabase/migrations`], {
       cwd: repositoryRoot,
       encoding: "utf8",
+      timeout: 10000,
     }).trim() !== migrationTree
   )
     throw new Error("canonical_history_current_source_checkpoint_changed");
@@ -176,7 +202,7 @@ export function buildCanonicalHistoryDecision({
   validateCanonicalHistoryCapture(lineage, baseline, supplement, sha256(bytes(baselinePath)));
   validateForwardExtension(
     pinnedSourceManifest,
-    source,
+    candidate,
     readDirectory(join(repositoryRoot, "supabase/migrations")),
     (filename) => bytes(`supabase/migrations/${filename}`),
   );
@@ -300,7 +326,7 @@ export function buildCanonicalHistoryDecision({
     targetProjectRef: supplement.projectRef,
     sourceCheckpointCommit: currentSourceCommit,
     sourceMigrationTree: migrationTree,
-    sourceManifestSha256: sha256(bytes(sourcePath)),
+    sourceManifestSha256: sha256(historicalSource),
     lineageSha256: sha256(bytes(lineagePath)),
     historicalFixtureManifestSha256: sha256(bytes(baselinePath)),
     currentSupplementSha256: sha256(bytes(supplementPath)),

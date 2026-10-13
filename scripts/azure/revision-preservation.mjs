@@ -2,6 +2,10 @@ import { lstatSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
+import {
+  compareRevisionTemplates,
+  TEMPLATE_COMPARISON_POLICY,
+} from "./revision-template-equivalence.mjs";
 
 const SHA = /^[a-f0-9]{40}$/u;
 const IMAGE = /^kovagptacr-dte9hugbhjghcyb8\.azurecr\.io\/kovagpt-web@sha256:[a-f0-9]{64}$/u;
@@ -19,8 +23,8 @@ const require = (condition, code) => {
 // Offline review of full private before/desired resource documents. This does
 // not render an ARM request, call Azure, authorize a change, or establish that
 // observations are current/authentic. Unknown properties are compared too.
-export function reviewRevisionPreservation({ baseline, desired, scope, previousRevision }) {
-  return reviewForTarget({ baseline, desired, scope, previousRevision }, PRODUCTION_TARGET);
+export function reviewRevisionPreservation(input) {
+  return reviewForTarget(input, PRODUCTION_TARGET);
 }
 
 export function reviewStagingRevisionPreservation(input) {
@@ -28,7 +32,7 @@ export function reviewStagingRevisionPreservation(input) {
   return reviewForTarget(input, STAGING_TARGET);
 }
 
-function reviewForTarget({ baseline, desired, scope, previousRevision }, TARGET) {
+function reviewForTarget({ baseline, desired, scope, previousRevision, inventory }, TARGET) {
   const appName = TARGET.split("/").at(-1);
   require(scope?.schemaVersion === 1 && SHA.test(scope.sourceSha ?? ""), "scope_invalid");
   require(scope.targetResourceId?.toLowerCase() === TARGET.toLowerCase(), "target_invalid");
@@ -43,8 +47,7 @@ function reviewForTarget({ baseline, desired, scope, previousRevision }, TARGET)
   require(typeof scope.previousRevision === "string" &&
     new RegExp(`^${appName}--[a-z][a-z0-9-]{0,62}$`, "u").test(scope.previousRevision) &&
     !scope.previousRevision.endsWith("-") &&
-    scope.previousRevision !==
-      `${appName}--${scope.candidateSuffix}`, "revision_binding_invalid");
+    scope.previousRevision !== `${appName}--${scope.candidateSuffix}`, "revision_binding_invalid");
   for (const document of [baseline, desired]) {
     require(document?.id?.toLowerCase() === TARGET.toLowerCase() &&
       document.name === appName &&
@@ -85,16 +88,25 @@ function reviewForTarget({ baseline, desired, scope, previousRevision }, TARGET)
     containers.every((c) => Array.isArray(c.env) && c.resources), "complete_containers_required");
   const index = containers.findIndex((c) => c.name === scope.containerName);
   require(index >= 0 && containers[index].image === scope.previousImage, "previous_image_mismatch");
+  require(scope.templateComparisonPolicy === undefined ||
+    scope.templateComparisonPolicy === TEMPLATE_COMPARISON_POLICY, "template_policy_invalid");
+  const templateComparison =
+    scope.templateComparisonPolicy === TEMPLATE_COMPARISON_POLICY
+      ? compareRevisionTemplates({ baseline, previousRevision, apiVersion: inventory?.apiVersion })
+      : {
+          result: isDeepStrictEqual(previousRevision?.properties?.template, template)
+            ? "PASS"
+            : "FAIL",
+          policy: "raw-exact",
+          normalizedPaths: [],
+        };
   require(previousRevision?.id?.toLowerCase() ===
     `${TARGET}/revisions/${scope.previousRevision}`.toLowerCase() &&
     previousRevision.name === scope.previousRevision &&
     previousRevision.properties?.active === true &&
     previousRevision.properties.healthState === "Healthy" &&
     previousRevision.properties.runningState === "Running" &&
-    isDeepStrictEqual(
-      previousRevision.properties.template,
-      template,
-    ), "previous_revision_unverified");
+    templateComparison.result === "PASS", "previous_revision_unverified");
 
   // Exactly four permitted paths; preserve every other setting, secret value /
   // reference, identity, sidecar, volume, probe, scale rule, tag and origin control.
@@ -108,9 +120,10 @@ function reviewForTarget({ baseline, desired, scope, previousRevision }, TARGET)
   require(isDeepStrictEqual(desired, expected), "unapproved_property_change");
 
   return {
-    kind: TARGET === PRODUCTION_TARGET
-      ? "offline-production-revision-preservation-review"
-      : "offline-staging-revision-preservation-review",
+    kind:
+      TARGET === PRODUCTION_TARGET
+        ? "offline-production-revision-preservation-review"
+        : "offline-staging-revision-preservation-review",
     result: "PASS",
     sourceSha: scope.sourceSha,
     targetResourceId: TARGET,
@@ -119,6 +132,7 @@ function reviewForTarget({ baseline, desired, scope, previousRevision }, TARGET)
     previousRevision: scope.previousRevision,
     previousImage: scope.previousImage,
     configurationPreserved: true,
+    templateComparison,
     initialCandidateTrafficPercent: 0,
     previousTrafficPercent: 100,
     changedPathsAllowlist: [
