@@ -19,11 +19,15 @@ import {
   armGet,
   captureProductionConfiguration,
   capturedRolloutInput,
+  capturedSecretPreservingRolloutInput,
   LIMITS,
   sanitizedFailure,
   TARGET,
 } from "../../scripts/azure/capture-production-configuration.mjs";
-import { generateRevisionRolloutPlan } from "../../scripts/azure/revision-rollout-plan.mjs";
+import {
+  generateRevisionRolloutPlan,
+  generateSecretPreservingRevisionRolloutPlan,
+} from "../../scripts/azure/revision-rollout-plan.mjs";
 import { rolloutFixture } from "../helpers/azure-revision-rollout-fixture.mjs";
 
 const NOW = "2026-10-12T18:00:00.000Z";
@@ -111,6 +115,36 @@ test("captured input feeds unchanged preservation/canary/rollback generator offl
     plan.steps[1].requestBody.properties.parameters.rolloutResource.value.properties.configuration
       .futureConfiguration.preserve,
     "SYNTHETIC_PRIVATE_MARKER",
+  );
+});
+
+test("captured secret-preserving input reuses bound receipt without a new token or read", async (t) => {
+  const f = fixture(t);
+  for (const document of [f.documents[0], f.documents[2]]) {
+    document.properties.configuration.secrets = [{ name: "synthetic-auth" }];
+  }
+  const capture = await captureProductionConfiguration(f.options, f.dependencies);
+  const scope = { ...f.input.scope, secretPreservingPatchOptIn: true };
+  const input = capturedSecretPreservingRolloutInput(capture, scope, f.input.canary, { now: NOW });
+  const plan = generateSecretPreservingRevisionRolloutPlan(input, { now: NOW });
+  assert.equal(plan.steps[1].method, "PATCH");
+  assert.equal(f.tokens(), 1);
+  assert.equal(f.calls.length, 3);
+  assert.throws(
+    () => capturedRolloutInput(capture, scope, f.input.canary, { now: NOW }),
+    /secret_inventory_incomplete/,
+  );
+  const badReceipt = structuredClone(capture);
+  badReceipt.receipt.reads[0].documentSha256 = "0".repeat(64);
+  assert.throws(
+    () => capturedSecretPreservingRolloutInput(badReceipt, scope, f.input.canary, { now: NOW }),
+    /receipt_binding_mismatch/,
+  );
+  const badTemplate = structuredClone(capture);
+  badTemplate.previousRevision.properties.template.scale.minReplicas = 9;
+  assert.throws(
+    () => capturedSecretPreservingRolloutInput(badTemplate, scope, f.input.canary, { now: NOW }),
+    /capture_hash_mismatch/,
   );
 });
 

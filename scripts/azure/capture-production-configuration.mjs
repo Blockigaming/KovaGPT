@@ -14,7 +14,11 @@ import {
 import https from "node:https";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { documentSha256, generateRevisionRolloutPlan } from "./revision-rollout-plan.mjs";
+import {
+  documentSha256,
+  generateRevisionRolloutPlan,
+  generateSecretPreservingRevisionRolloutPlan,
+} from "./revision-rollout-plan.mjs";
 
 // Collection is a separately approved read, never a deployment or secret export.
 export const TARGET =
@@ -319,11 +323,20 @@ export async function captureProductionConfiguration(
 
 // Offline bridge: use real approved image/source/canary inputs, not guessed
 // defaults. Run the unchanged preservation checker before returning anything.
-export function capturedRolloutInput(
+export function capturedRolloutInput(capture, scope, canary, options = {}) {
+  return boundRolloutInput(capture, scope, canary, options, false);
+}
+
+export function capturedSecretPreservingRolloutInput(capture, scope, canary, options = {}) {
+  return boundRolloutInput(capture, scope, canary, options, true);
+}
+
+function boundRolloutInput(
   { baseline, previousRevision, confirmation, receipt },
   scope,
   canary,
   options = {},
+  preserveSecretsByOmission = false,
 ) {
   require(receipt?.stage === "CAPTURE_COMPLETE_NOT_DEPLOYMENT_ACCEPTANCE" &&
     receipt.targetResourceId === TARGET &&
@@ -364,7 +377,8 @@ export function capturedRolloutInput(
       previousRevisionSha256: receipt.previousRevisionSha256,
     },
   };
-  generateRevisionRolloutPlan(input, options);
+  if (preserveSecretsByOmission) generateSecretPreservingRevisionRolloutPlan(input, options);
+  else generateRevisionRolloutPlan(input, options);
   return input;
 }
 

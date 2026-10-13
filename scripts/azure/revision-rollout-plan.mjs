@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import {
   reviewRevisionPreservation,
   reviewStagingRevisionPreservation,
@@ -43,6 +44,16 @@ const time = (v) =>
 // Also usable for private capture assessment before any candidate image exists.
 // This validates input completeness only; it never creates or executes a plan.
 export function validateCompleteCapture(input) {
+  validateCapture(input, false);
+}
+
+// An existing resource's secrets can remain opaque only when the generated
+// PATCH omits the entire secrets property. Never use this for a full PUT.
+export function validateSecretPreservingCapture(input) {
+  validateCapture(input, true);
+}
+
+function validateCapture(input, preserveSecretsByOmission) {
   const { baseline: b, previousRevision: previous, inventory } = input;
   require(object(b) && object(previous) && object(inventory), "capture_required");
   require(inventory.complete === true &&
@@ -107,6 +118,20 @@ export function validateCompleteCapture(input) {
   for (const secret of configuration.secrets) {
     require(typeof secret.name === "string" &&
       /^[a-z0-9-]+$/u.test(secret.name), "secret_inventory_incomplete");
+    if (preserveSecretsByOmission) {
+      require(!Object.hasOwn(secret, "value") ||
+        typeof secret.value === "string", "secret_inventory_incomplete");
+      if (Object.hasOwn(secret, "keyVaultUrl")) {
+        require(typeof secret.keyVaultUrl === "string" &&
+          /^https:\/\/[a-z0-9-]+\.vault\.azure\.net\/secrets\/[a-z0-9-]+(?:\/[a-z0-9-]+)?$/iu.test(
+            secret.keyVaultUrl,
+          ) &&
+          typeof secret.identity === "string" &&
+          secret.identity.length > 0 &&
+          !Object.hasOwn(secret, "value"), "secret_inventory_incomplete");
+      }
+      continue;
+    }
     const inline = typeof secret.value === "string" && secret.value.length > 0;
     const reference =
       typeof secret.keyVaultUrl === "string" &&
@@ -189,6 +214,18 @@ function writableResource(document, environment) {
   ])
     remove(body.properties, key, `properties.${key}`);
   remove(body.properties.configuration.ingress, "fqdn", "properties.configuration.ingress.fqdn");
+  // The pinned API marks ContainerResources.ephemeralStorage readOnly. GET
+  // output must not become a request to set writable capacity.
+  for (const kind of ["containers", "initContainers"]) {
+    for (const [index, container] of (body.properties.template[kind] ?? []).entries()) {
+      if (object(container.resources))
+        remove(
+          container.resources,
+          "ephemeralStorage",
+          `properties.template.${kind}[${index}].resources.ephemeralStorage`,
+        );
+    }
+  }
   for (const key of ["principalId", "tenantId"]) remove(body.identity, key, `identity.${key}`);
   for (const [id, identity] of Object.entries(body.identity.userAssignedIdentities ?? {})) {
     require(object(identity), "identity_incomplete");
@@ -247,7 +284,90 @@ function deployment(document, environment, targetResourceId) {
   };
 }
 
-export function generateRevisionRolloutPlan(input, { now = new Date().toISOString() } = {}) {
+// RFC7396 model for the fixed, internally generated request. Omitted members
+// survive, object nulls delete, arrays replace atomically. Never accept arbitrary
+// user-authored patches or infer preservation from a partial field allowlist.
+function mergePatch(target, patch) {
+  if (!object(patch)) return structuredClone(patch);
+  const value = object(target) ? structuredClone(target) : {};
+  for (const [key, replacement] of Object.entries(patch)) {
+    if (replacement === null) delete value[key];
+    else
+      Object.defineProperty(value, key, {
+        value: mergePatch(value[key], replacement),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+  }
+  return value;
+}
+
+function secretPreservingRequest(id, before, desired, targetResourceId) {
+  // Microsoft.App 2025-01-01 ContainerApps_Update is JSON Merge Patch.
+  // Do not send a configuration/secrets array, identity, registries, scale or
+  // origin controls. The containers array must be complete because arrays
+  // replace, not merge. Its only changed member is the reviewed primary image.
+  const properties = {};
+  const omittedResponseOnlyPaths = [];
+  const writableDesired = structuredClone(desired);
+  if (id === "prepare-multiple") {
+    properties.configuration = {
+      activeRevisionsMode: "Multiple",
+      ingress: { traffic: structuredClone(desired.properties.configuration.ingress.traffic) },
+    };
+  } else if (id === "create-candidate-zero-traffic") {
+    properties.template = {
+      revisionSuffix: desired.properties.template.revisionSuffix,
+      containers: structuredClone(desired.properties.template.containers),
+    };
+    for (const [index, container] of properties.template.containers.entries()) {
+      if (Object.hasOwn(container.resources, "ephemeralStorage")) {
+        delete container.resources.ephemeralStorage;
+        delete writableDesired.properties.template.containers[index].resources.ephemeralStorage;
+        omittedResponseOnlyPaths.push(
+          `properties.template.containers[${index}].resources.ephemeralStorage`,
+        );
+      }
+    }
+  } else {
+    properties.configuration = {
+      ingress: { traffic: structuredClone(desired.properties.configuration.ingress.traffic) },
+    };
+  }
+  const requestBody = { location: desired.location, properties };
+  require(isDeepStrictEqual(
+    mergePatch(before, requestBody),
+    writableDesired,
+  ), "merge_patch_preservation_mismatch");
+  return {
+    method: "PATCH",
+    url: `https://management.azure.com${targetResourceId}?api-version=${API}`,
+    headers: { "Content-Type": "application/json" },
+    targetResourceId,
+    clientTimeoutSeconds: 60,
+    maximumAttempts: 1,
+    retries: 0,
+    requestBody,
+    omittedResponseOnlyPaths,
+    preservationMethod: "RFC7396_OMISSION_AND_EXACT_WRITABLE_DOCUMENT_COMPARISON",
+    secretInventoryTransmitted: false,
+    requiresExclusiveWriter: true,
+    conditionalWriteSupportEstablished: false,
+  };
+}
+
+export function generateRevisionRolloutPlan(input, options = {}) {
+  return generatePlan(input, options, false);
+}
+
+export function generateSecretPreservingRevisionRolloutPlan(input, options = {}) {
+  require(input?.scope?.secretPreservingPatchOptIn ===
+    true, "secret_preserving_patch_opt_in_required");
+  return generatePlan(input, options, true);
+}
+
+function generatePlan(input, { now = new Date().toISOString() } = {}, preserveSecretsByOmission) {
   require(object(input) &&
     Object.keys(input).every((key) =>
       ["baseline", "previousRevision", "scope", "inventory", "canary", "desired"].includes(key),
@@ -256,7 +376,8 @@ export function generateRevisionRolloutPlan(input, { now = new Date().toISOStrin
   require(scope?.environment === "production" ||
     scope?.environment === "staging", "environment_required");
   require(scope.rolloutOptIn === true, "explicit_opt_in_required");
-  validateCompleteCapture(input);
+  if (preserveSecretsByOmission) validateSecretPreservingCapture(input);
+  else validateCompleteCapture(input);
   const start = time(canary?.windowStart),
     end = time(canary?.windowEnd),
     generated = time(now);
@@ -310,6 +431,28 @@ export function generateRevisionRolloutPlan(input, { now = new Date().toISOStrin
     return value;
   };
   const step = (id, document, dependsOn, requiresEvidence) => {
+    if (preserveSecretsByOmission) {
+      const before =
+        id === "prepare-multiple"
+          ? baseline
+          : id === "create-candidate-zero-traffic"
+            ? prepare
+            : id === "pin-initial-traffic"
+              ? desired
+              : id === "bounded-canary"
+                ? withTraffic(0)
+                : withTraffic(canary.candidateWeight);
+      return {
+        id,
+        dependsOn,
+        requiresEvidence: [
+          ...requiresEvidence,
+          "fresh exact preceding configuration; exclusive writer for replaced containers/traffic arrays",
+          "post-PATCH full-property comparison and unchanged secret/reference metadata; never list secret values",
+        ],
+        ...secretPreservingRequest(id, before, document, scope.targetResourceId),
+      };
+    }
     const request = deployment(document, scope.environment, scope.targetResourceId);
     const identity = documentSha256({
       sourceSha: scope.sourceSha,
@@ -332,6 +475,14 @@ export function generateRevisionRolloutPlan(input, { now = new Date().toISOStrin
   return {
     schemaVersion: 1,
     kind: "offline-revision-rollout-plan",
+    ...(preserveSecretsByOmission
+      ? {
+          requestTransport: "containerapp-json-merge-patch-2025-01-01",
+          secretPolicy: "PRESERVE_EXISTING_INVENTORY_BY_OMISSION_NO_EXPORT_OR_REWRITE",
+          secretVersionRollbackEstablished: false,
+          providerLivePreservationVerified: false,
+        }
+      : {}),
     environment: scope.environment,
     sourceSha: scope.sourceSha,
     targetResourceId: scope.targetResourceId,
@@ -445,15 +596,20 @@ function readPrivateInput(file) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
-    require(process.argv.length === 4, "private_paths_required");
-    const input = readPrivateInput(process.argv[2]);
-    const plan = generateRevisionRolloutPlan(input);
-    const parent = lstatSync(dirname(resolve(process.argv[3])));
+    const patchMode = process.argv[2] === "--secret-preserving-patch";
+    require(process.argv.length === (patchMode ? 5 : 4), "private_paths_required");
+    const inputPath = process.argv[patchMode ? 3 : 2];
+    const outputPath = process.argv[patchMode ? 4 : 3];
+    const input = readPrivateInput(inputPath);
+    const plan = patchMode
+      ? generateSecretPreservingRevisionRolloutPlan(input)
+      : generateRevisionRolloutPlan(input);
+    const parent = lstatSync(dirname(resolve(outputPath)));
     require(parent.isDirectory() &&
       !parent.isSymbolicLink() &&
       (parent.mode & 0o077) === 0 &&
       parent.uid === process.getuid(), "private_output_directory_required");
-    writeFileSync(process.argv[3], `${JSON.stringify(plan, null, 2)}\n`, {
+    writeFileSync(outputPath, `${JSON.stringify(plan, null, 2)}\n`, {
       flag: "wx",
       mode: 0o600,
     });

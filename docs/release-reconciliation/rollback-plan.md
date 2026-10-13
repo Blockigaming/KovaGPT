@@ -224,6 +224,51 @@ candidate promotion is not generated or authorized by this bounded canary plan.
 5. On application failure, restore traffic to the previous revision/digest.
 6. Verify homepage, auth, API health, streaming, and database compatibility after restoration.
 
+## Secret-preserving request alternative (offline; not live approval)
+
+The default full-resource generator still requires complete protected secret
+material. An explicit alternative now uses Microsoft's documented
+[2025-01-01 JSON Merge Patch operation](https://learn.microsoft.com/en-us/rest/api/resource-manager/containerapps/container-apps/update?view=rest-resource-manager-containerapps-2025-01-01):
+
+```bash
+node scripts/azure/revision-rollout-plan.mjs --secret-preserving-patch /private/input.json /private/plan.json
+```
+
+Both the existing rollout opt-in and `scope.secretPreservingPatchOptIn: true`
+are required. Generation makes no cloud requests. Private input/output controls
+are unchanged. This alternative never sends `configuration.secrets`, secret
+values, registry settings, identities, origin controls or scaling. Existing
+versionless Key Vault references remain versionless; it does not rotate, pin,
+export or remove them. Microsoft's [secret rotation contract](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets#key-vault-secret-uri-and-secret-rotation)
+still applies, so this is **not** proof of rollback to an earlier secret version.
+
+Five ordered PATCH requests prepare Multiple mode with previous=100, create the
+candidate at zero traffic, pin previous=100/candidate=0, apply bounded canary
+weights, and restore previous=100/candidate=0. Only candidate creation transmits
+the complete containers array, changing its reviewed image; traffic operations
+send no template. Both request transports omit only the API's response-only
+`ContainerResources.ephemeralStorage` field from transmitted container resources;
+CPU, memory and unknown writable fields remain intact. An independent test model checks exact writable-document results
+under [RFC7396](https://www.rfc-editor.org/rfc/rfc7396), including omitted fields,
+atomic arrays and nulls. All healthy-previous, exact-template, freshness,
+immutable-image, compatibility and approval requirements remain binding.
+
+No live preservation or concurrency guarantee is claimed. Execution still needs
+fresh preceding-state checks, an exclusive writer, post-write reconciliation,
+bounded authorization and cost approval. Unknown outcomes must be reconciled,
+never retried. The retained production capture remains blocked by its Activating
+previous revision and nine unproven app/revision template differences; this
+alternative does not normalize either away.
+
+The public API bindings reviewed for this remedy are Microsoft's
+`ContainerApps.json` blob `c1beb74e4ddf085861000eaf2e9c70537cdb9c87`
+and `CommonDefinitions.json` blob `f848c0bae6efd28e8ffe3c57d3052838c00cc8ba`
+under `specification/app/resource-manager/Microsoft.App/ContainerApps/stable/2025-01-01`
+in `Azure/azure-rest-api-specs`. The latter also documents 300-second cooldown and
+30-second polling defaults. Those defaults are explanatory evidence, not a
+substitute for proving the captured previous revision's complete effective
+configuration; the strict template equality check has not been relaxed.
+
 ## Database rollback
 
 Database migrations are treated as forward-only unless an explicit tested down path exists. Use expand/contract changes so the previous application remains compatible during the rollback window. For destructive or incompatible migrations, restore from the recorded backup/PITR point only under a separate incident decision; never improvise a reverse SQL script in production.
