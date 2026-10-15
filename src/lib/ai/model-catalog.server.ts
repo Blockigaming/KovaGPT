@@ -1,9 +1,12 @@
 import { runtimeEnv } from "@/lib/runtime-env.server";
 
-export const MODEL_CATALOG_VERSION = "2026-08-03";
+export const MODEL_CATALOG_VERSION = "2026-10-15";
 export const MODEL_CATALOG_SOURCES = [
   "https://platform.openai.com/docs/models",
   "https://platform.openai.com/docs/pricing",
+  "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+  "https://developers.openai.com/api/docs/models/gpt-5.6-terra",
+  "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
 ] as const;
 
 export type ModelTier = "guest" | "free" | "plus" | "pro";
@@ -76,7 +79,7 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 128_000,
-    pricePerMillion: { input: 0.25, cachedInput: 0.025, output: 2 },
+    pricePerMillion: { input: 0.2, cachedInput: 0.02, output: 1.2 },
     tiers: ["guest", "free", "plus", "pro"],
   },
   {
@@ -87,7 +90,7 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 128_000,
-    pricePerMillion: { input: 1.25, cachedInput: 0.125, output: 10 },
+    pricePerMillion: { input: 2, cachedInput: 0.2, output: 12 },
     tiers: ["free", "plus", "pro"],
   },
   {
@@ -98,7 +101,7 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 128_000,
-    pricePerMillion: { input: 2.5, cachedInput: 0.25, output: 20 },
+    pricePerMillion: { input: 4, cachedInput: 0.4, output: 20 },
     tiers: ["plus", "pro"],
   },
 ] as const;
