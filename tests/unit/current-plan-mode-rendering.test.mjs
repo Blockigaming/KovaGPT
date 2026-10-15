@@ -7,6 +7,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import * as entitlements from "../../src/lib/mode-entitlements.mjs";
+import * as modelIdentity from "../../src/lib/kova-model-identity.mjs";
 
 const nativeRequire = createRequire(import.meta.url);
 
@@ -22,6 +23,7 @@ function fixture({ signedIn = true, loaded = true, desktop = true } = {}) {
   ]);
   function load(id) {
     if (id === "@/lib/mode-entitlements.mjs") return entitlements;
+    if (id === "@/lib/kova-model-identity.mjs") return modelIdentity;
     if (id === "@/hooks/use-mobile")
       return {
         useLayout: () => ({ isDesktop: desktop, interaction: desktop ? "pointer" : "touch" }),
