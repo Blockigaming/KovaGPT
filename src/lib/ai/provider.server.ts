@@ -159,6 +159,19 @@ function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefi
 }
 
 function providerTarget(capability?: ProviderCapability): ProviderTarget {
+  // Explicit text cutover; image and embedding provider settings stay independent.
+  const textCapability = capability !== "image_generation" && capability !== "embeddings";
+  const selection = textCapability ? (env("KOVA_TEXT_PROVIDER") ?? "auto") : "auto";
+  if (!["auto", "openai", "azure_openai"].includes(selection)) {
+    throw new Error("invalid_text_provider_selection");
+  }
+  if (selection === "openai") {
+    return {
+      provider: "openai",
+      baseUrl: OPENAI_API_BASE_URL,
+      auth: env("OPENAI_API_KEY") ? "openai_api_key" : "missing",
+    };
+  }
   const dedicatedImageEndpoint =
     capability === "image_generation" ? env("AZURE_OPENAI_IMAGE_ENDPOINT") : undefined;
   const azureBaseUrl = normalizeAzureOpenAiBaseUrl(
@@ -185,6 +198,9 @@ function providerTarget(capability?: ProviderCapability): ProviderTarget {
     }
     return { provider: "azure_openai", baseUrl: azureBaseUrl, auth: "missing" };
   }
+
+  // An explicit Azure choice must never fall through to paid OpenAI traffic.
+  if (selection === "azure_openai") throw new Error("azure_text_endpoint_required");
 
   return {
     provider: "openai",

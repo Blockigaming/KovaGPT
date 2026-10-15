@@ -1,10 +1,8 @@
 /** Exact Kova Work product catalog. No provider call or runtime activation occurs here. */
 
-export const KOVA_WORK_FAMILIES = Object.freeze([
-  Object.freeze({ id: "cosmo", label: "Kova Cosmo" }),
-  Object.freeze({ id: "orion", label: "Kova Orion" }),
-  Object.freeze({ id: "nova", label: "Kova Nova" }),
-]);
+import { KOVA_MODEL_FAMILIES } from "./kova-model-identity.mjs";
+
+export const KOVA_WORK_FAMILIES = KOVA_MODEL_FAMILIES;
 
 export const KOVA_WORK_EFFORTS = Object.freeze([
   Object.freeze({

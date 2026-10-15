@@ -31,7 +31,7 @@ test("Kova Work catalog is exactly three families by six preserved efforts", () 
   );
   assert.deepEqual(
     KOVA_WORK_FAMILIES.map((family) => family.label),
-    ["Kova Cosmo", "Kova Orion", "Kova Nova"],
+    ["KovaGPT 4.6 Cosmo", "KovaGPT 4.6 Orion", "KovaGPT 4.6 Nova"],
   );
   for (const family of KOVA_WORK_FAMILIES) {
     assert.ok(
