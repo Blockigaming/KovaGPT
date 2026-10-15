@@ -104,6 +104,7 @@ import { Route as DevelopersConsoleRouteImport } from './routes/developers.conso
 import { Route as DevelopersPricingRouteImport } from './routes/developers.pricing'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
+import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as TranslateIndexRouteImport } from './routes/translate.index'
 import { Route as TranslatePairSlugRouteImport } from './routes/translate.$pairSlug'
@@ -694,6 +695,11 @@ const OauthConsentRoute = OauthConsentRouteImport.update({
   id: '/oauth/consent',
   path: '/oauth/consent',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProjectsRoute,
 } as any)
 const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   id: '/$projectId',
@@ -1374,6 +1380,7 @@ export interface FileRoutesByFullPath {
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
+  '/projects/': typeof ProjectsIndexRoute
   '/translate/': typeof TranslateIndexRoute
   '/writing/': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
@@ -1519,7 +1526,6 @@ export interface FileRoutesByTo {
   '/organization': typeof OrganizationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
-  '/projects': typeof ProjectsRouteWithChildren
   '/prompt-studio': typeof PromptStudioRoute
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
@@ -1581,6 +1587,7 @@ export interface FileRoutesByTo {
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers': typeof DevelopersIndexRoute
+  '/projects': typeof ProjectsIndexRoute
   '/translate': typeof TranslateIndexRoute
   '/writing': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
@@ -1789,6 +1796,7 @@ export interface FileRoutesById {
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
+  '/projects/': typeof ProjectsIndexRoute
   '/translate/': typeof TranslateIndexRoute
   '/writing/': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
@@ -1998,6 +2006,7 @@ export interface FileRouteTypes {
     | '/writing/$toolSlug'
     | '/~oauth/callback'
     | '/developers/'
+    | '/projects/'
     | '/translate/'
     | '/writing/'
     | '/$section/$category/$articleSlug'
@@ -2143,7 +2152,6 @@ export interface FileRouteTypes {
     | '/organization'
     | '/pricing'
     | '/privacy'
-    | '/projects'
     | '/prompt-studio'
     | '/refund'
     | '/research-assistant'
@@ -2205,6 +2213,7 @@ export interface FileRouteTypes {
     | '/writing/$toolSlug'
     | '/~oauth/callback'
     | '/developers'
+    | '/projects'
     | '/translate'
     | '/writing'
     | '/$section/$category/$articleSlug'
@@ -2412,6 +2421,7 @@ export interface FileRouteTypes {
     | '/writing/$toolSlug'
     | '/~oauth/callback'
     | '/developers/'
+    | '/projects/'
     | '/translate/'
     | '/writing/'
     | '/$section/$category/$articleSlug'
@@ -3385,6 +3395,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/': {
+      id: '/projects/'
+      path: '/'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof ProjectsIndexRouteImport
+      parentRoute: typeof ProjectsRoute
+    }
     '/projects/$projectId': {
       id: '/projects/$projectId'
       path: '/$projectId'
@@ -4183,10 +4200,12 @@ const ProjectsProjectIdRouteWithChildren =
 
 interface ProjectsRouteChildren {
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
+  ProjectsIndexRoute: typeof ProjectsIndexRoute
 }
 
 const ProjectsRouteChildren: ProjectsRouteChildren = {
   ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
+  ProjectsIndexRoute: ProjectsIndexRoute,
 }
 
 const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const routes = {
-  projects: await readFile("src/routes/projects.tsx", "utf8"),
+  projects: await readFile("src/routes/projects.index.tsx", "utf8"),
   project: await readFile("src/routes/projects.$projectId.tsx", "utf8"),
   files: await readFile("src/routes/files.tsx", "utf8"),
   memory: await readFile("src/routes/memory.tsx", "utf8"),
