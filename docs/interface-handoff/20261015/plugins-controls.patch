@@ -1,0 +1,2336 @@
+diff --git a/src/components/LaunchConnectorManager.tsx b/src/components/LaunchConnectorManager.tsx
+index 27cb5993586411c05e05497dc772bc91401cd70d..8729ddc3482dbdb69a12e8e120826ba791401a54 100644
+--- a/src/components/LaunchConnectorManager.tsx
++++ b/src/components/LaunchConnectorManager.tsx
+@@ -35,6 +35,13 @@ export function LaunchConnectorManager({ connector }: { connector: LaunchConnect
+   const [busy, setBusy] = useState(false);
+   const [consent, setConsent] = useState(false);
+   const [removing, setRemoving] = useState<LaunchAccountMetadata | null>(null);
++  const [cursorTrail, setCursorTrail] = useState<(string | null)[]>([null]);
++  const accountRegionRef = useRef<HTMLElement | null>(null);
++  const disconnectInvokerRef = useRef<HTMLButtonElement | null>(null);
++  const reviewRef = useRef<HTMLDivElement | null>(null);
++  useEffect(() => {
++    if (removing) reviewRef.current?.focus({ preventScroll: true });
++  }, [removing]);
+   const lifetime = useRef({
+     active: true,
+     pending: false,
+@@ -78,7 +85,7 @@ export function LaunchConnectorManager({ connector }: { connector: LaunchConnect
+     [connector],
+   );
+   const refresh = useCallback(
+-    async (cursor: string | null = null) => {
++    async (cursor: string | null = null, direction: "reset" | "next" | "back" = "reset") => {
+       const result = await request({ action: "status", cursor });
+       if (!result || !lifetime.current.active) return;
+       const parsed = metadataSchema.safeParse(result);
+@@ -87,6 +94,15 @@ export function LaunchConnectorManager({ connector }: { connector: LaunchConnect
+         return;
+       }
+       setData(parsed.data);
++      setRemoving(null);
++      setCursorTrail((current) =>
++        direction === "next"
++          ? [...current, cursor]
++          : direction === "back"
++            ? current.slice(0, -1)
++            : [null],
++      );
++      if (direction !== "reset") accountRegionRef.current?.focus({ preventScroll: true });
+     },
+     [connector, request],
+   );
+@@ -128,6 +144,7 @@ export function LaunchConnectorManager({ connector }: { connector: LaunchConnect
+       return;
+     }
+     setRemoving(null);
++    accountRegionRef.current?.focus({ preventScroll: true });
+     setConsent(false);
+     setNotice(
+       result.providerRevoked === true
+@@ -141,7 +158,12 @@ export function LaunchConnectorManager({ connector }: { connector: LaunchConnect
+       setError("Local disconnect succeeded, but the cleanup receipt could not be saved.");
+   };
+   return (
+-    <section className="space-y-3 rounded-xl border p-3" aria-label={`${contract.name} accounts`}>
++    <section
++      ref={accountRegionRef}
++      tabIndex={-1}
++      className="space-y-3 rounded-xl border p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
++      aria-label={`${contract.name} accounts`}
++    >
+       <h3 className="font-medium">{contract.name} accounts</h3>
+       <p className="text-xs text-muted-foreground">
+         Read access only. Connecting does not authorize sends, uploads or record changes.
+@@ -153,15 +175,29 @@ export function LaunchConnectorManager({ connector }: { connector: LaunchConnect
+       )}
+       {error && <p role="alert">{error}</p>}
+       {notice && <p role="status">{notice}</p>}
++      {busy && (
++        <p role="status" className="text-sm text-muted-foreground">
++          Updating connection status…
++        </p>
++      )}
+       <div className="flex flex-wrap gap-2">
+         <button className={buttonClass} disabled={busy} onClick={() => void refresh()}>
+           Refresh saved status
+         </button>
++        {cursorTrail.length > 1 && (
++          <button
++            className={buttonClass}
++            disabled={busy || !!removing}
++            onClick={() => void refresh(cursorTrail[cursorTrail.length - 2], "back")}
++          >
++            Previous accounts
++          </button>
++        )}
+         {data?.nextCursor && (
+           <button
+             className={buttonClass}
+             disabled={busy || !!removing}
+-            onClick={() => void refresh(data.nextCursor)}
++            onClick={() => void refresh(data.nextCursor, "next")}
+           >
+             Next accounts
+           </button>
+@@ -187,7 +223,10 @@ export function LaunchConnectorManager({ connector }: { connector: LaunchConnect
+             <button
+               className={`${buttonClass} mt-2`}
+               disabled={busy || !!error}
+-              onClick={() => setRemoving(account)}
++              onClick={(event) => {
++                disconnectInvokerRef.current = event?.currentTarget ?? null;
++                setRemoving(account);
++              }}
+             >
+               Disconnect {account.label}
+             </button>
+@@ -195,7 +234,13 @@ export function LaunchConnectorManager({ connector }: { connector: LaunchConnect
+         ))}
+       </ul>
+       {removing && (
+-        <div className="space-y-2 rounded-lg border p-3">
++        <div
++          ref={reviewRef}
++          tabIndex={-1}
++          role="group"
++          aria-label="Confirm account disconnect"
++          className="space-y-2 rounded-lg border p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
++        >
+           <p>
+             Disconnect {removing.label} ({removing.identity})? This stops future use in KovaGPT.
+             Provider-side access may require a separate removal step.
+@@ -207,7 +252,16 @@ export function LaunchConnectorManager({ connector }: { connector: LaunchConnect
+           >
+             Confirm disconnect
+           </button>{" "}
+-          <button className={buttonClass} disabled={busy} onClick={() => setRemoving(null)}>
++          <button
++            className={buttonClass}
++            disabled={busy}
++            onClick={() => {
++              setRemoving(null);
++              const invoker = disconnectInvokerRef.current;
++              if (invoker?.isConnected && !invoker.disabled) invoker.focus({ preventScroll: true });
++              else accountRegionRef.current?.focus({ preventScroll: true });
++            }}
++          >
+             Cancel
+           </button>
+         </div>
+diff --git a/src/routes/apps.tsx b/src/routes/apps.tsx
+index 9081b09ff8985301d5be9b8995843cbfa9ef725a..e60fd42b52ed6a416bff1f573f8757fc8692ea15 100644
+--- a/src/routes/apps.tsx
++++ b/src/routes/apps.tsx
+@@ -378,28 +378,72 @@ function GitHubManager() {
+     refresh = useServerFn(refreshGitHubInstallations),
+     grants = useServerFn(updateGitHubRepositoryGrants),
+     disconnect = useServerFn(disconnectGitHub);
++  const lifetimeRef = useRef({
++    active: true,
++    pending: false,
++    statusRequest: 0,
++    approvalRequest: 0,
++  });
++  const [approvalLoading, setApprovalLoading] = useState(true);
+   const [data, setData] = useState<GitHubManagement | null>(null);
+   const [approvals, setApprovals] = useState<PendingConfirm[]>([]);
+   const [approvalError, setApprovalError] = useState(false);
+   const [accessMode, setAccessMode] = useState<"none" | "view" | "write">("view");
+   const [accessBusy, setAccessBusy] = useState(false);
+   const [writeAccessOpen, setWriteAccessOpen] = useState(false);
++  const githubHeadingRef = useRef<HTMLHeadingElement | null>(null);
++  const managerFocusRef = useRef<{ element: HTMLElement | null; url: string | undefined } | null>(
++    null,
++  );
++  function rememberManagerFocus() {
++    managerFocusRef.current = {
++      element:
++        typeof document === "undefined" ? null : (document.activeElement as HTMLElement | null),
++      url: typeof window === "undefined" ? undefined : window.location.href,
++    };
++  }
++  function returnManagerFocus(event: Event) {
++    event.preventDefault();
++    const origin = managerFocusRef.current;
++    managerFocusRef.current = null;
++    if (!origin || !lifetimeRef.current.active) return;
++    const target =
++      origin.element?.isConnected &&
++      !origin.element.matches(":disabled") &&
++      origin.element.getClientRects().length
++        ? origin.element
++        : githubHeadingRef.current;
++    restoreDialogFocus(target, origin.url);
++  }
+   const loadApprovals = useCallback(async () => {
++    const owner = lifetimeRef.current;
++    if (!owner.active) return;
++    const request = ++owner.approvalRequest;
++    const current = () =>
++      owner.active && lifetimeRef.current === owner && owner.approvalRequest === request;
++    setApprovalLoading(true);
+     setApprovals([]);
+     setApprovalError(false);
+     try {
+       const response = await authFetch("/api/github/tool");
+       const body = await response.json();
++      if (!current()) return;
+       if (!response.ok || !body.ok || !Array.isArray(body.actions)) throw new Error("unavailable");
+       if (!["none", "view", "write"].includes(body.access_mode)) throw new Error("invalid access");
+       setAccessMode(body.access_mode);
+       setApprovals(body.actions);
+     } catch {
+-      setApprovalError(true);
++      if (current()) setApprovalError(true);
++    } finally {
++      if (current()) setApprovalLoading(false);
+     }
+   }, []);
+   async function changeAccess(mode: "none" | "view" | "write") {
+-    if (accessBusy) return;
++    const owner = lifetimeRef.current;
++    if (!owner.active || owner.pending || approvalLoading || approvalError) return;
++    owner.pending = true;
++    owner.approvalRequest++;
++    const current = () => owner.active && lifetimeRef.current === owner;
+     setAccessBusy(true);
+     try {
+       const response = await authFetch("/api/github/tool", {
+@@ -408,27 +452,37 @@ function GitHubManager() {
+         body: JSON.stringify({ access_mode: mode }),
+       });
+       const result = await response.json();
++      if (!current()) return;
+       if (!response.ok || !result.ok || result.access_mode !== mode) throw new Error("unverified");
+       setAccessMode(mode);
+       await loadApprovals();
+     } catch {
+-      toast.error("GitHub access change could not be verified. Reload its status.");
++      if (current()) toast.error("GitHub access change could not be verified. Reload its status.");
+     } finally {
+-      setAccessBusy(false);
++      owner.pending = false;
++      if (current()) setAccessBusy(false);
+     }
+   }
+   const [busyAction, setBusyAction] = useState<
+     "connect" | "refresh" | "grant" | "disconnect" | null
+   >(null);
+   const [search, setSearch] = useState("");
++  const repositorySearchRef = useRef<HTMLInputElement | null>(null);
+   const [selected, setSelected] = useState<number[]>([]);
+   const [loadError, setLoadError] = useState(false);
+-  const busy = busyAction !== null;
++  const [statusLoading, setStatusLoading] = useState(true);
++  const busy = busyAction !== null || accessBusy;
+   const reload = useCallback(
+     async (showError = true): Promise<boolean> => {
+-      setLoadError(false);
++      const owner = lifetimeRef.current;
++      if (!owner.active) return false;
++      const request = ++owner.statusRequest;
++      const current = () =>
++        owner.active && lifetimeRef.current === owner && request === owner.statusRequest;
++      setStatusLoading(true);
+       try {
+         const next = await load();
++        if (!current()) return false;
+         const activeAccountIds = new Set(
+           next.accounts
+             .filter((account) => ["connected", "degraded"].includes(account.status))
+@@ -449,11 +503,15 @@ function GitHubManager() {
+         );
+         setSelected((current) => current.filter((id) => activeRepositoryIds.has(id)));
+         setData(next);
++        setLoadError(false);
+         return true;
+       } catch {
++        if (!current()) return false;
+         setLoadError(true);
+         if (showError) toast.error("GitHub status unavailable");
+         return false;
++      } finally {
++        if (current()) setStatusLoading(false);
+       }
+     },
+     [load],
+@@ -464,8 +522,13 @@ function GitHubManager() {
+     login: string;
+   } | null>(null);
+   useEffect(() => {
++    const owner = { active: true, pending: false, statusRequest: 0, approvalRequest: 0 };
++    lifetimeRef.current = owner;
+     void reload();
+     void loadApprovals();
++    return () => {
++      owner.active = false;
++    };
+   }, [reload, loadApprovals]);
+   if (!data && loadError)
+     return (
+@@ -474,8 +537,13 @@ function GitHubManager() {
+         <p className="mt-1 text-sm text-muted-foreground">
+           Your connection was not changed. Try loading its status again.
+         </p>
+-        <Button variant="outline" className="mt-4 min-h-11" onClick={() => void reload()}>
+-          Try again
++        <Button
++          variant="outline"
++          className="mt-4 min-h-11"
++          disabled={statusLoading}
++          onClick={() => void reload()}
++        >
++          {statusLoading ? "Loading status…" : "Try again"}
+         </Button>
+       </section>
+     );
+@@ -503,7 +571,10 @@ function GitHubManager() {
+       repo.full_name.toLowerCase().includes(search.trim().toLowerCase()),
+   );
+   async function connect() {
+-    if (busy) return;
++    const owner = lifetimeRef.current;
++    if (!owner.active || owner.pending || busy || loadError || statusLoading) return;
++    owner.pending = true;
++    const current = () => owner.active && lifetimeRef.current === owner;
+     setBusyAction("connect");
+     try {
+       const response = await authFetch("/api/github/auth");
+@@ -512,41 +583,53 @@ function GitHubManager() {
+       } | null;
+       const authorizationUrl = parseGitHubAuthorizationUrl(result?.url);
+       if (!response.ok || !authorizationUrl) throw new Error("github_authorization_unavailable");
+-      location.assign(authorizationUrl);
++      if (current()) location.assign(authorizationUrl);
+     } catch {
+-      toast.error("GitHub authorization could not be started. Try again.");
++      if (current()) toast.error("GitHub authorization could not be started. Try again.");
+     } finally {
+-      setBusyAction(null);
++      owner.pending = false;
++      if (current()) setBusyAction(null);
+     }
+   }
+ 
+   async function refreshInstallations() {
+-    if (busy) return;
++    const owner = lifetimeRef.current;
++    if (!owner.active || owner.pending || busy) return;
++    owner.pending = true;
++    const current = () => owner.active && lifetimeRef.current === owner;
+     setBusyAction("refresh");
+     try {
+       await refresh();
+-      if (await reload(false)) {
++      if (!current()) return;
++      const loaded = await reload(false);
++      if (!current()) return;
++      if (loaded) {
+         toast.success("GitHub installations refreshed.");
+       } else {
+         toast.warning("Installations refreshed, but their current status could not be loaded.");
+       }
+     } catch {
+-      toast.error("GitHub installations could not be refreshed. Try again.");
++      if (current()) toast.error("GitHub installations could not be refreshed. Try again.");
+     } finally {
+-      setBusyAction(null);
++      owner.pending = false;
++      if (current()) setBusyAction(null);
+     }
+   }
+ 
+   async function update(granted: boolean) {
+-    if (busy) return;
++    if (busy || loadError || statusLoading) return;
+     if (!granted) {
++      rememberManagerFocus();
+       setRevokeOpen(true);
+       return;
+     }
+     await applyGrantUpdate(true);
+   }
+   async function applyGrantUpdate(granted: boolean) {
+-    if (busy) return;
++    const owner = lifetimeRef.current;
++    if (!owner.active || owner.pending || busy || loadError || statusLoading) return;
++    owner.pending = true;
++    const current = () => owner.active && lifetimeRef.current === owner;
+     setBusyAction("grant");
+     try {
+       await grants({
+@@ -556,50 +639,93 @@ function GitHubManager() {
+           confirmed: true,
+         },
+       });
++      if (!current()) return;
+       setSelected([]);
+-      if (!(await reload(false))) {
++      const loaded = await reload(false);
++      if (current() && !loaded) {
+         toast.warning("Repository access changed, but its current status could not be loaded.");
+       }
+     } catch {
+-      toast.error("Repository access could not be updated");
++      if (current()) toast.error("Repository access could not be updated");
+     } finally {
+-      setBusyAction(null);
++      owner.pending = false;
++      if (current()) setBusyAction(null);
+     }
+   }
+ 
+   async function performDisconnect() {
+-    if (!disconnectAccount || busy) return;
++    const owner = lifetimeRef.current;
++    if (!disconnectAccount || !owner.active || owner.pending || busy || loadError || statusLoading)
++      return;
++    owner.pending = true;
++    const current = () => owner.active && lifetimeRef.current === owner;
+     const accountId = disconnectAccount.id;
+     setSelected([]);
+     setBusyAction("disconnect");
+     try {
+       await disconnect({ data: { accountId, removeData: false } });
++      if (!current()) return;
+       setDisconnectAccount(null);
+-      if (await reload(false)) {
++      const loaded = await reload(false);
++      if (!current()) return;
++      if (loaded) {
+         toast.success("GitHub disconnected.");
+       } else {
+         toast.warning("GitHub disconnected, but its current status could not be loaded.");
+       }
+     } catch {
++      if (!current()) return;
+       setDisconnectAccount(null);
+       const statusLoaded = await reload(false);
++      if (!current()) return;
+       toast.error(
+         statusLoaded
+           ? "The disconnect outcome could not be confirmed. Review the current GitHub status before retrying."
+           : "The disconnect outcome and current GitHub status could not be confirmed. Reload before retrying.",
+       );
+     } finally {
+-      setBusyAction(null);
++      owner.pending = false;
++      if (current()) setBusyAction(null);
+     }
+   }
+ 
+   return (
+-    <section className="kova-card p-5" aria-labelledby="github-manager" aria-busy={busy}>
++    <section
++      className="kova-card p-5"
++      aria-labelledby="github-manager"
++      aria-busy={busy || statusLoading}
++    >
++      {loadError && (
++        <div role="alert" className="mb-4 space-y-2 rounded-xl border border-destructive/40 p-3">
++          <p className="text-sm">
++            Current GitHub status could not be loaded. The accounts and repositories below are from
++            the last successful load. Reload status before changing their access.
++          </p>
++          <Button
++            variant="outline"
++            className="min-h-11"
++            disabled={busy || statusLoading}
++            onClick={() => void reload()}
++          >
++            {statusLoading ? "Loading status…" : "Reload GitHub status"}
++          </Button>
++        </div>
++      )}
++      {statusLoading && (
++        <p role="status" className="mb-3 text-sm text-muted-foreground">
++          Loading GitHub status…
++        </p>
++      )}
+       <div className="flex flex-wrap items-start justify-between gap-3">
+         <div className="flex gap-3">
+           <Github className="h-9 w-9" />
+           <div>
+-            <h2 id="github-manager" className="font-semibold">
++            <h2
++              ref={githubHeadingRef}
++              tabIndex={-1}
++              id="github-manager"
++              className="font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
++            >
+               GitHub
+             </h2>
+             <p className="text-sm text-muted-foreground">
+@@ -613,7 +739,7 @@ function GitHubManager() {
+           </span>
+         ) : !activeAccounts.length ? (
+           <button
+-            disabled={busy}
++            disabled={busy || loadError || statusLoading}
+             className="min-h-11 rounded-full bg-foreground px-4 text-sm text-background disabled:cursor-not-allowed disabled:opacity-60"
+             onClick={() => void connect()}
+           >
+@@ -659,9 +785,12 @@ function GitHubManager() {
+             {isActive ? (
+               <button
+                 type="button"
+-                disabled={busy}
++                disabled={busy || loadError || statusLoading}
+                 className="min-h-11 rounded-full border px-3 text-sm text-destructive"
+-                onClick={() => setDisconnectAccount({ id: account.id, login: account.login })}
++                onClick={() => {
++                  rememberManagerFocus();
++                  setDisconnectAccount({ id: account.id, login: account.login });
++                }}
+                 aria-label={`Disconnect GitHub account @${account.login}`}
+               >
+                 Disconnect
+@@ -669,7 +798,7 @@ function GitHubManager() {
+             ) : (
+               <button
+                 type="button"
+-                disabled={busy}
++                disabled={busy || loadError || statusLoading}
+                 className="min-h-11 rounded-full border px-3 text-sm"
+                 onClick={() => void connect()}
+                 aria-label={`Reconnect GitHub account @${account.login}`}
+@@ -686,6 +815,7 @@ function GitHubManager() {
+         title="Remove repository access?"
+         description="Coding Agents will immediately lose access to the selected repositories."
+         confirmLabel="Remove access"
++        onCloseAutoFocus={returnManagerFocus}
+         destructive
+         onConfirm={() => {
+           setRevokeOpen(false);
+@@ -698,7 +828,7 @@ function GitHubManager() {
+           if (!open) setDisconnectAccount(null);
+         }}
+       >
+-        <DialogContent className="max-w-md">
++        <DialogContent className="max-w-md" onCloseAutoFocus={returnManagerFocus}>
+           <DialogHeader>
+             <DialogTitle>Disconnect @{disconnectAccount?.login ?? "GitHub account"}?</DialogTitle>
+             <DialogDescription>
+@@ -717,7 +847,7 @@ function GitHubManager() {
+             <Button
+               variant="destructive"
+               className="min-h-11"
+-              disabled={busy}
++              disabled={busy || loadError || statusLoading}
+               onClick={() => void performDisconnect()}
+             >
+               {busyAction === "disconnect" ? "Disconnecting…" : "Disconnect account"}
+@@ -742,20 +872,22 @@ function GitHubManager() {
+         <div className="mt-4">
+           <div className="flex flex-col gap-2 sm:flex-row">
+             <input
++              ref={repositorySearchRef}
+               className="min-h-11 flex-1 rounded-xl border px-3"
+               placeholder="Search GitHub repositories"
++              aria-label="Search GitHub repositories"
+               value={search}
+               onChange={(event) => setSearch(event.target.value)}
+             />
+             <button
+-              disabled={!selected.length || busy}
++              disabled={!selected.length || busy || loadError || statusLoading}
+               onClick={() => void update(true)}
+               className="min-h-11 rounded-full border px-3 text-sm"
+             >
+               Grant selected
+             </button>
+             <button
+-              disabled={!selected.length || busy}
++              disabled={!selected.length || busy || loadError || statusLoading}
+               onClick={() => void update(false)}
+               className="min-h-11 rounded-full border px-3 text-sm text-destructive"
+             >
+@@ -769,7 +901,7 @@ function GitHubManager() {
+                   <input
+                     type="checkbox"
+                     className="h-4 w-4"
+-                    disabled={busy}
++                    disabled={busy || loadError || statusLoading}
+                     aria-label={`Select ${repo.full_name}`}
+                     checked={selected.includes(repo.id)}
+                     onChange={() =>
+@@ -796,6 +928,27 @@ function GitHubManager() {
+               </li>
+             ))}
+           </ul>
++          {repos.length === 0 && (
++            <div role="status" className="mt-3 space-y-2 text-sm text-muted-foreground">
++              <p>
++                {search.trim()
++                  ? "No repositories match your search."
++                  : "No repositories are available for these installations."}
++              </p>
++              {search.trim() && (
++                <Button
++                  variant="outline"
++                  className="min-h-11"
++                  onClick={() => {
++                    setSearch("");
++                    repositorySearchRef.current?.focus();
++                  }}
++                >
++                  Clear repository search
++                </Button>
++              )}
++            </div>
++          )}
+         </div>
+       )}
+       <div className="mt-5 border-t pt-4">
+@@ -804,12 +957,14 @@ function GitHubManager() {
+           <select
+             aria-label="GitHub access"
+             value={accessMode}
+-            disabled={accessBusy || approvalError}
++            disabled={busy || approvalLoading || approvalError}
+             className="min-h-11 rounded-full border bg-background px-3"
+             onChange={(event) => {
+               const mode = event.target.value as "none" | "view" | "write";
+-              if (mode === "write") setWriteAccessOpen(true);
+-              else void changeAccess(mode);
++              if (mode === "write") {
++                rememberManagerFocus();
++                setWriteAccessOpen(true);
++              } else void changeAccess(mode);
+             }}
+           >
+             <option value="none">Disabled temporarily</option>
+@@ -827,6 +982,7 @@ function GitHubManager() {
+           title="Allow GitHub write requests?"
+           description="GitHub changes can publish content, modify branches or merge code. You will review and approve each exact operation before it runs. Existing repository grants still apply."
+           confirmLabel="Allow write requests"
++          onCloseAutoFocus={returnManagerFocus}
+           onConfirm={() => {
+             setWriteAccessOpen(false);
+             void changeAccess("write");
+@@ -834,11 +990,19 @@ function GitHubManager() {
+         />
+         <div className="flex items-center justify-between gap-3">
+           <h3 className="font-medium">GitHub actions awaiting your approval</h3>
+-          <Button variant="outline" onClick={() => void loadApprovals()}>
++          <Button
++            variant="outline"
++            disabled={busy || approvalLoading}
++            onClick={() => void loadApprovals()}
++          >
+             Refresh actions
+           </Button>
+         </div>
+-        {approvalError ? (
++        {approvalLoading ? (
++          <p role="status" className="mt-2 text-sm text-muted-foreground">
++            Loading GitHub actions…
++          </p>
++        ) : approvalError ? (
+           <p role="alert" className="mt-2 text-sm">
+             Approval requests could not be loaded. Refresh to try again.
+           </p>
+@@ -875,6 +1039,9 @@ function AppsPage() {
+   const generationRef = useRef(0);
+   const [lifecycleVersion, setLifecycleVersion] = useState(0);
+   const [query, setQuery] = useState("");
++  const searchInputRef = useRef<HTMLInputElement | null>(null);
++  const githubRegionRef = useRef<HTMLDivElement | null>(null);
++  const githubNavigationRef = useRef(false);
+   const [connecting, setConnecting] = useState<Record<string, true>>({});
+   const [failed, setFailed] = useState<Record<string, true>>({});
+   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
+@@ -883,6 +1050,23 @@ function AppsPage() {
+   const [verificationBusy, setVerificationBusy] = useState(false);
+   const googleBusyRef = useRef(false);
+   const googleRequestRef = useRef(0);
++  const [googleDisconnectTarget, setGoogleDisconnectTarget] = useState<{
++    id: string;
++    email: string;
++    revision: number;
++    principal: string;
++    generation: number;
++  } | null>(null);
++  const googleDisconnectRef = useRef(googleDisconnectTarget);
++  googleDisconnectRef.current = googleDisconnectTarget;
++  const [googleDisconnectError, setGoogleDisconnectError] = useState<string | null>(null);
++  const googleRefreshRef = useRef<HTMLButtonElement | null>(null);
++  const googleDisconnectReturnRef = useRef<{
++    element: HTMLElement | null;
++    url: string;
++    principal: string;
++    generation: number;
++  } | null>(null);
+   const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
+   // Sections can remount their cards; track the live button for the exact invoking provider.
+   const detailsButtonsRef = useRef(new Map<string, HTMLButtonElement>());
+@@ -902,6 +1086,18 @@ function AppsPage() {
+   const visibleGoogleLoading = activityReady ? googleLoading : true;
+   const visibleSelectedApp = activityReady ? selectedApp : null;
+   const googleConfigured = visibleGoogleStatus?.configured === true;
++  const clearSearch = () => {
++    setQuery("");
++    searchInputRef.current?.focus();
++  };
++  useEffect(
++    () => () => {
++      generationRef.current += 1;
++      googleRequestRef.current += 1;
++      githubNavigationRef.current = false;
++    },
++    [],
++  );
+   useEffect(() => {
+     if (!activityReady || !requestedPlugin) {
+       handledPluginRef.current = null;
+@@ -936,6 +1132,11 @@ function AppsPage() {
+     googleRequestRef.current += 1;
+     googleBusyRef.current = false;
+     setGoogleBusy(false);
++    setGoogleDisconnectTarget(null);
++    setGoogleDisconnectError(null);
++    googleDisconnectRef.current = null;
++    googleDisconnectReturnRef.current = null;
++    githubNavigationRef.current = false;
+     setQuery("");
+     activityRef.current = [];
+     setActivity([]);
+@@ -971,6 +1172,11 @@ function AppsPage() {
+       googleRequestRef.current += 1;
+       googleBusyRef.current = false;
+       setGoogleBusy(false);
++      setGoogleDisconnectTarget(null);
++      setGoogleDisconnectError(null);
++      googleDisconnectRef.current = null;
++      googleDisconnectReturnRef.current = null;
++      githubNavigationRef.current = false;
+       activityRef.current = [];
+       setActivity([]);
+       setActivityPrincipal(principal);
+@@ -1020,7 +1226,11 @@ function AppsPage() {
+     setGoogleLoading(true);
+     try {
+       const status = await getGoogleStatus(userKey);
+-      if (isCurrent()) setGoogleStatus(status);
++      if (isCurrent()) {
++        setGoogleStatus(status);
++        // A fresh authenticated status replaces a prior connection-attempt error.
++        if (status.state !== "temporarily_unavailable") setFailed({});
++      }
+     } catch {
+       if (isCurrent()) setGoogleStatus({ connected: false, state: "temporarily_unavailable" });
+     } finally {
+@@ -1108,6 +1318,11 @@ function AppsPage() {
+       generation === generationRef.current && principalRef.current === requestPrincipal;
+     googleBusyRef.current = true;
+     setGoogleBusy(true);
++    setFailed((current) => {
++      const next = { ...current };
++      delete next[itemId];
++      return next;
++    });
+     setConnecting((current) => ({ ...current, [itemId]: true }));
+     try {
+       await startGoogleConnect(connectionId, userKey);
+@@ -1129,37 +1344,42 @@ function AppsPage() {
+     }
+   };
+ 
+-  const changeGoogleAccount = async (action: "select" | "disconnect", connectionId: string) => {
++  const changeGoogleAccount = async (
++    action: "select" | "disconnect",
++    connectionId: string,
++    reviewedRevision?: number,
++  ): Promise<boolean> => {
+     if (
+       !activityReady ||
+       !principal ||
+       !userKey ||
++      principalRef.current !== principal ||
+       googleBusyRef.current ||
+       googleLoading ||
+       !googleStatus?.accounts?.some((account) => account.id === connectionId)
+     )
+-      return;
++      return false;
+     const generation = generationRef.current;
+     const requestPrincipal = principal;
+     const isCurrent = () =>
+       generation === generationRef.current && principalRef.current === requestPrincipal;
+     const revision = googleStatus.selectionRevision;
++    const connection = googleStatus.accounts!.find((account) => account.id === connectionId)!;
++    if (action === "disconnect" && connection.connectionRevision !== reviewedRevision) {
++      toast.error("This Google account changed. Review its current status before disconnecting.");
++      return false;
++    }
+     if (action === "select" && (!Number.isSafeInteger(revision) || (revision ?? -1) < 0)) {
+       await refreshGoogle();
+-      return;
++      return false;
+     }
+     googleBusyRef.current = true;
+     googleRequestRef.current += 1;
+     setGoogleBusy(true);
+     try {
+       if (action === "select") await selectGoogleAccount(connectionId, revision!, userKey);
+-      else
+-        await disconnectGoogleAccount(
+-          connectionId,
+-          googleStatus.accounts!.find((account) => account.id === connectionId)!.connectionRevision,
+-          userKey,
+-        );
+-      if (!isCurrent()) return;
++      else await disconnectGoogleAccount(connectionId, reviewedRevision!, userKey);
++      if (!isCurrent()) return false;
+       recordActivity(
+         "Google",
+         action === "select" ? "Selected account for new requests" : "Disconnected account",
+@@ -1167,9 +1387,11 @@ function AppsPage() {
+       toast.success(
+         action === "select" ? "Google account selected" : "Google account disconnected",
+       );
++      return true;
+     } catch (error) {
+       if (isCurrent())
+         toast.error(error instanceof Error ? error.message : "Google account change failed.");
++      return false;
+     } finally {
+       if (isCurrent()) {
+         await refreshGoogle();
+@@ -1181,6 +1403,60 @@ function AppsPage() {
+     }
+   };
+ 
++  const requestGoogleDisconnect = (id: string) => {
++    const account = visibleGoogleStatus?.accounts?.find((entry) => entry.id === id);
++    if (
++      !account ||
++      !principal ||
++      principalRef.current !== principal ||
++      googleBusyRef.current ||
++      visibleGoogleLoading
++    )
++      return;
++    const target = {
++      id,
++      email: account.email || "this Google account",
++      revision: account.connectionRevision,
++      principal,
++      generation: generationRef.current,
++    };
++    googleDisconnectRef.current = target;
++    setGoogleDisconnectTarget(target);
++    setGoogleDisconnectError(null);
++    googleDisconnectReturnRef.current = {
++      element: document.activeElement instanceof HTMLElement ? document.activeElement : null,
++      url: window.location.href,
++      principal,
++      generation: generationRef.current,
++    };
++  };
++  const confirmGoogleDisconnect = async () => {
++    const target = googleDisconnectRef.current;
++    if (
++      !target ||
++      target.principal !== principalRef.current ||
++      target.generation !== generationRef.current ||
++      googleBusyRef.current
++    )
++      return;
++    setGoogleDisconnectError(null);
++    const confirmed = await changeGoogleAccount("disconnect", target.id, target.revision);
++    if (
++      googleDisconnectRef.current !== target ||
++      target.principal !== principalRef.current ||
++      target.generation !== generationRef.current
++    )
++      return;
++    if (confirmed) {
++      googleDisconnectRef.current = null;
++      setGoogleDisconnectTarget(null);
++    } else {
++      setGoogleDisconnectError(
++        "Disconnect was not confirmed. Review the refreshed account status before trying again.",
++      );
++    }
++  };
++
+   const handleConnect = async (item: ConnectorItem) => {
+     if (isGoogleId(item.id)) {
+       const existing =
+@@ -1197,7 +1473,7 @@ function AppsPage() {
+   const handleDisconnect = async (item: ConnectorItem) => {
+     if (isGoogleId(item.id)) {
+       const id = visibleGoogleStatus?.selectedConnectionId;
+-      if (id) await changeGoogleAccount("disconnect", id);
++      if (id) requestGoogleDisconnect(id);
+       else toast.error("Select a Google account to disconnect.");
+       return;
+     }
+@@ -1226,6 +1502,7 @@ function AppsPage() {
+   }, [query]);
+   const filtered = matchingPlugins.filter((item) => item.id !== "github");
+   const showGitHub = matchingPlugins.some((item) => item.id === "github");
++  const showGoogle = matchingPlugins.some((item) => isGoogleId(item.id));
+ 
+   const isConnected = (id: string) => isGoogleId(id) && isGoogleConnected(id);
+   const connectedList = filtered.filter((c) => isConnected(c.id));
+@@ -1237,8 +1514,8 @@ function AppsPage() {
+   const stateOf = (id: string): ConnState => {
+     if (!isSignedIn) return "idle";
+     if (isGoogleId(id)) {
+-      if (visibleGoogleLoading || googleBusy) return "syncing";
+       if (activityReady && connecting[id]) return "connecting";
++      if (visibleGoogleLoading || googleBusy) return "syncing";
+       if (activityReady && failed[id]) return "failed";
+       if (visibleGoogleStatus?.configured === false) return "idle";
+       if (!googleConfigured || visibleGoogleStatus?.state === "temporarily_unavailable")
+@@ -1350,6 +1627,71 @@ function AppsPage() {
+         aria-labelledby="apps-title"
+         className="kova-page kova-secondary-page kova-core-page kova-adapted-controls max-w-5xl space-y-8"
+       >
++        <Dialog
++          open={activityReady && googleDisconnectTarget !== null}
++          onOpenChange={(open) => {
++            if (!open) {
++              googleDisconnectRef.current = null;
++              setGoogleDisconnectTarget(null);
++              setGoogleDisconnectError(null);
++            }
++          }}
++        >
++          <DialogContent
++            className="max-h-[85dvh] overflow-y-auto sm:max-w-md"
++            onCloseAutoFocus={(event) => {
++              event.preventDefault();
++              const origin = googleDisconnectReturnRef.current;
++              googleDisconnectReturnRef.current = null;
++              if (
++                origin?.principal === principalRef.current &&
++                origin?.generation === generationRef.current
++              ) {
++                restoreDialogFocus(
++                  origin.element?.isConnected ? origin.element : googleRefreshRef.current,
++                  origin.url,
++                );
++              }
++            }}
++          >
++            <DialogHeader>
++              <DialogTitle>Disconnect Google account?</DialogTitle>
++              <DialogDescription>
++                Disconnect {googleDisconnectTarget?.email}? This affects Gmail, Calendar and Drive
++                access for this account. Other Google accounts are unchanged.
++              </DialogDescription>
++            </DialogHeader>
++            {googleBusy && (
++              <p role="status" className="text-sm text-muted-foreground">
++                Disconnecting… Closing this dialog does not cancel the request.
++              </p>
++            )}
++            {googleDisconnectError && (
++              <p role="alert" className="text-sm text-destructive">
++                {googleDisconnectError}
++              </p>
++            )}
++            <DialogFooter>
++              <Button
++                variant="outline"
++                onClick={() => {
++                  googleDisconnectRef.current = null;
++                  setGoogleDisconnectTarget(null);
++                  setGoogleDisconnectError(null);
++                }}
++              >
++                {googleBusy ? "Close" : "Cancel"}
++              </Button>
++              <Button
++                variant="destructive"
++                disabled={googleBusy || visibleGoogleLoading}
++                onClick={() => void confirmGoogleDisconnect()}
++              >
++                {googleBusy ? "Disconnecting…" : "Disconnect account"}
++              </Button>
++            </DialogFooter>
++          </DialogContent>
++        </Dialog>
+         <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
+           <DialogContent
+             className="max-h-[85dvh] overflow-y-auto sm:max-w-lg"
+@@ -1357,6 +1699,28 @@ function AppsPage() {
+               event.preventDefault();
+               const origin = detailsReturnRef.current;
+               detailsReturnRef.current = null;
++              if (githubNavigationRef.current) {
++                githubNavigationRef.current = false;
++                const actor = principalRef.current,
++                  generation = generationRef.current,
++                  url = window.location.href;
++                requestAnimationFrame(() => {
++                  if (
++                    actor !== principalRef.current ||
++                    generation !== generationRef.current ||
++                    url !== window.location.href
++                  )
++                    return;
++                  githubRegionRef.current?.scrollIntoView({
++                    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
++                      ? "auto"
++                      : "smooth",
++                    block: "start",
++                  });
++                  restoreDialogFocus(githubRegionRef.current, url);
++                });
++                return;
++              }
+               if (
+                 origin &&
+                 origin.principal === principalRef.current &&
+@@ -1416,17 +1780,9 @@ function AppsPage() {
+                   <Button
+                     variant="outline"
+                     onClick={() => {
++                      setQuery("");
++                      githubNavigationRef.current = true;
+                       setSelectedApp(null);
+-                      requestAnimationFrame(() =>
+-                        document
+-                          .querySelector<HTMLElement>('[data-plugin-id="github"]')
+-                          ?.scrollIntoView({
+-                            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+-                              ? "auto"
+-                              : "smooth",
+-                            block: "start",
+-                          }),
+-                      );
+                     }}
+                   >
+                     Manage GitHub connection
+@@ -1503,125 +1859,158 @@ function AppsPage() {
+           </section>
+         ) : (
+           <>
+-            <label className="relative block max-w-md">
+-              <span className="sr-only">Search plugins</span>
++            <div className="relative max-w-md">
++              <label htmlFor="plugin-search" className="sr-only">
++                Search plugins
++              </label>
+               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+               <Input
++                id="plugin-search"
++                ref={searchInputRef}
+                 value={query}
+                 onChange={(event) => setQuery(event.target.value)}
++                onKeyDown={(event) => {
++                  if (event.key === "Escape" && query) {
++                    event.preventDefault();
++                    event.stopPropagation();
++                    clearSearch();
++                  }
++                }}
+                 placeholder="Search plugins"
+-                className="h-11 pl-9"
++                className="h-11 pl-9 pr-12"
+               />
+-            </label>
++              {query && (
++                <button
++                  type="button"
++                  aria-label="Clear plugin search"
++                  onClick={clearSearch}
++                  className="absolute right-0 top-0 inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
++                >
++                  <X className="h-4 w-4" />
++                </button>
++              )}
++            </div>
++            <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
++              {matchingPlugins.length} {matchingPlugins.length === 1 ? "plugin" : "plugins"}
++              {query.trim() ? " matching your search" : ""}
++            </p>
+ 
+-            <section
+-              aria-labelledby="google-accounts-title"
+-              className="space-y-3 rounded-xl border p-4"
+-            >
+-              <div className="flex flex-wrap items-center justify-between gap-3">
+-                <div>
+-                  <h2 id="google-accounts-title" className="font-semibold">
+-                    Google accounts
+-                  </h2>
+-                  <p className="text-sm text-muted-foreground">
+-                    Choose the account for new Gmail, Calendar and Drive requests. Existing
+-                    confirmed actions remain bound to their original account.
+-                  </p>
++            {showGoogle && (
++              <section
++                aria-labelledby="google-accounts-title"
++                className="space-y-3 rounded-xl border p-4"
++              >
++                <div className="flex flex-wrap items-center justify-between gap-3">
++                  <div>
++                    <h2 id="google-accounts-title" className="font-semibold">
++                      Google accounts
++                    </h2>
++                    <p className="text-sm text-muted-foreground">
++                      Choose the account for new Gmail, Calendar and Drive requests. Existing
++                      confirmed actions remain bound to their original account.
++                    </p>
++                  </div>
++                  <Button
++                    variant="outline"
++                    disabled={googleBusy || visibleGoogleLoading || !googleConfigured}
++                    onClick={() => void connectGoogle()}
++                  >
++                    Add Google account
++                  </Button>
++                  <Button
++                    ref={googleRefreshRef}
++                    variant="ghost"
++                    disabled={googleBusy || visibleGoogleLoading}
++                    onClick={() => void refreshGoogle()}
++                  >
++                    Refresh Google accounts
++                  </Button>
+                 </div>
+-                <Button
+-                  variant="outline"
+-                  disabled={googleBusy || visibleGoogleLoading || !googleConfigured}
+-                  onClick={() => void connectGoogle()}
+-                >
+-                  Add Google account
+-                </Button>
+-                <Button
+-                  variant="ghost"
+-                  disabled={googleBusy || visibleGoogleLoading}
+-                  onClick={() => void refreshGoogle()}
+-                >
+-                  Refresh Google accounts
+-                </Button>
+-              </div>
+-              {visibleGoogleLoading || googleBusy ? (
+-                <p role="status" className="text-sm text-muted-foreground">
+-                  Updating Google accounts…
+-                </p>
+-              ) : null}
+-              {visibleGoogleStatus?.configured === false ? (
+-                <p role="status" className="text-sm">
+-                  Google connection setup is required for this deployment. Connecting is unavailable
+-                  until setup is complete.
+-                </p>
+-              ) : visibleGoogleStatus?.state === "temporarily_unavailable" ||
+-                (!visibleGoogleLoading && !googleConfigured) ? (
+-                <p role="status" className="text-sm">
+-                  Google account status is unavailable. Refresh to try again.
+-                </p>
+-              ) : null}
+-              {(visibleGoogleStatus?.accounts?.length ?? 0) > 0 ? (
+-                <ul className="space-y-3">
+-                  {visibleGoogleStatus!.accounts!.map((account) => (
+-                    <li
+-                      key={account.id}
+-                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+-                    >
+-                      <div className="min-w-0">
+-                        <p className="break-all text-sm font-medium">
+-                          {account.email || "Google account"}
+-                        </p>
+-                        <p className="text-xs text-muted-foreground">
+-                          {account.id === visibleGoogleStatus?.selectedConnectionId
+-                            ? "Selected for new requests · "
+-                            : ""}
+-                          {account.state.replaceAll("_", " ")}
+-                        </p>
+-                      </div>
+-                      <div className="flex flex-wrap gap-2">
+-                        <Button
+-                          variant="outline"
+-                          disabled={
+-                            googleBusy ||
+-                            visibleGoogleLoading ||
+-                            !account.connected ||
+-                            account.id === visibleGoogleStatus?.selectedConnectionId
+-                          }
+-                          onClick={() => void changeGoogleAccount("select", account.id)}
+-                          aria-label={`Use ${account.email || "Google account"} for new requests`}
+-                        >
+-                          Use account
+-                        </Button>
+-                        {account.state !== "connected" ? (
++                {visibleGoogleLoading || googleBusy ? (
++                  <p role="status" className="text-sm text-muted-foreground">
++                    Updating Google accounts…
++                  </p>
++                ) : null}
++                {visibleGoogleStatus?.configured === false ? (
++                  <p role="status" className="text-sm">
++                    Google connection setup is required for this deployment. Connecting is
++                    unavailable until setup is complete.
++                  </p>
++                ) : visibleGoogleStatus?.state === "temporarily_unavailable" ||
++                  (!visibleGoogleLoading && !googleConfigured) ? (
++                  <p role="status" className="text-sm">
++                    Google account status is unavailable. Refresh to try again.
++                  </p>
++                ) : null}
++                {(visibleGoogleStatus?.accounts?.length ?? 0) > 0 ? (
++                  <ul className="space-y-3">
++                    {visibleGoogleStatus!.accounts!.map((account) => (
++                      <li
++                        key={account.id}
++                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
++                      >
++                        <div className="min-w-0">
++                          <p className="break-all text-sm font-medium">
++                            {account.email || "Google account"}
++                          </p>
++                          <p className="text-xs text-muted-foreground">
++                            {account.id === visibleGoogleStatus?.selectedConnectionId
++                              ? "Selected for new requests · "
++                              : ""}
++                            {account.state.replaceAll("_", " ")}
++                          </p>
++                        </div>
++                        <div className="flex flex-wrap gap-2">
+                           <Button
+                             variant="outline"
+-                            disabled={googleBusy || visibleGoogleLoading || !googleConfigured}
+-                            onClick={() => void connectGoogle(account.id)}
+-                            aria-label={`Reconnect ${account.email || "Google account"}`}
++                            disabled={
++                              googleBusy ||
++                              visibleGoogleLoading ||
++                              !account.connected ||
++                              account.id === visibleGoogleStatus?.selectedConnectionId
++                            }
++                            onClick={() => void changeGoogleAccount("select", account.id)}
++                            aria-label={`Use ${account.email || "Google account"} for new requests`}
++                          >
++                            Use account
++                          </Button>
++                          {account.state !== "connected" ? (
++                            <Button
++                              variant="outline"
++                              disabled={googleBusy || visibleGoogleLoading || !googleConfigured}
++                              onClick={() => void connectGoogle(account.id)}
++                              aria-label={`Reconnect ${account.email || "Google account"}`}
++                            >
++                              Reconnect
++                            </Button>
++                          ) : null}
++                          <Button
++                            variant="ghost"
++                            disabled={googleBusy || visibleGoogleLoading}
++                            onClick={() => requestGoogleDisconnect(account.id)}
++                            aria-label={`Disconnect ${account.email || "Google account"}`}
+                           >
+-                            Reconnect
++                            Disconnect
+                           </Button>
+-                        ) : null}
+-                        <Button
+-                          variant="ghost"
+-                          disabled={googleBusy || visibleGoogleLoading}
+-                          onClick={() => void changeGoogleAccount("disconnect", account.id)}
+-                          aria-label={`Disconnect ${account.email || "Google account"}`}
+-                        >
+-                          Disconnect
+-                        </Button>
+-                      </div>
+-                    </li>
+-                  ))}
+-                </ul>
+-              ) : !visibleGoogleLoading &&
+-                visibleGoogleStatus?.state !== "temporarily_unavailable" ? (
+-                <p className="text-sm text-muted-foreground">No Google accounts are connected.</p>
+-              ) : null}
+-            </section>
++                        </div>
++                      </li>
++                    ))}
++                  </ul>
++                ) : !visibleGoogleLoading &&
++                  visibleGoogleStatus?.state !== "temporarily_unavailable" ? (
++                  <p className="text-sm text-muted-foreground">No Google accounts are connected.</p>
++                ) : null}
++              </section>
++            )}
+ 
+             {showGitHub && (
+-              <div data-plugin-id="github">
+-                <GitHubManager key={principal ?? "unresolved"} />
++              <div
++                ref={githubRegionRef}
++                tabIndex={-1}
++                data-plugin-id="github"
++                className="scroll-mt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
++              >
++                <GitHubManager key={`${principal}:${lifecycleVersion}`} />
+               </div>
+             )}
+ 
+@@ -1655,12 +2044,7 @@ function AppsPage() {
+                   No matching plugins
+                 </h2>
+                 <p className="mt-1 text-xs text-muted-foreground">Try another service name.</p>
+-                <Button
+-                  variant="outline"
+-                  size="sm"
+-                  className="mt-4 min-h-11"
+-                  onClick={() => setQuery("")}
+-                >
++                <Button variant="outline" size="sm" className="mt-4 min-h-11" onClick={clearSearch}>
+                   Clear search
+                 </Button>
+               </section>
+diff --git a/tests/integration/apps-controls-truth-source.test.mjs b/tests/integration/apps-controls-truth-source.test.mjs
+index 0aa3f2d936b8256d78af92630ded440c3ae716ee..015f383e1f87cc06365dc718f8a840b72130a23f 100644
+--- a/tests/integration/apps-controls-truth-source.test.mjs
++++ b/tests/integration/apps-controls-truth-source.test.mjs
+@@ -14,7 +14,7 @@ test("Apps validates principal-scoped recent activity before rendering it", () =
+   assert.doesNotMatch(apps, /setActivity\(JSON\.parse/);
+   assert.match(apps, /storedActivity = parseAppActivity\(storage\.getItem\(activityKey\)\)/);
+   assert.match(apps, /catch \{\s+setActivityPersistenceError\(true\)/);
+-  assert.match(apps, /<GitHubManager key=\{principal \?\? "unresolved"\}/);
++  assert.match(apps, /<GitHubManager key=\{`\$\{principal\}:\$\{lifecycleVersion\}`\}/);
+ });
+ 
+ test("Recent activity exposes browser persistence failures without losing session state", () => {
+@@ -32,7 +32,7 @@ test("GitHub actions are busy-gated and report request failures", () => {
+   assert.match(apps, /The disconnect outcome could not be confirmed/);
+   assert.match(apps, /const statusLoaded = await reload\(false\)/);
+   assert.match(apps, /disabled=\{busy\}/);
+-  assert.match(apps, /aria-busy=\{busy\}/);
++  assert.match(apps, /aria-busy=\{busy \|\| statusLoading\}/);
+   assert.doesNotMatch(apps, /refresh\(\)\.then\(reload\)/);
+   assert.doesNotMatch(apps, /disconnect\([^)]*\)\.then\(reload\)/);
+ });
+@@ -48,7 +48,7 @@ test("GitHub OAuth navigation accepts only the provider authorization endpoint",
+ test("Connector management keeps destructive state until the server confirms success", () => {
+   assert.match(
+     apps,
+-    /await disconnect\(\{ data: \{ accountId, removeData: false \} \}\);\s+setDisconnectAccount\(null\)/,
++    /await disconnect\(\{ data: \{ accountId, removeData: false \} \}\);\s+if \(!current\(\)\) return;\s+setDisconnectAccount\(null\)/,
+   );
+   assert.match(apps, /if \(!open\) setDisconnectAccount\(null\)/);
+   assert.doesNotMatch(apps, /if \(!busy\) setDisconnect/);
+diff --git a/tests/unit/apps-availability-runtime.test.mjs b/tests/unit/apps-availability-runtime.test.mjs
+index 4efd00f6e24fa8438ad5aa9a933a617e092008c2..a2cc24ce7325fc7840a7fb10804fae26652dd941 100644
+--- a/tests/unit/apps-availability-runtime.test.mjs
++++ b/tests/unit/apps-availability-runtime.test.mjs
+@@ -17,10 +17,16 @@ const catalog = loadUiModule("src/lib/connectors-catalog.ts", {
+   "@/integrations/launch-contracts.mjs": launchContracts,
+ });
+ const owner = "11111111-1111-4111-8111-111111111111";
+-function apps(status, search = "") {
++function apps(status, search = "", options = {}) {
+   const hooks = createHookHarness();
+   const messages = [];
+   const connects = [];
++  const disconnects = [];
++  const frames = [];
++  const focused = [];
++  const scrolled = [];
++  const listeners = new Map();
++  let currentStatus = status;
+   const memory = new Map();
+   const local = {
+     getItem: (key) => memory.get(key) ?? null,
+@@ -32,7 +38,6 @@ function apps(status, search = "") {
+     user: { id: owner, primaryEmailAddress: { verification: { status: "verified" } } },
+   };
+   const dependencies = {
+-    "@/lib/dialog-return-focus": loadUiModule("src/lib/dialog-return-focus.ts", {}),
+     react: { ...hooks.react, useMemo: (fn) => fn() },
+     "@tanstack/react-router": {
+       createFileRoute: () => (config) => ({
+@@ -49,8 +54,16 @@ function apps(status, search = "") {
+     "@/lib/auth-fetch": {},
+     "@/integrations/supabase/client": {},
+     "@/lib/google-client": {
+-      getGoogleStatus: async () => status,
+-      startGoogleConnect: async (...args) => connects.push(args),
++      getGoogleStatus: async () => currentStatus,
++      startGoogleConnect: async (...args) => {
++        connects.push(args);
++        return options.connect?.(...args);
++      },
++      disconnectGoogleAccount: async (...args) => {
++        disconnects.push(args);
++        return options.disconnect?.(...args);
++      },
++      selectGoogleAccount: async () => {},
+     },
+     "@/lib/principal-browser-storage.mjs": { ...storage, safeBrowserStorage: () => local },
+     sonner: {
+@@ -74,23 +87,71 @@ function apps(status, search = "") {
+     "@/components/LaunchConnectorManager",
+   ])
+     dependencies[module] = new Proxy({}, { get: (_, name) => String(name) });
+-  const location = { search, pathname: "/apps" };
++  const location = { search, pathname: "/apps", href: `https://kova.test/apps${search}` };
+   const window = {
+     location,
+-    addEventListener() {},
+-    removeEventListener() {},
++    addEventListener: (type, fn) => listeners.set(type, fn),
++    removeEventListener: (type) => listeners.delete(type),
++    matchMedia: () => ({ matches: options.reducedMotion ?? false }),
+     history: {
+       replaceState(_a, _b, value) {
+         location.search = value.includes("?") ? value.slice(value.indexOf("?")) : "";
+       },
+     },
+   };
+-  const { Route } = loadUiModule("src/routes/apps.tsx", dependencies, {
+-    window,
+-    URLSearchParams,
+-    Date,
+-  });
+-  const render = () => hooks.render(Route.component);
++  class Element {
++    isConnected = true;
++    getClientRects() {
++      return [{}];
++    }
++    closest() {
++      return null;
++    }
++    matches() {
++      return false;
++    }
++    focus() {
++      focused.push(this.name);
++    }
++    scrollIntoView(value) {
++      scrolled.push(value);
++    }
++  }
++  dependencies["@/lib/dialog-return-focus"] = loadUiModule(
++    "src/lib/dialog-return-focus.ts",
++    {},
++    { window },
++  );
++  const document = { activeElement: new Element() };
++  const { Route } = loadUiModule(
++    process.env.KOVA_PLUGIN_APPS_SOURCE || "src/routes/apps.tsx",
++    dependencies,
++    {
++      window,
++      document,
++      HTMLElement: Element,
++      requestAnimationFrame: (fn) => frames.push(fn),
++      URLSearchParams,
++      Date,
++    },
++  );
++  const refs = new Map();
++  const render = () => {
++    for (const node of refs.values()) node.isConnected = false;
++    const tree = hooks.render(Route.component);
++    for (const entry of elements(
++      tree,
++      (node) => node.props.ref && typeof node.props.ref === "object",
++    )) {
++      const ref = entry.props.ref;
++      if (!refs.has(ref)) refs.set(ref, new Element());
++      const node = refs.get(ref);
++      node.isConnected = true;
++      node.name = entry.props.id || entry.props["data-plugin-id"] || text(entry).trim();
++      ref.current = node;
++    }
++    return tree;
++  };
+   const ready = async () => {
+     render();
+     await settle();
+@@ -98,7 +159,24 @@ function apps(status, search = "") {
+     await settle();
+     return render();
+   };
+-  return { auth, render, ready, messages, connects, hooks, memory };
++  return {
++    auth,
++    render,
++    ready,
++    messages,
++    connects,
++    disconnects,
++    hooks,
++    memory,
++    focused,
++    scrolled,
++    frames,
++    listeners,
++    window,
++    setStatus: (value) => {
++      currentStatus = value;
++    },
++  };
+ }
+ const disconnected = {
+   connected: false,
+@@ -365,7 +443,7 @@ for (const id of ["gmail", "google-calendar", "google-drive"]) {
+         cards(tree)
+           .find((card) => card.props.item.id === id)
+           .props.onDetails();
+-        const detail = elements(h.render(), (node) => node.type === "DialogContent")[0];
++        const detail = elements(h.render(), (node) => node.type === "Dialog" && node.props.open)[0];
+         const copy = text(detail);
+         assert.ok(copy.includes(email), "retained identity remains available");
+         assert.match(copy, scenario.expected);
+@@ -382,3 +460,266 @@ for (const id of ["gmail", "google-calendar", "google-drive"]) {
+     });
+   }
+ }
++
++const selectedGoogle = {
++  ...disconnected,
++  configured: true,
++  connected: true,
++  state: "connected",
++  email: "owner@example.invalid",
++  has: { gmail: true, calendar: true, drive: true },
++  selectedConnectionId: "22222222-2222-4222-8222-222222222222",
++  selectionRevision: 1,
++  accounts: [
++    {
++      id: "22222222-2222-4222-8222-222222222222",
++      email: "owner@example.invalid",
++      connected: true,
++      state: "connected",
++      connectionRevision: 1,
++    },
++  ],
++};
++const card = (h, id = "gmail") => cards(h.render()).find((node) => node.props.item.id === id);
++const searchInput = (h) => elements(h.render(), (node) => node.type === "Input")[0];
++const dialog = (h, phrase) =>
++  elements(
++    h.render(),
++    (node) => node.type === "Dialog" && node.props.open && text(node).includes(phrase),
++  )[0];
++
++test("Plugin recovery: failed connection is replaced by fresh authenticated status", async () => {
++  const h = apps({ ...disconnected, configured: true }, "", {
++    connect: () => Promise.reject(Error("denied")),
++  });
++  await h.ready();
++  await card(h).props.onConnect();
++  assert.equal(card(h).props.state, "failed");
++  h.setStatus(selectedGoogle);
++  button(h.render(), "Refresh Google accounts").props.onClick();
++  await settle();
++  assert.equal(card(h).props.state, "connected");
++  assert.equal(h.connects.length, 1);
++  h.hooks.unmount();
++});
++test("Plugin recovery: retry shows Connecting, never the previous failure or generic syncing", async () => {
++  const pending = deferred();
++  let attempts = 0;
++  const h = apps({ ...disconnected, configured: true }, "", {
++    connect: () => (++attempts === 1 ? Promise.reject(Error("denied")) : pending.promise),
++  });
++  await h.ready();
++  await card(h).props.onConnect();
++  const retry = card(h).props.onRetry();
++  assert.equal(card(h).props.state, "connecting");
++  pending.resolve();
++  await retry;
++  assert.equal(card(h).props.state, "idle");
++  h.hooks.unmount();
++});
++test("Plugin recovery: unknown status does not replace a failed attempt with success", async () => {
++  const h = apps({ ...disconnected, configured: true }, "", {
++    connect: () => Promise.reject(Error("denied")),
++  });
++  await h.ready();
++  await card(h).props.onConnect();
++  h.setStatus({ connected: false, state: "temporarily_unavailable" });
++  button(h.render(), "Refresh Google accounts").props.onClick();
++  await settle();
++  assert.notEqual(card(h).props.state, "connected");
++  assert.equal(card(h).props.configured, false);
++  h.hooks.unmount();
++});
++test("Plugin recovery: query filters managers and no-match Clear returns focus to search", async () => {
++  const h = apps(selectedGoogle);
++  await h.ready();
++  searchInput(h).props.onChange({ target: { value: "no-such-plugin" } });
++  let tree = h.render();
++  assert.match(text(tree), /No matching plugins/);
++  assert.equal(button(tree, "Add Google account"), undefined);
++  assert.equal(elements(tree, (n) => n.props["data-plugin-id"] === "github").length, 0);
++  button(tree, "Clear search").props.onClick();
++  tree = h.render();
++  assert.equal(searchInput(h).props.value, "");
++  assert.equal(cards(tree).length, 12);
++  assert.equal(h.focused.at(-1), "plugin-search");
++  h.hooks.unmount();
++});
++test("Plugin recovery: Escape clears search and consumes only an active query", async () => {
++  const h = apps(selectedGoogle);
++  await h.ready();
++  searchInput(h).props.onChange({ target: { value: "Slack" } });
++  let prevented = 0,
++    stopped = 0;
++  searchInput(h).props.onKeyDown({
++    key: "Escape",
++    preventDefault() {
++      prevented++;
++    },
++    stopPropagation() {
++      stopped++;
++    },
++  });
++  assert.equal(searchInput(h).props.value, "");
++  assert.equal(prevented, 1);
++  assert.equal(stopped, 1);
++  searchInput(h).props.onKeyDown({
++    key: "Escape",
++    preventDefault() {
++      prevented++;
++    },
++    stopPropagation() {
++      stopped++;
++    },
++  });
++  assert.equal(prevented, 1);
++  assert.equal(stopped, 1);
++  h.hooks.unmount();
++});
++for (const reducedMotion of [false, true])
++  test(`Plugin recovery: GitHub Details navigation clears hidden filter and focuses target; reduced motion ${reducedMotion}`, async () => {
++    const h = apps(selectedGoogle, "?plugin=github", { reducedMotion });
++    await h.ready();
++    searchInput(h).props.onChange({ target: { value: "Slack" } });
++    const details = dialog(h, "Manage GitHub connection");
++    assert.ok(details);
++    button(details, "Manage GitHub connection").props.onClick();
++    const tree = h.render();
++    const content = elements(
++      tree,
++      (n) => n.type === "DialogContent" && String(n.props.className).includes("sm:max-w-lg"),
++    )[0];
++    content.props.onCloseAutoFocus({ preventDefault() {} });
++    h.frames.splice(0).forEach((fn) => fn());
++    assert.equal(searchInput(h).props.value, "");
++    assert.equal(h.focused.at(-1), "github");
++    assert.equal(h.scrolled.at(-1).behavior, reducedMotion ? "auto" : "smooth");
++    assert.equal(h.connects.length, 0);
++    h.hooks.unmount();
++  });
++test("Plugin recovery: delayed GitHub navigation does not steal focus after route departure", async () => {
++  const h = apps(selectedGoogle, "?plugin=github");
++  await h.ready();
++  button(dialog(h, "Manage GitHub connection"), "Manage GitHub connection").props.onClick();
++  const content = elements(
++    h.render(),
++    (n) => n.type === "DialogContent" && String(n.props.className).includes("sm:max-w-lg"),
++  )[0];
++  content.props.onCloseAutoFocus({ preventDefault() {} });
++  h.window.location.href = "https://kova.test/";
++  h.frames.splice(0).forEach((fn) => fn());
++  assert.deepEqual(h.scrolled, []);
++  assert.deepEqual(h.focused, []);
++  h.hooks.unmount();
++});
++test("Plugin recovery: Google disconnect requires review and Cancel sends no request", async () => {
++  const h = apps(selectedGoogle);
++  await h.ready();
++  await card(h).props.onDisconnect();
++  const review = dialog(h, "Disconnect Google account?");
++  assert.ok(review);
++  assert.match(text(review), /owner@example.invalid/);
++  assert.match(text(review), /Gmail, Calendar and Drive/);
++  assert.equal(h.disconnects.length, 0);
++  button(review, "Cancel").props.onClick();
++  assert.equal(dialog(h, "Disconnect Google account?"), undefined);
++  assert.equal(h.disconnects.length, 0);
++  h.hooks.unmount();
++});
++test("Plugin recovery: confirm uses the reviewed account revision and fences duplicate clicks", async () => {
++  const pending = deferred();
++  const h = apps(selectedGoogle, "", { disconnect: () => pending.promise });
++  await h.ready();
++  await card(h).props.onDisconnect();
++  const confirm = button(dialog(h, "Disconnect Google account?"), "Disconnect account");
++  confirm.props.onClick();
++  confirm.props.onClick();
++  assert.equal(h.disconnects.length, 1);
++  assert.deepEqual(h.disconnects[0], [selectedGoogle.selectedConnectionId, 1, owner]);
++  assert.match(
++    text(dialog(h, "Disconnect Google account?")),
++    /Closing this dialog does not cancel/,
++  );
++  h.setStatus({ ...disconnected, configured: true });
++  pending.resolve();
++  await settle();
++  await settle();
++  assert.equal(dialog(h, "Disconnect Google account?"), undefined);
++  assert.equal(card(h).props.state, "idle");
++  h.hooks.unmount();
++});
++test("Plugin recovery: changed account revision must be reviewed again before disconnect", async () => {
++  const h = apps(selectedGoogle);
++  await h.ready();
++  await card(h).props.onDisconnect();
++  h.setStatus({
++    ...selectedGoogle,
++    accounts: [{ ...selectedGoogle.accounts[0], connectionRevision: 2 }],
++  });
++  button(h.render(), "Refresh Google accounts").props.onClick();
++  await settle();
++  button(dialog(h, "Disconnect Google account?"), "Disconnect account").props.onClick();
++  await settle();
++  assert.equal(h.disconnects.length, 0);
++  assert.match(text(dialog(h, "Disconnect Google account?")), /not confirmed/);
++  button(dialog(h, "Disconnect Google account?"), "Cancel").props.onClick();
++  await card(h).props.onDisconnect();
++  button(dialog(h, "Disconnect Google account?"), "Disconnect account").props.onClick();
++  assert.deepEqual(h.disconnects[0], [selectedGoogle.selectedConnectionId, 2, owner]);
++  await settle();
++  h.hooks.unmount();
++});
++test("Plugin recovery: failed disconnect retains review and actual saved connection for retry", async () => {
++  let count = 0;
++  const h = apps(selectedGoogle, "", {
++    disconnect: () => (++count === 1 ? Promise.reject(Error("offline")) : Promise.resolve()),
++  });
++  await h.ready();
++  await card(h).props.onDisconnect();
++  button(dialog(h, "Disconnect Google account?"), "Disconnect account").props.onClick();
++  await settle();
++  await settle();
++  assert.match(text(dialog(h, "Disconnect Google account?")), /not confirmed/);
++  assert.equal(card(h).props.state, "connected");
++  button(dialog(h, "Disconnect Google account?"), "Disconnect account").props.onClick();
++  await settle();
++  await settle();
++  assert.equal(h.disconnects.length, 2);
++  assert.equal(dialog(h, "Disconnect Google account?"), undefined);
++  h.hooks.unmount();
++});
++for (const boundary of ["account", "unmount"])
++  test(`Plugin recovery: late disconnect after ${boundary} boundary cannot report success`, async () => {
++    const pending = deferred();
++    const h = apps(selectedGoogle, "", { disconnect: () => pending.promise });
++    await h.ready();
++    await card(h).props.onDisconnect();
++    button(dialog(h, "Disconnect Google account?"), "Disconnect account").props.onClick();
++    if (boundary === "unmount") h.hooks.unmount();
++    else {
++      h.auth.user = { id: "33333333-3333-4333-8333-333333333333" };
++      h.render();
++    }
++    pending.resolve();
++    await settle();
++    await settle();
++    assert.equal(
++      h.messages.some((x) => x === "Google account disconnected"),
++      false,
++    );
++    if (boundary === "account") h.hooks.unmount();
++  });
++test("Plugin recovery: closing an in-flight disconnect remains closed after late failure", async () => {
++  const pending = deferred();
++  const h = apps(selectedGoogle, "", { disconnect: () => pending.promise });
++  await h.ready();
++  await card(h).props.onDisconnect();
++  button(dialog(h, "Disconnect Google account?"), "Disconnect account").props.onClick();
++  button(dialog(h, "Disconnect Google account?"), "Close").props.onClick();
++  pending.reject(Error("offline"));
++  await settle();
++  await settle();
++  assert.equal(dialog(h, "Disconnect Google account?"), undefined);
++  assert.equal(h.disconnects.length, 1);
++  h.hooks.unmount();
++});
+diff --git a/tests/unit/github-manager-lifecycle.test.mjs b/tests/unit/github-manager-lifecycle.test.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..8c8e31bb6a70fbf214ce5d838d4f963e19f2a61a
+--- /dev/null
++++ b/tests/unit/github-manager-lifecycle.test.mjs
+@@ -0,0 +1,394 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { readFileSync } from "node:fs";
++import ts from "typescript";
++import {
++  createHookHarness,
++  loadUiModule,
++  jsxRuntime,
++  elements,
++  text,
++  deferred,
++  settle,
++} from "../helpers/ui-state-harness.mjs";
++const source = ts.createSourceFile(
++  "apps.tsx",
++  readFileSync(process.env.KOVA_PLUGIN_APPS_SOURCE || "src/routes/apps.tsx", "utf8"),
++  ts.ScriptTarget.Latest,
++  true,
++  ts.ScriptKind.TSX,
++);
++const functions = source.statements
++  .filter(
++    (n) =>
++      ts.isFunctionDeclaration(n) &&
++      ["GitHubManager", "parseGitHubAuthorizationUrl"].includes(n.name?.text),
++  )
++  .map((n) => n.getText(source))
++  .join("\n");
++const code = ts.transpileModule(functions + "\nexports.Manager=GitHubManager;", {
++  compilerOptions: {
++    module: ts.ModuleKind.CommonJS,
++    target: ts.ScriptTarget.ES2022,
++    jsx: ts.JsxEmit.ReactJSX,
++  },
++}).outputText;
++const account = {
++  id: "account-a",
++  login: "owner",
++  status: "connected",
++  auth_type: "oauth",
++  github_user_id: 1,
++};
++const data = {
++  configured: true,
++  health: "connected",
++  accounts: [account],
++  installations: [{ id: 1, account_id: "account-a", suspended_at: null }],
++  repositories: [
++    {
++      id: 7,
++      installation_id: 1,
++      full_name: "owner/repo",
++      visibility: "private",
++      default_branch: "main",
++      archived: false,
++      explicitly_granted: false,
++    },
++  ],
++};
++const button = (tree, label) =>
++  elements(
++    tree,
++    (n) => ["button", "Button"].includes(n.type) && text(n).replace(/\s+/g, " ").trim() === label,
++  )[0];
++function fixture() {
++  const hooks = createHookHarness(),
++    calls = { load: [], refresh: [], grants: [], disconnect: [], http: [] },
++    messages = [],
++    navigations = [],
++    focused = [];
++  const focusable = (name) => ({
++    isConnected: true,
++    disabled: false,
++    matches() {
++      return this.disabled;
++    },
++    getClientRects: () => [{}],
++    closest: () => null,
++    focus: () => focused.push(name),
++  });
++  const browser = {
++    location: { href: "https://kovagpt.example/apps", assign: (url) => navigations.push(url) },
++  };
++  const document = { activeElement: focusable("invoker") };
++  const { restoreDialogFocus } = loadUiModule(
++    "src/lib/dialog-return-focus.ts",
++    {},
++    { window: browser },
++  );
++  const record =
++    (name) =>
++    (...args) => {
++      const d = deferred();
++      calls[name].push({ ...d, args });
++      return d.promise;
++    };
++  const env = {
++    ...hooks.react,
++    exports: {},
++    require: () => jsxRuntime,
++    useServerFn: (fn) => fn,
++    getGitHubManagement: record("load"),
++    refreshGitHubInstallations: record("refresh"),
++    updateGitHubRepositoryGrants: record("grants"),
++    disconnectGitHub: record("disconnect"),
++    authFetch: record("http"),
++    toast: Object.fromEntries(
++      ["error", "success", "warning"].map((kind) => [
++        kind,
++        (message) => messages.push({ kind, message }),
++      ]),
++    ),
++    location: browser.location,
++    window: browser,
++    document,
++    restoreDialogFocus,
++    URL,
++    Github: "Github",
++    Button: "Button",
++    ConfirmActionDialog: "ConfirmActionDialog",
++    Dialog: "Dialog",
++    DialogContent: "DialogContent",
++    DialogHeader: "DialogHeader",
++    DialogTitle: "DialogTitle",
++    DialogDescription: "DialogDescription",
++    DialogFooter: "DialogFooter",
++    ToolConfirmCard: "ToolConfirmCard",
++  };
++  const component = new Function(...Object.keys(env), code + ";return exports.Manager;")(
++    ...Object.values(env),
++  );
++  const render = () => hooks.render(component);
++  const ready = async (initial = data) => {
++    render();
++    calls.load[0].resolve(initial);
++    calls.http[0].resolve(Response.json({ ok: true, actions: [], access_mode: "view" }));
++    await settle();
++    return render();
++  };
++  return {
++    hooks,
++    calls,
++    messages,
++    navigations,
++    render,
++    ready,
++    focused,
++    focusable,
++    browser,
++    document,
++  };
++}
++test("Plugin recovery: GitHub approval loading never presents an unverified empty result", async () => {
++  const f = fixture();
++  f.render();
++  f.calls.load[0].resolve(data);
++  await settle();
++  assert.match(text(f.render()), /Loading GitHub actions/);
++  assert.doesNotMatch(text(f.render()), /No pending GitHub actions/);
++  f.calls.http[0].resolve(Response.json({ ok: true, actions: [], access_mode: "view" }));
++  await settle();
++  assert.match(text(f.render()), /No pending GitHub actions/);
++  f.hooks.unmount();
++});
++for (const outcome of ["success", "failure"])
++  test(`Plugin recovery: GitHub connect duplicate and late ${outcome} after unmount are fenced`, async () => {
++    const f = fixture();
++    const tree = await f.ready({ ...data, accounts: [], installations: [], repositories: [] });
++    const connect = button(tree, "Connect GitHub");
++    connect.props.onClick();
++    connect.props.onClick();
++    assert.equal(f.calls.http.length, 2);
++    f.hooks.unmount();
++    if (outcome === "success")
++      f.calls.http[1].resolve(
++        Response.json({ url: "https://github.com/login/oauth/authorize?state=test" }),
++      );
++    else f.calls.http[1].reject(Error("offline"));
++    await settle();
++    assert.deepEqual(f.navigations, []);
++    assert.deepEqual(f.messages, []);
++  });
++test("Plugin recovery: GitHub authorization errors permit one explicit retry and validate destination", async () => {
++  const f = fixture();
++  await f.ready({ ...data, accounts: [], installations: [], repositories: [] });
++  button(f.render(), "Connect GitHub").props.onClick();
++  f.calls.http[1].resolve(Response.json({ url: "https://wrong.invalid/authorize" }));
++  await settle();
++  assert.equal(f.navigations.length, 0);
++  assert.equal(f.messages.at(-1).kind, "error");
++  button(f.render(), "Connect GitHub").props.onClick();
++  f.calls.http[2].resolve(
++    Response.json({ url: "https://github.com/login/oauth/authorize?state=test" }),
++  );
++  await settle();
++  assert.deepEqual(f.navigations, ["https://github.com/login/oauth/authorize?state=test"]);
++  f.hooks.unmount();
++});
++test("Plugin recovery: GitHub refresh cannot reload or report success after search unmounts it", async () => {
++  const f = fixture();
++  const tree = await f.ready();
++  const refresh = button(tree, "Refresh installations");
++  refresh.props.onClick();
++  refresh.props.onClick();
++  assert.equal(f.calls.refresh.length, 1);
++  f.hooks.unmount();
++  f.calls.refresh[0].resolve();
++  await settle();
++  assert.equal(f.calls.load.length, 1);
++  assert.deepEqual(f.messages, []);
++});
++test("Plugin recovery: GitHub failed repository grant retains the reviewed selection for retry", async () => {
++  const f = fixture();
++  await f.ready();
++  elements(
++    f.render(),
++    (n) => n.type === "input" && n.props.type === "checkbox",
++  )[0].props.onChange();
++  const grant = button(f.render(), "Grant selected");
++  grant.props.onClick();
++  grant.props.onClick();
++  assert.equal(f.calls.grants.length, 1);
++  assert.deepEqual(f.calls.grants[0].args[0].data.repositoryIds, [7]);
++  f.calls.grants[0].reject(Error("offline"));
++  await settle();
++  assert.equal(
++    elements(f.render(), (n) => n.type === "input" && n.props.type === "checkbox")[0].props.checked,
++    true,
++  );
++  button(f.render(), "Grant selected").props.onClick();
++  assert.equal(f.calls.grants.length, 2);
++  f.hooks.unmount();
++  f.calls.grants[1].resolve();
++  await settle();
++  assert.equal(f.calls.load.length, 1);
++});
++test("Plugin recovery: GitHub disconnect Cancel does nothing and confirmation dispatches once", async () => {
++  const f = fixture();
++  await f.ready();
++  button(f.render(), "Disconnect").props.onClick();
++  let review = elements(f.render(), (n) => n.type === "Dialog" && n.props.open)[0];
++  button(review, "Cancel").props.onClick();
++  assert.equal(f.calls.disconnect.length, 0);
++  button(f.render(), "Disconnect").props.onClick();
++  review = elements(f.render(), (n) => n.type === "Dialog" && n.props.open)[0];
++  const confirm = button(review, "Disconnect account");
++  assert.ok(confirm);
++  confirm.props.onClick();
++  confirm.props.onClick();
++  assert.equal(f.calls.disconnect.length, 1);
++  assert.deepEqual(f.calls.disconnect[0].args[0].data, {
++    accountId: "account-a",
++    removeData: false,
++  });
++  f.hooks.unmount();
++  f.calls.disconnect[0].resolve();
++  await settle();
++  assert.equal(f.calls.load.length, 1);
++  assert.deepEqual(f.messages, []);
++});
++test("Plugin recovery: stale GitHub approval reads cannot overwrite the latest account access", async () => {
++  const f = fixture();
++  await f.ready();
++  const refresh = button(f.render(), "Refresh actions");
++  refresh.props.onClick();
++  refresh.props.onClick();
++  f.calls.http[2].resolve(Response.json({ ok: true, actions: [], access_mode: "write" }));
++  await settle();
++  f.calls.http[1].resolve(Response.json({ ok: true, actions: [], access_mode: "none" }));
++  await settle();
++  assert.equal(elements(f.render(), (n) => n.type === "select")[0].props.value, "write");
++  f.hooks.unmount();
++});
++test("Plugin recovery: GitHub permission changes serialize with other mutations and ignore late outcomes", async () => {
++  const f = fixture();
++  await f.ready();
++  const access = elements(f.render(), (n) => n.type === "select")[0];
++  access.props.onChange({ target: { value: "none" } });
++  access.props.onChange({ target: { value: "view" } });
++  button(f.render(), "Refresh installations").props.onClick();
++  assert.equal(f.calls.http.length, 2);
++  assert.equal(f.calls.refresh.length, 0);
++  f.hooks.unmount();
++  f.calls.http[1].resolve(Response.json({ ok: true, access_mode: "none" }));
++  await settle();
++  assert.equal(f.calls.http.length, 2);
++  assert.deepEqual(f.messages, []);
++});
++
++test("Plugin recovery: failed GitHub status keeps a persistent warning and blocks stale account changes until acknowledged reload", async () => {
++  const f = fixture();
++  await f.ready();
++  elements(
++    f.render(),
++    (n) => n.type === "input" && n.props.type === "checkbox",
++  )[0].props.onChange();
++  button(f.render(), "Refresh installations").props.onClick();
++  f.calls.refresh[0].resolve();
++  await settle();
++  f.calls.load[1].reject(Error("offline"));
++  await settle();
++  let tree = f.render();
++  assert.match(text(tree), /last successful load/);
++  assert.equal(button(tree, "Disconnect").props.disabled, true);
++  assert.equal(button(tree, "Grant selected").props.disabled, true);
++  button(tree, "Grant selected").props.onClick();
++  assert.equal(f.calls.grants.length, 0);
++  button(tree, "Reload GitHub status").props.onClick();
++  tree = f.render();
++  assert.match(text(tree), /last successful load/);
++  assert.equal(button(tree, "Grant selected").props.disabled, true);
++  f.calls.load[2].resolve(data);
++  await settle();
++  tree = f.render();
++  assert.doesNotMatch(text(tree), /last successful load/);
++  assert.equal(button(tree, "Grant selected").props.disabled, false);
++  assert.equal(button(tree, "Disconnect").props.disabled, false);
++  f.hooks.unmount();
++});
++
++test("Plugin recovery: GitHub repository no-match recovery clears the filter and restores keyboard focus", async () => {
++  const f = fixture();
++  await f.ready();
++  let focused = 0;
++  const input = elements(
++    f.render(),
++    (n) => n.props["aria-label"] === "Search GitHub repositories",
++  )[0];
++  input.props.ref.current = { focus: () => focused++ };
++  input.props.onChange({ target: { value: "missing-repo" } });
++  let tree = f.render();
++  assert.match(text(tree), /No repositories match your search/);
++  assert.equal(elements(tree, (n) => n.type === "input" && n.props.type === "checkbox").length, 0);
++  button(tree, "Clear repository search").props.onClick();
++  tree = f.render();
++  assert.equal(focused, 1);
++  assert.equal(elements(tree, (n) => n.type === "input" && n.props.type === "checkbox").length, 1);
++  assert.equal(f.calls.load.length, 1);
++  f.hooks.unmount();
++});
++
++for (const kind of ["disconnect", "remove", "write"])
++  test(`Plugin recovery: GitHub ${kind} confirmation cancellation returns keyboard focus without a mutation`, async () => {
++    const f = fixture();
++    await f.ready();
++    if (kind === "disconnect") button(f.render(), "Disconnect").props.onClick();
++    else if (kind === "remove") {
++      elements(
++        f.render(),
++        (n) => n.type === "input" && n.props.type === "checkbox",
++      )[0].props.onChange();
++      button(f.render(), "Remove selected").props.onClick();
++    } else
++      elements(f.render(), (n) => n.type === "select")[0].props.onChange({
++        target: { value: "write" },
++      });
++    const tree = f.render();
++    const content =
++      kind === "disconnect"
++        ? elements(tree, (n) => n.type === "DialogContent")[0]
++        : elements(tree, (n) => n.type === "ConfirmActionDialog" && n.props.open)[0];
++    if (kind === "disconnect") button(content, "Cancel").props.onClick();
++    else content.props.onOpenChange(false);
++    f.render();
++    let prevented = false;
++    content.props.onCloseAutoFocus({
++      preventDefault: () => {
++        prevented = true;
++      },
++    });
++    assert.equal(prevented, true);
++    assert.deepEqual(f.focused, ["invoker"]);
++    assert.equal(f.calls.http.length, 1);
++    assert.equal(f.calls.grants.length + f.calls.disconnect.length, 0);
++    f.hooks.unmount();
++  });
++
++for (const boundary of ["removed", "navigation", "unmount"])
++  test(`Plugin recovery: GitHub confirmation focus handles ${boundary} boundary`, async () => {
++    const f = fixture();
++    await f.ready();
++    elements(
++      f.render(),
++      (n) => n.type === "h2" && n.props.id === "github-manager",
++    )[0].props.ref.current = f.focusable("heading");
++    button(f.render(), "Disconnect").props.onClick();
++    const content = elements(f.render(), (n) => n.type === "DialogContent")[0];
++    if (boundary === "removed") f.document.activeElement.isConnected = false;
++    if (boundary === "navigation") f.browser.location.href = "https://kovagpt.example/";
++    if (boundary === "unmount") f.hooks.unmount();
++    content.props.onCloseAutoFocus({ preventDefault() {} });
++    assert.deepEqual(f.focused, boundary === "removed" ? ["heading"] : []);
++    if (boundary !== "unmount") f.hooks.unmount();
++  });
+diff --git a/tests/unit/launch-management-ui.test.mjs b/tests/unit/launch-management-ui.test.mjs
+index dffa308e6568ced48e863806d1be22f7a42ef2f3..04e21941deaf7a1ab8fa148b6dcd9739ceab19c1 100644
+--- a/tests/unit/launch-management-ui.test.mjs
++++ b/tests/unit/launch-management-ui.test.mjs
+@@ -24,7 +24,7 @@ function fixture() {
+     calls = [],
+     navigations = [];
+   const module = loadUiModule(
+-    "src/components/LaunchConnectorManager.tsx",
++    process.env.KOVA_LAUNCH_MANAGER_SOURCE || "src/components/LaunchConnectorManager.tsx",
+     {
+       react: hooks.react,
+       zod: { z },
+@@ -45,8 +45,14 @@ function fixture() {
+     },
+   );
+   const render = () => hooks.render(module.LaunchConnectorManager, { connector: "outlook" });
+-  const status = (certified = false) =>
+-    Response.json({ connector: "outlook", certified, accounts: [account], nextCursor: null });
++  const status = (certified = false, overrides = {}) =>
++    Response.json({
++      connector: "outlook",
++      certified,
++      accounts: [account],
++      nextCursor: null,
++      ...overrides,
++    });
+   return { hooks, calls, navigations, render, status };
+ }
+ const button = (tree, name) =>
+@@ -136,3 +142,122 @@ test("authorization response cannot navigate to an unrelated origin", async () =
+   assert.deepEqual(f.navigations, []);
+   assert.match(text(f.render()), /could not be started safely/);
+ });
++
++const nextCursor = "44444444-4444-4444-8444-444444444444";
++const second = {
++  ...account,
++  id: "55555555-5555-4555-8555-555555555555",
++  label: "Second",
++  identity: "second-provider-user",
++};
++test("Plugin recovery: saved account pagination returns to the previous page without a mutation", async () => {
++  const f = fixture();
++  f.render();
++  f.calls[0].resolve(f.status(false, { nextCursor }));
++  await settle();
++  button(f.render(), "Next accounts").props.onClick();
++  assert.deepEqual(JSON.parse(f.calls[1].init.body), { action: "status", cursor: nextCursor });
++  f.calls[1].resolve(f.status(false, { accounts: [second] }));
++  await settle();
++  assert.match(text(f.render()), /second-provider-user/);
++  button(f.render(), "Previous accounts").props.onClick();
++  assert.deepEqual(JSON.parse(f.calls[2].init.body), { action: "status", cursor: null });
++  f.calls[2].resolve(f.status(false, { nextCursor }));
++  await settle();
++  assert.equal(button(f.render(), "Previous accounts"), undefined);
++  assert.equal(
++    f.calls.every((c) => JSON.parse(c.init.body).action === "status"),
++    true,
++  );
++  f.hooks.unmount();
++});
++test("Plugin recovery: failed page load keeps current accounts and cursor for a single retry", async () => {
++  const f = fixture();
++  f.render();
++  f.calls[0].resolve(f.status(false, { nextCursor }));
++  await settle();
++  const next = button(f.render(), "Next accounts");
++  next.props.onClick();
++  next.props.onClick();
++  assert.equal(f.calls.length, 2);
++  f.calls[1].resolve(new Response(null, { status: 503 }));
++  await settle();
++  assert.match(text(f.render()), /provider-user/);
++  assert.equal(button(f.render(), "Previous accounts"), undefined);
++  button(f.render(), "Next accounts").props.onClick();
++  assert.deepEqual(JSON.parse(f.calls[2].init.body), { action: "status", cursor: nextCursor });
++  f.calls[2].resolve(f.status(false, { accounts: [second] }));
++  await settle();
++  assert.ok(button(f.render(), "Previous accounts"));
++  f.hooks.unmount();
++});
++test("Plugin recovery: refreshing saved status resets pagination and obsolete disconnect review", async () => {
++  const f = fixture();
++  f.render();
++  f.calls[0].resolve(f.status(false, { nextCursor }));
++  await settle();
++  button(f.render(), "Next accounts").props.onClick();
++  f.calls[1].resolve(f.status(false, { accounts: [second] }));
++  await settle();
++  button(f.render(), "Disconnect Second").props.onClick();
++  assert.ok(button(f.render(), "Cancel"));
++  button(f.render(), "Refresh saved status").props.onClick();
++  f.calls[2].resolve(f.status(false, { accounts: [] }));
++  await settle();
++  assert.equal(button(f.render(), "Previous accounts"), undefined);
++  assert.equal(button(f.render(), "Confirm disconnect"), undefined);
++  assert.match(text(f.render()), /No accounts on this loaded page/);
++  f.hooks.unmount();
++});
++test("Plugin recovery: empty subsequent page still offers Previous accounts and pending status", async () => {
++  const f = fixture();
++  f.render();
++  f.calls[0].resolve(f.status(false, { nextCursor }));
++  await settle();
++  button(f.render(), "Next accounts").props.onClick();
++  assert.match(text(f.render()), /Updating connection status/);
++  f.calls[1].resolve(f.status(false, { accounts: [] }));
++  await settle();
++  assert.ok(button(f.render(), "Previous accounts"));
++  assert.match(text(f.render()), /No accounts/);
++  f.hooks.unmount();
++});
++
++test("Plugin recovery: successful account page navigation restores section focus but failure does not move it", async () => {
++  const f = fixture();
++  let focused = 0;
++  const first = f.render();
++  first.props.ref.current = { focus: () => focused++ };
++  f.calls[0].resolve(f.status(false, { nextCursor }));
++  await settle();
++  assert.equal(focused, 0);
++  button(f.render(), "Next accounts").props.onClick();
++  f.calls[1].resolve(new Response(null, { status: 503 }));
++  await settle();
++  assert.equal(focused, 0);
++  button(f.render(), "Next accounts").props.onClick();
++  f.calls[2].resolve(f.status(false, { accounts: [second] }));
++  await settle();
++  assert.equal(focused, 1);
++  button(f.render(), "Previous accounts").props.onClick();
++  f.calls[3].resolve(f.status(false, { nextCursor }));
++  await settle();
++  assert.equal(focused, 2);
++  f.hooks.unmount();
++});
++
++test("Plugin recovery: saved-account disconnect Cancel restores its invoker and does not dispatch", async () => {
++  const f = fixture();
++  f.render();
++  f.calls[0].resolve(f.status());
++  await settle();
++  let focused = 0;
++  button(f.render(), "Disconnect Account").props.onClick({
++    currentTarget: { isConnected: true, disabled: false, focus: () => focused++ },
++  });
++  button(f.render(), "Cancel").props.onClick();
++  assert.equal(focused, 1);
++  assert.equal(f.calls.length, 1);
++  assert.equal(button(f.render(), "Confirm disconnect"), undefined);
++  f.hooks.unmount();
++});
+diff --git a/tests/unit/plugin-details-focus.test.mjs b/tests/unit/plugin-details-focus.test.mjs
+index 7050c18e49a726b194768e720e0db4bbdf45ea5b..db3398b39ca03b13830978885aaf021030bc81ec 100644
+--- a/tests/unit/plugin-details-focus.test.mjs
++++ b/tests/unit/plugin-details-focus.test.mjs
+@@ -58,6 +58,7 @@ function fixture() {
+       generationRef: { current: 3 },
+       detailsReturnRef: { current: null },
+       detailsButtonsRef: { current: buttons },
++      githubNavigationRef: { current: false },
+       setSelectedApp(item) {
+         g.selected = item;
+       },
