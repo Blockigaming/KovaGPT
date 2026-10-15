@@ -38,6 +38,12 @@
     "kovaIpHashSecretUri": {
       "value": "https://REPLACE_WITH_PRODUCTION_KEY_VAULT.vault.azure.net/secrets/kova-ip-hash-secret/REPLACE_WITH_VERSION"
     },
+    "textProvider": {
+      "value": "auto"
+    },
+    "openAiApiKeySecretUri": {
+      "value": ""
+    },
     "azureOpenAiAccountName": {
       "value": "REPLACE_WITH_PRODUCTION_AZURE_OPENAI_ACCOUNT"
     },

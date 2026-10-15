@@ -17,3 +17,27 @@ Rollback: disable generation first, restore the previous environment/revision an
 Source publication does not grant additional provider or cloud spending authority. Verify the approved cumulative budget and available headroom before any live call. Local mocked checks create no provider charge. Live model access, provider latency, streamed browser chat and hosted persistence are not verified by these checks.
 
 Startup validation checks credentials for the explicitly selected text provider. OpenAI selection does not require unused Azure text deployment aliases. Any retained Azure endpoint is still validated because image/embedding routes can use it; malformed retained Azure endpoints must be corrected rather than bypassed. Unknown selections are rejected without echoing values.
+
+## Azure production configuration
+
+The production template now supports `textProvider=openai` and the secure
+`openAiApiKeySecretUri` parameter. The latter must identify an existing, versioned
+secret in the selected production Key Vault. The template passes it to the
+server as `OPENAI_API_KEY` through a secret reference and the existing managed
+identity. It does not create, copy, rotate, or expose a key. The PLAN validator
+rejects a raw key, an unversioned or foreign-vault reference, and direct OpenAI
+selection without its key reference. Existing parameters retain `auto` routing.
+
+Before the app can answer, the existing key must be installed through the
+approved server-secret path, these parameters must be applied to the reviewed
+release, and generation must be enabled in that deployment after acceptance.
+The current production template still retains the migration cost freeze and
+does not provide an activation or traffic-cutover path. The staging template
+remains Azure managed-identity-only; do not assume it accepts this new production
+configuration.
+
+An OpenAI API credit top-up does not require a new API key or a model change.
+Once OpenAI posts the balance, a correctly deployed and enabled app can use it
+on the next request. A top-up does not publish application code, install a
+hosted secret, or change the app's generation switches. Do not continuously
+retry an exhausted credit balance; verify one real response after funding.
