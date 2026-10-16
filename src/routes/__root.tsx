@@ -7,6 +7,7 @@ import {
   HeadContent,
   ScriptOnce,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
@@ -132,7 +133,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
     <main id="main-content" tabIndex={-1} className="kova-state-screen">
