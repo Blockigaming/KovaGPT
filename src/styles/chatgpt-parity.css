@@ -38,7 +38,7 @@
 .kova-nav-row {
   min-height: 36px !important;
   border-radius: 8px !important;
-  gap: 10px !important;
+  gap: 10px;
   font-size: 14px !important;
   transition:
     background-color 140ms ease,
@@ -219,17 +219,14 @@
 
 /* Pages and cards */
 .kova-page {
-  max-width: var(--parity-page-max) !important;
-  padding: 24px !important;
-}
-.kova-page-header {
-  margin-bottom: 24px !important;
+  max-width: var(--page-max, var(--parity-page-max)) !important;
+  padding: var(--page-padding, 24px) !important;
 }
 .kova-page-title {
   font-family: inherit !important;
-  font-size: 28px !important;
-  line-height: 36px !important;
-  font-weight: 600 !important;
+  font-size: var(--page-title-size, 28px) !important;
+  line-height: var(--page-title-line, 36px) !important;
+  font-weight: var(--page-title-weight, 600) !important;
   letter-spacing: -0.02em !important;
 }
 .kova-page-description {
@@ -242,7 +239,7 @@
 .kova-plan-card,
 .kova-connector-card {
   border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
+  border-radius: var(--surface-card-radius, 12px) !important;
   background: var(--card) !important;
   box-shadow: none !important;
   transform: none !important;
@@ -301,7 +298,7 @@
 }
 :where([role="menuitem"], [role="option"]) {
   min-height: 36px;
-  border-radius: 8px !important;
+  border-radius: var(--menu-row-radius, 8px) !important;
   transition: background-color 100ms ease !important;
 }
 [data-kova-dialog-surface] {
@@ -315,8 +312,8 @@
 
 @media (max-width: 1023px) {
   .kova-page {
-    padding: 16px !important;
-    padding-bottom: max(24px, var(--safe-bottom)) !important;
+    padding: var(--page-padding, 16px) !important;
+    padding-bottom: var(--page-padding-bottom, max(24px, var(--safe-bottom))) !important;
   }
   .kova-message {
     padding-inline: 16px !important;
@@ -335,8 +332,8 @@
     border-radius: 24px !important;
   }
   .kova-page-title {
-    font-size: 24px !important;
-    line-height: 32px !important;
+    font-size: var(--page-title-size, 24px) !important;
+    line-height: var(--page-title-line, 32px) !important;
   }
   [data-kova-dialog-surface] {
     border-radius: 16px 16px 0 0 !important;
@@ -354,8 +351,8 @@
   }
 }
 
-/* Menu rows: keep only the soft grey highlight, never a hard outline box. */
-:where([role="menu"], [role="listbox"], [role="dialog"], .kova-model-menu, .kova-glass)
+/* Menu rows only: dialog actions retain their variant color pair and the shared focus outline. */
+:where([role="menu"], [role="listbox"], .kova-model-menu, .kova-glass)
   :where(button, [role="menuitem"], [role="option"]):focus-visible {
   outline: none !important;
   box-shadow: none !important;
@@ -383,6 +380,15 @@ html :is(input, textarea, select):focus-visible {
   outline-width: 2px !important;
   outline-style: solid !important;
   outline-color: currentColor !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* Native selection controls need a keyboard indicator outside their checked mark.
+   Specificity also beats scoped field resets without changing text/custom controls. */
+html input[type="checkbox"]:focus-visible,
+html input[type="radio"]:focus-visible {
+  outline: 2px solid var(--foreground) !important;
   outline-offset: 2px !important;
   box-shadow: none !important;
 }

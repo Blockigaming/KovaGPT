@@ -4,6 +4,7 @@ import regularFontUrl from "@/assets/document-fonts/DejaVuSans.ttf?url";
 import boldFontUrl from "@/assets/document-fonts/DejaVuSans-Bold.ttf?url";
 import {
   parseDocumentBlocks,
+  documentInlineRuns,
   safeDocumentFilename,
   downloadBytes,
   validateDocumentInput,
@@ -105,6 +106,50 @@ export async function createDocumentPdf(
       y -= lineHeight;
     }
   };
+  // Bounded inline subset: bold uses the embedded bold face; link destinations
+  // stay visible in the exported document. Other inline syntax remains literal.
+  const drawInline = (text: string, size: number, defaultFont: PDFFont, indent: number) => {
+    let x = margin + indent;
+    const end = width - margin,
+      lineHeight = size * 1.45;
+    const nextLine = () => {
+      y -= lineHeight;
+      ensure(lineHeight);
+      x = margin + indent;
+    };
+    ensure(lineHeight);
+    for (const run of documentInlineRuns(text)) {
+      const face = run.bold ? bold : defaultFont;
+      const value = run.link
+        ? `${run.text} (${run.link})`
+        : run.italics
+          ? `*${run.text}*`
+          : run.code
+            ? "`" + run.text + "`"
+            : run.text;
+      for (const word of value.replaceAll("\t", "    ").split(/(\s+)/u).filter(Boolean)) {
+        if (word.includes("\n")) {
+          for (const _line of word.matchAll(/\n/g)) nextLine();
+          continue;
+        }
+        const wordWidth = face.widthOfTextAtSize(word, size);
+        if (x + wordWidth > end && x > margin + indent) nextLine();
+        if (!word.trim() && x === margin + indent) continue;
+        if (wordWidth <= end - margin - indent) {
+          page.drawText(word, { x, y: y - size, font: face, size });
+          x += wordWidth;
+        } else {
+          for (const point of word) {
+            const pointWidth = face.widthOfTextAtSize(point, size);
+            if (x + pointWidth > end) nextLine();
+            page.drawText(point, { x, y: y - size, font: face, size });
+            x += pointWidth;
+          }
+        }
+      }
+    }
+    y -= lineHeight;
+  };
   newPage();
   drawLines(wrapPdfText(title || "Document", bold, 22, usable), 22, bold);
   y -= 18;
@@ -177,7 +222,9 @@ export async function createDocumentPdf(
       block.text +
       (block.kind === "quote" ? "”" : "");
     ensure(size * (block.kind === "heading" ? 3.5 : 1.5));
-    drawLines(wrapPdfText(text, selected, size, usable - indent), size, selected, indent);
+    if (block.kind === "code")
+      drawLines(wrapPdfText(text, selected, size, usable - indent), size, selected, indent);
+    else drawInline(text, size, selected, indent);
     y -= block.kind === "heading" ? 6 : 9;
   }
   for (const [index, sheet] of pdf.getPages().entries())

@@ -103,7 +103,12 @@ function OmegaPage() {
   if (!isLoaded)
     return (
       <AppShell>
-        <main className="p-6" aria-label="Loading Omega">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="kova-workspace-controls p-6"
+          aria-label="Loading Omega"
+        >
           <div className="h-48 animate-pulse rounded-2xl bg-muted" />
         </main>
       </AppShell>
@@ -111,7 +116,11 @@ function OmegaPage() {
   if (!isSignedIn)
     return (
       <AppShell>
-        <main className="mx-auto max-w-xl p-8 text-center">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="kova-workspace-controls mx-auto max-w-xl p-8 text-center"
+        >
           <h1 className="text-2xl font-semibold">Omega Control Center</h1>
           <p className="mt-2 text-muted-foreground">
             Sign in to prepare account-scoped platform integrations.
@@ -125,8 +134,12 @@ function OmegaPage() {
       </AppShell>
     );
   return (
-    <AppShell>
-      <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
+    <AppShell utilitiesInHeader>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-workspace-controls mx-auto w-full max-w-6xl px-4 py-7 sm:px-6"
+      >
         <WorkspacePageHeader
           icon={Bot}
           title="Omega Control Center"
@@ -269,7 +282,7 @@ function EnterprisePanel({ scope }: { scope: string }) {
       </h2>
       <a
         href="/organization"
-        className="mt-3 inline-flex min-h-10 items-center rounded-lg border px-4 text-sm hover:bg-accent"
+        className="kova-workspace-action mt-3 inline-flex min-h-10 items-center rounded-lg border px-4 text-sm hover:bg-accent"
       >
         Open organization administration
       </a>

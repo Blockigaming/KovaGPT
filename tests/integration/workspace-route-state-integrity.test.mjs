@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const routes = {
-  projects: await readFile("src/routes/projects.tsx", "utf8"),
+  projects: await readFile("src/routes/projects.index.tsx", "utf8"),
   project: await readFile("src/routes/projects.$projectId.tsx", "utf8"),
   files: await readFile("src/routes/files.tsx", "utf8"),
   memory: await readFile("src/routes/memory.tsx", "utf8"),
@@ -48,7 +48,16 @@ test("file sizes and memory identities preserve their edge-case invariants", () 
 
   assert.match(routes.memory, /function memoryRecordKey/);
   assert.match(routes.memory, /memoryRecordKey\(value\) === memoryRecordKey\(item\)/);
-  assert.match(routes.memory, /memoryRecordKey\(duplicate\) === memoryRecordKey\(item\)/);
+  assert.match(routes.memory, /const result = await mergeRecords\(/);
+  assert.match(
+    routes.memory,
+    /items: chosen\.map\(\(\{ id, content \}\) => \(\{ id, content \}\)\)/,
+  );
+  assert.match(
+    routes.memory,
+    /item\.source !== source \|\| !result\.removedIds\.includes\(item\.id\)/,
+  );
+  assert.match(routes.memory, /item\.source === source && item\.id === result\.id/);
   assert.match(routes.memory, /editing === memoryRecordKey\(item\)/);
 });
 

@@ -8,8 +8,12 @@ import {
   listKnowledgeGraph,
   type KnowledgeEdge,
   type KnowledgeNode,
+  type KnowledgeSource,
 } from "@/lib/professional.functions";
-import { chatStoragePrincipal, loadConversations, savePendingActive } from "@/lib/chat-store";
+import { chatStoragePrincipal, savePendingActive } from "@/lib/chat-store";
+import { useAccountConversationHistory } from "@/lib/use-account-conversation-history";
+import { mergeKnowledgeHistoryNodes } from "@/lib/knowledge-history-nodes";
+
 export const Route = createFileRoute("/knowledge-graph")({
   component: KnowledgeGraph,
   head: () => ({
@@ -28,19 +32,38 @@ const EMPTY_KNOWLEDGE_NODES: KnowledgeNode[] = [];
 const EMPTY_KNOWLEDGE_EDGES: KnowledgeEdge[] = [];
 
 function KnowledgeGraph() {
+  const { isLoaded, user } = useUser();
+  return <KnowledgeGraphForAccount key={isLoaded ? (user?.id ?? "guest") : "loading"} />;
+}
+function KnowledgeGraphForAccount() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const list = useServerFn(listKnowledgeGraph);
+  const [requestedCursors, setRequestedCursors] = useState<
+    Partial<Record<KnowledgeSource, string | null>>
+  >({});
+  const [localPage, setLocalPage] = useState(0);
+  const conversations = useAccountConversationHistory(userKey, isLoaded && Boolean(isSignedIn));
+  const localHasNext = conversations.length > (localPage + 1) * 20;
+  const [loadedCursors, setLoadedCursors] = useState<
+    Partial<Record<KnowledgeSource, string | null>>
+  >({});
+  const [nextCursors, setNextCursors] = useState<Partial<Record<KnowledgeSource, string | null>>>(
+    {},
+  );
   const [graphState, setGraphState] = useState<{
     principal: string | null;
     nodes: KnowledgeNode[];
     edges: KnowledgeEdge[];
   }>({ principal: null, nodes: [], edges: [] });
-  const nodes =
-    principal !== null && graphState.principal === principal
-      ? graphState.nodes
-      : EMPTY_KNOWLEDGE_NODES;
+  const nodes = useMemo(
+    () =>
+      principal !== null && graphState.principal === principal
+        ? mergeKnowledgeHistoryNodes(graphState.nodes, conversations, localPage)
+        : EMPTY_KNOWLEDGE_NODES,
+    [principal, graphState, conversations, localPage],
+  );
   const edges =
     principal !== null && graphState.principal === principal
       ? graphState.edges
@@ -72,19 +95,16 @@ function KnowledgeGraph() {
       return;
     }
     let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
-    list({})
+    list({ data: { cursors: requestedCursors }, signal: controller.signal })
       .then((graph) => {
         if (cancelled) return;
-        const local = loadConversations(userKey).map((chat) => ({
-          id: `local-chat:${chat.id}`,
-          kind: "chat" as const,
-          label: chat.title,
-          href: `/?chat=${chat.id}`,
-          updatedAt: new Date(chat.updatedAt).toISOString(),
-        }));
-        setGraphState({ principal, nodes: [...graph.nodes, ...local], edges: graph.edges });
+        setLoadedCursors(requestedCursors);
+        setNextCursors(graph.cursors);
+        setSelected(null);
+        setGraphState({ principal, nodes: graph.nodes, edges: graph.edges });
       })
       .catch((e) => {
         if (!cancelled)
@@ -95,16 +115,15 @@ function KnowledgeGraph() {
       });
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [isLoaded, isSignedIn, list, principal, userKey]);
+  }, [isLoaded, isSignedIn, list, principal, userKey, requestedCursors, localPage]);
   const visible = useMemo(
     () =>
-      nodes
-        .filter(
-          (node) =>
-            kinds.includes(node.kind) && node.label.toLowerCase().includes(query.toLowerCase()),
-        )
-        .slice(0, 120),
+      nodes.filter(
+        (node) =>
+          kinds.includes(node.kind) && node.label.toLowerCase().includes(query.toLowerCase()),
+      ),
     [nodes, kinds, query],
   );
   const visibleEdges = useMemo(() => {
@@ -123,7 +142,11 @@ function KnowledgeGraph() {
   const positions = useMemo(() => new Map(positioned.map((node) => [node.id, node])), [positioned]);
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-workspace-controls mx-auto min-w-0 w-full max-w-7xl px-4 py-7 sm:px-6"
+      >
         <header>
           <div className="flex items-center gap-2">
             <Network className="h-5 w-5" />
@@ -134,6 +157,61 @@ function KnowledgeGraph() {
             memories, and Context Packs.
           </p>
         </header>
+        {isSignedIn && (
+          <section className="mt-4 space-y-2" aria-label="Knowledge source pages">
+            <p className="text-sm text-muted-foreground">
+              This view contains one page per source. Search, timeline and relationships cover only
+              loaded records; an absent link does not establish that no relationship exists.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(["projects", "chats", "files", "library", "memories", "packs"] as const).map(
+                (source) => (
+                  <span key={source} className="inline-flex gap-1">
+                    <button
+                      type="button"
+                      disabled={loading}
+                      className="min-h-11 rounded-lg border px-3 text-sm"
+                      onClick={() => setRequestedCursors({ ...loadedCursors, [source]: null })}
+                    >
+                      First {source} page
+                    </button>
+                    <button
+                      type="button"
+                      disabled={loading || !nextCursors[source]}
+                      className="min-h-11 rounded-lg border px-3 text-sm"
+                      onClick={() =>
+                        setRequestedCursors({ ...loadedCursors, [source]: nextCursors[source] })
+                      }
+                    >
+                      Next {source} page
+                    </button>
+                  </span>
+                ),
+              )}
+              <button
+                type="button"
+                disabled={loading || localPage === 0}
+                className="min-h-11 rounded-lg border px-3 text-sm"
+                onClick={() => setLocalPage((page) => Math.max(0, page - 1))}
+              >
+                Previous local chats
+              </button>
+              <button
+                type="button"
+                disabled={loading || !localHasNext}
+                className="min-h-11 rounded-lg border px-3 text-sm"
+                onClick={() => setLocalPage((page) => page + 1)}
+              >
+                Next local chats
+              </button>
+            </div>
+          </section>
+        )}
+        {error && nodes.length > 0 && (
+          <p role="alert" className="mt-3 text-sm">
+            {error}. Last loaded graph retained; retry the page action.
+          </p>
+        )}
         <div className="my-5 flex flex-col gap-3 lg:flex-row">
           <label className="relative flex-1">
             <span className="sr-only">Search knowledge graph</span>
@@ -145,11 +223,14 @@ function KnowledgeGraph() {
               placeholder="Search graph"
             />
           </label>
-          <div className="flex gap-1 overflow-x-auto" aria-label="Knowledge types">
+          <div
+            className="kova-graph-filters flex gap-1 overflow-x-auto"
+            aria-label="Knowledge types"
+          >
             <button
               onClick={() => setMode("graph")}
               aria-pressed={mode === "graph"}
-              className={`min-h-10 rounded-lg border px-3 text-sm ${mode === "graph" ? "bg-foreground text-background" : ""}`}
+              className={`kova-graph-mode min-h-10 rounded-lg border px-3 text-sm ${mode === "graph" ? "bg-foreground text-background" : ""}`}
             >
               <Network className="mr-1 inline h-4 w-4" />
               Graph
@@ -157,7 +238,7 @@ function KnowledgeGraph() {
             <button
               onClick={() => setMode("timeline")}
               aria-pressed={mode === "timeline"}
-              className={`min-h-10 rounded-lg border px-3 text-sm ${mode === "timeline" ? "bg-foreground text-background" : ""}`}
+              className={`kova-graph-mode min-h-10 rounded-lg border px-3 text-sm ${mode === "timeline" ? "bg-foreground text-background" : ""}`}
             >
               <Clock3 className="mr-1 inline h-4 w-4" />
               Timeline
@@ -189,11 +270,11 @@ function KnowledgeGraph() {
             aria-label="Loading knowledge graph"
             className="h-[32rem] animate-pulse rounded-2xl bg-muted"
           />
-        ) : error ? (
+        ) : error && nodes.length === 0 ? (
           <div role="alert" className="rounded-xl border border-destructive/40 p-4">
             <p>{error}</p>
             <button
-              onClick={() => location.reload()}
+              onClick={() => setRequestedCursors({ ...requestedCursors })}
               className="mt-3 min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
             >
               Retry
@@ -202,9 +283,10 @@ function KnowledgeGraph() {
         ) : visible.length === 0 ? (
           <div className="rounded-2xl border p-10 text-center">
             <Network className="mx-auto h-6 w-6 text-muted-foreground" />
-            <h2 className="mt-3 font-semibold">No connected knowledge found</h2>
+            <h2 className="mt-3 font-semibold">No connected knowledge on loaded pages</h2>
             <p className="text-sm text-muted-foreground">
-              Adjust filters or add Projects, files, memories, and Context Packs.
+              Browse another source page, adjust filters or add Projects, files, memories, and
+              Context Packs.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <button
@@ -225,8 +307,11 @@ function KnowledgeGraph() {
             </div>
           </div>
         ) : mode === "timeline" ? (
-          <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
-            <ol className="divide-y rounded-2xl border bg-card/30" aria-label="Knowledge timeline">
+          <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <ol
+              className="min-w-0 divide-y rounded-2xl border bg-card/30"
+              aria-label="Knowledge timeline"
+            >
               {[...visible]
                 .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
                 .map((node) => {
@@ -240,7 +325,10 @@ function KnowledgeGraph() {
                         style={{ backgroundColor: colors[node.kind] }}
                       />
                       <div className="min-w-0 flex-1">
-                        <Link to={node.href} className="truncate font-medium hover:underline">
+                        <Link
+                          to={node.href}
+                          className="kova-graph-resource block whitespace-normal [overflow-wrap:anywhere] font-medium hover:underline"
+                        >
                           {node.label}
                         </Link>
                         <p className="text-xs capitalize text-muted-foreground">
@@ -255,7 +343,7 @@ function KnowledgeGraph() {
                   );
                 })}
             </ol>
-            <aside className="rounded-2xl border p-4">
+            <aside className="min-w-0 rounded-2xl border p-4">
               <h2 className="font-semibold">Relationship clusters</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Clusters use explicit Project membership and Context Pack inclusion only.
@@ -269,7 +357,7 @@ function KnowledgeGraph() {
                       <li key={projectId} className="rounded-xl border p-3">
                         <Link
                           to={project?.href ?? "/projects"}
-                          className="text-sm font-medium hover:underline"
+                          className="kova-graph-resource block whitespace-normal [overflow-wrap:anywhere] text-sm font-medium hover:underline"
                         >
                           {project?.label ?? "Project cluster"}
                         </Link>
@@ -322,6 +410,15 @@ function KnowledgeGraph() {
                     }}
                     className="cursor-pointer outline-none"
                   >
+                    <rect
+                      className="kova-graph-node-hit"
+                      x={node.x - 25}
+                      y={node.y - 25}
+                      width={50}
+                      height={50}
+                      fill="transparent"
+                      aria-hidden="true"
+                    />
                     <circle
                       cx={node.x}
                       cy={node.y}
@@ -364,7 +461,7 @@ function KnowledgeGraph() {
                         }
                       }
                     }}
-                    className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-foreground px-3 text-sm text-background"
+                    className="kova-workspace-action mt-4 inline-flex min-h-10 items-center rounded-lg bg-foreground px-3 text-sm text-background"
                   >
                     Open resource
                   </Link>

@@ -1,3 +1,9 @@
+import {
+  readCollectionPage,
+  CollectionPageInput,
+  type CollectionPage,
+} from "@/lib/read-bounded-collection";
+import { loose } from "@/lib/supabase-loose";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -96,46 +102,56 @@ export type MemoryRecord = {
   projectId?: string;
   updatedAt: string;
 };
+const MemoryPageInput = z.object({
+  cursor: z
+    .string()
+    .regex(
+      /^(conversation|project):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/i,
+    )
+    .nullable()
+    .default(null),
+});
 export const listMemoryCenter = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<MemoryRecord[]> => {
-    const [chats, projects] = await Promise.all([
-      table(context.supabase, "chat_memories")
-        .select("id,title,summary,updated_at")
-        .eq("user_id", context.userId)
-        .order("updated_at", { ascending: false })
-        .limit(100),
-      table(context.supabase, "project_memory")
-        .select("id,project_id,content,created_at")
-        .order("created_at", { ascending: false })
-        .limit(100),
-    ]);
-    if (chats.error || projects.error) throw new Error("Memory could not be loaded");
-    return [
-      ...((chats.data ?? []) as Record<string, unknown>[]).map((row) => ({
-        id: String(row.id),
-        content: String(row.summary),
-        title: String(row.title ?? "Conversation memory"),
-        source: "conversation" as const,
-        category: "Conversation summary",
-        updatedAt: String(row.updated_at),
+  .validator((input: unknown) => MemoryPageInput.parse(input))
+  .handler(async ({ data, context }): Promise<CollectionPage<MemoryRecord>> => {
+    const [source, after = ""] = (data.cursor ?? "conversation:").split(":");
+    const conversation = source === "conversation";
+    const page = await readCollectionPage<{ id: string } & Record<string, unknown>>(
+      (signal) => {
+        let query = loose(context.supabase)
+          .from(conversation ? "chat_memories" : "project_memory")
+          .select(conversation ? "id,title,summary,updated_at" : "id,project_id,content,created_at")
+          .order("id", { ascending: true })
+          .limit(10)
+          .abortSignal(signal);
+        if (conversation) query = query.eq("user_id", context.userId);
+        if (after) query = query.gt("id", after);
+        return query;
+      },
+      "Memories",
+      after || null,
+      10,
+    );
+    return {
+      items: page.items.map((row) => ({
+        id: row.id,
+        content: String(conversation ? row.summary : row.content),
+        title: conversation ? String(row.title ?? "Conversation memory") : "Project memory",
+        source: conversation ? "conversation" : "project",
+        category: conversation ? "Conversation summary" : "Project context",
+        ...(conversation ? {} : { projectId: String(row.project_id) }),
+        updatedAt: String(conversation ? row.updated_at : row.created_at),
       })),
-      ...((projects.data ?? []) as Record<string, unknown>[]).map((row) => ({
-        id: String(row.id),
-        content: String(row.content),
-        title: "Project memory",
-        source: "project" as const,
-        category: "Project context",
-        projectId: String(row.project_id),
-        updatedAt: String(row.created_at),
-      })),
-    ].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+      cursor: page.cursor ? `${source}:${page.cursor}` : conversation ? "project:" : null,
+    };
   });
 
 const MemoryChange = z.object({
   id: z.string().uuid(),
   source: z.enum(["conversation", "project"]),
   content: z.string().trim().min(1).max(2000),
+  expectedContent: z.string().max(100000),
 });
 export const updateMemoryRecord = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -146,18 +162,31 @@ export const updateMemoryRecord = createServerFn({ method: "POST" })
       data.source === "conversation"
         ? { summary: data.content, updated_at: new Date().toISOString() }
         : { content: data.content };
-    const { error } = await table(context.supabase, target)
+    const { data: row, error } = await table(context.supabase, target)
       .update(values)
       .eq("id", data.id)
-      .select("id")
+      .eq(data.source === "conversation" ? "summary" : "content", data.expectedContent)
+      .select(data.source === "conversation" ? "id,summary,updated_at" : "id,content,created_at")
       .single();
-    if (error) throw new Error("Memory could not be updated");
-    return { ok: true };
+    if (error || !row)
+      throw new Error("Memory changed or is no longer editable. Review before saving.");
+    const saved = row as Record<string, unknown>;
+    return {
+      ok: true,
+      content: String(saved[data.source === "conversation" ? "summary" : "content"]),
+      updatedAt: String(saved[data.source === "conversation" ? "updated_at" : "created_at"]),
+    };
   });
 export const deleteMemoryRecord = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) =>
-    z.object({ id: z.string().uuid(), source: z.enum(["conversation", "project"]) }).parse(input),
+    z
+      .object({
+        id: z.string().uuid(),
+        source: z.enum(["conversation", "project"]),
+        expectedContent: z.string().max(100000),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { error } = await table(
@@ -166,11 +195,39 @@ export const deleteMemoryRecord = createServerFn({ method: "POST" })
     )
       .delete()
       .eq("id", data.id)
+      .eq(data.source === "conversation" ? "summary" : "content", data.expectedContent)
       .select("id")
       .single();
-    if (error) throw new Error("Memory could not be deleted");
+    if (error) throw new Error("Memory changed or is no longer deletable. Review before deleting.");
     return { ok: true };
   });
+
+export const mergeMemoryRecords = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) =>
+    z
+      .object({
+        source: z.enum(["conversation", "project"]),
+        items: z
+          .array(z.object({ id: z.string().uuid(), content: z.string().max(100000) }))
+          .min(2)
+          .max(30),
+      })
+      .parse(input),
+  )
+  .handler(
+    async ({ data, context }): Promise<{ id: string; content: string; removedIds: string[] }> => {
+      const { data: result, error } = await loose(context.supabase).rpc("merge_memory_records", {
+        p_source: data.source,
+        p_items: data.items,
+      });
+      if (error || !result)
+        throw new Error(
+          "Memories changed, exceed the merge limit, or cannot be merged with your access. Review the selection and try again.",
+        );
+      return result;
+    },
+  );
 
 const PackItem = z.object({
   type: z.enum([
@@ -201,14 +258,48 @@ export type ContextPack = z.infer<typeof PackInput> & {
 };
 export const listContextPacks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<ContextPack[]> => {
-    const { data, error } = await table(context.supabase, "context_packs")
-      .select("id,name,description,items,created_at,updated_at")
-      .eq("user_id", context.userId)
-      .order("updated_at", { ascending: false })
-      .limit(100);
-    if (error) throw new Error("Context packs could not be loaded");
-    return (data ?? []) as ContextPack[];
+  .validator((input: unknown) => CollectionPageInput.parse(input))
+  .handler(async ({ data, context }): Promise<CollectionPage<ContextPack>> => {
+    return readCollectionPage<ContextPack>(
+      (signal) => {
+        let query = loose(context.supabase)
+          .from("context_packs")
+          .select("id,name,description,items,created_at,updated_at")
+          .eq("user_id", context.userId)
+          .order("id", { ascending: true })
+          .limit(1)
+          .abortSignal(signal);
+        if (data.cursor) query = query.gt("id", data.cursor);
+        return query;
+      },
+      "Context packs",
+      data.cursor,
+      1,
+    );
+  });
+/** Resolve a prompt's linked pack independently of the currently browsed page. */
+export const readContextPack = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<ContextPack> => {
+    const page = await readCollectionPage<ContextPack>(
+      (signal) =>
+        loose(context.supabase)
+          .from("context_packs")
+          .select("id,name,description,items,created_at,updated_at")
+          .eq("user_id", context.userId)
+          .eq("id", data.id)
+          .limit(1)
+          .abortSignal(signal),
+      "Linked context pack",
+      null,
+      1,
+    );
+    if (page.items.length !== 1 || page.items[0].id !== data.id)
+      throw new Error(
+        "The linked context pack is unavailable. Review the prompt before launching.",
+      );
+    return page.items[0];
   });
 export const createContextPack = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

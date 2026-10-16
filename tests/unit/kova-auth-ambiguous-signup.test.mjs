@@ -110,6 +110,29 @@ function harness(db, kind, response, options = {}) {
 }
 
 for (const cleanupFailure of [false, true]) {
+  test(`password signup: definitive database rejection attempts safe candidate cleanup (cleanup failure: ${cleanupFailure})`, async () => {
+    const db = await authDatabase();
+    try {
+      const h = harness(db, "password", (result) => result, {
+        definitiveError: true,
+        cleanupFailure,
+      });
+      const result = await h.run();
+      assert.equal(result.status, 503);
+      assert.deepEqual(h.deletes, [h.id]);
+      assert.equal(
+        (await db.query("select count(*)::int n from kova_private.auth_accounts")).rows[0].n,
+        0,
+      );
+      assert.equal(
+        (await db.query("select count(*)::int n from auth.users")).rows[0].n,
+        cleanupFailure ? 1 : 0,
+      );
+    } finally {
+      await db.close();
+    }
+  });
+
   test(`Google: definitive database rejection attempts safe candidate cleanup (cleanup failure: ${cleanupFailure})`, async () => {
     const db = await authDatabase();
     try {

@@ -136,7 +136,9 @@ test("auth dialog has one semantic title, one contained close target, and Escape
   await expect(dialog.getByRole("heading", { name: "Log in or sign up" })).toHaveCount(1);
   const describedBy = await dialog.getAttribute("aria-describedby");
   expect(describedBy).toBeTruthy();
-  await expect(page.locator(`[id="${describedBy}"]`)).toContainText("save your chats");
+  await expect(page.locator(`[id="${describedBy}"]`)).toContainText(
+    "A place for your ideas, conversations, and next steps.",
+  );
 
   const providerFeedback = dialog.getByText(
     /Checking Google availability|Continue with Google|Google sign-in/u,

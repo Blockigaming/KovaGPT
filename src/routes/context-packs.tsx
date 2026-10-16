@@ -1,11 +1,14 @@
+import { useCollectionPager } from "@/lib/use-collection-pager";
+import { CollectionPageControls } from "@/components/CollectionPageControls";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Boxes, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { chatStoragePrincipal, loadConversations } from "@/lib/chat-store";
-import { listMyLibrary, type LibraryItem } from "@/lib/library.functions";
+import type { LibraryItem } from "@/lib/library.functions";
+import { listLibraryPage, readLibraryItem } from "@/lib/library-items-client";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import {
   listPromptTemplates,
@@ -42,6 +45,7 @@ type Candidate = {
   id: string;
   title: string;
   content: string;
+  libraryItem?: LibraryItem;
 };
 const MAX_SEARCH_HANDOFF_BYTES = 30 * 1024;
 const MAX_SEARCH_QUERY_CHARS = 240;
@@ -72,19 +76,22 @@ function searchHandoffPrompt(pack: ContextPack) {
   return `${prompt.slice(0, low)}${notice}`;
 }
 function ContextPacksPage() {
+  const { isLoaded, user } = useUser();
+  return <ContextPacksForAccount key={isLoaded ? (user?.id ?? "guest") : "loading"} />;
+}
+function ContextPacksForAccount() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const workRevision = useWorkStoreRevision(userKey);
   const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const navigate = useNavigate();
-  const listPacks = useServerFn(listContextPacks),
+  const listPacksPage = useServerFn(listContextPacks),
     create = useServerFn(createContextPack),
     remove = useServerFn(deleteContextPack),
-    getLibrary = useServerFn(listMyLibrary),
     getProjects = useServerFn(listProjects),
-    getMemories = useServerFn(listMemoryCenter),
-    getPrompts = useServerFn(listPromptTemplates),
-    getResearch = useServerFn(listResearchTemplates);
+    getMemoriesPage = useServerFn(listMemoryCenter),
+    getPromptsPage = useServerFn(listPromptTemplates),
+    getResearchPage = useServerFn(listResearchTemplates);
   const [packs, setPacks] = useState<ContextPack[]>([]),
     [library, setLibrary] = useState<LibraryItem[]>([]),
     [projects, setProjects] = useState<ProjectSummary[]>([]),
@@ -93,12 +100,87 @@ function ContextPacksPage() {
     [research, setResearch] = useState<ResearchTemplate[]>([]),
     [pending, setPending] = useState<WorkspaceHandoff[]>([]),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState<string | null>(null),
     [creating, setCreating] = useState(false),
     [name, setName] = useState(""),
     [description, setDescription] = useState(""),
     [query, setQuery] = useState(""),
-    [selected, setSelected] = useState<string[]>([]);
+    [selected, setSelected] = useState<Candidate[]>([]);
+  const packsPager = useCollectionPager(listPacksPage, principal, setPacks);
+  const memoryPager = useCollectionPager(getMemoriesPage, principal, setMemories);
+  const promptsPager = useCollectionPager(getPromptsPage, principal, setPrompts);
+  const researchPager = useCollectionPager(getResearchPage, principal, setResearch);
+  const listPacks = packsPager.read,
+    getMemories = memoryPager.read,
+    getPrompts = promptsPager.read,
+    getResearch = researchPager.read;
+  const active = useRef(true);
+  const createPending = useRef(false);
+  const draftRevision = useRef(0);
+  const deletePending = useRef(new Set<string>());
+  const bodyAbort = useRef<AbortController | null>(null);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+      bodyAbort.current?.abort();
+    };
+  }, []);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [sourceErrors, setSourceErrors] = useState<string[]>([]);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryCursor, setLibraryCursor] = useState<Record<string, unknown> | null>(null);
+  const librarySequence = useRef(0);
+  const libraryAbort = useRef<AbortController | null>(null);
+  const loadLibrary = useCallback(
+    async (cursor: Record<string, unknown> | null = null) => {
+      if (!isLoaded || !isSignedIn || !userKey) return;
+      const sequence = ++librarySequence.current;
+      libraryAbort.current?.abort();
+      const controller = new AbortController();
+      libraryAbort.current = controller;
+      setLibraryLoading(true);
+      setLibraryError(null);
+      if (!cursor) {
+        setLibrary([]);
+        setLibraryCursor(null);
+      }
+      try {
+        const page = await listLibraryPage(
+          userKey,
+          { query, sort: "newest", filter: "all", folder: "all", favorites: "", cursor },
+          controller.signal,
+        );
+        if (!active.current || sequence !== librarySequence.current) return;
+        setLibrary((previous) =>
+          cursor
+            ? [
+                ...previous,
+                ...page.items.filter((item) => !previous.some((old) => old.id === item.id)),
+              ]
+            : page.items,
+        );
+        setLibraryCursor(page.cursor);
+      } catch (error) {
+        if (active.current && sequence === librarySequence.current)
+          setLibraryError(
+            error instanceof Error ? error.message : "Library choices are unavailable.",
+          );
+      } finally {
+        if (active.current && sequence === librarySequence.current) setLibraryLoading(false);
+      }
+    },
+    [isLoaded, isSignedIn, userKey, query],
+  );
+  useEffect(() => {
+    void loadLibrary();
+    const sequence = librarySequence,
+      abort = libraryAbort;
+    return () => {
+      sequence.current++;
+      abort.current?.abort();
+    };
+  }, [loadLibrary]);
   const [dataPrincipal, setDataPrincipal] = useState<string | null>(null);
   const dataReady = principal !== null && dataPrincipal === principal;
   useEffect(() => {
@@ -109,14 +191,12 @@ function ContextPacksPage() {
     }
     setDataPrincipal(null);
     setPacks([]);
-    setLibrary([]);
     setProjects([]);
     setMemories([]);
     setPrompts([]);
     setResearch([]);
     setPending([]);
-    setSelected([]);
-    setError(null);
+    setSourceErrors([]);
     if (!isSignedIn) {
       setDataPrincipal(principal);
       setLoading(false);
@@ -132,31 +212,28 @@ function ContextPacksPage() {
     if (handoff.ok) {
       const candidates = Array.isArray(handoff.value) ? handoff.value : [handoff.value];
       setPending(candidates);
-      setSelected(candidates.map((candidate) => `${candidate.type}:${candidate.id}`));
+      setSelected(
+        candidates
+          .slice(0, 30)
+          .map((candidate) => ({ ...candidate, key: `${candidate.type}:${candidate.id}` })),
+      );
     } else if (handoff.reason !== "missing") {
       toast.error("Saved context candidates could not be attached.");
     }
-    Promise.all([
-      listPacks({}),
-      getLibrary({}),
-      getProjects({}),
-      getMemories({}),
-      getPrompts({}),
-      getResearch({}),
-    ])
-      .then(([p, l, pr, memory, promptItems, researchItems]) => {
+    Promise.allSettled([listPacks(), getProjects({}), getMemories(), getPrompts(), getResearch()])
+      .then(([, pr]) => {
         if (cancelled) return;
-        setPacks(p);
-        setLibrary(l);
-        setProjects(pr);
-        setMemories(memory);
-        setPrompts(promptItems);
-        setResearch(researchItems);
-        setDataPrincipal(principal);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : "Context could not be loaded");
+        const unavailable: string[] = [];
+        function adopt<T>(
+          result: PromiseSettledResult<T>,
+          label: string,
+          setter: (value: T) => void,
+        ) {
+          if (result.status === "fulfilled") setter(result.value);
+          else unavailable.push(label);
+        }
+        adopt(pr, "Projects", setProjects);
+        setSourceErrors(unavailable);
         setDataPrincipal(principal);
       })
       .finally(() => {
@@ -169,13 +246,13 @@ function ContextPacksPage() {
     isLoaded,
     isSignedIn,
     listPacks,
-    getLibrary,
     getProjects,
     getMemories,
     getPrompts,
     getResearch,
     principal,
     userKey,
+    refreshVersion,
   ]);
   const candidates = useMemo<Candidate[]>(() => {
     void workRevision; // Invalidate the storage snapshot after a durable sync update.
@@ -207,7 +284,8 @@ function ContextPacksPage() {
               : "library") as Candidate["type"],
         id: item.id,
         title: item.title,
-        content: (item.content_text ?? item.file_name ?? item.title).slice(0, 12000),
+        content: "",
+        libraryItem: item,
       })),
       ...memories.map((memory) => ({
         key: `memory:${memory.id}`,
@@ -248,7 +326,13 @@ function ContextPacksPage() {
             12000,
           ),
       })),
-    ].filter((item) => `${item.title} ${item.content}`.toLowerCase().includes(query.toLowerCase()));
+    ]
+      .filter((item, index, all) => all.findIndex((other) => other.key === item.key) === index)
+      .filter(
+        (item) =>
+          "libraryItem" in item ||
+          `${item.title} ${item.content}`.toLowerCase().includes(query.toLowerCase()),
+      );
   }, [
     dataReady,
     library,
@@ -262,22 +346,52 @@ function ContextPacksPage() {
     workRevision,
   ]);
   const submit = async () => {
-    const items = candidates
-      .filter((item) => selected.includes(item.key))
-      .map(({ type, id, title, content }) => ({ type, id, title, content }));
-    if (!name.trim() || !items.length) return;
+    if (!active.current || createPending.current || !userKey || !name.trim() || !selected.length)
+      return;
+    createPending.current = true;
+    packsPager.invalidate();
+    const revision = draftRevision.current;
+    const controller = new AbortController();
+    bodyAbort.current = controller;
     setCreating(true);
     try {
+      const items = [];
+      for (const candidate of selected) {
+        let content = candidate.content;
+        if (candidate.libraryItem) {
+          const loaded = await readLibraryItem(userKey, candidate.libraryItem, controller.signal);
+          if (!active.current) return;
+          if (!loaded.content_text?.trim())
+            throw new Error(
+              `${candidate.title} has no readable text. Remove it from this text context pack.`,
+            );
+          content = loaded.content_text;
+        }
+        items.push({
+          type: candidate.type,
+          id: candidate.id,
+          title: candidate.title,
+          content: content.slice(0, 12000),
+        });
+      }
+      if (!active.current) return;
       const pack = await create({ data: { name, description, items } });
+      if (!active.current) return;
       setPacks((all) => [pack, ...all]);
-      setName("");
-      setDescription("");
-      setSelected([]);
+      if (draftRevision.current === revision) {
+        setName("");
+        setDescription("");
+        setSelected([]);
+      }
       toast.success("Context pack saved");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Context pack could not be saved");
+      if (active.current)
+        toast.error(e instanceof Error ? e.message : "Context pack could not be saved");
     } finally {
-      setCreating(false);
+      if (active.current) {
+        createPending.current = false;
+        setCreating(false);
+      }
     }
   };
   const attachPack = (pack: ContextPack) => {
@@ -296,7 +410,11 @@ function ContextPacksPage() {
   };
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-workspace-controls mx-auto min-w-0 w-full max-w-5xl px-4 py-7 sm:px-6"
+      >
         <header>
           <div className="flex items-center gap-2">
             <Boxes className="h-5 w-5" />
@@ -312,28 +430,30 @@ function ContextPacksPage() {
           </div>
         ) : !dataReady || loading ? (
           <div className="mt-6 h-40 animate-pulse rounded-2xl bg-muted" />
-        ) : error ? (
-          <div role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4">
-            {error}
-          </div>
         ) : (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
-            <section className="rounded-2xl border p-4">
+          <div className="mt-6 grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,.85fr)]">
+            <section className="min-w-0 rounded-2xl border p-4">
               <h2 className="font-semibold">Build a pack</h2>
               <div className="mt-3 grid gap-3">
                 <input
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    draftRevision.current++;
+                    setName(e.target.value);
+                  }}
                   maxLength={120}
-                  className="h-11 rounded-xl border bg-background px-3"
+                  className="min-w-0 w-full h-11 rounded-xl border bg-background px-3"
                   placeholder="Pack name"
                   aria-label="Pack name"
                 />
                 <textarea
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => {
+                    draftRevision.current++;
+                    setDescription(e.target.value);
+                  }}
                   maxLength={500}
-                  className="min-h-20 rounded-xl border bg-background p-3"
+                  className="min-w-0 w-full min-h-20 rounded-xl border bg-background p-3"
                   placeholder="What is this context for?"
                   aria-label="Pack description"
                 />
@@ -342,12 +462,42 @@ function ContextPacksPage() {
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <input
                     value={query}
+                    maxLength={200}
                     onChange={(e) => setQuery(e.target.value)}
                     className="h-10 w-full rounded-xl border bg-background pl-9"
                     placeholder="Search chats, files, Library, projects"
                   />
                 </label>
               </div>
+              {sourceErrors.length > 0 && (
+                <div role="alert" className="mt-3 text-sm">
+                  Unavailable sources: {sourceErrors.join(", ")}.
+                  <button
+                    disabled={creating}
+                    onClick={() => {
+                      if (!createPending.current) setRefreshVersion((value) => value + 1);
+                    }}
+                    className="ml-2 underline"
+                  >
+                    Retry sources
+                  </button>
+                </div>
+              )}
+              <CollectionPageControls label="Memory choices" pager={memoryPager} />
+              <CollectionPageControls label="Prompt choices" pager={promptsPager} />
+              <CollectionPageControls label="Research choices" pager={researchPager} />
+              {libraryError && (
+                <div role="alert" className="mt-3 text-sm">
+                  Library choices unavailable. {libraryError}
+                  <button onClick={() => void loadLibrary()} className="ml-2 underline">
+                    Retry Library
+                  </button>
+                </div>
+              )}
+              <p className="mt-3 text-xs text-muted-foreground">
+                Text context only. Library items without extracted text cannot be selected. Each
+                selected source contributes up to 12,000 characters.
+              </p>
               <div className="mt-3 max-h-80 overflow-y-auto rounded-xl border">
                 <ul className="divide-y">
                   {candidates.length ? (
@@ -356,17 +506,28 @@ function ContextPacksPage() {
                         <label className="flex min-h-12 cursor-pointer items-center gap-3 p-3 hover:bg-accent">
                           <input
                             type="checkbox"
-                            checked={selected.includes(item.key)}
-                            onChange={() =>
-                              setSelected((all) =>
-                                all.includes(item.key)
-                                  ? all.filter((key) => key !== item.key)
-                                  : [...all, item.key],
-                              )
+                            className="shrink-0"
+                            checked={selected.some((value) => value.key === item.key)}
+                            disabled={
+                              Boolean(item.libraryItem && !item.libraryItem.text_available) ||
+                              (selected.length >= 30 &&
+                                !selected.some((value) => value.key === item.key))
                             }
+                            onChange={() => {
+                              draftRevision.current++;
+                              setSelected((all) =>
+                                all.some((value) => value.key === item.key)
+                                  ? all.filter((value) => value.key !== item.key)
+                                  : all.length < 30
+                                    ? [...all, item]
+                                    : all,
+                              );
+                            }}
                           />
-                          <span className="min-w-0">
-                            <span className="block truncate text-sm font-medium">{item.title}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block whitespace-normal [overflow-wrap:anywhere] text-sm font-medium">
+                              {item.title}
+                            </span>
                             <span className="text-xs capitalize text-muted-foreground">
                               {item.type}
                             </span>
@@ -376,10 +537,37 @@ function ContextPacksPage() {
                     ))
                   ) : (
                     <li className="p-6 text-center text-sm text-muted-foreground">
-                      No matching context found.
+                      {libraryLoading
+                        ? "Loading Library choices…"
+                        : "No matching context in available sources."}
                     </li>
                   )}
                 </ul>
+              </div>
+              {libraryCursor && (
+                <button
+                  disabled={libraryLoading}
+                  onClick={() => void loadLibrary(libraryCursor)}
+                  className="mt-3 min-h-10 rounded-lg border px-3"
+                >
+                  {libraryLoading ? "Loading…" : "Load more Library items"}
+                </button>
+              )}
+              <div className="mt-3 text-sm">
+                Selected {selected.length}/30
+                {selected.map((item) => (
+                  <button
+                    key={item.key}
+                    aria-label={`Remove ${item.title} from selection`}
+                    className="ml-2 max-w-full whitespace-normal [overflow-wrap:anywhere] rounded border px-2 py-1"
+                    onClick={() => {
+                      draftRevision.current++;
+                      setSelected((all) => all.filter((value) => value.key !== item.key));
+                    }}
+                  >
+                    {item.title} ×
+                  </button>
+                ))}
               </div>
               <button
                 disabled={creating || !name.trim() || !selected.length}
@@ -390,18 +578,24 @@ function ContextPacksPage() {
                 {creating ? "Saving…" : "Save context pack"}
               </button>
             </section>
-            <section>
+            <section className="min-w-0">
               <h2 className="font-semibold">Saved packs</h2>
-              {packs.length === 0 ? (
+              <CollectionPageControls label="Saved packs" pager={packsPager} disabled={creating} />
+              {packsPager.error && packs.length === 0 ? (
+                <p role="alert" className="mt-3 text-sm">
+                  {packsPager.error}
+                </p>
+              ) : packs.length === 0 ? (
                 <div className="mt-3 rounded-2xl border p-8 text-center text-sm text-muted-foreground">
-                  Create your first pack from real workspace context.
+                  No saved packs on this page. Browse another page or create a pack from workspace
+                  context.
                 </div>
               ) : (
                 <ul className="mt-3 space-y-3">
                   {packs.map((pack) => (
                     <li key={pack.id} className="rounded-2xl border bg-card/40 p-4">
-                      <h3 className="font-medium">{pack.name}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <h3 className="[overflow-wrap:anywhere] font-medium">{pack.name}</h3>
+                      <p className="mt-1 [overflow-wrap:anywhere] text-sm text-muted-foreground">
                         {pack.description || `${pack.items.length} context items`}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -464,12 +658,23 @@ function ContextPacksPage() {
                         <button
                           aria-label={`Delete ${pack.name}`}
                           onClick={async () => {
-                            if (!confirm("Delete this context pack?")) return;
+                            if (
+                              !active.current ||
+                              deletePending.current.has(pack.id) ||
+                              !confirm("Delete this context pack?")
+                            )
+                              return;
+                            deletePending.current.add(pack.id);
+                            packsPager.invalidate();
                             try {
                               await remove({ data: { id: pack.id } });
+                              if (!active.current) return;
                               setPacks((all) => all.filter((p) => p.id !== pack.id));
                             } catch (e) {
-                              toast.error(e instanceof Error ? e.message : "Could not delete");
+                              if (active.current)
+                                toast.error(e instanceof Error ? e.message : "Could not delete");
+                            } finally {
+                              deletePending.current.delete(pack.id);
                             }
                           }}
                           className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10"

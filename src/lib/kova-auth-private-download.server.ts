@@ -59,7 +59,13 @@ export async function handleOwnedPrivateDownload(request: Request): Promise<Resp
       return denied(403);
     const authHeaders = new Headers(request.headers);
     authHeaders.set("X-Kova-Owner", owner);
-    const authRequest = new Request(request, { headers: authHeaders });
+    // Nitro wraps the incoming Request. Copy public GET fields instead of
+    // passing that wrapper to Undici's native, privately branded constructor.
+    const authRequest = new Request(request.url, {
+      method: "GET",
+      headers: authHeaders,
+      signal: request.signal,
+    });
     const auth = await bounded(requireVerifiedUser(authRequest));
     if (auth instanceof Response) return auth;
     if (

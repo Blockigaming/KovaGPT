@@ -448,34 +448,43 @@ export const setProjectArchived = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
+        expectedUpdatedAt: z.string().datetime({ offset: true }),
         archived: z.boolean(),
       })
       .parse(i),
   )
-  .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { data: updated, error } = await context.supabase
-      .from("projects")
-      .update({ archived_at: data.archived ? new Date().toISOString() : null })
-      .eq("id", data.id)
-      .eq("owner_id", context.userId)
-      .select("id")
-      .maybeSingle();
-    if (error) {
-      console.error("[serverfn]", error.message);
-      throw new Error("The project archive state could not be updated.");
-    }
-    if (!updated) {
-      throw new Error("The project was not found, or you no longer have permission to update it.");
-    }
-    await logActivity(
-      context.supabase,
-      data.id,
-      context.userId,
-      data.archived ? "archived" : "unarchived",
-      data.archived ? "Archived project" : "Restored project from archive",
-    );
-    return { ok: true };
-  });
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ ok: true; updatedAt: string; archivedAt: string | null }> => {
+      const { data: updated, error } = await context.supabase
+        .from("projects")
+        .update({ archived_at: data.archived ? new Date().toISOString() : null })
+        .eq("id", data.id)
+        .eq("updated_at", data.expectedUpdatedAt)
+        .eq("owner_id", context.userId)
+        .select("id, updated_at, archived_at")
+        .maybeSingle();
+      if (error) {
+        console.error("[serverfn]", error.message);
+        throw new Error("The project archive state could not be updated.");
+      }
+      if (!updated || updated.id !== data.id) {
+        throw new Error(
+          "Project changed or is no longer editable. Review the latest saved version before retrying.",
+        );
+      }
+      await logActivity(
+        context.supabase,
+        data.id,
+        context.userId,
+        data.archived ? "archived" : "unarchived",
+        data.archived ? "Archived project" : "Restored project from archive",
+      );
+      return { ok: true, updatedAt: updated.updated_at, archivedAt: updated.archived_at };
+    },
+  );
 
 // ============= SEARCH =============
 export type SearchResult = {

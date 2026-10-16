@@ -1,3 +1,4 @@
+import { serializeConnectedToolOutput } from "@/lib/connected-tool-output.mjs";
 import { memorySourcesDelta, type MemorySourceRef } from "@/lib/memory-sources.mjs";
 import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
 import { createFileRoute } from "@tanstack/react-router";
@@ -24,8 +25,10 @@ import {
   runGoogleTool,
   stagePendingAction,
 } from "@/lib/google-tools.server";
+import { getLaunchToolContext } from "@/integrations/launch-service.server";
 import {
   chatCompletions,
+  getAiProviderConfig,
   imageGenerations,
   imageModel,
   missingAiProviderResponse,
@@ -54,6 +57,7 @@ import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 
 import { routeAiModel } from "@/lib/ai/model-router.server";
+import { buildKovaModelIdentityInstructions } from "@/lib/kova-model-identity.mjs";
 
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
 import {
@@ -951,6 +955,12 @@ export const Route = createFileRoute("/api/chat")({
               { requestId },
             );
             const model = routeDecision.modelId;
+            const modelIdentityInstructions = buildKovaModelIdentityInstructions({
+              role: routeDecision.role,
+              modelId: model,
+              provider: getAiProviderConfig().provider,
+              hasAssistantHistory: transformed.some((message) => message.role === "assistant"),
+            });
 
             // Live web data is on for everyone by default. Users can still opt
             // out in settings except for explicit/time-sensitive search asks.
@@ -1284,7 +1294,8 @@ export const Route = createFileRoute("/api/chat")({
                       ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
                       : "") +
                     `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
-                    buildCurrentDateInstruction(timezone, locale),
+                    buildCurrentDateInstruction(timezone, locale) +
+                    modelIdentityInstructions,
                 },
                 ...transformed,
               ],
@@ -1324,9 +1335,25 @@ export const Route = createFileRoute("/api/chat")({
                     { required: false },
                   )) ?? null)
                 : null;
+            const launchContext =
+              auth &&
+              usesExistingContext &&
+              (!customKova || customKova.config.apps.length > 0) &&
+              !hasAttachments &&
+              m.id !== "instant" &&
+              lastText.length > 0
+                ? ((await preflight.run(
+                    "launch_connector_tools",
+                    () => getLaunchToolContext(auth, request, customKova?.config.apps),
+                    { required: false },
+                  )) ?? null)
+                : null;
             const availableTools = customKova
-              ? customKova.filterTools(googleContext?.tools ?? [])
-              : (googleContext?.tools ?? []);
+              ? customKova.filterTools([
+                  ...(googleContext?.tools ?? []),
+                  ...(launchContext?.tools ?? []),
+                ])
+              : [...(googleContext?.tools ?? []), ...(launchContext?.tools ?? [])];
             const googleBinding = googleContext?.binding ?? undefined;
             const enableTools = availableTools.length > 0;
 
@@ -1446,7 +1473,8 @@ export const Route = createFileRoute("/api/chat")({
                         ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
                         : "") +
                       `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
-                      buildCurrentDateInstruction(timezone, locale),
+                      buildCurrentDateInstruction(timezone, locale) +
+                      modelIdentityInstructions,
                   },
                   { role: "user", content: lastText },
                 ]
@@ -1720,7 +1748,10 @@ export const Route = createFileRoute("/api/chat")({
                     } catch {
                       /* keep empty */
                     }
-                    const activityLabel = TOOL_ACTIVITY[tc.function.name]?.done ?? tc.function.name;
+                    const activityLabel =
+                      TOOL_ACTIVITY[tc.function.name]?.done ??
+                      launchContext?.labels[tc.function.name] ??
+                      tc.function.name;
                     activityEvents.push({
                       tool: tc.function.name,
                       label: activityLabel,
@@ -1729,7 +1760,7 @@ export const Route = createFileRoute("/api/chat")({
                     // Dedup identical (name+args) within this request.
                     const key = dedupKey(tc.function.name, parsedArgs);
                     const cached = dedupCache.get(key);
-                    if (cached) {
+                    if (cached && !launchContext?.hasTool(tc.function.name)) {
                       return {
                         role: "tool",
                         tool_call_id: tc.id,
@@ -1770,13 +1801,15 @@ export const Route = createFileRoute("/api/chat")({
                       }
                     }
                     try {
-                      const out = await runGoogleTool(
-                        auth!.userId,
-                        tc.function.name,
-                        parsedArgs,
-                        googleBinding,
-                      );
-                      const content = JSON.stringify(out).slice(0, 24000);
+                      const out = launchContext?.hasTool(tc.function.name)
+                        ? await launchContext.execute(tc.function.name, parsedArgs)
+                        : await runGoogleTool(
+                            auth!.userId,
+                            tc.function.name,
+                            parsedArgs,
+                            googleBinding,
+                          );
+                      const content = serializeConnectedToolOutput(out);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };
                     } catch {

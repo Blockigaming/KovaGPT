@@ -20,6 +20,11 @@ function DeveloperAuthorizeRoute() {
   return request_id ? (
     <DeveloperMcpAccessPage requestId={request_id} />
   ) : (
-    <p>Invalid authorization request. Restart from your client.</p>
+    <main id="main-content" tabIndex={-1} className="kova-state-screen">
+      <section className="kova-state-panel" aria-labelledby="developer-authorization-error">
+        <h1 id="developer-authorization-error">Authorization unavailable</h1>
+        <p>Invalid authorization request. Restart from your client.</p>
+      </section>
+    </main>
   );
 }

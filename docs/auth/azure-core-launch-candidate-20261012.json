@@ -1,0 +1,391 @@
+{
+  "schemaVersion": 1,
+  "status": "REVIEWABLE_LOCAL_CANDIDATE_NOT_AUTH_ACCEPTANCE_OR_DEPLOYMENT_AUTHORIZATION",
+  "preparedAt": "2026-10-12T14:42:18Z",
+  "sources": {
+    "azureMain": "a3c26832dfda5fe7b5dc88f683411d500b9c5a3e",
+    "authPr": 443,
+    "authHead": "e43686bc123f2e5efcd32a69e843f3fd4bf61b49",
+    "authMergeCommit": "026196593e9f3a9d2f8a00d8e1788dffb320b5e3",
+    "authMergeDestination": "codex/kova-owned-auth-foundation",
+    "fullManifest": "release-migrations.json",
+    "fullManifestSha256": "3ad46f711f371dbfe4504919197b35f8819afcf33f923a67034c9426062a8d93"
+  },
+  "scope": {
+    "required": [
+      "signup",
+      "mail-proof confirmation",
+      "login",
+      "session revocation",
+      "account isolation",
+      "guarded account deletion"
+    ],
+    "excluded": ["family creation", "family invite redemption"],
+    "familyOnlyRpcs": ["create_or_repair_family_group", "accept_family_invite_atomic"],
+    "sharedNotFamilyOnly": [
+      "account_deletion_fences",
+      "auth_user_exists",
+      "owned directory",
+      "existing plan entitlement read"
+    ],
+    "limits": "No production reads/writes, hosted jobs, build, deployment, merge or spend. No Auth acceptance inferred from Git source or local tests."
+  },
+  "sourceIntegration": [
+    "Keep Azure main runtime, migration history/evidence tooling and UI design. Overlay only Auth-owned adapters, HTTP/store fixes, owner-bound password/MFA controls and their dependency tests.",
+    "No Auth receiver, coordinator, workflow, internal S6 receiver route or staging SQL is installed or executed. The imported S6 library supplies the existing Google identity restriction; production configuration must leave KOVA_S6_OWNER_RELAY_KEY unset.",
+    "Three original Auth SQL files remain byte-identical. The source inventory is regenerated with Azure's current policy/grant-order parser, not the older Auth snapshot."
+  ],
+  "dependencyDecision": [
+    {
+      "objects": ["kova_private.auth_user_exists(uuid)", "public.account_deletion_fences"],
+      "classification": "CORE_DELETION_REQUIRED",
+      "flow": "Account deletion calls read_account_deletion_state and prepare_org_account_deletion before cleanup, even for an ordinary non-family account. Canonical irreversible fence, organization ownership and export cleanup behavior retained.",
+      "evidence": [
+        "src/routes/api/account.ts",
+        "src/lib/organization-account-deletion.server.ts",
+        "tests/integration/azure-core-auth-candidate.test.mjs"
+      ]
+    },
+    {
+      "objects": ["public.kova_auth_directory_email(uuid)"],
+      "classification": "SHARED_OWNED_DIRECTORY",
+      "flow": "Owned account snapshot, availability and export identity use this helper. Pure signup/login tests do not prove this catalog absence alone breaks login. Included through the complete existing Auth migration dependency chain.",
+      "evidence": [
+        "supabase/migrations/20260923001500_kova_owned_directory_authority.sql",
+        "supabase/migrations/20260923012655_kova_owned_review_retirement_guards.sql",
+        "supabase/migrations/20260923013148_kova_owned_legacy_security_retirement.sql"
+      ]
+    },
+    {
+      "objects": ["kova_private.verified_auth_user_for_email(text)"],
+      "classification": "INVITATION_AUTHORITY_NOT_A_CORE_SIGNUP_LOGIN_DEPENDENCY",
+      "flow": "Family, project and organization invitations use verified-recipient identity. Its implementation is reused in the canonical Auth chain, but no invitation feature is accepted or required by the four tested core flows."
+    },
+    {
+      "objects": [
+        "public.create_or_repair_family_group(uuid,text)",
+        "public.accept_family_invite_atomic(uuid,text)"
+      ],
+      "classification": "FAMILY_SHARING_EXCLUDED_NOT_CORE_BLOCKER",
+      "flow": "Call sites confined to family functions and explicit family_invite URL redemption. The six new core integration checks pass with both RPCs and all family tables absent.",
+      "evidence": [
+        "src/lib/family.functions.ts",
+        "src/routes/index.tsx",
+        "tests/integration/azure-core-auth-candidate.test.mjs"
+      ]
+    },
+    {
+      "objects": ["public.effective_user_plan_tier(uuid)", "public.family_owner_of(uuid)"],
+      "classification": "PRESERVE_EXISTING_SHARED_ENTITLEMENT_READ",
+      "flow": "Billing tier resolution still consults the existing read helper. Excluding family creation/invites does not authorize deleting this helper, altering existing memberships or silently reducing a paid entitlement."
+    }
+  ],
+  "orderedLocalDependencySlice": [
+    {
+      "order": 87,
+      "filename": "20260903203000_account_data_exports.sql",
+      "sha256": "acbdfd3daf731406d5e5715ec8424e0461249d0bbd265063d4f158d880a08ed6"
+    },
+    {
+      "order": 88,
+      "filename": "20260903204500_account_export_deletion_fence.sql",
+      "sha256": "02ce679bddf85327bcdce0d3a0055de1e66d2b80f848e24872ddda3fae15cf6c"
+    },
+    {
+      "order": 97,
+      "filename": "20260904225916_account_export_generation_outbox.sql",
+      "sha256": "5f698e73756dfaaf5d1112cec9e115e4e48075f7c14759e0ae65f4d675392f1c"
+    },
+    {
+      "order": 111,
+      "filename": "20260905001454_organization_administration_foundation.sql",
+      "sha256": "de3a35f78d678f53baed39413029dfc8ad8deee8a21e8e59eec777dad9f7fbab"
+    },
+    {
+      "order": 112,
+      "filename": "20260905001736_private_auth_identity_helpers.sql",
+      "sha256": "b9005dcfee8279ebe3b1c23b80254099526088c610cad015a6070506dc6ca9ff"
+    },
+    {
+      "order": 134,
+      "filename": "20260905030947_irreversible_account_deletion.sql",
+      "sha256": "f29466776b99a5c8661de1b8a7ac1d82c11afe2ff4feaa9dc1033d74cf161e29"
+    },
+    {
+      "order": 158,
+      "filename": "20260920170657_kova_identity_session_store.sql",
+      "sha256": "c87e97ed30a8e0942cf3b61b447cf8da01c7cea770b571d57399998f3fdedb91"
+    },
+    {
+      "order": 159,
+      "filename": "20260920232443_kova_auth_foreign_key_indexes.sql",
+      "sha256": "65446ec07aef1f47db2b097f5c21175e349730f9ca051caa1f995c41c729772d"
+    },
+    {
+      "order": 160,
+      "filename": "20260921002928_kova_owned_totp_login_challenges.sql",
+      "sha256": "0711a4c8714ac115191e46400db5f74c95302eb5a75d75dc6d24c36424373dd3"
+    },
+    {
+      "order": 161,
+      "filename": "20260921003901_kova_owned_totp_login_indexes.sql",
+      "sha256": "141cb0c60b368930072460ee61212d06aa096465c53e4d4f8659e31fa7eb0883"
+    },
+    {
+      "order": 162,
+      "filename": "20260921020250_kova_owned_mfa_enrollment.sql",
+      "sha256": "000e02a5f0486ed35260291a2436710f3e853eb73409c4c8c510c29963fc94e0"
+    },
+    {
+      "order": 163,
+      "filename": "20260921023426_kova_owned_mfa_recovery_login.sql",
+      "sha256": "e4424a162998a3fa03c9e3200512117e127c23d54a058f986a3ad75f1b23246a"
+    },
+    {
+      "order": 164,
+      "filename": "20260921160105_kova_owned_mfa_recovery_controls.sql",
+      "sha256": "d27f13ba989a1b03f03efac502c28f31b1388a382249503483b4a5e0cc431d4d"
+    },
+    {
+      "order": 165,
+      "filename": "20260921171133_kova_owned_auth_session_mutations.sql",
+      "sha256": "d8028bc7b0536fab410515eeeb6dee40460ee5d003623cf3ce3e2177ef6dc8a0"
+    },
+    {
+      "order": 166,
+      "filename": "20260921180400_kova_owned_passkeys.sql",
+      "sha256": "ba586689eba79befe258097ac80fd6936c0f116387f334f1b478430df938afa4"
+    },
+    {
+      "order": 167,
+      "filename": "20260922001355_kova_owned_compatibility_revocation.sql",
+      "sha256": "13cb41537f5f48d0afc8aa49b1ee05971a74ee6217948bb4f407c0569fcf912a"
+    },
+    {
+      "order": 168,
+      "filename": "20260922211210_kova_owned_google_mfa_review_fixes.sql",
+      "sha256": "cda82909e8877d166d8892e87920271f1627c3447689277ce9fd295d01a60567"
+    },
+    {
+      "order": 169,
+      "filename": "20260922211527_kova_owned_mfa_enrollment_step_up.sql",
+      "sha256": "da950975ad119e78448117f337045fbfb67988f4baa5799448e1054de1565638"
+    },
+    {
+      "order": 170,
+      "filename": "20260923001500_kova_owned_directory_authority.sql",
+      "sha256": "9702af271877d7d0f69b77cc72078b2c2392e7af3da14e0a23cae1f5010ef2a2"
+    },
+    {
+      "order": 171,
+      "filename": "20260923001600_kova_owned_compatibility_lifecycle.sql",
+      "sha256": "e2e4116af47f48efc5fdb504b33eff5a608e36323685d685692162b426dc6bba"
+    },
+    {
+      "order": 172,
+      "filename": "20260923012655_kova_owned_review_retirement_guards.sql",
+      "sha256": "f30e85be6cd01a758e66454d2053d630463a3bce702f100af8b7296267b81eab"
+    },
+    {
+      "order": 173,
+      "filename": "20260923013148_kova_owned_legacy_security_retirement.sql",
+      "sha256": "2a9952087157b384a8db9e585cc1dbb02792581dd1f9496683a5cb3c713f3dc1"
+    },
+    {
+      "order": 174,
+      "filename": "20260923131141_kova_owned_sites_session_authority.sql",
+      "sha256": "cf50935611def591874265240e1b1030c5729c07bf1546d9be1721d4817076d3"
+    },
+    {
+      "order": 175,
+      "filename": "20260923132813_kova_owned_verification_resend_review.sql",
+      "sha256": "7998d10f99577a0990036191afc9c4bb842462573b00c22cd946daaf63e8c4ad"
+    },
+    {
+      "order": 176,
+      "filename": "20260924010000_kova_owned_mfa_binding_and_global_signout.sql",
+      "sha256": "4dfa1699b8c79b4cdf05830153c4162664ea49d03ffe40b7411f9f7cb57346b2"
+    },
+    {
+      "order": 177,
+      "filename": "20260924013419_kova_owned_multi_factor_login_v2.sql",
+      "sha256": "9bdf2c2cde1382f2d53aa31806589c7896abf4795cd669aa476d7a588ba5b8f7"
+    },
+    {
+      "order": 178,
+      "filename": "20260924015001_kova_owned_legacy_mfa_bridge.sql",
+      "sha256": "172c86f5bbd1c23854154f5dc85f3e23a8709a897b2ecdb81b84ae82cf7e546e"
+    },
+    {
+      "order": 179,
+      "filename": "20260924125525_kova_owned_mcp_session_authority.sql",
+      "sha256": "0da5854dd0f2c631610da39bfed4a978495760c7ea4456d5bbc8333498c1af4c"
+    },
+    {
+      "order": 180,
+      "filename": "20260924130000_kova_owned_mcp_legacy_mfa_claims.sql",
+      "sha256": "a87cd4326e01b3a3db0f05a346517158872fa7965fc6747088d9ce6f430e754a"
+    },
+    {
+      "order": 181,
+      "filename": "20260924140000_kova_owned_cutover_population_guards.sql",
+      "sha256": "9155d05612be88eca7c93673c57412de2fb66cf669597dbbbfbe61489821f687"
+    },
+    {
+      "order": 182,
+      "filename": "20260924150000_kova_owned_cutover_authority_and_rp.sql",
+      "sha256": "b04221df7d0e1aef7d862ea9a06f9ffcde3e6942c9270faf96026e4e44afddcd"
+    },
+    {
+      "order": 183,
+      "filename": "20260924160000_kova_owned_cutover_required_mfa_guard.sql",
+      "sha256": "154953a67562e2724e44478b4148d5e38b3bf819cf71f1eb168f63f31fe6f0d8"
+    },
+    {
+      "order": 185,
+      "filename": "20260925143706_kova_restore_legacy_private_helper_usage.sql",
+      "sha256": "0da3875693fabfef5814df83117c1eb4ab7ba5e0dbc36cc424951ecde0115e97"
+    },
+    {
+      "order": 186,
+      "filename": "20260927163950_kova_owned_auth_remaining_review_fixes.sql",
+      "sha256": "b07344cc8d8217358622e335428af3a54c27b17194c0def495c2fec17cc1bfa5"
+    },
+    {
+      "order": 187,
+      "filename": "20260930224000_kova_owned_storage_cache_boundary.sql",
+      "sha256": "0ce55846b9de680ee9132fce545770c68eadf0d982554adfebd8d3f19ae858f3"
+    },
+    {
+      "order": 188,
+      "filename": "20261001003120_kova_owned_passkey_registration_primary_session.sql",
+      "sha256": "ed52d3aa90dcffe28f4199d4dd12dfdf713b14cd46f74a2f9af9d3218cd97ce5"
+    }
+  ],
+  "orderMeaning": "36 existing canonical SQL files tested in chronological order against an in-memory PostgreSQL fixture. This slice is not a standalone production installer: platform schemas, mail queue, rate limiting and external cleanup are explicit seams. The full 188-file manifest retains all application prerequisites. Never replay already-applied history or install an empty deletion fence.",
+  "proposedMissingAuthExtensions": [
+    {
+      "order": 186,
+      "filename": "20260927163950_kova_owned_auth_remaining_review_fixes.sql",
+      "sha256": "b07344cc8d8217358622e335428af3a54c27b17194c0def495c2fec17cc1bfa5"
+    },
+    {
+      "order": 187,
+      "filename": "20260930224000_kova_owned_storage_cache_boundary.sql",
+      "sha256": "0ce55846b9de680ee9132fce545770c68eadf0d982554adfebd8d3f19ae858f3"
+    },
+    {
+      "order": 188,
+      "filename": "20261001003120_kova_owned_passkey_registration_primary_session.sql",
+      "sha256": "ed52d3aa90dcffe28f4199d4dd12dfdf713b14cd46f74a2f9af9d3218cd97ce5"
+    }
+  ],
+  "historicalBoundary": {
+    "historicalDecision": "docs/release-reconciliation/canonical-history-actions-20260923.json",
+    "sourceCount": 185,
+    "remoteCount": 98,
+    "historicalProposedBodies": 107,
+    "conditionalHistoryRecords": 4,
+    "historicalProposedLedgerCount": 209,
+    "authExtensionsDeferred": 3,
+    "acceptanceChanged": false,
+    "productionReady": false,
+    "explanation": "The candidate retains Azure's immutable historical decision and all nineteen proof requirements. Its exact three Auth additions are separately pinned and deferred from the historical rehearsal. Synthetic tests do not manufacture source157/remote98 evidence or mark history applied."
+  },
+  "securityReceipt": {
+    "path": "../.azure-migration-private/evidence/schema-edge-security-production-execution-20261012.json",
+    "sha256": "f339b2691bdd349cfd9fc99596b6b97aabeb82c2a453e187b7f1e2d8cb6529c7",
+    "status": "APPLIED_EDGE_SEARCH_PATH_COMMITTED",
+    "remainingDispatches": 0,
+    "requiredPreservedSetting": "public.validate_agent_dependency_edge(): search_path=pg_catalog, public, pg_temp",
+    "bindingRule": "No selected Auth SQL rewrites this function. Any future whole-database replay or target deployment must preserve this final setting and reconcile later writers; the earlier July body must not undo it."
+  },
+  "verification": {
+    "coreIntegration": 6,
+    "focusedRegressionChecks": 372,
+    "totalDistinctChecks": 378,
+    "typecheck": "PASS",
+    "targetedLint": "PASS",
+    "sourceLovableAudit": "PASS_STRICT_LOCK_PLUS_NEW_UNTRACKED_RUNTIME_FILES",
+    "builtOrDeployedAudit": "NOT_RUN_NO_BUILD_OR_DEPLOYMENT",
+    "rollback": "PASS local transaction rollback and fail-closed deletion/fence tests; not a live rollback or Auth mode reversal",
+    "cleanup": "All PGlite databases closed; ephemeral synthetic credentials remained memory-only; no recovery volume or external service used"
+  },
+  "deploymentPrerequisites": {
+    "requiredMigrations": [
+      "kova_owned_mfa_binding_and_global_signout",
+      "kova_owned_multi_factor_login_v2",
+      "kova_owned_legacy_mfa_bridge",
+      "kova_owned_mcp_session_authority",
+      "kova_owned_mcp_legacy_mfa_claims",
+      "kova_owned_cutover_population_guards",
+      "kova_owned_cutover_authority_and_rp",
+      "kova_owned_cutover_required_mfa_guard",
+      "kova_restore_legacy_private_helper_usage",
+      "kova_owned_auth_remaining_review_fixes",
+      "kova_owned_storage_cache_boundary",
+      "kova_owned_passkey_registration_primary_session"
+    ],
+    "requiredDeployedChecks": [
+      "server_client_mode_match",
+      "signing_key_and_issuer",
+      "origin_and_csrf",
+      "public_login_and_signup",
+      "recovery_and_resend",
+      "password_rotation",
+      "totp_enrollment_and_login",
+      "totp_recovery",
+      "legacy_mfa_bridge",
+      "passkey_registration",
+      "passkey_login_and_removal",
+      "google_callback_and_consent",
+      "owned_session_revocation",
+      "owner_rpc_revocation",
+      "postgrest_request_hook",
+      "rls_owner_isolation",
+      "storage_revocation_and_url_lifetime",
+      "realtime_reauthorization",
+      "mcp_bearer_revocation",
+      "hosted_bearer_denied_after_retirement",
+      "email_delivery",
+      "rollback_rehearsal"
+    ],
+    "mandatoryReceiptBindings": [
+      "exact integrated sourceSha and appBuildSha",
+      "environment/project/origin/config fingerprint",
+      "authMode=kova and matching browser mode",
+      "capture within fifteen minutes at cutover assessment",
+      "zero legacy adoption and MFA gaps",
+      "effective RLS/private ACL/request-hook counts",
+      "expired historical JWT/signed URL exposure window"
+    ],
+    "policy": "Existing 22 deployed checks retained, including Google, passkeys, MFA and rollback; reduced family scope removes none of them. The local candidate requires the two additional cache/passkey migrations as well."
+  },
+  "authReviewRequest": {
+    "owner": "Auth",
+    "action": "Review this source-bound candidate and provide the existing gate-compatible deployed cutover receipt and original observations for the exact integrated revision/configuration when Auth is ready. Confirm owned principal/deletion-fence contract, mode/origin/RP/key-issuer configuration and all required deployed checks; Git source alone is not acceptance. No source transfer or receiver change is requested.",
+    "localEvidenceCannotProve": [
+      "physical passkey device/browser behavior",
+      "real email queue and mailbox delivery",
+      "provider OAuth callback/consent configuration",
+      "hosted Storage/CDN and signed-URL expiry",
+      "Realtime/MCP revocation on the deployed stack",
+      "populated legacy adoption/MFA gap counts and rollback rehearsal"
+    ]
+  },
+  "rollback": {
+    "localCandidate": "Discard or revise only this separate worktree/patch; azure-app, accepted M17/M18 and production are unchanged by this integration.",
+    "database": "No down migration supplied or authorized. Do not erase irreversible deletion fences, retired identity state or Storage revocation restrictions to switch modes. A production rollback requires Auth's existing tested compatibility/restore contract and separate authority."
+  },
+  "limits": {
+    "incrementalSpendUsd": 0,
+    "paidBuild": "HELD",
+    "productionReads": 0,
+    "productionWrites": 0,
+    "builds": 0,
+    "pushes": 0,
+    "deployments": 0,
+    "merges": 0,
+    "otherWorkstreamProcessesTouched": false
+  }
+}

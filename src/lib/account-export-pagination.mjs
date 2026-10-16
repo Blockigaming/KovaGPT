@@ -1,5 +1,6 @@
 // Tables without a single global id must use their complete immutable key.
 const KEYS = Object.freeze({
+  academy_learning_export_rows: ["owner_id", "topic"],
   custom_kova_link_grants: ["kova_id", "user_id"],
   custom_kova_mutations: ["owner_id", "mutation_id"],
   workflow_skill_mutation_export_rows: ["owner_id", "mutation_id"],

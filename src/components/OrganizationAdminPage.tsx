@@ -18,8 +18,12 @@ import {
 export default function OrganizationAdminPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   return (
-    <AppShell>
-      <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+    <AppShell utilitiesInHeader>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6"
+      >
         <WorkspacePageHeader
           icon={Building2}
           title="Organization"
@@ -54,6 +58,7 @@ function OrganizationContent({ userId }: { userId: string }) {
     [domain, setDomain] = useState(""),
     [retention, setRetention] = useState("365"),
     [confirmation, setConfirmation] = useState("");
+  const mutationPending = useRef(false);
   const controller = useRef(new AbortController()),
     readEpoch = useRef(0);
   const refresh = useCallback(
@@ -126,13 +131,16 @@ function OrganizationContent({ userId }: { userId: string }) {
     });
   }
   async function submit(body: OrganizationMutation) {
+    if (busy || mutationPending.current || controller.current.signal.aborted) return;
+    mutationPending.current = true;
+    const operationEpoch = readEpoch.current;
     setBusy(true);
     setError(null);
     setNotice(null);
     setRetry(null);
     try {
       await organizationRequest(userId, "/api/organizations", controller.current.signal, body);
-      if (controller.current.signal.aborted) return;
+      if (controller.current.signal.aborted || operationEpoch !== readEpoch.current) return;
       setNotice("Organization changes saved.");
       setEmail("");
       setDomain("");
@@ -140,10 +148,11 @@ function OrganizationContent({ userId }: { userId: string }) {
         body.action === "close" || body.action === "leave" ? null : body.organizationId,
       );
     } catch (cause) {
-      if (controller.current.signal.aborted) return;
+      if (controller.current.signal.aborted || operationEpoch !== readEpoch.current) return;
       setError(organizationErrorMessage(cause));
       if (!(cause instanceof OrganizationRequestError) || cause.status >= 500) setRetry(body);
     } finally {
+      mutationPending.current = false;
       if (!controller.current.signal.aborted) setBusy(false);
     }
   }

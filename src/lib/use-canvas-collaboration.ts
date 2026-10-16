@@ -14,6 +14,7 @@ export function useCanvasCollaboration({
   messageId,
   projectId,
   initialContent,
+  documentId: requestedDocumentId,
 }: {
   open: boolean;
   actorId: string | null;
@@ -21,10 +22,11 @@ export function useCanvasCollaboration({
   messageId?: string | null;
   projectId?: string | null;
   initialContent: string;
+  documentId?: string;
 }) {
   const key =
     open && actorId && chatId && messageId
-      ? JSON.stringify([actorId, chatId, messageId, projectId ?? null])
+      ? JSON.stringify([actorId, chatId, messageId, projectId ?? null, requestedDocumentId ?? null])
       : null;
   const epoch = useRef(0);
   const keyRef = useRef(key);
@@ -39,11 +41,15 @@ export function useCanvasCollaboration({
   const parse = useCallback(
     (value: unknown) => {
       const result = parseCanvasSnapshot(value, actorId ?? "", projectId);
-      if (result.document.chat_id !== chatId || result.document.message_id !== messageId)
+      if (
+        result.document.chat_id !== chatId ||
+        result.document.message_id !== messageId ||
+        (requestedDocumentId && result.document.id !== requestedDocumentId)
+      )
         throw new CollaborationError("42501");
       return result;
     },
-    [actorId, projectId, chatId, messageId],
+    [actorId, projectId, chatId, messageId, requestedDocumentId],
   );
   useEffect(() => {
     const generation = ++epoch.current;
@@ -55,8 +61,10 @@ export function useCanvasCollaboration({
     const controller = new AbortController();
     void collaborationRequest(
       actorId,
-      "open",
-      { chatId, messageId, projectId: projectId ?? null, content: initialContent },
+      requestedDocumentId ? "get" : "open",
+      requestedDocumentId
+        ? { documentId: requestedDocumentId }
+        : { chatId, messageId, projectId: projectId ?? null, content: initialContent },
       controller.signal,
     )
       .then((value) => {
@@ -77,7 +85,17 @@ export function useCanvasCollaboration({
       epoch.current = generation + 1;
       controller.abort();
     };
-  }, [key, actorId, chatId, messageId, projectId, initialContent, parse, retry]);
+  }, [
+    key,
+    actorId,
+    chatId,
+    messageId,
+    projectId,
+    initialContent,
+    parse,
+    retry,
+    requestedDocumentId,
+  ]);
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
       if (!key || !actorId || !documentId) return;
@@ -117,8 +135,11 @@ export function useCanvasCollaboration({
     return snapshot.document.content;
   }, [key, snapshot]);
   const editable = snapshot?.canEdit ?? false;
-  const save = useCallback(
-    async (content: string) => {
+  const mutate = useCallback(
+    async (
+      operation: "save" | "save_title",
+      payload: { content?: string; title?: string; mutationId?: string },
+    ) => {
       if (
         !key ||
         !actorId ||
@@ -133,14 +154,16 @@ export function useCanvasCollaboration({
       const revision = base.current.revision;
       try {
         const result = parse(
-          await collaborationRequest(actorId, "save", {
+          await collaborationRequest(actorId, operation, {
             documentId,
             expectedRevision: revision,
-            content,
+            ...payload,
           }),
         );
         if (epoch.current !== generation || keyRef.current !== key)
           throw new CollaborationError("cancelled");
+        if (operation === "save_title" && result.document.title !== payload.title)
+          throw new CollaborationError("unavailable");
         base.current = { key, revision: result.document.revision };
         setStored((previous) => ({
           key,
@@ -161,6 +184,11 @@ export function useCanvasCollaboration({
       }
     },
     [key, actorId, documentId, editable, conflictKey, parse, refresh],
+  );
+  const save = useCallback((content: string) => mutate("save", { content }), [mutate]);
+  const saveTitle = useCallback(
+    (title: string, mutationId: string) => mutate("save_title", { title, mutationId }),
+    [mutate],
   );
   const commentMutation = async (
     operation: "comment" | "delete_comment",
@@ -226,6 +254,7 @@ export function useCanvasCollaboration({
   return {
     snapshot,
     save,
+    saveTitle,
     adopt,
     refresh,
     commentMutation,

@@ -73,13 +73,27 @@ function fixture(options = {}) {
     },
     "@/lib/kova-auth-browser": {
       clearKovaAuthCache: () => calls.push(["clear-cache"]),
+      getCapturedKovaPrincipal: () => ({ accountId: "owner", sessionId: "old-session" }),
+      restoreKovaSessionAfterRotation: async (previous, nextId) => {
+        calls.push(["clear-cache"]);
+        calls.push(["restore", previous.accountId, previous.sessionId, nextId]);
+        if (options.restoreFails) throw Error("session switched");
+      },
       async kovaAuthJson(path, body) {
         calls.push(["POST", path, JSON.parse(JSON.stringify(body))]);
         if (options.hold) await options.hold;
         if (options.reject) throw Error("sensitive upstream message");
-        return Response.json(options.badPayload ? { changed: false } : { changed: true }, {
-          status: options.failure ? 503 : 200,
-        });
+        return Response.json(
+          options.badPayload
+            ? { changed: false }
+            : {
+                changed: true,
+                session: { accountId: "owner", sessionId: "next-session" },
+              },
+          {
+            status: options.failure ? 503 : options.wrongPassword ? 401 : 200,
+          },
+        );
       },
     },
   };
@@ -93,8 +107,10 @@ function fixture(options = {}) {
       assert.ok(Object.hasOwn(modules, name), `Unexpected import ${name}`);
       return modules[name];
     },
-    fetch: async (path) => {
+    fetch: async (path, init) => {
       calls.push(["GET", path]);
+      assert.equal(init.headers["X-Kova-Owner"], "owner");
+      assert.equal(init.headers["X-Kova-Session"], "old-session");
       return Response.json({ hasPassword: options.hasPassword ?? true });
     },
   });
@@ -179,6 +195,10 @@ test("password form submits only the current/new values, clears them and invalid
     { currentPassword: "test original password", newPassword: "test replacement password" },
   ]);
   assert.ok(f.calls.some(([method]) => method === "clear-cache"));
+  assert.deepEqual(
+    f.calls.find(([method]) => method === "restore"),
+    ["restore", "owner", "old-session", "next-session"],
+  );
   assert.equal(f.messages.at(-1)[0], "success");
   assert.equal(nodes(f.tree).filter((node) => node.type === "input").length, 0);
   await f.click("Change password");
@@ -241,6 +261,21 @@ test("uncertain failures clear plaintext fields and never expose transport detai
     );
     assert.ok(f.calls.some(([method]) => method === "clear-cache"));
   }
+});
+
+test("a wrong current password leaves the valid owned session available for retry", async () => {
+  const f = fixture({ wrongPassword: true });
+  await fill(f);
+  await f.submit();
+  await f.flush();
+  assert.equal(f.messages.at(-1)[0], "error");
+  assert.ok(!f.calls.some(([method]) => method === "clear-cache" || method === "restore"));
+  assert.equal(f.calls.filter(([method]) => method === "POST").length, 1);
+  await f.input("kova-current-password", "corrected current password");
+  await f.input("kova-new-password", "another strong password");
+  await f.input("kova-confirm-password", "another strong password");
+  await f.submit();
+  assert.equal(f.calls.filter(([method]) => method === "POST").length, 2);
 });
 
 test("cancelling a password edit discards its fields without a mutation", async () => {

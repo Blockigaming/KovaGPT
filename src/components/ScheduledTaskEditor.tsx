@@ -303,11 +303,15 @@ function ScheduledTaskEditorBody({
       aria-label={task ? "Edit task" : "Review new task"}
       className="my-5 rounded-xl border border-border bg-card p-4 space-y-4"
     >
-      <div className="flex justify-between gap-3">
-        <h2 className="font-semibold">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="min-w-0 flex-1 break-words font-semibold">
           {task ? "Task settings, history, and sharing" : "Review and schedule"}
         </h2>
-        <button className={button} onClick={onClose} disabled={busy}>
+        <button
+          className={`${button} min-h-11 min-w-11 shrink-0 whitespace-nowrap!`}
+          onClick={onClose}
+          disabled={busy}
+        >
           Close
         </button>
       </div>
@@ -438,7 +442,7 @@ function ScheduledTaskEditorBody({
           </label>
           <div className="my-2 flex gap-2">
             <select
-              className={control}
+              className={`${control} min-w-0 flex-1`}
               value={kind}
               onChange={(event) => {
                 sourceRead.current++;
@@ -450,7 +454,10 @@ function ScheduledTaskEditorBody({
               <option value="library">Library text</option>
               <option value="project_file">Project files</option>
             </select>
-            <button className={button} onClick={() => void loadFiles()}>
+            <button
+              className={`${button} min-h-11 min-w-11 shrink-0 whitespace-nowrap!`}
+              onClick={() => void loadFiles()}
+            >
               Browse
             </button>
           </div>
@@ -485,15 +492,15 @@ function ScheduledTaskEditorBody({
           {refs
             .filter((ref) => ref.kind !== "snapshot")
             .map((ref, index) => (
-              <div className="my-2 flex justify-between text-sm" key={index}>
-                <span>
+              <div className="my-2 flex items-start justify-between gap-2 text-sm" key={index}>
+                <span className="min-w-0 flex-1 break-words">
                   {ref.kind === "connected"
                     ? `${ref.provider} · ${ref.resource}`
                     : (options.find((option) => option.id === ref.id)?.label ??
                       "Saved " + ref.kind.replace("_", " "))}
                 </span>
                 <button
-                  className={button}
+                  className={`${button} min-h-11 min-w-11 shrink-0 whitespace-nowrap!`}
                   onClick={() => setRefs((current) => current.filter((item) => item !== ref))}
                 >
                   Remove
@@ -718,14 +725,14 @@ function ScheduledTaskEditorBody({
                 Add event filter
               </button>
               {triggers.map((trigger, index) => (
-                <div className="flex justify-between text-sm" key={index}>
-                  <span>
+                <div className="flex items-start justify-between gap-2 text-sm" key={index}>
+                  <span className="min-w-0 flex-1 break-words">
                     {trigger.provider} · {trigger.resource}
                     {trigger.author ? ` · ${trigger.author}` : ""}
                     {trigger.contains ? ` · contains ${trigger.contains}` : ""}
                   </span>
                   <button
-                    className={button}
+                    className={`${button} min-h-11 min-w-11 shrink-0 whitespace-nowrap!`}
                     onClick={() => setTriggers((current) => current.filter((_, i) => i !== index))}
                   >
                     Remove

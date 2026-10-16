@@ -67,11 +67,28 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
   }
 
   const aiGenerationEnabled = booleanEnv(environment, "AI_GENERATION_ENABLED", false);
+  const textProvider = environment.KOVA_TEXT_PROVIDER?.trim() || "auto";
+  if (!["auto", "openai", "azure_openai"].includes(textProvider)) {
+    throw new Error("[env] KOVA_TEXT_PROVIDER must be auto, openai or azure_openai.");
+  }
   const azureEndpoint = environment.AZURE_OPENAI_ENDPOINT?.trim();
   const azureCredentialsReady = Boolean(
     environment.AZURE_OPENAI_API_KEY?.trim() || azureIdentityReady(environment),
   );
   const directOpenAiReady = Boolean(environment.OPENAI_API_KEY?.trim());
+
+  if (aiGenerationEnabled && textProvider === "openai" && !directOpenAiReady) {
+    throw new Error("[env] The selected OpenAI text provider requires OPENAI_API_KEY.");
+  }
+  if (
+    aiGenerationEnabled &&
+    textProvider === "azure_openai" &&
+    !(azureEndpoint && azureCredentialsReady)
+  ) {
+    throw new Error(
+      "[env] The selected Azure text provider requires its endpoint and credentials.",
+    );
+  }
 
   if (aiGenerationEnabled && !directOpenAiReady && !(azureEndpoint && azureCredentialsReady)) {
     throw new Error(
@@ -107,7 +124,7 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
       "AZURE_OPENAI_DEPLOYMENT_THINKING",
       "AZURE_OPENAI_DEPLOYMENT_DEEP",
     ]);
-    if (requiredAzureOpenAi.length > 0) {
+    if (textProvider !== "openai" && requiredAzureOpenAi.length > 0) {
       throw new Error(
         `[env] Azure OpenAI is configured but missing: ${requiredAzureOpenAi.join(", ")}.`,
       );

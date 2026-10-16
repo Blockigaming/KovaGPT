@@ -10,7 +10,7 @@ const sse = (...chunks: string[]) =>
     )
     .join("");
 
-test("guest chat consumes Kova SSE, persists once, and renders one top-left brand", async ({
+test("guest chat consumes Kova SSE once, stays session-only, and renders one top-left brand", async ({
   page,
 }, testInfo) => {
   const errors: string[] = [];
@@ -72,7 +72,9 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left bran
     .toBe(true);
   await page.reload();
   await waitForKovaHydration(page);
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("textbox").first()).toBeVisible();
+  await expect(page.getByText("Mocked OpenAI response", { exact: false })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

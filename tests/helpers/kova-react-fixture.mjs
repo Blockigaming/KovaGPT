@@ -30,6 +30,8 @@ export function reactFixture(path, select, options = {}) {
   const jsx = (type, props) => ({ type, props: props ?? {} });
   const react = {
     createContext: (value) => ({ Provider: "context-provider", value }),
+    lazy: () => "lazy-component",
+    Suspense: "suspense",
     useContext: (context) => context.value,
     useMemo(run, deps) {
       const i = cursor++;

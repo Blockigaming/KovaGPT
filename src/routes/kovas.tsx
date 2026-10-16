@@ -6,6 +6,7 @@ import {
   KOVA_MODES,
   KOVA_TOOLS,
   KOVA_APPS,
+  KOVA_APP_LABELS,
   normalizeKovaConfig,
   kovaId,
   type KovaConfig,
@@ -54,11 +55,13 @@ function KovasPage() {
   const { id } = Route.useSearch();
   return (
     <AppShell>
-      {isLoaded ? (
-        <Workspace key={user?.id ?? "guest"} ownerId={user?.id ?? null} initialId={id} />
-      ) : (
-        <p role="status">Loading account…</p>
-      )}
+      <main id="main-content" tabIndex={-1} className="kova-workspace-controls">
+        {isLoaded ? (
+          <Workspace key={user?.id ?? "guest"} ownerId={user?.id ?? null} initialId={id} />
+        ) : (
+          <p role="status">Loading account…</p>
+        )}
+      </main>
     </AppShell>
   );
 }
@@ -421,18 +424,22 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
           before editing.
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="kova-directory-controls flex flex-wrap items-center gap-3">
         <button
-          className="underline"
+          className="kova-directory-filter underline"
           disabled={disabled || !ownerId}
           onClick={() => setScope("owned")}
         >
           My Kovas
         </button>
-        <button className="underline" disabled={disabled} onClick={() => setScope("directory")}>
+        <button
+          className="kova-directory-filter underline"
+          disabled={disabled}
+          onClick={() => setScope("directory")}
+        >
           Community directory
         </button>
-        <label className="ml-auto text-sm">
+        <label className="kova-directory-search ml-auto text-sm">
           Search loaded Kovas{" "}
           <input
             className="rounded border bg-background px-2 py-1"
@@ -482,7 +489,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
           <p>{view.config.description}</p>
           <p className="text-sm text-muted-foreground">
             Model mode: {view.config.mode}. Tools: {view.config.tools.join(", ") || "none"}. Apps:{" "}
-            {view.config.apps.join(", ") || "none"}; only your own enabled accounts are available.
+            {view.config.apps.map((app) => KOVA_APP_LABELS[app] ?? app).join(", ") || "none"}; only
+            your own enabled accounts are available.
           </p>
           {view.blocked && (
             <p role="alert">
@@ -653,7 +661,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                           })
                         }
                       />{" "}
-                      {app}
+                      {KOVA_APP_LABELS[app] ?? app}
                     </label>
                   ))}
                 </div>

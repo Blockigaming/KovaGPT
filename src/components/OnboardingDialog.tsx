@@ -266,7 +266,7 @@ export function OnboardingDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && skip()}>
-      <DialogContent className="gap-0 overflow-y-auto p-0 sm:max-w-[30rem] [&>div[aria-hidden]]:mt-2">
+      <DialogContent className="kova-onboarding-dialog gap-0 overflow-y-auto p-0 sm:max-w-[30rem] [&>div[aria-hidden]]:mt-2">
         <div className="border-b border-border/60 pb-4 pl-5 pr-16 pt-5 sm:pl-6 sm:pr-16">
           <div className="mb-4 flex items-center justify-between gap-4">
             <span className="text-xs font-medium text-muted-foreground">Step {step} of 3</span>
@@ -393,6 +393,7 @@ export function OnboardingDialog({
           </Button>
           {step === 1 ? (
             <Button
+              className="kova-onboarding-primary"
               onClick={() => {
                 setSaveError(null);
                 setStep(2);
@@ -403,6 +404,7 @@ export function OnboardingDialog({
             </Button>
           ) : step === 2 ? (
             <Button
+              className="kova-onboarding-primary"
               onClick={() => {
                 setSaveError(null);
                 setStep(3);
@@ -412,7 +414,7 @@ export function OnboardingDialog({
               Continue
             </Button>
           ) : (
-            <Button onClick={() => finish()} disabled={saving}>
+            <Button className="kova-onboarding-primary" onClick={() => finish()} disabled={saving}>
               {saving ? "Saving…" : "Start chatting"}
             </Button>
           )}

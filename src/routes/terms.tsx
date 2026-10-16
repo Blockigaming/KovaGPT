@@ -42,7 +42,11 @@ export const Route = createFileRoute("/terms")({
 function TermsPage() {
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-6 pb-12 [overflow-wrap:anywhere]"
+      >
         <LegalDocHero
           eyebrow="KovaGPT legal"
           title="Terms of Service"

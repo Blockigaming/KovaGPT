@@ -34,6 +34,8 @@ export class GitHubClient {
       );
     const response = await this.fetch(`${this.apiBase}${path}`, {
       method,
+      redirect: "error",
+      signal: AbortSignal.timeout(30_000),
       headers: {
         accept: "application/vnd.github+json",
         authorization: `Bearer ${this.token}`,
@@ -62,12 +64,14 @@ export class GitHubClient {
     }
     return response.status === 204 ? null : response.json();
   }
-  async paginate(path, options = {}) {
+  async paginate(path, options = {}, collection = "items") {
     const results = [];
     for (let page = 1; page <= 20; page++) {
       const join = path.includes("?") ? "&" : "?",
         data = await this.request(`${path}${join}per_page=100&page=${page}`, options),
-        items = Array.isArray(data) ? data : (data.items ?? []);
+        items = Array.isArray(data) ? data : data?.[collection];
+      if (!Array.isArray(items))
+        throw new GitHubConnectorError("invalid_response", "GitHub collection is unavailable", 502);
       results.push(...items);
       if (items.length < 100) break;
     }
@@ -118,13 +122,17 @@ export class GitHubClient {
     return this.paginate(`/repos/${repo}/releases`, { repo });
   }
   workflows(repo) {
-    return this.paginate(`/repos/${repo}/actions/workflows`, { repo });
+    return this.paginate(`/repos/${repo}/actions/workflows`, { repo }, "workflows");
   }
   workflowRuns(repo) {
-    return this.paginate(`/repos/${repo}/actions/runs`, { repo });
+    return this.paginate(`/repos/${repo}/actions/runs`, { repo }, "workflow_runs");
   }
   checks(repo, ref) {
-    return this.paginate(`/repos/${repo}/commits/${encodeURIComponent(ref)}/check-runs`, { repo });
+    return this.paginate(
+      `/repos/${repo}/commits/${encodeURIComponent(ref)}/check-runs`,
+      { repo },
+      "check_runs",
+    );
   }
   discussions(repo) {
     return this.request(`/repos/${repo}/discussions`, { repo });

@@ -112,8 +112,9 @@ export function clearPrincipalBrowserStorage(
     localStorage?: StorageLike | null;
     sessionStorage?: StorageLike | null;
     purgeUnscopedPrivate?: boolean;
+    locks?: Pick<LockManager, "request">;
   },
-): PrincipalStorageCleanupResult;
+): Promise<PrincipalStorageCleanupResult>;
 export function purgeUnscopedPrivateBrowserStorage(
   userKey: BrowserStorageUserKey,
   options?: {

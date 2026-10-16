@@ -267,3 +267,42 @@ test("actual moderation API requires configured administrator authorization befo
     f.dispose();
   }
 });
+
+test("custom Kova maps exact launch read operations and never grants prefix-based tools", async () => {
+  const { LAUNCH_CONNECTORS, LAUNCH_OPERATIONS } =
+    await import("../../src/integrations/launch-contracts.mjs");
+  const { createLaunchToolContext } =
+    await import("../../src/integrations/launch-tools.server.mjs");
+  for (const app of Object.keys(LAUNCH_CONNECTORS)) {
+    const selected = context({ config: config({ apps: [app] }) });
+    const names = Object.keys(LAUNCH_OPERATIONS[app]).map(
+      (operation) => `launch_${app.replace(/-/g, "_")}_${operation}`,
+    );
+    const tools = [
+      ...names,
+      `${app}_forged_write`,
+      "gmail_send",
+      "launch_outlook_send_message",
+    ].map((name) => ({ function: { name } }));
+    assert.deepEqual(
+      filterKovaTools(tools, selected).map((t) => t.function.name),
+      names,
+    );
+    assert.deepEqual(
+      createLaunchToolContext({
+        ownerId: "caller",
+        sessionId: "session",
+        accounts: [],
+        runtime: {},
+      }).tools,
+      [],
+    );
+  }
+  assert.deepEqual(
+    filterKovaTools(
+      [{ function: { name: "gmail_delete_all" } }],
+      context({ config: config({ apps: ["gmail"] }) }),
+    ),
+    [],
+  );
+});

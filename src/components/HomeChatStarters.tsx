@@ -4,21 +4,25 @@ import { Lightbulb, ListChecks, PenLine, Sparkles } from "lucide-react";
 const EMPTY_STATE_STARTERS = [
   {
     label: "Brainstorm ideas",
+    description: "Find a fresh angle",
     prompt: "Help me brainstorm thoughtful ideas for ",
     icon: Lightbulb,
   },
   {
     label: "Make a plan",
+    description: "Turn goals into next steps",
     prompt: "Create a practical step-by-step plan for ",
     icon: ListChecks,
   },
   {
     label: "Improve writing",
+    description: "Make every word count",
     prompt: "Help me rewrite this clearly while preserving the meaning:\n\n",
     icon: PenLine,
   },
   {
     label: "Explore a topic",
+    description: "Understand the essentials",
     prompt: "Explain this topic clearly, including the most important context: ",
     icon: Sparkles,
   },
@@ -47,8 +51,9 @@ export function HomeChatStarters({ setInput }: { setInput: Dispatch<SetStateActi
             <span className="kova-starter-icon inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
               <Icon className="h-4 w-4" />
             </span>
-            <span className="min-w-0 truncate text-sm font-medium text-foreground">
-              {starter.label}
+            <span className="kova-starter-copy min-w-0 text-sm text-foreground">
+              <strong>{starter.label}</strong>
+              <small>{starter.description}</small>
             </span>
           </button>
         );

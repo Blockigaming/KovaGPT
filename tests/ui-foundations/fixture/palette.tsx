@@ -35,6 +35,7 @@ function Fixture() {
         onSelectChat={() => setResult("Chat invoked")}
         onSelectArchived={() => setResult("Archive invoked")}
         onOpenSettings={() => setResult("Settings invoked")}
+        onChangeTheme={(mode) => setResult(`Theme: ${mode}`)}
       />
     </main>
   );

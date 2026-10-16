@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { AuthDialog } from "@/components/auth/AuthDialog";
@@ -69,8 +69,11 @@ export function DeveloperMcpAccessPage({ requestId }: { requestId?: string }) {
   const { isLoaded, user } = useUser(),
     [authOpen, setAuthOpen] = useState(false);
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <Link to="/developers/console" className="text-sm underline">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-3xl space-y-6 p-6">
+      <Link
+        to="/developers/console"
+        className="kova-developer-link kova-workspace-action text-sm underline"
+      >
         Developer console
       </Link>
       <h1 className="text-2xl font-semibold">
@@ -97,6 +100,7 @@ export function DeveloperMcpConsentPanel({
   ownerId: string;
   requestId: string;
 }) {
+  const limitsId = useId();
   const [details, setDetails] = useState<Details | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -219,7 +223,7 @@ export function DeveloperMcpConsentPanel({
       </p>
     );
   return (
-    <section className="space-y-5 rounded-xl border p-5">
+    <section className="kova-workspace-controls space-y-5 rounded-xl border p-5">
       <h2 className="text-xl font-semibold">Allow {details.clientName} to use developer credit?</h2>
       <p>
         This is an external client. Review its exact destination and access before continuing. It
@@ -291,7 +295,7 @@ export function DeveloperMcpConsentPanel({
           <div className="grid gap-3 sm:grid-cols-2">
             {(["request", "daily", "monthly", "concurrent"] as const).map((key) => (
               <label key={key} className="space-y-1">
-                <span>
+                <span id={`${limitsId}-${key}-label`}>
                   {key === "request"
                     ? "Maximum per request"
                     : key === "daily"
@@ -299,9 +303,11 @@ export function DeveloperMcpConsentPanel({
                       : key === "monthly"
                         ? "Monthly limit"
                         : "Concurrent requests"}
+                  {key !== "concurrent" ? ` (${project.currency})` : ""}
                 </span>
                 <Input
-                  aria-label={key}
+                  aria-labelledby={`${limitsId}-${key}-label`}
+                  aria-describedby={`${limitsId}-${key}-help`}
                   type="number"
                   min={key === "concurrent" ? 1 : 0}
                   step={key === "concurrent" ? 1 : "any"}
@@ -312,7 +318,7 @@ export function DeveloperMcpConsentPanel({
                     setLimits((previous) => ({ ...previous, [key]: event.target.value }));
                   }}
                 />
-                <span className="text-xs text-muted-foreground">
+                <span id={`${limitsId}-${key}-help`} className="text-xs text-muted-foreground">
                   At most{" "}
                   {key === "request"
                     ? project.request_limit
@@ -320,7 +326,8 @@ export function DeveloperMcpConsentPanel({
                       ? project.daily_limit
                       : key === "monthly"
                         ? project.monthly_limit
-                        : project.concurrent_limit}
+                        : project.concurrent_limit}{" "}
+                  {key === "concurrent" ? "requests" : project.currency}
                 </span>
               </label>
             ))}
@@ -437,7 +444,7 @@ export function DeveloperMcpConnectionsPanel({ ownerId }: { ownerId: string }) {
     }
   }
   return (
-    <div className="space-y-6">
+    <div className="kova-workspace-controls space-y-6">
       <p>
         Revoke access here even when new MCP authorization is disabled. These connections use
         developer projects and prepaid developer credit.

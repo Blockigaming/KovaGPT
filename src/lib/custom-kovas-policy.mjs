@@ -1,3 +1,4 @@
+import { LAUNCH_CONNECTORS, LAUNCH_OPERATIONS } from "../integrations/launch-contracts.mjs";
 export const KOVA_LIMITS = Object.freeze({
   bodyBytes: 300000,
   versionBytes: 262144,
@@ -25,7 +26,20 @@ const LEGACY_KOVA_MODES = Object.freeze({
   kova_o3: "instant",
 });
 export const KOVA_TOOLS = Object.freeze(["web", "images", "files"]);
-export const KOVA_APPS = Object.freeze(["gmail", "calendar", "drive"]);
+export const KOVA_APPS = Object.freeze([
+  "gmail",
+  "calendar",
+  "drive",
+  ...Object.keys(LAUNCH_CONNECTORS),
+]);
+export const KOVA_APP_LABELS = Object.freeze({
+  gmail: "Gmail",
+  calendar: "Google Calendar",
+  drive: "Google Drive",
+  ...Object.fromEntries(
+    Object.entries(LAUNCH_CONNECTORS).map(([id, contract]) => [id, contract.name]),
+  ),
+});
 const record = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 function fail() {
   throw new Error("custom_kova_invalid");
@@ -121,10 +135,20 @@ export function normalizeKovaReference(value) {
 export function filterKovaTools(tools, context) {
   if (!context) return tools;
   const allowed = new Set(context.config.apps);
-  return tools.filter((t) => {
-    const name = t?.function?.name;
-    return typeof name === "string" && [...allowed].some((app) => name.startsWith(`${app}_`));
-  });
+  const names = new Set();
+  const google = {
+    gmail: ["gmail_search", "gmail_read_message", "gmail_create_draft", "gmail_send"],
+    calendar: ["calendar_list_events", "calendar_create_event"],
+    drive: ["drive_search", "drive_read_file"],
+  };
+  for (const app of allowed) {
+    for (const name of google[app] ?? []) names.add(name);
+    for (const operation of Object.keys(LAUNCH_OPERATIONS[app] ?? {}))
+      names.add(`launch_${app.replace(/-/g, "_")}_${operation}`);
+  }
+  // Selection narrows the already certified, caller-owned tool context. It cannot
+  // manufacture a tool, a grant, creator credentials, or a write operation.
+  return tools.filter((t) => names.has(t?.function?.name));
 }
 export function kovaAttachmentsAllowed(context, messages) {
   return (

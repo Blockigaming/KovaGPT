@@ -49,6 +49,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
   let leaseTimer: ReturnType<typeof setTimeout> | undefined;
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let retryPending = false;
   let retryCount = 0;
   let removeObserver = () => {};
   const lifetime = new AbortController();
@@ -79,6 +80,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
     active = false;
     clearTimeout(retryTimer);
     retryTimer = undefined;
+    retryPending = false;
     removeObserver();
     lifetime.abort();
     closeTransport();
@@ -88,11 +90,14 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
     }
   };
   const scheduleRetry = () => {
-    if (!active || retryTimer !== undefined) return;
+    if (!active || retryPending || retryTimer !== undefined) return;
     if (!current()) {
       stop();
       return;
     }
+    // unsubscribe() may synchronously report CLOSED; reserve this retry
+    // before its callback can re-enter scheduleRetry through admitted().
+    retryPending = true;
     closeTransport();
     options.onStatus("CHANNEL_ERROR");
     if (retryCount >= MAX_RETRIES) {
@@ -103,6 +108,7 @@ export function subscribeOwnedRealtime(options: Subscription): () => void {
     retryCount += 1;
     retryTimer = setTimeout(() => {
       retryTimer = undefined;
+      retryPending = false;
       if (!current()) {
         stop();
         return;

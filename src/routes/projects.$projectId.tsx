@@ -1,7 +1,9 @@
+import { projectTab, projectTabSearch } from "@/lib/project-tab-search";
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
+import { useProjectInstructionDraft } from "@/lib/use-project-instruction-draft";
 import { CollaborativeProjectNotes } from "@/components/CollaborativeProjectNotes";
 import { ProjectCollaboration } from "@/components/ProjectCollaboration";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
@@ -94,6 +96,7 @@ import {
 
 export const Route = createFileRoute("/projects/$projectId")({
   component: ProjectDetailRoute,
+  validateSearch: projectTabSearch,
   head: () => ({
     meta: [{ title: "KovaGPT Project" }, { name: "robots", content: "noindex" }],
   }),
@@ -122,9 +125,20 @@ function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [resolvedRequestKey, setResolvedRequestKey] = useState<string | null>(null);
-  const [tab, setTab] = useState("overview");
+  const tab = projectTab(Route.useSearch().tab);
+  const setTab = (value: string) => {
+    void navigate({
+      to: "/projects/$projectId",
+      params: { projectId },
+      search: (previous) => ({ ...previous, tab: projectTab(value) }),
+      state: (previous) => previous,
+      resetScroll: false,
+    });
+  };
   const [searchOpen, setSearchOpen] = useState(false);
   const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveReview, setArchiveReview] = useState<string | null>(null);
+  const archiveOperation = useRef(false);
   const [deletionBusy, setDeletionBusy] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const currentRequestKeyRef = useRef(requestKey);
@@ -193,7 +207,6 @@ function ProjectDetailPage() {
     setInvites([]);
     setChats([]);
     setLoadError(null);
-    setTab("overview");
     setSearchOpen(false);
     setArchiveBusy(false);
     setDeletionBusy(false);
@@ -362,28 +375,60 @@ function ProjectDetailPage() {
   }
 
   async function toggleArchive() {
-    if (archiveBusy) return;
+    if (archiveBusy || archiveOperation.current || archiveReview === requestKey || !project) return;
+    archiveOperation.current = true;
     const operationRequestKey = requestKey;
     setArchiveBusy(true);
     try {
-      await fnArchive({ data: { id: projectId, archived: !archived } });
+      const result = await fnArchive({
+        data: { id: projectId, archived: !archived, expectedUpdatedAt: project.updated_at },
+      });
       if (currentRequestKeyRef.current !== operationRequestKey) return;
       toast.success(archived ? "Project restored" : "Project archived");
-      await refresh();
+      setProject((previous) =>
+        previous
+          ? { ...previous, archived_at: result.archivedAt, updated_at: result.updatedAt }
+          : previous,
+      );
     } catch (error) {
       if (currentRequestKeyRef.current !== operationRequestKey) return;
+      setArchiveReview(operationRequestKey);
       toast.error(
         error instanceof Error ? error.message : "The project archive state could not be updated.",
       );
     } finally {
+      archiveOperation.current = false;
+      if (currentRequestKeyRef.current === operationRequestKey) setArchiveBusy(false);
+    }
+  }
+
+  async function reviewArchiveState() {
+    if (archiveOperation.current || !project) return;
+    archiveOperation.current = true;
+    const operationRequestKey = requestKey;
+    const previousRevision = project.updated_at;
+    setArchiveBusy(true);
+    try {
+      const latest = await fnGet({ data: { id: projectId } });
+      if (currentRequestKeyRef.current !== operationRequestKey) return;
+      if (!latest) throw new Error("Project access changed. Your draft is preserved.");
+      // Keep the instructions editor mounted. Its revision handling preserves
+      // dirty text and requires explicit review of conflicting saved content.
+      setProject((previous) => (previous?.updated_at === previousRevision ? latest : previous));
+      setArchiveReview(null);
+    } catch (error) {
+      if (currentRequestKeyRef.current === operationRequestKey)
+        toast.error(error instanceof Error ? error.message : "The latest project is unavailable.");
+    } finally {
+      archiveOperation.current = false;
       if (currentRequestKeyRef.current === operationRequestKey) setArchiveBusy(false);
     }
   }
 
   return (
     <AppShell>
-      <main id="main-content" tabIndex={-1} className="max-w-6xl mx-auto p-4 md:p-8 w-full">
-        <div className="flex items-center justify-between gap-2 mb-4">
+      <main id="main-content" tabIndex={-1} className="kova-core-page">
+        <div className="kova-project-actions flex flex-wrap items-center justify-between gap-3 mb-6">
           <Link
             to="/projects"
             className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
@@ -405,7 +450,7 @@ function ProjectDetailPage() {
                 variant="outline"
                 size="sm"
                 onClick={toggleArchive}
-                disabled={archiveBusy}
+                disabled={archiveBusy || archiveReview === requestKey}
                 aria-busy={archiveBusy}
               >
                 {archived ? (
@@ -431,6 +476,21 @@ function ProjectDetailPage() {
             )}
           </div>
         </div>
+
+        {archiveReview === requestKey && (
+          <div role="status" className="mb-4 rounded-lg border p-3 text-sm">
+            Review the latest saved project before trying Archive or Restore again. Unsaved
+            instructions stay in the editor.
+            <Button
+              variant="outline"
+              className="ml-2"
+              disabled={archiveBusy}
+              onClick={reviewArchiveState}
+            >
+              {archiveBusy ? "Loading latest…" : "Review latest project"}
+            </Button>
+          </div>
+        )}
 
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="min-w-0">
@@ -459,7 +519,7 @@ function ProjectDetailPage() {
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList
-            className="h-auto max-w-full flex-nowrap overflow-x-auto rounded-[var(--kova-radius-input)]"
+            className="kova-project-tabs flex h-auto w-full max-w-full flex-nowrap justify-start overflow-x-auto rounded-[var(--kova-radius-input)]"
             aria-label="Project workspace sections"
           >
             <TabsTrigger value="overview">
@@ -507,40 +567,67 @@ function ProjectDetailPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="mt-4">
+          <TabsContent value="overview" className="kova-workspace-controls mt-4">
             <OverviewTab projectId={projectId} onJump={(k) => setTab(k)} />
           </TabsContent>
-          <TabsContent value="chats" className="mt-4">
+          <TabsContent value="chats" className="kova-workspace-controls mt-4">
             <ChatsTab projectId={projectId} chats={chats} canEdit={canEdit} onRefresh={refresh} />
           </TabsContent>
-          <TabsContent value="files" className="mt-4">
+          <TabsContent value="files" className="kova-workspace-controls mt-4">
             <FilesTab projectId={projectId} canEdit={canEdit} kind="file" />
           </TabsContent>
-          <TabsContent value="images" className="mt-4">
+          <TabsContent value="images" className="kova-workspace-controls mt-4">
             <FilesTab projectId={projectId} canEdit={canEdit} kind="image" />
           </TabsContent>
-          <TabsContent value="instructions" className="mt-4">
+          <TabsContent
+            value="instructions"
+            forceMount
+            hidden={tab !== "instructions"}
+            inert={tab !== "instructions"}
+            className="mt-4"
+          >
             <ProjectInstructionsTab
+              key={requestKey}
+              scopeKey={requestKey ?? ""}
               project={project}
               canEdit={canEdit}
-              onSave={async (system_prompt) => {
+              onReload={async () => {
                 const operationRequestKey = requestKey;
-                await fnUpdate({ data: { id: projectId, system_prompt } });
-                if (currentRequestKeyRef.current !== operationRequestKey) return;
-                setProject((prev) => (prev ? { ...prev, system_prompt } : prev));
+                const latest = await fnGet({ data: { id: projectId } });
+                if (
+                  !latest ||
+                  !operationRequestKey ||
+                  currentRequestKeyRef.current !== operationRequestKey
+                )
+                  throw new Error("Project access changed. Your draft is preserved.");
+                setProject(latest);
+                return { value: latest.system_prompt ?? "", revision: latest.updated_at };
+              }}
+              onSave={async (system_prompt, expectedUpdatedAt) => {
+                const operationRequestKey = requestKey;
+                if (!operationRequestKey || currentRequestKeyRef.current !== operationRequestKey)
+                  throw new Error("Project access changed. Your draft was not saved.");
+                const result = await fnUpdate({
+                  data: { id: projectId, system_prompt, expectedUpdatedAt },
+                });
+                if (currentRequestKeyRef.current === operationRequestKey)
+                  setProject((prev) =>
+                    prev ? { ...prev, system_prompt, updated_at: result.updatedAt } : prev,
+                  );
+                return result.updatedAt;
               }}
             />
           </TabsContent>
-          <TabsContent value="notes" className="mt-4">
+          <TabsContent value="notes" className="kova-workspace-controls mt-4">
             <NotesTab projectId={projectId} canEdit={canEdit} />
           </TabsContent>
-          <TabsContent value="tasks" className="mt-4">
+          <TabsContent value="tasks" className="kova-workspace-controls mt-4">
             <TasksTab projectId={projectId} canEdit={canEdit} />
           </TabsContent>
-          <TabsContent value="memory" className="mt-4">
+          <TabsContent value="memory" className="kova-workspace-controls mt-4">
             <MemoryTab projectId={projectId} canEdit={canEdit} />
           </TabsContent>
-          <TabsContent value="members" className="mt-4">
+          <TabsContent value="members" className="kova-workspace-controls mt-4">
             <MembersTab
               members={members}
               invites={invites}
@@ -578,17 +665,28 @@ function ProjectDetailPage() {
               }}
             />
           </TabsContent>
-          <TabsContent value="collaboration" className="mt-4">
+          <TabsContent value="collaboration" className="kova-workspace-controls mt-4">
             <ProjectCollaboration projectId={projectId} members={members} role={project.role} />
           </TabsContent>
           {isOwner && (
-            <TabsContent value="settings" className="mt-4">
+            <TabsContent value="settings" className="kova-workspace-controls mt-4">
               <SettingsTab
                 project={project}
                 onSave={async (patch) => {
-                  await fnUpdate({ data: { id: projectId, ...patch } });
-                  await refresh();
-                  toast.success("Saved");
+                  const operationRequestKey = requestKey;
+                  if (!operationRequestKey || currentRequestKeyRef.current !== operationRequestKey)
+                    throw new Error("Project access changed. Your draft was not saved.");
+                  const result = await fnUpdate({ data: { id: projectId, ...patch } });
+                  if (currentRequestKeyRef.current === operationRequestKey) {
+                    const { expectedUpdatedAt: _expectedUpdatedAt, ...savedPatch } = patch;
+                    setProject((previous) =>
+                      previous
+                        ? { ...previous, ...savedPatch, updated_at: result.updatedAt }
+                        : previous,
+                    );
+                    toast.success("Submitted changes saved");
+                  }
+                  return result.updatedAt;
                 }}
                 onDelete={async () => {
                   try {
@@ -605,7 +703,7 @@ function ProjectDetailPage() {
             </TabsContent>
           )}
           {!isOwner && (
-            <TabsContent value="settings" className="mt-4">
+            <TabsContent value="settings" className="kova-workspace-controls mt-4">
               <div className="rounded-xl border border-destructive/40 p-4">
                 <h2 className="text-sm font-medium">Leave project</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -893,12 +991,18 @@ function ChatsTab({
           <DialogHeader>
             <DialogTitle>New chat</DialogTitle>
           </DialogHeader>
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={200}
-            autoFocus
-          />
+          <div className="space-y-2">
+            <label htmlFor="project-chat-title" className="text-sm font-medium">
+              Chat title
+            </label>
+            <Input
+              id="project-chat-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
+              autoFocus
+            />
+          </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setCreating(false)}>
               Cancel
@@ -1138,6 +1242,7 @@ function FilesTab({
           <div>
             <input
               ref={inputRef}
+              aria-label={kind === "image" ? "Upload project images" : "Upload project files"}
               type="file"
               multiple
               hidden
@@ -1309,46 +1414,38 @@ function humanBytes(n: number): string {
 }
 
 function ProjectInstructionsTab({
+  scopeKey,
   project,
   canEdit,
   onSave,
+  onReload,
 }: {
+  scopeKey: string;
   project: ProjectDetail;
   canEdit: boolean;
-  onSave: (systemPrompt: string | null) => Promise<void>;
+  onSave: (systemPrompt: string | null, expectedUpdatedAt: string) => Promise<string>;
+  onReload: () => Promise<{ value: string; revision: string }>;
 }) {
-  const [draft, setDraft] = useState(project.system_prompt ?? "");
-  const [lastSaved, setLastSaved] = useState(project.system_prompt ?? "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const initialized = useRef(false);
-
-  useEffect(() => {
-    setDraft(project.system_prompt ?? "");
-    setLastSaved(project.system_prompt ?? "");
-    initialized.current = true;
-  }, [project.id, project.system_prompt]);
-
-  useEffect(() => {
-    if (!initialized.current || !canEdit || draft === lastSaved) return;
-    const handle = setTimeout(async () => {
-      setSaving(true);
-      setError(null);
-      try {
-        const next = draft.trim() || null;
-        await onSave(next);
-        setLastSaved(draft);
-        setSaved(true);
-        window.setTimeout(() => setSaved(false), 1600);
-      } catch (saveError) {
-        setError(saveError instanceof Error ? saveError.message : "Instructions were not saved.");
-      } finally {
-        setSaving(false);
-      }
-    }, 900);
-    return () => clearTimeout(handle);
-  }, [canEdit, draft, lastSaved, onSave]);
+  const {
+    draft,
+    lastSaved,
+    saving,
+    saved,
+    error,
+    conflict,
+    remoteReview,
+    reviewSaved,
+    useSaved,
+    edit,
+    saveDraft,
+  } = useProjectInstructionDraft({
+    scopeKey,
+    initialValue: project.system_prompt ?? "",
+    initialRevision: project.updated_at,
+    canEdit,
+    onSave,
+    onReload,
+  });
 
   return (
     <section className="kova-card p-4" aria-labelledby="project-instructions-title">
@@ -1375,8 +1472,9 @@ function ProjectInstructionsTab({
         </div>
       </div>
       <Textarea
+        aria-labelledby="project-instructions-title"
         value={draft}
-        onChange={(event) => setDraft(event.target.value.slice(0, 4000))}
+        onChange={(event) => edit(event.target.value.slice(0, 4000))}
         disabled={!canEdit}
         rows={8}
         maxLength={4000}
@@ -1396,13 +1494,29 @@ function ProjectInstructionsTab({
           id="project-instructions-error"
           className="mt-3 rounded-[var(--kova-radius-input)] border border-[var(--border-destructive)] bg-destructive/10 p-3 text-sm text-destructive"
         >
-          Your instructions could not be saved. Your draft is preserved.
+          {error} Your draft is preserved.
+          {remoteReview ? (
+            <div className="mt-2">
+              <p>Latest saved instructions:</p>
+              <pre className="whitespace-pre-wrap break-words">
+                {remoteReview.value || "No instructions"}
+              </pre>
+              <button type="button" className="underline" disabled={saving} onClick={useSaved}>
+                Use saved instructions
+              </button>
+            </div>
+          ) : null}
           <button
             type="button"
             className="ml-2 underline"
-            onClick={() => void onSave(draft.trim() || null)}
+            disabled={!canEdit || saving}
+            onClick={() => void (conflict && !remoteReview ? reviewSaved() : saveDraft())}
           >
-            Retry
+            {conflict
+              ? remoteReview
+                ? "Save my draft instead"
+                : "Review saved instructions"
+              : "Retry"}
           </button>
         </div>
       ) : null}
@@ -1506,12 +1620,14 @@ function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            aria-label="New task title"
             placeholder="New task…"
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             className="flex-1"
           />
           <div className="flex gap-2">
             <Input
+              aria-label="Task due date"
               type="date"
               value={due}
               onChange={(e) => setDue(e.target.value)}
@@ -1661,6 +1777,7 @@ function MemoryTab({ projectId, canEdit }: { projectId: string; canEdit: boolean
       {canEdit && (
         <div className="border rounded-xl p-3 mb-4 flex flex-col sm:flex-row gap-2">
           <Input
+            aria-label="New project memory"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="e.g. Our brand voice is warm and concise."
@@ -1779,6 +1896,7 @@ function SearchDialog({
         </DialogHeader>
         <Input
           autoFocus
+          aria-label="Search this project"
           placeholder="Search chats, notes, tasks, files, memory…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -1859,12 +1977,16 @@ function MembersTab({
     <div className="space-y-6">
       {isOwner && (
         <div className="border rounded-xl p-4">
-          <div className="text-sm font-medium mb-2 flex items-center gap-1.5">
+          <label
+            htmlFor="project-invite-email"
+            className="text-sm font-medium mb-2 flex items-center gap-1.5"
+          >
             <Mail className="w-4 h-4" />
             Invite by email
-          </div>
+          </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <Input
+              id="project-invite-email"
               type="email"
               placeholder="teammate@example.com"
               value={email}
@@ -1872,7 +1994,10 @@ function MembersTab({
               className="flex-1"
             />
             <Select value={role} onValueChange={(v) => setRole(v as "editor" | "viewer")}>
-              <SelectTrigger className="w-full sm:w-32">
+              <label htmlFor="project-invite-role" className="sr-only">
+                Invitation role
+              </label>
+              <SelectTrigger id="project-invite-role" className="w-full sm:w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1912,7 +2037,10 @@ function MembersTab({
                     value={m.role}
                     onValueChange={(v) => onChangeRole(m.user_id, v as "editor" | "viewer")}
                   >
-                    <SelectTrigger className="w-28 h-8">
+                    <SelectTrigger
+                      aria-label={`Role for ${m.email ?? m.user_id.slice(0, 8)}`}
+                      className="w-28 h-8"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1968,24 +2096,36 @@ function SettingsTab({
     name?: string;
     description?: string | null;
     system_prompt?: string | null;
-  }) => Promise<void>;
+    expectedUpdatedAt: string;
+  }) => Promise<string>;
   onDelete: () => Promise<void>;
 }) {
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? "");
   const [systemPrompt, setSystemPrompt] = useState(project.system_prompt ?? "");
+  const revisionRef = useRef(project.updated_at);
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   return (
     <div className="space-y-6">
-      <div className="border rounded-xl p-4 space-y-3">
+      <div className="border rounded-xl p-4 space-y-4">
         <div>
-          <label className="text-sm font-medium mb-1 block">Name</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
+          <label htmlFor="project-settings-name" className="text-sm font-medium mb-2 block">
+            Name
+          </label>
+          <Input
+            id="project-settings-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={100}
+          />
         </div>
         <div>
-          <label className="text-sm font-medium mb-1 block">Description</label>
+          <label htmlFor="project-settings-description" className="text-sm font-medium mb-2 block">
+            Description
+          </label>
           <Textarea
+            id="project-settings-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
@@ -1993,8 +2133,11 @@ function SettingsTab({
           />
         </div>
         <div>
-          <label className="text-sm font-medium mb-1 block">Custom instructions</label>
+          <label htmlFor="project-settings-instructions" className="text-sm font-medium mb-2 block">
+            Custom instructions
+          </label>
           <Textarea
+            id="project-settings-instructions"
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
             rows={5}
@@ -2008,11 +2151,13 @@ function SettingsTab({
             onClick={async () => {
               setSaving(true);
               try {
-                await onSave({
+                const revision = await onSave({
+                  expectedUpdatedAt: revisionRef.current,
                   name: name.trim(),
                   description: description.trim() || null,
                   system_prompt: systemPrompt.trim() || null,
                 });
+                revisionRef.current = revision;
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "Failed");
               } finally {

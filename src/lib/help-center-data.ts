@@ -276,7 +276,11 @@ const rows: Row[] = [
     "How should I describe the image I want?",
     "State the subject, setting, composition, lighting, medium, and important exclusions. Clear constraints usually work better than a long list of vague adjectives.",
   ],
-  ["Files & images", "Can I edit an existing image?", features.imageEditing.summary],
+  [
+    "Files & images",
+    "Can I edit an existing image?",
+    "The image-history preview includes controls for local brightness, contrast and saturation adjustments. These controls stay disabled unless the original pixels load successfully; image access restrictions or unsupported browser features can leave the editor unavailable. AI/instruction-based editing and cropping are not available.",
+  ],
   [
     "Files & images",
     "Why was an image request rejected?",

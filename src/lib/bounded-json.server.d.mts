@@ -10,6 +10,7 @@ export function readBoundedUtf8(
   request: Request,
   maxBytes?: number,
   signal?: AbortSignal,
+  expectedBytes?: number,
 ): Promise<string>;
 
 export function readBoundedJsonObject(

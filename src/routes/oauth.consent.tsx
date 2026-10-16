@@ -426,7 +426,11 @@ function scopeLabel(scope: string) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-10 text-foreground">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-10 text-foreground"
+    >
       <div className="w-full max-w-[440px] rounded-3xl border border-border bg-card p-8 shadow-2xl">
         {children}
       </div>

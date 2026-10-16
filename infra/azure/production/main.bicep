@@ -43,6 +43,18 @@ param supabaseServiceRoleSecretUri string
 @secure()
 param kovaIpHashSecretUri string
 
+@description('Select the text provider explicitly. auto preserves endpoint-based routing; direct OpenAI requires the existing key reference below.')
+@allowed([
+  'auto'
+  'openai'
+  'azure_openai'
+])
+param textProvider string = 'auto'
+
+@description('Optional versioned existing Key Vault URI for OPENAI_API_KEY. Required when textProvider is openai; never pass a raw API key.')
+@secure()
+param openAiApiKeySecretUri string = ''
+
 @description('Keep billing disabled until the reviewed migration, webhook drain, account provenance, trial policy, and smoke gates pass.')
 @allowed([
   'disabled'
@@ -206,6 +218,7 @@ var budgetName = '${namePrefix}-monthly-budget'
 var useDedicatedAzureOpenAiImage = !empty(azureOpenAiImageAccountName)
 var useAzureOpenAiImageApiKey = useDedicatedAzureOpenAiImage && !empty(azureOpenAiImageApiKeySecretUri)
 var useAzureOpenAiImageManagedIdentity = useDedicatedAzureOpenAiImage && !useAzureOpenAiImageApiKey
+var useDirectOpenAiApiKey = !empty(openAiApiKeySecretUri)
 var acrPullRoleDefinitionId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   '7f951dda-4ed3-4680-a7ca-43fe172d538d'
@@ -307,7 +320,13 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
             keyVaultUrl: kovaIpHashSecretUri
             identity: identity.id
           }
-      ], stripeSecretReferences, useAzureOpenAiImageApiKey ? [
+      ], stripeSecretReferences, useDirectOpenAiApiKey ? [
+        {
+          name: 'openai-api-key'
+          keyVaultUrl: openAiApiKeySecretUri
+          identity: identity.id
+        }
+      ] : [], useAzureOpenAiImageApiKey ? [
         {
           name: 'azure-openai-image-api-key'
           keyVaultUrl: azureOpenAiImageApiKeySecretUri
@@ -394,6 +413,10 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
               value: azureOpenAiEmbeddingDeployment
             }
             {
+              name: 'KOVA_TEXT_PROVIDER'
+              value: textProvider
+            }
+            {
               name: 'AI_GENERATION_ENABLED'
               value: generationEnabled ? 'true' : 'false'
             }
@@ -433,7 +456,12 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: appInsights.properties.ConnectionString
             }
-          ], stripeSecretEnvironment, useDedicatedAzureOpenAiImage ? [
+          ], stripeSecretEnvironment, useDirectOpenAiApiKey ? [
+            {
+              name: 'OPENAI_API_KEY'
+              secretRef: 'openai-api-key'
+            }
+          ] : [], useDedicatedAzureOpenAiImage ? [
             {
               name: 'AZURE_OPENAI_IMAGE_ENDPOINT'
               value: azureOpenAiImage.properties.endpoint

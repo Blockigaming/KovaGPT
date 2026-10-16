@@ -1,3 +1,4 @@
+import { isCoreLaunchRoute } from "@/lib/core-launch-policy.mjs";
 import { Link } from "@tanstack/react-router";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -22,7 +23,7 @@ import type { LucideIcon } from "lucide-react";
 import { CAPABILITIES } from "@/platform/capabilities";
 import { extensionRegistry } from "@/platform/extensions";
 import { platformEvents } from "@/platform/events";
-import { applyThemeMode } from "@/lib/theme";
+import type { ThemeMode } from "@/lib/theme";
 import { searchConversations } from "@/lib/conversation-search";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
@@ -53,6 +54,14 @@ const fixedActions: PaletteAction[] = [
   },
   { label: "New project", href: "/projects", icon: FolderOpen },
   { label: "Open Library", href: "/library", icon: FolderOpen },
+  { label: "Open files", href: "/files", icon: FileSearch },
+  { label: "Open plugins", href: "/apps", icon: Boxes },
+  {
+    label: "Open Discover",
+    href: "/discovery",
+    icon: Search,
+    keywords: ["web", "research", "sources"],
+  },
   { label: "Generate image", href: "/images", icon: ImageIcon },
   {
     label: "Temporary Chat",
@@ -73,6 +82,7 @@ const quickActions: PaletteAction[] = [
   ...fixedActions,
   ...CAPABILITIES.filter(
     (capability) =>
+      isCoreLaunchRoute(capability.route) &&
       !HIDDEN_PALETTE_ROUTES.has(capability.route) &&
       !fixedActions.some((action) => action.href === capability.route),
   ).map((capability) => ({
@@ -150,6 +160,7 @@ export function CommandPalette({
   onSelectChat,
   onSelectArchived,
   onOpenSettings,
+  onChangeTheme,
   returnFocusTarget,
 }: {
   open: boolean;
@@ -165,6 +176,7 @@ export function CommandPalette({
   onSelectChat: (id: string) => void;
   onSelectArchived: (conversation: Conversation) => void;
   onOpenSettings: () => void;
+  onChangeTheme: (mode: ThemeMode) => void;
   returnFocusTarget?: HTMLElement | null;
 }) {
   const { isLoaded, user } = useUser();
@@ -311,6 +323,7 @@ export function CommandPalette({
     () =>
       quickActions
         .slice(1)
+        .filter((action) => !action.href || isCoreLaunchRoute(action.href))
         .map((action) => ({
           ...action,
           score: fuzzyScore(`${action.label} ${(action.keywords ?? []).join(" ")}`, normalized),
@@ -329,6 +342,7 @@ export function CommandPalette({
   const visibleWorkspaceItems = useMemo(
     () =>
       workspaceItems
+        .filter((item) => isCoreLaunchRoute(item.href))
         .filter((item) =>
           normalized ? `${item.title} ${item.subtitle}`.toLowerCase().includes(normalized) : true,
         )
@@ -425,7 +439,7 @@ export function CommandPalette({
       return;
     }
     if (action === "theme") {
-      applyThemeMode(document.documentElement.classList.contains("dark") ? "light" : "dark");
+      onChangeTheme(document.documentElement.classList.contains("dark") ? "light" : "dark");
       platformEvents.publish("platform", "command.executed", { command: action });
       closePalette();
       return;
@@ -464,7 +478,7 @@ export function CommandPalette({
     <div
       ref={dialogRef}
       data-kova-shell-overlay=""
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))]"
+      className="kova-search-overlay fixed inset-0 z-[70] flex justify-center bg-black/50"
       role="dialog"
       aria-modal="true"
       aria-label="Search workspace, chats, and actions"
@@ -519,8 +533,8 @@ export function CommandPalette({
         }
       }}
     >
-      <div className="min-w-0 w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100">
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+      <div className="kova-search-dialog min-w-0 overflow-hidden border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100">
+        <div className="kova-search-header flex items-center gap-3 border-b border-border">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
             ref={searchInputRef}
@@ -548,7 +562,7 @@ export function CommandPalette({
           id="command-palette-results"
           role="listbox"
           aria-label="Command palette results"
-          className="max-h-[60vh] overflow-y-auto p-2"
+          className="kova-search-results overflow-y-auto"
         >
           <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Actions</div>
           <button
@@ -644,7 +658,7 @@ export function CommandPalette({
                     });
                     closePalette();
                   } else if (action.action === "theme") {
-                    applyThemeMode(
+                    onChangeTheme(
                       document.documentElement.classList.contains("dark") ? "light" : "dark",
                     );
                     platformEvents.publish("platform", "command.executed", {

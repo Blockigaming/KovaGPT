@@ -101,3 +101,24 @@ test("missing storage never throws and reports empty state", () => {
   assert.equal(localRules(null, "chat-1"), null);
   assert.deepEqual(localBranches(null, "chat-1"), []);
 });
+
+test("failed or unreadable device storage cannot report a saved guest workspace", () => {
+  const denied = {
+    getItem: () => null,
+    setItem() {
+      throw Error("quota exceeded");
+    },
+  };
+  assert.throws(
+    () => saveLocalRules(denied, "chat", { instructions: "Keep this draft", enabled: true }),
+    /could not be saved/,
+  );
+  assert.throws(
+    () => saveLocalVersion(null, "chat", "message", { content: "Edit" }),
+    /could not be saved/,
+  );
+  const corrupt = memoryStorage();
+  corrupt.setItem("kova-local-chat-workspace", "invalid-json");
+  assert.throws(() => clearLocalRules(corrupt, "chat"), /could not be read/);
+  assert.equal(corrupt.getItem("kova-local-chat-workspace"), "invalid-json");
+});

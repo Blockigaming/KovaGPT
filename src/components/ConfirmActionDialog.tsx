@@ -17,6 +17,7 @@ export function ConfirmActionDialog({
   description,
   confirmLabel,
   onConfirm,
+  onCloseAutoFocus,
   destructive = false,
   disabled = false,
 }: {
@@ -26,12 +27,16 @@ export function ConfirmActionDialog({
   description: string;
   confirmLabel: string;
   onConfirm: () => void;
+  onCloseAutoFocus?: (event: Event) => void;
   destructive?: boolean;
   disabled?: boolean;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md bg-popover text-popover-foreground">
+      <AlertDialogContent
+        onCloseAutoFocus={onCloseAutoFocus}
+        className="max-w-md bg-popover text-popover-foreground"
+      >
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             {destructive ? (

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
-import { DEFAULT_SETTINGS, type Settings } from "@/components/SettingsDialog";
+import { DEFAULT_SETTINGS, type Settings } from "@/lib/settings-types";
 import { loadStoredSettings, saveStoredSettings, settingsKey } from "@/lib/settings-storage";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import {
@@ -79,7 +79,7 @@ export function useNovaSettings(userKey: string | null, principalResolved: boole
     const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
     if (generation !== generationRef.current) return;
     setState({ principal, generation, settings: loaded });
-    applyThemeMode(loaded.mode ?? "system");
+    applyThemeMode(loaded.mode ?? "dark");
   }, [principal, principalResolved, userKey]);
 
   useEffect(() => {
@@ -102,7 +102,7 @@ export function useNovaSettings(userKey: string | null, principalResolved: boole
       state.generation !== generationRef.current
     )
       return;
-    applyThemeMode(state.settings.mode ?? "system");
+    applyThemeMode(state.settings.mode ?? "dark");
     try {
       saveStoredSettings(userKey, state.settings);
     } catch {

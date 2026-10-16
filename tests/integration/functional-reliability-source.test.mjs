@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 const title = await readFile("src/routes/api/title.ts", "utf8");
 const mfa = await readFile("src/components/MfaPanel.tsx", "utf8");
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
-const home = await readFile("src/routes/index.tsx", "utf8");
+const home = await readFile("src/components/ChatWorkspace.tsx", "utf8");
 const shares = await readFile("src/lib/shared-chats.functions.ts", "utf8");
 const settings = await readFile("src/components/SettingsDialog.tsx", "utf8");
 const apiAuth = await readFile("src/lib/api-auth.server.ts", "utf8");

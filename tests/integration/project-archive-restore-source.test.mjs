@@ -32,8 +32,9 @@ test("project archive writes require an owner row and the control cannot report 
     workspaceServer.indexOf("// ============= SEARCH"),
   );
   assert.match(archive, /\.eq\("owner_id", context\.userId\)/);
-  assert.match(archive, /\.select\("id"\)[\s\S]{0,40}\.maybeSingle\(\)/);
-  assert.match(archive, /if \(!updated\)/);
+  assert.match(archive, /\.eq\("updated_at", data\.expectedUpdatedAt\)/);
+  assert.match(archive, /\.select\("id, updated_at, archived_at"\)[\s\S]{0,40}\.maybeSingle\(\)/);
+  assert.match(archive, /if \(!updated \|\| updated\.id !== data\.id\)/);
   assert.match(route, /const \[archiveBusy, setArchiveBusy\] = useState\(false\)/);
   assert.match(route, /disabled=\{archiveBusy\}/);
   assert.match(route, /aria-busy=\{archiveBusy\}/);

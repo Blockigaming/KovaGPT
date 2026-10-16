@@ -1,11 +1,18 @@
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
+import { LaunchConnectorManager } from "@/components/LaunchConnectorManager";
+import { isLaunchConnector } from "@/integrations/launch-contracts.mjs";
+import { PluginLogo } from "@/components/PluginLogo";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import {
-  CONNECTOR_CATALOG,
+  LAUNCH_PLUGIN_CATALOG,
   GOOGLE_CONNECT_IDS,
   type ConnectorItem,
+  connectorConnectFlow,
+  connectorUnavailableReason,
 } from "@/lib/connectors-catalog";
+import { CORE_LAUNCH_ADVANCED_WORKFLOWS } from "@/lib/core-launch-policy.mjs";
 import {
   Search,
   Check,
@@ -27,6 +34,8 @@ import {
   type GitHubManagement,
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
+import { ToolConfirmCard } from "@/components/ToolConfirmCard";
+import type { PendingConfirm } from "@/lib/chat-store";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import {
@@ -62,37 +71,24 @@ import {
 // The catalog owns which ids the Google grant actually covers.
 const GOOGLE_IDS = GOOGLE_CONNECT_IDS;
 
-// Apps that are actually wired up end-to-end today. Non-working connectors are
-// intentionally hidden so navigation never exposes fake or decorative controls.
-const WORKING_IDS = new Set<string>([
-  "google",
-  "gmail",
-  "google-drive",
-  "google-calendar",
-  "github",
-]);
-
-const CONFIGURED_CONNECTORS = WORKING_IDS;
-
-const RECOMMENDED_IDS = new Set([
-  "google",
-  "gmail",
-  "google-drive",
-  "google-calendar",
-  "icloud-mail",
-  "ms-word",
-  "youtube",
-  "apple",
-]);
+// An implemented flow is not proof of deployment configuration or provider health.
+// Planned catalog entries never reach actionable cards.
 
 export const Route = createFileRoute("/apps")({
   component: AppsPage,
+  validateSearch: (search: Record<string, unknown>): { plugin?: string } => ({
+    plugin:
+      typeof search.plugin === "string" &&
+      LAUNCH_PLUGIN_CATALOG.some((item) => item.id === search.plugin)
+        ? search.plugin
+        : undefined,
+  }),
   head: () => ({
     meta: [
-      { title: "KovaGPT Apps & Plugins" },
+      { title: "KovaGPT Plugins" },
       {
         name: "description",
-        content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",
+        content: "Manage KovaGPT plugin connections and check their availability.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -164,47 +160,24 @@ function parseGitHubAuthorizationUrl(value: unknown): string | null {
   }
 }
 
-function AppLogo({ domain, label }: { domain: string; label: string }) {
-  // Locally rendered brand mark using the domain's own favicon as a fallback.
-  // Avoids Logo.dev entirely.
-  const [failed, setFailed] = useState(false);
-  const src = `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(domain)}`;
-  if (!failed) {
-    return (
-      <img
-        src={src}
-        alt=""
-        loading="lazy"
-        onError={() => setFailed(true)}
-        className="w-10 h-10 rounded-lg object-contain bg-white border border-border shrink-0 p-1.5"
-      />
-    );
-  }
-  return (
-    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-xs font-semibold text-muted-foreground border border-border">
-      {label.slice(0, 2).toUpperCase()}
-    </div>
-  );
-}
-
 function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
-  if (!configured) {
+  if (!configured && state !== "syncing" && state !== "temporarily_unavailable") {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
         <ShieldAlert className="w-3 h-3" /> Setup needed
       </span>
     );
   }
   if (state === "connected") {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
         <Check className="w-3 h-3" /> Connected
       </span>
     );
   }
   if (state === "connecting") {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-transparent text-muted-foreground border border-border">
         <Loader2 className="w-3 h-3 animate-spin" /> Connecting
       </span>
     );
@@ -213,7 +186,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
   if (state === "expired" || state === "reauthorize") {
     return (
       <span
-        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20"
+        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20"
         aria-label="Reauthorization required"
       >
         <ShieldAlert className="w-3 h-3" /> Reconnect
@@ -223,7 +196,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
   if (state === "permission_incomplete") {
     return (
       <span
-        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20"
+        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20"
         aria-label="Permission incomplete"
       >
         <ShieldAlert className="w-3 h-3" /> More access needed
@@ -233,7 +206,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
   if (state === "syncing") {
     return (
       <span
-        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20"
+        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-transparent text-muted-foreground border border-border"
         aria-live="polite"
       >
         <Loader2 className="w-3 h-3 animate-spin" /> Syncing
@@ -252,7 +225,7 @@ function StatusBadge({ state, configured }: { state: ConnState; configured: bool
   }
   if (state === "failed") {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
         <AlertCircle className="w-3 h-3" /> Failed
       </span>
     );
@@ -269,6 +242,7 @@ function AppCard({
   onDisconnect,
   onRetry,
   onDetails,
+  detailsButtonRef,
   onUseInChat,
 }: {
   item: ConnectorItem;
@@ -279,13 +253,33 @@ function AppCard({
   onDisconnect: () => void;
   onRetry: () => void;
   onDetails: () => void;
+  detailsButtonRef: (button: HTMLButtonElement | null) => void;
   onUseInChat: () => void;
 }) {
   const baseBtn =
-    "inline-flex min-h-11 items-center justify-center rounded-full px-3 text-xs font-medium transition-colors shrink-0";
+    "inline-flex min-h-11 items-center justify-center rounded-[9999px] px-3 text-xs font-medium transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
   let action: React.ReactNode;
-  if (!configured) {
+  if (connectorConnectFlow(item) === null) {
+    action = (
+      <button
+        disabled
+        title={connectorUnavailableReason(item)}
+        className={`${baseBtn} border border-border text-muted-foreground cursor-not-allowed opacity-70`}
+      >
+        Not available yet
+      </button>
+    );
+  } else if (state === "syncing" || state === "temporarily_unavailable") {
+    action = (
+      <button
+        disabled
+        className={`${baseBtn} border border-border text-muted-foreground opacity-70`}
+      >
+        {state === "syncing" ? "Checking connection…" : "Status unavailable"}
+      </button>
+    );
+  } else if (!configured) {
     action = (
       <button
         disabled
@@ -298,10 +292,12 @@ function AppCard({
   } else if (!isSignedIn) {
     action = (
       <SignInButton mode="modal">
-        <button className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}>Connect</button>
+        <button className={`${baseBtn} bg-foreground text-background hover:opacity-90`}>
+          Connect
+        </button>
       </SignInButton>
     );
-  } else if (state === "connecting" || state === "syncing") {
+  } else if (state === "connecting") {
     action = (
       <button
         disabled
@@ -333,7 +329,7 @@ function AppCard({
     action = (
       <button
         onClick={onConnect}
-        className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}
+        className={`${baseBtn} bg-foreground text-background hover:opacity-90`}
       >
         Connect
       </button>
@@ -341,18 +337,24 @@ function AppCard({
   }
 
   return (
-    <li className="kova-card kova-connector-card flex h-full flex-col items-start gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-foreground/20 sm:flex-row">
-      <AppLogo domain={item.domain} label={item.label} />
+    <li
+      data-plugin-id={item.id}
+      className="kova-card kova-connector-card flex h-full flex-col items-start gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-foreground/20 sm:flex-row"
+    >
+      <PluginLogo id={item.id} label={item.label} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-semibold truncate">{item.label}</div>
-          <StatusBadge state={state} configured={configured} />
+          {connectorConnectFlow(item) !== null && (
+            <StatusBadge state={state} configured={configured} />
+          )}
         </div>
         <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description}</div>
       </div>
       <div className="flex w-full shrink-0 flex-wrap items-center gap-1 sm:w-auto sm:flex-col sm:items-end">
         {action}
         <button
+          ref={detailsButtonRef}
           onClick={onDetails}
           className="inline-flex min-h-11 items-center px-2 text-xs text-muted-foreground hover:text-foreground"
         >
@@ -377,6 +379,44 @@ function GitHubManager() {
     grants = useServerFn(updateGitHubRepositoryGrants),
     disconnect = useServerFn(disconnectGitHub);
   const [data, setData] = useState<GitHubManagement | null>(null);
+  const [approvals, setApprovals] = useState<PendingConfirm[]>([]);
+  const [approvalError, setApprovalError] = useState(false);
+  const [accessMode, setAccessMode] = useState<"none" | "view" | "write">("view");
+  const [accessBusy, setAccessBusy] = useState(false);
+  const [writeAccessOpen, setWriteAccessOpen] = useState(false);
+  const loadApprovals = useCallback(async () => {
+    setApprovals([]);
+    setApprovalError(false);
+    try {
+      const response = await authFetch("/api/github/tool");
+      const body = await response.json();
+      if (!response.ok || !body.ok || !Array.isArray(body.actions)) throw new Error("unavailable");
+      if (!["none", "view", "write"].includes(body.access_mode)) throw new Error("invalid access");
+      setAccessMode(body.access_mode);
+      setApprovals(body.actions);
+    } catch {
+      setApprovalError(true);
+    }
+  }, []);
+  async function changeAccess(mode: "none" | "view" | "write") {
+    if (accessBusy) return;
+    setAccessBusy(true);
+    try {
+      const response = await authFetch("/api/github/tool", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_mode: mode }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok || result.access_mode !== mode) throw new Error("unverified");
+      setAccessMode(mode);
+      await loadApprovals();
+    } catch {
+      toast.error("GitHub access change could not be verified. Reload its status.");
+    } finally {
+      setAccessBusy(false);
+    }
+  }
   const [busyAction, setBusyAction] = useState<
     "connect" | "refresh" | "grant" | "disconnect" | null
   >(null);
@@ -425,7 +465,8 @@ function GitHubManager() {
   } | null>(null);
   useEffect(() => {
     void reload();
-  }, [reload]);
+    void loadApprovals();
+  }, [reload, loadApprovals]);
   if (!data && loadError)
     return (
       <section role="alert" className="rounded-xl border border-destructive/40 p-5">
@@ -757,11 +798,73 @@ function GitHubManager() {
           </ul>
         </div>
       )}
+      <div className="mt-5 border-t pt-4">
+        <label className="mb-2 flex flex-wrap items-center gap-3 text-sm">
+          Assistant access to GitHub
+          <select
+            aria-label="GitHub access"
+            value={accessMode}
+            disabled={accessBusy || approvalError}
+            className="min-h-11 rounded-full border bg-background px-3"
+            onChange={(event) => {
+              const mode = event.target.value as "none" | "view" | "write";
+              if (mode === "write") setWriteAccessOpen(true);
+              else void changeAccess(mode);
+            }}
+          >
+            <option value="none">Disabled temporarily</option>
+            <option value="view">View only</option>
+            <option value="write">View + write</option>
+          </select>
+        </label>
+        <p className="mb-3 text-xs text-muted-foreground">
+          View + write allows preparing changes. Every write still needs your approval of its exact
+          details.
+        </p>
+        <ConfirmActionDialog
+          open={writeAccessOpen}
+          onOpenChange={setWriteAccessOpen}
+          title="Allow GitHub write requests?"
+          description="GitHub changes can publish content, modify branches or merge code. You will review and approve each exact operation before it runs. Existing repository grants still apply."
+          confirmLabel="Allow write requests"
+          onConfirm={() => {
+            setWriteAccessOpen(false);
+            void changeAccess("write");
+          }}
+        />
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="font-medium">GitHub actions awaiting your approval</h3>
+          <Button variant="outline" onClick={() => void loadApprovals()}>
+            Refresh actions
+          </Button>
+        </div>
+        {approvalError ? (
+          <p role="alert" className="mt-2 text-sm">
+            Approval requests could not be loaded. Refresh to try again.
+          </p>
+        ) : approvals.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">No pending GitHub actions.</p>
+        ) : (
+          approvals.map((confirm) => (
+            <ToolConfirmCard
+              key={confirm.actionId}
+              confirm={confirm}
+              onUpdate={(next) =>
+                setApprovals((current) =>
+                  current.map((item) => (item.actionId === next.actionId ? next : item)),
+                )
+              }
+            />
+          ))
+        )}
+      </div>
     </section>
   );
 }
 
 function AppsPage() {
+  const { plugin: requestedPlugin } = Route.useSearch();
+  const handledPluginRef = useRef<string | null>(null);
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const workflowSkillsAvailable = user?.primaryEmailAddress?.verification?.status === "verified";
@@ -781,6 +884,14 @@ function AppsPage() {
   const googleBusyRef = useRef(false);
   const googleRequestRef = useRef(0);
   const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
+  // Sections can remount their cards; track the live button for the exact invoking provider.
+  const detailsButtonsRef = useRef(new Map<string, HTMLButtonElement>());
+  const detailsReturnRef = useRef<{
+    id: string;
+    url: string;
+    principal: string | null;
+    generation: number;
+  } | null>(null);
   const [activity, setActivity] = useState<AppActivity[]>([]);
   const activityRef = useRef<AppActivity[]>([]);
   const [activityPrincipal, setActivityPrincipal] = useState<string | null>(null);
@@ -790,6 +901,17 @@ function AppsPage() {
   const visibleGoogleStatus = activityReady ? googleStatus : null;
   const visibleGoogleLoading = activityReady ? googleLoading : true;
   const visibleSelectedApp = activityReady ? selectedApp : null;
+  const googleConfigured = visibleGoogleStatus?.configured === true;
+  useEffect(() => {
+    if (!activityReady || !requestedPlugin) {
+      handledPluginRef.current = null;
+      return;
+    }
+    const request = `${principal}:${requestedPlugin}`;
+    if (handledPluginRef.current === request) return;
+    handledPluginRef.current = request;
+    setSelectedApp(LAUNCH_PLUGIN_CATALOG.find((item) => item.id === requestedPlugin) ?? null);
+  }, [activityReady, principal, requestedPlugin]);
 
   const resendWorkflowVerification = async () => {
     const email = user?.primaryEmailAddress?.emailAddress;
@@ -922,9 +1044,9 @@ function AppsPage() {
     const ok = params.get("google_connected");
     const err = params.get("google_error");
     if (ok) {
-      toast.success("Google account connected");
-      recordActivity("Google", "Connected");
-      refreshGoogle();
+      // A callback URL is only a request to reload authenticated status. It is not
+      // a success receipt: it may be copied, replayed, or followed by revocation.
+      void refreshGoogle();
     } else if (err) {
       const msg =
         err === "access_denied"
@@ -944,10 +1066,42 @@ function AppsPage() {
     }
   }, [activityReady, isSignedIn, recordActivity, refreshGoogle]);
 
+  useEffect(() => {
+    if (!activityReady || !isSignedIn) return;
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("integration_connected"),
+      failure = params.get("integration_error");
+    if (connected && isLaunchConnector(connected)) {
+      const item = LAUNCH_PLUGIN_CATALOG.find((entry) => entry.id === connected);
+      if (item) setSelectedApp(item); // Callback is a status reload request, never a success receipt.
+    }
+    if (failure)
+      toast.error(
+        "Provider connection was not completed. Review saved account status before retrying.",
+      );
+    if (connected || failure) {
+      params.delete("integration_connected");
+      params.delete("integration_error");
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + (params.toString() ? `?${params}` : ""),
+      );
+    }
+  }, [activityReady, isSignedIn]);
+
   const isGoogleId = (id: string) => GOOGLE_IDS.has(id);
 
   const connectGoogle = async (connectionId?: string, itemId = "google") => {
-    if (!activityReady || !principal || !userKey || googleBusyRef.current || googleLoading) return;
+    if (
+      !activityReady ||
+      !principal ||
+      !userKey ||
+      googleBusyRef.current ||
+      googleLoading ||
+      !googleConfigured
+    )
+      return;
     const generation = generationRef.current;
     const requestPrincipal = principal;
     const isCurrent = () =>
@@ -1059,23 +1213,26 @@ function AppsPage() {
     return false;
   };
 
-  const filtered = useMemo(() => {
+  const matchingPlugins = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CONNECTOR_CATALOG.filter((c) => WORKING_IDS.has(c.id) && c.id !== "github").filter(
-      (c) => {
-        if (!q) return true;
-        return (
-          c.label.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q) ||
-          c.category.toLowerCase().includes(q)
-        );
-      },
-    );
+    return LAUNCH_PLUGIN_CATALOG.filter((c) => {
+      if (!q) return true;
+      return (
+        c.label.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q) ||
+        c.category.toLowerCase().includes(q)
+      );
+    });
   }, [query]);
+  const filtered = matchingPlugins.filter((item) => item.id !== "github");
+  const showGitHub = matchingPlugins.some((item) => item.id === "github");
 
   const isConnected = (id: string) => isGoogleId(id) && isGoogleConnected(id);
   const connectedList = filtered.filter((c) => isConnected(c.id));
-  const recommendedList = filtered.filter((c) => !isConnected(c.id) && RECOMMENDED_IDS.has(c.id));
+  const recommendedList = filtered.filter(
+    (c) => !isConnected(c.id) && connectorConnectFlow(c) !== null,
+  );
+  const unavailableList = filtered.filter((c) => connectorConnectFlow(c) === null);
 
   const stateOf = (id: string): ConnState => {
     if (!isSignedIn) return "idle";
@@ -1083,7 +1240,8 @@ function AppsPage() {
       if (visibleGoogleLoading || googleBusy) return "syncing";
       if (activityReady && connecting[id]) return "connecting";
       if (activityReady && failed[id]) return "failed";
-      if (visibleGoogleStatus?.state === "temporarily_unavailable")
+      if (visibleGoogleStatus?.configured === false) return "idle";
+      if (!googleConfigured || visibleGoogleStatus?.state === "temporarily_unavailable")
         return "temporarily_unavailable";
       if (visibleGoogleStatus?.state === "reauthorization_required") return "reauthorize";
       if (isGoogleConnected(id)) return "connected";
@@ -1093,6 +1251,26 @@ function AppsPage() {
     return "temporarily_unavailable";
   };
 
+  const googleDetailsSummary = (id: string) => {
+    const status = visibleGoogleStatus;
+    const state = stateOf(id);
+    const identity = status?.email ? `Saved account: ${status.email}. ` : "";
+    if (state === "connected" && status?.state === "connected")
+      return `${status.email ? `Connected as ${status.email}. ` : "Connected. "}Only permissions granted by Google are available in chat.`;
+    if (status?.configured === false)
+      return `${identity}${status.state === "disconnected" || !status.connected ? "Disconnected. " : ""}Google setup is unavailable in this deployment.`;
+    if (state === "syncing" || state === "connecting")
+      return `${identity}Checking connection status. Access is not yet confirmed.`;
+    if (state === "reauthorize") return `${identity}Reconnect required before using this plugin.`;
+    if (state === "permission_incomplete" || status?.state === "permission_incomplete")
+      return `${identity}Permissions incomplete. Access for this plugin is not confirmed.`;
+    if (state === "temporarily_unavailable")
+      return `${identity}Connection status is unavailable. Refresh to check access.`;
+    if (state === "failed")
+      return `${identity}The connection attempt failed. Access is not confirmed.`;
+    return `${identity}Disconnected. This plugin cannot use this account in chat.`;
+  };
+
   const renderGrid = (items: ConnectorItem[]) => (
     <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
       {items.map((item) => (
@@ -1100,12 +1278,24 @@ function AppsPage() {
           key={item.id}
           item={item}
           state={stateOf(item.id)}
-          configured={CONFIGURED_CONNECTORS.has(item.id)}
+          configured={isGoogleId(item.id) && googleConfigured}
           isSignedIn={!!isSignedIn}
           onConnect={() => handleConnect(item)}
           onDisconnect={() => handleDisconnect(item)}
           onRetry={() => handleConnect(item)}
-          onDetails={() => setSelectedApp(item)}
+          detailsButtonRef={(button) => {
+            if (button) detailsButtonsRef.current.set(item.id, button);
+            else detailsButtonsRef.current.delete(item.id);
+          }}
+          onDetails={() => {
+            detailsReturnRef.current = {
+              id: item.id,
+              url: window.location.href,
+              principal,
+              generation: generationRef.current,
+            };
+            setSelectedApp(item);
+          }}
           onUseInChat={() => {
             const handoff = writePrincipalHandoff(
               safeBrowserStorage("sessionStorage"),
@@ -1153,17 +1343,36 @@ function AppsPage() {
   };
 
   return (
-    <AppShell>
+    <AppShell utilitiesInHeader>
       <main
         id="main-content"
         tabIndex={-1}
         aria-labelledby="apps-title"
-        className="kova-page kova-secondary-page max-w-5xl space-y-8"
+        className="kova-page kova-secondary-page kova-core-page kova-adapted-controls max-w-5xl space-y-8"
       >
         <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent
+            className="max-h-[85dvh] overflow-y-auto sm:max-w-lg"
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              const origin = detailsReturnRef.current;
+              detailsReturnRef.current = null;
+              if (
+                origin &&
+                origin.principal === principalRef.current &&
+                origin.generation === generationRef.current
+              ) {
+                restoreDialogFocus(detailsButtonsRef.current.get(origin.id), origin.url);
+              }
+            }}
+          >
             <DialogHeader>
-              <DialogTitle>{visibleSelectedApp?.label}</DialogTitle>
+              <DialogTitle className="flex items-center gap-3">
+                {visibleSelectedApp && (
+                  <PluginLogo id={visibleSelectedApp.id} label={visibleSelectedApp.label} />
+                )}
+                {visibleSelectedApp?.label}
+              </DialogTitle>
               <DialogDescription>{visibleSelectedApp?.description}</DialogDescription>
             </DialogHeader>
             {visibleSelectedApp && (
@@ -1177,12 +1386,13 @@ function AppsPage() {
                         ? "Read calendars and propose events. Creating an event requires explicit confirmation."
                         : visibleSelectedApp.id === "google-drive"
                           ? "Search and read files covered by the Drive scopes you granted."
-                          : "Manage the Google connection shared by supported Google apps."}
+                          : visibleSelectedApp.id === "github"
+                            ? "Choose Disabled, View only, or View + write. Write access still requires your approval for each specific action."
+                            : connectorUnavailableReason(visibleSelectedApp)}
                   </p>
-                  {isGoogleId(visibleSelectedApp.id) && visibleGoogleStatus?.email ? (
+                  {isGoogleId(visibleSelectedApp.id) ? (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Connected as {visibleGoogleStatus.email}. Only permissions granted by Google
-                      are available in chat.
+                      {googleDetailsSummary(visibleSelectedApp.id)}
                     </p>
                   ) : null}
                   {isGoogleId(visibleSelectedApp.id) &&
@@ -1196,14 +1406,48 @@ function AppsPage() {
                     </button>
                   ) : null}
                 </section>
+                {isSignedIn && isLaunchConnector(visibleSelectedApp.id) && (
+                  <LaunchConnectorManager
+                    key={`${principal}:${visibleSelectedApp.id}`}
+                    connector={visibleSelectedApp.id}
+                  />
+                )}
+                {visibleSelectedApp.id === "github" && isSignedIn ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedApp(null);
+                      requestAnimationFrame(() =>
+                        document
+                          .querySelector<HTMLElement>('[data-plugin-id="github"]')
+                          ?.scrollIntoView({
+                            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                              ? "auto"
+                              : "smooth",
+                            block: "start",
+                          }),
+                      );
+                    }}
+                  >
+                    Manage GitHub connection
+                  </Button>
+                ) : null}
                 <section>
                   <h3 className="font-medium">Recent activity</h3>
                   {visibleActivity.filter((entry) =>
-                    [visibleSelectedApp.label, "Google"].includes(entry.app),
+                    (isGoogleId(visibleSelectedApp.id)
+                      ? [visibleSelectedApp.label, "Google"]
+                      : [visibleSelectedApp.label]
+                    ).includes(entry.app),
                   ).length ? (
                     <ul className="mt-2 space-y-2">
                       {visibleActivity
-                        .filter((entry) => [visibleSelectedApp.label, "Google"].includes(entry.app))
+                        .filter((entry) =>
+                          (isGoogleId(visibleSelectedApp.id)
+                            ? [visibleSelectedApp.label, "Google"]
+                            : [visibleSelectedApp.label]
+                          ).includes(entry.app),
+                        )
                         .slice(0, 5)
                         .map((entry, index) => (
                           <li key={`${entry.at}:${index}`} className="rounded-lg bg-muted/60 p-2">
@@ -1221,7 +1465,7 @@ function AppsPage() {
         </Dialog>
         <WorkspacePageHeader
           icon={PanelsTopLeft}
-          title="Apps & plugins"
+          title="Plugins"
           titleId="apps-title"
           description="Connect the services you want KovaGPT to use. You control permissions, and write actions still require confirmation."
         />
@@ -1234,7 +1478,7 @@ function AppsPage() {
         {!isLoaded ? (
           <section role="status" aria-labelledby="apps-loading-title" className="space-y-3">
             <h2 id="apps-loading-title" className="sr-only">
-              Loading apps and plugins
+              Loading connections
             </h2>
             <div
               aria-hidden="true"
@@ -1251,8 +1495,7 @@ function AppsPage() {
               Sign in to connect services
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-              Connect Google, Gmail, Drive, Calendar, and GitHub to use authorized context across
-              your workspace.
+              Manage your connections and see which services are available for your account.
             </p>
             <SignInButton mode="modal">
               <Button className="mt-5 min-h-11">Sign in</Button>
@@ -1261,12 +1504,12 @@ function AppsPage() {
         ) : (
           <>
             <label className="relative block max-w-md">
-              <span className="sr-only">Search apps and plugins</span>
+              <span className="sr-only">Search plugins</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search apps and plugins"
+                placeholder="Search plugins"
                 className="h-11 pl-9"
               />
             </label>
@@ -1287,9 +1530,7 @@ function AppsPage() {
                 </div>
                 <Button
                   variant="outline"
-                  disabled={
-                    googleBusy || visibleGoogleLoading || !CONFIGURED_CONNECTORS.has("google")
-                  }
+                  disabled={googleBusy || visibleGoogleLoading || !googleConfigured}
                   onClick={() => void connectGoogle()}
                 >
                   Add Google account
@@ -1307,7 +1548,13 @@ function AppsPage() {
                   Updating Google accounts…
                 </p>
               ) : null}
-              {visibleGoogleStatus?.state === "temporarily_unavailable" ? (
+              {visibleGoogleStatus?.configured === false ? (
+                <p role="status" className="text-sm">
+                  Google connection setup is required for this deployment. Connecting is unavailable
+                  until setup is complete.
+                </p>
+              ) : visibleGoogleStatus?.state === "temporarily_unavailable" ||
+                (!visibleGoogleLoading && !googleConfigured) ? (
                 <p role="status" className="text-sm">
                   Google account status is unavailable. Refresh to try again.
                 </p>
@@ -1347,7 +1594,7 @@ function AppsPage() {
                         {account.state !== "connected" ? (
                           <Button
                             variant="outline"
-                            disabled={googleBusy || visibleGoogleLoading}
+                            disabled={googleBusy || visibleGoogleLoading || !googleConfigured}
                             onClick={() => void connectGoogle(account.id)}
                             aria-label={`Reconnect ${account.email || "Google account"}`}
                           >
@@ -1372,35 +1619,40 @@ function AppsPage() {
               ) : null}
             </section>
 
-            <GitHubManager key={principal ?? "unresolved"} />
-
-            {workflowSkillsAvailable ? (
-              <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
-            ) : (
-              <section className="rounded-2xl border bg-card p-5" aria-labelledby="skills-title">
-                <h2 id="skills-title" className="text-base font-semibold">
-                  Workflow skills
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Verify your primary email, then refresh this page to create or use workflow
-                  skills.
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-4 min-h-11"
-                  disabled={verificationBusy || !user?.primaryEmailAddress?.emailAddress}
-                  onClick={() => void resendWorkflowVerification()}
-                >
-                  {verificationBusy ? "Sending…" : "Resend verification email"}
-                </Button>
-              </section>
+            {showGitHub && (
+              <div data-plugin-id="github">
+                <GitHubManager key={principal ?? "unresolved"} />
+              </div>
             )}
 
-            {filtered.length === 0 ? (
+            {CORE_LAUNCH_ADVANCED_WORKFLOWS &&
+              (workflowSkillsAvailable ? (
+                <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
+              ) : (
+                <section className="rounded-2xl border bg-card p-5" aria-labelledby="skills-title">
+                  <h2 id="skills-title" className="text-base font-semibold">
+                    Workflow skills
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Verify your primary email, then refresh this page to create or use workflow
+                    skills.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="mt-4 min-h-11"
+                    disabled={verificationBusy || !user?.primaryEmailAddress?.emailAddress}
+                    onClick={() => void resendWorkflowVerification()}
+                  >
+                    {verificationBusy ? "Sending…" : "Resend verification email"}
+                  </Button>
+                </section>
+              ))}
+
+            {matchingPlugins.length === 0 ? (
               <section className="kova-empty-state" aria-labelledby="apps-empty-title">
                 <Search className="mx-auto h-5 w-5 text-muted-foreground" aria-hidden="true" />
                 <h2 id="apps-empty-title" className="mt-3 text-sm font-medium">
-                  No matching apps or plugins
+                  No matching plugins
                 </h2>
                 <p className="mt-1 text-xs text-muted-foreground">Try another service name.</p>
                 <Button
@@ -1421,10 +1673,15 @@ function AppsPage() {
                   items={connectedList}
                 />
                 <Section
-                  title="Available connections"
+                  title="Google services"
                   subtitle="Connect only the access you want to use."
                   icon={<Sparkles className="h-3.5 w-3.5 text-foreground/70" aria-hidden="true" />}
                   items={recommendedList}
+                />
+                <Section
+                  title="Not available yet"
+                  subtitle="These services cannot be connected yet."
+                  items={unavailableList}
                 />
               </>
             )}

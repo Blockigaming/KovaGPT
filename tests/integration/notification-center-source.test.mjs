@@ -18,7 +18,7 @@ test("notification UI loads server truth and exposes search, filters, read, and 
     "useServerFn(listNotifications)",
     "Search notifications",
     "Filter notifications",
-    "Mark all read",
+    "Mark loaded pages read",
     "Delete",
     "Connectors",
     "Task history",

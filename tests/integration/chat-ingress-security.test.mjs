@@ -82,7 +82,7 @@ test("chat normalization strips client extras and validates all prompt-control f
 test("only the latest user turn can carry provider-bound attachments", () => {
   const chat = read("src/routes/api/chat.ts");
   const ingress = read("src/lib/chat-ingress.server.mjs");
-  const mainChat = read("src/routes/index.tsx");
+  const mainChat = read("src/components/ChatWorkspace.tsx");
   const projectChat = read("src/routes/projects.$projectId.chat.$chatId.tsx");
 
   assert.match(ingress, /const latestMessageIndex = messages\.length - 1/);

@@ -46,9 +46,10 @@ test("public navigation exposes mobile and current-page semantics", async () => 
   assert.match(logo, /alt = "KovaGPT"/);
   assert.match(logo, /aria-hidden=\{decorative \|\| undefined\}/);
   assert.match(logo, /aria-label=\{decorative \? undefined : alt\}/);
-  assert.match(logo, /role=\{decorative \? undefined : "img"\}/);
+  assert.match(logo, /alt=\{decorative \? "" : alt\}/);
   assert.match(logo, /data-logo-variant=\{mark \? "mark" : "standard"\}/);
-  assert.doesNotMatch(logo, /<img|kova-logo\.png/);
+  assert.match(logo, /<img[\s\S]*?src="\/kova-logo\.png"/);
+  assert.doesNotMatch(logo, /<svg|<path/);
 });
 
 test("public layouts provide a single skip-link destination", async () => {
@@ -65,13 +66,14 @@ test("public layouts provide a single skip-link destination", async () => {
 
   for (const [index, source] of routes.entries()) {
     assert.match(source, /<PublicShell>/, `${directMainRoutes[index]} should use PublicShell`);
+    const renderedMain = source.includes("<LegalArticle") ? legalArticle : source;
     assert.match(
-      source,
+      renderedMain,
       /id="main-content"/,
       `${directMainRoutes[index]} should expose the skip-link target`,
     );
     assert.equal(
-      source.match(/id="main-content"/g)?.length,
+      renderedMain.match(/id="main-content"/g)?.length,
       1,
       `${directMainRoutes[index]} should define one skip-link target`,
     );

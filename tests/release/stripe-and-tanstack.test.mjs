@@ -61,5 +61,5 @@ test("installed TanStack compiler and application retain validated input contrac
       new URL("../../node_modules/@tanstack/react-start/package.json", import.meta.url),
     ),
   );
-  assert.equal(pkg.version, "1.168.34");
+  assert.equal(pkg.version, "1.168.60");
 });

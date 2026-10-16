@@ -54,7 +54,7 @@ select
       'retire_legacy_password_on_owned_change','adopt_compatibility_candidate',
       'bind_recovery_account_authority','legacy_principal_permitted','guard_legacy_adoption',
       'retire_legacy_auth','retire_password_authority','guard_session_legacy_principal',
-      'site_authorized_session','issue_site_ticket_authorized'
+      'site_authorized_session','issue_site_ticket_authorized','recent_primary_session'
     ) and (has_function_privilege('anon',p.oid,'execute') or
            has_function_privilege('authenticated',p.oid,'execute')))
     as browser_private_auth_function_access,

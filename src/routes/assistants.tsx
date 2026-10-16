@@ -120,7 +120,7 @@ function DirectoryPage() {
           Load more Kovas
         </button>
       )}
-      <Link className="col-span-full underline" to={"/kovas" as never}>
+      <Link className="kova-public-action-link col-span-full underline" to={"/kovas" as never}>
         Create or manage your Kovas
       </Link>
     </PublicPageView>

@@ -12,6 +12,10 @@ export const requiredMigrations = Object.freeze([
   "kova_owned_cutover_population_guards",
   "kova_owned_cutover_authority_and_rp",
   "kova_owned_cutover_required_mfa_guard",
+  "kova_restore_legacy_private_helper_usage",
+  "kova_owned_auth_remaining_review_fixes",
+  "kova_owned_storage_cache_boundary",
+  "kova_owned_passkey_registration_primary_session",
 ]);
 
 export const requiredDeployedChecks = Object.freeze([
@@ -53,6 +57,8 @@ const serviceOnlyFunctions = Object.freeze([
   "kova_auth_legacy_adoption_gap_count",
   "kova_auth_activate_legacy_mfa_migration",
   "kova_auth_validate_compatibility_session",
+  "kova_auth_passkey_recent_primary_session",
+  "kova_auth_remove_totp_with_session",
 ]);
 const hex = /^[a-f0-9]{64}$/u;
 const commit = /^[a-f0-9]{40}$/u;

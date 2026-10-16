@@ -1,3 +1,5 @@
+import { useCollectionPager } from "@/lib/use-collection-pager";
+import { CollectionPageControls } from "@/components/CollectionPageControls";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Bell, Check, CheckCheck, Loader2, Search, Trash2 } from "lucide-react";
@@ -11,6 +13,7 @@ import {
   deleteNotifications,
   listNotifications,
   markNotificationsRead,
+  readNotificationDetails,
   type CenterNotification,
 } from "@/lib/notification-center.functions";
 
@@ -28,16 +31,110 @@ function NotificationsRoute() {
   const list = useServerFn(listNotifications);
   const markRead = useServerFn(markNotificationsRead);
   const remove = useServerFn(deleteNotifications);
-  const [items, setItems] = useState<CenterNotification[]>([]);
+  const getDetails = useServerFn(readNotificationDetails);
+  const [details, setDetails] = useState<{ owner: string; id: string; body: string } | null>(null);
+  const [detailLoading, setDetailLoading] = useState<string | null>(null);
+  const detailRead = useRef({ sequence: 0, controller: null as AbortController | null });
+  useEffect(() => {
+    setDetails(null);
+    setDetailLoading(null);
+    const request = detailRead.current;
+    request.sequence++;
+    request.controller?.abort();
+    return () => {
+      request.sequence++;
+      request.controller?.abort();
+    };
+  }, [principalId]);
+  const revealDetails = async (item: CenterNotification) => {
+    const owner = principalId;
+    if (!owner || item.source !== "agent") return;
+    const request = detailRead.current,
+      sequence = ++request.sequence;
+    request.controller?.abort();
+    if (details?.owner === owner && details.id === item.id) {
+      setDetails(null);
+      setDetailLoading(null);
+      return;
+    }
+    const controller = new AbortController();
+    request.controller = controller;
+    setDetailLoading(item.id);
+    const current = () =>
+      request.sequence === sequence &&
+      activePrincipalRef.current === owner &&
+      !controller.signal.aborted;
+    try {
+      const saved = await getDetails({ data: { id: item.id }, signal: controller.signal });
+      if (!current()) return;
+      if (saved.id !== item.id || typeof saved.body !== "string")
+        throw new Error("Notification details are unavailable.");
+      setDetails({ owner, id: saved.id, body: saved.body });
+    } catch (reason) {
+      if (current())
+        toast.error(reason instanceof Error ? reason.message : "Notification details unavailable.");
+    } finally {
+      if (current()) {
+        setDetailLoading(null);
+        request.controller = null;
+      }
+    }
+  };
+
+  const [applicationItems, setApplicationItems] = useState<CenterNotification[]>([]);
+  const [agentItems, setAgentItems] = useState<CenterNotification[]>([]);
+  const items = useMemo(
+    () =>
+      [...applicationItems, ...agentItems].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [applicationItems, agentItems],
+  );
+  const setItems = useCallback(
+    (value: CenterNotification[] | ((items: CenterNotification[]) => CenterNotification[])) => {
+      setApplicationItems((old) =>
+        typeof value === "function"
+          ? value(old)
+          : value.filter((item) => item.source === "application"),
+      );
+      setAgentItems((old) =>
+        typeof value === "function" ? value(old) : value.filter((item) => item.source === "agent"),
+      );
+    },
+    [],
+  );
+  const applicationPage = useCallback(
+    (options: { data: { cursor: string | null }; signal?: AbortSignal }) =>
+      list({ ...options, data: { ...options.data, source: "application" } }),
+    [list],
+  );
+  const agentPage = useCallback(
+    (options: { data: { cursor: string | null }; signal?: AbortSignal }) =>
+      list({ ...options, data: { ...options.data, source: "agent" } }),
+    [list],
+  );
+  const applicationPager = useCollectionPager(applicationPage, principalId, setApplicationItems);
+  const agentPager = useCollectionPager(agentPage, principalId, setAgentItems);
+  const readApplication = applicationPager.read,
+    readAgent = agentPager.read;
+  const mutationPending = useRef(false);
   const [itemsOwner, setItemsOwner] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const error =
+    applicationPager.error && agentPager.error
+      ? "Both notification sources are unavailable. Retry sources below."
+      : null;
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const generationRef = useRef(0);
   const activePrincipalRef = useRef(principalId);
   activePrincipalRef.current = principalId;
+  useEffect(
+    () => () => {
+      activePrincipalRef.current = null;
+      generationRef.current++;
+    },
+    [],
+  );
 
   const reload = useCallback(async () => {
     const expectedPrincipal = principalId;
@@ -46,34 +143,27 @@ function NotificationsRoute() {
     setItems([]);
     setItemsOwner(expectedPrincipal);
     setLoading(true);
-    setError(null);
     try {
-      const nextItems = await list();
+      await Promise.allSettled([readApplication(), readAgent()]);
       if (generation !== generationRef.current || activePrincipalRef.current !== expectedPrincipal)
         return;
-      setItems(nextItems);
-    } catch {
-      if (generation !== generationRef.current || activePrincipalRef.current !== expectedPrincipal)
-        return;
-      setError("Notifications could not be loaded.");
     } finally {
       if (generation === generationRef.current && activePrincipalRef.current === expectedPrincipal)
         setLoading(false);
     }
-  }, [isLoaded, isSignedIn, list, principalId]);
+  }, [isLoaded, isSignedIn, readApplication, readAgent, principalId, setItems]);
 
   useEffect(() => {
     if (!isLoaded || !principalId) {
       generationRef.current += 1;
       setItems([]);
       setItemsOwner(null);
-      setError(null);
       setBusy(null);
       setLoading(!isLoaded);
       return;
     }
     void reload();
-  }, [isLoaded, principalId, reload]);
+  }, [isLoaded, principalId, reload, setItems]);
 
   const visibleItems = useMemo(
     () => (isLoaded && isSignedIn && itemsOwner === principalId ? items : []),
@@ -99,44 +189,78 @@ function NotificationsRoute() {
   );
   async function read(item?: CenterNotification) {
     const expectedPrincipal = principalId;
-    if (!expectedPrincipal) return;
+    if (!expectedPrincipal || mutationPending.current) return;
+    mutationPending.current = true;
+    applicationPager.invalidate();
+    agentPager.invalidate();
     setBusy(item?.id ?? "all");
+    const chosen = item ? [item] : visibleItems.filter((value) => !value.readAt);
     try {
-      await markRead({ data: item ? { ids: [item.id], source: item.source } : { source: "all" } });
+      const results = await Promise.allSettled(
+        (["application", "agent"] as const).map(async (source) => {
+          const ids = chosen.filter((value) => value.source === source).map((value) => value.id);
+          if (!ids.length) return { source, ids: [] };
+          const result = await markRead({ data: { source, ids } });
+          if (
+            !Array.isArray(result.ids) ||
+            !result.ids.every((id) => typeof id === "string" && ids.includes(id))
+          )
+            throw new Error("Unconfirmed notification change");
+          return { source, ids: result.ids };
+        }),
+      );
       if (activePrincipalRef.current !== expectedPrincipal) return;
       const now = new Date().toISOString();
-      setItems((current) =>
-        current.map((candidate) =>
-          !item || candidate.id === item.id
-            ? { ...candidate, readAt: candidate.readAt ?? now }
-            : candidate,
-        ),
-      );
-    } catch {
-      if (activePrincipalRef.current === expectedPrincipal)
-        toast.error("Could not mark notifications as read.");
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          const { source, ids } = result.value;
+          setItems((current) =>
+            current.map((value) =>
+              value.source === source && ids.includes(value.id)
+                ? { ...value, readAt: value.readAt ?? now }
+                : value,
+            ),
+          );
+        } else
+          toast.error(
+            "One notification source could not confirm the change. Refresh sources before retrying; confirmed changes are retained.",
+          );
+      }
     } finally {
+      mutationPending.current = false;
       if (activePrincipalRef.current === expectedPrincipal) setBusy(null);
     }
   }
   async function discard(item: CenterNotification) {
     const expectedPrincipal = principalId;
-    if (!expectedPrincipal) return;
+    if (!expectedPrincipal || mutationPending.current) return;
+    mutationPending.current = true;
+    applicationPager.invalidate();
+    agentPager.invalidate();
     setBusy(item.id);
     try {
-      await remove({ data: { ids: [item.id], source: item.source } });
+      const result = await remove({ data: { ids: [item.id], source: item.source } });
       if (activePrincipalRef.current !== expectedPrincipal) return;
-      setItems((current) => current.filter((candidate) => candidate.id !== item.id));
+      if (!Array.isArray(result.ids) || !result.ids.every((id) => id === item.id))
+        throw new Error("Unconfirmed notification deletion");
+      setItems((current) =>
+        current.filter((value) => value.source !== item.source || !result.ids.includes(value.id)),
+      );
     } catch {
       if (activePrincipalRef.current === expectedPrincipal)
-        toast.error("Could not delete the notification.");
+        toast.error(
+          "Notification deletion could not be confirmed. Refresh sources before retrying.",
+        );
     } finally {
+      mutationPending.current = false;
       if (activePrincipalRef.current === expectedPrincipal) setBusy(null);
     }
   }
   return (
-    <AppShell>
+    <AppShell utilitiesInHeader>
       <main
+        id="main-content"
+        tabIndex={-1}
         className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 sm:px-6"
         aria-labelledby="notifications-title"
       >
@@ -147,7 +271,7 @@ function NotificationsRoute() {
             description="Updates from scheduled tasks, shared workspaces, and account activity."
             meta={
               <span aria-live="polite">
-                {unread} unread notification{unread === 1 ? "" : "s"}
+                {unread} unread notification{unread === 1 ? "" : "s"} on loaded pages
               </span>
             }
             actions={
@@ -158,7 +282,7 @@ function NotificationsRoute() {
                 className="inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm disabled:opacity-50"
               >
                 <CheckCheck className="h-4 w-4" />
-                Mark all read
+                Mark loaded pages read
               </button>
             }
           />
@@ -187,6 +311,30 @@ function NotificationsRoute() {
             </select>
           </div>
         </section>
+        {principalId && (
+          <section aria-label="Notification source pages">
+            <CollectionPageControls
+              label="Application notifications"
+              pager={applicationPager}
+              disabled={busy !== null}
+            />
+            <CollectionPageControls
+              label="Agent notifications"
+              pager={agentPager}
+              disabled={busy !== null}
+            />
+            <button
+              type="button"
+              className="min-h-11 rounded-lg border px-3"
+              disabled={busy !== null || loading}
+              onClick={() => {
+                if (!mutationPending.current) void reload();
+              }}
+            >
+              Refresh sources
+            </button>
+          </section>
+        )}
         {principalPending || loading ? (
           <div className="flex min-h-40 items-center justify-center" role="status">
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -207,7 +355,9 @@ function NotificationsRoute() {
         ) : visible.length === 0 ? (
           <EmptyState
             icon={Bell}
-            title={visibleItems.length ? "No matching notifications" : "No notifications"}
+            title={
+              visibleItems.length ? "No matching notifications" : "No notifications on loaded pages"
+            }
             description={
               visibleItems.length
                 ? "Try another search or filter."
@@ -234,6 +384,25 @@ function NotificationsRoute() {
                       </time>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{item.preview}</p>
+                    {item.source === "agent" && (
+                      <>
+                        <button
+                          type="button"
+                          className="min-h-11 rounded-lg border px-3 text-sm"
+                          disabled={detailLoading === item.id}
+                          onClick={() => void revealDetails(item)}
+                        >
+                          {details?.owner === principalId && details.id === item.id
+                            ? "Hide details"
+                            : detailLoading === item.id
+                              ? "Loading details…"
+                              : "Show details"}
+                        </button>
+                        {details?.owner === principalId && details.id === item.id && (
+                          <p className="mt-2 whitespace-pre-wrap text-sm">{details.body}</p>
+                        )}
+                      </>
+                    )}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {item.actionUrl && (
                         <Link to={item.actionUrl} className="rounded-full border px-3 py-2 text-sm">

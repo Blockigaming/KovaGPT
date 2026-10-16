@@ -67,7 +67,7 @@ function AiMarketResearchGuide() {
           <span className="text-foreground">AI market research guide</span>
         </nav>
 
-        <article className="prose prose-invert max-w-none">
+        <article className="kova-public-article max-w-none">
           <h1 className="text-4xl font-bold tracking-tight">
             How to Use AI for Market Research Without Losing the Evidence
           </h1>
@@ -167,7 +167,7 @@ State when a source cannot be opened or when evidence is missing. Do not invent 
 
           <h2 className="mt-12 text-2xl font-semibold">Availability and verification</h2>
           <p>
-            KovaGPT can make mistakes, including with retrieved material. Search are
+            KovaGPT can make mistakes, including with retrieved material. Search is
             provider-dependent. The <Link to="/pricing">Pricing page</Link> and in-product controls
             show current account eligibility; neither plan access nor a citation guarantees
             correctness.

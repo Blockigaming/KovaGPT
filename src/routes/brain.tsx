@@ -118,7 +118,11 @@ function BrainPage() {
 
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-workspace-controls mx-auto w-full max-w-6xl px-4 py-7 sm:px-6"
+      >
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -133,7 +137,7 @@ function BrainPage() {
 
           <Link
             to="/goals"
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-medium hover:bg-accent"
+            className="kova-workspace-action inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-medium hover:bg-accent"
           >
             <Target className="h-4 w-4" />
             Manage goals

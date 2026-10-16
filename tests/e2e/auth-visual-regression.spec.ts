@@ -95,6 +95,8 @@ test.beforeEach(({ page: _page }, testInfo) => {
 test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   const theme = themeByProject.get(testInfo.project.name)!;
   const authNetwork = await installDeterministicAuthGuard(page);
+  await page.route("https://fonts.googleapis.com/**", (route) => route.abort());
+  await page.route("https://fonts.gstatic.com/**", (route) => route.abort());
 
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.addInitScript((mode: ThemeMode) => {
@@ -120,6 +122,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
 
   await page.evaluate(() => document.fonts.ready);
+  await dialog.locator("img.kova-logo").evaluate((logo) => (logo as HTMLImageElement).decode());
   await dialog.evaluate(async (element) => {
     await Promise.all(
       element

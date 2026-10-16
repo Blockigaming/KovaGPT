@@ -1,0 +1,859 @@
+/* Shared measured geometry; opt-in surfaces retain their own content and behavior. */
+:root {
+  --layout-control: 36px;
+  --layout-touch: 44px;
+  --layout-card-radius: 16px;
+  --layout-row-radius: 12px;
+  --layout-toolbar-gap: 12px;
+  --layout-section-gap: 40px;
+  --layout-page-gutter: 48px;
+  --layout-title-size: 24px;
+  --layout-title-line: 1.2;
+}
+@media (max-width: 1023px) {
+  :root {
+    --layout-page-gutter: 20px;
+  }
+}
+@media (pointer: coarse), (max-width: 767px) {
+  :root {
+    --layout-control: 44px;
+  }
+}
+.kova-directory {
+  --page-max: 1440px;
+  --directory-toolbar-gap: var(--layout-toolbar-gap);
+  --page-padding: 24px var(--layout-page-gutter) max(48px, var(--safe-bottom));
+  --page-padding-bottom: max(48px, var(--safe-bottom));
+  --page-title-size: var(--layout-title-size);
+  --page-title-line: var(--layout-title-line);
+  --page-title-weight: 500;
+  --surface-card-radius: var(--layout-card-radius);
+}
+.kova-directory .kova-toolbar input[type="search"],
+.kova-directory .kova-toolbar input:not([type]) {
+  min-height: var(--layout-control);
+  height: var(--layout-control);
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.kova-directory .kova-directory-row {
+  min-height: 70px;
+  padding-block: 8px;
+  font-size: 16px;
+  line-height: 24px;
+}
+/* Carousel bleed shares the page gutter, including tablet and phone widths. */
+.kova-image-style-scroll {
+  margin-inline: calc(-1 * var(--layout-page-gutter));
+  padding-inline: var(--layout-page-gutter);
+}
+.kova-image-presets {
+  gap: 8px;
+}
+.kova-image-preset {
+  aspect-ratio: 4 / 5;
+  border-radius: var(--layout-card-radius);
+}
+.kova-image-gallery {
+  container: image-gallery / inline-size;
+}
+.kova-image-gallery-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+@container image-gallery (min-width: 384px) {
+  .kova-image-gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container image-gallery (min-width: 576px) {
+  .kova-image-gallery-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container image-gallery (min-width: 768px) {
+  .kova-image-gallery-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+@container image-gallery (min-width: 1024px) {
+  .kova-image-gallery-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+@container image-gallery (min-width: 1280px) {
+  .kova-image-gallery-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+.kova-plan-grid {
+  width: 100%;
+  max-width: 416px;
+  margin-inline: auto;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  justify-items: center;
+  padding-inline: 16px;
+}
+@media (min-width: 832px) {
+  .kova-plan-grid {
+    max-width: 824px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1440px) {
+  .kova-plan-grid {
+    max-width: 1640px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.kova-help-page {
+  max-width: 1064px;
+  padding: 32px 20px;
+}
+.kova-help-title {
+  font-size: 32px;
+  line-height: 38px;
+}
+.kova-help-page .kova-help-search {
+  height: 64px;
+  border-width: 0 0 1px;
+  padding: 16px 48px;
+  border-radius: 0;
+  font-size: 18px;
+  line-height: 29px;
+  box-shadow: none;
+}
+.kova-search-overlay {
+  align-items: center;
+  padding: max(20px, var(--safe-top)) max(16px, var(--safe-left), var(--safe-right))
+    max(20px, var(--safe-bottom));
+}
+.kova-search-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, calc(100vw - 32px));
+  height: min(460px, calc(100dvh - 40px));
+  border-radius: var(--layout-card-radius);
+  --menu-row-radius: var(--layout-row-radius);
+}
+.kova-search-header {
+  flex: 0 0 auto;
+  min-height: 65px;
+  padding: 12px 16px 12px 24px;
+}
+.kova-search-header input {
+  line-height: 24px;
+}
+.kova-search-results {
+  flex: 1;
+  min-height: 0;
+  padding: 8px 12px;
+}
+.kova-search-results [role="option"] {
+  min-height: 48px;
+  padding: 8px 12px;
+  gap: 12px;
+  font-size: 16px;
+  line-height: 24px;
+}
+.kova-profile-menu {
+  width: 228px;
+  padding: 10px;
+  --parity-radius-menu: 16px;
+  --menu-row-radius: 12px;
+}
+.kova-profile-menu [role="menuitem"] {
+  min-height: var(--layout-control);
+  padding: 6px 10px;
+  font-size: 14px;
+  line-height: 20px;
+}
+@media (max-width: 767px) {
+  .kova-directory {
+    --page-title-size: 18px;
+    --page-title-line: 28px;
+  }
+  .kova-search-overlay {
+    padding: 0;
+  }
+  .kova-search-dialog {
+    width: 100%;
+    height: 100dvh;
+    border-radius: 0;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+    box-shadow: none;
+  }
+}
+
+.kova-core-page {
+  width: 100%;
+  min-width: 0;
+  max-width: var(--page-max, 1120px);
+  margin-inline: auto;
+  padding: var(--page-padding, clamp(20px, 3vw, 40px) clamp(16px, 3vw, 36px) 48px);
+}
+.kova-core-page:not(.kova-secondary-page) > .kova-page-header {
+  margin-bottom: 28px;
+}
+.kova-core-page .kova-page-title {
+  font-size: clamp(26px, 3vw, 32px);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+.kova-core-page .kova-page-description {
+  max-width: 66ch;
+  line-height: 1.6;
+}
+.kova-core-page .kova-card {
+  box-shadow: none;
+  background: transparent;
+}
+.kova-core-page .kova-empty-state {
+  border: 0;
+  background: transparent;
+  padding: 48px 16px;
+}
+.kova-core-page .kova-toolbar {
+  flex-wrap: wrap;
+  gap: var(--directory-toolbar-gap, 10px);
+}
+.kova-core-page .kova-row {
+  min-width: 0;
+}
+.kova-core-page .kova-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+.kova-core-page .kova-grid .kova-card {
+  overflow: hidden;
+  border-radius: 16px;
+}
+.kova-core-page .kova-connector-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 20px;
+}
+.kova-core-page .kova-connector-card > :last-child {
+  grid-column: 1/-1;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+.kova-core-page .kova-connector-card > :last-child > button {
+  min-height: var(--layout-control);
+}
+.kova-core-page .kova-connector-card > :last-child > button:last-child {
+  margin-left: auto;
+}
+.kova-core-page .kova-page-header > div:first-child > span[aria-hidden] {
+  border: 0;
+  background: transparent;
+}
+.kova-core-page .kova-task-meta {
+  flex-wrap: wrap;
+  line-height: 1.7;
+}
+.kova-core-page .kova-task-actions {
+  flex-wrap: wrap;
+}
+.kova-core-page .kova-task-actions button {
+  min-height: max(40px, var(--layout-control));
+  min-width: max(40px, var(--layout-control));
+  border-radius: 999px;
+}
+.kova-core-page .kova-task-form :is(input, textarea, select) {
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 12px;
+  min-height: 44px;
+}
+.kova-core-page .kova-task-form :is(input, textarea, select):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-core-page .kova-library-select input[type="checkbox"] {
+  appearance: auto;
+  inline-size: 16px;
+  block-size: 16px;
+  min-inline-size: 16px;
+  min-block-size: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--foreground);
+}
+/* Closed utilities share a row; expanded contents reclaim the full width. */
+.kova-library-utilities {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 24px;
+}
+.kova-library-utilities > details[open] {
+  flex-basis: 100%;
+}
+.kova-library-utilities > details.kova-library-disclosure {
+  min-width: 0;
+  max-width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+.kova-library-utilities > details.kova-library-disclosure > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  list-style-position: inside;
+}
+.kova-library-utilities > details.kova-library-disclosure > summary h2 {
+  display: inline;
+}
+.kova-library-utilities > details.kova-library-disclosure > .kova-card {
+  border: 0;
+  background: transparent;
+  padding: 8px 0 16px;
+}
+.kova-core-page .kova-task-filters [role="tab"][aria-selected="true"] {
+  background: var(--foreground) !important;
+  color: var(--background) !important;
+  box-shadow: none;
+}
+.kova-core-page .kova-project-tabs {
+  justify-content: flex-start;
+  scroll-padding-inline: 4px;
+}
+.kova-core-page .kova-project-tabs > [role="tab"] {
+  flex-shrink: 0;
+}
+.kova-core-page .kova-project-role {
+  margin-inline-end: 56px;
+}
+@media (max-width: 639px) {
+  .kova-core-page .kova-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .kova-core-page .kova-grid .kova-card {
+    padding: 10px;
+  }
+  .kova-core-page .kova-toolbar > label {
+    min-width: 100%;
+  }
+  .kova-core-page .kova-project-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .kova-core-page.kova-projects-page .kova-toolbar > div:first-child {
+    flex-basis: 100%;
+    min-width: 100%;
+  }
+  .kova-core-page.kova-projects-page .kova-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 359px) {
+  .kova-core-page .kova-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Consistent Kova form adaptations, not measured parity for these families.
+   Checkbox/radio/switch tracks retain their separately sized label/target. */
+.kova-adapted-controls :is(button:not([role="switch"]), select) {
+  max-width: 100%;
+}
+.kova-adapted-controls button:not([role="switch"]) {
+  min-height: var(--layout-touch);
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.kova-adapted-controls
+  :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select) {
+  min-width: 0;
+  max-width: 100%;
+  border-radius: var(--layout-row-radius);
+}
+@media (pointer: coarse), (max-width: 767px) {
+  .kova-adapted-controls
+    :is(
+      button:not([role="switch"]),
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+      select,
+      summary,
+      a.inline-flex
+    ) {
+    min-height: var(--layout-touch);
+  }
+  .kova-adapted-controls button:not([role="switch"]) {
+    min-width: var(--layout-touch);
+  }
+}
+
+@media (max-width: 767px) {
+  .kova-adapted-controls select {
+    display: block;
+    width: 100%;
+    margin-inline: 0;
+  }
+}
+
+@media (min-width: 640px) {
+  .kova-directory .kova-toolbar .kova-directory-search {
+    flex: 0 1 240px;
+    width: 240px;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+/* A compact phone overview links to complete, unchanged plan details. */
+.kova-mobile-plan-overview {
+  display: none;
+}
+.kova-plan-card[id] {
+  scroll-margin-top: 24px;
+}
+.kova-plan-card[id]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+@media (max-width: 767px) {
+  .kova-mobile-plan-overview {
+    display: grid;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .kova-mobile-plan-choices {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .kova-mobile-plan-choice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: var(--layout-touch);
+    padding: 12px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--layout-card-radius);
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .kova-mobile-enterprise-link {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: var(--layout-touch);
+    font-size: 14px;
+    line-height: 20px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .kova-mobile-plan-overview a:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Phone Project navigation keeps the desktop rhythm and provides 44px touch targets. */
+@media (max-width: 767px) {
+  .kova-core-page .kova-project-tabs > [role="tab"],
+  .kova-core-page .kova-project-actions button,
+  .kova-core-page .kova-project-actions a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .kova-core-page .kova-project-actions > div {
+    flex-wrap: wrap;
+  }
+}
+
+/* Keep phone editor actions tappable and reachable without changing desktop density. */
+@media (max-width: 767px) {
+  .kova-artifact-footer,
+  .kova-artifact-recovery {
+    flex-shrink: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    min-width: 0;
+  }
+  .kova-artifact-footer {
+    max-height: 35dvh;
+  }
+  .kova-artifact-recovery {
+    max-height: 25dvh;
+  }
+  .kova-artifact-footer button,
+  .kova-artifact-footer select,
+  .kova-artifact-recovery button {
+    min-height: 44px;
+    min-width: 44px;
+    height: auto;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .kova-artifact-recovery > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Scoped Settings phone interaction targets; desktop proportions remain unchanged. */
+@media (max-width: 767px) {
+  .kova-personalization-name,
+  .kova-settings-support-link {
+    min-height: 44px;
+    min-width: 44px;
+    height: auto;
+  }
+  .kova-settings-support-link {
+    max-width: 100%;
+    white-space: normal;
+  }
+  .kova-touch-slider {
+    min-height: 44px;
+  }
+  .kova-touch-slider .kova-slider-thumb {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-width: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .kova-touch-slider .kova-slider-thumb::before {
+    content: "";
+    width: 16px;
+    height: 16px;
+    border: 1px solid color-mix(in oklab, var(--primary) 50%, transparent);
+    border-radius: 9999px;
+    background: var(--background);
+    box-shadow: 0 1px 3px #0000001a;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .kova-developer-console button:not([role="checkbox"]):not([role="radio"]):not([role="switch"]) {
+    min-height: 44px;
+    min-width: 44px;
+    height: auto;
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+/* Phone targets for the existing writing and translation actions. */
+@media (max-width: 767px) {
+  .kova-workspace-action {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Explicit workspace opt-in: retain desktop dimensions and native selection marks. */
+@media (max-width: 767px) {
+  .kova-workspace-controls button:not([role="checkbox"]):not([role="radio"]):not([role="switch"]),
+  .kova-workspace-controls
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+  .kova-workspace-controls select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .kova-workspace-controls input[type="file"] {
+    max-width: 100%;
+  }
+  .kova-workspace-controls input[type="file"]::file-selector-button {
+    min-height: 44px;
+  }
+  .kova-directory-controls {
+    align-items: stretch;
+  }
+  .kova-directory-filter {
+    border: 1px solid var(--input);
+    border-radius: 9999px;
+    padding: 8px 12px;
+    background: transparent;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  .kova-directory-filter:hover {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+  .kova-directory-search {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    gap: 4px;
+    margin-left: 0;
+  }
+  .kova-directory-search input {
+    width: 100%;
+    min-width: 0;
+    border-radius: 12px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 767px) {
+  .kova-workspace-controls .kova-study-import {
+    min-width: 0;
+  }
+  .kova-workspace-controls .kova-study-import input[type="file"] {
+    width: 100%;
+    /* Override the more specific ordinary-input target minimum for intrinsic file width. */
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+}
+
+/* The 800-unit graph viewBox has a720px minimum canvas:50 units yields45px. */
+.kova-graph-node-hit {
+  display: none;
+}
+@media (max-width: 767px) {
+  .kova-graph-node-hit {
+    display: block;
+    pointer-events: all;
+  }
+  .kova-graph-resource {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+    max-width: 100%;
+  }
+}
+
+.kova-artifact-history {
+  width: 256px;
+}
+@media (max-width: 767px) {
+  .kova-artifact-history {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 20;
+    width: 100%;
+    max-height: 70dvh;
+    border-radius: 16px 16px 0 0;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-composer);
+  }
+  .kova-artifact-history button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Match the AppShell mobile header and its safe-area inset when focusing skip targets. */
+@media (max-width: 1023px) {
+  .kova-app-shell main#main-content {
+    scroll-margin-top: calc(var(--parity-topbar-height) + var(--safe-top));
+  }
+}
+@media (max-width: 767px) {
+  .kova-graph-filters {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .kova-graph-mode {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .kova-core-page .kova-workspace-controls summary {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media (max-width: 767px) {
+  .kova-summary-page .kova-summary-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .kova-summary-page .kova-summary-inline-action {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* Utility descendants may float over page content, but stay below the mobile header. */
+@media (max-width: 1023px) {
+  .kova-app-shell .kova-core-utilities {
+    position: relative;
+    z-index: calc(var(--z-header) - 1);
+  }
+}
+
+/* Keep recovery error wording readable while preserving the existing error surface. */
+.kova-auth-page .kova-reset-error {
+  color: var(--foreground);
+}
+@media (max-width: 767px) {
+  .kova-developer-link {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* Read-only snapshots share answer typography; long code/tables scroll locally. */
+.kova-shared-markdown {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.kova-shared-markdown.prose-chat pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.kova-shared-markdown pre code {
+  white-space: inherit;
+  overflow-wrap: normal;
+}
+
+.kova-shared-markdown .kova-table-scroll {
+  max-width: 100%;
+}
+
+/* Explicit standalone public actions; prose links and desktop stay unchanged. */
+@media (max-width: 767px) {
+  .kova-public-action-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+    max-width: 100%;
+  }
+}
+
+/* Project response controls retain desktop geometry and gain phone hit areas. */
+@media (max-width: 767px) {
+  .kova-project-chat .kova-message-actions button,
+  .kova-project-chat .kova-message-actions button.kova-message-icon-action {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    width: auto !important;
+    height: 44px !important;
+    flex: 0 0 auto !important;
+  }
+  .kova-project-chat .kova-code-toolbar button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Reserve the existing 12px + 16px icon and an 8px gap without resizing inputs. */
+.kova-directory-search.kova-directory-search-with-icon input {
+  padding-left: 2.25rem;
+}
+
+/* Phone overview anchors clear the measured sticky public header. */
+@media (max-width: 767px) {
+  [data-public-shell] .kova-plan-card[id] {
+    scroll-margin-top: calc(var(--kova-public-header-height) + 1rem);
+  }
+}
+
+/* Keep onboarding primary actions paired when generic dialog focus rules apply. */
+.kova-onboarding-dialog .kova-onboarding-primary {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+.kova-onboarding-dialog .kova-onboarding-primary:hover:not(:disabled) {
+  background-color: var(--foreground) !important;
+  color: var(--background) !important;
+}
+.kova-onboarding-dialog .kova-onboarding-primary:focus-visible {
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 3px !important;
+}
+.kova-onboarding-dialog .kova-onboarding-primary:disabled {
+  background-color: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+  opacity: 1 !important;
+}
+
+/* Evidence and local image adjustments keep native range semantics and visible tracks. */
+input.kova-work-evidence-range,
+input.kova-image-adjustment-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: var(--layout-touch);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+input.kova-work-evidence-range::-webkit-slider-runnable-track,
+input.kova-image-adjustment-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--muted-foreground);
+}
+input.kova-work-evidence-range::-moz-range-track,
+input.kova-image-adjustment-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--muted-foreground);
+}
+input.kova-work-evidence-range::-webkit-slider-thumb,
+input.kova-image-adjustment-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  background: var(--primary);
+}
+input.kova-work-evidence-range::-moz-range-thumb,
+input.kova-image-adjustment-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  background: var(--primary);
+}
+input.kova-work-evidence-range:focus-visible,
+input.kova-image-adjustment-range:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+input.kova-work-evidence-range:disabled,
+input.kova-image-adjustment-range:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -703,7 +703,8 @@ function validateSupportedWrite(tool: string, args: WriteArgs): WriteArgs {
  * Build a short, human-readable summary and confirmation preview. Actions
  * that send data outside KovaGPT expose the complete validated envelope so
  * the approval card never hides a recipient or unsurfaced body content.
- * Non-sending previews remain bounded.
+ * Calendar previews also expose every validated field and attendee. A short
+ * summary must never replace the exact details the user is approving.
  */
 export function summarizeWriteTool(
   tool: string,
@@ -733,14 +734,14 @@ export function summarizeWriteTool(
     return {
       summary: `Create calendar event "${title || "(untitled)"}" starting ${when || "(no time)"}`,
       preview: {
-        summary: title,
+        summary: String(args.summary ?? ""),
+        calendar: "Primary calendar",
         start: args.start,
         end: args.end,
-        location: args.location ? truncate(args.location, 120) : undefined,
-        attendees: Array.isArray(args.attendees)
-          ? (args.attendees as string[]).slice(0, 10)
-          : undefined,
-        description: args.description ? truncate(args.description, 300) : undefined,
+        timezone: args.timezone ? String(args.timezone) : undefined,
+        location: args.location ? String(args.location) : undefined,
+        attendees: Array.isArray(args.attendees) ? [...args.attendees] : undefined,
+        description: args.description ? String(args.description) : undefined,
       },
     };
   }

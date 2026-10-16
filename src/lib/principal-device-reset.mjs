@@ -7,7 +7,7 @@ import { closeChatHistoryOwner } from "./chat-history-bridge.ts";
 /** Clear all stores for a captured principal, including durable image bytes. */
 export async function resetPrincipalDeviceData(userKey, options = {}) {
   if (userKey === null || typeof userKey === "string") closeChatHistoryOwner(userKey);
-  const result = clearPrincipalBrowserStorage(userKey, options.storage);
+  const result = await clearPrincipalBrowserStorage(userKey, options.storage);
   const imageHistory = { cleared: false, failures: [] };
   const chatHistory = { cleared: false, failures: [] };
   const pwa = { cleared: false, failures: [] };

@@ -7,6 +7,7 @@ async function fixture(save = async () => true) {
     chat = { id: "chat-a", messages: [], title: "A" },
     key = crypto.randomUUID();
   const mocks = {
+    newId: () => crypto.randomUUID(),
     toast: {
       success: (...v) => events.push(["success", ...v]),
       error: (...v) => events.push(["error", ...v]),
@@ -58,6 +59,32 @@ test("an action delayed across account clear cannot persist or change the new vi
   await f.module.removeHomeChat(f.context, f.chat.id);
   assert.deepEqual(f.events, []);
 });
+test("rename and duplicate do not update the view when saving fails", async () => {
+  for (const action of ["renameHomeChat", "duplicateHomeChat"]) {
+    const f = await fixture(async () => false);
+    assert.equal(await f.module[action](f.context, f.chat.id, "New title"), false);
+    assert.deepEqual(
+      f.events.map((row) => row[0]),
+      ["save", "error"],
+    );
+  }
+});
+
+test("a rename acknowledged after account clear does not update the new view", async () => {
+  let finish;
+  const pending = new Promise((resolve) => {
+    finish = resolve;
+  });
+  const f = await fixture(() => pending);
+  const action = f.module.renameHomeChat(f.context, f.chat.id, "New title");
+  f.clear();
+  finish(true);
+  assert.equal(await action, false);
+  assert.deepEqual(
+    f.events.map((row) => row[0]),
+    ["save"],
+  );
+});
 test("Undo remains bound to the original account generation", async () => {
   const f = await fixture();
   await f.module.removeHomeChat(f.context, f.chat.id);
@@ -65,6 +92,20 @@ test("Undo remains bound to the original account generation", async () => {
   const count = f.events.length;
   f.clear();
   await undo();
+  assert.equal(f.events.length, count);
+});
+
+test("Undo uses the workspace mutation guard when supplied", async () => {
+  const f = await fixture();
+  const calls = [];
+  f.context.restore = async (chat, archived) => {
+    calls.push({ id: chat.id, archived });
+  };
+  await f.module.removeHomeChat(f.context, f.chat.id, false);
+  const undo = f.events.find((row) => row[0] === "success")[2].action.onClick;
+  const count = f.events.length;
+  await undo();
+  assert.deepEqual(calls, [{ id: f.chat.id, archived: false }]);
   assert.equal(f.events.length, count);
 });
 test("a late successful durable delete does not repaint a replacement principal", async () => {
@@ -81,4 +122,14 @@ test("a late successful durable delete does not repaint a replacement principal"
     f.events.map((row) => row[0]),
     ["save"],
   );
+});
+
+test("renaming or duplicating a saved chat does not persist a separate temporary chat", async () => {
+  for (const action of ["renameHomeChat", "duplicateHomeChat"]) {
+    const f = await fixture();
+    f.context.items.push({ id: "temporary", title: "Private", messages: [], temporary: true });
+    assert.equal(await f.module[action](f.context, f.chat.id, "New title"), true);
+    const saved = f.events.find((row) => row[0] === "save")[2];
+    assert.ok(saved.every((chat) => !chat.temporary));
+  }
 });

@@ -92,7 +92,7 @@ export function MfaChallengeDialog({
       }}
     >
       <DialogContent
-        className="sm:max-w-md"
+        className="kova-adapted-controls sm:max-w-md"
         onEscapeKeyDown={(event) => loading && event.preventDefault()}
       >
         <DialogHeader>

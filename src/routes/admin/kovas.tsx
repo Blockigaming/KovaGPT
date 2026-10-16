@@ -36,9 +36,16 @@ function Page() {
         user ? (
           <Queue key={user.id} owner={user.id} />
         ) : (
-          <SignInButton mode="modal">
-            <button>Sign in to moderation</button>
-          </SignInButton>
+          <main id="main-content" tabIndex={-1} className="kova-state-screen">
+            <section className="kova-state-panel" aria-labelledby="moderation-sign-in-title">
+              <h1 id="moderation-sign-in-title">Kova moderation</h1>
+              <SignInButton mode="modal">
+                <button className="kova-workspace-action mt-4 inline-flex items-center justify-center rounded-lg border px-4 py-2">
+                  Sign in to moderation
+                </button>
+              </SignInButton>
+            </section>
+          </main>
         )
       ) : (
         <p>Loading account…</p>

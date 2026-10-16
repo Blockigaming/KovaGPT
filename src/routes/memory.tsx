@@ -1,7 +1,10 @@
+import { MemoryClearPanel } from "@/components/MemoryClearPanel";
+import { useCollectionPager } from "@/lib/use-collection-pager";
+import { CollectionPageControls } from "@/components/CollectionPageControls";
 import { MEMORY_SOURCES_CHANGED_EVENT } from "@/lib/memory-sources.mjs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Brain, Pencil, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
@@ -10,6 +13,7 @@ import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
 import {
   deleteMemoryRecord,
   listMemoryCenter,
+  mergeMemoryRecords,
   updateMemoryRecord,
   type MemoryRecord,
 } from "@/lib/workspace.functions";
@@ -28,12 +32,25 @@ function memoryRecordKey(item: Pick<MemoryRecord, "id" | "source">) {
 }
 
 function MemoryPage() {
+  const { isLoaded, user } = useUser();
+  return <MemoryForAccount key={isLoaded ? (user?.id ?? "guest") : "loading"} />;
+}
+function MemoryForAccount() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
-  const list = useServerFn(listMemoryCenter);
+  const listPage = useServerFn(listMemoryCenter);
   const update = useServerFn(updateMemoryRecord);
   const remove = useServerFn(deleteMemoryRecord);
+  const mergeRecords = useServerFn(mergeMemoryRecords);
+  const mutationPending = useRef(false);
+  const [mutating, setMutating] = useState(false);
+  const clearBusy = useCallback((busy: boolean) => {
+    mutationPending.current = busy;
+    setMutating(busy);
+  }, []);
   const [items, setItems] = useState<MemoryRecord[]>([]);
+  const pager = useCollectionPager(listPage, userKey, setItems);
+  const list = pager.read;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -46,6 +63,12 @@ function MemoryPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const currentUserKeyRef = useRef(userKey);
   currentUserKeyRef.current = userKey;
+  useEffect(
+    () => () => {
+      currentUserKeyRef.current = null;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -70,7 +93,7 @@ function MemoryPage() {
 
     setLoading(true);
     setResolvedUserKey(null);
-    list({})
+    list()
       .then((nextItems) => {
         if (!active) return;
         setItems(nextItems);
@@ -101,14 +124,19 @@ function MemoryPage() {
   const save = async (item: MemoryRecord) => {
     const operationUserKey = userKey;
     const content = draft.trim();
-    if (!content) return;
+    if (!content || mutationPending.current) return;
+    mutationPending.current = true;
+    pager.invalidate();
+    setMutating(true);
     try {
-      await update({ data: { id: item.id, source: item.source, content } });
+      const saved = await update({
+        data: { id: item.id, source: item.source, content, expectedContent: item.content },
+      });
       if (currentUserKeyRef.current !== operationUserKey) return;
       setItems((all) =>
         all.map((value) =>
           memoryRecordKey(value) === memoryRecordKey(item)
-            ? { ...value, content, updatedAt: new Date().toISOString() }
+            ? { ...value, content: saved.content, updatedAt: saved.updatedAt }
             : value,
         ),
       );
@@ -119,12 +147,19 @@ function MemoryPage() {
       if (currentUserKeyRef.current === operationUserKey) {
         toast.error(e instanceof Error ? e.message : "Memory could not be updated");
       }
+    } finally {
+      mutationPending.current = false;
+      if (currentUserKeyRef.current === operationUserKey) setMutating(false);
     }
   };
   const del = async (item: MemoryRecord) => {
+    if (mutationPending.current) return;
+    mutationPending.current = true;
+    pager.invalidate();
+    setMutating(true);
     const operationUserKey = userKey;
     try {
-      await remove({ data: { id: item.id, source: item.source } });
+      await remove({ data: { id: item.id, source: item.source, expectedContent: item.content } });
       if (currentUserKeyRef.current !== operationUserKey) return;
       setItems((all) => all.filter((value) => memoryRecordKey(value) !== memoryRecordKey(item)));
       window.dispatchEvent(new Event(MEMORY_SOURCES_CHANGED_EVENT));
@@ -134,57 +169,112 @@ function MemoryPage() {
         toast.error(e instanceof Error ? e.message : "Memory could not be deleted");
       }
     } finally {
-      if (currentUserKeyRef.current === operationUserKey) setDeleting(null);
+      mutationPending.current = false;
+      if (currentUserKeyRef.current === operationUserKey) {
+        setDeleting(null);
+        setMutating(false);
+      }
     }
   };
   const merge = async () => {
+    if (mutationPending.current) return;
     const operationUserKey = userKey;
     const chosen = items.filter((item) => selected.includes(memoryRecordKey(item)));
-    if (chosen.length < 2 || new Set(chosen.map((item) => item.source)).size !== 1) {
-      toast.error("Select at least two memories from the same source category");
+    if (
+      chosen.length < 2 ||
+      chosen.length > 30 ||
+      new Set(chosen.map((item) => item.source)).size !== 1 ||
+      (chosen[0]?.source === "project" && new Set(chosen.map((item) => item.projectId)).size !== 1)
+    ) {
+      toast.error("Select 2–30 memories from the same source and project");
       return;
     }
-    const [keep, ...duplicates] = chosen;
-    const content = [...new Set(chosen.map((item) => item.content.trim()))].join("\n\n");
+    if (editing && chosen.some((item) => memoryRecordKey(item) === editing)) {
+      toast.error("Save or cancel the selected memory edit before merging.");
+      return;
+    }
+    mutationPending.current = true;
+    pager.invalidate();
+    setMutating(true);
     try {
-      await update({ data: { id: keep.id, source: keep.source, content } });
-      await Promise.all(
-        duplicates.map((item) => remove({ data: { id: item.id, source: item.source } })),
-      );
+      const result = await mergeRecords({
+        data: {
+          source: chosen[0].source,
+          items: chosen.map(({ id, content }) => ({ id, content })),
+        },
+      });
       if (currentUserKeyRef.current !== operationUserKey) return;
+      const source = chosen[0].source;
       setItems((all) =>
         all
-          .filter(
-            (item) =>
-              !duplicates.some((duplicate) => memoryRecordKey(duplicate) === memoryRecordKey(item)),
-          )
+          .filter((item) => item.source !== source || !result.removedIds.includes(item.id))
           .map((item) =>
-            memoryRecordKey(item) === memoryRecordKey(keep) ? { ...item, content } : item,
+            item.source === source && item.id === result.id
+              ? { ...item, content: result.content }
+              : item,
           ),
       );
       setSelected([]);
+      window.dispatchEvent(new Event(MEMORY_SOURCES_CHANGED_EVENT));
       toast.success("Duplicate memories merged");
     } catch (reason) {
-      if (currentUserKeyRef.current === operationUserKey) {
+      if (currentUserKeyRef.current === operationUserKey)
         toast.error(reason instanceof Error ? reason.message : "Memories could not be merged");
-      }
+    } finally {
+      mutationPending.current = false;
+      if (currentUserKeyRef.current === operationUserKey) setMutating(false);
+    }
+  };
+  const reviewLatest = async () => {
+    if (mutationPending.current || !userKey) return;
+    const operationUserKey = userKey;
+    mutationPending.current = true;
+    pager.invalidate();
+    setMutating(true);
+    try {
+      const latest = await pager.readCurrent();
+      if (currentUserKeyRef.current !== operationUserKey) return;
+      setItems(latest);
+      toast.success("Latest saved memories loaded. Your draft is preserved; review before saving.");
+    } catch (reason) {
+      if (currentUserKeyRef.current === operationUserKey)
+        toast.error(reason instanceof Error ? reason.message : "Memory could not be reviewed");
+    } finally {
+      mutationPending.current = false;
+      if (currentUserKeyRef.current === operationUserKey) setMutating(false);
     }
   };
   const isLoading =
     !isLoaded || Boolean(isSignedIn && (!userKey || loading || resolvedUserKey !== userKey));
   return (
-    <AppShell>
+    <AppShell utilitiesInHeader>
       <main
         id="main-content"
         tabIndex={-1}
         aria-busy={isLoading || undefined}
-        className="mx-auto w-full max-w-4xl px-4 py-7 sm:px-6"
+        className="kova-workspace-controls mx-auto w-full max-w-4xl px-4 py-7 sm:px-6"
       >
         <WorkspacePageHeader
           icon={Brain}
           title="Memory Center"
           description="Review durable conversation summaries and project context. Temporary chats are never stored here."
         />
+        {isSignedIn && userKey && !isLoading && !error && (
+          <MemoryClearPanel
+            ownerId={userKey}
+            disabled={mutating || Boolean(editing) || Boolean(deleting)}
+            onBusy={clearBusy}
+            onChanged={async (isCurrent) => {
+              const principal = userKey;
+              pager.invalidate();
+              const latest = await pager.readCurrent();
+              if (currentUserKeyRef.current !== principal || !isCurrent()) return;
+              setItems(latest);
+              setSelected([]);
+              window.dispatchEvent(new Event(MEMORY_SOURCES_CHANGED_EVENT));
+            }}
+          />
+        )}
         {isSignedIn && !isLoading && !error ? (
           <div className="my-6 grid gap-3 sm:grid-cols-[1fr_auto]">
             <label className="relative">
@@ -212,12 +302,22 @@ function MemoryPage() {
             </div>
           </div>
         ) : null}
+        {isSignedIn && !isLoading && !error && (
+          <button
+            onClick={reviewLatest}
+            disabled={mutating}
+            className="mb-3 min-h-10 rounded-lg border px-3 text-sm"
+          >
+            Review latest memories
+          </button>
+        )}
         {isSignedIn && !isLoading && !error && selected.length > 0 ? (
           <div className="mb-3 flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
             <span>{selected.length} selected</span>
             <button
               type="button"
               onClick={merge}
+              disabled={mutating}
               className="min-h-10 rounded-lg border bg-background px-3"
             >
               Merge duplicates
@@ -274,7 +374,7 @@ function MemoryPage() {
           >
             <Brain className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
             <h2 id="memory-empty-title" className="mt-3 font-semibold">
-              {query || source !== "all" ? "No matching memories" : "No memories yet"}
+              {query || source !== "all" ? "No matching memories" : "No memories on this page"}
             </h2>
             <p className="text-sm text-muted-foreground">
               {query || source !== "all"
@@ -301,17 +401,19 @@ function MemoryPage() {
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
+                    disabled={mutating || pager.busy}
                     className="mt-1 h-4 w-4"
                     aria-label={`Select ${item.title} for merging`}
                     checked={selected.includes(memoryRecordKey(item))}
-                    onChange={() =>
+                    onChange={() => {
+                      if (pager.isLoading() || mutationPending.current) return;
                       setSelected((all) => {
                         const key = memoryRecordKey(item);
                         return all.includes(key)
                           ? all.filter((value) => value !== key)
                           : [...all, key];
-                      })
-                    }
+                      });
+                    }}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -321,16 +423,24 @@ function MemoryPage() {
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {item.source} source · Updated {new Date(item.updatedAt).toLocaleString()}
+                      {item.source} source · {item.source === "project" ? "Added" : "Updated"}{" "}
+                      {new Date(item.updatedAt).toLocaleString()}
                     </p>
                     {editing === memoryRecordKey(item) ? (
-                      <textarea
-                        autoFocus
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        aria-label={`Memory content for ${item.title}`}
-                        className="mt-3 min-h-28 w-full rounded-xl border bg-background p-3"
-                      />
+                      <div>
+                        <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">
+                          Latest saved content: {item.content}
+                        </p>
+                        <textarea
+                          autoFocus
+                          disabled={mutating}
+                          maxLength={2000}
+                          value={draft}
+                          onChange={(e) => setDraft(e.target.value)}
+                          aria-label={`Memory content for ${item.title}`}
+                          className="mt-3 min-h-28 w-full rounded-xl border bg-background p-3"
+                        />
+                      </div>
                     ) : (
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{item.content}</p>
                     )}
@@ -389,13 +499,14 @@ function MemoryPage() {
                         <button
                           type="button"
                           onClick={() => save(item)}
-                          disabled={!draft.trim()}
+                          disabled={mutating || !draft.trim()}
                           className="min-h-11 rounded-lg px-3 text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Save
                         </button>
                         <button
                           type="button"
+                          disabled={mutating}
                           onClick={() => {
                             setEditing(null);
                             setDraft("");
@@ -409,9 +520,11 @@ function MemoryPage() {
                       <button
                         type="button"
                         onClick={() => {
+                          if (pager.isLoading() || mutationPending.current) return;
                           setEditing(memoryRecordKey(item));
                           setDraft(item.content);
                         }}
+                        disabled={mutating || pager.busy || editing !== null}
                         aria-label={`Edit ${item.title}`}
                         className="grid min-h-11 min-w-11 place-items-center rounded-lg hover:bg-accent"
                       >
@@ -421,6 +534,7 @@ function MemoryPage() {
                     <button
                       type="button"
                       onClick={() => setDeleting(item)}
+                      disabled={mutating}
                       aria-label={`Delete ${item.title}`}
                       className="grid min-h-11 min-w-11 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
                     >
@@ -431,6 +545,13 @@ function MemoryPage() {
               </li>
             ))}
           </ul>
+        )}
+        {isSignedIn && !isLoading && !error && (
+          <CollectionPageControls
+            label="Memories (conversation pages, then project pages)"
+            pager={pager}
+            disabled={mutating || editing !== null || selected.length > 0}
+          />
         )}
         {isSignedIn && !isLoading && !error ? (
           <aside className="mt-8 rounded-2xl bg-muted/50 p-4 text-sm">

@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Bookmark, Check, Copy, Download, Eraser, Loader2, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { authFetch } from "@/lib/auth-fetch";
 import { saveToLibrary } from "@/lib/library.functions";
@@ -57,6 +58,24 @@ function WritePage() {
   const [dirty, setDirty] = useState(false);
   const [autosaveError, setAutosaveError] = useState<string | null>(null);
   const [clearOpen, setClearOpen] = useState(false);
+  const clearFocusRef = useRef<{
+    target: HTMLButtonElement;
+    url: string;
+    principal: string | null;
+    generation: number;
+    confirmed: boolean;
+  } | null>(null);
+  const restoreClearFocus = (event: Event) => {
+    const opened = clearFocusRef.current;
+    if (!opened || opened.confirmed) return;
+    event.preventDefault();
+    restoreDialogFocus(
+      opened.target,
+      opened.url,
+      opened.principal !== principalRef.current ||
+        opened.generation !== storageGenerationRef.current,
+    );
+  };
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
@@ -438,8 +457,10 @@ function WritePage() {
 
   return (
     <AppShell>
-      <div
-        className="mx-auto flex h-full w-full max-w-4xl flex-col px-4 py-6 sm:px-8 sm:py-10"
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto flex min-h-full w-full max-w-4xl shrink-0 flex-col px-4 py-6 sm:px-8 sm:py-10"
         aria-busy={!documentReady}
       >
         {!documentReady && (
@@ -517,16 +538,17 @@ function WritePage() {
         <div className="mb-3 flex items-center gap-2">
           <input
             value={custom}
+            aria-label="Custom instruction"
             disabled={!documentReady}
             onChange={(e) => setCustom(e.target.value)}
             placeholder="Custom instruction - e.g. 'rewrite as a cover letter'"
-            className="min-h-11 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+            className="min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
           />
           <button
             type="button"
             onClick={() => run("custom")}
             disabled={!!busy || !custom.trim() || !documentReady}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
           >
             {busy === "custom" ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -594,7 +616,16 @@ function WritePage() {
           </button>
           <button
             type="button"
-            onClick={() => setClearOpen(true)}
+            onClick={(event) => {
+              clearFocusRef.current = {
+                target: event.currentTarget,
+                url: window.location.href,
+                principal: principalRef.current,
+                generation: storageGenerationRef.current,
+                confirmed: false,
+              };
+              setClearOpen(true);
+            }}
             disabled={!documentReady || !text.trim()}
             className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
           >
@@ -663,9 +694,13 @@ function WritePage() {
           description="This removes the current text from this device."
           confirmLabel="Clear"
           destructive
-          onConfirm={clearAll}
+          onCloseAutoFocus={restoreClearFocus}
+          onConfirm={() => {
+            if (clearFocusRef.current) clearFocusRef.current.confirmed = true;
+            clearAll();
+          }}
         />
-      </div>
+      </main>
     </AppShell>
   );
 }

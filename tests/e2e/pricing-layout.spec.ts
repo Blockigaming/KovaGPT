@@ -24,17 +24,12 @@ test("pricing is responsive, truthful, and keeps plan actions aligned", async ({
   const freePlan = page.locator('[data-pricing-plan="free"]');
   const plusPlan = page.locator('[data-pricing-plan="plus"]');
   const proPlan = page.locator('[data-pricing-plan="pro"]');
-  await expect(freePlan.getByText("Lite mode", { exact: true })).toBeVisible();
-  await expect(freePlan.getByText("Lite and Thinking modes", { exact: true })).toHaveCount(0);
-  await expect(
-    plusPlan.getByText("Lite, Medium, and Thinking modes", { exact: true }),
-  ).toBeVisible();
-  await expect(plusPlan.getByText("Lite, Medium, and High modes", { exact: true })).toHaveCount(0);
-  // Preserve the currently implemented Pro routes. Models PR #25 tracks the
-  // pending backend mapping for the requested final Pro Chat choice.
-  await expect(
-    proPlan.getByText("Lite, Medium, High, Extra high, Max, and Ultra modes", { exact: true }),
-  ).toBeVisible();
+  for (const plan of [freePlan, plusPlan, proPlan]) {
+    await expect(plan.getByText("One KovaGPT assistant", { exact: true })).toBeVisible();
+    await expect(plan.getByText(/\b(?:Lite|Medium|Thinking|High|Max|Ultra) modes?\b/u)).toHaveCount(
+      0,
+    );
+  }
   // Deliberately do not activate a paid CTA: this browser check must not create a checkout session.
   await expect(page.getByRole("dialog", { name: "Secure checkout" })).toHaveCount(0);
 

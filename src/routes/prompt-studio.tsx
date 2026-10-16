@@ -1,3 +1,6 @@
+import { promptEvaluationIdentity } from "@/lib/prompt-evaluation-identity.mjs";
+import { useCollectionPager } from "@/lib/use-collection-pager";
+import { CollectionPageControls } from "@/components/CollectionPageControls";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -6,12 +9,13 @@ import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
-import { listContextPacks, type ContextPack } from "@/lib/workspace.functions";
+import { listContextPacks, readContextPack, type ContextPack } from "@/lib/workspace.functions";
 import {
   deletePromptTemplate,
   evaluatePrompt,
   listPromptHistory,
   listPromptTemplates,
+  readPromptTemplate,
   savePromptTemplate,
   updatePromptTemplate,
   type PromptTemplate,
@@ -46,24 +50,45 @@ function PromptStudio() {
   const principalRef = useRef(principal);
   principalRef.current = principal;
   const generationRef = useRef(0);
+  const launchEpoch = useRef(0);
+  const launchAbort = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
+  const cancelLaunch = () => {
+    launchEpoch.current++;
+    launchAbort.current?.abort();
+  };
+  useEffect(() => {
+    mounted.current = true;
+    const endingLaunchEpoch = launchEpoch;
+    return () => {
+      mounted.current = false;
+      historyAbort.current?.abort();
+      generationRef.current++;
+      endingLaunchEpoch.current++;
+      launchAbort.current?.abort();
+    };
+  }, []);
   const [dataPrincipal, setDataPrincipal] = useState<string | null>(null);
   const [dataGeneration, setDataGeneration] = useState(0);
   const dataReady =
     principal !== null && dataPrincipal === principal && dataGeneration === generationRef.current;
   const navigate = useNavigate();
-  const list = useServerFn(listPromptTemplates),
-    save = useServerFn(savePromptTemplate),
-    update = useServerFn(updatePromptTemplate),
-    remove = useServerFn(deletePromptTemplate),
+  const listPage = useServerFn(listPromptTemplates),
+    savePrompt = useServerFn(savePromptTemplate),
+    updatePrompt = useServerFn(updatePromptTemplate),
+    removePrompt = useServerFn(deletePromptTemplate),
     getProjects = useServerFn(listProjects),
-    getPacks = useServerFn(listContextPacks);
+    getPacksPage = useServerFn(listContextPacks),
+    getPack = useServerFn(readContextPack);
+  const getSavedPrompt = useServerFn(readPromptTemplate);
   const getHistory = useServerFn(listPromptHistory),
     evaluate = useServerFn(evaluatePrompt);
   const [items, setItems] = useState<PromptTemplate[]>([]),
     [projects, setProjects] = useState<ProjectSummary[]>([]),
     [packs, setPacks] = useState<ContextPack[]>([]),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState<string | null>(null),
+    [projectError, setProjectError] = useState<string | null>(null),
+    [projectsLoading, setProjectsLoading] = useState(false),
     [query, setQuery] = useState(""),
     [favorites, setFavorites] = useState(false),
     [folderFilter, setFolderFilter] = useState("all"),
@@ -83,16 +108,154 @@ function PromptStudio() {
     [editBody, setEditBody] = useState(""),
     [rating, setRating] = useState(5),
     [notes, setNotes] = useState("");
+  const inspectionEpoch = useRef(0);
+  const historySequence = useRef(0);
+  const historyAbort = useRef<AbortController | null>(null);
+  const evaluationPending = useRef(false);
+  const separateEvaluation = useRef(false);
+  const [savingEvaluation, setSavingEvaluation] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [versionsKnown, setVersionsKnown] = useState(false);
+  const [evaluationsKnown, setEvaluationsKnown] = useState(false);
+  const [versionCursor, setVersionCursor] = useState<string | null>(null);
+  const [evaluationCursor, setEvaluationCursor] = useState<string | null>(null);
+  const loadHistoryPage = async (
+    source: "versions" | "evaluations" | "both",
+    cursor: string | null,
+    promptId = inspecting?.id,
+    epoch = inspectionEpoch.current,
+  ) => {
+    if (!promptId || evaluationPending.current) return;
+    const sequence = ++historySequence.current,
+      generation = generationRef.current;
+    historyAbort.current?.abort();
+    const controller = new AbortController();
+    historyAbort.current = controller;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    if (source === "both") {
+      setVersionsKnown(false);
+      setEvaluationsKnown(false);
+      setVersions([]);
+      setEvaluations([]);
+      setVersionCursor(null);
+      setEvaluationCursor(null);
+    }
+    const current = () =>
+      mounted.current &&
+      sequence === historySequence.current &&
+      epoch === inspectionEpoch.current &&
+      generation === generationRef.current &&
+      principalRef.current === principal &&
+      !controller.signal.aborted;
+    try {
+      const history = await getHistory({
+        data: { prompt_id: promptId, source, cursor },
+        signal: controller.signal,
+      });
+      if (!current()) return;
+      if (source !== "evaluations") {
+        setVersionsKnown(true);
+        setVersions(history.versions);
+        setVersionCursor(history.versionCursor);
+      }
+      if (source !== "versions") {
+        setEvaluationsKnown(true);
+        setEvaluations(history.evaluations);
+        setEvaluationCursor(history.evaluationCursor);
+      }
+    } catch (reason) {
+      if (current())
+        setHistoryError(
+          reason instanceof Error
+            ? reason.message
+            : "History page is unavailable. The last loaded page is retained.",
+        );
+    } finally {
+      if (current()) {
+        setHistoryLoading(false);
+        historyAbort.current = null;
+      }
+    }
+  };
+
+  const editRevision = useRef(0);
+  const createDraft = useRef("");
+  createDraft.current = JSON.stringify({ name, body, category, folder, projectId, packId });
+  const [reviewingPrompt, setReviewingPrompt] = useState(false);
+  const reviewSavedPrompt = async () => {
+    if (!inspecting || mutationScope.current.pending || reviewingPrompt) return;
+    const generation = generationRef.current,
+      epoch = inspectionEpoch.current;
+    setReviewingPrompt(true);
+    try {
+      const latest = await getSavedPrompt({ data: { id: inspecting.id } });
+      if (
+        generation !== generationRef.current ||
+        principalRef.current !== principal ||
+        epoch !== inspectionEpoch.current
+      )
+        return;
+      setInspecting(latest);
+      setItems((all) => all.map((item) => (item.id === latest.id ? latest : item)));
+      toast.success("Saved prompt loaded. Your draft is preserved; review before saving.");
+    } catch (reason) {
+      if (generation === generationRef.current && epoch === inspectionEpoch.current)
+        toast.error(reason instanceof Error ? reason.message : "Saved prompt unavailable.");
+    } finally {
+      if (generation === generationRef.current && epoch === inspectionEpoch.current)
+        setReviewingPrompt(false);
+    }
+  };
+  const promptsPager = useCollectionPager(listPage, principal, setItems);
+  const packsPager = useCollectionPager(getPacksPage, principal, setPacks);
+  const list = promptsPager.read,
+    getPacks = packsPager.read;
+  const mutationScope = useRef({ principal, pending: false });
+  if (mutationScope.current.principal !== principal)
+    mutationScope.current = { principal, pending: false };
+  const [promptMutating, setPromptMutating] = useState(false);
+  const mutatePrompt = async <T,>(operation: () => Promise<T>): Promise<T> => {
+    const owner = mutationScope.current;
+    if (owner.pending) throw new Error("Wait for the current prompt change to finish.");
+    owner.pending = true;
+    setPromptMutating(true);
+    promptsPager.invalidate();
+    try {
+      return await operation();
+    } finally {
+      owner.pending = false;
+      if (mutationScope.current === owner) setPromptMutating(false);
+    }
+  };
+  const save = (options: Parameters<typeof savePrompt>[0]) =>
+    mutatePrompt(() => savePrompt(options));
+  const update = (options: Parameters<typeof updatePrompt>[0]) =>
+    mutatePrompt(() => updatePrompt(options));
+  const remove = (options: Parameters<typeof removePrompt>[0]) =>
+    mutatePrompt(() => removePrompt(options));
+
   useEffect(() => {
     const generation = generationRef.current + 1;
     generationRef.current = generation;
     setDataPrincipal(null);
+    launchEpoch.current++;
+    launchAbort.current?.abort();
+    inspectionEpoch.current++;
+    separateEvaluation.current = false;
+    historyAbort.current?.abort();
+    historyAbort.current = null;
+    historySequence.current++;
+    setHistoryError(null);
+    setReviewingPrompt(false);
+    setPromptMutating(false);
     setDataGeneration(generation);
     setItems([]);
     setProjects([]);
     setPacks([]);
     setLoading(true);
-    setError(null);
+    setProjectError(null);
+    setProjectsLoading(false);
     setQuery("");
     setFavorites(false);
     setFolderFilter("all");
@@ -109,6 +272,15 @@ function PromptStudio() {
     setEvaluations([]);
     setHistoryLoading(false);
     setEditBody("");
+    setRating(5);
+    setNotes("");
+    setSavingEvaluation(false);
+    evaluationPending.current = false;
+    separateEvaluation.current = false;
+    setVersionsKnown(false);
+    setEvaluationsKnown(false);
+    setVersionCursor(null);
+    setEvaluationCursor(null);
     if (!principal || !draftKey) return;
 
     const defaults = loadPrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, userKey, {
@@ -124,13 +296,14 @@ function PromptStudio() {
         projectId?: string;
         packId?: string;
       } | null;
-      if (!saved) return;
-      setName(saved.name ?? "");
-      setFolder(saved.folder ?? "Unfiled");
-      setCategory(saved.category ?? "General");
-      setBody(saved.body ?? "");
-      setProjectId(saved.projectId ?? "");
-      setPackId(saved.packId ?? "");
+      if (saved) {
+        setName(saved.name ?? "");
+        setFolder(saved.folder ?? "Unfiled");
+        setCategory(saved.category ?? "General");
+        setBody(saved.body ?? "");
+        setProjectId(saved.projectId ?? "");
+        setPackId(saved.packId ?? "");
+      }
     } catch {
       safeBrowserStorage("localStorage")?.removeItem(draftKey);
     }
@@ -142,16 +315,14 @@ function PromptStudio() {
       setLoading(false);
       return;
     }
-    Promise.all([list({}), getProjects({}), getPacks({})])
-      .then(([prompts, p, context]) => {
+    Promise.allSettled([list(), getProjects({}), getPacks()])
+      .then(([, result]) => {
         if (generationRef.current !== generation || principalRef.current !== principal) return;
-        setItems(prompts);
-        setProjects(p);
-        setPacks(context);
-      })
-      .catch((e) => {
-        if (generationRef.current !== generation || principalRef.current !== principal) return;
-        setError(e instanceof Error ? e.message : "Prompt Studio could not be loaded");
+        if (result.status === "fulfilled") setProjects(result.value);
+        else
+          setProjectError(
+            result.reason instanceof Error ? result.reason.message : "Projects unavailable.",
+          );
       })
       .finally(() => {
         if (generationRef.current === generation && principalRef.current === principal) {
@@ -166,13 +337,20 @@ function PromptStudio() {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       const generation = generationRef.current + 1;
       generationRef.current = generation;
+      inspectionEpoch.current++;
+      historySequence.current++;
+      historyAbort.current?.abort();
+      historyAbort.current = null;
+      setHistoryError(null);
+      setReviewingPrompt(false);
       setDataPrincipal(principal);
       setDataGeneration(generation);
       setItems([]);
       setProjects([]);
       setPacks([]);
       setLoading(false);
-      setError(null);
+      setProjectError(null);
+      setProjectsLoading(false);
       setQuery("");
       setFavorites(false);
       setFolderFilter("all");
@@ -190,6 +368,15 @@ function PromptStudio() {
       setEvaluations([]);
       setHistoryLoading(false);
       setEditBody("");
+      setRating(5);
+      setNotes("");
+      setSavingEvaluation(false);
+      evaluationPending.current = false;
+      separateEvaluation.current = false;
+      setVersionsKnown(false);
+      setEvaluationsKnown(false);
+      setVersionCursor(null);
+      setEvaluationCursor(null);
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
@@ -229,9 +416,16 @@ function PromptStudio() {
     [items, favorites, folderFilter, query],
   );
   const create = async () => {
-    if (!dataReady || dataGeneration !== generationRef.current || !name.trim() || !body.trim())
+    if (
+      !dataReady ||
+      mutationScope.current.pending ||
+      dataGeneration !== generationRef.current ||
+      !name.trim() ||
+      !body.trim()
+    )
       return;
     const generation = generationRef.current;
+    const snapshot = createDraft.current;
     setCreating(true);
     try {
       const item = await save({
@@ -248,9 +442,11 @@ function PromptStudio() {
       });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
       setItems((all) => [item, ...all]);
-      setName("");
-      setBody("");
-      safeBrowserStorage("localStorage")?.removeItem(draftKey!);
+      if (createDraft.current === snapshot) {
+        setName("");
+        setBody("");
+        safeBrowserStorage("localStorage")?.removeItem(draftKey!);
+      }
       toast.success("Prompt saved");
     } catch (e) {
       if (generation === generationRef.current && principalRef.current === principal) {
@@ -263,15 +459,47 @@ function PromptStudio() {
     }
   };
   const launch = async (item: PromptTemplate) => {
-    if (!dataReady || dataGeneration !== generationRef.current) return;
+    if (!mounted.current || !dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
+    const epoch = ++launchEpoch.current;
+    launchAbort.current?.abort();
+    const controller = new AbortController();
+    launchAbort.current = controller;
+    const current = () =>
+      mounted.current &&
+      epoch === launchEpoch.current &&
+      !controller.signal.aborted &&
+      generation === generationRef.current &&
+      principalRef.current === principal;
     let prompt = item.body;
     for (const variable of item.variables)
       prompt = prompt.replaceAll(
         new RegExp(`{{\\s*${variable.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*}}`, "g"),
         values[variable] ?? "",
       );
-    const pack = packs.find((value) => value.id === item.context_pack_id);
+    let pack: ContextPack | undefined;
+    try {
+      if (item.context_pack_id)
+        pack = await getPack({ data: { id: item.context_pack_id }, signal: controller.signal });
+    } catch (reason) {
+      if (current())
+        toast.error(
+          reason instanceof Error ? reason.message : "The linked context pack is unavailable.",
+        );
+      return;
+    }
+    if (!current()) return;
+    try {
+      await update({
+        data: { id: item.id, increment_use: true },
+        signal: controller.signal,
+      });
+    } catch {
+      if (current()) {
+        toast.warning("Prompt prepared, but usage analytics could not be updated.");
+      }
+    }
+    if (!current()) return;
     const handoff = writePrincipalHandoff(
       safeBrowserStorage("sessionStorage"),
       "kova-prompt-launch",
@@ -282,21 +510,33 @@ function PromptStudio() {
       toast.error("Prompt could not be prepared. Reload and try again.");
       return;
     }
-    try {
-      await update({
-        data: { id: item.id, last_used_at: new Date().toISOString(), increment_use: true },
-      });
-    } catch {
-      if (generation === generationRef.current && principalRef.current === principal) {
-        toast.warning("Prompt prepared, but usage analytics could not be updated.");
-      }
-    }
-    if (generation !== generationRef.current || principalRef.current !== principal) return;
     navigate({ to: "/" });
   };
+  const retryProjects = async () => {
+    if (projectsLoading) return;
+    const generation = generationRef.current;
+    const owner = principal;
+    setProjectsLoading(true);
+    try {
+      const result = await getProjects({});
+      if (generationRef.current !== generation || principalRef.current !== owner) return;
+      setProjects(result);
+      setProjectError(null);
+    } catch (reason) {
+      if (generationRef.current !== generation || principalRef.current !== owner) return;
+      setProjectError(reason instanceof Error ? reason.message : "Projects unavailable.");
+    } finally {
+      if (generationRef.current === generation && principalRef.current === owner)
+        setProjectsLoading(false);
+    }
+  };
   return (
-    <AppShell>
-      <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
+    <AppShell utilitiesInHeader>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-workspace-controls mx-auto w-full max-w-6xl px-4 py-7 sm:px-6"
+      >
         <WorkspacePageHeader
           icon={FlaskConical}
           title="Prompt Studio"
@@ -309,27 +549,39 @@ function PromptStudio() {
           </div>
         ) : loading || !dataReady ? (
           <div className="mt-6 h-48 animate-pulse rounded-2xl bg-muted" />
-        ) : error ? (
-          <div role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4">
-            <p>{error}</p>
-            <button
-              onClick={() => location.reload()}
-              className="mt-3 min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
-            >
-              Retry
-            </button>
-          </div>
         ) : (
           <>
+            {projectError && (
+              <div role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4">
+                <p>Project choices unavailable: {projectError}</p>
+                <button
+                  onClick={retryProjects}
+                  disabled={projectsLoading}
+                  className="mt-3 min-h-11 rounded-lg border px-3 text-sm hover:bg-accent disabled:opacity-50"
+                >
+                  {projectsLoading ? "Loading Projects…" : "Retry Projects"}
+                </button>
+              </div>
+            )}
+            <CollectionPageControls
+              label="Prompts"
+              pager={promptsPager}
+              disabled={promptMutating || creating || inspecting !== null || testing !== null}
+            />
+            <CollectionPageControls
+              label="Context pack choices"
+              pager={packsPager}
+              disabled={creating}
+            />
             <section
               className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
-              aria-label="Prompt analytics"
+              aria-label="Loaded page prompt analytics"
             >
               {[
-                ["Prompts", items.length],
-                ["Folders", new Set(items.map((item) => item.folder)).size],
-                ["Total launches", items.reduce((sum, item) => sum + item.use_count, 0)],
-                ["Evaluated", items.filter((item) => item.use_count > 0).length],
+                ["Prompts on page", items.length],
+                ["Folders on page", new Set(items.map((item) => item.folder)).size],
+                ["Page launch attempts", items.reduce((sum, item) => sum + item.use_count, 0)],
+                ["Page evaluated", items.filter((item) => item.use_count > 0).length],
               ].map(([label, value]) => (
                 <div key={String(label)} className="rounded-2xl border bg-card/40 p-4">
                   <div className="text-xs text-muted-foreground">{label}</div>
@@ -380,6 +632,9 @@ function PromptStudio() {
                     aria-label="Associate Project"
                   >
                     <option value="">No Project</option>
+                    {projectId && !projects.some((project) => project.id === projectId) && (
+                      <option value={projectId}>Selected Project (not in loaded choices)</option>
+                    )}
                     {projects.map((project) => (
                       <option key={project.id} value={project.id}>
                         {project.name}
@@ -393,6 +648,9 @@ function PromptStudio() {
                     aria-label="Attach Context Pack"
                   >
                     <option value="">No Context Pack</option>
+                    {packId && !packs.some((pack) => pack.id === packId) && (
+                      <option value={packId}>Selected context pack (not on this page)</option>
+                    )}
                     {packs.map((pack) => (
                       <option key={pack.id} value={pack.id}>
                         {pack.name}
@@ -445,7 +703,10 @@ function PromptStudio() {
                 </div>
                 {visible.length === 0 ? (
                   <div className="mt-3 rounded-2xl border p-10 text-center text-sm text-muted-foreground">
-                    <p>No prompts match. Create a reusable prompt to begin.</p>
+                    <p>
+                      No prompts on this page match. Browse another page or create a reusable
+                      prompt.
+                    </p>
                     {query || favorites || folderFilter !== "all" ? (
                       <button
                         onClick={() => {
@@ -467,9 +728,9 @@ function PromptStudio() {
                           <div className="min-w-0 flex-1">
                             <h3 className="font-medium">{item.name}</h3>
                             <p className="text-xs text-muted-foreground">
-                              {item.folder} · {item.category} · {item.use_count} launches
+                              {item.folder} · {item.category} · {item.use_count} launch attempts
                               {item.last_used_at
-                                ? ` · Used ${new Date(item.last_used_at).toLocaleDateString()}`
+                                ? ` · Attempted ${new Date(item.last_used_at).toLocaleDateString()}`
                                 : ""}
                             </p>
                             <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm">
@@ -481,18 +742,20 @@ function PromptStudio() {
                             onClick={async () => {
                               const generation = generationRef.current;
                               try {
-                                await update({ data: { id: item.id, favorite: !item.favorite } });
+                                const saved = await update({
+                                  data: {
+                                    id: item.id,
+                                    favorite: !item.favorite,
+                                    expectedUpdatedAt: item.updated_at,
+                                  },
+                                });
                                 if (
                                   generation !== generationRef.current ||
                                   principalRef.current !== principal
                                 )
                                   return;
                                 setItems((all) =>
-                                  all.map((value) =>
-                                    value.id === item.id
-                                      ? { ...value, favorite: !value.favorite }
-                                      : value,
-                                  ),
+                                  all.map((value) => (value.id === item.id ? saved : value)),
                                 );
                               } catch (reason) {
                                 if (
@@ -517,7 +780,9 @@ function PromptStudio() {
                               if (!confirm("Delete this prompt?")) return;
                               const generation = generationRef.current;
                               try {
-                                await remove({ data: { id: item.id } });
+                                await remove({
+                                  data: { id: item.id, expectedUpdatedAt: item.updated_at },
+                                });
                                 if (
                                   generation !== generationRef.current ||
                                   principalRef.current !== principal
@@ -544,6 +809,7 @@ function PromptStudio() {
                         </div>
                         <button
                           onClick={() => {
+                            cancelLaunch();
                             setTesting(item);
                             setValues({});
                           }}
@@ -553,39 +819,18 @@ function PromptStudio() {
                           Test in chat
                         </button>
                         <button
-                          onClick={async () => {
-                            const generation = generationRef.current;
+                          onClick={() => {
+                            if (evaluationPending.current) return;
+                            const epoch = ++inspectionEpoch.current;
+                            separateEvaluation.current = false;
+                            setReviewingPrompt(false);
+                            editRevision.current++;
+                            setRating(5);
+                            setNotes("");
+                            setSavingEvaluation(false);
                             setInspecting(item);
                             setEditBody(item.body);
-                            setHistoryLoading(true);
-                            try {
-                              const history = await getHistory({ data: { prompt_id: item.id } });
-                              if (
-                                generation !== generationRef.current ||
-                                principalRef.current !== principal
-                              )
-                                return;
-                              setVersions(history.versions);
-                              setEvaluations(history.evaluations);
-                            } catch (reason) {
-                              if (
-                                generation !== generationRef.current ||
-                                principalRef.current !== principal
-                              )
-                                return;
-                              toast.error(
-                                reason instanceof Error
-                                  ? reason.message
-                                  : "History could not be loaded",
-                              );
-                            } finally {
-                              if (
-                                generation === generationRef.current &&
-                                principalRef.current === principal
-                              ) {
-                                setHistoryLoading(false);
-                              }
-                            }
+                            void loadHistoryPage("both", null, item.id, epoch);
                           }}
                           className="mt-3 ml-2 inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm hover:bg-accent"
                         >
@@ -599,7 +844,7 @@ function PromptStudio() {
             </div>
           </>
         )}
-        {testing && (
+        {dataReady && testing && (
           <div
             className="fixed inset-0 z-50 grid place-items-end bg-black/40 sm:place-items-center"
             role="dialog"
@@ -628,7 +873,10 @@ function PromptStudio() {
               )}
               <div className="mt-5 flex justify-end gap-2">
                 <button
-                  onClick={() => setTesting(null)}
+                  onClick={() => {
+                    cancelLaunch();
+                    setTesting(null);
+                  }}
                   className="min-h-11 rounded-xl px-4 hover:bg-accent"
                 >
                   Cancel
@@ -643,7 +891,7 @@ function PromptStudio() {
             </div>
           </div>
         )}
-        {inspecting ? (
+        {dataReady && inspecting ? (
           <div
             className="fixed inset-0 z-50 grid place-items-end bg-black/40 sm:place-items-center"
             role="dialog"
@@ -659,12 +907,26 @@ function PromptStudio() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setInspecting(null)}
+                  onClick={() => {
+                    inspectionEpoch.current++;
+                    separateEvaluation.current = false;
+                    historyAbort.current?.abort();
+                    evaluationPending.current = false;
+                    setSavingEvaluation(false);
+                    setRating(5);
+                    setNotes("");
+                    setInspecting(null);
+                  }}
                   className="min-h-10 rounded-lg px-3 hover:bg-accent"
                 >
                   Close
                 </button>
               </div>
+              {historyError && (
+                <p role="alert" className="mt-3 text-sm">
+                  {historyError}
+                </p>
+              )}
               {historyLoading ? (
                 <div className="mt-4 h-32 animate-pulse rounded-xl bg-muted" />
               ) : (
@@ -673,17 +935,28 @@ function PromptStudio() {
                     <h3 className="text-sm font-semibold">Current prompt</h3>
                     <textarea
                       value={editBody}
-                      onChange={(e) => setEditBody(e.target.value)}
+                      onChange={(e) => {
+                        editRevision.current++;
+                        setEditBody(e.target.value);
+                      }}
                       className="mt-2 min-h-56 w-full rounded-xl border bg-background p-3"
                     />
                     <button
-                      disabled={!editBody.trim() || editBody === inspecting.body}
+                      disabled={
+                        promptMutating ||
+                        reviewingPrompt ||
+                        !editBody.trim() ||
+                        editBody === inspecting.body
+                      }
                       onClick={async () => {
                         const generation = generationRef.current;
+                        const epoch = inspectionEpoch.current,
+                          revision = editRevision.current;
                         try {
-                          await update({
+                          const saved = await update({
                             data: {
                               id: inspecting.id,
+                              expectedUpdatedAt: inspecting.updated_at,
                               body: editBody,
                               variables: variables(editBody),
                             },
@@ -694,19 +967,15 @@ function PromptStudio() {
                           )
                             return;
                           setItems((all) =>
-                            all.map((item) =>
-                              item.id === inspecting.id
-                                ? {
-                                    ...item,
-                                    body: editBody,
-                                    variables: variables(editBody),
-                                    updated_at: new Date().toISOString(),
-                                  }
-                                : item,
-                            ),
+                            all.map((item) => (item.id === inspecting.id ? saved : item)),
                           );
                           toast.success("Prompt revision saved");
-                          setInspecting(null);
+                          if (epoch === inspectionEpoch.current) {
+                            if (revision === editRevision.current) {
+                              inspectionEpoch.current++;
+                              setInspecting(null);
+                            } else setInspecting(saved);
+                          }
                         } catch (reason) {
                           if (
                             generation !== generationRef.current ||
@@ -724,7 +993,42 @@ function PromptStudio() {
                     >
                       Save revision
                     </button>
+                    <button
+                      type="button"
+                      disabled={promptMutating || reviewingPrompt}
+                      onClick={() => void reviewSavedPrompt()}
+                      className="mt-2 min-h-11 rounded-lg border px-3 text-sm"
+                    >
+                      Review saved prompt
+                    </button>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Saved content for comparison:
+                    </p>
+                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-xs">
+                      {inspecting.body}
+                    </pre>
                     <h3 className="mt-5 text-sm font-semibold">Previous versions</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Only this history page is shown. More revisions may be on another page.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={savingEvaluation}
+                        className="min-h-11 rounded-lg border px-3 text-sm"
+                        onClick={() => void loadHistoryPage("versions", null)}
+                      >
+                        First versions page
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingEvaluation || !versionCursor}
+                        className="min-h-11 rounded-lg border px-3 text-sm"
+                        onClick={() => void loadHistoryPage("versions", versionCursor)}
+                      >
+                        Next versions page
+                      </button>
+                    </div>
                     {versions.length ? (
                       <ul className="mt-2 space-y-2">
                         {versions.map((version) => (
@@ -737,7 +1041,10 @@ function PromptStudio() {
                               {version.body}
                             </p>
                             <button
-                              onClick={() => setEditBody(version.body)}
+                              onClick={() => {
+                                editRevision.current++;
+                                setEditBody(version.body);
+                              }}
                               className="mt-2 text-xs font-medium hover:underline"
                             >
                               Restore into editor
@@ -747,7 +1054,9 @@ function PromptStudio() {
                       </ul>
                     ) : (
                       <p className="mt-2 text-sm text-muted-foreground">
-                        No earlier revisions yet.
+                        {versionsKnown
+                          ? "No revisions on this loaded page."
+                          : "Revisions have not loaded. Use First versions page to retry."}
                       </p>
                     )}
                   </section>
@@ -773,23 +1082,60 @@ function PromptStudio() {
                       placeholder="What worked? What should change?"
                       className="mt-2 min-h-24 w-full rounded-xl border bg-background p-3"
                     />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Retries of the same rating and notes reuse a saved request in this tab (up to
+                      64 retained requests). Clearing local recovery removes these retry references.
+                      Review saved evaluations before recording a separate one.
+                    </p>
                     <button
+                      className="mt-2 min-h-11 rounded-lg border px-3 text-sm"
+                      disabled={savingEvaluation}
+                      onClick={() => {
+                        separateEvaluation.current = true;
+                        toast.success("The next save will start a separate evaluation.");
+                      }}
+                    >
+                      Start separate evaluation
+                    </button>
+                    <button
+                      disabled={savingEvaluation}
                       onClick={async () => {
+                        if (evaluationPending.current || historyAbort.current) return;
+                        evaluationPending.current = true;
+                        setSavingEvaluation(true);
+                        const epoch = inspectionEpoch.current;
                         const generation = generationRef.current;
                         try {
-                          const result = await evaluate({
-                            data: { prompt_id: inspecting.id, rating, notes },
-                          });
+                          const payload = { prompt_id: inspecting.id, rating, notes: notes.trim() };
+                          const current = () =>
+                            epoch === inspectionEpoch.current &&
+                            generation === generationRef.current &&
+                            principalRef.current === principal;
+                          const requestId = await promptEvaluationIdentity(
+                            safeBrowserStorage("sessionStorage"),
+                            userKey!,
+                            payload,
+                            current,
+                            separateEvaluation.current,
+                          );
+                          if (!current()) return;
+                          separateEvaluation.current = false;
+                          const result = await evaluate({ data: { ...payload, requestId } });
                           if (
+                            epoch !== inspectionEpoch.current ||
                             generation !== generationRef.current ||
                             principalRef.current !== principal
                           )
                             return;
-                          setEvaluations((all) => [result, ...all]);
-                          setNotes("");
+                          setEvaluations((all) => [
+                            result,
+                            ...all.filter((item) => item.id !== result.id),
+                          ]);
+                          setNotes((current) => (current === notes ? "" : current));
                           toast.success("Evaluation saved");
                         } catch (reason) {
                           if (
+                            epoch !== inspectionEpoch.current ||
                             generation !== generationRef.current ||
                             principalRef.current !== principal
                           )
@@ -799,6 +1145,15 @@ function PromptStudio() {
                               ? reason.message
                               : "Evaluation could not be saved",
                           );
+                        } finally {
+                          if (
+                            generation === generationRef.current &&
+                            epoch === inspectionEpoch.current &&
+                            principalRef.current === principal
+                          ) {
+                            evaluationPending.current = false;
+                            setSavingEvaluation(false);
+                          }
                         }
                       }}
                       className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm"
@@ -807,6 +1162,27 @@ function PromptStudio() {
                       Save evaluation
                     </button>
                     <h3 className="mt-5 text-sm font-semibold">Evaluation history</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Only this history page is shown.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={savingEvaluation}
+                        className="min-h-11 rounded-lg border px-3 text-sm"
+                        onClick={() => void loadHistoryPage("evaluations", null)}
+                      >
+                        First evaluations page
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingEvaluation || !evaluationCursor}
+                        className="min-h-11 rounded-lg border px-3 text-sm"
+                        onClick={() => void loadHistoryPage("evaluations", evaluationCursor)}
+                      >
+                        Next evaluations page
+                      </button>
+                    </div>
                     {evaluations.length ? (
                       <ul className="mt-2 space-y-2">
                         {evaluations.map((evaluation) => (
@@ -819,7 +1195,9 @@ function PromptStudio() {
                         ))}
                       </ul>
                     ) : (
-                      <p className="mt-2 text-sm text-muted-foreground">No evaluations yet.</p>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        No evaluations on this loaded page.
+                      </p>
                     )}
                   </section>
                 </div>

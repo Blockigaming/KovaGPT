@@ -538,7 +538,7 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
           </ul>
         </div>
       )}
-      <label className="grid gap-1 text-sm">
+      <label className="kova-study-import grid gap-1 text-sm">
         Import an exported practice set
         <input
           type="file"

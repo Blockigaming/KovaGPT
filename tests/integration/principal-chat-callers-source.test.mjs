@@ -11,7 +11,7 @@ const callerPaths = [
   "src/routes/knowledge-graph.tsx",
   "src/routes/library.tsx",
   "src/routes/summary.tsx",
-  "src/routes/index.tsx",
+  "src/components/ChatWorkspace.tsx",
 ];
 
 test("all remaining local chat callers carry the resolved principal", async () => {
@@ -36,7 +36,10 @@ test("all remaining local chat callers carry the resolved principal", async () =
   assert.match(contextPacks, /dataPrincipal === principal/);
   assert.match(contextPacks, /if \(!dataReady\) return \[\]/);
 
-  assert.match(graph, /loadConversations\(userKey\)/);
+  assert.match(
+    graph,
+    /useAccountConversationHistory\(userKey, isLoaded && Boolean\(isSignedIn\)\)/,
+  );
   assert.match(graph, /savePendingActive\(userKey, node\.id\.replace\("local-chat:", ""\)\)/);
   assert.match(graph, /graphState\.principal === principal/);
 
@@ -52,9 +55,15 @@ test("all remaining local chat callers carry the resolved principal", async () =
     /setPreviewItem\(null\);\s*setSelected\(\[\]\);\s*setLoadError\(null\);[\s\S]*\}, \[favoritesKey, principal\]\)/,
   );
 
-  assert.match(summary, /loadConversations\(userKey\)/);
+  assert.match(
+    summary,
+    /useAccountConversationHistory\(userKey, isLoaded && Boolean\(isSignedIn\)\)/,
+  );
   assert.equal((summary.match(/savePendingActive\(userKey, c\.id\)/g) ?? []).length, 2);
-  assert.match(summary, /conversationState\.principal === principal/);
+  assert.match(
+    await read("src/lib/use-account-conversation-history.ts"),
+    /state\.principal === principal/,
+  );
   assert.match(summary, /queryKey: \["summary", "projects", userKey\]/);
 });
 
@@ -67,12 +76,14 @@ test("the caller slice contains no direct legacy draft or pending-selection keys
 });
 
 test("home chat uses stable empty state and complete callback dependencies", async () => {
-  const home = await read("src/routes/index.tsx");
+  const home = await read("src/components/ChatWorkspace.tsx");
 
   assert.match(home, /const EMPTY_CONVERSATIONS: Conversation\[\] = \[\]/);
   assert.match(
     home,
     /const conversations = principalReady \? conversationState\.items : EMPTY_CONVERSATIONS/,
   );
-  assert.match(home, /\[activeId, conversations, setConversations, userKey\]/);
+  assert.match(home, /\[activeId, conversations, setConversations, userKey, storagePrincipal\]/);
+  assert.match(home, /if \(storagePrincipalRef\.current !== storagePrincipal\) return/);
+  assert.match(home, /epoch === historyActionEpochRef\.current/);
 });

@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
+import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import type { LucideIcon } from "lucide-react";
 
 export function WorkspacePageHeader({
@@ -16,9 +17,10 @@ export function WorkspacePageHeader({
   meta?: ReactNode;
   titleId?: string;
 }) {
+  const utilities = useContext(WorkspacePageUtilities);
   return (
     <header className="kova-page-header" aria-labelledby={titleId}>
-      <div className="flex min-w-0 items-start gap-3">
+      <div className="flex min-w-0 flex-1 min-[641px]:basis-80 items-start gap-3">
         {Icon ? (
           <span
             className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-muted/45 text-foreground"
@@ -35,7 +37,12 @@ export function WorkspacePageHeader({
           {meta ? <div className="mt-1 text-xs text-muted-foreground">{meta}</div> : null}
         </div>
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions || utilities ? (
+        <div className="kova-page-actions ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
+          {actions}
+          {utilities}
+        </div>
+      ) : null}
     </header>
   );
 }

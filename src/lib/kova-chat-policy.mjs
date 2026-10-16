@@ -1,10 +1,10 @@
 /** Current Kova Chat target. Catalog and selection only; live routing stays disabled. */
 
 import { KOVA_WORK_EFFORTS } from "./kova-work-policy.mjs";
+import { KOVA_MODEL_FAMILIES } from "./kova-model-identity.mjs";
 
 export const KOVA_CHAT_FAMILIES = Object.freeze([
-  Object.freeze({ id: "cosmo", label: "Kova Cosmo" }),
-  Object.freeze({ id: "orion", label: "Kova Orion" }),
+  ...KOVA_MODEL_FAMILIES.filter((family) => family.id !== "nova"),
 ]);
 
 export const KOVA_CHAT_EFFORTS = KOVA_WORK_EFFORTS;

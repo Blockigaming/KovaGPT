@@ -88,7 +88,9 @@ test("retired modes and unsupported product promises stay off public routes", ()
 test("known limitations and required unavailable Voice remain explicit", () => {
   assert.match(registry, /voiceScope: "required_unavailable"/);
   assert.match(registry, /voice:[\s\S]*availability: "unavailable"/);
-  assert.match(registry, /PDF, Word, PowerPoint, and Excel extraction is not currently supported/);
+  assert.match(registry, /text extracted from PDF, DOCX, XLSX, and PPTX/);
+  assert.match(registry, /files up to 10 MB, PDFs up to 100 pages/);
+  assert.match(registry, /Scanned-page OCR is unavailable/);
   assert.match(registry, /Editing an uploaded or generated image is not currently available/);
   assert.match(
     registry,
@@ -118,10 +120,16 @@ test("known limitations and required unavailable Voice remain explicit", () => {
   }
 });
 
-test("Help answers for high-risk capabilities come from the registry", () => {
+test("Help uses registry limits and accurately distinguishes conditional local image adjustments", () => {
   assert.match(help, /features\.attachments\.summary/);
   assert.match(help, /features\.dataAnalysis\.limitation/);
-  assert.match(help, /features\.imageEditing\.summary/);
+  assert.match(helpData, /local brightness, contrast and saturation adjustments/);
+  assert.match(helpData, /disabled unless the original pixels load successfully/);
+  assert.match(helpData, /AI\/instruction-based editing and cropping are not available/);
+  assert.match(registry, /imageEditing: \{[\s\S]*?availability: "unavailable"/);
+  const localEditor = read("src/components/LocalImageEditor.tsx");
+  assert.match(localEditor, /\["brightness", "contrast", "saturation"\]/);
+  assert.match(localEditor, /disabled=\{!original\}/);
   assert.match(help, /features\.library\.summary/);
   assert.match(help, /features\.cloudHistory\.summary/);
   assert.match(help, /features\.scheduledTasks\.summary/);

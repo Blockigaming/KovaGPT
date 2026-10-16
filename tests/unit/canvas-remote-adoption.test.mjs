@@ -33,6 +33,8 @@ function apply(localEditRevision, acknowledgedEditRevision = 0, pendingWrites = 
   };
   const bindings = {
     open: true,
+    titleAccountDirty: false,
+    titleSaving: false,
     remoteSnapshot,
     canApplyLoadedArtifactHistory,
     localEditRevisionRef: { current: localEditRevision },

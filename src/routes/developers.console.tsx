@@ -32,6 +32,7 @@ function DeveloperConsole() {
   if (isSignedIn && user?.id) return <OwnedDeveloperConsole key={user.id} userId={user.id} />;
   return (
     <PublicPageView
+      className="kova-developer-console"
       eyebrow="Developers"
       title="Developer console"
       summary="Manage your developer workspace."
@@ -125,6 +126,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
     "mt-1 block min-h-11 w-full rounded-md border border-border bg-background px-3";
   return (
     <PublicPageView
+      className="kova-developer-console"
       eyebrow="Developers"
       title="Developer console"
       summary="Manage scoped keys, spending limits, and prepaid API usage."
@@ -394,37 +396,39 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
               onBalanceChanged={load}
             />
           )}
-          <section className="space-y-3 rounded-xl border p-5">
+          <section className="min-w-0 space-y-3 rounded-xl border p-5">
             <h2 className="text-lg font-semibold">Stored spending limits</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full min-w-[44rem] text-left">
                 <thead>
                   <tr>
-                    <th>Account</th>
-                    <th>Scope</th>
-                    <th>Per request</th>
-                    <th>Per day</th>
-                    <th>Per month</th>
-                    <th>Concurrent</th>
+                    <th className="whitespace-nowrap p-2">Account</th>
+                    <th className="whitespace-nowrap p-2">Scope</th>
+                    <th className="whitespace-nowrap p-2">Per request</th>
+                    <th className="whitespace-nowrap p-2">Per day</th>
+                    <th className="whitespace-nowrap p-2">Per month</th>
+                    <th className="whitespace-nowrap p-2">Concurrent</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data?.limits.map((row) => (
                     <tr key={`${row.account_id}:${row.scope_type}:${row.scope_id}`}>
-                      <td>{data.accounts.find((a) => a.account_id === row.account_id)?.name}</td>
-                      <td>
+                      <td className="max-w-48 whitespace-normal [overflow-wrap:anywhere] p-2 align-top">
+                        {data.accounts.find((a) => a.account_id === row.account_id)?.name}
+                      </td>
+                      <td className="whitespace-nowrap p-2 align-top">
                         {row.scope_type} · {String(row.scope_id).slice(0, 8)}
                       </td>
-                      <td>{row.request_limit}</td>
-                      <td>{row.daily_limit}</td>
-                      <td>{row.monthly_limit}</td>
-                      <td>{row.concurrent_limit}</td>
+                      <td className="whitespace-nowrap p-2 align-top">{row.request_limit}</td>
+                      <td className="whitespace-nowrap p-2 align-top">{row.daily_limit}</td>
+                      <td className="whitespace-nowrap p-2 align-top">{row.monthly_limit}</td>
+                      <td className="whitespace-nowrap p-2 align-top">{row.concurrent_limit}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Button
                 variant="outline"
                 disabled={limitsPage === 0 || busy}
@@ -432,7 +436,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
               >
                 Previous limits
               </Button>
-              <span>Page {limitsPage + 1}</span>
+              <span className="shrink-0 whitespace-nowrap">Page {limitsPage + 1}</span>
               <Button
                 variant="outline"
                 disabled={!data?.limitsHasMore || busy}
@@ -442,15 +446,15 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
               </Button>
             </div>
           </section>
-          <section className="rounded-xl border p-5">
+          <section className="min-w-0 rounded-xl border p-5">
             <h2 className="text-lg font-semibold">Latest 100 API calls</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full min-w-[28rem] text-left">
                 <thead>
                   <tr>
-                    <th className="p-2">Model</th>
-                    <th className="p-2">Status</th>
-                    <th className="p-2">Charge (minor units)</th>
+                    <th className="whitespace-nowrap p-2">Model</th>
+                    <th className="whitespace-nowrap p-2">Status</th>
+                    <th className="whitespace-nowrap p-2">Charge (minor units)</th>
                   </tr>
                 </thead>
                 <tbody>

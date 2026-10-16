@@ -27,6 +27,8 @@ test("normal AI calls use the Responses API through the approved direct provider
 
 test("provider fails closed for missing credentials and the Kova generation kill switch", () => {
   assert.match(config, /KOVA_GENERATION_DISABLED/);
+  assert.match(env, /^KOVA_GENERATION_DISABLED=true$/m);
+  assert.match(env, /^AI_GENERATION_ENABLED=false$/m);
   assert.match(provider, /OPENAI_API_KEY/);
   assert.match(provider, /AZURE_OPENAI_API_KEY/);
   assert.match(provider, /IDENTITY_ENDPOINT/);

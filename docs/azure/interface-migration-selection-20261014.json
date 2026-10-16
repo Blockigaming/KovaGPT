@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "status": "LOCAL_SOURCE_SELECTION_ONLY_NOT_RELEASE_OR_DATABASE_APPROVAL",
+  "baseCommit": "5d9e6fe1fc1db38531d724c7aab7df3cd5576618",
+  "previousIntegratedTree": "b16135cc4fdb848a6299f1acca8469ef589de235",
+  "referenceDotTree": "3ec1d239e4e026a9d4d6c4d5cd232cf026648ff2",
+  "contract": {
+    "path": "docs/auth/azure-core-launch-candidate-20261012.json",
+    "sha256": "6a719e3cd43c94e74a7cb5dc40b2ac898b8743f7d4601c8c7e2bd8b6c458acf3",
+    "academyDeferralAuthority": "3ec1d239e4e026a9d4d6c4d5cd232cf026648ff2:docs/release/core-launch-20261007.md explicitly keeps Academy paused and unapproved; navigation omission alone is not a backend feature fence.",
+    "preserved": [
+      "account deletion",
+      "existing shared billing entitlements",
+      "frozen Auth source",
+      "committed dependency-edge security correction",
+      "accepted M17/M18",
+      "family creation/invitations exclusion"
+    ],
+    "notAuthorized": [
+      "database execution",
+      "migration-history repair",
+      "historical hash or count repinning",
+      "build",
+      "hosted job",
+      "push",
+      "merge",
+      "deployment",
+      "spending"
+    ]
+  },
+  "inventory": {
+    "baseline": 185,
+    "dotEarlier": "185 + connector 1 = 186",
+    "dotFinal": "185 + connector 1 + DOT proposals 8 = 194",
+    "previousIntegrated": "185 + Auth 3 + connector 1 + DOT proposals 8 = 197",
+    "selected": "185 + Auth 3 + connector 1 + retained DOT proposals 7 = 196",
+    "hypotheticalRemoveAllEight": {
+      "count": 189,
+      "manifestSha256": "f433e696e75e46f942fe09eb8cdb06e4e20701cd7c550b00aa39d225bfec1d5e",
+      "exactExistingCandidateAllowlistMatch": true,
+      "selected": false,
+      "reason": "Removing the seven retained files breaks current callers or removes concurrency/ownership protections. Even the exact 189 candidate is a forward source allowance, not evidence replacing the historical 185-source/98-remote decision."
+    },
+    "historicalSqlBlobsChanged": 0,
+    "historicalEntryMetadataChanged": 0,
+    "separateHistoricalDecisionDifference": {
+      "azurePinned": "98 remote + 111 source-only = proposed 209; 107 conditional bodies + 4 record-only versions",
+      "dotReference": "98 remote + 112 source-only = proposed 210; 108 conditional bodies + 4 record-only versions",
+      "exactDifference": "Only connector 20261008153032, SHA-256 25fb40a6a18a051ec4724cf8c924957f05bde98ea7e75d16ad44a295b741fc27; all existing 111 source-only entries are identical and none missing.",
+      "disposition": "Preserve Azure's pinned decision, not DOT's changed projection. Neither projection proves execution or approves the eight later proposals."
+    },
+    "canonicalGuardResult": "canonical_history_current_source_checkpoint_changed",
+    "canonicalGuardWeakened": false,
+    "schemaProofsAccepted": 0,
+    "schemaProofTotal": 19
+  },
+  "proposals": [
+    {
+      "path": "supabase/migrations/20261012013252_project_monotonic_revision.sql",
+      "sha256": "41eb4614fde01c81a80c0084aafaa75a31561f93637c80dc68d0fc0c367a8690",
+      "decision": "RETAIN_UNAPPLIED",
+      "objects": ["public.touch_project_revision()", "public.trg_projects_updated_at"],
+      "schemaAndDataEffect": "Replace the project update trigger with a strictly monotonic finite updated_at token; revoke direct PUBLIC execution. No existing project backfill or deletion.",
+      "dependentSources": ["src/lib/projects.functions.ts"],
+      "necessity": "Core project metadata/instructions use expectedUpdatedAt equality-CAS. Same-transaction clock-only revisions can lose updates; retain this correction with the current callers.",
+      "retainedTests": [
+        "tests/unit/project-revision-trigger.test.mjs",
+        "tests/unit/project-metadata-cas.test.mjs"
+      ],
+      "livePreconditions": [
+        "Exact existing projects.updated_at definition and finite-value invariant",
+        "Existing trigger identity and trigger order",
+        "Current owner/ACL/RLS and old/new writer compatibility"
+      ],
+      "rollback": "Keep the monotonic trigger. Reverting to a clock-only trigger restores the lost-update defect; old unconditional writers need a matched compatible rollback or a write pause. No automatic down SQL."
+    },
+    {
+      "path": "supabase/migrations/20261012021000_project_atomic_capacity.sql",
+      "sha256": "be50bb87b8ab348d2ff427ad45d5e99e98228922a56b82f9beef479cff15987d",
+      "decision": "RETAIN_UNAPPLIED",
+      "objects": [
+        "public.project_capacity_guards",
+        "public.enforce_project_capacity()",
+        "public.trg_projects_capacity"
+      ],
+      "schemaAndDataEffect": "Add a private RLS-enabled owner guard, auth.users cascading FK and revoked API-role access. A privileged trigger serializes entry into each active-project set; it writes guard rows only when subsequently invoked. No existing project rewrite.",
+      "dependentSources": [
+        "src/lib/projects.functions.ts",
+        "src/lib/billing-entitlement.server.ts"
+      ],
+      "necessity": "Core project creation, restoration and owner transfer must enforce atomic free=3/plus=25/pro=200 admission, preserving existing effective_user_plan_tier shared entitlements. Client read-then-insert limits are insufficient.",
+      "retainedTests": ["tests/unit/project-atomic-capacity.test.mjs"],
+      "livePreconditions": [
+        "Approved effective_user_plan_tier(uuid) behavior and grants, including existing family-owner read semantics",
+        "projects owner/archive columns and Auth UUID bridge",
+        "Deletion cascade and true multi-session isolation compatibility"
+      ],
+      "rollback": "Keep guard and trigger. Unknown entitlement fails closed; disabling enforcement is not rollback. Previous client must preserve drafts when it receives capacity failures. No automatic down SQL."
+    },
+    {
+      "path": "supabase/migrations/20261012022135_chat_rules_revision_boundary.sql",
+      "sha256": "007af5eaa4edd831f7375d23aacaaefc7555d10f322dfbcc7ec7453f5039230f",
+      "decision": "RETAIN_UNAPPLIED",
+      "objects": [
+        "public.touch_chat_rules_revision()",
+        "public.compare_and_save_chat_rules(text,timestamp with time zone,text,text,boolean)",
+        "chat_custom_rules update trigger"
+      ],
+      "schemaAndDataEffect": "Add monotonic rule revisions and an authenticated invoker CAS RPC. A subsequent clear retains an empty versioned row instead of deleting its concurrency token; no apply-time row rewrite.",
+      "dependentSources": ["src/lib/chat-workspace.functions.ts"],
+      "necessity": "Core per-chat instruction save, clear and enable/disable calls require this exact RPC. There is no safe direct-write fallback.",
+      "retainedTests": ["tests/unit/chat-rules-revision.test.mjs"],
+      "livePreconditions": [
+        "Owner/chat uniqueness, actual ACL/RLS and auth.uid identity",
+        "Old trigger definition",
+        "All overlapping old unconditional save/delete writers fenced or upgraded"
+      ],
+      "rollback": "Retain RPC, trigger and empty revision records. A previous application using unconditional save/delete can resurrect cleared rules; use a compatible rollback writer or explicitly approved write pause."
+    },
+    {
+      "path": "supabase/migrations/20261012022740_atomic_memory_merge.sql",
+      "sha256": "199143d7a13a1e81a6999d0e4d59e2e1089be68d06a7d3f020316054f21c321e",
+      "decision": "RETAIN_UNAPPLIED",
+      "objects": ["public.merge_memory_records(text,jsonb)"],
+      "schemaAndDataEffect": "Add bounded invoker RPC with ordered row locks and captured-content comparison. A later user merge atomically updates the retained memory and deletes the other selected records. Applying SQL alone changes no memories.",
+      "dependentSources": ["src/lib/workspace.functions.ts"],
+      "necessity": "Core Memory merge uses this atomic boundary; reverting to multi-call update/delete risks partial data loss and changed-record merges.",
+      "retainedTests": [
+        "tests/unit/memory-merge-sql.test.mjs",
+        "tests/unit/memory-merge-boundary.test.mjs"
+      ],
+      "livePreconditions": [
+        "chat_memories owner policies and update/delete ACL",
+        "project_memory membership/editor policies",
+        "Current auth.uid and single-project ownership semantics"
+      ],
+      "rollback": "Retain the RPC. A completed merge cannot be undone by dropping it; row restoration requires preserved inverse data and current permissions, or separately authorized incident recovery. Older multi-call merge clients are not equivalent."
+    },
+    {
+      "path": "supabase/migrations/20261012031700_atomic_prompt_mutations.sql",
+      "sha256": "72e1591881c8b07aa3d122509b9e6337775a60097c48e4ac13e51fcda3ed42b4",
+      "decision": "RETAIN_UNAPPLIED_SECURITY_AND_ACCESSIBLE_CALLERS",
+      "objects": [
+        "public.touch_prompt_revision()",
+        "public.mutate_prompt_template(uuid,timestamp with time zone,jsonb,boolean)",
+        "prompt_templates update trigger",
+        "restrictive parent-owner policies on prompt_versions and prompt_evaluations"
+      ],
+      "schemaAndDataEffect": "Add locked parent CAS, atomic history allocation and restrictive child-to-parent ownership checks. No ownership reassignment, legacy-row deletion or backfill.",
+      "dependentSources": [
+        "src/lib/professional.functions.ts",
+        "docs/release/prompt-legacy-ownership-preflight.sql"
+      ],
+      "necessity": "Prompt Studio is not in core navigation, but its direct route and authenticated functions remain reachable and are not explicitly paused by the accepted contract. Removing its RPCs breaks callers; removing restrictive ownership policies discards a security correction. No inference that navigation hiding disables the feature.",
+      "retainedTests": [
+        "tests/unit/atomic-prompt-sql.test.mjs",
+        "tests/unit/prompt-mutation-boundary.test.mjs"
+      ],
+      "livePreconditions": [
+        "Exact prompt parent/child schema, trigger composition and effective ACL/RLS",
+        "All-owner foreign-parent history and uniqueness-collision preflight must pass or an approved preserving repair must complete",
+        "Matched old/new write protocols"
+      ],
+      "rollback": "Keep restrictive ownership policies and RPC semantics. Never weaken ownership to bypass a legacy collision. Any quarantine/ownership repair is a separate decision; no automatic down migration or legacy-row cleanup is authorized."
+    },
+    {
+      "path": "supabase/migrations/20261012041908_prompt_evaluation_idempotency.sql",
+      "sha256": "b42e982d09f63f34c15c3ec70fb4ff64cbd4b99c1221086ed2c1a34437299433",
+      "decision": "RETAIN_UNAPPLIED_ACCESSIBLE_CALLERS",
+      "objects": [
+        "public.prompt_evaluations.request_id",
+        "partial owner/request unique index",
+        "public.record_prompt_evaluation(uuid,uuid,integer,text)"
+      ],
+      "schemaAndDataEffect": "Add nullable request identity and an invoker, payload-bound idempotent RPC using an actor/request advisory lock. Legacy NULL request IDs are retained; no existing evaluations are rewritten.",
+      "dependentSources": [
+        "src/lib/professional.functions.ts",
+        "src/lib/prompt-evaluation-identity.mjs"
+      ],
+      "requiresProposal": "20261012031700_atomic_prompt_mutations.sql",
+      "necessity": "Not a signup/login requirement, but current reachable Prompt Studio evaluation writes call this RPC. No accepted contract authorizes dropping this reachable behavior merely to reduce the manifest count.",
+      "retainedTests": [
+        "tests/unit/atomic-prompt-sql.test.mjs",
+        "tests/unit/prompt-evaluation-boundary.test.mjs",
+        "tests/unit/prompt-evaluation-identity.test.mjs"
+      ],
+      "livePreconditions": [
+        "Parent-owner policy and expected user/rating/notes columns",
+        "No conflicting request_id/index/function",
+        "Exact actor identity and parent-cascade receipt lifetime"
+      ],
+      "rollback": "Retain request column, unique index, function and receipts. Older direct inserts can create duplicates; dropping the column destroys retry evidence. A compatible writer or a reviewed write pause is required."
+    },
+    {
+      "path": "docs/release-proposals/deferred-interface/20261012052309_academy_learning_state.sql",
+      "originalPath": "supabase/migrations/20261012052309_academy_learning_state.sql",
+      "sha256": "ae71de43cbc27874a3209fb4552ef9f2b1818cfb04ae89f2b2daae620b5ab8be",
+      "decision": "DEFER_BYTE_IDENTICAL_UNDER_EXISTING_PAUSED_CONTRACT",
+      "objects": [
+        "public.academy_learning_state",
+        "public.academy_write_windows",
+        "private/public save_academy_learning_state",
+        "public.academy_learning_export_rows",
+        "kova_private.account_export_direct_row_bytes(uuid,bigint) replacement"
+      ],
+      "schemaAndDataEffect": "Would add owner-scoped notes/progress, CAS/retry/rate-limit storage, Auth FK cascades, deletion-fenced RPC, security-invoker export view and a replacement account-export budget function. It remains unapplied and outside the migration directory.",
+      "dependentSources": [
+        "src/lib/academy-state-policy.mjs",
+        "src/lib/academy-state.functions.ts",
+        "src/lib/use-academy-account.ts",
+        "src/components/public/AcademyPractice.tsx",
+        "src/lib/account-export-policy.mjs"
+      ],
+      "necessity": "Not needed for the accepted launch: Academy is explicitly paused. Browser loads/saves and direct server handlers now fail closed before Academy database/rate-limit calls. Device notes/export remain available, with truthful copy. Core account export no longer queries the absent view.",
+      "retainedTests": [
+        "tests/unit/academy-state-sql.test.mjs",
+        "tests/unit/academy-remount-recovery.test.mjs"
+      ],
+      "affectedTests": [
+        "tests/unit/academy-state-service.test.mjs",
+        "tests/unit/academy-account-lifecycle.test.mjs",
+        "tests/unit/azure-academy-deferral.test.mjs",
+        "tests/unit/workflow-skills.test.mjs",
+        "tests/integration/account-export-source.test.mjs"
+      ],
+      "futurePrerequisites": [
+        "Separate Academy scope approval",
+        "Matched SQL, account export registry and pagination, deletion-fence and budget acceptance",
+        "No inference from deferred fixture tests that account persistence is enabled"
+      ],
+      "rollback": "No database rollback is needed for this source-only deferral. Preserve the proposal and device drafts. If it is ever deployed, do not DROP stored notes or retry/fence data; retain a matched export-capable rollback."
+    },
+    {
+      "path": "supabase/migrations/20261012053000_canvas_document_titles.sql",
+      "sha256": "0f2187b4109c3c9d6fa42b05e89f58a12073fe4e93f50aac194baa92b2127c9f",
+      "decision": "RETAIN_UNAPPLIED",
+      "objects": [
+        "public.canvas_documents title and retry-binding columns",
+        "public.canvas_revisions.title",
+        "kova_private.canvas_revision_title() and trigger",
+        "kova_private.save_canvas_title(jsonb)",
+        "public.collaboration_rpc(text,jsonb) routing"
+      ],
+      "schemaAndDataEffect": "Add bounded titles (default empty, not reconstructed historical titles), mutation receipts and a revision title-copy trigger. Route only save_title to a deletion-fenced, access-rechecked CAS function; delegate existing operations unchanged. Later title saves append a version and retain the established 50-version window.",
+      "dependentSources": [
+        "src/lib/use-canvas-collaboration.ts",
+        "src/lib/collaboration.ts",
+        "src/components/ArtifactEditor.tsx"
+      ],
+      "necessity": "Core Canvas document rename/title acknowledgement and revision history use save_title and title-bearing responses. Removal leaves current account save and history behavior incomplete.",
+      "retainedTests": [
+        "tests/unit/canvas-title-sql.test.mjs",
+        "tests/unit/canvas-title-lifecycle.test.mjs",
+        "tests/unit/canvas-title-reset.test.mjs"
+      ],
+      "livePreconditions": [
+        "Current private Canvas access predicate, collaboration dispatcher and project/private-chat locking",
+        "Auth UUID existence and irreversible deletion fence",
+        "UTF16 helper, exact columns and old/new revision trigger compatibility"
+      ],
+      "rollback": "Retain columns, title data, receipt binding and title-copy trigger for old content writers. Dropping columns loses data and dedup evidence. Previous application must preserve deletion/access checks and avoid incompatible title writes. No automatic down SQL."
+    }
+  ],
+  "verificationReuse": {
+    "sourceByteBindings": "All eight SQL SHA-256 values match the exact delivered 3ec1 tree; Academy is relocated without modifying bytes. All 185 historical SQL blobs and entry metadata match the Azure baseline.",
+    "sixTailReview": "3ec1:docs/release/ordered-migration-rollback-review-20261012.json binds the first six exact SQL hashes and records their old/new-writer and preflight limitations.",
+    "olderPersistenceReceiptLimitation": "3ec1:docs/release/account-persistence-checkpoint-20261012.json binds older Academy and Canvas SQL hashes a65cc483... and 73385d8f... . Its numeric test totals must not be relabeled as exact-current-SQL proof.",
+    "latestDeliveredHandoff": "The bound ORIGINAL-DOT-HANDOFF.txt reports 29 supplemental PGlite and 29 real PostgreSQL contention/rollback passes for the later source. Reuse as attributed reported evidence; raw per-case output is not in this seven-member bridge. It is not current Azure operational acceptance or an all-green aggregate.",
+    "existingLocalIntegration": "Reuse the 42 focused checks in the prior integrated-tree receipt; refresh only tests affected by this deferral. No build or broad test rerun.",
+    "historicalProofs": "No synthetic test establishes missing historical source157/remote98 preimages, populated backfill compatibility or later-writer attribution. The 19 existing requirements remain unchanged and unaccepted."
+  },
+  "remainingDecisionsAndEvidence": {
+    "sourceDisposition": "Seven proposals are retained because of concrete current dependencies; retaining source is not permission to apply them. Academy remains deferred without needing a new scope expansion.",
+    "academyTargetSafety": "The supplied handoff labels Academy SQL unapplied. Before activating this source on any real target, verify that Academy account persistence was never activated there. If stored Academy rows exist, stop: preserve their export/read path while writes remain paused; do not omit existing account data merely because the feature is deferred. No target inspection or data removal occurred here.",
+    "beforeAnyDatabaseOperation": "Obtain explicit approval for the ordered seven-tail database changes only after exact target/current-object preconditions, all-owner prompt ownership/uniqueness checks, full dependency closure and matched rollback-writer evidence are bound. Apply none to the old production database merely to make comparisons match.",
+    "historicalAcceptance": "Recover the exact missing source157/remote98 scope artifacts and historical data evidence indexed by the existing 19-proof review. Not located does not mean confirmed unavailable. No canonical pin change is proposed.",
+    "otherOwners": "Auth supplies its existing live 22-check acceptance; Models supplies CPU/runtime qualification. These are downstream release requirements, not reasons to repeat completed local integration.",
+    "release": "A fresh healthy Running previous-revision receipt, accepted integrated source, matched image provenance/configuration and separate publication/build/deployment authority are still required. This document authorizes none of them."
+  }
+}

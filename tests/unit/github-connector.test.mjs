@@ -94,3 +94,34 @@ test("webhook HMAC validation rejects tampering", async () => {
   assert.equal(await verifyGitHubWebhook({ secret, signature, body }), true);
   assert.equal(await verifyGitHubWebhook({ secret, signature, body: `${body}x` }), false);
 });
+
+test("workflow and check endpoints preserve their named result collections", async () => {
+  for (const [method, collection] of [
+    ["workflows", "workflows"],
+    ["workflowRuns", "workflow_runs"],
+    ["checks", "check_runs"],
+  ]) {
+    const client = new GitHubClient({
+      token: "fixture",
+      allowedRepositories: ["acme/repo"],
+      fetchImpl: async (_url, options) => {
+        assert.equal(options.redirect, "error");
+        assert.ok(options.signal instanceof AbortSignal);
+        return response({ total_count: 1, [collection]: [{ id: 42 }] });
+      },
+    });
+    assert.deepEqual(await client[method]("acme/repo", "main"), [{ id: 42 }]);
+  }
+});
+
+test("a malformed GitHub collection is not reported as an empty successful result", async () => {
+  const client = new GitHubClient({
+    token: "fixture",
+    allowedRepositories: ["acme/repo"],
+    fetchImpl: async () => response({ unexpected: [] }),
+  });
+  await assert.rejects(
+    () => client.workflows("acme/repo"),
+    (error) => error.code === "invalid_response",
+  );
+});

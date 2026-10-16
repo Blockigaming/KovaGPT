@@ -35,6 +35,7 @@ const CanvasSnapshot = z.object({
     chat_id: z.string(),
     message_id: z.string(),
     content: z.string().max(400000),
+    title: z.string().max(200).optional(),
     revision: z.number().int().positive(),
     comment_epoch: z.number().int().nonnegative().default(0),
     updated_at: z.string(),

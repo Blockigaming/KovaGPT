@@ -56,7 +56,7 @@ class MemoryStorage {
   }
 }
 
-test("principal identity never treats unresolved auth as guest", () => {
+test("principal identity never treats unresolved auth as guest", async () => {
   assert.equal(browserStoragePrincipal(undefined), null);
   assert.equal(browserStoragePrincipal(null), "guest");
   assert.equal(browserStoragePrincipal("account/a"), "user:account%2Fa");
@@ -69,7 +69,7 @@ test("principal identity never treats unresolved auth as guest", () => {
   );
 });
 
-test("account cleanup removes only A plus unscoped private state", () => {
+test("account cleanup removes only A plus unscoped private state", async () => {
   const local = new MemoryStorage([
     ["nova-gpt-conversations-v3:user:A", "malformed-but-removable"],
     ["nova-gpt-conversations-v3:user:B", "b"],
@@ -113,7 +113,8 @@ test("account cleanup removes only A plus unscoped private state", () => {
     ["unrelated-session", "keep"],
   ]);
 
-  const result = clearPrincipalBrowserStorage("A", {
+  const result = await clearPrincipalBrowserStorage("A", {
+    locks: { request: async (_key, fn) => fn() },
     localStorage: local,
     sessionStorage: session,
   });
@@ -168,7 +169,7 @@ test("account cleanup removes only A plus unscoped private state", () => {
   assert.equal(session.has("unrelated-session"), true);
 });
 
-test("confirmed guest cleanup removes guest scoped and guest legacy data", () => {
+test("confirmed guest cleanup removes guest scoped and guest legacy data", async () => {
   const local = new MemoryStorage([
     ["nova-gpt-conversations-v3:guest", "guest"],
     ["nova-gpt-conversations-v3:user:A", "a"],
@@ -185,7 +186,8 @@ test("confirmed guest cleanup removes guest scoped and guest legacy data", () =>
     ["kova-active-context-pack:v2:user:A", "a-pack"],
   ]);
 
-  const result = clearPrincipalBrowserStorage(null, {
+  const result = await clearPrincipalBrowserStorage(null, {
+    locks: { request: async (_key, fn) => fn() },
     localStorage: local,
     sessionStorage: session,
   });
@@ -204,7 +206,7 @@ test("confirmed guest cleanup removes guest scoped and guest legacy data", () =>
   assert.equal(session.has("kova-active-context-pack:v2:user:A"), true);
 });
 
-test("unresolved auth is a storage-free no-op", () => {
+test("unresolved auth is a storage-free no-op", async () => {
   let accesses = 0;
   const unavailable = {
     get length() {
@@ -225,7 +227,8 @@ test("unresolved auth is a storage-free no-op", () => {
     },
   };
 
-  const result = clearPrincipalBrowserStorage(undefined, {
+  const result = await clearPrincipalBrowserStorage(undefined, {
+    locks: { request: async (_key, fn) => fn() },
     localStorage: unavailable,
     sessionStorage: unavailable,
   });
@@ -235,7 +238,7 @@ test("unresolved auth is a storage-free no-op", () => {
   assert.equal(listPrincipalBrowserStorageKeys(undefined), null);
 });
 
-test("safe storage resolution catches throwing global getters", () => {
+test("safe storage resolution catches throwing global getters", async () => {
   let accesses = 0;
   const target = {};
   Object.defineProperty(target, "sessionStorage", {
@@ -257,7 +260,7 @@ test("safe storage resolution catches throwing global getters", () => {
   );
 });
 
-test("first resolution purge removes ownerless data without deleting guest or incoming user", () => {
+test("first resolution purge removes ownerless data without deleting guest or incoming user", async () => {
   const local = new MemoryStorage([
     ["kova-prompt-studio-draft-v1", "ownerless"],
     ["kova-prompt-studio-draft:v2:guest", "guest"],
@@ -288,7 +291,7 @@ test("first resolution purge removes ownerless data without deleting guest or in
   assert.equal(session.has("kova-prompt-launch:v2:user:A"), true);
 });
 
-test("one storage failure does not stop remaining exact cleanup", () => {
+test("one storage failure does not stop remaining exact cleanup", async () => {
   const blockedKey = "nova-gpt-conversations-v3:user:A";
   const local = new MemoryStorage(
     [
@@ -298,7 +301,8 @@ test("one storage failure does not stop remaining exact cleanup", () => {
     { failOnRemove: blockedKey },
   );
 
-  const result = clearPrincipalBrowserStorage("A", {
+  const result = await clearPrincipalBrowserStorage("A", {
+    locks: { request: async (_key, fn) => fn() },
     localStorage: local,
     sessionStorage: null,
   });
@@ -308,7 +312,7 @@ test("one storage failure does not stop remaining exact cleanup", () => {
   assert.deepEqual(result.session.failures, ["session:unavailable"]);
 });
 
-test("handoff envelopes enforce principal, age, size, and schema", () => {
+test("handoff envelopes enforce principal, age, size, and schema", async () => {
   const now = 10_000;
   const envelope = createPrincipalHandoffEnvelope("A", { prompt: "hello" }, now);
   assert.deepEqual(parsePrincipalHandoffEnvelope(JSON.stringify(envelope), "A", { now }), {
@@ -351,7 +355,7 @@ test("handoff envelopes enforce principal, age, size, and schema", () => {
   assert.equal(createPrincipalHandoffEnvelope(undefined, {}, now), null);
 });
 
-test("scoped handoff helpers write, consume once, and never inspect ownerless keys", () => {
+test("scoped handoff helpers write, consume once, and never inspect ownerless keys", async () => {
   const now = 25_000;
   const storage = new MemoryStorage([["kova-prompt-launch", '{"prompt":"legacy"}']]);
   const written = writePrincipalHandoff(
@@ -381,7 +385,7 @@ test("scoped handoff helpers write, consume once, and never inspect ownerless ke
   );
 });
 
-test("scoped handoff consumers reject mismatched, legacy, expired, and oversized values", () => {
+test("scoped handoff consumers reject mismatched, legacy, expired, and oversized values", async () => {
   const now = 40_000;
   const keyB = principalScopedStorageKey("kova-work-context", "B");
   const storage = new MemoryStorage([
@@ -421,7 +425,7 @@ test("scoped handoff consumers reject mismatched, legacy, expired, and oversized
   );
 });
 
-test("handoff I/O fails closed and unresolved auth performs no storage access", () => {
+test("handoff I/O fails closed and unresolved auth performs no storage access", async () => {
   let accesses = 0;
   const forbidden = {
     getItem() {
@@ -458,7 +462,7 @@ test("handoff I/O fails closed and unresolved auth performs no storage access", 
   );
 });
 
-test("principal cleanup events match only their resolved principal", () => {
+test("principal cleanup events match only their resolved principal", async () => {
   let dispatched = null;
   class TestCustomEvent {
     constructor(type, init) {

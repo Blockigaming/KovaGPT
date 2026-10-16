@@ -1,3 +1,5 @@
+import { isLaunchConnector } from "./launch-contracts.mjs";
+
 export type OAuthProviderId =
   "microsoft" | "github" | "slack" | "notion" | "linear" | "dropbox" | "box";
 export type OAuthProviderAdapter = {
@@ -143,6 +145,10 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
 
 export function configuredOAuthProviders() {
   return Object.values(OAUTH_PROVIDERS).filter(
-    (provider) => process.env[provider.clientIdEnv] && process.env[provider.clientSecretEnv],
+    (provider) =>
+      provider.id !== "microsoft" &&
+      !isLaunchConnector(provider.id) &&
+      process.env[provider.clientIdEnv] &&
+      process.env[provider.clientSecretEnv],
   );
 }

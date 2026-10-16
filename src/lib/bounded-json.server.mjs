@@ -71,11 +71,26 @@ async function readChunk(reader, signal) {
   }
 }
 
-export async function readBoundedUtf8(request, maxBytes = DEFAULT_JSON_BODY_LIMIT, signal) {
+export async function readBoundedUtf8(
+  request,
+  maxBytes = DEFAULT_JSON_BODY_LIMIT,
+  signal,
+  expectedBytes,
+) {
   validateLimit(maxBytes);
+  if (
+    expectedBytes !== undefined &&
+    (!Number.isSafeInteger(expectedBytes) || expectedBytes < 0 || expectedBytes > maxBytes)
+  ) {
+    throw new TypeError("expectedBytes must be a safe integer within the byte limit");
+  }
   validateContentLength(request, maxBytes);
 
-  if (!request.body) return "";
+  if (!request.body) {
+    if (expectedBytes !== undefined && expectedBytes !== 0)
+      throw new BoundedJsonError("body_size_mismatch", 400);
+    return "";
+  }
   const reader = request.body.getReader();
   const decoder = new TextDecoder("utf-8", { fatal: true });
   let bytesRead = 0;
@@ -93,6 +108,9 @@ export async function readBoundedUtf8(request, maxBytes = DEFAULT_JSON_BODY_LIMI
       text += decoder.decode(value, { stream: true });
     }
     text += decoder.decode();
+    if (expectedBytes !== undefined && bytesRead !== expectedBytes) {
+      throw new BoundedJsonError("body_size_mismatch", 400);
+    }
     return text;
   } catch (error) {
     if (error instanceof BoundedJsonError) throw error;

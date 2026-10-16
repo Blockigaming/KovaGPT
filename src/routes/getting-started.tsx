@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PUBLIC_MODE_PLAN_SUMMARY } from "@/lib/public-mode-copy";
 import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/getting-started")({
@@ -30,7 +31,7 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "2. Choose a mode",
-    body: "Free includes Instant and Thinking. Plus includes Instant, Medium, and High. Pro includes Instant, Medium, High, Extra High, Max, and Ultra. Search is a separate tool with provider requirements.",
+    body: `${PUBLIC_MODE_PLAN_SUMMARY} Mode labels do not identify the serving model. Response availability depends on the configured provider. Search is a separate tool with provider requirements.`,
   },
   {
     title: "3. Sign in to save your work",
@@ -42,7 +43,7 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "5. Check your usage",
-    body: "Signed-in users can view daily usage from Settings → Subscription.",
+    body: "Signed-in users can view daily usage from Settings → Usage.",
   },
   { title: "6. Get help", body: "For support, contact support@kovagpt.com." },
 ];
@@ -67,39 +68,54 @@ function GettingStartedPage() {
         </div>
 
         <div className="mt-10 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-          <Link to="/modes" className="underline hover:text-foreground">
+          <Link to="/modes" className="kova-public-action-link underline hover:text-foreground">
             Explore modes
           </Link>
-          <Link to="/images" className="underline hover:text-foreground">
+          <Link to="/images" className="kova-public-action-link underline hover:text-foreground">
             Generate images
           </Link>
-          <Link to="/pricing" className="underline hover:text-foreground">
+          <Link to="/pricing" className="kova-public-action-link underline hover:text-foreground">
             View pricing
           </Link>
-          <Link to="/contact-support" className="underline hover:text-foreground">
+          <Link
+            to="/contact-support"
+            className="kova-public-action-link underline hover:text-foreground"
+          >
             Contact support
           </Link>
         </div>
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-          <Link to="/ai-writer" className="underline hover:text-foreground">
+          <Link to="/ai-writer" className="kova-public-action-link underline hover:text-foreground">
             AI Writer
           </Link>
-          <Link to="/study-assistant" className="underline hover:text-foreground">
+          <Link
+            to="/study-assistant"
+            className="kova-public-action-link underline hover:text-foreground"
+          >
             Study Assistant
           </Link>
-          <Link to="/code-helper" className="underline hover:text-foreground">
+          <Link
+            to="/code-helper"
+            className="kova-public-action-link underline hover:text-foreground"
+          >
             Code Helper
           </Link>
-          <Link to="/research-assistant" className="underline hover:text-foreground">
+          <Link
+            to="/research-assistant"
+            className="kova-public-action-link underline hover:text-foreground"
+          >
             Research Assistant
           </Link>
-          <Link to="/ai-image-generator" className="underline hover:text-foreground">
+          <Link
+            to="/ai-image-generator"
+            className="kova-public-action-link underline hover:text-foreground"
+          >
             AI Image Generator
           </Link>
         </div>
 
         <p className="mt-8 text-sm">
-          <Link to="/" className="underline hover:text-foreground">
+          <Link to="/" className="kova-public-action-link underline hover:text-foreground">
             ← Back to KovaGPT
           </Link>
         </p>

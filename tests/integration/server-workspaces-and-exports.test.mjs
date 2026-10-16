@@ -39,7 +39,7 @@ test("Writing keeps all real document writers behind the shared lazy export boun
 });
 
 test("universal search loads authorized workspace results asynchronously", async () => {
-  const index = await read("src/routes/index.tsx");
+  const index = await read("src/components/ChatWorkspace.tsx");
   const palette = await read("src/components/CommandPalette.tsx");
   assert.match(index, /import\("@\/lib\/workspace\.functions"\)/);
   assert.match(index, /listWorkspaceRecents/);

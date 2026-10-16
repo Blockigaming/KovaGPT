@@ -276,7 +276,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                     type="button"
                     onClick={() => fileRef.current?.click()}
                     aria-label="Add files and more"
-                    className="grid h-10 w-10 place-items-center rounded-full border border-border hover:bg-muted"
+                    className="kova-workspace-action grid h-10 w-10 place-items-center rounded-full border border-border hover:bg-muted"
                   >
                     <Paperclip aria-hidden="true" className="h-4 w-4" />
                   </button>
@@ -284,7 +284,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                     type="button"
                     disabled={!source.trim() || Boolean(busy)}
                     onClick={() => void run()}
-                    className="ml-auto inline-flex min-h-10 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-background disabled:opacity-30"
+                    className="kova-workspace-action ml-auto inline-flex min-h-10 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-background disabled:opacity-30"
                   >
                     {busy === "translate" ? (
                       <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
@@ -314,7 +314,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                   aria-label="Copy translation"
                   disabled={!translation}
                   onClick={() => void copy()}
-                  className="absolute bottom-3 right-3 inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-background px-3 text-sm hover:bg-muted disabled:opacity-35"
+                  className="kova-workspace-action absolute bottom-3 right-3 inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-background px-3 text-sm hover:bg-muted disabled:opacity-35"
                 >
                   {copied ? (
                     <Check aria-hidden="true" className="h-4 w-4" />

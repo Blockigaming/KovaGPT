@@ -1,3 +1,4 @@
+import * as coreLaunchPolicy from "../../src/lib/core-launch-policy.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -13,6 +14,7 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
   const module = loadUiModule(
     "src/components/CommandPalette.tsx",
     {
+      "@/lib/core-launch-policy.mjs": coreLaunchPolicy,
       react: { ...hooks.react, useDeferredValue: (value) => value, useMemo: (fn) => fn() },
       "@tanstack/react-router": { Link: "Link" },
       "lucide-react": Object.fromEntries(
@@ -89,6 +91,7 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
     onSelectChat: () => actions.push("chat"),
     onSelectArchived: () => actions.push("archive"),
     onOpenSettings: () => actions.push("settings"),
+    onChangeTheme: (mode) => actions.push(`settings-theme:${mode}`),
   };
   const render = () => hooks.render(module.CommandPalette, props);
   render();
@@ -103,7 +106,7 @@ function fixture({ query = "", recent = [], pinned = [] } = {}) {
     inputTarget,
     key(key, target = inputTarget, nativeEvent = {}) {
       let prevented = false;
-      tree.props.onKeyDown({
+      render().props.onKeyDown({
         key,
         target,
         nativeEvent,
@@ -178,3 +181,22 @@ test("the real guest palette fixture runs on all three engines without productio
   assert.match(auth, /user: null/);
   assert.doesNotMatch(auth, /^\s*import\b|\b(?:import|fetch)\s*\(/m);
 });
+
+for (const method of ["click", "keyboard"])
+  test(`palette ${method} theme change reaches the settings owner`, () => {
+    const f = fixture({ query: "appearance" });
+    if (method === "keyboard") {
+      f.key("ArrowDown");
+      f.key("ArrowDown");
+      f.key("Enter");
+    } else
+      elements(
+        f.tree,
+        (node) => node.type === "button" && text(node).includes("Toggle appearance"),
+      )[0].props.onClick();
+    assert.ok(f.actions.includes("settings-theme:dark"));
+    assert.ok(
+      !f.actions.includes("theme"),
+      "must not change only the root class without settings state",
+    );
+  });

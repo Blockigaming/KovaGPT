@@ -42,22 +42,23 @@ const routes = [
   "/reset-password",
 ];
 
-test("implemented routes render without server errors or horizontal overflow", async ({
-  page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop-1440x900");
-  test.setTimeout(90_000);
+test.describe("implemented routes render without server errors or horizontal overflow", () => {
+  // Each route gets the default test budget and its own failure trace. A shared
+  // budget made normal navigation time across all 37 routes exhaust 90 seconds.
   for (const route of routes) {
-    const response = await page.goto(route, { waitUntil: "domcontentloaded" });
-    expect(response?.status(), `${route} should be implemented`).toBeLessThan(400);
-    await expect(page.locator("body")).toBeVisible();
-    const overflow = await page.evaluate(() => ({
-      width: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-    }));
-    expect(overflow.scrollWidth, `${route} should fit the viewport`).toBeLessThanOrEqual(
-      overflow.width + 1,
-    );
+    test(route, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== "desktop-1440x900");
+      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      expect(response?.status(), `${route} should be implemented`).toBeLessThan(400);
+      await expect(page.locator("body")).toBeVisible();
+      const overflow = await page.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(overflow.scrollWidth, `${route} should fit the viewport`).toBeLessThanOrEqual(
+        overflow.width + 1,
+      );
+    });
   }
 });
 

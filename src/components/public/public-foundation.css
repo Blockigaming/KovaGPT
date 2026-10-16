@@ -541,6 +541,7 @@
   gap: 2rem;
 }
 [data-public-shell] .legal-toc-mobile {
+  margin-block-end: 1rem;
   border: 1px solid var(--border);
   border-radius: 1rem;
   background: var(--muted);
@@ -601,7 +602,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-[data-public-shell] .legal-toc-list {
+[data-public-shell] ol.legal-toc-list {
   display: grid;
   gap: 0.125rem;
   margin: 0;
@@ -609,7 +610,12 @@
   border-inline-start: 1px solid var(--border);
   list-style: none;
 }
+[data-public-shell] .legal-toc-list > li {
+  list-style: none;
+}
 [data-public-shell] .legal-toc-list a {
+  min-height: var(--layout-control, 36px);
+  overflow-wrap: anywhere;
   display: flex;
   align-items: baseline;
   gap: 0.75rem;
@@ -632,6 +638,8 @@
   font-weight: 500;
 }
 [data-public-shell] .legal-toc-index {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
   font-size: 0.6875rem;
   color: var(--muted-foreground);
@@ -928,4 +936,45 @@
   --muted: #222;
   --muted-foreground: #b4b4b4;
   --border: #383838;
+}
+
+/* Opt-in article defaults replace unavailable prose utilities without overriding explicit content styles. */
+[data-public-shell] .kova-public-article {
+  min-width: 0;
+}
+[data-public-shell] .kova-public-article p:not([class]) {
+  margin-block: 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  color: var(--muted-foreground);
+}
+[data-public-shell] .kova-public-article ul:not([class]),
+[data-public-shell] .kova-public-article ol:not([class]) {
+  margin-block: 1.25rem;
+  padding-inline-start: 1.5rem;
+  list-style-position: outside;
+}
+[data-public-shell] .kova-public-article ul:not([class]) {
+  list-style-type: disc;
+}
+[data-public-shell] .kova-public-article ol:not([class]) {
+  list-style-type: decimal;
+}
+[data-public-shell] .kova-public-article li:not([class]) {
+  margin-block: 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  color: var(--muted-foreground);
+}
+[data-public-shell] .kova-public-article :is(p, li, a) {
+  overflow-wrap: anywhere;
+}
+[data-public-shell] .kova-public-article a:not([class]) {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+[data-public-shell] .kova-public-article a:focus-visible {
+  outline: 2px solid var(--ring, var(--foreground));
+  outline-offset: 2px;
 }

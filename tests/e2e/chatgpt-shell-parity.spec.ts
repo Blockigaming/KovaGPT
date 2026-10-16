@@ -63,50 +63,36 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
 
     expect(await page.locator(".kova-greeting-mark").count()).toBe(0);
     expect(await page.locator(".kova-starter-grid").count()).toBe(0);
-    expect(
-      await page
-        .getByText("Think through a question, shape an idea, or get a polished first draft.")
-        .count(),
-    ).toBe(0);
+    expect(await page.getByText("Bring a question, an idea, or a rough first draft.").count()).toBe(
+      0,
+    );
   });
 
-  test("signed-in desktop navigation keeps Chat and Work one step apart", async ({ page }) => {
+  test("signed-in desktop navigation opens Library and returns to the unified assistant", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await installAuthenticatedFixture(page);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
-
-    const chatNavigation = page.getByRole("navigation", { name: "Primary workspace" });
-    await expect(chatNavigation).toBeVisible();
-    await expect(chatNavigation.getByRole("link", { name: "Chat" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-
-    await chatNavigation.getByRole("link", { name: "Work" }).click();
-    await expect(page).toHaveURL(/\/work$/);
-    const workNavigation = page.getByRole("navigation", { name: "Primary workspace" });
-    await expect(workNavigation).toBeVisible();
-    await expect(workNavigation.getByRole("link", { name: "Work" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-
-    await workNavigation.getByRole("link", { name: "Chat" }).click();
+    await expect(page.getByRole("navigation", { name: "Primary workspace" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Files", exact: true })).toHaveCount(0);
+    await page.getByRole("link", { name: "Library", exact: true }).click();
+    await expect(page).toHaveURL(/\/library$/);
+    await page.getByRole("button", { name: "New chat", exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
   });
-
-  test("collapsed desktop navigation keeps Work one step away", async ({ page }) => {
+  test("collapsed desktop navigation keeps Library one step away", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await installAuthenticatedFixture(page);
     await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
-
-    const workLink = page.getByRole("link", { name: "Work" });
-    await expect(workLink).toBeVisible();
-    await workLink.click();
-    await expect(page).toHaveURL(/\/work$/);
+    const libraryLink = page.getByRole("link", { name: "Library", exact: true });
+    await expect(libraryLink).toBeVisible();
+    await libraryLink.click();
+    await expect(page).toHaveURL(/\/library$/);
   });
 
   test("active desktop chat keeps secondary actions in one overflow menu", async ({
@@ -184,7 +170,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
         await expect(page.locator(".kova-greeting-mark")).toHaveCount(0);
         await expect(page.locator(".kova-starter-grid")).toHaveCount(0);
         await expect(
-          page.getByText("Think through a question, shape an idea, or get a polished first draft."),
+          page.getByText("Bring a question, an idea, or a rough first draft."),
         ).toHaveCount(0);
         if (width < 1024) {
           await expect(page.getByRole("button", { name: "Log in" })).toHaveCount(0);

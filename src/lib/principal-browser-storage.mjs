@@ -18,6 +18,9 @@ export const PRINCIPAL_LOCAL_STORAGE_BASES = Object.freeze([
   "kova-write-title",
   "kova.write.versions.v1",
   "kova-prompt-studio-draft",
+  "kova-image-brief",
+  "kova-academy-progress",
+  "kova-document-titles",
   "kova-library-favorites",
   "kovagpt-saved-message-ids",
   "kova-message-feedback",
@@ -33,6 +36,8 @@ export const PRINCIPAL_LOCAL_STORAGE_BASES = Object.freeze([
 ]);
 
 export const PRINCIPAL_SESSION_STORAGE_BASES = Object.freeze([
+  "kova-support-retry",
+  "kova-prompt-evaluation-retries",
   "kova-context-candidates",
   "kova-active-context-pack",
   "kova-app-chat-context",
@@ -372,6 +377,9 @@ function principalKeyPlan(identity, { purgeUnscopedPrivate = true } = {}) {
   if (purgeUnscopedPrivate) localPrefixes.push(...UNSCOPED_PRIVATE_LOCAL_PREFIXES);
 
   const sessionExact = PRINCIPAL_SESSION_STORAGE_BASES.map((base) => `${base}:v2:${principal}`);
+  // Unreleased evaluation clients passed the encoded principal to the key builder.
+  // Remove that exact legacy spelling during this same principal's cleanup.
+  sessionExact.push(principalScopedStorageKey("kova-prompt-evaluation-retries", principal));
   if (purgeUnscopedPrivate) sessionExact.push(...UNSCOPED_PRIVATE_SESSION_EXACT_KEYS);
 
   return {
@@ -437,7 +445,7 @@ function clearStorageArea(storage, exactKeys, prefixes, area) {
  * Remove exactly one resolved principal's registered browser data. Passing
  * `undefined` is an auth-not-loaded no-op; only `null` means confirmed guest.
  */
-export function clearPrincipalBrowserStorage(userKey, options = {}) {
+export async function clearPrincipalBrowserStorage(userKey, options = {}) {
   const identity = storagePrincipal(userKey);
   if (!identity) {
     return {
@@ -457,13 +465,53 @@ export function clearPrincipalBrowserStorage(userKey, options = {}) {
     ? options.sessionStorage
     : defaultStorage("sessionStorage");
 
-  return {
-    resolved: true,
-    reason: null,
-    principal: identity.principal,
-    local: clearStorageArea(local, plan.localExact, plan.localPrefixes, "local"),
-    session: clearStorageArea(session, plan.sessionExact, [], "session"),
+  const lockKey = principalScopedStorageKey("kova-device-record-epoch", userKey);
+  const locks = options.locks ?? globalThis.navigator?.locks;
+  const clear = () => {
+    const failures = [];
+    // Retain a non-content tombstone outside the cleared registry. Every device
+    // writer reads it under this same principal lock, including first saves.
+    if (local) {
+      try {
+        local.setItem(lockKey, globalThis.crypto.randomUUID());
+      } catch {
+        failures.push("local:device_recovery_fence_failed");
+      }
+    }
+    const deviceKeys = ["kova-image-brief", "kova-academy-progress", "kova-document-titles"].map(
+      (base) => principalScopedStorageKey(base, userKey),
+    );
+    const safeKeys =
+      failures.length || !locks?.request
+        ? plan.localExact.filter((key) => !deviceKeys.includes(key))
+        : plan.localExact;
+    const cleared = clearStorageArea(local, safeKeys, plan.localPrefixes, "local");
+    cleared.failures.push(...failures);
+    if (!locks?.request) cleared.failures.push("local:device_recovery_lock_unavailable");
+    return {
+      resolved: true,
+      reason: null,
+      principal: identity.principal,
+      local: cleared,
+      session: clearStorageArea(session, plan.sessionExact, [], "session"),
+    };
   };
+  if (!locks?.request) return clear();
+  try {
+    return await locks.request(lockKey, clear);
+  } catch {
+    return {
+      resolved: true,
+      reason: null,
+      principal: identity.principal,
+      local: {
+        available: Boolean(local),
+        removed: [],
+        failures: ["local:device_recovery_lock_failed"],
+      },
+      session: clearStorageArea(session, plan.sessionExact, [], "session"),
+    };
+  }
 }
 
 /**

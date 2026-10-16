@@ -4,7 +4,7 @@ import test from "node:test";
 
 const portability = await readFile("src/lib/device-data-portability.ts", "utf8");
 const settings = await readFile("src/components/SettingsDialog.tsx", "utf8");
-const chat = await readFile("src/routes/index.tsx", "utf8");
+const chat = await readFile("src/components/ChatWorkspace.tsx", "utf8");
 const matrix = await readFile("docs/release/acceptance-ledger.md", "utf8");
 const generatedLedger = JSON.parse(
   await readFile("docs/release/acceptance-ledger.generated.json", "utf8"),

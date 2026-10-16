@@ -1,3 +1,9 @@
+import { loose } from "@/lib/supabase-loose";
+import {
+  readCollectionPage,
+  CollectionPageInput,
+  type CollectionPage,
+} from "@/lib/read-bounded-collection";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -102,18 +108,35 @@ export type PromptTemplate = z.infer<typeof PromptInput> & {
   updated_at: string;
   use_count: number;
 };
+const SavedPrompt = PromptInput.extend({
+  id: z.string().uuid(),
+  updated_at: z.string().datetime({ offset: true }),
+  created_at: z.string().datetime({ offset: true }),
+  last_used_at: z.string().datetime({ offset: true }).nullable(),
+  use_count: z.number().int().nonnegative(),
+});
 export const listPromptTemplates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<PromptTemplate[]> => {
-    const { data, error } = await t(context.supabase, "prompt_templates")
-      .select(
-        "id,name,category,body,variables,project_id,context_pack_id,favorite,folder,use_count,last_used_at,created_at,updated_at",
-      )
-      .eq("user_id", context.userId)
-      .order("updated_at", { ascending: false })
-      .limit(200);
-    if (error) throw new Error("Prompts could not be loaded");
-    return (data ?? []) as PromptTemplate[];
+  .validator((input: unknown) => CollectionPageInput.parse(input))
+  .handler(async ({ data, context }): Promise<CollectionPage<PromptTemplate>> => {
+    return readCollectionPage<PromptTemplate>(
+      (signal) => {
+        let query = loose(context.supabase)
+          .from("prompt_templates")
+          .select(
+            "id,name,category,body,variables,project_id,context_pack_id,favorite,folder,use_count,last_used_at,created_at,updated_at",
+          )
+          .eq("user_id", context.userId)
+          .order("id", { ascending: true })
+          .limit(20)
+          .abortSignal(signal);
+        if (data.cursor) query = query.gt("id", data.cursor);
+        return query;
+      },
+      "Prompts",
+      data.cursor,
+      20,
+    );
   });
 export const savePromptTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -128,64 +151,58 @@ export const savePromptTemplate = createServerFn({ method: "POST" })
     if (error || !row) throw new Error("Prompt could not be saved");
     return row as PromptTemplate;
   });
+const PromptUpdate = z.union([
+  z.object({ id: z.string().uuid(), increment_use: z.literal(true) }).strict(),
+  z
+    .object({
+      id: z.string().uuid(),
+      expectedUpdatedAt: z.string().datetime({ offset: true }),
+      favorite: z.boolean().optional(),
+      name: z.string().trim().min(1).max(120).optional(),
+      body: z.string().trim().min(1).max(12000).optional(),
+      variables: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
+      folder: z.string().trim().min(1).max(80).optional(),
+    })
+    .strict()
+    .refine((value) => Object.keys(value).length > 2, "Prompt changes are required"),
+]);
 export const updatePromptTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((i: unknown) =>
-    z
-      .object({
-        id: z.string().uuid(),
-        favorite: z.boolean().optional(),
-        last_used_at: z.string().datetime().optional(),
-        name: z.string().trim().min(1).max(120).optional(),
-        body: z.string().trim().min(1).max(12000).optional(),
-        variables: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
-        folder: z.string().trim().min(1).max(80).optional(),
-        increment_use: z.boolean().optional(),
+  .validator((input: unknown) => PromptUpdate.parse(input))
+  .handler(async ({ data, context }): Promise<PromptTemplate> => {
+    const usage = "increment_use" in data;
+    const { id, ...rest } = data;
+    const changes = usage
+      ? {}
+      : Object.fromEntries(Object.entries(rest).filter(([key]) => key !== "expectedUpdatedAt"));
+    const result = await loose(context.supabase)
+      .rpc("mutate_prompt_template", {
+        p_prompt_id: id,
+        p_expected_updated_at: "expectedUpdatedAt" in data ? data.expectedUpdatedAt : null,
+        p_changes: changes,
+        p_increment_use: usage,
       })
-      .parse(i),
-  )
-  .handler(async ({ data, context }) => {
-    const { id, increment_use, ...changes } = data;
-    const existing = await t(context.supabase, "prompt_templates")
-      .select("id,name,body,variables,use_count")
-      .eq("id", id)
+      .abortSignal(AbortSignal.timeout(15000));
+    const saved = SavedPrompt.safeParse(result.data);
+    if (result.error || !saved.success || saved.data.id !== id)
+      throw new Error("Prompt could not be confirmed. Review saved prompt before retrying.");
+    return saved.data;
+  });
+export const readPromptTemplate = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<PromptTemplate> => {
+    const { data: row, error } = await loose(context.supabase)
+      .from("prompt_templates")
+      .select(
+        "id,name,category,body,variables,project_id,context_pack_id,favorite,folder,use_count,last_used_at,created_at,updated_at",
+      )
+      .eq("id", data.id)
       .eq("user_id", context.userId)
-      .single();
-    if (existing.error || !existing.data) throw new Error("Prompt could not be updated");
-    const current = existing.data as Record<string, unknown>;
-    if (changes.body || changes.name) {
-      const versions = await t(context.supabase, "prompt_versions")
-        .select("id,version")
-        .eq("prompt_id", id)
-        .order("version", { ascending: false })
-        .limit(1);
-      const latest = ((versions.data ?? [])[0] as Record<string, unknown> | undefined)?.version;
-      const snapshot = await t(context.supabase, "prompt_versions")
-        .insert({
-          prompt_id: id,
-          user_id: context.userId,
-          version: Number(latest ?? 0) + 1,
-          name: String(current.name),
-          body: String(current.body),
-          variables: current.variables,
-        })
-        .select("id")
-        .single();
-      if (snapshot.error) throw new Error("Prompt revision could not be recorded");
-    }
-    const persisted = {
-      ...changes,
-      ...(increment_use ? { use_count: Number(current.use_count ?? 0) + 1 } : {}),
-      updated_at: new Date().toISOString(),
-    };
-    const { error } = await t(context.supabase, "prompt_templates")
-      .update(persisted)
-      .eq("id", id)
-      .eq("user_id", context.userId)
-      .select("id")
-      .single();
-    if (error) throw new Error("Prompt could not be updated");
-    return { ok: true };
+      .single()
+      .abortSignal(AbortSignal.timeout(15000));
+    if (error || !row) throw new Error("Saved prompt is unavailable.");
+    return row as PromptTemplate;
   });
 
 export type PromptVersion = {
@@ -206,64 +223,127 @@ export type PromptEvaluation = {
 };
 export const listPromptHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((i: unknown) => z.object({ prompt_id: z.string().uuid() }).parse(i))
+  .validator((input: unknown) =>
+    z
+      .object({
+        prompt_id: z.string().uuid(),
+        source: z.enum(["versions", "evaluations", "both"]).optional(),
+        cursor: z.string().uuid().nullable().optional(),
+      })
+      .parse(input),
+  )
   .handler(
     async ({
       data,
       context,
-    }): Promise<{ versions: PromptVersion[]; evaluations: PromptEvaluation[] }> => {
+    }): Promise<{
+      versions: PromptVersion[];
+      evaluations: PromptEvaluation[];
+      versionCursor: string | null;
+      evaluationCursor: string | null;
+    }> => {
+      const source = data.source ?? "both",
+        cursor = data.cursor ?? null;
+      const read = <T extends { id: string }>(table: string, columns: string) =>
+        readCollectionPage<T>(
+          (signal) => {
+            let query = loose(context.supabase)
+              .from(table)
+              .select(columns)
+              .eq("prompt_id", data.prompt_id)
+              .eq("user_id", context.userId)
+              .order("id", { ascending: true })
+              .limit(20)
+              .abortSignal(signal);
+            if (cursor) query = query.gt("id", cursor);
+            return query;
+          },
+          "Prompt history",
+          cursor,
+          20,
+        );
       const [versions, evaluations] = await Promise.all([
-        t(context.supabase, "prompt_versions")
-          .select("id,prompt_id,version,name,body,variables,created_at")
-          .eq("prompt_id", data.prompt_id)
-          .eq("user_id", context.userId)
-          .order("created_at", { ascending: false })
-          .limit(50),
-        t(context.supabase, "prompt_evaluations")
-          .select("id,prompt_id,rating,notes,created_at")
-          .eq("prompt_id", data.prompt_id)
-          .eq("user_id", context.userId)
-          .order("created_at", { ascending: false })
-          .limit(50),
+        source === "evaluations"
+          ? { items: [], cursor: null }
+          : read<PromptVersion>(
+              "prompt_versions",
+              "id,prompt_id,version,name,body,variables,created_at",
+            ),
+        source === "versions"
+          ? { items: [], cursor: null }
+          : read<PromptEvaluation>("prompt_evaluations", "id,prompt_id,rating,notes,created_at"),
       ]);
-      if (versions.error || evaluations.error)
-        throw new Error("Prompt history could not be loaded");
       return {
-        versions: (versions.data ?? []) as PromptVersion[],
-        evaluations: (evaluations.data ?? []) as PromptEvaluation[],
+        versions: versions.items,
+        evaluations: evaluations.items,
+        versionCursor: versions.cursor,
+        evaluationCursor: evaluations.cursor,
       };
     },
   );
+
 export const evaluatePrompt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((i: unknown) =>
     z
       .object({
+        requestId: z.string().uuid(),
         prompt_id: z.string().uuid(),
         rating: z.number().int().min(1).max(5),
         notes: z.string().trim().max(2000),
       })
+      .strict()
       .parse(i),
   )
   .handler(async ({ data, context }): Promise<PromptEvaluation> => {
-    const { data: row, error } = await t(context.supabase, "prompt_evaluations")
-      .insert({ ...data, user_id: context.userId })
-      .select("id,prompt_id,rating,notes,created_at")
-      .single();
-    if (error || !row) throw new Error("Evaluation could not be saved");
-    return row as PromptEvaluation;
+    const { data: row, error } = await context.supabase
+      .rpc(
+        "record_prompt_evaluation" as never,
+        {
+          p_request_id: data.requestId,
+          p_prompt_id: data.prompt_id,
+          p_rating: data.rating,
+          p_notes: data.notes,
+        } as never,
+      )
+      .abortSignal(AbortSignal.timeout(15_000));
+    const parsed = z
+      .object({
+        id: z.string().uuid(),
+        request_id: z.literal(data.requestId),
+        prompt_id: z.literal(data.prompt_id),
+        rating: z.literal(data.rating),
+        notes: z.literal(data.notes),
+        created_at: z.string().datetime({ offset: true }),
+      })
+      .safeParse(row);
+    if (error || !parsed.success)
+      throw new Error(
+        "Evaluation outcome is unconfirmed. Retry with the same saved request identity or review saved evaluations.",
+      );
+    return parsed.data;
   });
 export const deletePromptTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .validator((input: unknown) =>
+    z
+      .object({ id: z.string().uuid(), expectedUpdatedAt: z.string().datetime({ offset: true }) })
+      .parse(input),
+  )
   .handler(async ({ data, context }) => {
-    const { error } = await t(context.supabase, "prompt_templates")
+    const { data: row, error } = await loose(context.supabase)
+      .from("prompt_templates")
       .delete()
       .eq("id", data.id)
       .eq("user_id", context.userId)
+      .eq("updated_at", data.expectedUpdatedAt)
       .select("id")
-      .single();
-    if (error) throw new Error("Prompt could not be deleted");
+      .single()
+      .abortSignal(AbortSignal.timeout(15000));
+    if (error || !row || row.id !== data.id)
+      throw new Error(
+        "Prompt changed or deletion could not be confirmed. Review saved prompt before deleting.",
+      );
     return { ok: true };
   });
 
@@ -280,14 +360,24 @@ export type ResearchTemplate = z.infer<typeof ResearchInput> & {
 };
 export const listResearchTemplates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<ResearchTemplate[]> => {
-    const { data, error } = await t(context.supabase, "research_templates")
-      .select("id,name,steps,allowed_sites,source_preference,created_at,updated_at")
-      .eq("user_id", context.userId)
-      .order("updated_at", { ascending: false })
-      .limit(100);
-    if (error) throw new Error("Research templates could not be loaded");
-    return (data ?? []) as ResearchTemplate[];
+  .validator((input: unknown) => CollectionPageInput.parse(input))
+  .handler(async ({ data, context }): Promise<CollectionPage<ResearchTemplate>> => {
+    return readCollectionPage<ResearchTemplate>(
+      (signal) => {
+        let query = loose(context.supabase)
+          .from("research_templates")
+          .select("id,name,steps,allowed_sites,source_preference,created_at,updated_at")
+          .eq("user_id", context.userId)
+          .order("id", { ascending: true })
+          .limit(10)
+          .abortSignal(signal);
+        if (data.cursor) query = query.gt("id", data.cursor);
+        return query;
+      },
+      "Research templates",
+      data.cursor,
+      10,
+    );
   });
 export const saveResearchTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -310,132 +400,169 @@ export type KnowledgeNode = {
   updatedAt: string;
 };
 export type KnowledgeEdge = { source: string; target: string; reason: string; strength: number };
+export type KnowledgeSource = "projects" | "chats" | "files" | "library" | "memories" | "packs";
+const KnowledgeCursors = z
+  .object({
+    projects: z.string().uuid().nullable(),
+    chats: z.string().uuid().nullable(),
+    files: z.string().uuid().nullable(),
+    library: z.string().uuid().nullable(),
+    memories: z.string().uuid().nullable(),
+    packs: z.string().uuid().nullable(),
+  })
+  .partial();
 export const listKnowledgeGraph = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ nodes: KnowledgeNode[]; edges: KnowledgeEdge[] }> => {
-    const [projects, chats, files, library, memories, packs] = await Promise.all([
-      t(context.supabase, "projects")
-        .select("id,name,updated_at")
-        .order("updated_at", { ascending: false })
-        .limit(50),
-      t(context.supabase, "project_chats")
-        .select("id,project_id,title,updated_at")
-        .order("updated_at", { ascending: false })
-        .limit(100),
-      t(context.supabase, "project_files")
-        .select("id,project_id,name,created_at")
-        .order("created_at", { ascending: false })
-        .limit(100),
-      t(context.supabase, "user_library_items")
-        .select("id,title,item_type,created_at")
-        .eq("user_id", context.userId)
-        .order("created_at", { ascending: false })
-        .limit(100),
-      t(context.supabase, "project_memory")
-        .select("id,project_id,content,created_at")
-        .order("created_at", { ascending: false })
-        .limit(100),
-      t(context.supabase, "context_packs")
-        .select("id,name,items,updated_at")
-        .eq("user_id", context.userId)
-        .order("updated_at", { ascending: false })
-        .limit(50),
-    ]);
-    const failed = [projects, chats, files, library, memories, packs].find(
-      (result) => result.error,
-    );
-    if (failed?.error) throw new Error("Knowledge graph could not be loaded");
-    const nodes: KnowledgeNode[] = [];
-    const edges: KnowledgeEdge[] = [];
-    for (const row of (projects.data ?? []) as Record<string, unknown>[])
-      nodes.push({
-        id: `project:${row.id}`,
-        kind: "project",
-        label: String(row.name),
-        href: `/projects/${row.id}`,
-        updatedAt: String(row.updated_at),
-      });
-    for (const row of (chats.data ?? []) as Record<string, unknown>[]) {
-      nodes.push({
-        id: `chat:${row.id}`,
-        kind: "chat",
-        label: String(row.title),
-        href: `/projects/${row.project_id}/chat/${row.id}`,
-        projectId: String(row.project_id),
-        updatedAt: String(row.updated_at),
-      });
-      edges.push({
-        source: `project:${row.project_id}`,
-        target: `chat:${row.id}`,
-        reason: "Project chat",
-        strength: 1,
-      });
-    }
-    for (const row of (files.data ?? []) as Record<string, unknown>[]) {
-      nodes.push({
-        id: `file:${row.id}`,
-        kind: "file",
-        label: String(row.name),
-        href: `/projects/${row.project_id}`,
-        projectId: String(row.project_id),
-        updatedAt: String(row.created_at),
-      });
-      edges.push({
-        source: `project:${row.project_id}`,
-        target: `file:${row.id}`,
-        reason: "Project file",
-        strength: 1,
-      });
-    }
-    for (const row of (library.data ?? []) as Record<string, unknown>[])
-      nodes.push({
-        id: `library:${row.id}`,
-        kind:
-          String(row.item_type).includes("artifact") ||
-          ["document", "code", "website_draft"].includes(String(row.item_type))
-            ? "artifact"
-            : "file",
-        label: String(row.title),
-        href: "/library",
-        updatedAt: String(row.created_at),
-      });
-    for (const row of (memories.data ?? []) as Record<string, unknown>[]) {
-      nodes.push({
-        id: `memory:${row.id}`,
-        kind: "memory",
-        label: String(row.content).slice(0, 70),
-        href: "/memory",
-        projectId: String(row.project_id),
-        updatedAt: String(row.created_at),
-      });
-      edges.push({
-        source: `project:${row.project_id}`,
-        target: `memory:${row.id}`,
-        reason: "Project memory",
-        strength: 1,
-      });
-    }
-    for (const row of (packs.data ?? []) as Record<string, unknown>[]) {
-      const id = `context:${row.id}`;
-      nodes.push({
-        id,
-        kind: "context",
-        label: String(row.name),
-        href: "/context-packs",
-        updatedAt: String(row.updated_at),
-      });
-      for (const item of (Array.isArray(row.items) ? row.items : []) as Record<string, unknown>[]) {
-        const candidates = [`${item.type}:${item.id}`, `library:${item.id}`];
-        const target = candidates.find((value) => nodes.some((node) => node.id === value));
-        if (target)
-          edges.push({ source: id, target, reason: "Included in context pack", strength: 1 });
+  .validator((input: unknown) => z.object({ cursors: KnowledgeCursors.optional() }).parse(input))
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{
+      nodes: KnowledgeNode[];
+      edges: KnowledgeEdge[];
+      cursors: Record<KnowledgeSource, string | null>;
+    }> => {
+      const read = async (
+        source: KnowledgeSource,
+        table: string,
+        columns: string,
+        owned = false,
+        size = 20,
+      ) => {
+        const cursor = data.cursors?.[source] ?? null;
+        const page = await readCollectionPage<{ id: string } & Record<string, unknown>>(
+          (signal) => {
+            let query = loose(context.supabase)
+              .from(table)
+              .select(columns)
+              .order("id", { ascending: true })
+              .limit(size)
+              .abortSignal(signal);
+            if (owned) query = query.eq("user_id", context.userId);
+            if (cursor) query = query.gt("id", cursor);
+            return query;
+          },
+          "Knowledge graph",
+          cursor,
+          size,
+        );
+        return { data: page.items, cursor: page.cursor };
+      };
+      const [projects, chats, files, library, memories, packs] = await Promise.all([
+        read("projects", "projects", "id,name,updated_at"),
+        read("chats", "project_chats", "id,project_id,title,updated_at"),
+        read("files", "project_files", "id,project_id,name,created_at"),
+        read("library", "user_library_items", "id,title,item_type,created_at", true),
+        read("memories", "project_memory", "id,project_id,content,created_at"),
+        read("packs", "context_packs", "id,name,items,updated_at", true, 1),
+      ]);
+      const nodes: KnowledgeNode[] = [];
+      const edges: KnowledgeEdge[] = [];
+      for (const row of (projects.data ?? []) as Record<string, unknown>[])
+        nodes.push({
+          id: `project:${row.id}`,
+          kind: "project",
+          label: String(row.name),
+          href: `/projects/${row.id}`,
+          updatedAt: String(row.updated_at),
+        });
+      for (const row of (chats.data ?? []) as Record<string, unknown>[]) {
+        nodes.push({
+          id: `chat:${row.id}`,
+          kind: "chat",
+          label: String(row.title),
+          href: `/projects/${row.project_id}/chat/${row.id}`,
+          projectId: String(row.project_id),
+          updatedAt: String(row.updated_at),
+        });
+        edges.push({
+          source: `project:${row.project_id}`,
+          target: `chat:${row.id}`,
+          reason: "Project chat",
+          strength: 1,
+        });
       }
-    }
-    const relationships = new Map<string, KnowledgeEdge>();
-    for (const edge of edges) {
-      const key = `${edge.source}:${edge.target}:${edge.reason}`;
-      const existing = relationships.get(key);
-      relationships.set(key, existing ? { ...existing, strength: existing.strength + 1 } : edge);
-    }
-    return { nodes, edges: [...relationships.values()] };
-  });
+      for (const row of (files.data ?? []) as Record<string, unknown>[]) {
+        nodes.push({
+          id: `file:${row.id}`,
+          kind: "file",
+          label: String(row.name),
+          href: `/projects/${row.project_id}`,
+          projectId: String(row.project_id),
+          updatedAt: String(row.created_at),
+        });
+        edges.push({
+          source: `project:${row.project_id}`,
+          target: `file:${row.id}`,
+          reason: "Project file",
+          strength: 1,
+        });
+      }
+      for (const row of (library.data ?? []) as Record<string, unknown>[])
+        nodes.push({
+          id: `library:${row.id}`,
+          kind:
+            String(row.item_type).includes("artifact") ||
+            ["document", "code", "website_draft"].includes(String(row.item_type))
+              ? "artifact"
+              : "file",
+          label: String(row.title),
+          href: "/library",
+          updatedAt: String(row.created_at),
+        });
+      for (const row of (memories.data ?? []) as Record<string, unknown>[]) {
+        nodes.push({
+          id: `memory:${row.id}`,
+          kind: "memory",
+          label: String(row.content).slice(0, 70),
+          href: "/memory",
+          projectId: String(row.project_id),
+          updatedAt: String(row.created_at),
+        });
+        edges.push({
+          source: `project:${row.project_id}`,
+          target: `memory:${row.id}`,
+          reason: "Project memory",
+          strength: 1,
+        });
+      }
+      for (const row of (packs.data ?? []) as Record<string, unknown>[]) {
+        const id = `context:${row.id}`;
+        nodes.push({
+          id,
+          kind: "context",
+          label: String(row.name),
+          href: "/context-packs",
+          updatedAt: String(row.updated_at),
+        });
+        for (const item of (Array.isArray(row.items) ? row.items : []) as Record<
+          string,
+          unknown
+        >[]) {
+          const candidates = [`${item.type}:${item.id}`, `library:${item.id}`];
+          const target = candidates.find((value) => nodes.some((node) => node.id === value));
+          if (target)
+            edges.push({ source: id, target, reason: "Included in context pack", strength: 1 });
+        }
+      }
+      const relationships = new Map<string, KnowledgeEdge>();
+      for (const edge of edges) {
+        const key = `${edge.source}:${edge.target}:${edge.reason}`;
+        const existing = relationships.get(key);
+        relationships.set(key, existing ? { ...existing, strength: existing.strength + 1 } : edge);
+      }
+      return {
+        nodes,
+        edges: [...relationships.values()],
+        cursors: {
+          projects: projects.cursor,
+          chats: chats.cursor,
+          files: files.cursor,
+          library: library.cursor,
+          memories: memories.cursor,
+          packs: packs.cursor,
+        },
+      };
+    },
+  );

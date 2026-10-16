@@ -151,7 +151,9 @@ export function LibraryVersionsDialog({
       }}
     >
       <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
-        <DialogTitle>Versions of {item.title}</DialogTitle>
+        <DialogTitle className="min-w-0 max-w-full pr-14 whitespace-normal [overflow-wrap:anywhere]">
+          Versions of {item.title}
+        </DialogTitle>
         <DialogDescription>
           Replacements keep earlier versions private. Retained originals and text history count
           toward storage. Images and Work outputs keep their own generation history.

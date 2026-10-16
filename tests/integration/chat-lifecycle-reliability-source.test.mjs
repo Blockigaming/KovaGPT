@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const chatRoute = readFileSync("src/routes/api/chat.ts", "utf8");
-const homeChat = readFileSync("src/routes/index.tsx", "utf8");
+const homeChat = readFileSync("src/components/ChatWorkspace.tsx", "utf8");
 const projectChat = readFileSync("src/routes/projects.$projectId.chat.$chatId.tsx", "utf8");
 const responsesCompat = readFileSync("src/lib/ai/responses-compat.server.mjs", "utf8");
 const accounting = readFileSync("src/lib/ai/accounting.server.ts", "utf8");

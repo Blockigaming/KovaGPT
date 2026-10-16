@@ -102,12 +102,31 @@ export function writeWorkspace(storage, state) {
 }
 
 function mutate(storage, chatId, fn) {
-  const state = readWorkspace(storage);
+  if (!storage)
+    throw new Error("Device workspace could not be saved. Keep your draft and try again.");
+  let state;
+  try {
+    const raw = storage.getItem(LOCAL_WORKSPACE_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : emptyState();
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      Array.isArray(parsed) ||
+      !parsed.chats ||
+      typeof parsed.chats !== "object" ||
+      Array.isArray(parsed.chats)
+    )
+      throw new Error("Invalid workspace");
+    state = { chats: parsed.chats };
+  } catch {
+    throw new Error("Device workspace could not be read. Existing data was not replaced.");
+  }
   const entry = chatEntry(state, chatId);
   const next = fn(entry);
   next.touchedAt = Date.now();
   state.chats[chatId] = next;
-  writeWorkspace(storage, state);
+  if (!writeWorkspace(storage, state))
+    throw new Error("Device workspace could not be saved. Keep your draft and try again.");
   return next;
 }
 

@@ -1,8 +1,16 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
+import { createBrowserHistory } from "./vendor/tanstack-history";
 import { routeTree } from "./routeTree.gen";
+import { AssistantWorkspace } from "./components/AssistantWorkspace";
 
-export const getRouter = () => {
+export const getRouter = async () => {
+  if (
+    typeof window !== "undefined" &&
+    (window.location.pathname === "/" || /^\/c\/[^/]+\/?$/u.test(window.location.pathname))
+  ) {
+    await AssistantWorkspace.preload?.();
+  }
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -19,6 +27,7 @@ export const getRouter = () => {
 
   const router = createRouter({
     routeTree,
+    history: typeof window === "undefined" ? undefined : createBrowserHistory(),
     context: { queryClient },
     scrollRestoration: true,
     // TanStack Query owns freshness - keep router preload cache disabled.

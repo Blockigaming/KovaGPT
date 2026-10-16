@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import { getGoogleAccountsHealth } from "@/lib/google-oauth.server";
+import { getGoogleAccountsHealth, googleOAuthConfigured } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 import { safeConnectorError } from "@/lib/connectors.server";
 import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
@@ -20,9 +20,15 @@ export const Route = createFileRoute("/api/google/status")({
         const limited = await enforceGoogleRateLimit(auth.userId, "status", 30);
         if (limited) return limited;
         try {
-          return Response.json(await getGoogleAccountsHealth(auth.userId), {
-            headers: { "Cache-Control": "private, no-store", Vary: "Authorization" },
-          });
+          return Response.json(
+            {
+              ...(await getGoogleAccountsHealth(auth.userId)),
+              configured: googleOAuthConfigured(),
+            },
+            {
+              headers: { "Cache-Control": "private, no-store", Vary: "Authorization" },
+            },
+          );
         } catch (error) {
           console.error("[google status]", safeConnectorError(error));
           return Response.json(

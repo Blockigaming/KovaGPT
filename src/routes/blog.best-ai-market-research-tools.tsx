@@ -107,7 +107,7 @@ function BestAiMarketResearchToolsPage() {
           <span className="text-foreground">Market research tools</span>
         </nav>
 
-        <article className="prose prose-invert max-w-none">
+        <article className="kova-public-article max-w-none">
           <h1 className="text-4xl font-bold tracking-tight">
             How to Choose AI Market Research Tools in 2026
           </h1>

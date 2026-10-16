@@ -154,7 +154,7 @@ test("Maps provider admission and chat handoffs use rolling byte bounds", () => 
   assert.match(contextPacks, /MAX_SEARCH_HANDOFF_BYTES = 30 \* 1024/);
   assert.match(contextPacks, /TextEncoder/);
   assert.match(contextPacks, /tool: "web_search"/);
-  assert.match(read("src/routes/index.tsx"), /setSelectedTool\("web_search"\)/);
+  assert.match(read("src/components/ChatWorkspace.tsx"), /setSelectedTool\("web_search"\)/);
   assert.match(migration, /provider text primary key/);
   assert.match(migration, /interval '1 second'/);
   assert.match(migration, /next_request_at <= v_now/);

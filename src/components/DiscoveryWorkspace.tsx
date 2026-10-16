@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useBlocker } from "@tanstack/react-router";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { discoveryApiRequest } from "@/lib/discovery/discovery-browser";
@@ -96,7 +96,7 @@ export function DiscoveryWorkspace({ initialMode = "web" }: { initialMode?: Disc
     );
   return (
     <DiscoverySession
-      key={`${user.id}:${initialMode}:${privacyRevision}`}
+      key={`${user.id}:${privacyRevision}`}
       userId={user.id}
       initialMode={initialMode}
     />
@@ -104,8 +104,13 @@ export function DiscoveryWorkspace({ initialMode = "web" }: { initialMode?: Disc
 }
 function DiscoverySession({ userId, initialMode }: { userId: string; initialMode: DiscoveryMode }) {
   const [mode, setMode] = useState(initialMode),
-    [query, setQuery] = useState(""),
-    [location, setLocation] = useState(""),
+    [drafts, setDrafts] = useState<Record<DiscoveryMode, { query: string; location: string }>>({
+      web: { query: "", location: "" },
+      images: { query: "", location: "" },
+      shopping: { query: "", location: "" },
+      local: { query: "", location: "" },
+    }),
+    [exportStatus, setExportStatus] = useState(""),
     [ready, setReady] = useState<boolean | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -121,6 +126,82 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
   const active = useRef(true),
     requestVersion = useRef(0),
     controller = useRef<AbortController | null>(null);
+  const draftsRef = useRef(drafts),
+    editVersion = useRef(0);
+  const { query, location } = drafts[mode];
+  function updateDraft(field: "query" | "location", value: string) {
+    const next = { ...draftsRef.current, [mode]: { ...draftsRef.current[mode], [field]: value } };
+    draftsRef.current = next;
+    editVersion.current++;
+    setDrafts(next);
+    setExportStatus("");
+  }
+  function resetSearch() {
+    requestVersion.current++;
+    controller.current?.abort();
+    setBusy(false);
+    setResults(null);
+    setProducts({});
+    setSearch(null);
+    setError("");
+    setExportStatus("");
+    editVersion.current++;
+  }
+  useEffect(() => {
+    setMode(initialMode);
+    requestVersion.current++;
+    controller.current?.abort();
+    setBusy(false);
+    setResults(null);
+    setProducts({});
+    setSearch(null);
+    setError("");
+    setExportStatus("");
+    editVersion.current++;
+  }, [initialMode]);
+  const hasDrafts = Object.values(drafts).some((draft) => draft.query || draft.location);
+  useBlocker({
+    enableBeforeUnload: hasDrafts,
+    shouldBlockFn: ({ current, next }) =>
+      hasDrafts &&
+      current.pathname !== next.pathname &&
+      !window.confirm(
+        "Leave Discovery? Queries in this view are not saved. Copy or download them first.",
+      ),
+  });
+  function currentQueryText() {
+    const draft = draftsRef.current[mode];
+    return `${labels[mode]} query\n\n${draft.query}${mode === "local" ? `\n\nEntered location: ${draft.location}` : ""}\n`;
+  }
+  async function copyQuery() {
+    const version = editVersion.current;
+    try {
+      await navigator.clipboard.writeText(currentQueryText());
+      if (active.current && version === editVersion.current)
+        setExportStatus("Query copied. It is not saved.");
+    } catch {
+      if (active.current && version === editVersion.current)
+        setExportStatus("Copy failed. Your query is still here; try downloading it.");
+    }
+  }
+  function downloadQuery() {
+    let url: string | undefined;
+    try {
+      url = URL.createObjectURL(
+        new Blob([currentQueryText()], { type: "text/plain;charset=utf-8" }),
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `discovery-${mode}-query.txt`;
+      a.click();
+      setExportStatus("Query download requested. It is not saved.");
+    } catch {
+      setExportStatus("Download could not start. Your query is still here.");
+    } finally {
+      const completedUrl = url;
+      if (completedUrl) setTimeout(() => URL.revokeObjectURL(completedUrl), 1000);
+    }
+  }
   useEffect(() => {
     active.current = true;
     let retired = false;
@@ -183,7 +264,14 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
                   ? "Live discovery is not enabled for this deployment."
                   : "Search could not complete. Check your connection and Lockdown settings, then try again.",
         );
-      return data;
+      return {
+        data,
+        isCurrent: () =>
+          active.current &&
+          !c.signal.aborted &&
+          version === requestVersion.current &&
+          controller.current === c,
+      };
     } catch (e) {
       if (active.current && version === requestVersion.current)
         setError(
@@ -203,13 +291,14 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
     setResults(null);
     setProducts({});
     setSearch(null);
-    const data = await request({
+    const reply = await request({
       operation: "search",
       mode,
       query,
       location: mode === "local" ? location : "",
     });
-    if (data?.operation === "search") {
+    if (reply?.isCurrent() && reply.data.operation === "search") {
+      const data = reply.data;
       setResults(data.results);
       setSearch({
         mode: data.mode,
@@ -220,8 +309,11 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
     }
   }
   async function check(result: DiscoveryResult) {
-    const data = await request({ operation: "product", sourceToken: result.sourceToken });
-    if (data?.operation === "product") setProducts((p) => ({ ...p, [result.url]: data.product }));
+    const reply = await request({ operation: "product", sourceToken: result.sourceToken });
+    if (reply?.isCurrent() && reply.data.operation === "product") {
+      const product = reply.data.product;
+      setProducts((p) => (reply.isCurrent() ? { ...p, [result.url]: product } : p));
+    }
   }
   function toggle(product: DiscoveryProduct, variant: DiscoveryVariant) {
     const key = discoveryComparisonKey(product, variant);
@@ -234,7 +326,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
     );
   }
   return (
-    <div className="space-y-6">
+    <div className="kova-adapted-controls space-y-6">
       <p className="max-w-3xl text-sm text-muted-foreground">
         Searching sends your query and any place you enter to the configured search provider.
         Results are source reports and can be incomplete or outdated. KovaGPT stores request counts,
@@ -265,8 +357,9 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
               aria-pressed={mode === value}
               disabled={busy}
               onClick={() => {
+                if (value === mode) return;
+                resetSearch();
                 setMode(value);
-                if (value !== "local") setLocation("");
               }}
             >
               {labels[value]}
@@ -282,7 +375,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
           <input
             className="w-full rounded-lg border bg-background p-3"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => updateDraft("query", e.target.value)}
             maxLength={300}
             required
             placeholder={
@@ -312,12 +405,12 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
               <input
                 className="w-full rounded-lg border bg-background p-3"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={(e) => updateDraft("location", e.target.value)}
                 maxLength={160}
                 required
               />
             </label>
-            <Button type="button" variant="ghost" onClick={() => setLocation("")}>
+            <Button type="button" variant="ghost" onClick={() => updateDraft("location", "")}>
               Remove location
             </Button>
             <p className="text-xs text-muted-foreground">
@@ -335,7 +428,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
             ) : null}
           </div>
         ) : null}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             disabled={!ready || busy || !query.trim() || (mode === "local" && !location.trim())}
           >
@@ -346,7 +439,44 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
               Cancel
             </Button>
           ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={copyQuery}
+            disabled={!query && !location}
+          >
+            Copy query
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={downloadQuery}
+            disabled={!query && !location}
+          >
+            Download query
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              resetSearch();
+              const next = { ...draftsRef.current, [mode]: { query: "", location: "" } };
+              draftsRef.current = next;
+              setDrafts(next);
+            }}
+          >
+            Clear query
+          </Button>
         </div>
+        <p className="text-sm text-muted-foreground">
+          Queries stay in this view only. Switching search type keeps each query; leaving can
+          discard them.
+        </p>
+        {exportStatus ? (
+          <p role="status" className="text-sm">
+            {exportStatus}
+          </p>
+        ) : null}
       </form>
       {error ? (
         <p role="alert" className="rounded-lg border p-3">

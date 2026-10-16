@@ -4,6 +4,14 @@ import { PUBLIC_REVIEW_PATHS } from "../../src/lib/seo-policy.mjs";
 import { waitForKovaHydration } from "./hydration";
 
 const verificationProjects = new Set(["phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
+const corePublicRoutes = new Set([
+  "/pricing",
+  "/help",
+  "/terms",
+  "/privacy",
+  "/refund",
+  "/contact-support",
+]);
 const expandedPublicRoutes = new Set([
   "/academy",
   "/business-data",
@@ -62,7 +70,11 @@ function watchForRuntimeErrors(page: Page) {
 const routesUnderTest =
   process.env.KOVA_PUBLIC_MATRIX_SCOPE === "expanded"
     ? PUBLIC_REVIEW_PATHS.filter((route) => expandedPublicRoutes.has(route))
-    : PUBLIC_REVIEW_PATHS;
+    : process.env.KOVA_PUBLIC_MATRIX_SCOPE === "core"
+      ? PUBLIC_REVIEW_PATHS.filter(
+          (route) => corePublicRoutes.has(route) || route === "/" || route === "/features",
+        )
+      : PUBLIC_REVIEW_PATHS;
 // Bound each shardable test rather than letting one group consume a whole CI job.
 // Every route still runs in both themes on every verification project.
 const groupCount = Math.max(1, Math.ceil(routesUnderTest.length / 12));
@@ -80,27 +92,55 @@ async function verifyRoute(
   const response = await page.goto(route, { waitUntil: "domcontentloaded", timeout: 15_000 });
   expect(response?.status(), `${route} ${colorScheme} status`).toBe(200);
   await waitForKovaHydration(page);
+  await expect(page.locator("html")).toHaveClass(
+    colorScheme === "dark" ? /\bdark\b/ : /^(?!.*\bdark\b)/,
+  );
 
   await expect(page.locator("main#main-content"), `${route} ${colorScheme} main`).toHaveCount(1);
   await expect(
     page.getByRole("heading", { level: 1 }),
     `${route} ${colorScheme} heading`,
   ).toBeVisible();
-  const publicNavigation = page.getByRole("navigation", { name: "Public navigation" });
-  if ((await publicNavigation.count()) === 1) {
-    await expect(publicNavigation, `${route} ${colorScheme} navigation`).toBeVisible();
-    await expect(page.getByRole("contentinfo"), `${route} ${colorScheme} footer`).toBeVisible();
-  } else {
+  if (route === "/") {
     await expect(
       page.getByRole("button", { name: /^Log in(?: to KovaGPT)?$/u }).first(),
       `${route} ${colorScheme} application-shell login entry`,
     ).toBeVisible();
-  }
-  if (route === "/") {
     await expect(
       page.getByRole("textbox", { name: "Message KovaGPT" }),
       `${route} ${colorScheme} composer`,
     ).toBeVisible();
+  } else if (corePublicRoutes.has(route)) {
+    const coreNavigation = page.getByRole("navigation", { name: "Account and help navigation" });
+    await expect(coreNavigation, `${route} ${colorScheme} core navigation`).toBeVisible();
+    await expect(coreNavigation.getByRole("link", { name: "Plans", exact: true })).toHaveAttribute(
+      "href",
+      "/pricing",
+    );
+    await expect(coreNavigation.getByRole("link", { name: "Help", exact: true })).toHaveAttribute(
+      "href",
+      "/help",
+    );
+    await expect(page.getByRole("link", { name: "Back to KovaGPT chat" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+    const footer = page.getByRole("contentinfo", { name: "Legal and support" });
+    await expect(footer).toBeVisible();
+    await expect(footer.getByRole("link", { name: "Terms of Service" })).toHaveAttribute(
+      "href",
+      "/terms",
+    );
+    await expect(footer.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute(
+      "href",
+      "/privacy",
+    );
+  } else {
+    await expect(
+      page.getByRole("navigation", { name: "Public navigation" }),
+      `${route} ${colorScheme} navigation`,
+    ).toBeVisible();
+    await expect(page.getByRole("contentinfo"), `${route} ${colorScheme} footer`).toBeVisible();
   }
 
   const layout = await page.evaluate(() => {
@@ -143,6 +183,8 @@ test.describe.parallel("complete public surface matrix", () => {
       test.setTimeout(Math.max(4 * 60_000, routes.length * 2 * 20_000));
 
       const runtimeErrors = watchForRuntimeErrors(page);
+      // Select the stored System preference explicitly. The product default is dark.
+      await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "system"));
       for (const colorScheme of ["light", "dark"] as const) {
         await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
         for (const route of routes) {

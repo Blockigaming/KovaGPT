@@ -19,8 +19,12 @@ import {
 export default function SitesPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   return (
-    <AppShell>
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+    <AppShell utilitiesInHeader>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-workspace-controls mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6"
+      >
         <WorkspacePageHeader
           icon={Globe}
           title="Sites"
@@ -64,6 +68,7 @@ function SitesContent({ userId }: { userId: string }) {
     [notice, setNotice] = useState<string | null>(null),
     [retry, setRetry] = useState<SiteMutation | null>(null),
     [confirm, setConfirm] = useState<"delete" | "public" | null>(null);
+  const mutationPending = useRef(false);
   const controller = useRef(new AbortController()),
     epoch = useRef(0),
     picker = useRef<HTMLInputElement>(null);
@@ -106,7 +111,9 @@ function SitesContent({ userId }: { userId: string }) {
   }, [refresh]);
   const site = workspace?.site?.id === selected ? workspace.site : null;
   async function submit(body: SiteMutation) {
-    if (busy) return;
+    if (busy || mutationPending.current || controller.current.signal.aborted) return;
+    mutationPending.current = true;
+    const operationEpoch = epoch.current;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -115,15 +122,16 @@ function SitesContent({ userId }: { userId: string }) {
       const result = (await siteRequest(userId, "/api/sites", controller.current.signal, body)) as {
         result?: { siteId?: string };
       };
-      if (controller.current.signal.aborted) return;
+      if (controller.current.signal.aborted || operationEpoch !== epoch.current) return;
       if (typeof result.result?.siteId !== "string") throw new Error("site_response_invalid");
       setNotice("Site changes saved.");
       await refresh(body.action === "delete" ? null : result.result.siteId);
     } catch (cause) {
-      if (controller.current.signal.aborted) return;
+      if (controller.current.signal.aborted || operationEpoch !== epoch.current) return;
       setError(siteError(cause));
       if (!(cause instanceof SiteRequestError) || cause.status >= 500) setRetry(body);
     } finally {
+      mutationPending.current = false;
       if (!controller.current.signal.aborted) setBusy(false);
     }
   }

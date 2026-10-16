@@ -38,7 +38,7 @@ const [
   read("src/components/WorkflowSkillsPanel.tsx"),
   read("src/routes/apps.tsx"),
   read("src/lib/workflow-skills-retry.mjs"),
-  read("src/routes/index.tsx"),
+  read("src/components/ChatWorkspace.tsx"),
   read("src/components/MobileTopBar.tsx"),
   read("src/lib/principal-browser-storage.mjs"),
   read("src/lib/account-export.server.ts"),
@@ -46,6 +46,17 @@ const [
   read("supabase/migrations/20260910210000_workflow_skill_packages.sql"),
   read("release-migrations.json"),
 ]);
+
+// Compare the exporter against the last definition in the ordered proposal set.
+// The immutable workflow migration remains tested separately below.
+const budgetMarker = "create or replace function kova_private.account_export_direct_row_bytes(";
+let latestExportBudget = "";
+for (const entry of JSON.parse(manifest).migrations) {
+  const sql = await read(`supabase/migrations/${entry.filename}`);
+  const start = sql.lastIndexOf(budgetMarker);
+  if (start >= 0) latestExportBudget = sql.slice(start);
+}
+assert.ok(latestExportBudget, "ordered migrations define the export budget");
 
 test("workflow skills resolve server-side from owner installation and exact version IDs", () => {
   assert.match(ingress, /normalizeWorkflowSkillSelection\(value\.skill\)/u);
@@ -232,10 +243,7 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   assert.match(migration, /public\.try_add_storage_bytes\(actor, payload_bytes, storage_limit\)/u);
   assert.match(migration, /to_jsonb\(version_record\)::text/u);
   assert.match(migration, /workflow_skill_bytes > 32000000/u);
-  const exportBudget = migration.slice(
-    migration.indexOf("create or replace function kova_private.account_export_direct_row_bytes"),
-    migration.indexOf("create or replace function public.list_workflow_skills"),
-  );
+  const exportBudget = latestExportBudget;
   const directBudget = exportBudget.slice(
     exportBudget.indexOf("for export_source in"),
     exportBudget.indexOf("-- The exporter reserves"),

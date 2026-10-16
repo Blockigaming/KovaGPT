@@ -21,7 +21,7 @@ function ShareInbox() {
   const ownerId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   return (
     <AppShell>
-      <main className="mx-auto max-w-3xl space-y-4 p-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-3xl space-y-4 p-6">
         <h1 className="text-2xl font-semibold">Review shared text</h1>
         {!isLoaded ? (
           <p>Loading your account…</p>

@@ -3,16 +3,19 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const projects = await readFile("src/routes/projects.tsx", "utf8");
+const projectsIndex = await readFile("src/routes/projects.index.tsx", "utf8");
 const projectDetail = await readFile("src/routes/projects.$projectId.tsx", "utf8");
 const projectChat = await readFile("src/routes/projects.$projectId.chat.$chatId.tsx", "utf8");
 
 test("projects renders its overview only at the exact projects route", () => {
-  assert.match(projects, /component: ProjectsRoute/);
+  assert.match(projects, /component: Outlet/);
+  assert.doesNotMatch(projects, /ProjectsPage|useMatch|useUser/);
+  assert.match(projectsIndex, /createFileRoute\("\/projects\/"\)/);
+  assert.match(projectsIndex, /component: ProjectsPage/);
   assert.match(
-    projects,
-    /function ProjectsRoute\(\)[\s\S]*?from: "\/projects\/\$projectId"[\s\S]*?shouldThrow: false[\s\S]*?return projectMatch \? <Outlet \/> : <ProjectsPage \/>/,
+    projectsIndex,
+    /function ProjectsPage\(\)[\s\S]*?return \(\s*<AppShell utilitiesInHeader>/,
   );
-  assert.match(projects, /function ProjectsPage\(\)[\s\S]*?return \(\s*<AppShell>/);
 });
 
 test("project detail yields to its nested chat without adding a second shell", () => {

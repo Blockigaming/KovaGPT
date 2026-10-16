@@ -1,4 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { AcademyPractice } from "./AcademyPractice";
+import { academyReturnSearch } from "@/lib/academy-progress.mjs";
+import { Link, useSearch } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { type ReactNode } from "react";
 import { PublicFaq } from "@/components/public/PublicFaq";
@@ -26,6 +28,7 @@ export function PublicPageView({
   title,
   summary,
   children,
+  className,
   review,
   primaryAction = { label: "Try KovaGPT", to: "/" },
   secondaryAction,
@@ -34,13 +37,18 @@ export function PublicPageView({
   title: string;
   summary: string;
   children: ReactNode;
+  className?: string;
   review?: "legal" | "admin";
   primaryAction?: { label: string; to: string };
   secondaryAction?: { label: string; to: string };
 }) {
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="min-w-0 [overflow-wrap:anywhere]">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`min-w-0 [overflow-wrap:anywhere] ${className ?? ""}`}
+      >
         <section className="relative overflow-hidden border-b border-border/70">
           <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
             <p className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -56,6 +64,7 @@ export function PublicPageView({
               <Link
                 to={primaryAction.to as never}
                 data-public-primary
+                style={{ borderRadius: "9999px" }}
                 className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {primaryAction.label} <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -89,6 +98,8 @@ export function PublicPageView({
 }
 
 export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
+  const search = useSearch({ strict: false });
+  const academyReturn = academyReturnSearch(search as Record<string, unknown>);
   const slugSegments = item.slug.split("/");
   const currentPageSlug = slugSegments.at(-1) ?? item.slug;
   const categorySlugs = slugSegments.slice(0, -1);
@@ -114,6 +125,10 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
             >
               <Link
                 to={(sectionLanding?.to ?? `/${item.section}`) as never}
+                search={(item.section === "academy" ? academyReturn : undefined) as never}
+                hash={
+                  item.section === "academy" ? `guide-${item.slug.replaceAll("/", "-")}` : undefined
+                }
                 data-public-breadcrumb
                 className="inline-flex min-h-11 min-w-0 max-w-full items-center rounded-md py-2.5 underline-offset-4 outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
               >
@@ -146,6 +161,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               <Link
                 to={item.primaryAction.to as never}
                 data-public-primary
+                style={{ borderRadius: "9999px" }}
                 className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {item.primaryAction.label}
@@ -154,6 +170,16 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               {item.secondaryAction ? (
                 <Link
                   to={item.secondaryAction.to as never}
+                  search={
+                    (item.section === "academy" && item.secondaryAction.to === "/academy"
+                      ? academyReturn
+                      : undefined) as never
+                  }
+                  hash={
+                    item.section === "academy" && item.secondaryAction.to === "/academy"
+                      ? `guide-${item.slug.replaceAll("/", "-")}`
+                      : undefined
+                  }
                   className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border bg-background/70 px-5 py-2.5 text-center text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {item.secondaryAction.label}
@@ -206,6 +232,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
           ))}
         </section>
 
+        {item.section === "academy" && <AcademyPractice item={item} />}
         {item.faq?.length ? (
           <div className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 sm:pb-20">
             <PublicFaq items={item.faq} />
@@ -251,6 +278,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
             </div>
             <Link
               to={item.primaryAction.to as never}
+              style={{ borderRadius: "9999px" }}
               className="inline-flex min-h-11 min-w-0 max-w-full shrink-0 items-center justify-center gap-2 rounded-full bg-background px-5 py-2.5 text-center text-sm font-medium text-foreground outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground md:max-w-xs"
             >
               {item.primaryAction.label}

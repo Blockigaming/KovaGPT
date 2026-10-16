@@ -75,7 +75,7 @@ const payload = (value) => ({
   digest: workflowSkillDigest(value),
 });
 
-async function fixture() {
+async function fixture({ academy = false } = {}) {
   const db = new PGlite();
   try {
     await db.exec(`
@@ -349,6 +349,20 @@ async function fixture() {
         "utf8",
       ),
     );
+    if (academy) {
+      await db.exec("create table public.academy_learning_export_rows(owner_id uuid)");
+      const academyMigration = await readFile(
+        "docs/release-proposals/deferred-interface/20261012052309_academy_learning_state.sql",
+        "utf8",
+      );
+      await db.exec(
+        academyMigration.slice(
+          academyMigration.indexOf(
+            "create or replace function kova_private.account_export_direct_row_bytes(",
+          ),
+        ),
+      );
+    }
     return db;
   } catch (error) {
     await db.close();
@@ -1450,5 +1464,40 @@ test("install and uninstall receipts are admitted against the shared export budg
         await db.close();
       }
     });
+  }
+});
+
+test("launch account export admission works without the deferred Academy relation", async () => {
+  assert.equal(
+    ACCOUNT_EXPORT_DIRECT_TABLES.some(([table]) => table.startsWith("academy_")),
+    false,
+  );
+  const db = await fixture();
+  try {
+    assert.equal(
+      (await db.query("select to_regclass('public.academy_learning_export_rows') as relation"))
+        .rows[0].relation,
+      null,
+    );
+    assert.ok((await accountExportDatabaseBytes(db)) >= 0);
+  } finally {
+    await db.close();
+  }
+});
+
+test("deferred Academy proposal includes its rows in the complete account export admission budget", async () => {
+  const db = await fixture({ academy: true });
+  try {
+    const before = await accountExportDatabaseBytes(db);
+    await db.exec("alter table academy_learning_export_rows add column body jsonb");
+    await db.query("insert into academy_learning_export_rows(owner_id,body) values($1,$2::jsonb)", [
+      OWNER,
+      JSON.stringify({ notes: "n".repeat(4000), completed: false, checked: [] }),
+    ]);
+    const after = await accountExportDatabaseBytes(db);
+    assert.ok(after >= before + 4000);
+    assert.ok((await accountExportDatabaseBytes(db, OTHER)) < after);
+  } finally {
+    await db.close();
   }
 });

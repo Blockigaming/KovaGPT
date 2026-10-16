@@ -19,7 +19,7 @@ test("public support submission can enqueue only a fixed internal recipient", ()
 
 test("support payload remains bounded and retains the reply address", () => {
   assert.match(route, /MAX_BODY_BYTES = 32 \* 1024/);
-  assert.match(route, /new TextEncoder\(\)\.encode\(rawText\)\.byteLength/);
+  assert.match(route, /readBoundedJsonObject\(request, MAX_BODY_BYTES\)/);
   assert.match(route, /email:\s*z\.string\(\)\.trim\(\)\.email\(\)/);
   assert.match(route, /data:\s*body/);
 });

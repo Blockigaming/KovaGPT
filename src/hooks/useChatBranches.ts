@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
@@ -28,6 +28,8 @@ export type BranchView = {
   durable: boolean;
 };
 
+const EMPTY_BRANCHES: BranchView[] = [];
+
 function fromDto(row: ChatBranchDto): BranchView {
   return {
     id: row.id,
@@ -52,20 +54,46 @@ function fromDto(row: ChatBranchDto): BranchView {
  * caller can switch what is actually displayed rather than only flip a flag.
  */
 export function useChatBranches(rootChatId: string | null, temporary = false) {
-  const { isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const listFn = useServerFn(listChatBranches);
   const createFn = useServerFn(createChatBranch);
   const activateFn = useServerFn(activateChatBranch);
 
-  const [branches, setBranches] = useState<BranchView[]>([]);
+  const key = `${isLoaded}:${user?.id ?? (isSignedIn ? "pending" : "guest")}:${rootChatId}:${temporary}`;
+  const scope = useRef({ key, active: true, read: 0, mutation: false, rows: [] as BranchView[] });
+  if (scope.current.key !== key)
+    scope.current = { key, active: true, read: 0, mutation: false, rows: [] };
+  const current = scope.current;
+  const isCurrent = useCallback(() => scope.current === current && current.active, [current]);
+  const [snapshot, setSnapshot] = useState({ key, rows: [] as BranchView[] });
+  const branches = snapshot.key === key ? snapshot.rows : EMPTY_BRANCHES;
+  const setBranches = useCallback(
+    (update: BranchView[] | ((previous: BranchView[]) => BranchView[])) => {
+      if (!isCurrent()) return;
+      current.rows = typeof update === "function" ? update(current.rows) : update;
+      setSnapshot({ key: current.key, rows: current.rows });
+    },
+    [current, isCurrent],
+  );
+  useEffect(() => {
+    current.active = true;
+    return () => {
+      current.active = false;
+    };
+  }, [current]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const persistent = Boolean(rootChatId) && !temporary;
+  const persistent =
+    Boolean(rootChatId) && !temporary && isLoaded && (!isSignedIn || Boolean(user?.id));
 
   const refresh = useCallback(async () => {
-    if (!rootChatId || temporary) {
+    if (!isCurrent() || current.mutation) return;
+    const sequence = ++current.read;
+    if (!persistent || !rootChatId) {
       setBranches([]);
+      setLoading(false);
+      setError(null);
       return;
     }
     setLoading(true);
@@ -73,6 +101,7 @@ export function useChatBranches(rootChatId: string | null, temporary = false) {
     try {
       if (isSignedIn) {
         const rows = await listFn({ data: { chatId: rootChatId } });
+        if (!isCurrent() || sequence !== current.read) return;
         if (!Array.isArray(rows)) throw new Error("Branches could not be loaded.");
         setBranches(rows.map(fromDto));
       } else {
@@ -84,15 +113,16 @@ export function useChatBranches(rootChatId: string | null, temporary = false) {
         );
       }
     } catch (err) {
+      if (!isCurrent() || sequence !== current.read) return;
       setError(
         err instanceof Error && err.message !== "h.map is not a function"
           ? err.message
           : "Branches could not be loaded.",
       );
     } finally {
-      setLoading(false);
+      if (isCurrent() && sequence === current.read) setLoading(false);
     }
-  }, [isSignedIn, listFn, rootChatId, temporary]);
+  }, [current, isCurrent, persistent, setBranches, isSignedIn, listFn, rootChatId]);
 
   useEffect(() => {
     void refresh();
@@ -108,7 +138,7 @@ export function useChatBranches(rootChatId: string | null, temporary = false) {
       parentBranchId?: string | null;
       active?: boolean;
     }): Promise<BranchView | null> => {
-      if (!persistent || !rootChatId) return null;
+      if (!isCurrent() || !persistent || !rootChatId) return null;
       if (isSignedIn) {
         const row = await createFn({
           data: {
@@ -122,6 +152,7 @@ export function useChatBranches(rootChatId: string | null, temporary = false) {
             active: input.active !== false,
           },
         });
+        if (!isCurrent()) return null;
         const view = fromDto(row);
         setBranches((prev) => {
           const others = prev
@@ -140,10 +171,15 @@ export function useChatBranches(rootChatId: string | null, temporary = false) {
         parentBranchId: input.parentBranchId ?? null,
         active: input.active !== false,
       });
-      await refresh();
+      setBranches(
+        localBranches(safeBrowserStorage("localStorage"), rootChatId).map((row) => ({
+          ...row,
+          durable: false,
+        })),
+      );
       return saved ? { ...saved, durable: false } : null;
     },
-    [createFn, isSignedIn, persistent, refresh, rootChatId],
+    [createFn, isSignedIn, isCurrent, persistent, setBranches, rootChatId],
   );
 
   /**
@@ -152,14 +188,14 @@ export function useChatBranches(rootChatId: string | null, temporary = false) {
    */
   const ensureRootBranch = useCallback(async (): Promise<BranchView | null> => {
     if (!persistent || !rootChatId) return null;
-    const existing = branches.find((branch) => branch.conversationId === rootChatId);
+    const existing = current.rows.find((branch) => branch.conversationId === rootChatId);
     if (existing) return existing;
     return persistBranch({
       conversationId: rootChatId,
       label: "Original",
       active: true,
     });
-  }, [branches, persistBranch, persistent, rootChatId]);
+  }, [current, persistBranch, persistent, rootChatId]);
 
   const createBranch = useCallback(
     async (input: {
@@ -170,32 +206,63 @@ export function useChatBranches(rootChatId: string | null, temporary = false) {
       label?: string | null;
       parentBranchId?: string | null;
     }): Promise<BranchView | null> => {
-      const root = await ensureRootBranch();
-      return persistBranch({
-        ...input,
-        parentBranchId: input.parentBranchId ?? root?.id ?? null,
-        active: true,
-      });
+      if (!isCurrent() || current.mutation) return null;
+      current.mutation = true;
+      current.read++;
+      try {
+        const root = await ensureRootBranch();
+        if (!isCurrent() || !root) return null;
+        return await persistBranch({
+          ...input,
+          parentBranchId: input.parentBranchId ?? root.id,
+          active: true,
+        });
+      } catch (error) {
+        if (!isCurrent()) return null;
+        throw error;
+      } finally {
+        current.mutation = false;
+        if (isCurrent()) setLoading(false);
+      }
     },
-    [ensureRootBranch, persistBranch],
+    [current, isCurrent, ensureRootBranch, persistBranch],
   );
 
   const activate = useCallback(
     async (branchId: string) => {
-      if (!persistent || !rootChatId) return null;
+      if (!isCurrent() || !persistent || !rootChatId) return null;
       if (!branchId) throw new Error("Select a branch first.");
-      if (isSignedIn) {
-        const row = await activateFn({ data: { chatId: rootChatId, branchId } });
-        const view = fromDto(row);
-        setBranches((prev) => prev.map((branch) => ({ ...branch, active: branch.id === view.id })));
-        return view;
+      if (current.mutation) return null;
+      current.mutation = true;
+      current.read++;
+      try {
+        if (isSignedIn) {
+          const row = await activateFn({ data: { chatId: rootChatId, branchId } });
+          if (!isCurrent()) return null;
+          const view = fromDto(row);
+          setBranches((prev) =>
+            prev.map((branch) => ({ ...branch, active: branch.id === view.id })),
+          );
+          return view;
+        }
+        const saved = activateLocalBranch(safeBrowserStorage("localStorage"), rootChatId, branchId);
+        if (!saved) throw new Error("That branch no longer exists on this device.");
+        setBranches(
+          localBranches(safeBrowserStorage("localStorage"), rootChatId).map((row) => ({
+            ...row,
+            durable: false,
+          })),
+        );
+        return { ...saved, durable: false as const };
+      } catch (error) {
+        if (!isCurrent()) return null;
+        throw error;
+      } finally {
+        current.mutation = false;
+        if (isCurrent()) setLoading(false);
       }
-      const saved = activateLocalBranch(safeBrowserStorage("localStorage"), rootChatId, branchId);
-      if (!saved) throw new Error("That branch no longer exists on this device.");
-      await refresh();
-      return { ...saved, durable: false as const };
     },
-    [activateFn, isSignedIn, persistent, refresh, rootChatId],
+    [activateFn, current, isCurrent, isSignedIn, persistent, setBranches, rootChatId],
   );
 
   const activeBranch = useMemo(() => branches.find((branch) => branch.active) ?? null, [branches]);

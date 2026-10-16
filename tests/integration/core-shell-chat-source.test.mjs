@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const topbar = await readFile("src/components/MobileTopBar.tsx", "utf8");
 const input = await readFile("src/components/ChatInput.tsx", "utf8");
-const index = await readFile("src/routes/index.tsx", "utf8");
+const index = await readFile("src/components/ChatWorkspace.tsx", "utf8");
 const temporaryControls = await readFile("src/components/TemporaryChatStartDialog.tsx", "utf8");
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const chatStore = await readFile("src/lib/chat-store.ts", "utf8");
@@ -27,13 +27,11 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);
   const order = [
     'aria-label="New chat"',
-    'navLink("/work"',
     'navLink("/images"',
     'navLink("/library"',
     'navLink("/projects"',
     'navLink("/scheduled-tasks"',
     'navLink("/apps"',
-    'aria-controls="sidebar-more-items"',
   ];
   let cursor = -1;
   for (const marker of order) {
@@ -42,7 +40,7 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
     cursor = next;
   }
 
-  assert.match(sidebar, /navLink\("\/apps", "Plugins", PlugZap\)/);
+  assert.match(sidebar, /navLink\("\/apps", "Plugins", Puzzle\)/);
 });
 
 test("mobile header and sidebar controls meet touch and accessible-name contracts", () => {
@@ -168,15 +166,18 @@ test("temporary chat changes create a clean privacy boundary", () => {
     toggle.indexOf("newChat()") < toggle.indexOf("setTempChat(enabled)"),
     "the clean conversation boundary should be created before the privacy mode changes",
   );
-  assert.match(index, /onTemporaryChatChange=\{setTemporaryChatEnabled\}/);
+  assert.match(index, /onTemporaryChatChange=\{[\s\S]{0,250}setTemporaryChatEnabled\(enabled\)/);
   assert.match(index, /<TemporaryChatToggle[\s\S]*?enabled=\{tempChat\}/);
-  assert.match(index, /onToggle=\{\(\) => setTemporaryChatEnabled\(!tempChat\)\}/);
-  assert.match(temporaryControls, /onClick=\{onToggle\}/);
+  assert.match(
+    index,
+    /onToggle=\{\(trigger\) => \{[\s\S]{0,220}setTemporaryChatEnabled\(!tempChat\)/,
+  );
+  assert.match(temporaryControls, /onClick=\{\(event\) => onToggle\(event\.currentTarget\)\}/);
   assert.match(temporaryControls, /aria-pressed=\{enabled\}/);
   assert.match(index, /temporary: tempChat/);
   assert.match(
     index,
-    /saveConversations\(\s*userKey,\s*conversations\.filter\(\(c\) => !c\.temporary\)/,
+    /const items = conversations\.filter\(\(c\) => !c\.temporary\)[\s\S]*saveConversations\(userKey, items, \{ snapshot \}\)/,
   );
 });
 

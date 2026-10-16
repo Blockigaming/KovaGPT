@@ -41,6 +41,15 @@ export default tseslint.config(
     },
   },
   {
+    // Keep the pinned upstream API/types byte-identical except the audited traversal fix.
+    // Runtime behavior and source identity are exercised by history-traversal-cancel tests.
+    files: ["src/vendor/tanstack-history/index.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+    },
+  },
+  {
     // These modules are intentionally public facades rather than route-level
     // component modules: shadcn-style primitives export variants, the auth
     // facade exports hooks and controls together, and email templates export

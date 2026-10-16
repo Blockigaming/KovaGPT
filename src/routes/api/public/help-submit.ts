@@ -3,6 +3,7 @@ import { render } from "@react-email/components";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { TEMPLATES } from "@/lib/email-templates/registry";
 import type { Database } from "@/integrations/supabase/types";
 import { resolveBackendUrl } from "@/lib/backend-url";
@@ -15,6 +16,7 @@ const FROM_DOMAIN = "kovagpt.com";
 const MAX_BODY_BYTES = 32 * 1024;
 
 const BodySchema = z.object({
+  requestId: z.string().uuid(),
   name: z.string().trim().max(120).optional().default(""),
   email: z.string().trim().email().max(254),
   topic: z.string().trim().max(200).optional().default(""),
@@ -63,6 +65,7 @@ async function enqueueFixedRecipient(args: {
   templateName: string;
   data: Record<string, unknown>;
   idempotencyKey: string;
+  requestId: string;
 }) {
   if (process.env.KOVA_EMAIL_QUEUE_ENABLED !== "true") {
     throw new Error("Email delivery is not configured");
@@ -77,17 +80,45 @@ async function enqueueFixedRecipient(args: {
   const plainText = await render(element, { plainText: true });
   const subject = typeof entry.subject === "function" ? entry.subject(args.data) : entry.subject;
   const recipient = entry.to.trim().toLowerCase();
-  const messageId = randomToken();
-  // The email API rejects transactional sends without an unsubscribe token,
-  // so the internal support recipient needs one too.
-  const unsubscribeToken = await unsubscribeTokenFor(args.supabase, recipient);
-  await args.supabase.from("email_send_log").insert({
+  const messageId = args.requestId;
+  const fingerprint = Array.from(
+    new Uint8Array(
+      await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(JSON.stringify({ template: args.templateName, data: args.data })),
+      ),
+    ),
+  )
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  // Reserve an existing primary key before any queue operation. A retry can
+  // read an acknowledged receipt, but can never enqueue the same reservation twice.
+  const { error: reserveError } = await args.supabase.from("email_send_log").insert({
+    id: messageId,
     message_id: messageId,
     template_name: args.templateName,
     recipient_email: recipient,
     status: "pending",
+    metadata: { support_fingerprint: fingerprint },
   });
-  const { error } = await args.supabase.rpc("enqueue_email", {
+  if (reserveError) {
+    if (reserveError.code !== "23505") throw new Error("Support reservation unavailable");
+    const { data: prior, error } = await args.supabase
+      .from("email_send_log")
+      .select("metadata")
+      .eq("id", messageId)
+      .maybeSingle();
+    const metadata = prior?.metadata as Record<string, unknown> | null;
+    if (error || metadata?.support_fingerprint !== fingerprint)
+      throw new Error("Support reservation unavailable");
+    if (metadata?.support_queued === true)
+      return { status: "queued" as const, reference: messageId };
+    throw new Error("Support submission outcome is unconfirmed");
+  }
+  // The email API rejects transactional sends without an unsubscribe token,
+  // so the internal support recipient needs one too.
+  const unsubscribeToken = await unsubscribeTokenFor(args.supabase, recipient);
+  const { data: queueId, error } = await args.supabase.rpc("enqueue_email", {
     queue_name: "transactional_emails",
     payload: {
       message_id: messageId,
@@ -104,7 +135,16 @@ async function enqueueFixedRecipient(args: {
       queued_at: new Date().toISOString(),
     },
   });
-  if (error) throw new Error(error.message);
+  if (error || !Number.isSafeInteger(queueId) || Number(queueId) <= 0)
+    throw new Error("Support queue acknowledgement unavailable");
+  const { data: receipt, error: receiptError } = await args.supabase
+    .from("email_send_log")
+    .update({ metadata: { support_fingerprint: fingerprint, support_queued: true } })
+    .eq("id", messageId)
+    .select("id")
+    .maybeSingle();
+  if (receiptError || receipt?.id !== messageId) throw new Error("Support receipt unavailable");
+  return { status: "queued" as const, reference: messageId };
 }
 
 export const Route = createFileRoute("/api/public/help-submit")({
@@ -141,54 +181,51 @@ export const Route = createFileRoute("/api/public/help-submit")({
           );
         }
 
-        const contentLength = Number(request.headers.get("content-length") ?? "0");
-        if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-          return Response.json({ error: "Request too large" }, { status: 413 });
-        }
-
-        const rawText = await request.text();
-        if (new TextEncoder().encode(rawText).byteLength > MAX_BODY_BYTES) {
-          return Response.json({ error: "Request too large" }, { status: 413 });
-        }
-
+        if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json")
+          return Response.json({ error: "JSON is required" }, { status: 415 });
         let raw: unknown;
         try {
-          raw = JSON.parse(rawText);
-        } catch {
-          return Response.json({ error: "Invalid JSON" }, { status: 400 });
+          raw = await readBoundedJsonObject(request, MAX_BODY_BYTES);
+        } catch (error) {
+          return Response.json(
+            { error: "Invalid or oversized request" },
+            {
+              status: error instanceof BoundedJsonError ? error.status : 400,
+            },
+          );
         }
         const parsed = BodySchema.safeParse(raw);
         if (!parsed.success) {
           return Response.json({ error: "Please fill in all required fields." }, { status: 400 });
         }
         const body = parsed.data;
-        if (body.website) {
-          // Honeypot tripped - pretend success so bots don't probe.
-          return Response.json({ success: true });
-        }
-
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        const idem = randomToken();
-
         try {
           // Public submissions may send only to the template's fixed internal
           // recipient. The submitted address stays in the notification so
           // support can reply manually, but it is never an outbound target.
-          await enqueueFixedRecipient({
+          const receipt = await enqueueFixedRecipient({
             supabase,
             templateName: "help-contact-notification",
             data: body,
-            idempotencyKey: `help-notify-${idem}`,
+            idempotencyKey: `help-notify-${body.requestId}`,
+            requestId: body.requestId,
           });
-        } catch (err) {
-          console.error("help-submit enqueue failed", err);
           return Response.json(
-            { error: "We couldn't send your message. Please try again in a moment." },
+            { success: true, ...receipt },
+            { headers: { "Cache-Control": "no-store" } },
+          );
+        } catch {
+          console.error("help-submit acceptance unconfirmed");
+          return Response.json(
+            {
+              error:
+                "Submission could not be confirmed. Retry this unchanged request to check its receipt; do not submit another copy.",
+              reference: body.requestId,
+            },
             { status: 500 },
           );
         }
-
-        return Response.json({ success: true });
       },
     },
   },

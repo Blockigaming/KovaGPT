@@ -60,14 +60,13 @@ test("public capability copy excludes retired or unsupported claims", () => {
   const llms = read("public/llms.txt");
   const writer = read("src/routes/ai-writer.tsx");
 
-  assert.match(llms, /Free uses Lite/);
-  assert.match(llms, /Thinking control is an Upgrade to Plus action, not an executable Free mode/);
-  assert.match(llms, /Plus Chat includes Lite, Medium, and Thinking/);
-  assert.match(llms, /same underlying Chat model/);
-  assert.match(llms, /Pro Chat includes Lite, Medium, High, Extra High, Max, and Ultra/);
-  assert.doesNotMatch(llms, /Free includes Lite and Thinking modes/);
+  assert.match(llms, /one unified assistant/);
+  assert.match(llms, /Model selection and response effort are separate concepts/);
+  assert.match(llms, /Only capabilities confirmed by the deployed runtime are available/);
+  assert.match(llms, /Max remains single-agent/);
+  assert.doesNotMatch(llms, /Plus Chat includes|Free uses Lite|Upgrade to Plus action/);
   assert.match(llms, /Voice input is not currently part of the supported web product/);
-  assert.match(llms, /Scheduled background work and image editing are not currently available/);
+  assert.match(llms, /Scheduled tasks require an enabled worker and account access/);
   assert.doesNotMatch(llms, /Creative, Precise, Code, Study|use voice/);
 
   assert.match(writer, /exact voice match is not guaranteed/);
@@ -86,7 +85,16 @@ test("install metadata is complete and support identity is consistent", () => {
   assert.equal(manifest.name, "KovaGPT");
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.start_url, "/");
-  assert.ok(manifest.icons.length >= 2);
+  assert.ok(manifest.icons.length >= 1);
+  for (const icon of manifest.icons) {
+    const bytes = readFileSync(join(root, "public", icon.src));
+    assert.equal(bytes.subarray(1, 4).toString(), "PNG");
+    const width = bytes.readUInt32BE(16);
+    const height = bytes.readUInt32BE(20);
+    assert.equal(icon.sizes, `${width}x${height}`);
+    assert.equal(width, height);
+    assert.ok(width >= 512, "install icon must support a large square render");
+  }
   assert.ok(manifest.icons.every((icon) => icon.src.startsWith("/") && icon.type === "image/png"));
 
   for (const source of [help, unsubscribe, helpNotification]) {

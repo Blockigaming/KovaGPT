@@ -17,7 +17,9 @@ test("Prompt Studio 2.0 persists folders revisions evaluations and launch analyt
   assert.match(server, /listPromptHistory/);
   assert.match(server, /evaluatePrompt/);
   assert.match(server, /increment_use/);
-  assert.match(route, /Prompt analytics/);
+  assert.match(route, /aria-label="Loaded page prompt analytics"/);
+  assert.match(route, /Page launch attempts/);
+  assert.match(route, /items\.reduce\(\(sum, item\) => sum \+ item\.use_count, 0\)/);
   assert.match(route, /Save revision/);
   assert.match(route, /Evaluation history/);
   assert.match(route, /Versions & evaluation/);

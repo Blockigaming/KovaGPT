@@ -10,3 +10,6 @@ routeTree.gen.ts
 src/integrations/supabase/types.ts
 docs/ui-ux/page-by-page-progress.json
 /.nitro/
+
+# Preserve audited upstream source with its single-line correction.
+src/vendor/tanstack-history/index.ts

@@ -159,3 +159,26 @@ test("Google preferences, Site children, Work events and skill receipts use comp
     assert.equal(rows.length, 1);
   }
 });
+
+test("Academy export uses the complete owner/topic key and charges its shared byte budget", async () => {
+  const ordered = [];
+  const body = { notes: "private notes", completed: false, checked: [] };
+  const budget = createAccountExportReadBudget(10000);
+  const rows = await readAccountExportRows(
+    () => ({
+      order(key) {
+        ordered.push(key);
+        return this;
+      },
+      async range() {
+        return { data: [{ owner_id: "A", topic: "writing", body }], error: null };
+      },
+    }),
+    "academy_learning_export_rows",
+    8,
+    100,
+    budget,
+  );
+  assert.deepEqual(ordered, ["owner_id", "topic"]);
+  assert.equal(rows[0].body.notes, "private notes");
+});

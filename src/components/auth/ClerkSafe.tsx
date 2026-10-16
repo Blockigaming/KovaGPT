@@ -33,11 +33,16 @@ import { AuthDialog } from "@/components/auth/AuthDialog";
 import { MfaChallengeDialog } from "@/components/auth/MfaChallengeDialog";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import {
+  recordHostedAuthDiagnostic,
+  traceHostedAuth,
+  getHostedAuthDiagnosticText,
   clearOAuthResponseFromUrl,
   completeOAuthSessionFromUrl,
   hasOAuthResponseInUrl,
+  isUnusableHostedAuthLink,
   markPasswordRecoveryFlow,
   OAUTH_CALLBACK_PATH,
+  UNUSABLE_SIGN_IN_LINK_MESSAGE,
 } from "@/lib/oauth-session";
 import {
   clearPrincipalBrowserStorage,
@@ -74,7 +79,7 @@ import {
 export const clerkEnabled = true;
 
 type AuthDialogState = { open: boolean; mode: "sign-in" | "sign-up" };
-type AuthIssue = "temporarily_unavailable" | "configuration_unavailable" | null;
+type AuthIssue = "temporarily_unavailable" | "configuration_unavailable" | "link_unusable" | null;
 
 type AuthCtx = {
   session: Session | null;
@@ -275,7 +280,7 @@ function KovaClerkProvider({
     if (!response.ok) throw new Error("Kova sign out failed");
     const userId = session?.user.id ?? null;
     if (userId) {
-      clearPrincipalBrowserStorage(userId);
+      await clearPrincipalBrowserStorage(userId);
       dispatchPrincipalBrowserStorageCleared(userId);
     }
     purgeUnscopedPrivateBrowserStorage(null);
@@ -354,14 +359,14 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
   const pendingValidationUserIdRef = useRef<string | undefined>(undefined);
   const validatedSessionRef = useRef<Session | null>(null);
 
-  const clearBrowserStateFor = useCallback((...userIds: (string | null | undefined)[]) => {
+  const clearBrowserStateFor = useCallback(async (...userIds: (string | null | undefined)[]) => {
     const seen = new Set<string>();
     for (const userId of userIds) {
       if (userId === undefined) continue;
       const identityKey = userId === null ? "guest" : `user:${userId}`;
       if (seen.has(identityKey)) continue;
       seen.add(identityKey);
-      const result = clearPrincipalBrowserStorage(userId);
+      const result = await clearPrincipalBrowserStorage(userId);
       const failureCount = result.local.failures.length + result.session.failures.length;
       if (failureCount > 0) {
         console.warn("[KovaAuth] Account-local browser cleanup was incomplete", {
@@ -409,7 +414,8 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
       // previously validated same-user session may remain available offline;
       // initial and account-switch failures stay principal-unresolved.
       setPendingMfaSession(null);
-      setAuthIssue("temporarily_unavailable");
+      recordHostedAuthDiagnostic("ui_validation", "error", { error });
+      setAuthIssue(isUnusableHostedAuthLink(error) ? "link_unusable" : "temporarily_unavailable");
       setSession(retainedSession);
       setIsLoaded(Boolean(retainedSession));
     },
@@ -442,6 +448,7 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
         setPendingMfaSession(null);
         setAuthIssue(null);
         setIsLoaded(true);
+        recordHostedAuthDiagnostic("ui_session", "guest");
         return;
       }
 
@@ -458,8 +465,10 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
       try {
         const [{ data: userData, error: userError }, { data: assurance, error: assuranceError }] =
           await Promise.all([
-            supabase.auth.getUser(candidate.access_token),
-            supabase.auth.mfa.getAuthenticatorAssuranceLevel(candidate.access_token),
+            traceHostedAuth("provider_user", () => supabase.auth.getUser(candidate.access_token)),
+            traceHostedAuth("provider_assurance", () =>
+              supabase.auth.mfa.getAuthenticatorAssuranceLevel(candidate.access_token),
+            ),
           ]);
         if (validation !== sessionValidationRef.current) return;
 
@@ -477,6 +486,10 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
           return;
         }
         if (disposition.kind === "terminal") {
+          recordHostedAuthDiagnostic("ui_validation", "error", {
+            error: userError ?? assuranceError,
+            identityMatches: validatedUser?.id === candidate.user.id,
+          });
           console.error("[KovaAuth] Session validation failed", {
             userStatus: userError ? "invalid" : validatedUser ? "invalid" : "missing",
             assuranceStatus: assuranceError ? "unavailable" : "valid",
@@ -506,6 +519,7 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
         if (!validatedUser || !assurance) return;
 
         if (assurance.nextLevel === "aal2" && assurance.currentLevel !== "aal2") {
+          recordHostedAuthDiagnostic("ui_session", "mfa_required");
           if (
             browserStorageUserIdRef.current &&
             browserStorageUserIdRef.current !== candidate.user.id
@@ -545,6 +559,7 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
         setSession(validatedSession);
         setAuthIssue(null);
         setIsLoaded(true);
+        recordHostedAuthDiagnostic("ui_session", "authenticated", { identityMatches: true });
       } catch (error) {
         if (validation !== sessionValidationRef.current) return;
         const disposition = classifyThrownAuthValidationError(error);
@@ -575,9 +590,14 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
       };
     }
 
+    const callbackPresentAtMount = hasOAuthResponseInUrl();
     const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (cancelled) return;
       if (!newSession && hasOAuthResponseInUrl()) return;
+      // auth-js can deliver its initial empty session after the callback has
+      // scrubbed the URL. That stale event must not classify a failed/pending
+      // callback as a confirmed guest or invalidate its error handling.
+      if (!newSession && event === "INITIAL_SESSION" && callbackPresentAtMount) return;
       if (event === "PASSWORD_RECOVERY" && newSession) {
         markPasswordRecoveryFlow(newSession.user.id);
       }
@@ -603,8 +623,8 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
           window.location.pathname !== OAUTH_CALLBACK_PATH &&
           window.location.pathname !== "/reset-password"
         ) {
-          // Clear the OAuth params from the URL up-front so a StrictMode
-          // double-invoke / reload can't re-trigger exchange.
+          // The surviving effect owns the callback. The helper scrubs secrets
+          // before network I/O and checks cancellation/authority after awaits.
           const oauthSession = await completeOAuthSessionFromUrl(
             "app bootstrap",
             callbackController.signal,
@@ -620,7 +640,9 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await traceHostedAuth("session_read", () =>
+          supabase.auth.getSession(),
+        );
         if (error) {
           if (
             isCurrentAuthValidation(hydrationValidation, sessionValidationRef.current, cancelled)
@@ -668,7 +690,11 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    hydrateSession();
+    // Effect cleanup/replay must happen before consuming the one-use URL. A
+    // cancelled effect must not scrub the fragment needed by its replacement.
+    void Promise.resolve().then(() => {
+      if (!cancelled) void hydrateSession();
+    });
 
     return () => {
       cancelled = true;
@@ -712,7 +738,9 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
     setPendingMfaSession(null);
     setIsLoaded(false);
     clearBrowserStateFor(browserStorageUserId, pendingValidationUserId);
-    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+    await traceHostedAuth("logout", () => supabase.auth.signOut({ scope: "local" })).catch(
+      () => undefined,
+    );
     clearBrowserStateFor(browserStorageUserId, pendingValidationUserId);
     purgeOwnerlessStateFor(null);
     browserStorageUserIdRef.current = null;
@@ -749,16 +777,26 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
           <span>
             {authIssue === "configuration_unavailable"
               ? "Sign-in is temporarily unavailable because authentication is not configured."
-              : "KovaGPT could not verify your session. Your browser data was not changed."}
+              : authIssue === "link_unusable"
+                ? UNUSABLE_SIGN_IN_LINK_MESSAGE
+                : "KovaGPT could not verify your session. Your browser data was not changed."}
           </span>
           <button
             type="button"
             className="shrink-0 rounded-md border border-border px-2.5 py-1 font-medium hover:bg-accent"
-            onClick={() => window.location.reload()}
+            onClick={() =>
+              authIssue === "link_unusable" ? openAuth("sign-in") : window.location.reload()
+            }
           >
-            Retry
+            {authIssue === "link_unusable" ? "Sign in again" : "Retry"}
           </button>
         </div>
+      ) : null}
+      {getHostedAuthDiagnosticText() ? (
+        <details className="fixed bottom-2 right-2 z-[120] max-h-[40vh] max-w-[calc(100%-1rem)] overflow-auto rounded border bg-background p-2 text-xs">
+          <summary>Sign-in diagnostics (no credentials)</summary>
+          <pre data-testid="hosted-auth-diagnostics">{getHostedAuthDiagnosticText()}</pre>
+        </details>
       ) : null}
       <AuthDialog
         open={dialog.open}
@@ -943,7 +981,7 @@ export function UserButton(_props?: {
             <span>{initial}</span>
           )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="kova-profile-menu">
           <DropdownMenuLabel className="truncate">{label}</DropdownMenuLabel>
           {adapted?.email && adapted.email !== label && (
             <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">

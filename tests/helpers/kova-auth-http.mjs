@@ -1,3 +1,5 @@
+import * as proxyOrigin from "../../src/lib/kova-auth-proxy-origin.mjs";
+import * as ownerRelay from "../../src/lib/s6-owner-relay.mjs";
 import assert from "node:assert/strict";
 import * as nodeCrypto from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -6,6 +8,7 @@ import ts from "typescript";
 import * as contract from "../../src/lib/kova-auth-contract.mjs";
 import * as crypto from "../../src/lib/kova-auth-crypto.server.mjs";
 import * as security from "../../src/lib/auth-security.mjs";
+import * as validation from "../../src/lib/auth-validation-policy.mjs";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
 
 const compile = (path) =>
@@ -24,6 +27,8 @@ export function authHttp(options = {}) {
     limits = [],
     logs = [];
   const modules = {
+    "@/lib/kova-auth-proxy-origin.mjs": proxyOrigin,
+    "@/lib/s6-owner-relay.mjs": ownerRelay,
     "node:crypto": nodeCrypto,
     "@/lib/kova-auth-crypto.server.mjs": { ...crypto, ...options.crypto },
     "@/lib/kova-auth-contract.mjs": {
@@ -31,6 +36,7 @@ export function authHttp(options = {}) {
       resolveKovaAuthMode: () => options.mode ?? "kova",
     },
     "@/lib/auth-security.mjs": security,
+    "@/lib/auth-validation-policy.mjs": validation,
     "@/lib/chat-ingress.server.mjs": { resolveAnonymousClientKey: () => "fixture-client" },
     "@/lib/endpoint-reliability.mjs": reliability,
     "@/lib/distributed-rate-limit.server": {

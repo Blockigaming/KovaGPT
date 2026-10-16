@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
+import { ProjectChatContext } from "@/components/ProjectChatContext";
 import { ChatMessage } from "@/components/ChatMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +76,7 @@ function ProjectChatPage() {
   const activeChatIdRef = useRef(chatId);
   const renameTriggerRef = useRef<HTMLButtonElement>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const loadedContextOwnerRef = useRef<string | null>(null);
 
   const fnGetChat = useServerFn(getProjectChat);
   const fnGetProject = useServerFn(getProject);
@@ -109,6 +111,7 @@ function ProjectChatPage() {
           navigate({ to: "/projects/$projectId", params: { projectId } });
           return;
         }
+        loadedContextOwnerRef.current = userKey;
         setProject(nextProject);
         setTitle(chat.title);
         setMessages(chat.snapshot.messages ?? []);
@@ -318,7 +321,11 @@ function ProjectChatPage() {
 
   return (
     <AppShell>
-      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-project-chat flex min-h-0 w-full flex-1 flex-col overflow-hidden"
+      >
         <header className="flex shrink-0 items-center gap-2 border-b px-3 py-2 sm:gap-3 sm:px-4">
           <Link
             to="/projects/$projectId"
@@ -421,7 +428,7 @@ function ProjectChatPage() {
           })}
         </div>
 
-        <div className="shrink-0 border-t bg-background">
+        <div className="kova-assistant kova-project-composer shrink-0 border-t bg-background">
           <ChatInput
             value={input}
             onChange={setInput}
@@ -433,10 +440,26 @@ function ProjectChatPage() {
             attachments={composerAttachments}
             onAttachmentsChange={setComposerAttachments}
             canChangeAgent={false}
+            showModelStatus
+            readOnlyContext={{
+              title: "Project context",
+              description:
+                "Review saved instructions and how project files can contribute to this conversation.",
+              content: (
+                <ProjectChatContext
+                  projectId={projectId}
+                  project={
+                    loadedContextOwnerRef.current === userKey && project?.id === projectId
+                      ? project
+                      : null
+                  }
+                />
+              ),
+            }}
             placeholder={canEdit ? "Message the project…" : "You have view-only access"}
           />
         </div>
-      </div>
+      </main>
 
       <Dialog
         open={renameOpen}
@@ -464,6 +487,7 @@ function ProjectChatPage() {
             }}
           >
             <Input
+              className="kova-workspace-action"
               value={renameDraft}
               onChange={(event) => setRenameDraft(event.target.value)}
               maxLength={200}

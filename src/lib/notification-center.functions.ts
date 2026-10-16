@@ -1,3 +1,5 @@
+import { loose } from "@/lib/supabase-loose";
+import { readCollectionPage, type CollectionPage } from "@/lib/read-bounded-collection";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -31,59 +33,89 @@ type NotificationRow = {
 };
 
 const mutationSchema = z.object({
-  ids: z.array(z.string().uuid()).max(200).optional(),
-  source: z.enum(["application", "agent", "all"]).default("all"),
+  ids: z
+    .array(z.string().uuid())
+    .min(1)
+    .max(50)
+    .transform((ids) => [...new Set(ids)]),
+  source: z.enum(["application", "agent"]),
 });
 
+const NotificationPageInput = z.object({
+  source: z.enum(["application", "agent"]),
+  cursor: z.string().uuid().nullable().default(null),
+});
 export const listNotifications = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<CenterNotification[]> => {
-    const client = context.supabase as unknown as LooseClient;
-    const [application, agent] = await Promise.all([
-      client
-        .from("app_notifications")
-        .select("id,type,title,safe_preview,action_url,read_at,created_at")
-        .eq("owner_id", context.userId)
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-        .order("created_at", { ascending: false })
-        .limit(100),
-      client
-        .from("agent_notifications")
-        .select("id,type,title,body,action_url,read_at,created_at")
-        .eq("owner_id", context.userId)
-        .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false })
-        .limit(100),
-    ]);
-    if (application.error) throw new Error("Unable to load notifications");
-    // The agent migration can be deployed independently. Do not hide ordinary notifications while
-    // an operator is applying it, but never invent agent rows.
-    const rows: CenterNotification[] = ((application.data ?? []) as NotificationRow[]).map(
-      (item) => ({
+  .validator((input: unknown) => NotificationPageInput.parse(input))
+  .handler(async ({ data, context }): Promise<CollectionPage<CenterNotification>> => {
+    const application = data.source === "application";
+    const page = await readCollectionPage<NotificationRow>(
+      (signal) => {
+        let query = loose(context.supabase)
+          .from(application ? "app_notifications" : "agent_notifications")
+          .select(
+            application
+              ? "id,type,title,safe_preview,action_url,read_at,created_at"
+              : "id,type,title,action_url,read_at,created_at",
+          )
+          .eq("owner_id", context.userId)
+          .order("id", { ascending: true })
+          .limit(25)
+          .abortSignal(signal);
+        const now = new Date().toISOString();
+        query = application
+          ? query.or(`expires_at.is.null,expires_at.gt.${now}`)
+          : query.gt("expires_at", now);
+        if (data.cursor) query = query.gt("id", data.cursor);
+        return query;
+      },
+      application ? "Application notifications" : "Agent notifications",
+      data.cursor,
+      25,
+    );
+    return {
+      cursor: page.cursor,
+      items: page.items.map((item) => ({
         id: item.id,
-        source: "application",
+        source: data.source,
         type: item.type,
         title: item.title,
-        preview: item.safe_preview ?? "",
+        preview: application
+          ? (item.safe_preview ?? "")
+          : "Agent notification received. Details are hidden by default.",
         actionUrl: item.action_url,
         readAt: item.read_at,
         createdAt: item.created_at,
-      }),
+      })),
+    };
+  });
+
+export const readNotificationDetails = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<{ id: string; body: string }> => {
+    const page = await readCollectionPage<{ id: string; body: string }>(
+      (signal) =>
+        loose(context.supabase)
+          .from("agent_notifications")
+          .select("id,body")
+          .eq("owner_id", context.userId)
+          .eq("id", data.id)
+          .gt("expires_at", new Date().toISOString())
+          .limit(1)
+          .abortSignal(signal),
+      "Notification details",
+      null,
+      1,
     );
-    if (!agent.error)
-      rows.push(
-        ...((agent.data ?? []) as NotificationRow[]).map((item) => ({
-          id: item.id,
-          source: "agent" as const,
-          type: item.type,
-          title: item.title,
-          preview: item.body ?? "",
-          actionUrl: item.action_url,
-          readAt: item.read_at,
-          createdAt: item.created_at,
-        })),
-      );
-    return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 150);
+    if (
+      page.items.length !== 1 ||
+      page.items[0].id !== data.id ||
+      typeof page.items[0].body !== "string"
+    )
+      throw new Error("Notification details are unavailable.");
+    return page.items[0];
   });
 
 async function updateTables(
@@ -92,39 +124,45 @@ async function updateTables(
   input: z.infer<typeof mutationSchema>,
   operation: "read" | "delete",
 ) {
-  const tables =
-    input.source === "all"
-      ? ["app_notifications", "agent_notifications"]
-      : [input.source === "agent" ? "agent_notifications" : "app_notifications"];
-  await Promise.all(
-    tables.map(async (table) => {
-      let query =
-        operation === "read"
-          ? client.from(table).update({ read_at: new Date().toISOString() })
-          : client.from(table).delete();
-      query = query.eq("owner_id", ownerId);
-      if (input.ids?.length) query = query.in("id", input.ids);
-      const { error } = await query;
-      if (error && !String(error.message).includes("agent_notifications"))
-        throw new Error("Unable to update notifications");
-    }),
-  );
+  const table = input.source === "agent" ? "agent_notifications" : "app_notifications";
+  const query =
+    operation === "read"
+      ? client.from(table).update({ read_at: new Date().toISOString() })
+      : client.from(table).delete();
+  const { data, error } = await query
+    .eq("owner_id", ownerId)
+    .in("id", input.ids)
+    .select("id")
+    .abortSignal(AbortSignal.timeout(15000));
+  if (error || !Array.isArray(data))
+    throw new Error(
+      "Notification change could not be confirmed. Refresh this source before retrying.",
+    );
+  return data.map((row) => String(row.id));
 }
 
 export const markNotificationsRead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => mutationSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await updateTables(context.supabase as unknown as LooseClient, context.userId, data, "read");
-    return { ok: true };
+    const ids = await updateTables(
+      context.supabase as unknown as LooseClient,
+      context.userId,
+      data,
+      "read",
+    );
+    return { ok: true, ids };
   });
 
 export const deleteNotifications = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) =>
-    mutationSchema.extend({ ids: z.array(z.string().uuid()).min(1).max(200) }).parse(input),
-  )
+  .validator((input: unknown) => mutationSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await updateTables(context.supabase as unknown as LooseClient, context.userId, data, "delete");
-    return { ok: true };
+    const ids = await updateTables(
+      context.supabase as unknown as LooseClient,
+      context.userId,
+      data,
+      "delete",
+    );
+    return { ok: true, ids };
   });

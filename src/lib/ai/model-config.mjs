@@ -44,13 +44,13 @@ export const ROLE_ENV_KEYS = Object.freeze({
   EMBEDDING: "KOVA_MODEL_EMBEDDING",
 });
 
-// USD per 1M tokens. Used for cost estimates in routing logs only; it never
-// changes which model is selected. Unknown models fall back to the
-// DEFAULT_CHAT price so estimates stay conservative instead of throwing.
+// Standard text USD per 1M tokens, checked against official model pages on
+// 2026-10-15. Used only for routing logs; the server catalog authorizes costs.
+// Unknown models use the default logging estimate, not a conservative bound.
 export const MODEL_COST_PER_MTOK = Object.freeze({
-  "gpt-5.6-luna": { input: 0.1, output: 0.4 },
-  "gpt-5.6-terra": { input: 1.25, output: 10 },
-  "gpt-5.6-sol": { input: 5, output: 40 },
+  "gpt-5.6-luna": { input: 0.2, output: 1.2 },
+  "gpt-5.6-terra": { input: 2, output: 12 },
+  "gpt-5.6-sol": { input: 4, output: 20 },
   "gpt-image-1": { input: 5, output: 40 },
   "text-embedding-3-small": { input: 0.02, output: 0 },
 });

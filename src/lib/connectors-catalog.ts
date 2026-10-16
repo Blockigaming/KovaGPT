@@ -1,3 +1,7 @@
+import { isLaunchConnector } from "@/integrations/launch-contracts.mjs";
+import { LAUNCH_PLUGIN_IDS } from "./core-launch-policy.mjs";
+export { LAUNCH_PLUGIN_IDS } from "./core-launch-policy.mjs";
+
 // Catalog of connectable services shown in Apps and Settings.
 //
 // TRUTHFULNESS CONTRACT
@@ -40,7 +44,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google",
     description: "Sign in with your Google account.",
     category: "Productivity",
-    status: "live",
+    status: "setup_required",
     domain: "google.com",
     legacyProvider: "google",
   },
@@ -49,7 +53,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Gmail",
     description: "Read message context from Gmail.",
     category: "Email",
-    status: "live",
+    status: "setup_required",
     domain: "gmail.com",
     legacyProvider: "gmail",
   },
@@ -58,7 +62,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Drive",
     description: "Reference files from your Drive.",
     category: "Storage & Files",
-    status: "live",
+    status: "setup_required",
     domain: "drive.google.com",
     legacyProvider: "google-drive",
   },
@@ -149,7 +153,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Calendar",
     description: "Read and create events.",
     category: "Calendar",
-    status: "live",
+    status: "setup_required",
     domain: "calendar.google.com",
   },
   {
@@ -2938,7 +2942,7 @@ export const CONNECTOR_CATEGORIES: ConnectorCategory[] = [
   "Development",
 ];
 
-/** Connectors a user can actually connect today. */
+/** Entries with separately established production acceptance, never inferred from code. */
 export const LIVE_CONNECTOR_IDS: ReadonlySet<string> = new Set(
   CONNECTOR_CATALOG.filter((item) => item.status === "live").map((item) => item.id),
 );
@@ -2951,6 +2955,21 @@ export const SETUP_REQUIRED_CONNECTOR_IDS: ReadonlySet<string> = new Set(
 export function getConnector(id: string): ConnectorItem | undefined {
   return CONNECTOR_CATALOG.find((item) => item.id === id);
 }
+
+export const LAUNCH_PLUGIN_CATALOG: readonly ConnectorItem[] = LAUNCH_PLUGIN_IDS.map((id) => {
+  if (id === "sharepoint")
+    return {
+      id,
+      label: "SharePoint",
+      description: "Reference authorized SharePoint sites and files.",
+      category: "Storage & Files",
+      status: "planned",
+      domain: "sharepoint.com",
+    };
+  const item = getConnector(id);
+  if (!item) throw new Error(`Launch plugin is missing from the catalog: ${id}`);
+  return item;
+});
 
 /**
  * The single source of truth for connectors reachable through the Google
@@ -2989,8 +3008,10 @@ export function connectorUnavailableLabel(item: ConnectorItem): string {
 
 /** Longer explanation, used for tooltips and screen-reader descriptions. */
 export function connectorUnavailableReason(item: ConnectorItem): string {
+  if (isLaunchConnector(item.id))
+    return `${item.label} connections are not available until its connection and read operations have been verified.`;
   if (item.status === "setup_required") {
-    return `${item.label} is implemented but this deployment has not been given ${item.label} credentials yet.`;
+    return `${item.label} is implemented but availability must be confirmed by this deployment before you connect.`;
   }
   return `${item.label} is listed in the catalog. KovaGPT does not have a ${item.label} connection yet.`;
 }

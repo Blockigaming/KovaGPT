@@ -43,3 +43,5 @@ export function kovaAttachmentsAllowed(
   context: KovaContext | null,
   messages: { attachments?: unknown[] }[],
 ): boolean;
+
+export const KOVA_APP_LABELS: Readonly<Record<string, string>>;

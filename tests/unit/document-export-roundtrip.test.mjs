@@ -198,3 +198,77 @@ test("Word ordered lists preserve each list's starting number and reject unrepre
   assert.throws(() => parseDocumentBlocks("999999999999999999999999. Text"), /list number/);
   assert.throws(() => parseDocumentBlocks("| a | b |\n| --- |\n| c | d |"), /separator/);
 });
+
+test("DOCX simple inline styles and safe links are real runs; credential and executable links remain inert text", async () => {
+  const bytes = await createDocumentDocx(
+    "Title",
+    "A **bold** and *italic* with `code` and [safe](https://example.test/path). [private](https://user:secret@example.test) [bad](javascript:alert)",
+  );
+  const files = unzipSync(bytes),
+    xml = strFromU8(files["word/document.xml"]),
+    rels = strFromU8(files["word/_rels/document.xml.rels"]);
+  assert.match(xml, /<w:b\/>/);
+  assert.match(xml, /<w:i\/>/);
+  assert.match(xml, /Courier New/);
+  assert.match(xml, /<w:hyperlink/);
+  assert.match(rels, /https:\/\/example.test\/path/);
+  assert.doesNotMatch(rels, /secret|javascript/);
+  assert.match(xml, /\[private\]/);
+  assert.match(xml, /\[bad\]/);
+});
+
+test("DOCX preserves all six heading levels and current title/body", async () => {
+  const bytes = await createDocumentDocx(
+    "Current résumé",
+    "#### Fourth\n##### Fifth\n###### Sixth\nFinal unsaved body",
+  );
+  const xml = strFromU8(unzipSync(bytes)["word/document.xml"]);
+  for (const level of [4, 5, 6]) assert.match(xml, new RegExp(`w:val="Heading${level}"`));
+  assert.match(xml, /Current résumé/);
+  assert.match(xml, /Final unsaved body/);
+});
+test("PDF renders simple bold and visible link destinations while retaining unsupported inline syntax", async () => {
+  const bytes = await createDocumentPdf(
+    "Current résumé",
+    "1. **Important** [Reference](https://example.test/path)\n- Café Ελληνικά\n\n*literal italic* and `literal code`",
+    fonts,
+  );
+  const task = getDocument({ data: bytes, disableFontFace: true });
+  const pdf = await task.promise;
+  try {
+    const content = await (await pdf.getPage(1)).getTextContent();
+    const text = content.items.map((x) => x.str ?? "").join(" ");
+    assert.match(text, /Important/);
+    assert.doesNotMatch(text, /\*\*Important\*\*/);
+    assert.match(text, /https:\/\/example.test\/path/);
+    assert.match(text, /Café/);
+    assert.match(text, /literal italic/);
+    assert.match(text, /literal code/);
+    const important = content.items.find((x) => x.str === "Important");
+    const reference = content.items.find((x) => x.str?.includes("Reference"));
+    assert.ok(important);
+    assert.ok(reference);
+    assert.notEqual(important.fontName, reference.fontName);
+  } finally {
+    await task.destroy();
+  }
+});
+
+test("DOCX defines each style ID once and retains customized title and six heading styles", async () => {
+  const files = unzipSync(
+    await createDocumentDocx(
+      "Current title",
+      "# One\n## Two\n### Three\n#### Four\n##### Five\n###### Six\nFinal marker",
+    ),
+  );
+  const styles = parser.parse(strFromU8(files["word/styles.xml"]))["w:styles"]["w:style"];
+  const ids = styles.map((style) => style["@_w:styleId"]);
+  assert.equal(new Set(ids).size, ids.length, "duplicate OOXML style IDs");
+  for (const id of ["Title", ...[1, 2, 3, 4, 5, 6].map((level) => `Heading${level}`)]) {
+    const style = styles.find((entry) => entry["@_w:styleId"] === id);
+    assert.ok(style, id);
+    assert.equal(style["w:rPr"]["w:rFonts"]["@_w:ascii"], "Arial");
+    assert.equal(style["w:rPr"]["w:color"]["@_w:val"], "111827");
+    assert.ok("w:b" in style["w:rPr"]);
+  }
+});

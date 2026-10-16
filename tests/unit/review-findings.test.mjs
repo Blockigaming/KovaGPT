@@ -88,9 +88,10 @@ test("model selectors only advertise backed intelligence modes", () => {
   const desktop = read("src/components/ModelSelector.tsx");
   const responsive = read("src/components/ResponsiveModelSelector.tsx");
   const chat = read("src/routes/api/chat.ts");
-  const shell = read("src/routes/index.tsx");
+  const shell = read("src/components/ChatWorkspace.tsx");
   assert.match(desktop, /ResponsiveModelSelector/);
-  assert.match(responsive, /versionGroupsForTier\(userTier\)/);
+  assert.match(responsive, /kova-model-static/);
+  assert.doesNotMatch(responsive, /model-selector-trigger|<button/);
   for (const selector of [desktop, responsive])
     assert.doesNotMatch(selector, /KOVA_VERSIONS|kova-version|KovaGPT version|Kova 3\.[345]/);
   assert.doesNotMatch(shell, /kovaVersion|kova-version/);
@@ -140,9 +141,9 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
     /scheduled_task_runtime_ready/,
   );
   assert.match(route, /Scheduled Tasks Status/);
-  assert.match(route, /Upgrading will not enable scheduled/);
+  assert.match(route, /Upgrading your plan won.t change this availability/);
   assert.doesNotMatch(route, /Schedule KovaGPT to do something for you later/);
-  assert.match(sidebar, /Scheduled tasks status/);
+  assert.match(sidebar, /Scheduled tasks/);
   assert.match(palette, /Scheduled Tasks status/);
   assert.match(capabilities, /label: "Scheduled Tasks status"/);
   assert.match(

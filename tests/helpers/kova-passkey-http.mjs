@@ -3,7 +3,11 @@ import { createHash } from "node:crypto";
 import { authHttp, authRequest } from "./kova-auth-http.mjs";
 import * as passkeyCrypto from "../../src/lib/kova-auth-passkey-crypto.server.mjs";
 
-const booleanRpcs = new Set(["kova_auth_begin_passkey_challenge", "kova_auth_rename_passkey"]);
+const booleanRpcs = new Set([
+  "kova_auth_begin_passkey_challenge",
+  "kova_auth_rename_passkey",
+  "kova_auth_passkey_recent_primary_session",
+]);
 const rpcs = new Set([
   ...booleanRpcs,
   "kova_auth_resolve_session",

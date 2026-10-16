@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 const styles = await readFile("src/styles.css", "utf8");
 const reference = await readFile("docs/kova-observable-reference.md", "utf8");
-const projects = await readFile("src/routes/projects.tsx", "utf8");
+const projects = await readFile("src/routes/projects.index.tsx", "utf8");
 const projectDetail = await readFile("src/routes/projects.$projectId.tsx", "utf8");
 const projectFns = await readFile("src/lib/projects.functions.ts", "utf8");
 const rag = await readFile("src/lib/project-rag.server.ts", "utf8");
@@ -108,7 +108,9 @@ test("library workspace supports filters, sorting, view preference, safe actions
 
 test("composer can reuse recent authorized Library files without duplicate upload", () => {
   assert.match(chatInput, /RecentLibraryFile/);
-  assert.match(chatInput, /Recent Library files/);
+  assert.match(chatInput, /Saved Library files/);
+  assert.match(chatInput, /Add from Library/);
+  assert.match(chatInput, /Search Library files/);
   assert.match(chatInput, /attachLibraryFile/);
   assert.match(chatInput, /libraryItemId/);
   assert.match(chatInput, /is already attached/);

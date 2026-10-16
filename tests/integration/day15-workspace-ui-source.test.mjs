@@ -50,12 +50,14 @@ test("per-chat rules and pinned files have a real management surface", () => {
   assert.match(dialog, /listChatPinnedFiles/u);
   assert.match(dialog, /pinChatFile/u);
   assert.match(dialog, /unpinChatFile/u);
-  assert.match(dialog, /listMyLibrary/u);
+  assert.match(dialog, /await listLibraryPage\(/u);
+  assert.match(dialog, /setLibraryCursor\(page\.cursor\)/u);
+  assert.match(dialog, /Load more Library items/u);
   assert.doesNotMatch(dialog, /TODO|FIXME/u);
 });
 
 test("the chat route wires branches, rules disclosure, and edit application", () => {
-  const source = read("src/routes/index.tsx");
+  const source = read("src/components/ChatWorkspace.tsx");
   assert.match(source, /useChatBranches/u);
   assert.match(source, /<ChatBranchBar/u);
   assert.match(source, /ChatWorkspaceDialog/u);

@@ -1,3 +1,4 @@
+import { trackLegalSection } from "@/lib/legal-active-section";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export type LegalDocSection = Readonly<{ id: string; label: string }>;
@@ -36,10 +37,18 @@ function LegalTocList({
   activeId: string | null;
 }) {
   return (
-    <ol className="legal-toc-list">
+    <ol className="legal-toc-list" role="list">
       {sections.map((section, index) => (
         <li key={section.id}>
-          <a href={`#${section.id}`} data-active={activeId === section.id || undefined}>
+          <a
+            href={`#${section.id}`}
+            data-active={activeId === section.id || undefined}
+            aria-current={activeId === section.id ? "location" : undefined}
+            onClick={(event) => {
+              const menu = event.currentTarget.closest("details");
+              if (menu) menu.open = false;
+            }}
+          >
             <span className="legal-toc-index" aria-hidden="true">
               {String(index + 1).padStart(2, "0")}
             </span>
@@ -63,27 +72,8 @@ export function LegalDoc({
 
   useEffect(() => {
     const root = bodyRef.current;
-    if (!root || typeof IntersectionObserver === "undefined") return;
-    const targets = Array.from(root.querySelectorAll<HTMLElement>("[data-legal-section]"));
-    if (!targets.length) return;
-
-    const visible = new Map<string, number>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) visible.set(entry.target.id, entry.boundingClientRect.top);
-          else visible.delete(entry.target.id);
-        }
-        if (!visible.size) return;
-        let top = Number.POSITIVE_INFINITY;
-        for (const value of visible.values()) top = Math.min(top, value);
-        const match = targets.find((target) => visible.get(target.id) === top);
-        if (match) setActiveId(match.id);
-      },
-      { rootMargin: "0px 0px -55% 0px", threshold: 0 },
-    );
-    targets.forEach((target) => observer.observe(target));
-    return () => observer.disconnect();
+    if (!root) return;
+    return trackLegalSection(root, setActiveId);
   }, []);
 
   return (

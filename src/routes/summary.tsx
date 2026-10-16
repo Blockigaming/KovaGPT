@@ -23,12 +23,8 @@ import {
   Pin,
   ArrowRight,
 } from "lucide-react";
-import {
-  chatStoragePrincipal,
-  loadConversations,
-  savePendingActive,
-  type Conversation,
-} from "@/lib/chat-store";
+import { chatStoragePrincipal, savePendingActive } from "@/lib/chat-store";
+import { useAccountConversationHistory } from "@/lib/use-account-conversation-history";
 import { safeNavigationUrl } from "@/lib/safe-url";
 import {
   getSummaryProjects,
@@ -61,8 +57,6 @@ export const Route = createFileRoute("/summary")({
   }),
   component: SummaryPage,
 });
-
-const EMPTY_CONVERSATIONS: Conversation[] = [];
 
 // -------- Dismissible sections --------
 const DISMISS_KEY_BASE = "kova-summary-dismissed";
@@ -269,22 +263,8 @@ function SummaryPage() {
   const firstName = (user?.firstName ?? user?.fullName?.split(" ")[0] ?? null) as string | null;
   const greeting = useGreeting(firstName);
 
-  // Local chats
-  const [conversationState, setConversationState] = useState<{
-    principal: string | null;
-    items: Conversation[];
-  }>({ principal: null, items: [] });
-  const conversations =
-    principal !== null && conversationState.principal === principal
-      ? conversationState.items
-      : EMPTY_CONVERSATIONS;
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn || principal === null) {
-      setConversationState({ principal: null, items: [] });
-      return;
-    }
-    setConversationState({ principal, items: loadConversations(userKey) });
-  }, [isLoaded, isSignedIn, principal, userKey]);
+  // Reactive account history; server hydration can complete after this route mounts.
+  const conversations = useAccountConversationHistory(userKey, isLoaded && Boolean(isSignedIn));
   const pinned = conversations.filter((c) => c.pinned).slice(0, 4);
   const continueChats = conversations
     .filter((c) => !c.pinned)
@@ -377,7 +357,6 @@ function SummaryPage() {
       setDismissed([]);
       setWeatherEnabled(false);
       setPreferencesPrincipal(principal);
-      setConversationState({ principal, items: [] });
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
@@ -413,17 +392,21 @@ function SummaryPage() {
   if (!isLoaded || !isSignedIn) {
     return (
       <AppShell>
-        <div className="p-6">
+        <main id="main-content" tabIndex={-1} className="p-6">
           <Skeleton className="h-8 w-64 mb-4" />
           <Skeleton className="h-24 w-full" />
-        </div>
+        </main>
       </AppShell>
     );
   }
 
   return (
     <AppShell>
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-summary-page kova-workspace-controls mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-8"
+      >
         {/* Greeting + composer */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{greeting}</h1>
@@ -454,7 +437,7 @@ function SummaryPage() {
                   <Link
                     key={a.label}
                     to={a.to}
-                    className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent/40 transition"
+                    className="kova-summary-target flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent/40 transition"
                   >
                     <a.icon className="w-4 h-4 text-muted-foreground" />
                     <span className="truncate">{a.label}</span>
@@ -535,7 +518,7 @@ function SummaryPage() {
               action={
                 <Link
                   to="/projects"
-                  className="text-xs text-muted-foreground hover:text-foreground"
+                  className="kova-summary-target kova-summary-inline-action text-xs text-muted-foreground hover:text-foreground"
                 >
                   All
                 </Link>
@@ -555,7 +538,7 @@ function SummaryPage() {
                       <Link
                         to="/projects/$projectId"
                         params={{ projectId: p.id }}
-                        className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+                        className="kova-summary-target flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
                       >
                         <span
                           className="w-2 h-2 rounded-full shrink-0"
@@ -580,7 +563,10 @@ function SummaryPage() {
               icon={ImageIcon}
               onDismiss={hide}
               action={
-                <Link to="/images" className="text-xs text-muted-foreground hover:text-foreground">
+                <Link
+                  to="/images"
+                  className="kova-summary-target kova-summary-inline-action text-xs text-muted-foreground hover:text-foreground"
+                >
                   All
                 </Link>
               }
@@ -599,7 +585,7 @@ function SummaryPage() {
                     <Link
                       key={img.id}
                       to="/library"
-                      className="block aspect-square rounded-lg overflow-hidden border border-border bg-muted/40"
+                      className="kova-summary-target block aspect-square rounded-lg overflow-hidden border border-border bg-muted/40"
                     >
                       {img.file_url ? (
                         <img
@@ -627,7 +613,10 @@ function SummaryPage() {
               icon={FolderOpen}
               onDismiss={hide}
               action={
-                <Link to="/library" className="text-xs text-muted-foreground hover:text-foreground">
+                <Link
+                  to="/library"
+                  className="kova-summary-target kova-summary-inline-action text-xs text-muted-foreground hover:text-foreground"
+                >
                   All
                 </Link>
               }
@@ -648,7 +637,7 @@ function SummaryPage() {
                           href={safeNavigationUrl(f.file_url)!}
                           target="_blank"
                           rel="noopener"
-                          className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+                          className="kova-summary-target flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
                         >
                           <FolderOpen className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate flex-1">{f.title}</span>
@@ -659,7 +648,7 @@ function SummaryPage() {
                       ) : (
                         <Link
                           to="/library"
-                          className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+                          className="kova-summary-target flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
                         >
                           <FolderOpen className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate flex-1">{f.title}</span>
@@ -713,7 +702,10 @@ function SummaryPage() {
               {!qGoogle.isFetching && !hasCal ? (
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-2">Connect Google Calendar to see upcoming events.</p>
-                  <Link to="/apps" className="text-xs underline">
+                  <Link
+                    to="/apps"
+                    className="kova-summary-target kova-summary-inline-action text-xs underline"
+                  >
                     Connect →
                   </Link>
                 </div>
@@ -735,7 +727,7 @@ function SummaryPage() {
                           href={e.link}
                           target="_blank"
                           rel="noopener"
-                          className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+                          className="kova-summary-target flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
                         >
                           <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate flex-1">{e.title}</span>
@@ -767,7 +759,10 @@ function SummaryPage() {
               {!qGoogle.isFetching && !hasGmail ? (
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-2">Connect Gmail to see unread messages.</p>
-                  <Link to="/apps" className="text-xs underline">
+                  <Link
+                    to="/apps"
+                    className="kova-summary-target kova-summary-inline-action text-xs underline"
+                  >
                     Connect →
                   </Link>
                 </div>
@@ -788,7 +783,7 @@ function SummaryPage() {
                         href={`https://mail.google.com/mail/u/0/#inbox/${m.id}`}
                         target="_blank"
                         rel="noopener"
-                        className="block rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+                        className="kova-summary-target block rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
                       >
                         <div className="flex items-center gap-2">
                           <span className="truncate flex-1 font-medium">{m.subject}</span>
@@ -812,7 +807,7 @@ function SummaryPage() {
                   <li key={s.label}>
                     <Link
                       to={s.to}
-                      className="flex items-start gap-3 rounded-lg border border-border px-3 py-2.5 hover:bg-accent/40 transition"
+                      className="kova-summary-target flex items-start gap-3 rounded-lg border border-border px-3 py-2.5 hover:bg-accent/40 transition"
                     >
                       <ArrowRight className="w-4 h-4 mt-0.5 text-muted-foreground" />
                       <div className="min-w-0">
@@ -833,7 +828,10 @@ function SummaryPage() {
               icon={Link2}
               onDismiss={hide}
               action={
-                <Link to="/apps" className="text-xs text-muted-foreground hover:text-foreground">
+                <Link
+                  to="/apps"
+                  className="kova-summary-target kova-summary-inline-action text-xs text-muted-foreground hover:text-foreground"
+                >
                   Manage
                 </Link>
               }
@@ -843,7 +841,10 @@ function SummaryPage() {
                   ? `Google connected${qGoogle.data.email ? ` as ${qGoogle.data.email}` : ""}.`
                   : "Connect Google, Notion, Slack, and more."}
               </p>
-              <Link to="/apps" className="inline-flex items-center gap-1.5 text-sm underline">
+              <Link
+                to="/apps"
+                className="kova-summary-target inline-flex items-center gap-1.5 text-sm underline"
+              >
                 Open Apps <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </Section>
@@ -856,7 +857,10 @@ function SummaryPage() {
               icon={FolderOpen}
               onDismiss={hide}
               action={
-                <Link to="/library" className="text-xs text-muted-foreground hover:text-foreground">
+                <Link
+                  to="/library"
+                  className="kova-summary-target kova-summary-inline-action text-xs text-muted-foreground hover:text-foreground"
+                >
                   Open
                 </Link>
               }
@@ -906,7 +910,7 @@ function SummaryPage() {
             </button>
           </div>
         )}
-      </div>
+      </main>
     </AppShell>
   );
 }

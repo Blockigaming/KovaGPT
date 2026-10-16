@@ -90,22 +90,6 @@ section.kova-empty-chat > div.kova-empty-chat-content {
   padding-top: 0;
 }
 
-.kova-empty-chat .kova-composer {
-  --composer-height: 3.125rem !important;
-  --composer-control: 2.75rem !important;
-  --composer-inset: 0.1875rem !important;
-  border-radius: 1.75rem !important;
-  background: var(--background) !important;
-  box-shadow: 0 2px 12px rgb(0 0 0 / 3%) !important;
-}
-
-.kova-empty-chat .kova-composer-input {
-  min-width: 0;
-  min-height: 3.125rem !important;
-  padding-block: 0.8125rem !important;
-  line-height: 1.5rem !important;
-}
-
 /* A labelled link is not an icon button. Its natural width prevents the label
  * from painting over the adjacent send control in both composer surfaces. */
 .kova-composer [data-testid="thinking-upgrade-button"] {
@@ -178,11 +162,6 @@ section.kova-empty-chat > div.kova-empty-chat-content {
 @media (max-width: 479px) {
   .kova-composer [data-testid="thinking-upgrade-button"] {
     padding-inline: 0.625rem;
-  }
-
-  /* Keep the full accessible name while giving the textarea room to type. */
-  .kova-composer [data-testid="thinking-upgrade-button"] > span {
-    display: none;
   }
 
   .kova-empty-chat .kova-starter-grid {

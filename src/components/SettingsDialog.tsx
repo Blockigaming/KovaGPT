@@ -1,3 +1,4 @@
+import { listLibraryPage, readLibraryItem } from "@/lib/library-items-client";
 import { requestAccountDeletion } from "@/lib/account-deletion-client";
 import { PwaSettings } from "@/components/PwaSettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -61,7 +62,7 @@ import {
 import { useTier, tierRank } from "@/hooks/useTier";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import {
@@ -75,6 +76,7 @@ import { setSharedSendOnEnter, useSharedSendOnEnter } from "@/lib/composer-prefe
 import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
+import { CORE_LAUNCH_FAMILY_MANAGEMENT } from "@/lib/core-launch-policy.mjs";
 import { MfaPanel } from "@/components/MfaPanel";
 import {
   loadArchivedConversations,
@@ -105,65 +107,13 @@ import {
   parseDeviceDataExport,
 } from "@/lib/device-data-portability";
 import { getUsage } from "@/lib/limits";
-import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
-import { applyThemeMode, DEFAULT_THEME, type ThemeColors, type ThemeMode } from "@/lib/theme";
+import { applyThemeMode, type ThemeMode } from "@/lib/theme";
 import { authFetch } from "@/lib/auth-fetch";
 
-export type Mood = "neutral" | "friendly" | "professional" | "concise";
-
-export type Settings = {
-  displayName: string;
-  email: string;
-  extraFacts: string;
-  customInstructions: string;
-  mood: Mood;
-  responseLength: "short" | "medium" | "long";
-  rememberAcross: boolean;
-  webSearch: boolean;
-  sendOnEnter: boolean;
-  mode: ThemeMode;
-  // Notifications
-  notifyEmail?: boolean;
-  notifyProduct?: boolean;
-  // Parental controls
-  parentalMode?: boolean;
-  // Deprecated local-only value retained so old device exports still import safely.
-  // It is not exposed as an account- or provider-level training control.
-  trainingOptOut?: boolean;
-  // deprecated fields kept so old localStorage payloads still load
-  preferredPronouns?: string;
-  phone?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  region?: string;
-  postalCode?: string;
-  country?: string;
-  language?: string;
-  showTimestamps?: boolean;
-  theme?: ThemeColors;
-};
-
-// Shared persisted-settings default; exported here until the settings schema is separated from the dialog.
-// eslint-disable-next-line react-refresh/only-export-components
-export const DEFAULT_SETTINGS: Settings = {
-  displayName: "",
-  email: "",
-  extraFacts: "",
-  customInstructions: "",
-  mood: "neutral",
-  responseLength: "medium",
-  rememberAcross: false,
-  webSearch: true,
-  sendOnEnter: true,
-  mode: "system",
-  notifyEmail: true,
-  notifyProduct: true,
-  parentalMode: false,
-  trainingOptOut: false,
-  theme: DEFAULT_THEME,
-};
+import { DEFAULT_SETTINGS, type Settings, type Mood } from "@/lib/settings-types";
+export type { Settings, Mood } from "@/lib/settings-types";
 
 const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "neutral", label: "Neutral", hint: "Balanced and helpful" },
@@ -172,7 +122,13 @@ const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "concise", label: "Concise", hint: "Short, direct answers" },
 ];
 
-type TabDef = { v: string; label: string; icon: typeof Cog; keywords?: string[] };
+type TabDef = {
+  v: string;
+  label: string;
+  icon: typeof Cog;
+  keywords?: string[];
+  showSettingsSubtitle?: boolean;
+};
 type TabGroup = { title: string; hint?: string; tabs: TabDef[] };
 
 // Settings are grouped into clear sections with headers so it doesn't read as
@@ -188,7 +144,7 @@ const TAB_GROUPS: TabGroup[] = [
       { v: "memory", label: "Memory", icon: Brain },
       {
         v: "billing",
-        label: "Billing",
+        label: "Subscriptions",
         icon: CreditCard,
         keywords: ["plan", "subscription", "payment", "invoice"],
       },
@@ -232,10 +188,10 @@ const TAB_GROUPS: TabGroup[] = [
   {
     title: "Support",
     tabs: [
-      { v: "report", label: "Report an issue", icon: Bug },
-      { v: "help", label: "Help center", icon: LifeBuoy },
-      { v: "about", label: "About", icon: Info },
-      { v: "logout", label: "Log out", icon: LogOut },
+      { v: "report", label: "Report an issue", icon: Bug, showSettingsSubtitle: false },
+      { v: "help", label: "Help center", icon: LifeBuoy, showSettingsSubtitle: false },
+      { v: "about", label: "About", icon: Info, showSettingsSubtitle: false },
+      { v: "logout", label: "Log out", icon: LogOut, showSettingsSubtitle: false },
     ],
   },
 ];
@@ -247,7 +203,6 @@ export function SettingsDialog({
   onChange,
   onClearAll,
   initialTab,
-  onOpenHelp,
   returnFocusTarget,
 }: {
   open: boolean;
@@ -276,7 +231,7 @@ export function SettingsDialog({
   currentAuthUserKeyRef.current = isLoaded ? userKey : undefined;
   const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const clerk = useClerk();
-  const loggedIn = !clerkEnabled || isSignedIn;
+  const loggedIn = isLoaded && isSignedIn;
   const { tier } = useTier();
   const adaptiveMemoryUnlocked = tierRank(tier) >= 1;
   const normalizedInitialTab = initialTab === "subscription" ? "billing" : initialTab;
@@ -307,6 +262,9 @@ export function SettingsDialog({
     deletionOperationRef.current++;
     setUsage(null);
     setUsageLoaded(false);
+    setSubSummary(null);
+    setSubscriptionError(null);
+    setSubscriptionLoading(false);
     setDeletionStatus(null);
     setDeleteAccountBusy(false);
     setDeleteAccountOpen(false);
@@ -367,7 +325,7 @@ export function SettingsDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, tab, loggedIn]);
+  }, [open, tab, loggedIn, userKey]);
 
   useEffect(() => {
     if (!open || (tab !== "billing" && tab !== "usage") || !loggedIn) return;
@@ -393,20 +351,29 @@ export function SettingsDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, tab, loggedIn]);
+  }, [open, tab, loggedIn, userKey]);
 
   const handleManageBilling = async () => {
-    if (portalLoading || !subSummary?.hasBillingAccount || !subSummary.billingPortalAvailable)
+    if (
+      !loggedIn ||
+      !userKey ||
+      portalLoading ||
+      !subSummary?.hasBillingAccount ||
+      !subSummary.billingPortalAvailable
+    )
       return;
+    const requestOwner = userKey;
     setPortalLoading(true);
     try {
       const res = await createPortalSession({ data: {} });
+      if (currentAuthUserKeyRef.current !== requestOwner) return;
       if ("error" in res) throw new Error("billing_portal_unavailable");
       const portalUrl = parseAllowedBillingPortalUrl(res.url);
       if (!portalUrl) throw new Error("billing_portal_url_rejected");
       window.location.assign(portalUrl);
     } catch {
-      toast.error("The billing portal couldn't be opened. Try again.");
+      if (currentAuthUserKeyRef.current === requestOwner)
+        toast.error("The billing portal couldn't be opened. Try again.");
     } finally {
       setPortalLoading(false);
     }
@@ -593,13 +560,15 @@ export function SettingsDialog({
   };
 
   const handleRestore = async () => {
-    if (subscriptionLoading) return;
+    if (subscriptionLoading || !loggedIn || !userKey) return;
+    const requestOwner = userKey;
     setSubscriptionLoading(true);
     setSubscriptionError(null);
     try {
       const summary = await getSubscriptionSummary({
         data: { environment: getStripeEnvironment() },
       });
+      if (currentAuthUserKeyRef.current !== requestOwner) return;
       setSubSummary(summary);
       if (summary.billingConflict) {
         toast.error("A billing conflict needs support review.");
@@ -609,13 +578,14 @@ export function SettingsDialog({
         toast.success(`${summary.effectiveTier === "pro" ? "Pro" : "Plus"} plan refreshed.`);
       }
     } catch {
+      if (currentAuthUserKeyRef.current !== requestOwner) return;
       setSubSummary(null);
       setSubscriptionError(
         "Billing details couldn't be verified. Select Refresh billing status to retry.",
       );
       toast.error("Couldn't check your subscription. Try again.");
     } finally {
-      setSubscriptionLoading(false);
+      if (currentAuthUserKeyRef.current === requestOwner) setSubscriptionLoading(false);
     }
   };
 
@@ -628,7 +598,7 @@ export function SettingsDialog({
     familyTierUpgrade && subSummary.activeSubscriptionCount > 0;
   const displayedSubscriptionTier = subSummary?.effectiveTier;
 
-  // "Saved" indicator: whenever settings change while the dialog is open, show
+  // State-change indicator (not a persistence receipt): whenever settings change, show
   // a subtle pill for ~1.5s. Skips the very first render so it doesn't fire on
   // open.
   const [savedPulse, setSavedPulse] = useState(false);
@@ -713,7 +683,7 @@ export function SettingsDialog({
               <p className="text-xs text-muted-foreground mt-1">
                 {loggedIn
                   ? "Changes save automatically."
-                  : "Sign in to view and change your settings."}
+                  : "Appearance and preferences for this browser."}
               </p>
             </div>
             {loggedIn && (
@@ -726,7 +696,7 @@ export function SettingsDialog({
                 }`}
               >
                 <Check className="inline w-3 h-3 mr-1 -mt-0.5" />
-                Saved
+                Updated
               </div>
             )}
           </div>
@@ -766,7 +736,15 @@ export function SettingsDialog({
                   <section key={group.title} aria-label={group.title}>
                     <p className="kova-settings-nav-group">{group.title}</p>
                     {group.tabs.map(({ v, icon: Icon, label }) => (
-                      <TabsTrigger key={v} value={v} className="kova-settings-nav-item">
+                      <TabsTrigger
+                        key={v}
+                        value={v}
+                        className="kova-settings-nav-item"
+                        onClick={() => {
+                          // An already-selected Radix tab does not emit onValueChange.
+                          if (mobileHome && v === tab) selectTab(v);
+                        }}
+                      >
                         <Icon aria-hidden="true" />
                         <span>{label}</span>
                       </TabsTrigger>
@@ -801,14 +779,16 @@ export function SettingsDialog({
                   <h2 ref={contentHeadingRef} tabIndex={-1}>
                     {activeTab.label}
                   </h2>
-                  <p>Manage your KovaGPT {activeTab.label.toLocaleLowerCase()} settings.</p>
+                  {activeTab.showSettingsSubtitle !== false && (
+                    <p>Manage your KovaGPT {activeTab.label.toLocaleLowerCase()} settings.</p>
+                  )}
                 </div>
                 <span
                   aria-live="polite"
                   className={savedPulse ? "kova-settings-saved visible" : "kova-settings-saved"}
                 >
                   <Check aria-hidden="true" />
-                  Saved
+                  Updated
                 </span>
               </header>
               {/* GENERAL */}
@@ -879,20 +859,29 @@ export function SettingsDialog({
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold">About you</h3>
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">
+                    <label
+                      htmlFor="settings-preferred-name"
+                      className="text-xs text-muted-foreground mb-1 block"
+                    >
                       Preferred name
                     </label>
                     <Input
+                      id="settings-preferred-name"
+                      className="kova-personalization-name"
                       placeholder={user?.firstName || "Your name"}
                       value={settings.displayName}
                       onChange={(e) => onChange({ ...settings, displayName: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">
+                    <label
+                      htmlFor="settings-extra-facts"
+                      className="text-xs text-muted-foreground mb-1 block"
+                    >
                       Anything KovaGPT should know about you
                     </label>
                     <textarea
+                      id="settings-extra-facts"
                       rows={4}
                       placeholder="e.g. I'm a student in Chicago. I prefer metric. I'm learning Python."
                       value={settings.extraFacts}
@@ -926,10 +915,14 @@ export function SettingsDialog({
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">
+                    <label
+                      htmlFor="settings-custom-instructions"
+                      className="text-xs text-muted-foreground mb-1 block"
+                    >
                       Custom instructions
                     </label>
                     <textarea
+                      id="settings-custom-instructions"
                       rows={4}
                       placeholder="e.g. Answer in clear bullets. Use simple language. Skip disclaimers."
                       value={settings.customInstructions}
@@ -1138,7 +1131,10 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* BILLING */}
-              <TabsContent value="billing" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
+              <TabsContent
+                value="billing"
+                className="kova-billing-details kova-adapted-controls overflow-y-auto px-7 pb-8 space-y-6 py-5"
+              >
                 <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-medium">Current plan</div>
@@ -1673,48 +1669,46 @@ export function SettingsDialog({
 
               {/* FAMILY CENTER */}
               <TabsContent value="family" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
-                {!loggedIn ? <SignInGate label="Family Sharing" /> : <FamilySharingPanel />}
+                {!CORE_LAUNCH_FAMILY_MANAGEMENT ? (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    Family creation and invitations are not part of this launch. Existing shared
+                    plan access is unchanged.
+                  </p>
+                ) : !loggedIn ? (
+                  <SignInGate label="Family Sharing" />
+                ) : (
+                  <FamilySharingPanel />
+                )}
               </TabsContent>
 
               {/* REPORT ISSUE */}
               <TabsContent value="report" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
-                <h3 className="text-sm font-semibold">Report an issue</h3>
                 <p className="text-xs text-muted-foreground">
                   Found a bug or something off? Send it to our team and we'll take a look.
                 </p>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    onOpenChange(false);
-                    onOpenHelp?.();
-                  }}
-                >
-                  <Bug className="w-4 h-4 mr-2" />
-                  Open bug report form
+                <Button size="sm" asChild className="kova-settings-support-link">
+                  <Link to="/help" hash="support-form" onClick={() => onOpenChange(false)}>
+                    <Bug className="w-4 h-4 mr-2" />
+                    Open bug report form
+                  </Link>
                 </Button>
               </TabsContent>
 
               {/* HELP CENTER */}
               <TabsContent value="help" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
-                <h3 className="text-sm font-semibold">Help center</h3>
                 <p className="text-xs text-muted-foreground">
                   Get help, contact support, or browse common questions.
                 </p>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    onOpenChange(false);
-                    onOpenHelp?.();
-                  }}
-                >
-                  <LifeBuoy className="w-4 h-4 mr-2" />
-                  Open help center
+                <Button size="sm" asChild className="kova-settings-support-link">
+                  <Link to="/help" onClick={() => onOpenChange(false)}>
+                    <LifeBuoy className="w-4 h-4 mr-2" />
+                    Open help center
+                  </Link>
                 </Button>
               </TabsContent>
 
               {/* ABOUT */}
               <TabsContent value="about" className="overflow-y-auto px-7 pb-8 space-y-3 py-5">
-                <h3 className="text-sm font-semibold">About KovaGPT</h3>
                 <p className="text-sm text-muted-foreground">
                   KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and
                   trustworthy AI available to everyone.
@@ -1735,7 +1729,6 @@ export function SettingsDialog({
 
               {/* LOG OUT */}
               <TabsContent value="logout" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
-                <h3 className="text-sm font-semibold">Log out</h3>
                 <p className="text-sm text-muted-foreground">
                   You'll be signed out of KovaGPT on this device.
                 </p>
@@ -1888,7 +1881,7 @@ function ToggleRow({
   const controlId = useId();
   const hintId = hint ? `${controlId}-hint` : undefined;
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="kova-settings-row flex items-start justify-between">
       <div className="min-w-0">
         <label htmlFor={controlId} className="text-sm font-medium">
           {title}
@@ -1986,7 +1979,7 @@ function WorkspaceDefaults({
           <select
             value={defaults[key]}
             onChange={(event) => update(key, event.target.value)}
-            className="mt-1.5 h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground"
+            className="kova-workspace-action mt-1.5 h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground"
           >
             {options.map((option) => (
               <option key={option}>{option}</option>
@@ -2124,29 +2117,113 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [viewing, setViewing] = useState<LibItem | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    setLoadError(null);
+  const [cursor, setCursor] = useState<Record<string, unknown> | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [sharesLoading, setSharesLoading] = useState(true);
+  const [opening, setOpening] = useState<string | null>(null);
+  const readSequence = useRef(0);
+  const readAbort = useRef<AbortController | null>(null);
+  const openSequence = useRef(0);
+  const load = useCallback(
+    async (nextCursor: Record<string, unknown> | null = null) => {
+      if (!ownerId) {
+        setLoading(false);
+        return;
+      }
+      const sequence = ++readSequence.current;
+      readAbort.current?.abort();
+      const controller = new AbortController();
+      readAbort.current = controller;
+      setLoading(true);
+      setLoadError(null);
+      if (!nextCursor) {
+        setItems([]);
+        setCursor(null);
+      }
+      try {
+        const page = await listLibraryPage(
+          ownerId,
+          {
+            query,
+            sort: "newest",
+            filter: "all",
+            folder: "all",
+            favorites: "",
+            cursor: nextCursor,
+          },
+          controller.signal,
+        );
+        if (!active.current || sequence !== readSequence.current) return;
+        setItems((previous) =>
+          nextCursor
+            ? [
+                ...previous,
+                ...page.items.filter((item) => !previous.some((old) => old.id === item.id)),
+              ]
+            : page.items,
+        );
+        setCursor(page.cursor);
+      } catch (error) {
+        if (active.current && sequence === readSequence.current)
+          setLoadError(
+            error instanceof Error ? error.message : "Library data could not be loaded.",
+          );
+      } finally {
+        if (active.current && sequence === readSequence.current) setLoading(false);
+      }
+    },
+    [ownerId, query],
+  );
+  const loadShares = useCallback(async () => {
+    setSharesLoading(true);
+    setShareError(null);
     try {
-      const [lib, inbox, mineShares] = await Promise.all([
-        (await import("@/lib/library.functions")).listMyLibrary(),
-        (await import("@/lib/shared-chats.functions")).listSharedWithMe(),
-        (await import("@/lib/shared-chats.functions")).listMySharedChats(),
+      const api = await import("@/lib/shared-chats.functions");
+      const [inbox, mineShares] = await Promise.all([
+        api.listSharedWithMe(),
+        api.listMySharedChats(),
       ]);
       if (!active.current) return;
-      setItems(lib);
       setShared(inbox);
       setMine(mineShares);
-    } catch (e) {
-      console.error("[settings] library load failed");
-      setLoadError(e instanceof Error ? e.message : "Library data could not be loaded.");
+    } catch (error) {
+      if (active.current)
+        setShareError(error instanceof Error ? error.message : "Shared chats could not be loaded.");
     } finally {
-      setLoading(false);
+      if (active.current) setSharesLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+    const sequence = readSequence;
+    const abort = readAbort;
+    return () => {
+      sequence.current++;
+      abort.current?.abort();
+    };
+  }, [load]);
+  useEffect(() => {
+    void loadShares();
+  }, [loadShares]);
+
+  const openItem = async (item: LibItem) => {
+    if (!ownerId || !active.current) return;
+    const sequence = ++openSequence.current;
+    setOpening(item.id);
+    try {
+      const loaded = item.text_available
+        ? await readLibraryItem(ownerId, item, new AbortController().signal)
+        : item;
+      if (active.current && sequence === openSequence.current) setViewing(loaded);
+    } catch (error) {
+      if (active.current && sequence === openSequence.current)
+        toast.error(
+          error instanceof Error ? error.message : "This Library item could not be opened.",
+        );
+    } finally {
+      if (active.current && sequence === openSequence.current) setOpening(null);
     }
   };
-  useEffect(() => {
-    load();
-  }, []);
 
   const remove = async (id: string) => {
     try {
@@ -2163,11 +2240,14 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
         },
       });
       if (!active.current) return;
+      readSequence.current++;
+      readAbort.current?.abort();
+      setLoading(false);
       setItems((prev) => prev.filter((i) => i.id !== id));
       setViewing((v) => (v?.id === id ? null : v));
       toast.success("Deleted.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not delete.");
+      if (active.current) toast.error(e instanceof Error ? e.message : "Could not delete.");
     }
   };
 
@@ -2175,10 +2255,11 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
     try {
       const { revokeSharedChat } = await import("@/lib/shared-chats.functions");
       await revokeSharedChat({ data: { id } });
+      if (!active.current) return;
       setMine((prev) => prev.map((m) => (m.id === id ? { ...m, status: "revoked" } : m)));
       toast.success("Share revoked.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not revoke.");
+      if (active.current) toast.error(e instanceof Error ? e.message : "Could not revoke.");
     }
   };
 
@@ -2194,9 +2275,7 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
       )
         return false;
     }
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return it.title.toLowerCase().includes(q) || (it.content_text ?? "").toLowerCase().includes(q);
+    return true;
   });
 
   return (
@@ -2204,7 +2283,7 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold">My library</h3>
-          <Button size="sm" variant="ghost" onClick={load} disabled={loading}>
+          <Button size="sm" variant="ghost" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
@@ -2217,7 +2296,8 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search title or content..."
+            placeholder="Search Library…"
+            maxLength={200}
             className="h-8 text-xs"
           />
           <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -2242,7 +2322,7 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
           >
             <p className="text-sm font-medium text-destructive">Library data is unavailable</p>
             <p className="mt-1 text-xs text-muted-foreground">{loadError}</p>
-            <Button size="sm" variant="outline" onClick={load} className="mt-3">
+            <Button size="sm" variant="outline" onClick={() => void load()} className="mt-3">
               <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
             </Button>
           </div>
@@ -2251,8 +2331,10 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
             {loading
               ? "Loading…"
               : items.length === 0
-                ? "Nothing saved yet. Use the Save button on any AI response to add it here."
-                : "No items match your search."}
+                ? query
+                  ? "No items match your search."
+                  : "Nothing saved yet. Use the Save button on any AI response to add it here."
+                : "No matching items on the loaded pages."}
           </div>
         ) : (
           <ul className="divide-y divide-border rounded-lg border border-border">
@@ -2274,9 +2356,10 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
                     size="sm"
                     variant="ghost"
                     className="h-7 text-xs"
-                    onClick={() => setViewing(it)}
+                    disabled={opening !== null}
+                    onClick={() => void openItem(it)}
                   >
-                    Open
+                    {opening === it.id ? "Opening…" : "Open"}
                   </Button>
                   {it.content_text && (
                     <button
@@ -2291,6 +2374,7 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
                     </button>
                   )}
                   <button
+                    disabled={loading || opening !== null}
                     onClick={() => remove(it.id)}
                     className="p-1.5 rounded hover:bg-accent transition"
                     title="Delete"
@@ -2303,14 +2387,36 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
           </ul>
         )}
 
+        {cursor && (
+          <Button
+            variant="outline"
+            className="mt-3"
+            disabled={loading}
+            onClick={() => void load(cursor)}
+          >
+            {loading ? "Loading…" : "Load more Library items"}
+          </Button>
+        )}
         <LibraryItemViewer item={viewing} onClose={() => setViewing(null)} onDelete={remove} />
       </div>
 
+      {shareError && (
+        <div role="alert" className="text-sm">
+          Shared chats are unavailable. {shareError}
+          <Button variant="outline" disabled={sharesLoading} onClick={() => void loadShares()}>
+            Retry shared chats
+          </Button>
+        </div>
+      )}
       <div>
         <h3 className="text-sm font-semibold mb-2">Shared with me</h3>
         {shared.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-            No chats shared with you yet.
+            {sharesLoading
+              ? "Loading shared chats…"
+              : shareError
+                ? "Shared chats are unavailable."
+                : "No chats shared with you yet."}
           </div>
         ) : (
           <ul className="divide-y divide-border rounded-lg border border-border">
@@ -2331,7 +2437,11 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
         <h3 className="text-sm font-semibold mb-2">Chats I've shared</h3>
         {mine.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-            You haven't shared any chats yet. Use the Share button next to any chat in the sidebar.
+            {sharesLoading
+              ? "Loading shared chats…"
+              : shareError
+                ? "Shared chats are unavailable."
+                : "You haven't shared any chats yet. Use the Share button next to any chat in the sidebar."}
           </div>
         ) : (
           <ul className="divide-y divide-border rounded-lg border border-border">
@@ -2374,7 +2484,7 @@ function SignedOutSettings({
   onSignIn: () => void;
   onClose: () => void;
 }) {
-  const [section, setSection] = useState<"general" | "data">("general");
+  const [section, setSection] = useState<"general" | "data" | "help">("general");
 
   return (
     <div className="kova-settings-surface flex max-h-[78vh] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--surface-modal)] md:flex-row">
@@ -2386,6 +2496,7 @@ function SignedOutSettings({
           [
             ["general", "General", Cog],
             ["data", "Data controls", Database],
+            ["help", "Help & legal", LifeBuoy],
           ] as const
         ).map(([value, label, Icon]) => (
           <button
@@ -2412,7 +2523,7 @@ function SignedOutSettings({
               <span className="text-sm">Appearance</span>
               <div className="w-44">
                 <Select
-                  value={settings.mode ?? "system"}
+                  value={settings.mode ?? "dark"}
                   onValueChange={(v) => setMode(v as ThemeMode)}
                 >
                   <SelectTrigger aria-label="Appearance">
@@ -2439,7 +2550,7 @@ function SignedOutSettings({
               </Button>
             </div>
           </div>
-        ) : (
+        ) : section === "data" ? (
           <div className="space-y-5">
             <ArchivedChatsPanel userKey={null} />
             <div className="rounded-xl border border-border/60 bg-card/40 p-4">
@@ -2459,6 +2570,27 @@ function SignedOutSettings({
               </p>
             </div>
           </div>
+        ) : (
+          <section className="kova-settings-help-links" aria-labelledby="guest-help-title">
+            <h2 id="guest-help-title" className="text-lg font-semibold">
+              Help & legal
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Get answers, review plans, or read how KovaGPT works.
+            </p>
+            <Link to="/help" onClick={onClose}>
+              Help center <ExternalLink aria-hidden="true" />
+            </Link>
+            <Link to="/pricing" onClick={onClose}>
+              Plans and subscriptions <ExternalLink aria-hidden="true" />
+            </Link>
+            <Link to="/terms" onClick={onClose}>
+              Terms of Service <ExternalLink aria-hidden="true" />
+            </Link>
+            <Link to="/privacy" onClick={onClose}>
+              Privacy Policy <ExternalLink aria-hidden="true" />
+            </Link>
+          </section>
         )}
       </div>
     </div>

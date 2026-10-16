@@ -82,7 +82,7 @@ export function CanvasComments({
                 attempt.current = null;
               })
             }
-            className="mt-2 min-h-9 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
+            className="kova-workspace-action mt-2 min-h-9 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
           >
             {pending ? "Saving…" : "Add comment"}
           </button>

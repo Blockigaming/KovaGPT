@@ -13,9 +13,9 @@ export type ProjectSummary = {
   color: string | null;
   owner_id: string;
   role: ProjectRole;
-  member_count: number;
-  chat_count?: number;
-  file_count?: number;
+  member_count: number | null;
+  chat_count?: number | null;
+  file_count?: number | null;
   instructions_preview?: string | null;
   created_at?: string;
   updated_at: string;
@@ -148,43 +148,94 @@ function projectChatSnapshot(value: unknown): { messages: ProjectChatMessage[] }
 export const listProjects = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<ProjectSummary[]> => {
-    const { data: memberships, error: memErr } = await context.supabase
-      .from("project_members")
-      .select("project_id, role")
-      .eq("user_id", context.userId);
-    if (memErr) {
-      console.error("[listProjects] mem", memErr.message);
-      return [];
-    }
-    const ids = (memberships ?? []).map((m) => m.project_id);
-    if (ids.length === 0) return [];
-    const { data: projects, error: pErr } = await loose(context.supabase)
-      .from("projects")
-      .select(
-        "id, name, description, system_prompt, color, owner_id, created_at, updated_at, pinned_at, archived_at, deletion_requested_at",
+    // Keyset traversal also works when PostgREST's configured row cap is
+    // lower than our requested page size. Never call a partial list complete.
+    const memberships: { project_id: string; role: string }[] = [];
+    let after: string | null = null;
+    for (;;) {
+      let query = context.supabase
+        .from("project_members")
+        .select("project_id, role", { count: "exact" })
+        .eq("user_id", context.userId)
+        .order("project_id", { ascending: true })
+        .limit(200);
+      if (after) query = query.gt("project_id", after);
+      const { data: page, error, count } = await query;
+      if (
+        error ||
+        !Array.isArray(page) ||
+        !Number.isInteger(count) ||
+        count === null ||
+        count < page.length
       )
-      .in("id", ids)
-      .order("pinned_at", { ascending: false, nullsFirst: false })
-      .order("updated_at", { ascending: false });
-    if (pErr) {
-      console.error("[listProjects] p", pErr.message);
-      return [];
+        throw new Error("Projects could not be loaded completely. Try again.");
+      for (const membership of page) {
+        if (typeof membership.project_id !== "string" || (after && membership.project_id <= after))
+          throw new Error("Projects could not be loaded completely. Try again.");
+        after = membership.project_id;
+        memberships.push(membership);
+      }
+      if (memberships.length > 5000)
+        throw new Error("This project collection is too large to load. Contact support.");
+      if (page.length === count) break;
+      if (!page.length) throw new Error("Projects could not be loaded completely. Try again.");
     }
-    const [{ data: counts }, { data: chats }, { data: files }] = await Promise.all([
-      context.supabase.from("project_members").select("project_id").in("project_id", ids),
-      context.supabase.from("project_chats").select("project_id").in("project_id", ids),
+    const ids = memberships.map((m) => m.project_id);
+    if (ids.length === 0) return [];
+    const projects: Record<string, unknown>[] = [];
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const batch = ids.slice(offset, offset + 100);
+      const {
+        data: rows,
+        error,
+        count,
+      } = await loose(context.supabase)
+        .from("projects")
+        .select(
+          "id, name, description, system_prompt, color, owner_id, created_at, updated_at, pinned_at, archived_at, deletion_requested_at",
+          { count: "exact" },
+        )
+        .in("id", batch);
+      if (error || !Array.isArray(rows) || count !== rows.length)
+        throw new Error("Projects could not be loaded completely. Try again.");
+      // Concurrent membership revocation can legitimately remove visible rows.
+      projects.push(...rows);
+    }
+    projects.sort((a, b) => {
+      const pinned = Number(Boolean(b.pinned_at)) - Number(Boolean(a.pinned_at));
+      return (
+        pinned ||
+        String(b.pinned_at ?? "").localeCompare(String(a.pinned_at ?? "")) ||
+        String(b.updated_at).localeCompare(String(a.updated_at)) ||
+        String(a.id).localeCompare(String(b.id))
+      );
+    });
+    // A row-limited response is not an exact count. Keep each category unknown
+    // if its read fails or truncates, while retaining the project list itself.
+    const countResults = await Promise.allSettled([
+      context.supabase
+        .from("project_members")
+        .select("project_id", { count: "exact" })
+        .in("project_id", ids),
+      context.supabase
+        .from("project_chats")
+        .select("project_id", { count: "exact" })
+        .in("project_id", ids),
       loose(context.supabase)
         .from("project_files")
-        .select("project_id")
+        .select("project_id", { count: "exact" })
         .in("project_id", ids)
         .eq("status", "ready"),
     ]);
-    const countMap = new Map<string, number>();
-    const chatMap = new Map<string, number>();
-    const fileMap = new Map<string, number>();
-    for (const r of counts ?? []) countMap.set(r.project_id, (countMap.get(r.project_id) ?? 0) + 1);
-    for (const r of chats ?? []) chatMap.set(r.project_id, (chatMap.get(r.project_id) ?? 0) + 1);
-    for (const r of files ?? []) fileMap.set(r.project_id, (fileMap.get(r.project_id) ?? 0) + 1);
+    const maps = countResults.map((result) => {
+      if (result.status !== "fulfilled") return null;
+      const { data, count, error } = result.value;
+      if (error || !Array.isArray(data) || count !== data.length) return null;
+      const map = new Map<string, number>();
+      for (const row of data) map.set(row.project_id, (map.get(row.project_id) ?? 0) + 1);
+      return map;
+    });
+    const [countMap, chatMap, fileMap] = maps;
     const roleMap = new Map<string, ProjectRole>();
     for (const m of memberships ?? []) roleMap.set(m.project_id, m.role as ProjectRole);
     return (projects ?? []).map((p: Record<string, unknown>) => ({
@@ -194,9 +245,9 @@ export const listProjects = createServerFn({ method: "GET" })
       color: (p.color as string | null) ?? null,
       owner_id: p.owner_id as string,
       role: roleMap.get(p.id as string) ?? "viewer",
-      member_count: countMap.get(p.id as string) ?? 1,
-      chat_count: chatMap.get(p.id as string) ?? 0,
-      file_count: fileMap.get(p.id as string) ?? 0,
+      member_count: countMap ? (countMap.get(p.id as string) ?? 0) : null,
+      chat_count: chatMap ? (chatMap.get(p.id as string) ?? 0) : null,
+      file_count: fileMap ? (fileMap.get(p.id as string) ?? 0) : null,
       instructions_preview:
         typeof p.system_prompt === "string" ? p.system_prompt.slice(0, 180) : null,
       created_at: p.created_at as string,
@@ -223,12 +274,14 @@ export const createProject = createServerFn({ method: "POST" })
     // Enforce per-plan active-project cap (owned by user).
     const tier = await planTier(context.supabase);
     const cap = PROJECT_LIMITS[tier].projects;
-    const { count } = await context.supabase
+    const { count, error: countError } = await context.supabase
       .from("projects")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", context.userId)
       .is("archived_at", null);
-    if ((count ?? 0) >= cap) {
+    if (countError || count === null)
+      throw new Error("Your project limit could not be checked. Try again.");
+    if (count >= cap) {
       throw new Error(
         `You've reached your ${tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"} plan limit of ${cap} active projects. Archive one or upgrade to add more.`,
       );
@@ -262,21 +315,34 @@ export const pinProject = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
+        expectedUpdatedAt: z.string().datetime({ offset: true }),
         pinned: z.boolean(),
       })
       .parse(input),
   )
-  .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { error } = await context.supabase
-      .from("projects")
-      .update({ pinned_at: data.pinned ? new Date().toISOString() : null })
-      .eq("id", data.id);
-    if (error) {
-      console.error("[pinProject]", error.message);
-      throw new Error("Failed to pin");
-    }
-    return { ok: true };
-  });
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ ok: true; updatedAt: string; pinnedAt: string | null }> => {
+      const { data: updated, error } = await context.supabase
+        .from("projects")
+        .update({ pinned_at: data.pinned ? new Date().toISOString() : null })
+        .eq("id", data.id)
+        .eq("updated_at", data.expectedUpdatedAt)
+        .select("id, updated_at, pinned_at")
+        .maybeSingle();
+      if (error) {
+        console.error("[pinProject]", error.message);
+        throw new Error("Failed to pin");
+      }
+      if (!updated || updated.id !== data.id)
+        throw new Error(
+          "Project changed or is no longer editable. Review the latest saved version before retrying.",
+        );
+      return { ok: true, updatedAt: updated.updated_at, pinnedAt: updated.pinned_at };
+    },
+  );
 
 export const duplicateProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -293,12 +359,14 @@ export const duplicateProject = createServerFn({ method: "POST" })
     // Enforce plan cap
     const tier = await planTier(context.supabase);
     const cap = PROJECT_LIMITS[tier].projects;
-    const { count } = await context.supabase
+    const { count, error: countError } = await context.supabase
       .from("projects")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", context.userId)
       .is("archived_at", null);
-    if ((count ?? 0) >= cap) {
+    if (countError || count === null)
+      throw new Error("Your project limit could not be checked. Try again.");
+    if (count >= cap) {
       throw new Error(
         `You've reached your plan limit of ${cap} active projects. Archive one or upgrade to duplicate.`,
       );
@@ -337,7 +405,7 @@ export const getProject = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) {
       console.error("[getProject]", error.message);
-      return null;
+      throw new Error("Project could not be loaded. Try again.");
     }
     if (!p) return null;
     const { data: mem } = await context.supabase
@@ -360,6 +428,7 @@ export const updateProject = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
+        expectedUpdatedAt: z.string().datetime({ offset: true }),
         name: z.string().trim().min(1).max(100).optional(),
         description: z.string().trim().max(1000).nullable().optional(),
         system_prompt: z.string().trim().max(4000).nullable().optional(),
@@ -367,14 +436,24 @@ export const updateProject = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { id, ...rest } = data;
-    const { error } = await context.supabase.from("projects").update(rest).eq("id", id);
+  .handler(async ({ data, context }): Promise<{ ok: true; updatedAt: string }> => {
+    const { id, expectedUpdatedAt, ...rest } = data;
+    const { data: updated, error } = await context.supabase
+      .from("projects")
+      .update(rest)
+      .eq("id", id)
+      .eq("updated_at", expectedUpdatedAt)
+      .select("id, updated_at")
+      .maybeSingle();
     if (error) {
       console.error("[updateProject]", error.message);
       throw new Error("Failed to update project");
     }
-    return { ok: true };
+    if (!updated || updated.id !== id || typeof updated.updated_at !== "string")
+      throw new Error(
+        "Project changed or is no longer editable. Review the latest saved version before retrying.",
+      );
+    return { ok: true, updatedAt: updated.updated_at };
   });
 
 export const deleteProject = createServerFn({ method: "POST" })
@@ -414,7 +493,7 @@ export const listMembers = createServerFn({ method: "GET" })
       .order("created_at", { ascending: true });
     if (error) {
       console.error("[listMembers]", error.message);
-      return [];
+      throw new Error("Project members could not be loaded. Try again.");
     }
     // Resolve the verified Kova primary email first; the hosted auth.users
     // compatibility row can intentionally use a non-user-facing shadow address.
@@ -525,7 +604,7 @@ export const listInvites = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) {
       console.error("[listInvites]", error.message);
-      return [];
+      throw new Error("Project invitations could not be loaded. Try again.");
     }
     return (rows ?? []) as ProjectInvite[];
   });
@@ -598,7 +677,7 @@ export const listMyPendingInvites = createServerFn({ method: "GET" })
       .ilike("email", email);
     if (error) {
       console.error("[listMyPendingInvites]", error.message);
-      return [];
+      throw new Error("Project invitations could not be loaded. Try again.");
     }
     const ids = (rows ?? []).map((r) => r.project_id);
     if (ids.length === 0) return [];
@@ -686,7 +765,7 @@ export const listProjectChats = createServerFn({ method: "GET" })
       .limit(200);
     if (error) {
       console.error("[listProjectChats]", error.message);
-      return [];
+      throw new Error("Project conversations could not be loaded. Try again.");
     }
     return (rows ?? []) as ProjectChatSummary[];
   });
@@ -700,7 +779,8 @@ export const getProjectChat = createServerFn({ method: "GET" })
       .select("id, project_id, title, snapshot, updated_at, created_by")
       .eq("id", data.id)
       .maybeSingle();
-    if (error || !row) return null;
+    if (error) throw new Error("Project conversation could not be loaded. Try again.");
+    if (!row) return null;
     return {
       ...row,
       snapshot: projectChatSnapshot(row.snapshot),

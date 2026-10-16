@@ -11,6 +11,7 @@ import {
   Paperclip,
   RotateCcw,
 } from "lucide-react";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { AppShell } from "@/components/AppShell";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import {
@@ -111,6 +112,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
   const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const revisionRef = useRef(0);
+  const sourceRef = useRef<HTMLTextAreaElement>(null);
   const stats = useMemo(() => textStats(text), [text]);
 
   const importFile = async (file?: File) => {
@@ -288,6 +290,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
             </label>
             <textarea
               id="writing-input"
+              ref={sourceRef}
               value={text}
               maxLength={MAX_INPUT_CHARACTERS}
               onChange={(event) => {
@@ -313,13 +316,13 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl px-2 text-sm font-medium hover:bg-black/[0.045] dark:hover:bg-white/[0.07]"
+                className="kova-workspace-action inline-flex min-h-10 items-center gap-2 rounded-xl px-2 text-sm font-medium hover:bg-black/[0.045] dark:hover:bg-white/[0.07]"
               >
                 <Paperclip aria-hidden="true" className="h-4 w-4" /> Upload
               </button>
               <Link
                 to="/library"
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl px-2 text-sm font-medium hover:bg-black/[0.045] dark:hover:bg-white/[0.07]"
+                className="kova-workspace-action inline-flex min-h-10 items-center gap-2 rounded-xl px-2 text-sm font-medium hover:bg-black/[0.045] dark:hover:bg-white/[0.07]"
               >
                 <FolderOpen aria-hidden="true" className="h-4 w-4" /> Library
               </Link>
@@ -369,7 +372,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                 aria-label={`Run ${tool.title}`}
                 disabled={!text.trim() || busy}
                 onClick={() => void run()}
-                className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full bg-foreground text-background transition-opacity disabled:cursor-not-allowed disabled:opacity-30"
+                className="kova-workspace-action ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full bg-foreground text-background transition-opacity disabled:cursor-not-allowed disabled:opacity-30"
               >
                 {busy ? (
                   <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
@@ -407,7 +410,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                   <button
                     type="button"
                     onClick={() => void copyResult()}
-                    className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm hover:bg-muted"
+                    className="kova-workspace-action inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm hover:bg-muted"
                   >
                     {copied ? (
                       <Check aria-hidden="true" className="h-4 w-4" />
@@ -419,11 +422,12 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                   <button
                     type="button"
                     onClick={() => {
+                      restoreDialogFocus(sourceRef.current, window.location.href);
                       setResult("");
                       setError("");
                       setAnnouncement("");
                     }}
-                    className="grid h-9 w-9 place-items-center rounded-lg hover:bg-muted"
+                    className="kova-workspace-action grid h-9 w-9 place-items-center rounded-lg hover:bg-muted"
                     aria-label="Clear result"
                   >
                     <RotateCcw aria-hidden="true" className="h-4 w-4" />

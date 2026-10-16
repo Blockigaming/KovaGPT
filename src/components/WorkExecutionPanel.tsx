@@ -161,7 +161,10 @@ export function WorkExecutionPanel({
     });
   if (cleared)
     return (
-      <section className="mb-4 rounded-2xl border bg-card p-4" aria-label="Work execution">
+      <section
+        className="kova-adapted-controls mb-4 rounded-2xl border bg-card p-4"
+        aria-label="Work execution"
+      >
         <p>Work controls were cleared on this device.</p>
         <button
           type="button"
@@ -176,7 +179,10 @@ export function WorkExecutionPanel({
       </section>
     );
   return (
-    <section className="mb-4 rounded-2xl border bg-card p-4" aria-label="Work execution">
+    <section
+      className="kova-adapted-controls mb-4 rounded-2xl border bg-card p-4"
+      aria-label="Work execution"
+    >
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-semibold">Run prepared work</h2>
         <button className="text-sm underline" disabled={locked} onClick={() => void load()}>

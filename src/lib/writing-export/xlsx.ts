@@ -21,7 +21,13 @@ export async function createDocumentXlsx(title: string, markdown: string) {
       name: "Document",
       rows: [
         [title || "Document"],
-        ...blocks.filter((block) => block.kind !== "table").map((block) => [block.text]),
+        ...blocks
+          .filter((block) => block.kind !== "table")
+          .map((block) => [
+            block.kind === "list"
+              ? `${block.ordered ? `${block.number}.` : "•"} ${block.text}`
+              : block.text,
+          ]),
       ],
     },
   ];

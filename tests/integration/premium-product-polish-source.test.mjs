@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("streaming batches token updates and deduplicates activity events", async () => {
-  const source = await read("src/routes/index.tsx");
+  const source = await read("src/components/ChatWorkspace.tsx");
   assert.match(source, /pendingContent \+= chunk/);
   assert.match(source, /requestAnimationFrame\(flushAssistant\)/);
   assert.match(source, /item\.tool === activity\.tool && item\.label === activity\.label/);

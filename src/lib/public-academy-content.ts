@@ -24,7 +24,7 @@ const academy = (topic: AcademyTopic): PublicDetailPage => ({
   sections: [
     {
       title: "What you will practice",
-      body: `This Kova Academy guide turns ${topic.title.toLowerCase()} into a bounded exercise. Start with an outcome, the context you are allowed to use, and the person responsible for the finished work.`,
+      body: "Practice this topic with a focused exercise. Start with an outcome, the context you are allowed to use, and the person responsible for the finished work.",
       points: topic.practice,
     },
     {

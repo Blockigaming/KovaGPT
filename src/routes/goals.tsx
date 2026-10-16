@@ -141,8 +141,12 @@ function GoalsPage() {
   };
 
   return (
-    <AppShell>
-      <main className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6">
+    <AppShell utilitiesInHeader>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-workspace-controls mx-auto w-full max-w-5xl px-4 py-7 sm:px-6"
+      >
         <WorkspacePageHeader
           icon={Target}
           title="Goals"

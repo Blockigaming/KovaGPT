@@ -23,7 +23,6 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { WorkSessionPanel } from "@/components/WorkSessionPanel";
 import { WorkSyncStatus } from "@/components/WorkSyncStatus";
-import { WorkspaceModeSwitch } from "@/components/WorkspaceModeSwitch";
 import { recordWorkRecent } from "@/lib/work-sync-client";
 import { EmptyState, ErrorState } from "@/components/states";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
@@ -43,6 +42,11 @@ import {
   type WorkRun,
 } from "@/lib/work.functions";
 import { calculateCriticalPath, dagLayout } from "@/lib/work-graph.mjs";
+import { fitGraphViewport, GRAPH_MIN_ZOOM, GRAPH_MAX_ZOOM } from "@/lib/work-graph-viewport.mjs";
+import {
+  classifySpecialistEvents,
+  WORK_INSPECTOR_CATEGORIES,
+} from "@/lib/work-inspector-events.mjs";
 import { parseWorkRunList } from "@/lib/work-response.mjs";
 import {
   browserStoragePrincipal,
@@ -94,7 +98,7 @@ function factualStatus(run: WorkRun) {
 }
 
 function WorkRoute() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
   const principal = browserStoragePrincipal(isLoaded ? userKey : undefined);
   const fetchRuns = useServerFn(listWorkRuns),
@@ -242,12 +246,12 @@ function WorkRoute() {
   }
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-[1600px] p-3" aria-label="Work center">
-        {isLoaded && isSignedIn ? (
-          <div className="mb-3 hidden justify-center lg:flex">
-            <WorkspaceModeSwitch active="work" className="flex" />
-          </div>
-        ) : null}
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-adapted-controls mx-auto w-full max-w-[1600px] p-3"
+        aria-label="Work center"
+      >
         <WorkSyncStatus />
         {isLoaded && (
           <WorkSessionPanel key={principal} ownerId={userKey} prepared={preparedDraft} />
@@ -282,7 +286,7 @@ function WorkRoute() {
               </button>
             ))}
           </aside>
-          <section className="min-w-0 flex-1 overflow-hidden rounded-3xl border bg-card">
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-3xl border bg-card">
             {preparedDraft ? (
               <div className="h-full overflow-y-auto p-5 sm:p-8">
                 <div className="mx-auto max-w-3xl">
@@ -345,7 +349,7 @@ function WorkRoute() {
               />
             ) : (
               <>
-                <header className="border-b p-4">
+                <header className="shrink-0 border-b p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
@@ -403,7 +407,7 @@ function WorkRoute() {
                     )}
                   </nav>
                 </header>
-                <div className="h-[calc(100%-10.5rem)] overflow-y-auto p-4">
+                <div data-work-view-scroll className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4">
                   {tab === "graph" && <DependencyGraph detail={detail} />}{" "}
                   {tab === "timeline" && <Timeline detail={detail} />}{" "}
                   {tab === "evidence" && <Evidence detail={detail} />}{" "}
@@ -460,38 +464,111 @@ function DependencyGraph({ detail }: { detail: WorkDetail }) {
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [selected, setSelected] = useState<string | null>(null);
   const [panning, setPanning] = useState<{ x: number; y: number } | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const minimapRef = useRef<HTMLDivElement>(null);
+  const minimumZoomRef = useRef(GRAPH_MIN_ZOOM);
+  const nodeRefs = useRef(new Map<string, HTMLDivElement>());
   const fit = () => {
-    setScale(1);
-    setOffset({ x: 0, y: 0 });
-    setPositions(dagLayout(graphNodes, detail.edges));
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const nextPositions = dagLayout(graphNodes, detail.edges);
+    const rectangles = graphNodes.map((node) => {
+      const element = nodeRefs.current.get(node.id);
+      return {
+        ...nextPositions[node.id],
+        width: element?.offsetWidth ?? 224,
+        height: element?.offsetHeight ?? 160,
+      };
+    });
+    // Only an explicit Fit may reveal this graph inside its own run pane.
+    const pane = viewport.closest<HTMLElement>("[data-work-view-scroll]");
+    if (pane) {
+      const canvasBounds = viewport.getBoundingClientRect();
+      const paneBounds = pane.getBoundingClientRect();
+      const paneTop = paneBounds.top + pane.clientTop;
+      const paneBottom = paneTop + pane.clientHeight;
+      const delta =
+        canvasBounds.top < paneTop
+          ? canvasBounds.top - paneTop
+          : Math.max(0, canvasBounds.bottom - paneBottom);
+      pane.scrollTop += delta;
+    }
+    const style = getComputedStyle(viewport);
+    const paddingTop = parseFloat(style.paddingTop);
+    const paddingBottom = parseFloat(style.paddingBottom);
+    const canvasTop = viewport.getBoundingClientRect().top + viewport.clientTop;
+    const paneTop = pane ? pane.getBoundingClientRect().top + pane.clientTop : canvasTop;
+    const visibleTop = Math.max(paddingTop, paneTop - canvasTop);
+    const visibleBottom = Math.min(
+      viewport.clientHeight - paddingBottom,
+      pane ? paneTop + pane.clientHeight - canvasTop : viewport.clientHeight,
+    );
+    const minimap = minimapRef.current;
+    const minimapTop = minimap
+      ? minimap.getBoundingClientRect().top - canvasTop - 8
+      : visibleBottom;
+    // Fit to the actually visible canvas content, with the minimap kept clear.
+    const fitted = fitGraphViewport(
+      rectangles,
+      {
+        width:
+          viewport.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+        height: Math.min(visibleBottom, minimapTop) - visibleTop,
+      },
+      { minZoom: Number.MIN_VALUE },
+    );
+    if (!fitted) return;
+    setPositions(nextPositions);
+    minimumZoomRef.current = Math.min(GRAPH_MIN_ZOOM, fitted.scale);
+    setScale(fitted.scale);
+    setOffset({ x: fitted.offset.x, y: fitted.offset.y + visibleTop - paddingTop });
   };
   const specialist = specialists.find((item) => item.name === selected);
+  const inspectorEvents = useMemo(
+    () => classifySpecialistEvents(detail.events, selected),
+    [detail.events, selected],
+  );
   return (
-    <section>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
+    <section className="flex h-full min-h-0 flex-col">
+      <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-[1_1_16rem]">
           <h3 className="font-semibold">Dependency graph</h3>
           <p className="text-sm text-muted-foreground">
             Authoritative persisted task dependencies. No estimated percentage.
           </p>
         </div>
-        <div className="flex gap-1" aria-label="Graph controls">
-          <button className="work-icon" onClick={() => setScale((s) => Math.max(0.6, s - 0.1))}>
+        <div
+          className="flex shrink-0 items-center gap-1 whitespace-nowrap"
+          aria-label="Graph controls"
+        >
+          <button
+            className="work-icon"
+            onClick={() => setScale((s) => Math.max(minimumZoomRef.current, s - 0.1))}
+          >
             −
           </button>
-          <button className="work-icon" onClick={() => setScale((s) => Math.min(1.6, s + 0.1))}>
+          <button
+            className="work-icon"
+            onClick={() => setScale((s) => Math.min(GRAPH_MAX_ZOOM, s + 0.1))}
+          >
             +
           </button>
-          <button className="work-small" onClick={fit}>
+          <button className="work-small shrink-0 whitespace-nowrap!" onClick={fit}>
             Fit
           </button>
         </div>
       </div>
       <div
-        className="relative h-[28rem] touch-none overflow-hidden rounded-2xl border bg-muted/20 p-8"
+        ref={viewportRef}
+        className="relative max-h-[28rem] min-h-32 flex-1 touch-none overflow-hidden rounded-2xl border bg-muted/20 p-4 sm:min-h-48 sm:p-8"
         onWheel={(event) => {
           event.preventDefault();
-          setScale((value) => Math.min(1.8, Math.max(0.5, value - event.deltaY * 0.001)));
+          setScale((value) =>
+            Math.min(
+              GRAPH_MAX_ZOOM,
+              Math.max(minimumZoomRef.current, value - event.deltaY * 0.001),
+            ),
+          );
         }}
         onPointerDown={(event) => {
           if (event.target === event.currentTarget) {
@@ -556,6 +633,10 @@ function DependencyGraph({ detail }: { detail: WorkDetail }) {
             specialists.map((item, index) => (
               <div
                 key={item.name}
+                ref={(element) => {
+                  if (element) nodeRefs.current.set(item.name, element);
+                  else nodeRefs.current.delete(item.name);
+                }}
                 role="button"
                 tabIndex={0}
                 aria-label={`${item.label}, ${item.status}`}
@@ -620,7 +701,7 @@ function DependencyGraph({ detail }: { detail: WorkDetail }) {
                   {item.status.replaceAll("_", " ")}
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {item.events} recorded action{item.events === 1 ? "" : "s"}
+                  {item.events} recorded event{item.events === 1 ? "" : "s"}
                 </p>
                 {index < specialists.length - 1 && !positions[item.name] && (
                   <span className="absolute -right-8 top-1/2 w-8 border-t" />
@@ -634,7 +715,8 @@ function DependencyGraph({ detail }: { detail: WorkDetail }) {
           )}
         </div>
         <div
-          className="absolute bottom-3 right-3 h-20 w-32 rounded-lg border bg-card/90 p-2"
+          ref={minimapRef}
+          className="absolute bottom-3 right-3 h-12 w-20 rounded-lg border bg-card/90 p-2 sm:h-20 sm:w-32"
           aria-label="Graph minimap"
         >
           <div className="relative h-full w-full">
@@ -665,28 +747,12 @@ function DependencyGraph({ detail }: { detail: WorkDetail }) {
           </button>
           <h3 className="pr-8 text-lg font-semibold">{specialist.name}</h3>
           <p className="capitalize text-sm text-muted-foreground">
-            {specialist.status} · {specialist.events} actions
+            {specialist.status} · {specialist.events} recorded event
+            {specialist.events === 1 ? "" : "s"}
           </p>
           <div className="mt-4 space-y-4">
-            {[
-              "objective",
-              "inputs",
-              "outputs",
-              "browser",
-              "tool",
-              "provider",
-              "log",
-              "memory",
-              "handoff",
-              "deliverable",
-              "screenshot",
-              "approval",
-            ].map((kind) => {
-              const matching = detail.events.filter(
-                (event) =>
-                  event.type.includes(kind) ||
-                  JSON.stringify(event.payload).toLowerCase().includes(kind),
-              );
+            {WORK_INSPECTOR_CATEGORIES.map((kind) => {
+              const matching = inspectorEvents[kind];
               return (
                 <details key={kind} className="rounded-xl border p-3">
                   <summary className="cursor-pointer font-medium capitalize">
@@ -698,7 +764,7 @@ function DependencyGraph({ detail }: { detail: WorkDetail }) {
                         key={event.id}
                         className="overflow-x-auto whitespace-pre-wrap text-xs text-muted-foreground"
                       >
-                        {JSON.stringify(event.payload, null, 2)}
+                        {JSON.stringify({ type: event.type, payload: event.payload }, null, 2)}
                       </pre>
                     ))}
                   </div>
@@ -757,13 +823,13 @@ function Evidence({ detail }: { detail: WorkDetail }) {
   );
   return (
     <section>
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2">
         <h3 className="font-semibold">Evidence center</h3>
-        <div className="flex flex-wrap gap-2">
-          <label className="relative">
+        <div className="flex min-w-0 max-w-full flex-1 flex-wrap gap-2">
+          <label className="relative min-w-0 max-w-full flex-[1_1_12rem]">
             <Search className="absolute left-3 top-3 h-4 w-4" />
             <input
-              className="min-h-10 rounded-xl border pl-9 pr-3"
+              className="min-h-10 w-full min-w-0 rounded-xl border pl-9 pr-3"
               placeholder="Search evidence"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -771,7 +837,7 @@ function Evidence({ detail }: { detail: WorkDetail }) {
           </label>
           <select
             aria-label="Evidence type"
-            className="min-h-10 rounded-xl border bg-background px-2"
+            className="min-h-10 min-w-0 max-w-full flex-[1_1_9rem] rounded-xl border bg-background px-2"
             value={type}
             onChange={(e) => setType(e.target.value)}
           >
@@ -782,7 +848,7 @@ function Evidence({ detail }: { detail: WorkDetail }) {
           </select>
           <select
             aria-label="Evidence specialist"
-            className="min-h-10 rounded-xl border bg-background px-2"
+            className="min-h-10 min-w-0 max-w-full flex-[1_1_9rem] rounded-xl border bg-background px-2"
             value={specialist}
             onChange={(e) => setSpecialist(e.target.value)}
           >
@@ -799,7 +865,7 @@ function Evidence({ detail }: { detail: WorkDetail }) {
           ? new Date(detail.events[Math.max(0, cursor)].createdAt).toLocaleString()
           : "start"}
         <input
-          className="mt-1 w-full"
+          className="kova-work-evidence-range mt-1 w-full"
           type="range"
           min="0"
           max={Math.max(0, detail.events.length - 1)}
@@ -897,23 +963,23 @@ function Deliverables({
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="font-semibold">Deliverables</h3>
         <input
-          className="min-h-10 rounded-xl border px-3"
+          className="min-h-10 min-w-0 w-full rounded-xl border px-3 sm:w-auto"
           placeholder="Search deliverables"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-2">
         {shown.map((item) => (
-          <article key={item.id} className="rounded-2xl border p-4">
-            <div className="flex gap-3">
-              <FileText className="h-5 w-5 text-primary" />
+          <article key={item.id} className="min-w-0 rounded-2xl border p-4">
+            <div className="flex min-w-0 gap-3">
+              <FileText className="h-5 w-5 shrink-0 text-primary" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{item.title}</p>
+                <p className="break-words font-medium">{item.title}</p>
                 <p className="text-xs capitalize text-muted-foreground">
                   {item.type.replaceAll("_", " ")} · revision {item.revision}
                 </p>
-                <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
+                <p className="mt-1 break-all font-mono text-[10px] text-muted-foreground">
                   {item.integrityHash}
                 </p>
               </div>
@@ -921,7 +987,7 @@ function Deliverables({
             <div className="mt-3 flex flex-wrap gap-2">
               {renamingId === item.id ? (
                 <form
-                  className="flex min-w-0 flex-1 gap-2"
+                  className="flex min-w-0 flex-1 flex-wrap gap-2"
                   onSubmit={(event) => {
                     event.preventDefault();
                     const title = renameValue.trim();
@@ -940,16 +1006,24 @@ function Deliverables({
                     onKeyDown={(event) => event.key === "Escape" && setRenamingId(null)}
                     className="h-10 min-w-0 flex-1 rounded-lg border bg-background px-3 text-sm"
                   />
-                  <button className="work-small" type="submit" disabled={!renameValue.trim()}>
+                  <button
+                    className="work-small shrink-0 whitespace-nowrap!"
+                    type="submit"
+                    disabled={!renameValue.trim()}
+                  >
                     Save
                   </button>
-                  <button className="work-small" type="button" onClick={() => setRenamingId(null)}>
+                  <button
+                    className="work-small shrink-0 whitespace-nowrap!"
+                    type="button"
+                    onClick={() => setRenamingId(null)}
+                  >
                     Cancel
                   </button>
                 </form>
               ) : (
                 <button
-                  className="work-small"
+                  className="work-small shrink-0 whitespace-nowrap!"
                   onClick={() => {
                     setRenameValue(item.title);
                     setRenamingId(item.id);
@@ -959,7 +1033,7 @@ function Deliverables({
                 </button>
               )}
               <button
-                className="work-small"
+                className="work-small shrink-0 whitespace-nowrap!"
                 onClick={() =>
                   void action(() => duplicate({ data: { id: item.id } }), "Duplicated")
                 }
@@ -967,7 +1041,7 @@ function Deliverables({
                 Duplicate
               </button>
               <button
-                className="work-small"
+                className="work-small shrink-0 whitespace-nowrap!"
                 onClick={() =>
                   void versions({ data: { id: item.id } })
                     .then(setHistory)
@@ -977,7 +1051,7 @@ function Deliverables({
                 Versions
               </button>
               <button
-                className="work-small"
+                className="work-small shrink-0 whitespace-nowrap!"
                 onClick={() =>
                   void action(async () => {
                     const result = await download({ data: { id: item.id } });
@@ -989,7 +1063,7 @@ function Deliverables({
                 Download
               </button>
               <button
-                className="work-small text-destructive"
+                className="work-small shrink-0 whitespace-nowrap! text-destructive"
                 onClick={() =>
                   void action(() => remove({ data: { id: item.id } }), "Moved to deleted items")
                 }
@@ -1004,8 +1078,12 @@ function Deliverables({
       {!shown.length && (
         <EmptyState
           icon={FileText}
-          title="No deliverables"
-          description="Generated Project, Library, Research, Context Pack, Markdown, JSON, and CSV outputs appear here."
+          title={items.length ? "No matching deliverables" : "No deliverables"}
+          description={
+            items.length
+              ? "Try another title or file type."
+              : "Generated Project, Library, Research, Context Pack, Markdown, JSON, and CSV outputs appear here."
+          }
         />
       )}
       {history && (
@@ -1031,10 +1109,10 @@ function Deliverables({
             </div>
             <div className="mt-4 space-y-3">
               {history.map((version, index) => (
-                <article key={version.id} className="rounded-2xl border p-3">
-                  <div className="flex justify-between gap-2">
-                    <div>
-                      <p className="font-medium">
+                <article key={version.id} className="min-w-0 rounded-2xl border p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 flex-[1_1_12rem]">
+                      <p className="break-words font-medium">
                         Revision {version.revision}: {version.title}
                       </p>
                       <time className="text-xs text-muted-foreground">
@@ -1042,7 +1120,7 @@ function Deliverables({
                       </time>
                     </div>
                     <button
-                      className="work-small"
+                      className="work-small shrink-0 whitespace-nowrap!"
                       onClick={() =>
                         void action(
                           () => restoreRevision({ data: { id: version.id } }),

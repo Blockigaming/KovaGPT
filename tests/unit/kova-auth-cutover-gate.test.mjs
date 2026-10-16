@@ -48,6 +48,8 @@ const evidence = () => ({
       "kova_auth_legacy_adoption_gap_count",
       "kova_auth_activate_legacy_mfa_migration",
       "kova_auth_validate_compatibility_session",
+      "kova_auth_passkey_recent_primary_session",
+      "kova_auth_remove_totp_with_session",
     ].map((name) => [
       name,
       {
@@ -71,6 +73,10 @@ const evidence = () => ({
 });
 
 test("cutover receipt binds the deployed build, live database and fresh evidence", () => {
+  assert.ok(requiredMigrations.includes("kova_restore_legacy_private_helper_usage"));
+  assert.ok(requiredMigrations.includes("kova_owned_auth_remaining_review_fixes"));
+  assert.ok(requiredMigrations.includes("kova_owned_storage_cache_boundary"));
+  assert.ok(requiredMigrations.includes("kova_owned_passkey_registration_primary_session"));
   assert.deepEqual(validateCutoverEvidence(evidence(), options), {
     sourceSha,
     configSha256,
@@ -108,6 +114,10 @@ test("cutover receipt rejects a passkey origin on a different application", () =
 test("cutover receipt fails closed on missing proof, public function access and unexpired tokens", () => {
   const mutations = [
     (item) => item.appliedMigrations.pop(),
+    (item) =>
+      (item.appliedMigrations = item.appliedMigrations.filter(
+        (name) => name !== "kova_restore_legacy_private_helper_usage",
+      )),
     (item) => (item.legacyMfaGapCount = 1),
     (item) => (item.legacyAdoptionGapCount = 1),
     (item) => delete item.legacyAdoptionGapCount,
@@ -121,6 +131,10 @@ test("cutover receipt fails closed on missing proof, public function access and 
     (item) => (item.revocationProof.scoped_rls_tables = 0),
     (item) =>
       (item.serviceOnlyFunctions.kova_auth_validate_compatibility_session.anonExecute = true),
+    (item) => delete item.serviceOnlyFunctions.kova_auth_passkey_recent_primary_session,
+    (item) =>
+      (item.serviceOnlyFunctions.kova_auth_passkey_recent_primary_session.authenticatedExecute = true),
+    (item) => (item.serviceOnlyFunctions.kova_auth_remove_totp_with_session.timeoutMs = 0),
     (item) => (item.serviceOnlyFunctions.kova_auth_activate_legacy_mfa_migration.timeoutMs = 0),
     (item) => (item.deployedChecks.realtime_reauthorization = false),
     (item) => (item.historicExpiry.signedStorageUrl = "2026-09-24T21:01:00.000Z"),

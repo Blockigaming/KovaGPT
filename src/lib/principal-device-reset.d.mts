@@ -7,7 +7,11 @@ import type {
 export function resetPrincipalDeviceData(
   userKey: BrowserStorageUserKey,
   options?: {
-    storage?: { localStorage?: StorageLike | null; sessionStorage?: StorageLike | null };
+    storage?: {
+      localStorage?: StorageLike | null;
+      sessionStorage?: StorageLike | null;
+      locks?: Pick<LockManager, "request">;
+    };
     notify?: (userKey: BrowserStorageUserKey) => unknown;
     clearPwaData?: (userKey: string | null) => Promise<void>;
     clearImageHistory?: (userKey: string) => Promise<void>;

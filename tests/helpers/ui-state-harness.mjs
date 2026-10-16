@@ -38,6 +38,7 @@ export function loadUiModule(path, dependencies, globals = {}) {
 
 export function createHookHarness() {
   const slots = [];
+  const setters = [];
   let cursor = 0;
   let pending = [];
   const same = (a, b) => a && b && a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
@@ -47,12 +48,10 @@ export function createHookHarness() {
       if (!(index in slots)) {
         slots[index] = typeof initial === "function" ? initial() : initial;
       }
-      return [
-        slots[index],
-        (next) => {
-          slots[index] = typeof next === "function" ? next(slots[index]) : next;
-        },
-      ];
+      setters[index] ??= (next) => {
+        slots[index] = typeof next === "function" ? next(slots[index]) : next;
+      };
+      return [slots[index], setters[index]];
     },
     useRef(initial) {
       const index = cursor++;

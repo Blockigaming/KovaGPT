@@ -111,7 +111,8 @@ test("public discovery actions lead to populated Kova surfaces", async () => {
   ]);
 
   assert.match(academyRoute, /Start Academy guides[\s\S]*\/academy\/ai-fundamentals/u);
-  assert.match(academyRoute, /PUBLIC_ACADEMY_PAGES\.map/u);
+  assert.match(academyRoute, /const pages = PUBLIC_ACADEMY_PAGES\.filter\(/u);
+  assert.match(academyRoute, /pages\.map\(\(page\)/u);
   assert.match(
     publicSlugRoute,
     /economic-research-exchange[\s\S]*Explore KovaGPT research[\s\S]*\/research-assistant/u,

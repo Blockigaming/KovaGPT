@@ -239,7 +239,7 @@ export const WRITING_TOOLS = [
   {
     slug: "word-counter",
     title: "Word counter",
-    shortDescription: "Count words, characters, sentences, and lines locally as you type.",
+    shortDescription: "Count words, characters, sentences, and lines in your browser.",
     placeholder: "Type or paste text to count",
     action: "count",
     supportsSettings: false,

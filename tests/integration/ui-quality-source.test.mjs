@@ -4,7 +4,7 @@ import test from "node:test";
 
 const styles = await readFile("src/styles.css", "utf8");
 const finalParityStyles = await readFile("src/styles/chatgpt-final-parity.css", "utf8");
-const home = await readFile("src/routes/index.tsx", "utf8");
+const home = await readFile("src/components/ChatWorkspace.tsx", "utf8");
 const root = await readFile("src/routes/__root.tsx", "utf8");
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const composer = await readFile("src/components/ChatInput.tsx", "utf8");
@@ -38,7 +38,8 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(home, /What can I help with\?/);
   assert.match(home, /placement="topbar"/);
   assert.match(composer, /COMPOSER_TOOLS/);
-  assert.match(composer, /PROMPT_SHORTCUTS/);
+  assert.match(composer, /ComposerPluginList/);
+  assert.match(composer, /setLibraryOpen\(true\)/);
 
   // A blocked attachment may explain the blocker, but it must not submit the message.
   assert.match(composer, /const blockedAttachmentMessage = blockedAttachment/);
@@ -59,16 +60,16 @@ test("core chat surfaces use shared workspace primitives", () => {
   assert.match(sidebar, /kova-new-chat/);
   assert.match(styles, /overflow-anchor: auto/);
   assert.match(logo, /kova-logo-mark/);
-  assert.match(logo, /<svg[\s\S]*?viewBox="0 0 24 24"[\s\S]*?<circle[\s\S]*?<path/);
+  assert.match(logo, /<img[\s\S]*?src="\/kova-logo\.png"/);
   assert.match(logo, /decorative = false/);
   assert.match(logo, /alt = "KovaGPT"/);
   assert.match(logo, /aria-hidden=\{decorative \|\| undefined\}/);
   assert.match(logo, /aria-label=\{decorative \? undefined : alt\}/);
-  assert.match(logo, /role=\{decorative \? undefined : "img"\}/);
+  assert.match(logo, /alt=\{decorative \? "" : alt\}/);
   assert.match(logo, /data-logo-variant=\{mark \? "mark" : "standard"\}/);
-  assert.doesNotMatch(logo, /<img|kova-logo\.png/);
+  assert.doesNotMatch(logo, /<svg|<path/);
   assert.doesNotMatch(styles, /\.kova-logo-mark\s*\{[\s\S]*?mask: url/);
-  assert.match(sidebar, /<span className="kova-sidebar-brand">KovaGPT<\/span>/);
+  assert.match(sidebar, /kova-sidebar-brand[\s\S]*?<NovaLogo decorative className="h-7 w-7"/);
   assert.match(home, /<NovaLogo decorative mark className="h-5 w-5" \/>/);
   assert.match(publicSite, /<PublicShell>/);
   assert.doesNotMatch(publicSite, /<NovaLogo/);
@@ -81,9 +82,9 @@ test("core chat surfaces use shared workspace primitives", () => {
   assert.match(resetPassword, /<NovaLogo decorative className="w-4 h-4" \/>/);
   assert.match(
     uiQuality,
-    /page\.route\("\*\*\/kova-logo\.png\*"[\s\S]*?rasterLogoRequests \+= 1;[\s\S]*?route\.abort\(\)/,
+    /page\.route\("\*\*\/kova-logo\.png\*"[\s\S]*?rasterLogoRequests \+= 1;[\s\S]*?route\.continue\(\)/,
   );
-  assert.match(uiQuality, /expect\(rasterLogoRequests\)\.toBe\(0\)/);
+  assert.match(uiQuality, /toHaveJSProperty\("naturalWidth", 1024\)/);
 });
 
 test("the core workspace layer owns shell and composer visual contracts", () => {
@@ -143,9 +144,14 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.doesNotMatch(composer, /outlineWidth:\s*"2px"/);
   assert.doesNotMatch(composer, /outlineColor:\s*"currentColor"/);
   assert.match(composer, /surface\?: "empty" \| "conversation"/);
-  assert.match(composer, /top-\[calc\(100%\+1\.25rem\)\]/);
-  assert.match(composer, /bottom-\[calc\(100%\+1\.25rem\)\]/);
-  assert.match(composer, /mobile \? "min-h-14[^"\n]+" : "min-h-11/);
+  assert.match(composer, /<PopoverContent/);
+  assert.match(composer, /side=\{surface === "empty" \? "bottom" : "top"\}/);
+  assert.match(composer, /collisionPadding=\{12\}/);
+  assert.match(composer, /onCloseAutoFocus/);
+  assert.match(composer, /ArrowDown/);
+  assert.match(composer, /ArrowUp/);
+  assert.match(composer, /renderComposerActions\(true\)/);
+  assert.match(composer, /renderComposerActions\(false\)/);
   assert.match(home, /surface="empty"/);
   assert.match(home, /<HomeChatStarters setInput=\{setInput\}/);
   assert.match(
@@ -158,10 +164,11 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   );
   assert.match(modelSelector, /kova-model-static/);
 
-  const lockedBranch = modelSelector.match(/if \(locked\)[\s\S]*?<\/span>\s*\);/)?.[0] ?? "";
-  assert.ok(lockedBranch, "locked model branch should remain explicit");
-  assert.doesNotMatch(lockedBranch, /ChevronDown|pointer-events-none|aria-hidden/);
-  assert.match(sidebar, /navLink\("\/discovery", "Discover", Globe\)/);
+  assert.doesNotMatch(modelSelector, /ChevronDown|<button|aria-hidden|model-selector-trigger/);
+  assert.match(modelSelector, /CORE_LAUNCH_MODE/);
+  assert.doesNotMatch(sidebar, /navLink\("\/discovery", "Discover", Globe\)/);
+  assert.match(sidebar, /navLink\("\/library", "Library", LibraryBig\)/);
+  assert.doesNotMatch(sidebar, /navLink\("\/files"/);
   assert.doesNotMatch(sidebar, /"Maps", Map, isOn\("\/maps"\), "New"/);
 });
 

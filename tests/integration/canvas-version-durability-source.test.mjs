@@ -26,8 +26,10 @@ test("save failures surface an error instead of a false success", () => {
 });
 
 test("history copy reflects whether persistence is available", () => {
-  assert.match(editor, /Edits are saved to this chat and stay available after you close Canvas\./);
-  assert.match(editor, /Versions are kept only while this Canvas is open\./);
+  assert.match(editor, /artifactHistoryStatus\(/);
+  const status = readFileSync("src/lib/artifact-history-status.ts", "utf8");
+  assert.match(status, /session/i);
+  assert.match(status, /saved/i);
 });
 
 test("ChatMessage forwards the ids Canvas needs", () => {
@@ -38,7 +40,12 @@ test("ChatMessage forwards the ids Canvas needs", () => {
 test("Canvas never edits, exports, or saves a silently truncated document", () => {
   assert.doesNotMatch(editor, /initialContent\.slice\(0,\s*LONG_THRESHOLD\)/);
   assert.doesNotMatch(editor, /content_text: value\.slice/);
-  assert.match(editor, /const blob = new Blob\(\[value\]/);
+  assert.match(editor, /const body = textareaRef\.current\?\.value \?\? value/);
+  assert.match(
+    editor,
+    /const content = kind === "writing" \? `# \$\{artifactTitle\}\\n\\n\$\{body\}` : body/,
+  );
+  assert.match(editor, /const blob = new Blob\(\[content\]/);
   assert.match(editor, /if \(value\.length > 200_000\)/);
   assert.match(editor, /too large for Library[\s\S]{0,100}complete file/);
   assert.match(editor, /if \(trimmed\.length > 8000\)/);
@@ -75,7 +82,7 @@ test("Canvas debounce survives its saving-state render and records the exact edi
   );
   assert.doesNotMatch(dependencies, /saveState/);
   assert.match(editor, /setSaveState\(durable \? "saved" : "session_only"\)/);
-  assert.match(editor, /saveState === "session_only"[\s\S]{0,80}"Session only"/);
+  assert.match(editor, /artifactHistoryStatus\(/);
 });
 
 test("Canvas serializes accepted autosaves so an older request cannot win", () => {
@@ -119,7 +126,7 @@ test("Canvas session identity and generation fence late history responses", () =
   const hook = readFileSync("src/lib/use-canvas-collaboration.ts", "utf8");
   assert.match(
     editor,
-    /key=\{JSON\.stringify\(\[user\?\.id, props\.chatId, props\.messageId, props\.projectId\]\)\}/,
+    /key=\{JSON\.stringify\(\[\s*user\?\.id,\s*props\.chatId,\s*props\.messageId,\s*props\.projectId,\s*props\.documentId,\s*\]\)\}/,
   );
   assert.match(editor, /if \(!props\.open\) return null/);
   const version = hook.slice(

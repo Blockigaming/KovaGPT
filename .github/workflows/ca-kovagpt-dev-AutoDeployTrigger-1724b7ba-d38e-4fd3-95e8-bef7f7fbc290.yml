@@ -24,7 +24,7 @@ concurrency:
 env:
   AZURE_CORE_OUTPUT: none
   ACR_NAME: kovagptacr
-  ACR_LOGIN_SERVER: kovagptacr.azurecr.io
+  ACR_RESOURCE_GROUP: rg-kovagpt-dev
   CONTAINER_APP_NAME: ca-kovagpt-dev
   RESOURCE_GROUP: rg-kovagpt-dev
   IMAGE_NAME: kovagpt-web
@@ -128,6 +128,35 @@ jobs:
             echo "::error::The server SUPABASE_URL does not match the approved browser Supabase project."
             exit 1
           fi
+
+      - name: Resolve and verify the existing registry destination
+        shell: bash
+        env:
+          KOVA_DEV_AZURE_SUBSCRIPTION_ID: ${{ secrets.CAKOVAGPTDEV_AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          login_server="$(
+            timeout 30s az acr show \
+              --name "$ACR_NAME" \
+              --resource-group "$ACR_RESOURCE_GROUP" \
+              --query '{id:id,name:name,type:type,loginServer:loginServer}' \
+              --output json \
+              --only-show-errors |
+              node --input-type=module -e '
+                import { readFileSync } from "node:fs";
+                import { validateObservedProductionAcr } from "./scripts/azure/production-plan-parameters.mjs";
+                const observed = JSON.parse(readFileSync(0, "utf8"));
+                const verified = validateObservedProductionAcr({
+                  observed,
+                  acrName: process.env.ACR_NAME,
+                  acrResourceGroup: process.env.ACR_RESOURCE_GROUP,
+                  acrLoginServer: observed.loginServer,
+                  subscriptionId: process.env.KOVA_DEV_AZURE_SUBSCRIPTION_ID,
+                });
+                process.stdout.write(verified.loginServer);
+              '
+          )"
+          echo "ACR_LOGIN_SERVER=$login_server" >> "$GITHUB_ENV"
 
       - name: Verify ACR push access before building
         shell: bash

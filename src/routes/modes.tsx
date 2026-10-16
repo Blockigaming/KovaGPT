@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PublicShell } from "@/components/public/PublicShell";
+import { publicModeLabel } from "@/lib/public-mode-copy";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 
 export const Route = createFileRoute("/modes")({
@@ -8,7 +9,8 @@ export const Route = createFileRoute("/modes")({
       { title: "KovaGPT AI Modes" },
       {
         name: "description",
-        content: "Compare the KovaGPT modes currently available on Free, Plus, and Pro plans.",
+        content:
+          "Compare KovaGPT plan mode labels and response instructions for Free, Plus, and Pro.",
       },
       { property: "og:title", content: "KovaGPT AI Modes" },
       {
@@ -38,13 +40,13 @@ function ModesPage() {
       <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <h1 className="text-4xl font-bold tracking-tight mb-3">KovaGPT AI Modes</h1>
         <p className="text-muted-foreground mb-10">
-          Choose how much speed and reasoning you want. Mode access follows your current plan;
-          provider availability can still affect a response.
+          Mode labels follow your plan entitlements; they do not identify the serving model.
+          Response availability depends on the configured provider.
         </p>
         <div className="grid sm:grid-cols-2 gap-4">
           {CAPABILITY_REGISTRY.modes.map((mode) => (
             <div key={mode.id} className="rounded-xl border border-border p-4 bg-card">
-              <h2 className="font-semibold mb-1">{mode.label}</h2>
+              <h2 className="font-semibold mb-1">{publicModeLabel(mode.id)}</h2>
               <p className="text-sm text-muted-foreground">{mode.description}</p>
               <p className="text-xs text-muted-foreground mt-2">
                 <span className="font-medium text-foreground">Available on:</span>{" "}
@@ -72,21 +74,30 @@ function ModesPage() {
           </dl>
         </section>
         <p className="mt-10 text-sm">
-          <Link to="/pricing" className="underline hover:text-foreground">
+          <Link to="/pricing" className="kova-public-action-link underline hover:text-foreground">
             See which modes are included in each plan →
           </Link>
         </p>
         <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm">
-          <Link to="/study-assistant" className="underline hover:text-foreground">
+          <Link
+            to="/study-assistant"
+            className="kova-public-action-link underline hover:text-foreground"
+          >
             Study Assistant
           </Link>
-          <Link to="/code-helper" className="underline hover:text-foreground">
+          <Link
+            to="/code-helper"
+            className="kova-public-action-link underline hover:text-foreground"
+          >
             Code Helper
           </Link>
-          <Link to="/ai-writer" className="underline hover:text-foreground">
+          <Link to="/ai-writer" className="kova-public-action-link underline hover:text-foreground">
             AI Writer
           </Link>
-          <Link to="/research-assistant" className="underline hover:text-foreground">
+          <Link
+            to="/research-assistant"
+            className="kova-public-action-link underline hover:text-foreground"
+          >
             Research Assistant
           </Link>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useWorkStoreRevision } from "@/hooks/use-work-store-revision";
 import { loadWorkSessions, saveWorkSessions } from "@/lib/work-store";
@@ -18,6 +19,9 @@ import {
   writePrincipalHandoff,
 } from "@/lib/principal-browser-storage.mjs";
 
+import { duplicateWorkDraft, serializeWorkDraft, type WorkPlanDraft } from "@/lib/work-draft";
+import { downloadBytes } from "@/lib/writing-export/common";
+
 type Draft = { objective: string; context: string; plan: string[] };
 /** Saved planning remains separate from explicitly submitted execution. */
 export function WorkSessionPanel({
@@ -27,6 +31,7 @@ export function WorkSessionPanel({
   ownerId: string | null;
   prepared: Draft | null;
 }) {
+  const navigate = useNavigate();
   useWorkStoreRevision(ownerId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [edit, setEdit] = useState<{
@@ -39,8 +44,10 @@ export function WorkSessionPanel({
   const [newObjective, setNewObjective] = useState("");
   const [, setPrivacyRevision] = useState(0);
   const generation = useRef(0);
+  const active = useRef(true);
   const currentGeneration = generation.current;
   useEffect(() => {
+    active.current = true;
     const clear = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, ownerId)) return;
       generation.current += 1;
@@ -51,14 +58,30 @@ export function WorkSessionPanel({
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, clear);
     return () => {
+      active.current = false;
       window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, clear);
     };
   }, [ownerId]);
   const sessions = loadWorkSessions(ownerId).filter(validWorkSession);
   const selected = sessions.find((value) => value.id === selectedId);
+  const editBase = edit ? (JSON.parse(edit.base) as WorkSession) : null;
+  const editDirty = Boolean(
+    edit &&
+    editBase &&
+    (edit.objective !== editBase.objective ||
+      edit.context !== editBase.context ||
+      edit.plan !== editBase.steps.map((step) => step.text).join("\n")),
+  );
+  const hasUnsavedDraft = editDirty || Boolean(newObjective);
+  const approveDiscardEdit = () =>
+    !editDirty || window.confirm("Discard unsaved plan edits? The saved plan will stay unchanged.");
+  const approveLeave = () =>
+    !hasUnsavedDraft ||
+    window.confirm("Leave Work? Unsaved plan edits and the new objective will be lost.");
+  useBlocker({ shouldBlockFn: () => !approveLeave(), enableBeforeUnload: hasUnsavedDraft });
   const perform = (action: () => void) => {
     try {
-      if (generation.current !== currentGeneration)
+      if (!active.current || generation.current !== currentGeneration)
         throw new Error("Session data changed. Open the current session before editing.");
       action();
     } catch (error) {
@@ -79,11 +102,19 @@ export function WorkSessionPanel({
   };
   const start = (draft: Draft) =>
     perform(() => {
+      if (!approveDiscardEdit()) return;
+      if (
+        newObjective &&
+        draft.objective !== newObjective &&
+        !window.confirm("Replace the unsaved new objective with the prepared plan?")
+      )
+        return;
       persist(createWorkSession(draft));
       setNewObjective("");
       setEdit(null);
     });
-  const openEditor = (session: WorkSession) =>
+  const openEditor = (session: WorkSession) => {
+    if (!approveDiscardEdit()) return;
     setEdit({
       id: session.id,
       base: JSON.stringify(session),
@@ -91,6 +122,7 @@ export function WorkSessionPanel({
       context: session.context,
       plan: session.steps.map((step) => step.text).join("\n"),
     });
+  };
   let revision = 0;
   if (ownerId && selected) {
     try {
@@ -100,6 +132,63 @@ export function WorkSessionPanel({
       /* Retain local editing. */
     }
   }
+  const rescueDraft = (draft: WorkPlanDraft, copy: boolean) => {
+    perform(() => {
+      const bytes = serializeWorkDraft(draft);
+      if (!copy) {
+        downloadBytes(new TextEncoder().encode(bytes), "application/json", "work-draft.json");
+        return;
+      }
+      const capturedGeneration = generation.current;
+      void navigator.clipboard.writeText(bytes).then(
+        () => {
+          if (active.current && generation.current === capturedGeneration)
+            toast.success("Draft copied. Unsaved changes remain unsaved.");
+        },
+        () => {
+          if (active.current && generation.current === capturedGeneration)
+            toast.error("Copy failed. Download the draft instead.");
+        },
+      );
+    });
+  };
+  const duplicateDraft = (draft: WorkPlanDraft) =>
+    perform(() => {
+      if (
+        !window.confirm(
+          "Create a separate planning session from this draft? The original and your unsaved edits will stay unchanged. No task will run.",
+        )
+      )
+        return;
+      if (!active.current || generation.current !== currentGeneration)
+        throw new Error("Session data changed. Reopen the draft before duplicating.");
+      const session = duplicateWorkDraft(draft);
+      const current = loadWorkSessions(ownerId);
+      saveWorkSessions(ownerId, [session, ...current]);
+      toast.success(
+        ownerId
+          ? "Separate plan created on this device. Account sync, when available, is tracked separately. No task started."
+          : "Separate guest plan created for this visit. Reloading clears guest plans. No task started.",
+      );
+    });
+  const draftActions = (draft: WorkPlanDraft) => (
+    <div className="flex flex-wrap gap-2">
+      <button type="button" className={button} onClick={() => rescueDraft(draft, true)}>
+        Copy draft
+      </button>
+      <button type="button" className={button} onClick={() => rescueDraft(draft, false)}>
+        Download draft
+      </button>
+      <button
+        type="button"
+        className={button}
+        disabled={!draft.objective.trim()}
+        onClick={() => duplicateDraft(draft)}
+      >
+        Duplicate current draft
+      </button>
+    </div>
+  );
   const button = "min-h-10 rounded-lg border px-3 py-2 text-sm disabled:opacity-40";
   return (
     <section className="my-4 rounded-2xl border bg-card p-4" aria-label="Planning sessions">
@@ -108,9 +197,15 @@ export function WorkSessionPanel({
         Save a plan, record your progress, and explore a branch. These are your planning actions;
         background execution has not started.
       </p>
+      {hasUnsavedDraft && (
+        <p role="status" className="mt-2 text-sm">
+          Unsaved plan draft
+        </p>
+      )}
       {!ownerId && (
         <p className="mt-2 text-xs text-muted-foreground">
-          Guest sessions stay on this device. Sign in for account sync.
+          Guest plans are temporary and are cleared when you reload. Copy or download drafts to keep
+          them. Sign in for account sync.
         </p>
       )}
       <form
@@ -138,6 +233,7 @@ export function WorkSessionPanel({
           </button>
         )}
       </form>
+      {newObjective && draftActions({ objective: newObjective, context: "", plan: "" })}
       {sessions.length > 0 && (
         <label className="mt-3 block text-sm">
           Saved session
@@ -145,6 +241,8 @@ export function WorkSessionPanel({
             className="ml-2 max-w-full rounded-lg border bg-background p-2"
             value={selectedId ?? ""}
             onChange={(event) => {
+              if (event.target.value === (selectedId ?? "")) return;
+              if (!approveDiscardEdit()) return;
               setSelectedId(event.target.value || null);
               setEdit(null);
             }}
@@ -162,7 +260,8 @@ export function WorkSessionPanel({
         <div className="mt-4 space-y-3 border-t pt-4">
           <h3 className="break-words font-semibold">{selected.objective}</h3>
           <p className="text-xs text-muted-foreground">
-            Your status: {selected.status}. {selected.events.length} planning actions recorded.
+            Your status: {selected.status}. {selected.events.length} planning{" "}
+            {selected.events.length === 1 ? "action" : "actions"} recorded.
           </p>
           {selected.parent && (
             <p className="text-xs text-muted-foreground">
@@ -171,6 +270,7 @@ export function WorkSessionPanel({
                 <button
                   className="underline"
                   onClick={() => {
+                    if (!approveDiscardEdit()) return;
                     setSelectedId(selected.parent!.id);
                     setEdit(null);
                   }}
@@ -240,12 +340,19 @@ export function WorkSessionPanel({
                   onChange={(event) => setEdit({ ...edit, plan: event.target.value })}
                 />
               </label>
+              {draftActions(edit)}
               <div className="flex flex-wrap gap-2">
                 <button className={button}>Save plan</button>
                 <button type="button" className={button} onClick={() => openEditor(selected)}>
                   Reload saved version
                 </button>
-                <button type="button" className={button} onClick={() => setEdit(null)}>
+                <button
+                  type="button"
+                  className={button}
+                  onClick={() => {
+                    if (approveDiscardEdit()) setEdit(null);
+                  }}
+                >
                   Cancel edit
                 </button>
               </div>
@@ -342,17 +449,45 @@ export function WorkSessionPanel({
                   className={button}
                   onClick={() =>
                     perform(() => {
+                      if (!approveLeave()) return;
                       const prompt = `Help me work through this plan in chat. Do not claim background execution.\n\nObjective: ${selected.objective}\n\nContext: ${selected.context}\n\nPlan:\n${selected.steps.map((step) => `${step.done ? "[done]" : "[pending]"} ${step.text}`).join("\n")}`;
                       if (
-                        !writePrincipalHandoff(
-                          safeBrowserStorage("sessionStorage"),
-                          "kova-app-chat-context",
-                          ownerId,
-                          prompt,
-                        ).ok
+                        !active.current ||
+                        generation.current !== currentGeneration ||
+                        JSON.stringify(
+                          loadWorkSessions(ownerId).find((value) => value.id === selected.id),
+                        ) !== JSON.stringify(selected)
                       )
+                        throw new Error(
+                          "Session data changed. Open the current session before continuing.",
+                        );
+                      const storage = safeBrowserStorage("sessionStorage");
+                      const handoff = writePrincipalHandoff(
+                        storage,
+                        "kova-app-chat-context",
+                        ownerId,
+                        prompt,
+                      );
+                      if (!handoff.ok)
                         throw new Error("The plan could not be opened in chat. Please try again.");
-                      window.location.assign("/");
+                      const ownedValue = storage?.getItem(handoff.key);
+                      // The explicit draft decision above covers this same-origin transition.
+                      // Client navigation avoids a second native beforeunload decision.
+                      void navigate({ to: "/", ignoreBlocker: true }).catch(() => {
+                        let cleanupUnverified = false;
+                        try {
+                          if (storage?.getItem(handoff.key) === ownedValue)
+                            storage?.removeItem(handoff.key);
+                        } catch {
+                          cleanupUnverified = true;
+                        }
+                        if (active.current && generation.current === currentGeneration)
+                          toast.error(
+                            cleanupUnverified
+                              ? "The plan could not be opened in chat. Handoff cleanup could not be verified because browser storage is unavailable; the plan may still be available when you next open chat."
+                              : "The plan could not be opened in chat. Please try again.",
+                          );
+                      });
                     })
                   }
                 >

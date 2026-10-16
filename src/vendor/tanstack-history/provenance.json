@@ -1,0 +1,11 @@
+{
+  "package": "@tanstack/history",
+  "version": "1.162.4",
+  "upstreamSource": "packages/history/src/index.ts",
+  "repository": "https://github.com/TanStack/router",
+  "installedSourceSha256": "15dab9e61b2cd9f3eaa695fa8a58e7c77833ff7e2c6b185fe7f8397c3fd5c765",
+  "patch": "None. Version 1.162.4 includes the inverse-delta rejection correction upstream: win.history.go(-delta). The vendor copy is byte-identical to the pinned installed source.",
+  "integration": "Explicit browser history supplied to createRouter via its public history option; SSR retains framework default. Refreshed to the installed patched TanStack family without a generated-bundle edit.",
+  "documentation": "https://tanstack.com/router/latest/docs/framework/react/guide/history-types",
+  "removal": "Upstream now supplies the correction. Retain the existing explicit browser-history integration until removal is separately reviewed; the provenance and regression matrix must continue to pass."
+}

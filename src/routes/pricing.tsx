@@ -25,11 +25,11 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "KovaGPT Billing" },
+      { title: "KovaGPT Subscriptions" },
       {
         name: "description",
         content:
-          "Compare KovaGPT Free, Plus, and Pro plans. Get more messages, image generations and advanced reasoning modes.",
+          "Compare KovaGPT Free, Plus, and Pro plans. Review published allowances and billing options.",
       },
       { property: "og:title", content: "Pricing - KovaGPT Plus & Pro plans" },
       {
@@ -85,7 +85,7 @@ export const Route = createFileRoute("/pricing")({
               name: "Can I cancel anytime?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Open Billing in Settings to see the available subscription-management options and their effective dates.",
+                text: "Open Subscriptions in Settings to see the available subscription-management options and their effective dates.",
               },
             },
             {
@@ -164,6 +164,7 @@ function PricingPage() {
   }, [isOpen]);
 
   const startCheckout = (priceId: string, trigger: HTMLButtonElement) => {
+    if (!isLoaded) return;
     if (isLoaded && !isSignedIn) {
       try {
         openSignIn();
@@ -204,11 +205,36 @@ function PricingPage() {
           </p>
         </section>
 
-        <section
-          aria-label="KovaGPT plans"
-          className="mt-12 grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-4"
-        >
+        <nav className="kova-mobile-plan-overview" aria-label="Plan overview">
+          <h2 className="text-base font-semibold">Compare plans</h2>
+          <div className="kova-mobile-plan-choices">
+            {PRICING_TIERS.map((tier) => {
+              const plan = CAPABILITY_REGISTRY.plans[tier];
+              return (
+                <a key={tier} href={`#plan-${tier}`} className="kova-mobile-plan-choice">
+                  <span className="font-semibold">{plan.name}</span>
+                  <span className="text-lg font-semibold">
+                    {displayPrice(plan.monthlyPriceUsd)}
+                  </span>
+                  <span>{tier === "free" ? "forever" : "/ month"}</span>
+                  <span className="underline underline-offset-2">View details</span>
+                </a>
+              );
+            })}
+          </div>
+          <p className="text-sm leading-5 text-muted-foreground">
+            Paid plans are subject to applicable tax. Review full details and trial eligibility
+            below.
+          </p>
+          <a href="#plan-enterprise" className="kova-mobile-enterprise-link">
+            <span>{CAPABILITY_REGISTRY.enterprise.name}</span>
+            <span>{CAPABILITY_REGISTRY.enterprise.priceLabel} · View details</span>
+          </a>
+        </nav>
+
+        <section aria-label="KovaGPT plans" className="kova-plan-grid mt-12 grid items-stretch">
           <PlanCard
+            id="plan-free"
             icon={Sparkles}
             name={CAPABILITY_REGISTRY.plans.free.name}
             price={displayPrice(CAPABILITY_REGISTRY.plans.free.monthlyPriceUsd)}
@@ -220,6 +246,7 @@ function PricingPage() {
           />
 
           <PlanCard
+            id="plan-plus"
             icon={Zap}
             name={CAPABILITY_REGISTRY.plans.plus.name}
             price={displayPrice(CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd)}
@@ -227,6 +254,7 @@ function PricingPage() {
             taxNotice
             description={CAPABILITY_REGISTRY.plans.plus.description}
             cta="Start Plus"
+            ctaDisabled={!isLoaded}
             highlight
             note={`${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial for eligible first-time subscribers`}
             onCta={(event) =>
@@ -236,6 +264,7 @@ function PricingPage() {
           />
 
           <PlanCard
+            id="plan-pro"
             icon={Crown}
             name={CAPABILITY_REGISTRY.plans.pro.name}
             price={displayPrice(CAPABILITY_REGISTRY.plans.pro.monthlyPriceUsd)}
@@ -243,6 +272,7 @@ function PricingPage() {
             taxNotice
             description={CAPABILITY_REGISTRY.plans.pro.description}
             cta="Upgrade to Pro"
+            ctaDisabled={!isLoaded}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!, event.currentTarget)
             }
@@ -250,6 +280,7 @@ function PricingPage() {
           />
 
           <PlanCard
+            id="plan-enterprise"
             icon={Building2}
             name={CAPABILITY_REGISTRY.enterprise.name}
             price={CAPABILITY_REGISTRY.enterprise.priceLabel}
@@ -282,8 +313,8 @@ function PricingPage() {
             <article className="border-t border-border pt-5">
               <h3 className="font-medium mb-1">Can I cancel anytime?</h3>
               <p className="leading-6 text-muted-foreground">
-                Open Billing in Settings to see the options available for your subscription and when
-                a change takes effect.
+                Open Subscriptions in Settings to see the options available for your subscription
+                and when a change takes effect.
               </p>
             </article>
             <article className="border-t border-border pt-5">
@@ -295,8 +326,8 @@ function PricingPage() {
             <article className="border-t border-border pt-5">
               <h3 className="font-medium mb-1">Can I switch plans?</h3>
               <p className="leading-6 text-muted-foreground">
-                Available plan changes appear in Billing. Review the portal or checkout confirmation
-                for timing and price before accepting.
+                Available plan changes appear in Subscriptions. Review the portal or checkout
+                confirmation for timing and price before accepting.
               </p>
             </article>
             <article className="border-t border-border pt-5">
@@ -350,6 +381,7 @@ function PricingPage() {
 }
 
 type CardProps = {
+  id: string;
   icon?: React.ComponentType<{ className?: string }>;
   name: string;
   price: string;
@@ -366,6 +398,7 @@ type CardProps = {
 };
 
 function PlanCard({
+  id,
   icon: Icon,
   name,
   price,
@@ -382,6 +415,9 @@ function PlanCard({
 }: CardProps) {
   return (
     <article
+      id={id}
+      tabIndex={-1}
+      aria-labelledby={`${id}-title`}
       data-pricing-plan={name.toLowerCase()}
       className={`kova-plan-card relative row-span-7 grid h-full grid-rows-subgrid rounded-2xl border p-6 transition-colors ${
         enterprise
@@ -400,11 +436,13 @@ function PlanCard({
       </div>
       <div className="mt-3 flex items-center gap-2.5">
         {Icon ? (
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted">
+          <span className="grid h-9 w-9 place-items-center">
             <Icon className="h-4 w-4" aria-hidden="true" />
           </span>
         ) : null}
-        <h2 className="text-xl font-semibold">{name}</h2>
+        <h2 id={`${id}-title`} className="text-xl font-semibold">
+          {name}
+        </h2>
       </div>
       <div className="flex min-h-[3.25rem] flex-col justify-end">
         <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">

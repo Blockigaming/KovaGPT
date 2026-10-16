@@ -3,7 +3,12 @@ import { KeyRound, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { clearKovaAuthCache, kovaAuthJson } from "@/lib/kova-auth-browser";
+import {
+  clearKovaAuthCache,
+  getCapturedKovaPrincipal,
+  kovaAuthJson,
+  restoreKovaSessionAfterRotation,
+} from "@/lib/kova-auth-browser";
 import { toast } from "sonner";
 
 /** Changes an existing owned password; never creates a hosted-auth credential. */
@@ -22,13 +27,27 @@ export function KovaPasswordPanel() {
     setStatus("loading");
     void (async () => {
       try {
+        const captured = getCapturedKovaPrincipal();
+        if (!captured) throw new Error("password_status_owner_unavailable");
         const response = await fetch("/api/auth/password", {
           credentials: "same-origin",
-          headers: { Accept: "application/json" },
+          mode: "same-origin",
+          redirect: "error",
+          headers: {
+            Accept: "application/json",
+            "X-Kova-Owner": captured.accountId,
+            "X-Kova-Session": captured.sessionId,
+          },
           cache: "no-store",
         });
         const payload = (await response.json()) as { hasPassword?: unknown };
-        if (!response.ok || typeof payload.hasPassword !== "boolean") throw new Error("status");
+        if (
+          !response.ok ||
+          typeof payload.hasPassword !== "boolean" ||
+          getCapturedKovaPrincipal()?.accountId !== captured.accountId ||
+          getCapturedKovaPrincipal()?.sessionId !== captured.sessionId
+        )
+          throw new Error("status");
         if (!cancelled) setStatus(payload.hasPassword ? "ready" : "unavailable");
       } catch {
         if (!cancelled) setStatus("error");
@@ -62,17 +81,37 @@ export function KovaPasswordPanel() {
     }
     inFlight.current = true;
     setBusy(true);
+    const previous = getCapturedKovaPrincipal();
+    let responseStatus: number | undefined;
     try {
-      const response = await kovaAuthJson("/api/auth/password", { currentPassword, newPassword });
-      const payload = (await response.json()) as { changed?: unknown };
-      if (!response.ok || payload.changed !== true) throw new Error("password_change_failed");
+      const response = await kovaAuthJson(
+        "/api/auth/password",
+        { currentPassword, newPassword },
+        previous ?? undefined,
+      );
+      responseStatus = response.status;
+      const payload = (await response.json()) as {
+        changed?: unknown;
+        session?: { accountId?: unknown; sessionId?: unknown };
+      };
+      if (
+        !response.ok ||
+        payload.changed !== true ||
+        !previous ||
+        payload.session?.accountId !== previous.accountId ||
+        typeof payload.session.sessionId !== "string"
+      )
+        throw new Error("password_change_failed");
+      await restoreKovaSessionAfterRotation(previous, payload.session.sessionId);
       setEditing(false);
       toast.success("Password changed. Other devices have been signed out.");
     } catch {
+      // Credential rejections are compatible with a still-valid session; the
+      // transport rechecks its cookie before deciding whether to invalidate.
+      if (responseStatus !== 401 && responseStatus !== 409) clearKovaAuthCache();
       toast.error("Password change could not be confirmed. Sign in again before retrying.");
     } finally {
       clearFields();
-      clearKovaAuthCache();
       inFlight.current = false;
       setBusy(false);
     }

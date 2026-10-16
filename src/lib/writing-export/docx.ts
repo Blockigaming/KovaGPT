@@ -2,6 +2,7 @@ import {
   AlignmentType,
   BorderStyle,
   Document,
+  ExternalHyperlink,
   HeadingLevel,
   LevelFormat,
   Packer,
@@ -15,6 +16,7 @@ import {
 } from "docx";
 import {
   parseDocumentBlocks,
+  documentInlineRuns,
   safeDocumentFilename,
   downloadBytes,
   validateDocumentInput,
@@ -22,16 +24,29 @@ import {
 export async function createDocumentDocx(title: string, markdown: string) {
   validateDocumentInput(title, markdown);
   const border = { style: BorderStyle.SINGLE, size: 4, color: "CCD1D8" };
+  const inline = (text: string, bold = false) =>
+    documentInlineRuns(text).map((run) => {
+      const child = new TextRun({
+        text: run.text,
+        bold: bold || run.bold,
+        italics: run.italics,
+        ...(run.code ? { font: "Courier New", size: 19 } : {}),
+        ...(run.link ? { style: "Hyperlink" } : {}),
+      });
+      return run.link ? new ExternalHyperlink({ link: run.link, children: [child] }) : child;
+    });
   const paragraph = (text: string, code = false) =>
     new Paragraph({
-      children: text.split("\n").map(
-        (line, index) =>
-          new TextRun({
-            text: line,
-            ...(index ? { break: 1 } : {}),
-            ...(code ? { font: "Courier New", size: 19 } : {}),
-          }),
-      ),
+      children: code
+        ? text.split("\n").map(
+            (line, index) =>
+              new TextRun({
+                text: line,
+                ...(index ? { break: 1 } : {}),
+                ...(code ? { font: "Courier New", size: 19 } : {}),
+              }),
+          )
+        : inline(text),
     });
   const children: Array<Paragraph | Table> = [
     new Paragraph({ text: title || "Document", heading: HeadingLevel.TITLE }),
@@ -67,7 +82,7 @@ export async function createDocumentDocx(title: string, markdown: string) {
                       ...(index === 0 ? { shading: { fill: "EEF2F6" } } : {}),
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: cell, bold: index === 0 })],
+                          children: inline(cell, index === 0),
                         }),
                       ],
                     }),
@@ -82,14 +97,20 @@ export async function createDocumentDocx(title: string, markdown: string) {
         HeadingLevel.HEADING_1,
         HeadingLevel.HEADING_2,
         HeadingLevel.HEADING_3,
+        HeadingLevel.HEADING_4,
+        HeadingLevel.HEADING_5,
+        HeadingLevel.HEADING_6,
       ] as const;
       children.push(
-        new Paragraph({ text: block.text, heading: headings[Math.min(3, block.level ?? 1) - 1] }),
+        new Paragraph({
+          children: inline(block.text),
+          heading: headings[Math.min(6, block.level ?? 1) - 1],
+        }),
       );
     } else if (block.kind === "list")
       children.push(
         new Paragraph({
-          text: block.text,
+          children: inline(block.text),
           numbering: {
             reference: block.ordered ? `ordered-${orderedStarts.length}` : "bullets",
             level: 0,
@@ -99,7 +120,7 @@ export async function createDocumentDocx(title: string, markdown: string) {
     else if (block.kind === "quote")
       children.push(
         new Paragraph({
-          text: block.text,
+          children: inline(block.text),
           indent: { left: 360 },
           border: { left: { ...border, size: 12 } },
         }),
@@ -115,25 +136,25 @@ export async function createDocumentDocx(title: string, markdown: string) {
           run: { font: "Arial", size: 22, color: "1F2937" },
           paragraph: { spacing: { after: 120, line: 276 } },
         },
-      },
-      paragraphStyles: [
-        {
-          id: "Title",
-          name: "Title",
-          basedOn: "Normal",
-          next: "Normal",
+        title: {
           run: { font: "Arial", size: 48, bold: true, color: "111827" },
           paragraph: { spacing: { before: 0, after: 240 }, keepNext: true },
         },
-        ...[1, 2, 3].map((level) => ({
-          id: `Heading${level}`,
-          name: `Heading ${level}`,
-          basedOn: "Normal",
-          next: "Normal",
-          run: { font: "Arial", size: 36 - level * 4, bold: true, color: "111827" },
-          paragraph: { spacing: { before: 220, after: 120 }, keepNext: true },
-        })),
-      ],
+        ...Object.fromEntries(
+          [1, 2, 3, 4, 5, 6].map((level) => [
+            `heading${level}`,
+            {
+              run: {
+                font: "Arial",
+                size: Math.max(22, 36 - level * 4),
+                bold: true,
+                color: "111827",
+              },
+              paragraph: { spacing: { before: 220, after: 120 }, keepNext: true },
+            },
+          ]),
+        ),
+      },
     },
     numbering: {
       config: [

@@ -87,7 +87,11 @@ function UnsubscribePage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-6 py-16">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-[80vh] flex items-center justify-center px-6 py-16"
+    >
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
         <div className="mx-auto w-12 h-12 rounded-2xl bg-foreground/5 flex items-center justify-center mb-4">
           <MailMinus className="w-6 h-6" />
@@ -150,6 +154,6 @@ function UnsubscribePage() {
           </>
         )}
       </div>
-    </div>
+    </main>
   );
 }

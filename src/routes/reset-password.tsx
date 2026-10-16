@@ -223,7 +223,11 @@ function ResetPassword() {
   };
 
   return (
-    <div className="kova-auth-page min-h-screen flex items-center justify-center px-4 bg-background">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="kova-auth-page min-h-screen flex items-center justify-center px-4 bg-background"
+    >
       <div className="kova-auth-surface w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center mb-3">
@@ -241,7 +245,7 @@ function ResetPassword() {
           </div>
         ) : error ? (
           <div className="space-y-4">
-            <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+            <p className="kova-reset-error text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
               {error}
             </p>
             <Button className="w-full" onClick={() => navigate({ to: "/" })}>
@@ -283,6 +287,6 @@ function ResetPassword() {
           </form>
         )}
       </div>
-    </div>
+    </main>
   );
 }

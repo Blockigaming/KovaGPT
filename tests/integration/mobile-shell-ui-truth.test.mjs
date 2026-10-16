@@ -7,19 +7,22 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8
 test("Temporary Chat is reachable and truthfully selected from the mobile top bar", async () => {
   const [topBar, route, temporaryControls] = await Promise.all([
     read("src/components/MobileTopBar.tsx"),
-    read("src/routes/index.tsx"),
+    read("src/components/ChatWorkspace.tsx"),
     read("src/components/TemporaryChatStartDialog.tsx"),
   ]);
 
-  assert.match(topBar, /MessageSquareDashed/);
-  assert.match(topBar, /onTemporaryChatChange\(!temporaryChat\)/);
+  assert.match(topBar, /MessageCircleOff/);
+  assert.match(topBar, /onTemporaryChatChange\(!temporaryChat, event\.currentTarget\)/);
   assert.match(topBar, /aria-pressed=\{temporaryChat\}/);
-  assert.match(topBar, /data-state=\{temporaryChat \? "on" : "off"\}/);
-  assert.match(topBar, /h-11 w-11/);
+  assert.match(temporaryControls, /aria-pressed=\{enabled\}/);
+  assert.match(temporaryControls, /min-h-11 min-w-11/);
   assert.match(route, /temporaryChat=\{tempChat\}/);
-  assert.match(route, /onTemporaryChatChange=\{setTemporaryChatEnabled\}/);
-  assert.match(route, /onToggle=\{\(\) => setTemporaryChatEnabled\(!tempChat\)\}/);
-  assert.match(temporaryControls, /onClick=\{onToggle\}/);
+  assert.match(route, /onTemporaryChatChange=\{[\s\S]{0,250}setTemporaryChatEnabled\(enabled\)/);
+  assert.match(
+    route,
+    /onToggle=\{\(trigger\) => \{[\s\S]{0,220}setTemporaryChatEnabled\(!tempChat\)/,
+  );
+  assert.match(temporaryControls, /onClick=\{\(event\) => onToggle\(event\.currentTarget\)\}/);
   assert.match(temporaryControls, /aria-pressed=\{enabled\}/);
   assert.match(route, /onTurnOff=\{\(\) => setTemporaryChatEnabled\(false\)\}/);
   assert.match(temporaryControls, /onClick=\{onTurnOff\}/);
@@ -32,7 +35,7 @@ test("Temporary Chat is reachable and truthfully selected from the mobile top ba
 });
 
 test("header progress never invents activity", async () => {
-  const route = await read("src/routes/index.tsx");
+  const route = await read("src/components/ChatWorkspace.tsx");
 
   assert.doesNotMatch(route, /AIStatus/);
   await assert.rejects(read("src/components/AIStatus.tsx"), /ENOENT/);
@@ -96,8 +99,9 @@ test("command palette traps and restores focus with safe-area and reduced-motion
     /action\.action === "focus-input"[\s\S]*suppressFocusRestore\(\);[\s\S]*textarea/,
   );
   assert.match(palette, /data-kova-shell-overlay=""/);
-  assert.match(palette, /var\(--safe-top\)/);
-  assert.match(palette, /var\(--safe-bottom\)/);
+  assert.match(await read("src/styles/core-pages.css"), /var\(--safe-top\)/);
+  assert.match(palette, /kova-search-overlay/);
+  assert.match(await read("src/styles/core-pages.css"), /var\(--safe-bottom\)/);
   assert.match(palette, /h-11 w-11 shrink-0/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });

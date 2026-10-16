@@ -108,7 +108,7 @@ function BestAiAssistantsPage() {
           <span className="text-foreground">Choosing an AI assistant</span>
         </nav>
 
-        <article className="prose prose-invert max-w-none">
+        <article className="kova-public-article max-w-none">
           <h1 className="text-4xl font-bold tracking-tight">
             How to Choose an AI Assistant in 2026
           </h1>

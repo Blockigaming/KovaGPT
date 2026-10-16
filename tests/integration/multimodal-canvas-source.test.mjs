@@ -165,7 +165,7 @@ test("image history stores image blobs outside localStorage and exposes persiste
   assert.match(images, /persistImageHistoryItem\(userKey, item, HISTORY_LIMIT\)/);
   assert.match(images, /loadImageHistory\(userKey, HISTORY_LIMIT\)/);
   assert.match(images, /available for this session only\. Save it to Library/);
-  assert.match(images, /Save an image to Library\s+to\s+use it on other devices/);
+  assert.match(images, /Save an image to Library\s+to\s+use\s+it on other devices/);
   assert.doesNotMatch(images, /localStorage\.setItem\(\s*HISTORY_KEY_PREFIX/);
   assert.match(history, /indexedDB\.open\(DATABASE_NAME, DATABASE_VERSION\)/);
   assert.match(history, /image: Blob/);

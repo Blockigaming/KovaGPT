@@ -11,6 +11,7 @@ function storage(values = {}) {
     },
     key: (index) => [...rows.keys()][index] ?? null,
     getItem: (key) => rows.get(key) ?? null,
+    setItem: (key, value) => rows.set(key, value),
     removeItem: (key) => rows.delete(key),
   };
 }
@@ -29,7 +30,11 @@ test("a global reset awaits image deletion for the captured account and invalida
   let finished = false;
   let currentUser = "A";
   const pending = resetPrincipalDeviceData(currentUser, {
-    storage: { localStorage: local, sessionStorage: session },
+    storage: {
+      locks: { request: async (_key, fn) => fn() },
+      localStorage: local,
+      sessionStorage: session,
+    },
     notify: (owner) => events.push(["invalidate", owner]),
     clearChatHistory: async () => {},
     clearImageHistory: async (owner) => {
@@ -41,7 +46,7 @@ test("a global reset awaits image deletion for the captured account and invalida
     return result;
   });
   currentUser = "B";
-  await Promise.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
   assert.equal(finished, false);
   assert.deepEqual(events, [
     ["invalidate", "A"],
@@ -57,7 +62,11 @@ test("a global reset awaits image deletion for the captured account and invalida
 
 test("an IndexedDB deletion failure is reported without exposing database error contents", async () => {
   const result = await resetPrincipalDeviceData("A", {
-    storage: { localStorage: storage(), sessionStorage: storage() },
+    storage: {
+      locks: { request: async (_key, fn) => fn() },
+      localStorage: storage(),
+      sessionStorage: storage(),
+    },
     notify: () => {},
     clearChatHistory: async () => {},
     clearImageHistory: async () => {
@@ -72,7 +81,11 @@ test("an IndexedDB deletion failure is reported without exposing database error 
 test("unresolved identity cannot clear image history and guest reset cannot target account image stores", async () => {
   const touched = [];
   const options = {
-    storage: { localStorage: storage(), sessionStorage: storage() },
+    storage: {
+      locks: { request: async (_key, fn) => fn() },
+      localStorage: storage(),
+      sessionStorage: storage(),
+    },
     notify: (owner) => touched.push(["notify", owner]),
     clearChatHistory: async () => {},
     clearImageHistory: async (owner) => {
@@ -94,7 +107,11 @@ test("privacy reset fences late chat writers before durable deletion and reports
     reject = no;
   });
   const pending = resetPrincipalDeviceData(owner, {
-    storage: { localStorage: storage(), sessionStorage: storage() },
+    storage: {
+      locks: { request: async (_key, fn) => fn() },
+      localStorage: storage(),
+      sessionStorage: storage(),
+    },
     notify: () => assert.equal(canWriteChatHistory(owner), false),
     clearChatHistory: async () => wait,
     clearImageHistory: async () => {},
@@ -112,7 +129,11 @@ test("device reset awaits installed-app erasure and reports a failed acknowledge
   let complete;
   let finished = false;
   const pending = resetPrincipalDeviceData("A", {
-    storage: { localStorage: null, sessionStorage: null },
+    storage: {
+      locks: { request: async (_key, fn) => fn() },
+      localStorage: null,
+      sessionStorage: null,
+    },
     notify: () => {},
     clearImageHistory: async () => {},
     clearChatHistory: async () => {},
@@ -129,7 +150,11 @@ test("device reset awaits installed-app erasure and reports a failed acknowledge
   complete();
   assert.equal((await pending).pwa.cleared, true);
   const failed = await resetPrincipalDeviceData("A", {
-    storage: { localStorage: null, sessionStorage: null },
+    storage: {
+      locks: { request: async (_key, fn) => fn() },
+      localStorage: null,
+      sessionStorage: null,
+    },
     notify: () => {},
     clearImageHistory: async () => {},
     clearChatHistory: async () => {},

@@ -35,7 +35,7 @@ function AuditLogPage() {
   }, [load]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8">
+    <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Activity</h1>
@@ -95,14 +95,14 @@ function AuditLogPage() {
           ))}
         </ul>
       )}
-    </div>
+    </main>
   );
 }
 
 function AuditLogErrorComponent({ reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
   return (
-    <div className="mx-auto max-w-md p-8">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-md p-8">
       <OperationalState
         state="unavailable"
         title="Activity unavailable"
@@ -112,7 +112,7 @@ function AuditLogErrorComponent({ reset }: { error: unknown; reset: () => void }
           reset();
         }}
       />
-    </div>
+    </main>
   );
 }
 

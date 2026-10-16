@@ -27,13 +27,7 @@ export const getMyDailyUsage = createServerFn({ method: "GET" })
 
     if (error) {
       console.error("[getMyDailyUsage] read error", error.message);
-      return {
-        date: ymd,
-        chats: 0,
-        images: 0,
-        uploads: 0,
-        resetsAt: nextMidnight.toISOString(),
-      };
+      throw new Error("Usage could not be loaded. Try again.");
     }
 
     if (!data) {

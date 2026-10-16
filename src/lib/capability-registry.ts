@@ -142,10 +142,7 @@ export const PLAN_ALLOWANCE_COPY = {
 function planFeatures(tier: Tier): readonly string[] {
   const allowance = PLAN_ALLOWANCE_COPY[tier];
   const features = [
-    `${modesByTier[tier]
-      .map((mode) => mode.label)
-      .join(modesByTier[tier].length === 2 ? " and " : ", ")
-      .replace(/, ([^,]+)$/, ", and $1")} ${modesByTier[tier].length === 1 ? "mode" : "modes"}`,
+    "One KovaGPT assistant",
     allowance.chat,
     allowance.image,
     allowance.upload,
@@ -175,8 +172,9 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       availability: "limited",
       minimumTier: "free",
       summary:
-        "Chat accepts text, code, CSV, JSON, and image attachments. Project knowledge indexes supported text-like files.",
-      limitation: "PDF, Word, PowerPoint, and Excel extraction is not currently supported.",
+        "Chat accepts text, code, CSV, JSON, images, and text extracted from PDF, DOCX, XLSX, and PPTX documents. Project knowledge indexes supported text-like files.",
+      limitation:
+        "Document extraction supports files up to 10 MB, PDFs up to 100 pages, and extracted text up to 80,000 characters or 200 KB. Scanned-page OCR is unavailable; formatting and reading order may differ.",
     },
     dataAnalysis: {
       label: "Data analysis",
@@ -279,7 +277,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
       description:
-        "Lite, Medium, Thinking, and Adaptive Memory. Operational usage limits still apply.",
+        "Higher published allowances and Adaptive Memory when enabled. Operational usage limits still apply.",
       features: planFeatures("plus"),
     },
     pro: {
@@ -288,7 +286,8 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       monthlyPriceUsd: 80,
       lookupKey: BILLING_PLANS.pro_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.pro_monthly.trialPeriodDays,
-      description: "All six Chat modes. Operational token and premium-request limits still apply.",
+      description:
+        "Highest published allowances. Operational token and premium-request limits still apply.",
       features: planFeatures("pro"),
     },
   },

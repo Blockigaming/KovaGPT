@@ -38,7 +38,10 @@ function UnavailableDeveloperDoc() {
           server’s secret manager. Paid execution is disabled until the operator enables it with
           verified pricing.
         </p>
-        <Link to="/developers/console" className="underline">
+        <Link
+          to="/developers/console"
+          className="kova-developer-link kova-workspace-action underline"
+        >
           Open developer console
         </Link>
       </section>

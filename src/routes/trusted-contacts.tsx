@@ -34,7 +34,11 @@ function Page() {
   const { isLoaded, isSignedIn, user } = useUser();
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-3xl px-4 py-8">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="kova-workspace-controls mx-auto w-full max-w-3xl px-4 py-8"
+      >
         <h1 className="text-2xl font-semibold">Trusted contacts</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           A voluntary connection between two verified accounts. Contacts do not gain access to

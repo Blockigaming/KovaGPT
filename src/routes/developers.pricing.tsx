@@ -38,7 +38,7 @@ function PricingAdministration() {
       summary="Review developer pricing and credit offers."
     >
       <SignInButton mode="modal">
-        <Button>Sign in</Button>
+        <Button className="kova-workspace-action">Sign in</Button>
       </SignInButton>
     </PublicPageView>
   );

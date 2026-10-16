@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { loose } from "@/lib/supabase-loose";
@@ -447,102 +448,76 @@ export const getChatCustomRules = createServerFn({ method: "GET" })
     };
   });
 
+const RulesRevision = z.object({
+  expectedUpdatedAt: z.string().datetime({ offset: true }).nullable(),
+});
+async function mutateRulesWithRevision(
+  supabase: Parameters<typeof loose>[0],
+  data: {
+    chatId: string;
+    expectedUpdatedAt: string | null;
+    operation: "save" | "clear" | "enabled";
+    instructions?: string;
+    enabled?: boolean;
+  },
+): Promise<ChatCustomRulesDto> {
+  const { data: row, error } = await loose(supabase).rpc("compare_and_save_chat_rules", {
+    p_chat_id: data.chatId,
+    p_expected_updated_at: data.expectedUpdatedAt,
+    p_operation: data.operation,
+    p_instructions: data.instructions ?? "",
+    p_enabled: data.enabled ?? true,
+  });
+  // No unconditional upsert fallback: missing migration or uncertain result
+  // must not bypass the captured revision.
+  if (error)
+    throw new Error(
+      error.code === "40001"
+        ? "Rules changed. Review the latest saved rules before retrying."
+        : "Rules could not be saved. Review saved rules before retrying.",
+    );
+  if (!row || row.chat_id !== data.chatId || typeof row.updated_at !== "string")
+    throw new Error("Saved rules could not be confirmed. Review saved rules before retrying.");
+  return {
+    id: row.id,
+    chatId: row.chat_id,
+    instructions: row.instructions,
+    enabled: row.enabled,
+    updatedAt: row.updated_at,
+  };
+}
 export const saveChatCustomRules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(parseCustomRulesInput)
-  .handler(async ({ data, context }): Promise<ChatCustomRulesDto> => {
-    const { data: rpcRow, error: rpcFailure } = await callWorkspaceRpc(
-      context.supabase as unknown as RpcClient,
-      {
-        name: "save_chat_custom_rules",
-        args: {
-          p_chat_id: data.chatId,
-          p_instructions: data.instructions,
-          p_enabled: data.enabled,
-        },
-      },
-    );
-    if (rpcFailure && !isMissingFunction(rpcFailure)) throw rpcError(rpcFailure.message);
-    if (!rpcFailure && rpcRow) {
-      const saved = rpcRow as unknown as {
-        id: string;
-        chat_id: string;
-        instructions: string;
-        enabled: boolean;
-        updated_at: string;
-      };
-      return {
-        id: saved.id,
-        chatId: saved.chat_id,
-        instructions: saved.instructions,
-        enabled: saved.enabled,
-        updatedAt: saved.updated_at,
-      };
-    }
-
-    const { data: row, error } = await context.supabase
-      .from("chat_custom_rules")
-      .upsert(
-        {
-          owner_id: context.userId,
-          chat_id: data.chatId,
-          instructions: data.instructions,
-          enabled: data.enabled,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "owner_id,chat_id" },
-      )
-      .select(RULES_COLUMNS)
-      .single();
-    if (error) throw dbError(error.message);
-    return {
-      id: row.id,
-      chatId: row.chat_id,
-      instructions: row.instructions,
-      enabled: row.enabled,
-      updatedAt: row.updated_at,
-    };
-  });
+  .inputValidator((input: unknown) => ({
+    ...parseCustomRulesInput(input),
+    ...RulesRevision.parse(input),
+  }))
+  .handler(async ({ data, context }): Promise<ChatCustomRulesDto> =>
+    mutateRulesWithRevision(context.supabase, { ...data, operation: "save" }),
+  );
 
 export const setChatCustomRulesEnabled = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { chatId: string; enabled: boolean }) => ({
-    chatId: parseChatId(input?.chatId),
-    enabled: input?.enabled === true,
-  }))
-  .handler(async ({ data, context }): Promise<ChatCustomRulesDto | null> => {
-    const { data: rows, error } = await context.supabase
-      .from("chat_custom_rules")
-      .update({ enabled: data.enabled })
-      .eq("owner_id", context.userId)
-      .eq("chat_id", data.chatId)
-      .select(RULES_COLUMNS);
-    if (error) throw dbError(error.message);
-    const row = rows?.[0];
-    if (!row) return null;
-    return {
-      id: row.id,
-      chatId: row.chat_id,
-      instructions: row.instructions,
-      enabled: row.enabled,
-      updatedAt: row.updated_at,
-    };
-  });
+  .inputValidator(
+    (input: { chatId: string; enabled: boolean; expectedUpdatedAt: string | null }) => ({
+      chatId: parseChatId(input?.chatId),
+      enabled: input?.enabled === true,
+      ...RulesRevision.parse(input),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<ChatCustomRulesDto> =>
+    mutateRulesWithRevision(context.supabase, { ...data, operation: "enabled" }),
+  );
 
 export const resetChatCustomRules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
-  .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
-      .from("chat_custom_rules")
-      .delete()
-      .eq("owner_id", context.userId)
-      .eq("chat_id", data.chatId)
-      .select("id");
-    if (error) throw dbError(error.message);
-    if (!rows?.length) throw new Error("There were no saved rules for this chat.");
-    return { ok: true as const };
-  });
+  .inputValidator((input: { chatId: string; expectedUpdatedAt: string | null }) => ({
+    chatId: parseChatId(input?.chatId),
+    ...RulesRevision.parse(input),
+  }))
+  .handler(async ({ data, context }): Promise<ChatCustomRulesDto> =>
+    mutateRulesWithRevision(context.supabase, { ...data, operation: "clear" }),
+  );
 
 /* ------------------------------------------------------------------ *
  * Pinned files.

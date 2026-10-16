@@ -83,7 +83,7 @@ test("live handoff producers and consumers use the tested principal envelope hel
     agent: agentSource,
     apps: read("src/routes/apps.tsx"),
     contextPacks: read("src/routes/context-packs.tsx"),
-    home: read("src/routes/index.tsx"),
+    home: read("src/components/ChatWorkspace.tsx"),
     prompts: read("src/routes/prompt-studio.tsx"),
     scheduled: read("src/routes/scheduled-tasks.tsx"),
   };
@@ -177,7 +177,7 @@ test("live private feature stores are principal tagged and reset stale mounted s
 test("same-principal cleanup blocks late writes and account-switch UI flashes", () => {
   const apps = read("src/routes/apps.tsx");
   const chat = read("src/components/ChatMessage.tsx");
-  const home = read("src/routes/index.tsx");
+  const home = read("src/components/ChatWorkspace.tsx");
   const summary = read("src/routes/summary.tsx");
   const write = read("src/routes/write.tsx");
 

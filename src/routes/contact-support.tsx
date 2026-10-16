@@ -29,6 +29,11 @@ function ContactSupportPage() {
         <h1>Contact Support</h1>
         <p>Need help with KovaGPT? We're here to help.</p>
         <p>
+          <Link to="/help" hash="support-form" className="kova-public-action-link">
+            Open the support request form
+          </Link>
+        </p>
+        <p>
           For account issues, billing questions, subscription problems, technical bugs, feature
           requests, or general support, email us at{" "}
           <a href="mailto:support@kovagpt.com">support@kovagpt.com</a>.
@@ -102,7 +107,9 @@ function ContactSupportPage() {
         </p>
 
         <p className="mt-4">
-          <Link to="/">← Back to KovaGPT</Link>
+          <Link to="/" className="kova-public-action-link">
+            ← Back to KovaGPT
+          </Link>
         </p>
       </LegalArticle>
     </PublicShell>

@@ -275,7 +275,7 @@ test("client stream idle deadline exceeds the longest configured provider reques
 
 test("chat failures complete with a user-visible error and SSE terminator", () => {
   const chat = readFileSync("src/routes/api/chat.ts", "utf8");
-  const client = readFileSync("src/routes/index.tsx", "utf8");
+  const client = readFileSync("src/components/ChatWorkspace.tsx", "utf8");
 
   assert.match(chat, /isProviderTimeoutError\(error\)/u);
   assert.match(chat, /KovaGPT took too long to respond/u);

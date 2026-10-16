@@ -11,19 +11,27 @@ const timerStore = read("src/lib/timers.ts");
 
 test("the timer launcher is reachable, responsive, and exposes usable touch targets", () => {
   assert.doesNotMatch(widget, /visibleItems\.length === 0 && !open/);
-  assert.match(widget, /2xl:bottom-\[max\(1rem,var\(--safe-bottom\)\)\]/);
-  assert.match(widget, /top-\[calc\(4rem\+var\(--safe-top\)\)\]/);
-  assert.match(widget, /sm:top-\[calc\(8rem\+var\(--safe-top\)\)\]/);
-  assert.match(widget, /flex-col-reverse/);
-  assert.match(widget, /2xl:flex-col/);
-  assert.match(widget, /left-\[max\(1rem,var\(--safe-left\)\)\]/);
-  assert.match(widget, /right-\[max\(1rem,var\(--safe-right\)\)\]/);
-  assert.match(widget, /sm:w-72/);
-  assert.match(widget, /max-h-\[calc\(100dvh-8rem-var\(--safe-top\)-var\(--safe-bottom\)\)\]/);
-  assert.match(widget, /sm:max-h-\[calc\(100dvh-12rem-var\(--safe-top\)-var\(--safe-bottom\)\)\]/);
+  assert.match(appShell, /<div className="kova-core-utilities">\s*<TimersWidget/);
+  assert.equal((appShell.match(/<TimersWidget/g) ?? []).length, 1);
+  assert.match(
+    appShell,
+    /!utilitiesInHeader \? \([\s\S]*?flex shrink-0 justify-end[\s\S]*?\{utilities\}/,
+  );
+  assert.match(appShell, /value=\{utilitiesInHeader \? utilities : null\}/);
+  const header = read("src/components/WorkspacePageHeader.tsx");
+  assert.match(header, /useContext\(WorkspacePageUtilities\)/);
+  assert.match(
+    header,
+    /kova-page-actions ml-auto flex min-w-0 max-w-full flex-wrap[\s\S]*?\{utilities\}/,
+  );
+  assert.match(widget, /className=\{`relative z-40 flex items-end/);
+  assert.doesNotMatch(widget, /className=[^>]*\bfixed\b/);
+  assert.match(widget, /absolute right-0 top-full mt-2/);
+  assert.match(widget, /w-\[min\(18rem,calc\(100vw-2rem\)\)\]/);
+  assert.match(widget, /max-h-\[calc\(100dvh-12rem-var\(--safe-top\)-var\(--safe-bottom\)\)\]/);
   assert.match(widget, /overflow-y-auto/);
   assert.ok((widget.match(/min-h-11/g) ?? []).length >= 4);
-  assert.match(widget, /mobileSidebarOpen \? "max-lg:hidden" : ""/);
+  assert.match(widget, /mobileSidebarOpen \? "max-lg:invisible" : ""/);
   assert.match(appShell, /mobileSidebarOpen=\{sidebarOpen\}/);
   assert.match(widget, /panelRef\.current\?\.focus\(\)/);
   assert.match(widget, /ref=\{panelRef\}/);

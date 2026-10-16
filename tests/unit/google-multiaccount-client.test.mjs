@@ -126,6 +126,7 @@ test("OAuth reauthorization is account-bound and rejects unsafe or stale-account
 
 test("malformed or oversized status cannot expose an actionable account list", async () => {
   for (const response of [
+    () => Response.json({ connected: false, state: "disconnected", configured: "true" }),
     () => Response.json({ connected: true, state: "connected", accounts: [{ id: account }] }),
     () =>
       Response.json({

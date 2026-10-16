@@ -308,6 +308,8 @@ export function PersonalitySliders({
               </span>
             </div>
             <Slider
+              thumbLabel={t.label}
+              touchTarget
               value={[visibleValues[t.key]]}
               min={1}
               max={10}
