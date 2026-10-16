@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { type ReactNode } from "react";
+import { AcademyLessonPage } from "@/components/public/AcademyLessonPage";
 import { PublicFaq } from "@/components/public/PublicFaq";
 import { PublicShell } from "@/components/public/PublicShell";
 import type { PublicDetailPage } from "@/lib/public-detail-content";
@@ -89,6 +90,10 @@ export function PublicPageView({
 }
 
 export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
+  // Keep this visual candidate scoped to the first Academy guide.
+  if (item.section === "academy" && item.slug === "ai-fundamentals") {
+    return <AcademyLessonPage item={item} />;
+  }
   const slugSegments = item.slug.split("/");
   const currentPageSlug = slugSegments.at(-1) ?? item.slug;
   const categorySlugs = slugSegments.slice(0, -1);
