@@ -216,6 +216,7 @@ jobs:
           import { validateProductionBillingParameters } from "./scripts/azure/production-billing-parameters.mjs";
           import { validateProductionParameterTargets } from "./scripts/azure/production-plan-parameters.mjs";
           import { validateProductionTextProviderParameters } from "./scripts/azure/production-text-provider-parameters.mjs";
+          import { validateProductionImageProviderParameters } from "./scripts/azure/production-image-provider-parameters.mjs";
           const raw = process.env.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON;
           if (!raw) throw new Error("KOVA_PRODUCTION_BICEP_PARAMETERS_JSON is required");
           const document = JSON.parse(raw);
@@ -265,6 +266,9 @@ jobs:
             stripePublishableKey: process.env.KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY || "",
           }));
           Object.assign(document.parameters, validateProductionTextProviderParameters({
+            parameters: document.parameters,
+          }));
+          Object.assign(document.parameters, validateProductionImageProviderParameters({
             parameters: document.parameters,
           }));
           fs.writeFileSync(process.env.PARAMETERS_PATH, `${JSON.stringify(document, null, 2)}\n`, {
