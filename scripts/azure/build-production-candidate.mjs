@@ -81,8 +81,24 @@ export function productionCandidateConfig(env) {
     stripeKey === "" || /^pk_live_[A-Za-z0-9]{16,}$/u.test(stripeKey),
     "stripe_browser_key_invalid",
   );
+  const browserAuthMode = env.KOVA_PRODUCTION_BROWSER_AUTH_MODE;
+  const googleAuthEnabled = env.KOVA_PRODUCTION_GOOGLE_AUTH_ENABLED;
+  requireCondition(
+    ["supabase", "dual", "kova"].includes(browserAuthMode),
+    "browser_auth_mode_required",
+  );
+  requireCondition(["true", "false"].includes(googleAuthEnabled), "google_auth_choice_required");
   const tag = `production-candidate-${env.GITHUB_SHA}-${env.GITHUB_RUN_ID}-${env.GITHUB_RUN_ATTEMPT}`;
-  return { ...APPROVED, sourceSha: env.GITHUB_SHA, supabaseUrl, publishableKey, stripeKey, tag };
+  return {
+    ...APPROVED,
+    sourceSha: env.GITHUB_SHA,
+    supabaseUrl,
+    publishableKey,
+    stripeKey,
+    browserAuthMode,
+    googleAuthEnabled,
+    tag,
+  };
 }
 
 // Explicit argument allowlist, exact remote Git commit, no local/stale build context.
@@ -96,6 +112,8 @@ export function productionCandidateBuildArgs(config, sourceTree, abac) {
     VITE_SUPABASE_URL: config.supabaseUrl,
     VITE_SUPABASE_PUBLISHABLE_KEY: config.publishableKey,
     VITE_PAYMENTS_CLIENT_TOKEN: config.stripeKey,
+    VITE_KOVA_AUTH_MODE: config.browserAuthMode,
+    VITE_KOVA_GOOGLE_AUTH_ENABLED: config.googleAuthEnabled,
   };
   return [
     "acr",
@@ -268,6 +286,8 @@ export function buildProductionCandidate(env, run = command) {
     "com.kovagpt.browser.supabase-project-ref": config.projectRef,
     "com.kovagpt.browser.config-verified": "true",
     "com.kovagpt.browser.config-provenance": "/app/dist/browser-config-provenance.json",
+    "com.kovagpt.browser.auth-mode": config.browserAuthMode,
+    "com.kovagpt.browser.google-auth-enabled": config.googleAuthEnabled,
   };
   requireCondition(
     Object.entries(expectedLabels).every(([key, value]) => image.Labels?.[key] === value),
@@ -324,6 +344,9 @@ export function buildProductionCandidate(env, run = command) {
       labels: expectedLabels,
       githubRunId: env.GITHUB_RUN_ID,
       githubRunAttempt: env.GITHUB_RUN_ATTEMPT,
+      requestedBrowserAuthMode: config.browserAuthMode,
+      requestedGoogleAuthEnabled: config.googleAuthEnabled,
+      authRuntimeAcceptanceEstablished: false,
       browserBundleSha256: provenance.browserBundleSha256,
       browserProvenanceSha256: sha256(`${JSON.stringify(provenance, null, 2)}\n`),
       containerAppUpdated: false,

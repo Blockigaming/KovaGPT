@@ -34,6 +34,11 @@ RUN case "$VITE_KOVA_GOOGLE_AUTH_ENABLED" in \
       *) echo 'VITE_KOVA_GOOGLE_AUTH_ENABLED must be true or false' >&2; exit 1 ;; \
     esac
 
+RUN case "$VITE_KOVA_AUTH_MODE" in \
+      supabase|dual|kova) ;; \
+      *) echo 'VITE_KOVA_AUTH_MODE must be supabase, dual or kova' >&2; exit 1 ;; \
+    esac
+
 RUN SHA="$KOVA_SOURCE_SHA" TREE="$KOVA_SOURCE_TREE" node -e "require('fs').writeFileSync('/app/.kova-source-attestation.json', JSON.stringify({schemaVersion:1,context:'acr-git',sourceSha:process.env.SHA,sourceTree:process.env.TREE}))"
 RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" NODE_OPTIONS=--max-old-space-size=3072 KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
     && find dist -name '*.map' -type f -delete \
@@ -60,6 +65,8 @@ ARG KOVA_SOURCE_SHA
 ARG KOVA_SOURCE_TREE
 ARG KOVA_EXPECTED_SUPABASE_PROJECT_REF
 ARG KOVA_VERIFY_BROWSER_CONFIG
+ARG VITE_KOVA_AUTH_MODE=supabase
+ARG VITE_KOVA_GOOGLE_AUTH_ENABLED=false
 WORKDIR /app
 ENV NODE_ENV=production \
     HOST=0.0.0.0
@@ -67,7 +74,9 @@ LABEL org.opencontainers.image.revision="${KOVA_SOURCE_SHA}" \
       com.kovagpt.source.tree="${KOVA_SOURCE_TREE}" \
       com.kovagpt.browser.supabase-project-ref="${KOVA_EXPECTED_SUPABASE_PROJECT_REF}" \
       com.kovagpt.browser.config-verified="${KOVA_VERIFY_BROWSER_CONFIG}" \
-      com.kovagpt.browser.config-provenance="/app/dist/browser-config-provenance.json"
+      com.kovagpt.browser.config-provenance="/app/dist/browser-config-provenance.json" \
+      com.kovagpt.browser.auth-mode="${VITE_KOVA_AUTH_MODE}" \
+      com.kovagpt.browser.google-auth-enabled="${VITE_KOVA_GOOGLE_AUTH_ENABLED}"
 
 RUN groupadd --system --gid 10001 kova && \
     useradd --system --uid 10001 --gid kova --home-dir /app --shell /usr/sbin/nologin kova
