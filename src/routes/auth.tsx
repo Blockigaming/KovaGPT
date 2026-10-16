@@ -8,7 +8,11 @@ import { Label } from "@/components/ui/label";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { getEmailAuthRedirectUri, getSafePostAuthRedirect } from "@/lib/oauth-session";
+import {
+  getEmailAuthRedirectUri,
+  getSafePostAuthRedirect,
+  traceHostedAuth,
+} from "@/lib/oauth-session";
 import { browserKovaAuthEnabled, kovaPublicAuthJson } from "@/lib/kova-auth-browser";
 import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
@@ -278,10 +282,12 @@ function AuthPage() {
     if (cooldown > 0) return;
     if (!guard()) return;
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-        options: { emailRedirectTo: getEmailAuthRedirectUri() },
-      });
+      const { error } = await traceHostedAuth("email_request", () =>
+        supabase.auth.signInWithOtp({
+          email: email.trim().toLowerCase(),
+          options: { emailRedirectTo: getEmailAuthRedirectUri() },
+        }),
+      );
       if (error) throw error;
       setMagicSent(true);
       setCooldown(RESEND_COOLDOWN_SECONDS);

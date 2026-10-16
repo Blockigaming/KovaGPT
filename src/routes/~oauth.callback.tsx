@@ -2,10 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
+  recordHostedAuthDiagnostic,
+  getHostedAuthDiagnosticText,
   clearOAuthResponseFromUrl,
   completeOAuthSessionFromUrl,
   getCallbackPostAuthRedirect,
   getSafePostAuthRedirect,
+  HostedAuthCallbackError,
 } from "@/lib/oauth-session";
 
 export const Route = createFileRoute("/~oauth/callback")({
@@ -32,6 +35,7 @@ function OAuthCallbackPage() {
       if (cancelled) return;
       cancelled = true;
       controller.abort();
+      recordHostedAuthDiagnostic("callback_finish", "timeout", { elapsedMs: CALLBACK_TIMEOUT_MS });
       setShowTransition(true);
       setError("Sign in timed out. Check your connection and try again.");
     }, CALLBACK_TIMEOUT_MS);
@@ -50,20 +54,29 @@ function OAuthCallbackPage() {
         const next = getSafePostAuthRedirect(callbackRedirect);
         window.clearTimeout(revealTransition);
         window.clearTimeout(timeout);
+        recordHostedAuthDiagnostic("callback_finish", "ok", { sessionPresent: true });
         window.location.replace(next);
       } catch (err) {
         if (cancelled) return;
+        recordHostedAuthDiagnostic("callback_finish", "error", { error: err });
         window.clearTimeout(revealTransition);
         window.clearTimeout(timeout);
         console.error("[KovaAuth] Authentication callback could not create a session", {
           error: err instanceof Error ? err.name : "unknown_error",
+          code: err instanceof HostedAuthCallbackError ? err.code : "callback_failed",
         });
         setShowTransition(true);
-        setError("Sign in could not be completed. Please try again.");
+        setError(
+          err instanceof HostedAuthCallbackError
+            ? err.message
+            : "Sign in could not be completed. Please try again.",
+        );
       }
     }
 
-    finishSignIn();
+    void Promise.resolve().then(() => {
+      if (!cancelled) void finishSignIn();
+    });
     return () => {
       cancelled = true;
       controller.abort();
@@ -77,6 +90,12 @@ function OAuthCallbackPage() {
       aria-busy={!error}
       className="flex min-h-[100dvh] items-center justify-center bg-background px-4 text-foreground"
     >
+      {getHostedAuthDiagnosticText() ? (
+        <details className="fixed bottom-2 right-2 max-h-[40vh] max-w-[calc(100%-1rem)] overflow-auto rounded border bg-background p-2 text-xs">
+          <summary>Sign-in diagnostics (no credentials)</summary>
+          <pre data-testid="hosted-auth-diagnostics">{getHostedAuthDiagnosticText()}</pre>
+        </details>
+      ) : null}
       {error ? (
         <section
           aria-labelledby="oauth-callback-error-title"

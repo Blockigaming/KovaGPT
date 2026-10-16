@@ -8,6 +8,292 @@ export const POST_AUTH_REDIRECT_PARAM = "return_to";
 export const PASSWORD_RECOVERY_KEY = "kovagpt:password-recovery-started";
 const PASSWORD_RECOVERY_MAX_AGE_MS = 10 * 60 * 1000;
 
+// Opt-in, tab-local diagnostics. This records classifications, never a URL,
+// address, identity, token, provider message or request/response body.
+const DIAGNOSTIC_KEY = "kovagpt:hosted-auth-diagnostic:v1";
+const DIAGNOSTIC_OPT_IN_KEY = "kovagpt:hosted-auth-diagnostic-enabled:v1";
+const DIAGNOSTIC_TTL_MS = 30 * 60 * 1000;
+const DIAGNOSTIC_PHASES = [
+  "email_request",
+  "callback_received",
+  "authority",
+  "fragment_scrub",
+  "session_write",
+  "code_exchange",
+  "session_read",
+  "current_user",
+  "provider_user",
+  "provider_assurance",
+  "ui_validation",
+  "ui_session",
+  "callback_finish",
+  "logout",
+] as const;
+type DiagnosticPhase = (typeof DIAGNOSTIC_PHASES)[number];
+type DiagnosticOutcome =
+  | "started"
+  | "ok"
+  | "error"
+  | "cancelled"
+  | "missing"
+  | "mismatch"
+  | "guest"
+  | "authenticated"
+  | "mfa_required"
+  | "timeout";
+type DiagnosticDetails = {
+  error?: unknown;
+  elapsedMs?: number;
+  sessionPresent?: boolean;
+  identityMatches?: boolean;
+  flow?: "implicit" | "pkce" | "provider_error" | "none";
+  origin?: "canonical" | "www" | "other";
+  route?: "callback" | "root" | "other";
+  queryCredentialsPresent?: boolean;
+  redirectOriginChanges?: boolean;
+};
+type DiagnosticEvent = Record<string, string | number | boolean | null>;
+let diagnostic: { startedAt: number; events: DiagnosticEvent[] } | null = null;
+
+function diagnosticActive(): boolean {
+  if (typeof window === "undefined") return false;
+  const now = Date.now();
+  if (!diagnostic) {
+    // Validate persisted state before making even a sanitized copy visible.
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(DIAGNOSTIC_KEY) ?? "null");
+      if (
+        saved &&
+        Number.isFinite(saved.startedAt) &&
+        now >= saved.startedAt &&
+        now - saved.startedAt < DIAGNOSTIC_TTL_MS &&
+        Array.isArray(saved.events)
+      ) {
+        diagnostic = {
+          startedAt: saved.startedAt,
+          events: saved.events.slice(-64).map(sanitizeDiagnosticEvent),
+        };
+      }
+    } catch {
+      /* In-memory diagnostics still work when storage is unavailable. */
+    }
+    let enabledAt = 0;
+    try {
+      enabledAt = Number(window.localStorage.getItem(DIAGNOSTIC_OPT_IN_KEY));
+    } catch {
+      /* optional */
+    }
+    if (getCurrentUrl()?.searchParams.get("auth_debug") === "1") {
+      enabledAt = now;
+      // Only the expiring opt-in crosses tabs; no auth data or diagnostic events.
+      try {
+        window.localStorage.setItem(DIAGNOSTIC_OPT_IN_KEY, String(now));
+      } catch {
+        /* optional */
+      }
+    }
+    if (!diagnostic && enabledAt > 0 && now >= enabledAt && now - enabledAt < DIAGNOSTIC_TTL_MS) {
+      diagnostic = { startedAt: now, events: [] };
+    }
+  }
+  return Boolean(
+    diagnostic && now >= diagnostic.startedAt && now - diagnostic.startedAt < DIAGNOSTIC_TTL_MS,
+  );
+}
+
+function sanitizeDiagnosticEvent(raw: unknown): DiagnosticEvent {
+  const input = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const output: DiagnosticEvent = {};
+  const enums: Record<string, readonly string[]> = {
+    phase: DIAGNOSTIC_PHASES,
+    outcome: [
+      "started",
+      "ok",
+      "error",
+      "cancelled",
+      "missing",
+      "mismatch",
+      "guest",
+      "authenticated",
+      "mfa_required",
+      "timeout",
+    ],
+    errorClass: [
+      "AbortError",
+      "AuthApiError",
+      "AuthRetryableFetchError",
+      "AuthSessionMissingError",
+      "AuthInvalidTokenResponseError",
+      "AuthUnknownError",
+      "HostedAuthCallbackError",
+      "TypeError",
+      "Error",
+      "other",
+    ],
+    code: [
+      "otp_expired",
+      "provider_rejected",
+      "session_not_found",
+      "refresh_token_not_found",
+      "bad_jwt",
+      "over_request_rate_limit",
+      "other",
+    ],
+    flow: ["implicit", "pkce", "provider_error", "none"],
+    origin: ["canonical", "www", "other"],
+    route: ["callback", "root", "other"],
+  };
+  for (const [key, allowed] of Object.entries(enums)) {
+    if (typeof input[key] === "string" && allowed.includes(input[key])) output[key] = input[key];
+  }
+  for (const key of ["elapsedMs", "sinceStartMs"]) {
+    const value = input[key];
+    if (typeof value === "number" && Number.isFinite(value))
+      output[key] = Math.min(DIAGNOSTIC_TTL_MS, Math.max(0, Math.round(value)));
+  }
+  const status = input.httpStatus;
+  output.httpStatus =
+    typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599
+      ? status
+      : null;
+  for (const key of [
+    "sessionPresent",
+    "identityMatches",
+    "queryCredentialsPresent",
+    "redirectOriginChanges",
+  ]) {
+    if (typeof input[key] === "boolean") output[key] = input[key];
+  }
+  return output;
+}
+
+export function recordHostedAuthDiagnostic(
+  phase: DiagnosticPhase,
+  outcome: DiagnosticOutcome,
+  details: DiagnosticDetails = {},
+) {
+  // Diagnostics must never change the authentication outcome, even if saving
+  // or console capture fails. The memory buffer survives failed storage writes.
+  try {
+    if (!diagnosticActive() || !diagnostic) return;
+    const error =
+      details.error && typeof details.error === "object"
+        ? (details.error as Record<string, unknown>)
+        : null;
+    const event = sanitizeDiagnosticEvent({
+      ...details,
+      phase,
+      outcome,
+      sinceStartMs: Date.now() - diagnostic.startedAt,
+      httpStatus: error?.status,
+      ...(error
+        ? {
+            errorClass:
+              typeof error.name === "string" &&
+              [
+                "AbortError",
+                "AuthApiError",
+                "AuthRetryableFetchError",
+                "AuthSessionMissingError",
+                "AuthInvalidTokenResponseError",
+                "AuthUnknownError",
+                "HostedAuthCallbackError",
+                "TypeError",
+                "Error",
+              ].includes(error.name)
+                ? error.name
+                : "other",
+            code:
+              typeof error.code === "string" &&
+              [
+                "otp_expired",
+                "provider_rejected",
+                "session_not_found",
+                "refresh_token_not_found",
+                "bad_jwt",
+                "over_request_rate_limit",
+              ].includes(error.code)
+                ? error.code
+                : "other",
+          }
+        : {}),
+    });
+    diagnostic.events.push(event);
+    diagnostic.events = diagnostic.events.slice(-64);
+    try {
+      sessionStorage.setItem(DIAGNOSTIC_KEY, JSON.stringify(diagnostic));
+    } catch {
+      /* memory retained */
+    }
+    try {
+      console.info("[KovaAuth diagnostic]", event);
+    } catch {
+      /* no auth impact */
+    }
+  } catch {
+    /* no auth impact */
+  }
+}
+
+export function getHostedAuthDiagnosticText(): string | null {
+  if (!diagnosticActive() || !diagnostic) return null;
+  return JSON.stringify(
+    {
+      kind: "SANITIZED_BROWSER_AUTH_DIAGNOSTIC",
+      httpStatusMeaning: "SDK-reported error status only; null means not observed",
+      events: diagnostic.events,
+    },
+    null,
+    2,
+  );
+}
+
+export async function traceHostedAuth<T>(
+  phase: DiagnosticPhase,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const start = Date.now();
+  recordHostedAuthDiagnostic(phase, "started");
+  try {
+    const result = await operation();
+    const error = result && typeof result === "object" && "error" in result ? result.error : null;
+    recordHostedAuthDiagnostic(phase, error ? "error" : "ok", {
+      elapsedMs: Date.now() - start,
+      error,
+    });
+    return result;
+  } catch (error) {
+    recordHostedAuthDiagnostic(
+      phase,
+      error instanceof Error && error.name === "AbortError" ? "cancelled" : "error",
+      { elapsedMs: Date.now() - start, error },
+    );
+    throw error;
+  }
+}
+
+export const UNUSABLE_SIGN_IN_LINK_MESSAGE =
+  "This sign-in link has expired or was already used. Request a new link and open it once in the browser you want to use.";
+
+export class HostedAuthCallbackError extends Error {
+  readonly code: "otp_expired" | "provider_rejected";
+
+  constructor(providerCode: string | null) {
+    const code = providerCode === "otp_expired" ? "otp_expired" : "provider_rejected";
+    super(
+      code === "otp_expired"
+        ? UNUSABLE_SIGN_IN_LINK_MESSAGE
+        : "Sign in could not be completed. Please try again.",
+    );
+    this.name = "HostedAuthCallbackError";
+    this.code = code;
+  }
+}
+
+export function isUnusableHostedAuthLink(error: unknown): boolean {
+  return error instanceof HostedAuthCallbackError && error.code === "otp_expired";
+}
+
 function getCurrentUrl(): URL | null {
   if (typeof window === "undefined") return null;
   try {
@@ -184,23 +470,12 @@ async function waitForStoredSession(
   assertCurrent: () => void,
 ): Promise<Session | null> {
   assertCurrent();
-  if (candidate?.access_token && candidate.refresh_token) {
-    const { error } = await context.auth.setSession({
-      access_token: candidate.access_token,
-      refresh_token: candidate.refresh_token,
-    });
-    assertCurrent();
-    if (error) {
-      console.error("[KovaAuth] Session persistence failed after OAuth.", {
-        error: authErrorKind(error),
-      });
-      throw error;
-    }
-  }
+  // setSession/exchangeCodeForSession already persist in auth-js. Read that
+  // result back and validate it; writing again repeats /user and SIGNED_IN.
 
   for (let i = 0; i < 20; i += 1) {
     assertCurrent();
-    const { data, error } = await context.auth.getSession();
+    const { data, error } = await traceHostedAuth("session_read", () => context.auth.getSession());
     assertCurrent();
     if (error) {
       console.error("[KovaAuth] Session read failed after OAuth.", {
@@ -209,8 +484,30 @@ async function waitForStoredSession(
       throw error;
     }
     if (data.session?.access_token) {
-      const { data: userData, error: userError } = await context.auth.getUser();
+      const { data: userData, error: userError } = await traceHostedAuth("current_user", () =>
+        context.auth.getUser(),
+      );
       assertCurrent();
+      recordHostedAuthDiagnostic(
+        "current_user",
+        userError
+          ? "error"
+          : !userData.user
+            ? "missing"
+            : userData.user.id === data.session.user.id &&
+                (!candidate || data.session.user.id === candidate.user.id)
+              ? "ok"
+              : "mismatch",
+        {
+          error: userError,
+          sessionPresent: true,
+          identityMatches: Boolean(
+            userData.user &&
+            userData.user.id === data.session.user.id &&
+            (!candidate || data.session.user.id === candidate.user.id),
+          ),
+        },
+      );
       if (
         userError ||
         !userData.user ||
@@ -220,7 +517,7 @@ async function waitForStoredSession(
         console.error("[KovaAuth] Current user check failed after OAuth.", {
           error: authErrorKind(userError),
         });
-        throw userError ?? new Error("No current user was found after Google sign in.");
+        throw userError ?? new Error("No matching current user was found after sign in.");
       }
       return data.session;
     }
@@ -237,10 +534,32 @@ export async function completeOAuthSessionFromUrl(
 ): Promise<Session | null> {
   const url = getCurrentUrl();
   if (!url) return null;
+  const fragment = getHashParams(url);
+  recordHostedAuthDiagnostic("callback_received", "ok", {
+    flow: getOAuthParam(url, "error")
+      ? "provider_error"
+      : fragment.has("access_token") && fragment.has("refresh_token")
+        ? "implicit"
+        : url.searchParams.has("code")
+          ? "pkce"
+          : "none",
+    origin:
+      url.hostname === "kovagpt.com"
+        ? "canonical"
+        : url.hostname === "www.kovagpt.com"
+          ? "www"
+          : "other",
+    route:
+      url.pathname === OAUTH_CALLBACK_PATH ? "callback" : url.pathname === "/" ? "root" : "other",
+    queryCredentialsPresent:
+      url.searchParams.has("access_token") || url.searchParams.has("refresh_token"),
+    redirectOriginChanges: new URL(getOAuthRedirectUri()).origin !== url.origin,
+  });
   // Clear before any network operation, including failed or forbidden callbacks.
   clearOAuthResponseFromUrl();
+  recordHostedAuthDiagnostic("fragment_scrub", "ok");
   signal?.throwIfAborted();
-  const context = await resolveLegacyAuthContext();
+  const context = await traceHostedAuth("authority", () => resolveLegacyAuthContext());
   const assertCurrent = () => {
     signal?.throwIfAborted();
     context.assertCurrent();
@@ -249,10 +568,13 @@ export async function completeOAuthSessionFromUrl(
 
   const oauthError = getOAuthParam(url, "error");
   if (oauthError) {
+    // Callback parameters are untrusted. Preserve only an allowlisted reason,
+    // never provider descriptions, arbitrary codes, URLs or credentials.
+    const failure = new HostedAuthCallbackError(getOAuthParam(url, "error_code"));
     console.error(`[KovaAuth] OAuth callback error from ${source}.`, {
-      error: oauthError.replace(/[^a-z0-9_-]/gi, "").slice(0, 64) || "provider_error",
+      error: failure.code,
     });
-    throw new Error("Google sign in failed.");
+    throw failure;
   }
 
   // Implicit-flow credentials belong in the fragment. Never consume tokens
@@ -264,10 +586,12 @@ export async function completeOAuthSessionFromUrl(
   if (accessToken && refreshToken) {
     if (options.recoveryOnly && hash.get("type") !== "recovery")
       throw new Error("password_recovery_proof_required");
-    const { data, error } = await context.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
+    const { data, error } = await traceHostedAuth("session_write", () =>
+      context.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }),
+    );
     assertCurrent();
     if (error) {
       console.error(`[KovaAuth] OAuth token session save failed from ${source}.`, {
@@ -283,7 +607,9 @@ export async function completeOAuthSessionFromUrl(
 
   const code = url.searchParams.get("code");
   if (code) {
-    const { data, error } = await context.auth.exchangeCodeForSession(code);
+    const { data, error } = await traceHostedAuth("code_exchange", () =>
+      context.auth.exchangeCodeForSession(code),
+    );
     assertCurrent();
     if (error) {
       console.error(`[KovaAuth] OAuth code exchange failed from ${source}.`, {
@@ -303,7 +629,7 @@ export async function completeOAuthSessionFromUrl(
     return restored;
   }
 
-  const { data, error } = await context.auth.getSession();
+  const { data, error } = await traceHostedAuth("session_read", () => context.auth.getSession());
   assertCurrent();
   if (error) {
     console.error(`[KovaAuth] Session lookup failed from ${source}.`, {
