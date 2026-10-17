@@ -38,7 +38,13 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Only the bounded Azure integration draft defers this browser matrix.
+    # Its ready-for-review event still requires the existing browser checks.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      !(github.event.pull_request.draft &&
+      github.event.pull_request.head.ref == 'azure/independent-release-gates-20261012'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

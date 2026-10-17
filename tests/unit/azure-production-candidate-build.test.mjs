@@ -365,6 +365,91 @@ test("production writes are isolated from PR validation and never dispatch PLAN 
   assert.match(workflow, /name: production\n/u);
 });
 
+test("bounded source CI executes selected-provider readiness fixtures without expanding authority", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/build-azure-production-candidate.yml", import.meta.url),
+    "utf8",
+  );
+  const tests = workflow.slice(
+    workflow.indexOf("  source-tests:"),
+    workflow.indexOf("  build-only:"),
+  );
+  assert.match(tests, /runs-on: ubuntu-24\.04\n\s+timeout-minutes: 5/u);
+  assert.match(tests, /package-manager-cache: false/u);
+  assert.match(tests, /npm ci --ignore-scripts --no-audit --no-fund/u);
+  const install = tests.indexOf("run: npm ci --ignore-scripts --no-audit --no-fund");
+  const fixtures = tests.indexOf(
+    "name: Test text-provider readiness with isolated nonsecret fixtures",
+  );
+  assert.ok(install >= 0 && fixtures > install);
+  const command = tests.slice(fixtures, tests.indexOf("      - name:", fixtures + 1));
+  assert.match(command, /run: >-\s+node --test\s/u);
+  for (const path of [
+    "tests/unit/text-provider-readiness.test.mjs",
+    "tests/unit/stripe-readiness-source.test.mjs",
+    "tests/release/readiness-and-observability.test.mjs",
+  ]) {
+    assert.ok(command.includes(path));
+  }
+  assert.doesNotMatch(tests, /id-token|environment:|secrets\.|--execute|azure\/login/u);
+  assert.doesNotMatch(tests, /npm run build|docker build|workflow_dispatch|gh workflow run/u);
+});
+
+for (const [file, job] of [
+  ["candidate-source-evidence.yml", "source-evidence"],
+  ["ui-foundation-browser.yml", "browser"],
+]) {
+  test(`${file} defers only the exact Azure draft without waiving release checks`, () => {
+    const workflow = readFileSync(
+      new URL(`../../.github/workflows/${file}`, import.meta.url),
+      "utf8",
+    );
+    const body = workflow.slice(workflow.indexOf(`\n  ${job}:\n`));
+    const guard = body
+      .match(/^    if: >-\n((?:      .*\n)+)/mu)?.[1]
+      .trim()
+      .replace(/\s+/gu, " ");
+    const expected =
+      "github.event_name != 'pull_request' || " +
+      "(github.event.pull_request.head.repo.full_name == github.repository && " +
+      "!(github.event.pull_request.draft && " +
+      "github.event.pull_request.head.ref == 'azure/independent-release-gates-20261012'))";
+    assert.equal(guard, expected);
+    assert.match(workflow, /types: \[opened, reopened, synchronize, ready_for_review\]/u);
+    // Evaluate the exact committed boolean expression, not a parallel policy.
+    const permits = new Function("github", `return (${guard});`);
+    const repository = "Blockigaming/KovaGPT";
+    const azureBranch = "azure/independent-release-gates-20261012";
+    const pr = (ref, draft, sameRepository = true) => ({
+      event_name: "pull_request",
+      repository,
+      event: {
+        pull_request: {
+          draft,
+          head: {
+            ref,
+            repo: {
+              full_name: sameRepository ? repository : "other/KovaGPT",
+            },
+          },
+        },
+      },
+    });
+    for (const [name, event, expectedPermission] of [
+      ["exact Azure draft", pr(azureBranch, true), false],
+      ["exact Azure ready", pr(azureBranch, false), true],
+      ["other draft branch", pr("interface/accepted-source", true), true],
+      ["other ready branch", pr("interface/accepted-source", false), true],
+      ["fork draft", pr(azureBranch, true, false), false],
+      ["fork ready", pr(azureBranch, false, false), false],
+      ["main push", { event_name: "push", repository, ref: "refs/heads/main" }, true],
+      ["manual dispatch", { event_name: "workflow_dispatch", repository }, true],
+    ]) {
+      assert.equal(permits(event), expectedPermission, name);
+    }
+  });
+}
+
 test("existing PLAN and Dockerfile require the same provenance context and labels", () => {
   const plan = readFileSync(
     new URL("../../.github/workflows/validate-azure-production.yml", import.meta.url),

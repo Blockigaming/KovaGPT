@@ -26,7 +26,13 @@ concurrency:
 
 jobs:
   source-evidence:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # The Azure integration draft is limited to its bounded source-tests job.
+    # Ready-for-review and every other branch retain their existing evidence path.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      !(github.event.pull_request.draft &&
+      github.event.pull_request.head.ref == 'azure/independent-release-gates-20261012'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -43,6 +43,12 @@ jobs:
         run: node --test tests/unit/azure-production-candidate-build.test.mjs
       - name: Install locked formatter without package lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Test text-provider readiness with isolated nonsecret fixtures
+        run: >-
+          node --test
+          tests/unit/text-provider-readiness.test.mjs
+          tests/unit/stripe-readiness-source.test.mjs
+          tests/release/readiness-and-observability.test.mjs
       - name: Check exact formatting and print any required source-only diff
         shell: bash
         run: |
