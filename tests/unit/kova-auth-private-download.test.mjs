@@ -187,6 +187,7 @@ async function fixture(kind = "project", options = {}) {
     "@/lib/billing-entitlement.server": {},
     "@/lib/auth-validation-policy.mjs": validation,
     "@/lib/auth-security.mjs": security,
+    "@/lib/auth-validation-policy.mjs": validation,
     "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => "kova" },
     "@/lib/kova-auth-crypto.server.mjs": {
       digestKovaToken,
