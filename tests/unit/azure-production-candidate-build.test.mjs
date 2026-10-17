@@ -6,11 +6,15 @@ import test from "node:test";
 
 import {
   buildProductionCandidate,
-  productionCandidateBuildArgs,
+  createProductionCandidateCommand,
+  PRODUCTION_BUILD_TIMEOUT_SECONDS,
+  PRODUCTION_CLIENT_BUDGET_MS,
+  productionCandidateBuildRequest,
   productionCandidateConfig,
   productionCandidateDigest,
 } from "../../scripts/azure/build-production-candidate.mjs";
 import { verifyBrowserConfig } from "../../scripts/azure/verify-browser-config.mjs";
+import { ACR_RESOURCE_ID } from "../../scripts/azure/acr-pinned-quick-build.mjs";
 
 const sourceSha = "a".repeat(40);
 const sourceTree = "b".repeat(40);
@@ -49,17 +53,18 @@ function buildRun(config) {
   return {
     runId: "ca123",
     status: "Succeeded",
+    agentCpu: 2,
     outputImages: [{ registry: loginServer, repository: "kovagpt-web", tag: config.tag, digest }],
   };
 }
 
 test("only the explicit production browser argument allowlist reaches a commit-pinned ACR build", () => {
   const config = productionCandidateConfig(environment());
-  const args = productionCandidateBuildArgs(config, sourceTree, false);
-  assert.equal(args.at(-1), `https://github.com/Blockigaming/KovaGPT.git#${sourceSha}`);
+  const request = productionCandidateBuildRequest(config, sourceTree, false);
+  assert.equal(request.sourceLocation, `https://github.com/Blockigaming/KovaGPT.git#${sourceSha}`);
   assert.match(config.tag, /^production-candidate-[a-f0-9]{40}-12345-1$/u);
   assert.deepEqual(
-    args.filter((_, index) => args[index - 1] === "--build-arg").map((arg) => arg.split("=")[0]),
+    request.arguments.map((argument) => argument.name),
     [
       "KOVA_SOURCE_SHA",
       "KOVA_SOURCE_TREE",
@@ -70,16 +75,21 @@ test("only the explicit production browser argument allowlist reaches a commit-p
       "VITE_PAYMENTS_CLIENT_TOKEN",
     ],
   );
-  assert.ok(args.includes("KOVA_VERIFY_BROWSER_CONFIG=true"));
-  assert.ok(args.includes("linux/amd64"));
-  assert.ok(args.includes("--no-logs"));
-  assert.ok(args.includes("1800"));
+  assert.equal(
+    request.arguments.find((argument) => argument.name === "KOVA_VERIFY_BROWSER_CONFIG").value,
+    "true",
+  );
+  assert.ok(request.arguments.every((argument) => argument.isSecret === false));
+  assert.deepEqual(request.platform, { os: "Linux", architecture: "amd64" });
+  assert.deepEqual(request.agentConfiguration, { cpu: 2 });
+  assert.equal(request.timeout, 1200);
+  assert.equal(PRODUCTION_BUILD_TIMEOUT_SECONDS, 1200);
   assert.doesNotMatch(
-    args.join(" "),
+    JSON.stringify(request),
     /SERVER_REFERENCE|BICEP_PARAMETERS|:latest|containerapp|--no-wait/u,
   );
-  const abac = productionCandidateBuildArgs(config, sourceTree, true);
-  assert.equal(abac[abac.indexOf("--source-acr-auth-id") + 1], "[caller]");
+  const abac = productionCandidateBuildRequest(config, sourceTree, true);
+  assert.deepEqual(abac.credentials, { sourceRegistry: { identity: "[caller]" } });
 });
 
 for (const [name, overrides] of [
@@ -165,7 +175,7 @@ function harness(t, options = {}) {
   const env = environment({ KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR: output });
   const config = productionCandidateConfig(env);
   const calls = [];
-  const run = (program, args) => {
+  const run = (program, args, { input } = {}) => {
     calls.push([program, ...args]);
     const command = args.slice(0, 3).join(" ");
     if (program === "git") {
@@ -177,6 +187,9 @@ function harness(t, options = {}) {
     if (program === "az") {
       if (command === "acr show --name")
         return JSON.stringify({
+          id: options.wrongResource
+            ? ACR_RESOURCE_ID.replace("rg-kovagpt-dev", "other")
+            : ACR_RESOURCE_ID,
           loginServer: options.wrongRegistry ? "wrong.azurecr.io" : loginServer,
           roleAssignmentMode: "LegacyRegistryPermissions",
         });
@@ -184,10 +197,21 @@ function harness(t, options = {}) {
         if (options.tagLookupFailed) throw new Error("simulated_authorization_failure");
         return options.tagExists ? JSON.stringify([config.tag]) : "[]";
       }
-      if (args[1] === "build") return JSON.stringify(buildRun(config));
+      if (command === "account get-access-token --subscription") return "fixtureToken".repeat(5);
       if (command === "acr repository show")
         return options.digestMismatch ? `sha256:${"d".repeat(64)}` : digest;
       if (args[1] === "login") return "";
+    }
+    if (program === "node") {
+      const request = JSON.parse(input);
+      assert.equal(request.resourceId, ACR_RESOURCE_ID);
+      assert.equal(request.body.agentConfiguration.cpu, 2);
+      assert.equal(request.body.timeout, 1200);
+      assert.equal(
+        request.body.sourceLocation,
+        `https://github.com/Blockigaming/KovaGPT.git#${sourceSha}`,
+      );
+      return JSON.stringify(buildRun(config));
     }
     if (program === "docker") {
       if (args[0] === "pull" || args[0] === "rm") return "";
@@ -248,6 +272,7 @@ function harness(t, options = {}) {
     }
     throw new Error(`unexpected_mock_command:${program}:${args.join(" ")}`);
   };
+  run.remainingMs = () => options.remainingMs ?? PRODUCTION_CLIENT_BUDGET_MS;
   return { run, calls, env, output };
 }
 
@@ -267,7 +292,8 @@ test("build-only orchestration verifies pulled bytes and emits key-free PLAN evi
     readFileSync(`${output}/browser-config-provenance.json`, "utf8");
   assert.doesNotMatch(artifact, /sb_publishable_|pk_live_|SERVER_REFERENCE/u);
   assert.equal(readFileSync(`${output}/image-reference.txt`, "utf8"), `${imageReference}\n`);
-  assert.equal(calls.filter(([program, , sub]) => program === "az" && sub === "build").length, 1);
+  assert.equal(calls.filter(([program]) => program === "node").length, 1);
+  assert.ok(!calls.some(([program, , sub]) => program === "az" && sub === "build"));
   assert.ok(calls.some(([program, sub]) => program === "docker" && sub === "rm"));
   for (const call of calls) {
     assert.doesNotMatch(
@@ -281,13 +307,19 @@ for (const [name, options, code] of [
   ["dirty checkout", { dirty: true }, /dirty_source/u],
   ["internal output path", { internalOutput: true }, /output_must_be_external/u],
   ["wrong live registry", { wrongRegistry: true }, /live_registry_mismatch/u],
+  ["wrong live registry resource", { wrongResource: true }, /registry_resource_mismatch/u],
+  [
+    "preflight exhausted server and cleanup reserve",
+    { remainingMs: 1_319_999 },
+    /submission_budget_insufficient/u,
+  ],
   ["existing candidate tag", { tagExists: true }, /tag_already_exists/u],
   ["tag-read authorization failure", { tagLookupFailed: true }, /simulated_authorization_failure/u],
 ]) {
   test(`no build is queued when ${name}`, (t) => {
     const { env, run, calls, output } = harness(t, options);
     assert.throws(() => buildProductionCandidate(env, run), code);
-    assert.ok(!calls.some(([program, , sub]) => program === "az" && sub === "build"));
+    assert.ok(!calls.some(([program]) => program === "node"));
     assert.equal(existsSync(`${output}/candidate.json`), false);
   });
 }
@@ -314,6 +346,8 @@ test("production writes are isolated from PR validation and never dispatch PLAN 
     workflow.indexOf("  build-only:"),
   );
   assert.doesNotMatch(tests, /id-token|environment:|secrets\.|--execute|azure\/login/u);
+  assert.match(tests, /timeout-minutes: 5\b/u);
+  assert.match(workflow.slice(workflow.indexOf("  build-only:")), /timeout-minutes: 25\b/u);
   assert.match(
     workflow,
     /github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'/u,
@@ -330,6 +364,77 @@ test("production writes are isolated from PR validation and never dispatch PLAN 
   assert.equal((workflow.match(/--execute/g) ?? []).length, 1);
   assert.equal((workflow.match(/id-token: write/g) ?? []).length, 1);
   assert.match(workflow, /name: production\n/u);
+});
+
+test("all commands share one twenty-five-minute client budget without a retry", () => {
+  let clock = 0;
+  const calls = [];
+  const run = createProductionCandidateCommand({
+    now: () => clock,
+    spawn: (program, args, options) => {
+      calls.push({ program, args, timeout: options.timeout, killSignal: options.killSignal });
+      clock += 60_000;
+      return { status: 0, stdout: " fixture\n" };
+    },
+  });
+  assert.equal(PRODUCTION_CLIENT_BUDGET_MS, 1_500_000);
+  assert.equal(run("git", ["rev-parse", "HEAD"]), "fixture");
+  assert.equal(run("az", ["acr", "build"]), "fixture");
+  assert.deepEqual(
+    calls.map((call) => call.timeout),
+    [1_500_000, 1_440_000],
+  );
+  assert.ok(calls.every((call) => call.killSignal === "SIGKILL"));
+  clock = PRODUCTION_CLIENT_BUDGET_MS;
+  assert.throws(() => run("az", ["acr", "build"]), /client_deadline_exceeded/u);
+  assert.equal(calls.length, 2);
+});
+
+test("a timed-out command or late successful result cannot certify or retry the operation", () => {
+  for (const lateSuccess of [false, true]) {
+    let clock = 0;
+    let calls = 0;
+    const run = createProductionCandidateCommand({
+      now: () => clock,
+      spawn: () => {
+        calls++;
+        clock = PRODUCTION_CLIENT_BUDGET_MS;
+        return lateSuccess
+          ? { status: 0, stdout: "private provider fixture" }
+          : {
+              status: null,
+              error: { code: "ETIMEDOUT", message: "private credential fixture" },
+              stderr: "private provider fixture",
+            };
+      },
+    });
+    assert.throws(
+      () => run("az", ["acr", "build"]),
+      (error) => {
+        assert.equal(error.message, "production_candidate_client_deadline_exceeded");
+        return true;
+      },
+    );
+    assert.equal(calls, 1);
+    assert.throws(() => run("az", ["acr", "build"]), /client_deadline_exceeded/u);
+    assert.equal(calls, 1);
+  }
+});
+
+test("workflow setup elapsed time reduces the same command budget", () => {
+  let recorded;
+  const run = createProductionCandidateCommand({
+    now: () => 0,
+    wallNow: () => 100_000,
+    workflowDeadlineMs: 1_400_000,
+    spawn: (_program, _args, options) => {
+      recorded = options.timeout;
+      return { status: 0, stdout: "" };
+    },
+  });
+  run("fixture", []);
+  assert.equal(recorded, 1_300_000);
+  assert.equal(run.remainingMs(), 1_300_000);
 });
 
 test("existing PLAN and Dockerfile require the same provenance context and labels", () => {
@@ -360,4 +465,140 @@ test("existing PLAN and Dockerfile require the same provenance context and label
   ]) {
     assert.ok(plan.includes(setting));
   }
+});
+
+function narrowEnvironment(overrides = {}) {
+  return environment({
+    KOVA_PRODUCTION_BROWSER_INPUT_MODE: "narrow-openai",
+    KOVA_PRODUCTION_SUPABASE_URL: params.supabaseUrl.value,
+    KOVA_PRODUCTION_SUPABASE_PUBLISHABLE_KEY: browserKey,
+    KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: undefined,
+    ...overrides,
+  });
+}
+
+test("browser mode: default and explicit PLAN inputs retain the original behavior", () => {
+  const original = productionCandidateConfig(environment());
+  assert.deepEqual(
+    productionCandidateConfig(environment({ KOVA_PRODUCTION_BROWSER_INPUT_MODE: "plan" })),
+    original,
+  );
+  assert.equal(
+    productionCandidateConfig(
+      environment({
+        KOVA_PRODUCTION_BROWSER_INPUT_MODE: "plan",
+        KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY: "",
+      }),
+    ).stripeKey,
+    "",
+  );
+  assert.throws(
+    () => productionCandidateConfig(environment({ KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: "" })),
+    /production_candidate_json_invalid/u,
+  );
+});
+
+test("browser mode: explicit narrow input never accesses the full PLAN secret", () => {
+  const env = narrowEnvironment();
+  Object.defineProperty(env, "KOVA_PRODUCTION_BICEP_PARAMETERS_JSON", {
+    get() {
+      assert.fail("Narrow mode must not read the PLAN document");
+    },
+  });
+  const config = productionCandidateConfig(env);
+  assert.deepEqual(config, productionCandidateConfig(environment()));
+  const request = productionCandidateBuildRequest(config, sourceTree, false);
+  assert.deepEqual(
+    request.arguments
+      .filter((argument) => argument.name.startsWith("VITE_"))
+      .map(({ name, value }) => [name, value]),
+    [
+      ["VITE_SUPABASE_URL", params.supabaseUrl.value],
+      ["VITE_SUPABASE_PUBLISHABLE_KEY", browserKey],
+      ["VITE_PAYMENTS_CLIENT_TOKEN", stripeKey],
+    ],
+  );
+  assert.equal(request.agentConfiguration.cpu, 2);
+  assert.equal(request.timeout, 1200);
+});
+
+test("browser mode: narrow missing values cannot fall back to a complete PLAN document", () => {
+  for (const [field, code] of [
+    ["KOVA_PRODUCTION_SUPABASE_URL", "supabase_url_invalid"],
+    ["KOVA_PRODUCTION_SUPABASE_PUBLISHABLE_KEY", "supabase_publishable_key_invalid"],
+    ["KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY", "stripe_publishable_key_invalid"],
+  ]) {
+    const env = narrowEnvironment({
+      KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: environment().KOVA_PRODUCTION_BICEP_PARAMETERS_JSON,
+      [field]: "",
+    });
+    assert.throws(() => productionCandidateConfig(env), {
+      message: `narrow_openai_browser_inputs_${code}`,
+    });
+  }
+});
+
+test("browser mode: unknown selections fail before any external command", () => {
+  for (const mode of ["", "auto", "NARROW-OPENAI", "narrow-openai ", 7]) {
+    assert.throws(
+      () =>
+        buildProductionCandidate(environment({ KOVA_PRODUCTION_BROWSER_INPUT_MODE: mode }), () =>
+          assert.fail("Invalid mode must not execute a command"),
+        ),
+      { message: "production_candidate_browser_input_mode_invalid" },
+    );
+  }
+});
+
+test("browser mode: narrow mode preserves the protected target and owner-approval gates", () => {
+  for (const change of [
+    { GITHUB_EVENT_NAME: "pull_request" },
+    { GITHUB_REF: "refs/heads/dev" },
+    { KOVA_BUILD_CONFIRMATION: "PLAN" },
+    { KOVA_APPROVED_SOURCE_SHA: "d".repeat(40) },
+    { KOVA_PRODUCTION_SUPABASE_PROJECT_REF: "z".repeat(20) },
+    { KOVA_PRODUCTION_ACR_NAME: "wrongregistry" },
+  ]) {
+    assert.throws(
+      () =>
+        buildProductionCandidate(narrowEnvironment(change), () =>
+          assert.fail("Invalid approval or target must not execute a command"),
+        ),
+      /production_candidate_/u,
+    );
+  }
+});
+
+test("browser mode: workflow opts in explicitly and excludes the PLAN secret from narrow inputs", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/build-azure-production-candidate.yml", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    workflow,
+    /browser_input_mode:[\s\S]*?type: choice\n\s+default: plan\n\s+options:\n\s+- plan\n\s+- narrow-openai/u,
+  );
+  assert.ok(
+    workflow.includes("KOVA_PRODUCTION_BROWSER_INPUT_MODE: ${{ inputs.browser_input_mode }}"),
+  );
+  for (const name of ["KOVA_PRODUCTION_SUPABASE_URL", "KOVA_PRODUCTION_SUPABASE_PUBLISHABLE_KEY"])
+    assert.ok(workflow.includes(`${name}: \${{ vars.${name} }}`));
+  const planBindings = [...workflow.matchAll(/KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ([^\n]+)/gu)];
+  assert.equal(planBindings.length, 2);
+  for (const [, binding] of planBindings)
+    assert.equal(
+      binding,
+      "${{ inputs.browser_input_mode != 'narrow-openai' && secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON || '' }}",
+    );
+  const tests = workflow.slice(
+    workflow.indexOf("  source-tests:"),
+    workflow.indexOf("  build-only:"),
+  );
+  assert.match(tests, /timeout-minutes: 5\b/u);
+  assert.doesNotMatch(tests, /id-token|environment:|secrets\.|--execute|azure\/login/u);
+  for (const path of [
+    "scripts/azure/narrow-openai-browser-inputs.mjs",
+    "tests/unit/azure-narrow-openai-browser-inputs.test.mjs",
+  ])
+    assert.equal(workflow.split(path).length - 1, path.startsWith("tests/") ? 4 : 3);
 });

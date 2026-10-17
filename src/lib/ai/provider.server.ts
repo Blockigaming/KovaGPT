@@ -727,6 +727,7 @@ function toResponsesRequest(body: JsonObject): JsonObject {
       ? body.reasoning
       : { effort: "low", summary: "auto" };
   request.store = false;
+  if (providerTarget("chat").provider === "openai") request.service_tier = "default";
   return request;
 }
 
