@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as contract from "../../src/lib/kova-auth-contract.mjs";
 import * as security from "../../src/lib/auth-security.mjs";
+import * as validation from "../../src/lib/auth-validation-policy.mjs";
 import { digestKovaToken } from "../../src/lib/kova-auth-crypto.server.mjs";
 
 const transpile = (source) =>
@@ -388,6 +389,7 @@ test("a preferred owned credential never reaches Supabase Auth or creates an adm
         },
       },
       "@/lib/billing-entitlement.server": {},
+      "@/lib/auth-validation-policy.mjs": validation,
       "@/lib/auth-security.mjs": security,
       "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => "dual" },
       "@/lib/kova-auth-crypto.server.mjs": {
@@ -478,7 +480,7 @@ test("dual-mode bearer admission rechecks owned retirement after hosted verifica
               getUser: async () => {
                 calls.push("verified-user");
                 return scenario === "invalid-hosted"
-                  ? { error: {} }
+                  ? { error: { status: 401, code: "bad_jwt" } }
                   : {
                       data: { user: { id: owner, email_confirmed_at: "2026-01-01T00:00:00Z" } },
                     };
@@ -500,6 +502,7 @@ test("dual-mode bearer admission rechecks owned retirement after hosted verifica
         },
       },
       "@/lib/billing-entitlement.server": {},
+      "@/lib/auth-validation-policy.mjs": validation,
       "@/lib/auth-security.mjs": security,
       "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => "dual" },
       "@/lib/kova-auth-crypto.server.mjs": {},
@@ -562,6 +565,7 @@ test("all cookie-authenticated mutations reject cross-origin or unproven browser
               createClient: () => assert.fail("no clients before origin proof"),
             },
             "@/lib/billing-entitlement.server": {},
+            "@/lib/auth-validation-policy.mjs": validation,
             "@/lib/auth-security.mjs": security,
             "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => mode },
             "@/lib/kova-auth-crypto.server.mjs": {

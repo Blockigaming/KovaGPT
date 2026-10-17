@@ -132,7 +132,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
   return (
     <main id="main-content" tabIndex={-1} className="kova-state-screen">

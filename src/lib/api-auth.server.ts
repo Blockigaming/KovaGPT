@@ -12,6 +12,7 @@ import {
 import { resolveKovaAuthMode, selectAuthCredential } from "@/lib/kova-auth-contract.mjs";
 import { digestKovaToken, signKovaCompatibilityJwt } from "@/lib/kova-auth-crypto.server.mjs";
 import { resolveSession } from "@/lib/kova-auth-store.server";
+import { isTerminalUserValidationError } from "@/lib/auth-validation-policy.mjs";
 
 export const DAILY_IMAGE_LIMIT = 1;
 export const DAILY_CHAT_LIMIT = 50;
@@ -174,8 +175,43 @@ export async function optionalUser(request: Request): Promise<HttpAuthedCaller |
   // can outlive user deletion, a ban, or a server-side session revocation.
   // getUser performs the authoritative Auth server check before any service-role
   // client is created or user-controlled work is performed.
-  const [{ data: userData, error: userError }, { data: claimsData, error: claimsError }] =
-    await Promise.all([verifier.auth.getUser(token), verifier.auth.getClaims(token)]);
+  let userResult: Awaited<ReturnType<typeof verifier.auth.getUser>>;
+  let claimsResult: Awaited<ReturnType<typeof verifier.auth.getClaims>>;
+  try {
+    [userResult, claimsResult] = await Promise.all([
+      verifier.auth.getUser(token),
+      verifier.auth.getClaims(token),
+    ]);
+  } catch {
+    // Transport/runtime exceptions are not evidence that the caller signed out.
+    // Never expose the upstream message, URL, token or response body in logs.
+    console.error("[auth] Hosted validation unavailable", {
+      phase: "hosted_identity_validation",
+      classification: "unexpected_exception",
+    });
+    return jsonError("Authentication is temporarily unavailable.", 503);
+  }
+  const { data: userData, error: userError } = userResult;
+  const { data: claimsData, error: claimsError } = claimsResult;
+  for (const [phase, error] of [
+    ["hosted_user", userError],
+    ["hosted_claims", claimsError],
+  ] as const) {
+    if (error && !isTerminalUserValidationError(error) && error.code !== "invalid_jwt") {
+      console.error("[auth] Hosted validation unavailable", {
+        phase,
+        classification: "temporary_or_unknown",
+        status:
+          typeof error.status === "number" &&
+          Number.isInteger(error.status) &&
+          error.status >= 0 &&
+          error.status <= 599
+            ? error.status
+            : null,
+      });
+      return jsonError("Authentication is temporarily unavailable.", 503);
+    }
+  }
   if (userError || claimsError || !userData.user || !claimsData?.claims) {
     return unauthorized("Invalid or expired session");
   }
