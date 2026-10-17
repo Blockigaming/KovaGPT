@@ -6,6 +6,9 @@ import test from "node:test";
 
 import {
   buildProductionCandidate,
+  createProductionCandidateCommand,
+  PRODUCTION_BUILD_TIMEOUT_SECONDS,
+  PRODUCTION_CLIENT_BUDGET_MS,
   productionCandidateBuildArgs,
   productionCandidateConfig,
   productionCandidateDigest,
@@ -73,7 +76,8 @@ test("only the explicit production browser argument allowlist reaches a commit-p
   assert.ok(args.includes("KOVA_VERIFY_BROWSER_CONFIG=true"));
   assert.ok(args.includes("linux/amd64"));
   assert.ok(args.includes("--no-logs"));
-  assert.ok(args.includes("1800"));
+  assert.equal(args[args.indexOf("--timeout") + 1], "1200");
+  assert.equal(PRODUCTION_BUILD_TIMEOUT_SECONDS, 1200);
   assert.doesNotMatch(
     args.join(" "),
     /SERVER_REFERENCE|BICEP_PARAMETERS|:latest|containerapp|--no-wait/u,
@@ -314,6 +318,8 @@ test("production writes are isolated from PR validation and never dispatch PLAN 
     workflow.indexOf("  build-only:"),
   );
   assert.doesNotMatch(tests, /id-token|environment:|secrets\.|--execute|azure\/login/u);
+  assert.match(tests, /timeout-minutes: 5\b/u);
+  assert.match(workflow.slice(workflow.indexOf("  build-only:")), /timeout-minutes: 25\b/u);
   assert.match(
     workflow,
     /github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'/u,
@@ -330,6 +336,61 @@ test("production writes are isolated from PR validation and never dispatch PLAN 
   assert.equal((workflow.match(/--execute/g) ?? []).length, 1);
   assert.equal((workflow.match(/id-token: write/g) ?? []).length, 1);
   assert.match(workflow, /name: production\n/u);
+});
+
+test("all commands share one twenty-five-minute client budget without a retry", () => {
+  let clock = 0;
+  const calls = [];
+  const run = createProductionCandidateCommand({
+    now: () => clock,
+    spawn: (program, args, options) => {
+      calls.push({ program, args, timeout: options.timeout, killSignal: options.killSignal });
+      clock += 60_000;
+      return { status: 0, stdout: " fixture\n" };
+    },
+  });
+  assert.equal(PRODUCTION_CLIENT_BUDGET_MS, 1_500_000);
+  assert.equal(run("git", ["rev-parse", "HEAD"]), "fixture");
+  assert.equal(run("az", ["acr", "build"]), "fixture");
+  assert.deepEqual(
+    calls.map((call) => call.timeout),
+    [1_500_000, 1_440_000],
+  );
+  assert.ok(calls.every((call) => call.killSignal === "SIGKILL"));
+  clock = PRODUCTION_CLIENT_BUDGET_MS;
+  assert.throws(() => run("az", ["acr", "build"]), /client_deadline_exceeded/u);
+  assert.equal(calls.length, 2);
+});
+
+test("a timed-out command or late successful result cannot certify or retry the operation", () => {
+  for (const lateSuccess of [false, true]) {
+    let clock = 0;
+    let calls = 0;
+    const run = createProductionCandidateCommand({
+      now: () => clock,
+      spawn: () => {
+        calls++;
+        clock = PRODUCTION_CLIENT_BUDGET_MS;
+        return lateSuccess
+          ? { status: 0, stdout: "private provider fixture" }
+          : {
+              status: null,
+              error: { code: "ETIMEDOUT", message: "private credential fixture" },
+              stderr: "private provider fixture",
+            };
+      },
+    });
+    assert.throws(
+      () => run("az", ["acr", "build"]),
+      (error) => {
+        assert.equal(error.message, "production_candidate_client_deadline_exceeded");
+        return true;
+      },
+    );
+    assert.equal(calls, 1);
+    assert.throws(() => run("az", ["acr", "build"]), /client_deadline_exceeded/u);
+    assert.equal(calls, 1);
+  }
 });
 
 test("existing PLAN and Dockerfile require the same provenance context and labels", () => {

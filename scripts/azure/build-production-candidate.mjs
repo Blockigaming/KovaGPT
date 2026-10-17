@@ -11,6 +11,8 @@ const REPOSITORY = "Blockigaming/KovaGPT";
 const GIT_URL = `https://github.com/${REPOSITORY}.git`;
 const SHA = /^[a-f0-9]{40}$/u;
 const DIGEST = /^sha256:[a-f0-9]{64}$/u;
+export const PRODUCTION_BUILD_TIMEOUT_SECONDS = 20 * 60;
+export const PRODUCTION_CLIENT_BUDGET_MS = 25 * 60 * 1000;
 const APPROVED = {
   acrName: "kovagptacr",
   loginServer: "kovagptacr-dte9hugbhjghcyb8.azurecr.io",
@@ -109,7 +111,7 @@ export function productionCandidateBuildArgs(config, sourceTree, abac) {
     "--platform",
     "linux/amd64",
     "--timeout",
-    "1800",
+    String(PRODUCTION_BUILD_TIMEOUT_SECONDS),
     "--no-logs",
     ...(abac ? ["--source-acr-auth-id", "[caller]"] : []),
     ...Object.entries(values).flatMap(([name, value]) => ["--build-arg", `${name}=${value}`]),
@@ -144,31 +146,47 @@ export function productionCandidateDigest(run, config) {
   return image.digest;
 }
 
-function command(program, args) {
-  const env = { ...process.env };
-  for (const name of [
-    "KOVA_PRODUCTION_BICEP_PARAMETERS_JSON",
-    "GITHUB_TOKEN",
-    "GH_TOKEN",
-    "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
-  ])
-    delete env[name];
-  const result = spawnSync(program, args, {
-    env,
-    encoding: "utf8",
-    timeout: 35 * 60 * 1000,
-    maxBuffer: 16 * 1024 * 1024,
-  });
-  // Child errors may contain arguments or provider output. Do not echo them.
-  requireCondition(result.status === 0, `command_failed:${program}`);
-  return result.stdout.trim();
+export function createProductionCandidateCommand({
+  spawn = spawnSync,
+  now = () => performance.now(),
+} = {}) {
+  // One monotonic budget for the complete attempt, not a fresh allowance for
+  // every child process. Expiry is a terminal, potentially consumed operation;
+  // never retry a build submission or certify a late result.
+  const deadline = now() + PRODUCTION_CLIENT_BUDGET_MS;
+  return (program, args) => {
+    const remaining = Math.floor(deadline - now());
+    requireCondition(remaining > 0, "client_deadline_exceeded");
+    const env = { ...process.env };
+    for (const name of [
+      "KOVA_PRODUCTION_BICEP_PARAMETERS_JSON",
+      "GITHUB_TOKEN",
+      "GH_TOKEN",
+      "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
+    ])
+      delete env[name];
+    const result = spawn(program, args, {
+      env,
+      encoding: "utf8",
+      timeout: remaining,
+      killSignal: "SIGKILL",
+      maxBuffer: 16 * 1024 * 1024,
+    });
+    // Child errors may contain arguments or provider output. Do not echo them.
+    requireCondition(
+      result.error?.code !== "ETIMEDOUT" && now() < deadline,
+      "client_deadline_exceeded",
+    );
+    requireCondition(result.status === 0, `command_failed:${program}`);
+    return result.stdout.trim();
+  };
 }
 
 function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
 }
 
-export function buildProductionCandidate(env, run = command) {
+export function buildProductionCandidate(env, run = createProductionCandidateCommand()) {
   const config = productionCandidateConfig(env);
   requireCondition(run("git", ["rev-parse", "HEAD"]) === config.sourceSha, "checkout_mismatch");
   requireCondition(

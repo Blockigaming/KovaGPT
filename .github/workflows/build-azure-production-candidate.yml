@@ -77,7 +77,8 @@ jobs:
       contents: read
       id-token: write
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # Five minutes of source-tests plus this job: at most thirty running minutes.
+    timeout-minutes: 25
     env:
       KOVA_BUILD_CONFIRMATION: ${{ inputs.confirmation }}
       KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
