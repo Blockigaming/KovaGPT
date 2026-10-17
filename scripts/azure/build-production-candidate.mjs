@@ -6,6 +6,12 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { verifyBrowserConfig } from "./verify-browser-config.mjs";
+import { narrowOpenAiBrowserInputs } from "./narrow-openai-browser-inputs.mjs";
+import {
+  ACR_RESOURCE_ID,
+  ACR_CPU,
+  ACR_RECONCILIATION_RESERVE_MS,
+} from "./acr-pinned-quick-build.mjs";
 
 const REPOSITORY = "Blockigaming/KovaGPT";
 const GIT_URL = `https://github.com/${REPOSITORY}.git`;
@@ -36,7 +42,7 @@ function parseJson(value) {
   }
 }
 
-// Only browser-safe values from the same protected parameters consumed by PLAN.
+// Only browser-safe values from protected PLAN parameters or explicit narrow inputs.
 // Never pass the parameters document, a server credential, or a vault URI to ACR.
 export function productionCandidateConfig(env) {
   requireCondition(
@@ -63,32 +69,40 @@ export function productionCandidateConfig(env) {
   ]) {
     requireCondition(env[variable] === APPROVED[field], `target_mismatch:${variable}`);
   }
-  const document = parseJson(env.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON ?? "");
-  const parameters = document?.parameters;
-  requireCondition(parameters && typeof parameters === "object", "parameters_required");
-  const supabaseUrl = parameters.supabaseUrl?.value;
-  const publishableKey = parameters.supabasePublishableKey?.value;
-  requireCondition(parameters.acrName?.value === APPROVED.acrName, "parameter_registry_mismatch");
-  requireCondition(
-    supabaseUrl === `https://${APPROVED.projectRef}.supabase.co`,
-    "supabase_url_mismatch",
-  );
-  requireCondition(
-    typeof publishableKey === "string" &&
-      /^sb_publishable_[A-Za-z0-9_-]{16,}$/u.test(publishableKey),
-    "browser_key_invalid",
-  );
-  const stripeKey = env.KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY ?? "";
-  requireCondition(
-    stripeKey === "" || /^pk_live_[A-Za-z0-9]{16,}$/u.test(stripeKey),
-    "stripe_browser_key_invalid",
-  );
+  const inputMode = env.KOVA_PRODUCTION_BROWSER_INPUT_MODE ?? "plan";
+  requireCondition(["plan", "narrow-openai"].includes(inputMode), "browser_input_mode_invalid");
+  let browserInputs;
+  if (inputMode === "narrow-openai") {
+    browserInputs = narrowOpenAiBrowserInputs(env, APPROVED);
+  } else {
+    const document = parseJson(env.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON ?? "");
+    const parameters = document?.parameters;
+    requireCondition(parameters && typeof parameters === "object", "parameters_required");
+    const supabaseUrl = parameters.supabaseUrl?.value;
+    const publishableKey = parameters.supabasePublishableKey?.value;
+    requireCondition(parameters.acrName?.value === APPROVED.acrName, "parameter_registry_mismatch");
+    requireCondition(
+      supabaseUrl === `https://${APPROVED.projectRef}.supabase.co`,
+      "supabase_url_mismatch",
+    );
+    requireCondition(
+      typeof publishableKey === "string" &&
+        /^sb_publishable_[A-Za-z0-9_-]{16,}$/u.test(publishableKey),
+      "browser_key_invalid",
+    );
+    const stripeKey = env.KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY ?? "";
+    requireCondition(
+      stripeKey === "" || /^pk_live_[A-Za-z0-9]{16,}$/u.test(stripeKey),
+      "stripe_browser_key_invalid",
+    );
+    browserInputs = { supabaseUrl, publishableKey, stripeKey };
+  }
   const tag = `production-candidate-${env.GITHUB_SHA}-${env.GITHUB_RUN_ID}-${env.GITHUB_RUN_ATTEMPT}`;
-  return { ...APPROVED, sourceSha: env.GITHUB_SHA, supabaseUrl, publishableKey, stripeKey, tag };
+  return { ...APPROVED, sourceSha: env.GITHUB_SHA, ...browserInputs, tag };
 }
 
 // Explicit argument allowlist, exact remote Git commit, no local/stale build context.
-export function productionCandidateBuildArgs(config, sourceTree, abac) {
+export function productionCandidateBuildRequest(config, sourceTree, abac) {
   requireCondition(SHA.test(sourceTree), "source_tree_invalid");
   const values = {
     KOVA_SOURCE_SHA: config.sourceSha,
@@ -99,34 +113,24 @@ export function productionCandidateBuildArgs(config, sourceTree, abac) {
     VITE_SUPABASE_PUBLISHABLE_KEY: config.publishableKey,
     VITE_PAYMENTS_CLIENT_TOKEN: config.stripeKey,
   };
-  return [
-    "acr",
-    "build",
-    "--registry",
-    config.acrName,
-    "--image",
-    `${config.imageRepository}:${config.tag}`,
-    "--file",
-    "Dockerfile",
-    "--platform",
-    "linux/amd64",
-    "--timeout",
-    String(PRODUCTION_BUILD_TIMEOUT_SECONDS),
-    "--no-logs",
-    ...(abac ? ["--source-acr-auth-id", "[caller]"] : []),
-    ...Object.entries(values).flatMap(([name, value]) => ["--build-arg", `${name}=${value}`]),
-    "--query",
-    "{runId:runId,status:status,outputImages:outputImages}",
-    "--output",
-    "json",
-    "--only-show-errors",
-    `${GIT_URL}#${config.sourceSha}`,
-  ];
+  return {
+    type: "DockerBuildRequest",
+    imageNames: [`${config.imageRepository}:${config.tag}`],
+    isPushEnabled: true,
+    dockerFilePath: "Dockerfile",
+    platform: { os: "Linux", architecture: "amd64" },
+    timeout: PRODUCTION_BUILD_TIMEOUT_SECONDS,
+    agentConfiguration: { cpu: ACR_CPU },
+    sourceLocation: `${GIT_URL}#${config.sourceSha}`,
+    arguments: Object.entries(values).map(([name, value]) => ({ name, value, isSecret: false })),
+    ...(abac ? { credentials: { sourceRegistry: { identity: "[caller]" } } } : {}),
+  };
 }
 
 // The digest comes from this successful build's output, never from a tag lookup.
 export function productionCandidateDigest(run, config) {
   requireCondition(run?.status === "Succeeded", "acr_build_not_succeeded");
+  requireCondition(run.agentCpu === ACR_CPU, "acr_cpu_mismatch");
   requireCondition(
     /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u.test(run.runId ?? ""),
     "acr_run_id_invalid",
@@ -149,12 +153,19 @@ export function productionCandidateDigest(run, config) {
 export function createProductionCandidateCommand({
   spawn = spawnSync,
   now = () => performance.now(),
+  wallNow = Date.now,
+  workflowDeadlineMs,
 } = {}) {
   // One monotonic budget for the complete attempt, not a fresh allowance for
   // every child process. Expiry is a terminal, potentially consumed operation;
   // never retry a build submission or certify a late result.
-  const deadline = now() + PRODUCTION_CLIENT_BUDGET_MS;
-  return (program, args) => {
+  const budget =
+    workflowDeadlineMs === undefined
+      ? PRODUCTION_CLIENT_BUDGET_MS
+      : Math.min(PRODUCTION_CLIENT_BUDGET_MS, Math.floor(workflowDeadlineMs - wallNow()));
+  requireCondition(Number.isInteger(budget) && budget > 0, "client_deadline_exceeded");
+  const deadline = now() + budget;
+  const command = (program, args, { input } = {}) => {
     const remaining = Math.floor(deadline - now());
     requireCondition(remaining > 0, "client_deadline_exceeded");
     const env = { ...process.env };
@@ -171,6 +182,7 @@ export function createProductionCandidateCommand({
       timeout: remaining,
       killSignal: "SIGKILL",
       maxBuffer: 16 * 1024 * 1024,
+      ...(input === undefined ? {} : { input }),
     });
     // Child errors may contain arguments or provider output. Do not echo them.
     requireCondition(
@@ -180,13 +192,24 @@ export function createProductionCandidateCommand({
     requireCondition(result.status === 0, `command_failed:${program}`);
     return result.stdout.trim();
   };
+  command.remainingMs = () => Math.floor(deadline - now());
+  return command;
 }
 
 function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
 }
 
-export function buildProductionCandidate(env, run = createProductionCandidateCommand()) {
+export function buildProductionCandidate(env, run) {
+  if (!run) {
+    requireCondition(
+      /^[1-9][0-9]{12}$/u.test(env.KOVA_BUILD_JOB_DEADLINE_MS ?? ""),
+      "workflow_deadline_required",
+    );
+    run = createProductionCandidateCommand({
+      workflowDeadlineMs: Number(env.KOVA_BUILD_JOB_DEADLINE_MS),
+    });
+  }
   const config = productionCandidateConfig(env);
   requireCondition(run("git", ["rev-parse", "HEAD"]) === config.sourceSha, "checkout_mismatch");
   requireCondition(
@@ -212,12 +235,13 @@ export function buildProductionCandidate(env, run = createProductionCandidateCom
       "--name",
       config.acrName,
       "--query",
-      "{loginServer:loginServer,roleAssignmentMode:roleAssignmentMode}",
+      "{id:id,loginServer:loginServer,roleAssignmentMode:roleAssignmentMode}",
       "--output",
       "json",
     ]),
   );
   requireCondition(registry.loginServer === config.loginServer, "live_registry_mismatch");
+  requireCondition(registry.id === ACR_RESOURCE_ID, "registry_resource_mismatch");
   requireCondition(
     ["LegacyRegistryPermissions", "AbacRepositoryPermissions"].includes(
       registry.roleAssignmentMode,
@@ -242,16 +266,50 @@ export function buildProductionCandidate(env, run = createProductionCandidateCom
   requireCondition(Array.isArray(existing) && existing.length === 0, "tag_already_exists");
   // Do not overwrite earlier evidence or start paid work after a local path error.
   mkdirSync(output, { mode: 0o700 });
-  const build = parseJson(
-    run(
-      "az",
-      productionCandidateBuildArgs(
-        config,
-        sourceTree,
-        registry.roleAssignmentMode === "AbacRepositoryPermissions",
-      ),
-    ),
-  );
+  const submissionBudget = () => {
+    requireCondition(typeof run.remainingMs === "function", "client_budget_required");
+    const budget = run.remainingMs();
+    requireCondition(
+      budget >= PRODUCTION_BUILD_TIMEOUT_SECONDS * 1000 + ACR_RECONCILIATION_RESERVE_MS,
+      "build_submission_budget_insufficient",
+    );
+    return budget;
+  };
+  submissionBudget();
+  let token;
+  let build;
+  try {
+    token = run("az", [
+      "account",
+      "get-access-token",
+      "--subscription",
+      "ab732127-11c3-46a7-a1cb-6ee8d86594f4",
+      "--resource",
+      "https://management.azure.com/",
+      "--query",
+      "accessToken",
+      "--output",
+      "tsv",
+      "--only-show-errors",
+    ]);
+    build = parseJson(
+      run("node", [resolve("scripts/azure/acr-pinned-quick-build.mjs")], {
+        input: JSON.stringify({
+          resourceId: registry.id,
+          token,
+          budgetMs: submissionBudget(),
+          receiptPath: `${output}/acr-attempt.json`,
+          body: productionCandidateBuildRequest(
+            config,
+            sourceTree,
+            registry.roleAssignmentMode === "AbacRepositoryPermissions",
+          ),
+        }),
+      }),
+    );
+  } finally {
+    token = undefined;
+  }
   const digest = productionCandidateDigest(build, config);
   const imageReference = `${config.loginServer}/${config.imageRepository}@${digest}`;
   const registryDigest = run("az", [
@@ -337,6 +395,8 @@ export function buildProductionCandidate(env, run = createProductionCandidateCom
       imageReference,
       digest,
       acrRunId: build.runId,
+      agentCpu: build.agentCpu,
+      serverTimeoutSeconds: PRODUCTION_BUILD_TIMEOUT_SECONDS,
       candidateTag: config.tag,
       observedAt: new Date().toISOString(),
       labels: expectedLabels,
