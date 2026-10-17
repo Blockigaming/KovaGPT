@@ -20,6 +20,7 @@ const configured = {
 function readiness(env, compiledToken) {
   const context = {
     runtimeEnv: (name) => env[name],
+    getAiProviderConfig: () => ({ configured: false, provider: "openai" }),
     providerCapabilityConfigured: () => false,
     PUBLIC_STRIPE_ACCOUNT_ID: account,
     COMPILED_PAYMENTS_CLIENT_TOKEN: compiledToken,

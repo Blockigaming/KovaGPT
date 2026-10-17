@@ -1,7 +1,7 @@
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { PUBLIC_STRIPE_ACCOUNT_ID } from "@/config/public-config";
 import { COMPILED_PAYMENTS_CLIENT_TOKEN } from "@/lib/stripe-browser-config";
-import { providerCapabilityConfigured } from "@/lib/ai/provider.server";
+import { getAiProviderConfig, providerCapabilityConfigured } from "@/lib/ai/provider.server";
 
 export type CapabilityState =
   | "ready"
@@ -60,20 +60,23 @@ function stripePortalConfigured(): boolean {
 }
 
 function aiProviderConfigured(): boolean {
-  if (runtimeEnv("AZURE_OPENAI_ENDPOINT")) {
-    const authenticated =
-      Boolean(runtimeEnv("AZURE_OPENAI_API_KEY")) ||
-      present("IDENTITY_ENDPOINT", "IDENTITY_HEADER");
+  try {
+    const selected = getAiProviderConfig();
+    if (!selected.configured) return false;
+    // Resolve the same text provider as requests. Retained Azure settings for
+    // images/embeddings must not override an explicit OpenAI text selection.
     return (
-      authenticated &&
+      selected.provider !== "azure_openai" ||
       present(
         "AZURE_OPENAI_DEPLOYMENT_CHAT",
         "AZURE_OPENAI_DEPLOYMENT_THINKING",
         "AZURE_OPENAI_DEPLOYMENT_DEEP",
       )
     );
+  } catch {
+    // Invalid selections/endpoints remain unavailable without exposing values.
+    return false;
   }
-  return Boolean(runtimeEnv("OPENAI_API_KEY"));
 }
 
 export function structuralReadiness(): ReadinessReport {
