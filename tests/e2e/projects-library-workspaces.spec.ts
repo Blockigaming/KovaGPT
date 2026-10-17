@@ -39,13 +39,15 @@ test.describe("projects and library workspaces", () => {
     await expect(page.getByRole("button", { name: /grid view/i })).toBeVisible();
   });
 
-  test("project tabs and instructions surface are reachable", async ({ page }) => {
+  test("project detail renders its own signed-out gate, never the overview", async ({ page }) => {
     await page.goto("/projects/test-project", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const instructions = page.getByRole("tab", { name: /instructions/i }).first();
-    if (await instructions.isVisible().catch(() => false)) {
-      await instructions.click();
-      await expect(page.getByText(/instructions are injected into project chats/i)).toBeVisible();
-    }
+    await expect(
+      page.getByRole("heading", { name: "Sign in required", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Sign in to use Projects", exact: true }),
+    ).toHaveCount(0);
+    await expect(page).toHaveTitle("KovaGPT Project");
   });
 });

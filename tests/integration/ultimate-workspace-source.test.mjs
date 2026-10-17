@@ -20,7 +20,7 @@ test("destructive workspace actions use accessible application dialogs", () => {
     "src/routes/write.tsx",
     "src/routes/memory.tsx",
     "src/routes/library.tsx",
-    "src/routes/projects.tsx",
+    "src/routes/projects.index.tsx",
     "src/routes/apps.tsx",
   ]) {
     const source = read(path);

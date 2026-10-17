@@ -26,7 +26,7 @@ test("knowledge decisions reject missing or cross-owner rows and graph avoids un
 });
 test("client workspace failures are presented without dumping raw records", async () => {
   for (const path of [
-    "src/routes/projects.tsx",
+    "src/routes/projects.index.tsx",
     "src/routes/library.tsx",
     "src/routes/projects.$projectId.tsx",
     "src/routes/projects.$projectId.chat.$chatId.tsx",

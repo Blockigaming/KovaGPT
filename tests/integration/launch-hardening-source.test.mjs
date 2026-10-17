@@ -49,7 +49,7 @@ test("commercial surfaces avoid fake success and preserve recoverable work", asy
     read("src/lib/library.functions.ts"),
     read("src/routes/prompt-studio.tsx"),
     read("src/lib/fetch-with-timeout.ts"),
-    read("src/routes/projects.tsx"),
+    read("src/routes/projects.index.tsx"),
     Promise.all([read("src/routes/help.tsx"), read("src/lib/help-center-data.ts")]).then(
       (sources) => sources.join("\n"),
     ),
