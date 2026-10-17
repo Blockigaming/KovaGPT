@@ -6,6 +6,7 @@ import ts from "typescript";
 import { z } from "zod";
 import * as contract from "../../src/lib/kova-auth-contract.mjs";
 import * as security from "../../src/lib/auth-security.mjs";
+import * as validation from "../../src/lib/auth-validation-policy.mjs";
 import { digestKovaToken } from "../../src/lib/kova-auth-crypto.server.mjs";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
@@ -128,6 +129,7 @@ function fixture(options = {}) {
           : { auth: { getUser: () => assert.fail("Hosted Auth must not be called") } },
     },
     "@/lib/billing-entitlement.server": {},
+    "@/lib/auth-validation-policy.mjs": validation,
     "@/lib/auth-security.mjs": security,
     "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => "kova" },
     "@/lib/kova-auth-crypto.server.mjs": {

@@ -1,3 +1,5 @@
+import { getAiProviderConfig } from "@/lib/ai/provider.server";
+
 export type FeatureStatus = {
   configured: boolean;
   missing: string[];
@@ -53,17 +55,28 @@ function allGroups(groups: FeatureStatus[]): FeatureStatus {
 }
 
 function aiProviderStatus(): FeatureStatus {
-  if (hasEnv("AZURE_OPENAI_ENDPOINT")) {
-    return allGroups([
-      oneOfGroups([["AZURE_OPENAI_API_KEY"], ["IDENTITY_ENDPOINT", "IDENTITY_HEADER"]]),
-      feature([
-        "AZURE_OPENAI_DEPLOYMENT_CHAT",
-        "AZURE_OPENAI_DEPLOYMENT_THINKING",
-        "AZURE_OPENAI_DEPLOYMENT_DEEP",
-      ]),
-    ]);
+  try {
+    // Match the text request provider; retained image/embedding Azure settings
+    // must not override an explicit OpenAI text selection.
+    const selected = getAiProviderConfig();
+    if (selected.provider === "azure_openai") {
+      return allGroups([
+        oneOfGroups([["AZURE_OPENAI_API_KEY"], ["IDENTITY_ENDPOINT", "IDENTITY_HEADER"]]),
+        feature([
+          "AZURE_OPENAI_DEPLOYMENT_CHAT",
+          "AZURE_OPENAI_DEPLOYMENT_THINKING",
+          "AZURE_OPENAI_DEPLOYMENT_DEEP",
+        ]),
+      ]);
+    }
+    return {
+      configured: selected.configured,
+      missing: selected.configured ? [] : ["OPENAI_API_KEY"],
+    };
+  } catch {
+    // Only fixed configuration names are diagnostic output, never thrown input.
+    return { configured: false, missing: ["KOVA_TEXT_PROVIDER or AZURE_OPENAI_ENDPOINT"] };
   }
-  return feature(["OPENAI_API_KEY"]);
 }
 
 function nullableEnv(name: string): string | null {
