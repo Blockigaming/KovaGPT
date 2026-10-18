@@ -24,16 +24,22 @@ const EMPTY_STATE_STARTERS = [
   },
 ] as const;
 
+/**
+ * Empty-state prompt chips shown under the centered composer.
+ * Visual treatment is owned by the parity CSS layer so light/dark and
+ * mobile density stay consistent with the rest of the product.
+ */
 export function HomeChatStarters({ setInput }: { setInput: Dispatch<SetStateAction<string>> }) {
   return (
-    <div className="kova-starter-grid mx-auto grid w-full max-w-[48rem] grid-cols-2 gap-2 px-1 pt-2 sm:px-2">
+    <div className="kova-starter-grid" role="list">
       {EMPTY_STATE_STARTERS.map((starter) => {
         const Icon = starter.icon;
         return (
           <button
             key={starter.label}
             type="button"
-            className="kova-starter-prompt group flex min-h-14 items-center gap-2.5 rounded-xl border border-border px-3 text-left"
+            role="listitem"
+            className="kova-starter-prompt"
             aria-label={`Start with ${starter.label}`}
             onClick={() => {
               setInput((current) => (current.trim() ? current : starter.prompt));
@@ -44,12 +50,10 @@ export function HomeChatStarters({ setInput }: { setInput: Dispatch<SetStateActi
               });
             }}
           >
-            <span className="kova-starter-icon inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
-              <Icon className="h-4 w-4" />
+            <span className="kova-starter-icon" aria-hidden="true">
+              <Icon className="h-4 w-4" strokeWidth={1.75} />
             </span>
-            <span className="min-w-0 truncate text-sm font-medium text-foreground">
-              {starter.label}
-            </span>
+            <span>{starter.label}</span>
           </button>
         );
       })}
