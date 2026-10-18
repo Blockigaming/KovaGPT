@@ -120,6 +120,10 @@
     color 100ms ease !important;
 }
 
+.kova-message-actions button:hover {
+  background: var(--accent) !important;
+}
+
 /* ------------------------------------------------------------------ */
 /* Mobile / tablet polish                                             */
 /* ------------------------------------------------------------------ */
@@ -198,6 +202,34 @@
   line-height: 1.5 !important;
 }
 
+/* Composer buttons: consistent size, no aggressive scale on press. */
+.kova-composer-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px !important;
+  transition:
+    background-color 100ms ease,
+    color 100ms ease,
+    opacity 100ms ease !important;
+}
+
+.kova-composer-button:active:not(:disabled) {
+  transform: none !important;
+}
+
+.kova-send-button.is-enabled {
+  background: var(--foreground) !important;
+  color: var(--background) !important;
+}
+
+.kova-send-button.is-enabled:hover {
+  opacity: 0.88;
+}
+
+.kova-send-button.is-enabled:active {
+  opacity: 0.78;
+}
+
 /* Thinking / upgrade pill must not collide with send. */
 .kova-composer [data-testid="thinking-upgrade-button"] {
   width: auto !important;
@@ -212,6 +244,14 @@
 
 .kova-composer [data-testid="thinking-upgrade-button"] svg {
   flex-shrink: 0;
+}
+
+/* Attachment chips: quieter surface, clearer status. */
+.kova-composer [aria-label="Attachments"] > div {
+  border-radius: 14px !important;
+  border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+  background: var(--muted) !important;
+  box-shadow: none !important;
 }
 
 /* ------------------------------------------------------------------ */
@@ -333,6 +373,57 @@ section.kova-empty-chat > div.kova-empty-chat-content {
 }
 
 /* ------------------------------------------------------------------ */
+/* Message bubbles & streaming                                        */
+/* ------------------------------------------------------------------ */
+
+.kova-user-message {
+  border-radius: 22px !important;
+  background: var(--user-bubble) !important;
+  box-shadow: none !important;
+  padding: 0.75rem 1rem !important;
+}
+
+.kova-thinking-indicator {
+  min-height: 32px;
+}
+
+.kova-thinking-signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.kova-thinking-signal span {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--muted-foreground);
+  opacity: 0.35;
+  animation: kova-thinking-pulse 1.35s ease-in-out infinite;
+}
+
+.kova-thinking-signal span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.kova-thinking-signal span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes kova-thinking-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.28;
+    transform: scale(0.85);
+  }
+  40% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Visual refinement (spacing, elevation, light/dark)                 */
 /* ------------------------------------------------------------------ */
 
@@ -351,13 +442,6 @@ section.kova-empty-chat > div.kova-empty-chat-content {
 .kova-card:hover,
 .kova-row:hover {
   transform: none !important;
-  box-shadow: none !important;
-}
-
-/* User bubbles: quiet, slightly elevated surface that works in both themes. */
-.kova-user-message {
-  border-radius: 22px !important;
-  background: var(--user-bubble) !important;
   box-shadow: none !important;
 }
 
@@ -397,8 +481,10 @@ section.kova-empty-chat > div.kova-empty-chat-content {
   .kova-composer button,
   .kova-nav-row,
   .kova-chat-row,
-  .kova-starter-prompt {
+  .kova-starter-prompt,
+  .kova-thinking-signal span {
     transition: none !important;
+    animation: none !important;
   }
 }
 
