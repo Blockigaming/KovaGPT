@@ -6,10 +6,9 @@ import type { ModeId, Tier } from "@/lib/modes";
 /**
  * Compact sticky top bar shown on phones and tablets (any viewport below the
  * desktop breakpoint). Provides a menu trigger to open the off-canvas sidebar,
- * brand identity, and a quick "new chat" action. Signed-out users see a
- * compact login action instead of the new-chat icon so they can always
- * reach auth from the top bar. Honors safe-area-inset-top and uses
- * translucent blur so content underneath eases through as it scrolls.
+ * brand identity / model selector, and a quick "new chat" action.
+ * Signed-out users see a compact login action. Honors safe-area-inset-top
+ * and uses a translucent surface so content eases through as it scrolls.
  */
 export function MobileTopBar({
   onOpenSidebar,
@@ -39,18 +38,20 @@ export function MobileTopBar({
 }) {
   const { isLoaded, isSignedIn } = useUser();
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
+
   return (
     <header className="kova-topbar sticky top-0 z-30 lg:hidden">
-      <div className="kova-topbar-inner grid min-h-14 grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-1 px-2">
+      <div className="kova-topbar-inner grid min-h-14 grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-1 px-2 pb-1">
         <button
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
-          className="kova-action w-11 h-11 text-foreground"
+          className="kova-action flex h-11 w-11 items-center justify-center rounded-xl text-foreground hover:bg-accent/70 active:bg-accent"
         >
-          <Menu className="w-5 h-5" />
+          <Menu className="h-5 w-5" strokeWidth={1.75} />
         </button>
-        <div className="flex min-w-0 items-center justify-start gap-1 pl-1">
+
+        <div className="flex min-w-0 items-center justify-start gap-1.5 pl-0.5">
           {mode && onModeChange ? (
             <ResponsiveModelSelector
               mode={mode}
@@ -61,7 +62,7 @@ export function MobileTopBar({
             />
           ) : (
             <div className="flex min-w-0 items-center justify-start">
-              <span className="font-display font-semibold tracking-tight text-base truncate">
+              <span className="font-display truncate text-[15px] font-semibold tracking-tight">
                 {title || "KovaGPT"}
               </span>
             </div>
@@ -71,7 +72,7 @@ export function MobileTopBar({
               type="button"
               onClick={skill.clear}
               disabled={skill.disabled}
-              className="max-w-20 shrink truncate rounded-full border px-2 py-1 text-xs text-muted-foreground disabled:opacity-50"
+              className="max-w-[5.5rem] shrink truncate rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
               aria-label={`Clear workflow skill ${skill.name}`}
               title="Clear skill"
             >
@@ -79,9 +80,13 @@ export function MobileTopBar({
             </button>
           ) : null}
         </div>
+
         {showAuth ? (
           <SignInButton mode="modal">
-            <button className="mr-1 min-h-11 justify-self-end whitespace-nowrap rounded-full bg-foreground px-4 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 active:opacity-80">
+            <button
+              type="button"
+              className="mr-0.5 min-h-11 justify-self-end whitespace-nowrap rounded-full bg-foreground px-4 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 active:opacity-80"
+            >
               Log in
             </button>
           </SignInButton>
@@ -93,15 +98,16 @@ export function MobileTopBar({
                 onClick={onOpenChatSettings}
                 aria-label={chatRulesActive ? "Chat settings, rules active" : "Chat settings"}
                 title="Chat settings"
-                className={`kova-action h-11 w-11 ${
+                className={`kova-action flex h-11 w-11 items-center justify-center rounded-xl ${
                   chatRulesActive
                     ? "bg-primary/15 text-primary"
-                    : "text-foreground hover:bg-accent/60"
+                    : "text-foreground hover:bg-accent/70 active:bg-accent"
                 }`}
               >
-                <Sliders className="h-5 w-5" />
+                <Sliders className="h-5 w-5" strokeWidth={1.75} />
               </button>
             ) : null}
+
             {isSignedIn && onTemporaryChatChange ? (
               <button
                 type="button"
@@ -110,22 +116,23 @@ export function MobileTopBar({
                 aria-pressed={temporaryChat}
                 title={temporaryChat ? "Temporary chat on" : "Start temporary chat"}
                 data-state={temporaryChat ? "on" : "off"}
-                className={`kova-action h-11 w-11 ${
+                className={`kova-action flex h-11 w-11 items-center justify-center rounded-xl ${
                   temporaryChat
                     ? "bg-primary/15 text-primary"
-                    : "text-foreground hover:bg-accent/60"
+                    : "text-foreground hover:bg-accent/70 active:bg-accent"
                 }`}
               >
-                <MessageSquareDashed className="h-5 w-5" />
+                <MessageSquareDashed className="h-5 w-5" strokeWidth={1.75} />
               </button>
             ) : null}
+
             <button
               type="button"
               onClick={onNewChat}
               aria-label="New chat"
-              className="kova-action h-11 w-11 text-foreground"
+              className="kova-action flex h-11 w-11 items-center justify-center rounded-xl text-foreground hover:bg-accent/70 active:bg-accent"
             >
-              <SquarePen className="h-5 w-5" />
+              <SquarePen className="h-5 w-5" strokeWidth={1.75} />
             </button>
           </div>
         )}
