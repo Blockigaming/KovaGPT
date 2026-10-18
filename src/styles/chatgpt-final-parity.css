@@ -1,16 +1,32 @@
-/* Final ChatGPT-first corrections. Keep this file small and evidence-driven. */
+/* Final ChatGPT-first corrections + 2026-10-18 core polish pass.
+ * Keep this file evidence-driven and scoped so it wins over historical layers
+ * without breaking transcript spacing, attachments, auth, or submission. */
 
-/* The earlier parity layer accidentally removed its own accessibility ring in
- * a later override. Keep the quiet border treatment, but always expose a
- * visible two-pixel focus indicator around the complete composer. */
+/* ------------------------------------------------------------------ */
+/* Focus & accessibility                                              */
+/* ------------------------------------------------------------------ */
+
+/* Always expose a visible two-pixel focus indicator around the full composer. */
 .kova-composer:focus-within {
   outline: 2px solid var(--parity-focus) !important;
   outline-offset: 2px !important;
   box-shadow: var(--shadow-composer) !important;
+  border-color: color-mix(in oklab, var(--foreground) 14%, transparent) !important;
 }
 
-/* Current ChatGPT navigation uses a quiet background change rather than a
- * horizontal slide. Avoid shifting labels or icons during pointer movement. */
+/* Quiet focus for menus and list items (background only, no hard ring). */
+:where([role="menu"], [role="listbox"], .kova-model-menu, .kova-glass)
+  :where(button, [role="menuitem"], [role="option"]):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  background: var(--accent) !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Sidebar + navigation                                               */
+/* ------------------------------------------------------------------ */
+
+/* Navigation uses quiet background change, never horizontal slide. */
 .kova-sidebar :is(a, button) {
   transform: none !important;
 }
@@ -19,24 +35,263 @@
   transform: none !important;
 }
 
-/* Preserve a stable transcript/composer axis at every required viewport. */
+/* Consistent row density and comfortable hit area. */
+.kova-nav-row,
+.kova-chat-row {
+  min-height: 40px !important;
+  border-radius: 10px !important;
+  transition:
+    background-color 140ms var(--ease-standard, ease),
+    color 140ms var(--ease-standard, ease) !important;
+}
+
+.kova-nav-row:hover,
+.kova-chat-row:hover {
+  background-color: var(--sidebar-hover) !important;
+}
+
+.kova-nav-row.is-active,
+.kova-chat-row.is-active {
+  background-color: var(--sidebar-active) !important;
+}
+
+/* New chat button: slightly stronger presence without becoming a filled CTA. */
+.kova-new-chat {
+  min-height: 42px !important;
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+}
+
+.kova-new-chat:hover {
+  background-color: var(--sidebar-hover) !important;
+}
+
+/* History section headings and empty states. */
+.kova-sidebar-history h2,
+.kova-recents-heading {
+  margin: 1rem 0 0.35rem !important;
+  padding-inline: 0.65rem !important;
+  font-size: 0.6875rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: var(--muted-foreground) !important;
+}
+
+.kova-sidebar-empty {
+  margin: 0.15rem 0 0.5rem !important;
+  padding-inline: 0.65rem !important;
+  font-size: 0.8125rem !important;
+  color: var(--muted-foreground) !important;
+}
+
+/* Chat row options button: only visible on hover / focus-within for density. */
+.kova-chat-options {
+  opacity: 0;
+  transition: opacity 100ms ease !important;
+}
+
+.kova-chat-row:hover .kova-chat-options,
+.kova-chat-row:focus-within .kova-chat-options,
+.kova-chat-options:focus-visible {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .kova-chat-options {
+    opacity: 1;
+  }
+}
+
+/* Collapsed desktop rail: centered, generous touch targets, no visual noise. */
+.kova-sidebar-rail {
+  width: 64px !important;
+  border-right: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.kova-rail-button {
+  display: grid !important;
+  place-items: center !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  transition: background-color 120ms ease !important;
+}
+
+.kova-rail-button:hover {
+  background: var(--sidebar-hover) !important;
+}
+
+.kova-rail-button:active {
+  background: var(--sidebar-active) !important;
+}
+
+/* Floating desktop trigger when sidebar is collapsed. */
+.kova-floating-sidebar-trigger {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+  background: color-mix(in oklab, var(--background) 94%, transparent) !important;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%) !important;
+}
+
+.kova-floating-sidebar-trigger:hover {
+  background: var(--accent) !important;
+}
+
+/* Mobile drawer: respect safe areas and keep content clear of the notch. */
+.kova-sidebar.max-lg\:fixed {
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+
+.kova-sidebar-header {
+  min-height: 52px;
+  padding-inline: 12px 8px;
+  gap: 4px;
+}
+
+.kova-header-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+/* Account footer */
+.kova-sidebar-footer {
+  border-top: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  padding: 10px 12px;
+  padding-bottom: max(10px, var(--safe-bottom));
+}
+
+.kova-account-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  width: 100%;
+  border-radius: 10px;
+  padding: 6px 8px;
+  transition: background-color 120ms ease;
+}
+
+.kova-account-main:hover {
+  background: var(--sidebar-hover);
+}
+
+.kova-account-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.kova-account-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.kova-account-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.kova-account-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 550;
+}
+
+.kova-account-copy small {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.kova-sign-in {
+  min-height: 40px;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: opacity 120ms ease;
+}
+
+.kova-sign-in:hover {
+  opacity: 0.9;
+}
+
+/* ------------------------------------------------------------------ */
+/* Transcript stability                                               */
+/* ------------------------------------------------------------------ */
+
 [data-chat-transcript] {
   scroll-padding-bottom: max(9rem, calc(var(--safe-bottom) + 8rem));
   overscroll-behavior-y: contain;
 }
 
-/* Interactive controls on touch layouts remain at least 44 CSS pixels without
- * inflating desktop density. */
+/* Message actions: tighter, always-visible on desktop hover, large enough on touch. */
+.kova-message-actions {
+  min-height: 36px !important;
+  gap: 2px !important;
+}
+
+.kova-message-actions button {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px !important;
+  transition:
+    background-color 100ms ease,
+    color 100ms ease !important;
+}
+
+.kova-message-actions button:hover {
+  background: var(--accent) !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Mobile / tablet polish                                             */
+/* ------------------------------------------------------------------ */
+
+/* Interactive controls on touch layouts remain at least 44 CSS pixels. */
 @media (pointer: coarse), (max-width: 1023px) {
   .kova-sidebar :is(a, button),
   .kova-topbar button,
-  .kova-composer button {
-    min-width: 44px;
-    min-height: 44px;
+  .kova-composer button,
+  .kova-message-actions button,
+  .kova-rail-button,
+  .kova-header-button,
+  .kova-action,
+  .kova-floating-sidebar-trigger {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  .kova-message-actions button {
+    width: 44px !important;
+    height: 44px !important;
   }
 }
 
-/* Do not let a long Kova/model name push mobile actions off screen. */
+/* Top bar: safe-area aware, stable grid, no overflow from long model names. */
+.kova-topbar {
+  padding-top: var(--safe-top);
+  background: color-mix(in oklab, var(--background) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 .kova-topbar [data-testid="model-selector-trigger"] {
   max-width: min(58vw, 18rem);
 }
@@ -47,67 +302,80 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .kova-sidebar :is(a, button),
-  .kova-composer,
-  .kova-composer button {
-    transition: none !important;
-  }
+/* Composer keyboard offset is handled in JS; keep bottom safe-area padding. */
+.kova-chat-input {
+  padding-bottom: max(0.75rem, var(--safe-bottom));
 }
 
-/* Empty-chat composition: keep the prompt central, not a stack of marketing cards.
- * Scoped selectors win over historical global parity layers without changing
- * transcript spacing, attachment state, authentication or submission behavior. */
-section.kova-empty-chat > div.kova-empty-chat-content {
-  flex: 1 0 auto;
-  justify-content: center;
-  padding-block: clamp(2rem, 6vh, 4rem) !important;
+/* Quiet product disclaimer under the composer. */
+.kova-chat-input > p {
+  margin-top: 0.5rem !important;
+  font-size: 0.6875rem !important;
+  line-height: 1.3 !important;
+  color: var(--muted-foreground) !important;
 }
 
-.kova-empty-chat .kova-greeting {
-  gap: 0;
-  margin-bottom: 2rem;
+/* ------------------------------------------------------------------ */
+/* Composer visual refinement                                         */
+/* ------------------------------------------------------------------ */
+
+.kova-composer {
+  border-radius: 28px !important;
+  border: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent) !important;
+  background: var(--surface-composer) !important;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease !important;
 }
 
-.kova-empty-chat .kova-greeting-mark,
-.kova-empty-chat .kova-greeting > p {
-  display: none;
+.kova-composer:hover {
+  border-color: color-mix(in oklab, var(--foreground) 14%, transparent) !important;
 }
 
-.kova-empty-chat .kova-greeting h1 {
-  font-size: clamp(1.625rem, 3vw, 2rem);
-  font-weight: 400;
-  line-height: 1.25;
-  letter-spacing: -0.025em;
+.dark .kova-composer {
+  border-color: color-mix(in oklab, var(--foreground) 12%, transparent) !important;
+  background: var(--surface-composer) !important;
 }
 
-.kova-empty-chat .kova-empty-chat-content > div:has(> .kova-chat-input) {
-  padding-inline: 0;
+.dark .kova-composer:hover {
+  border-color: color-mix(in oklab, var(--foreground) 18%, transparent) !important;
 }
 
-.kova-empty-chat .kova-chat-input {
-  padding-inline: 0;
-  padding-top: 0;
+.kova-composer-input {
+  font-size: 16px !important; /* prevents iOS zoom */
+  line-height: 1.5 !important;
 }
 
-.kova-empty-chat .kova-composer {
-  --composer-height: 3.125rem !important;
-  --composer-control: 2.75rem !important;
-  --composer-inset: 0.1875rem !important;
-  border-radius: 1.75rem !important;
-  background: var(--background) !important;
-  box-shadow: 0 2px 12px rgb(0 0 0 / 3%) !important;
+/* Composer buttons: consistent size, no aggressive scale on press. */
+.kova-composer-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px !important;
+  transition:
+    background-color 100ms ease,
+    color 100ms ease,
+    opacity 100ms ease !important;
 }
 
-.kova-empty-chat .kova-composer-input {
-  min-width: 0;
-  min-height: 3.125rem !important;
-  padding-block: 0.8125rem !important;
-  line-height: 1.5rem !important;
+.kova-composer-button:active:not(:disabled) {
+  transform: none !important;
 }
 
-/* A labelled link is not an icon button. Its natural width prevents the label
- * from painting over the adjacent send control in both composer surfaces. */
+.kova-send-button.is-enabled {
+  background: var(--foreground) !important;
+  color: var(--background) !important;
+}
+
+.kova-send-button.is-enabled:hover {
+  opacity: 0.88;
+}
+
+.kova-send-button.is-enabled:active {
+  opacity: 0.78;
+}
+
+/* Thinking / upgrade pill must not collide with send. */
 .kova-composer [data-testid="thinking-upgrade-button"] {
   width: auto !important;
   min-width: 2.75rem;
@@ -123,39 +391,118 @@ section.kova-empty-chat > div.kova-empty-chat-content {
   flex-shrink: 0;
 }
 
-.kova-empty-chat .kova-starter-grid {
+/* Attachment chips: quieter surface, clearer status. */
+.kova-composer [aria-label="Attachments"] > div {
+  border-radius: 14px !important;
+  border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+  background: var(--muted) !important;
+  box-shadow: none !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Empty state                                                        */
+/* ------------------------------------------------------------------ */
+
+section.kova-empty-chat > div.kova-empty-chat-content {
+  flex: 1 0 auto;
+  justify-content: center;
+  padding-block: clamp(2rem, 6vh, 4.5rem) !important;
+}
+
+.kova-empty-chat .kova-greeting {
+  gap: 0;
+  margin-bottom: 1.75rem;
+}
+
+.kova-empty-chat .kova-greeting-mark,
+.kova-empty-chat .kova-greeting > p {
+  display: none;
+}
+
+.kova-empty-chat .kova-greeting h1 {
+  font-size: clamp(1.625rem, 3.2vw, 2.125rem);
+  font-weight: 500;
+  line-height: 1.22;
+  letter-spacing: -0.028em;
+  color: var(--foreground);
+}
+
+.kova-empty-chat .kova-empty-chat-content > div:has(> .kova-chat-input) {
+  padding-inline: 0;
+}
+
+.kova-empty-chat .kova-chat-input {
+  padding-inline: 0;
+  padding-top: 0;
+}
+
+.kova-empty-chat .kova-composer {
+  --composer-height: 3.25rem !important;
+  --composer-control: 2.75rem !important;
+  --composer-inset: 0.2rem !important;
+  border-radius: 1.75rem !important;
+  background: var(--background) !important;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 4%),
+    0 4px 16px -4px rgb(0 0 0 / 6%) !important;
+}
+
+.dark .kova-empty-chat .kova-composer {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 30%),
+    0 8px 24px -8px rgb(0 0 0 / 45%) !important;
+}
+
+.kova-empty-chat .kova-composer-input {
+  min-width: 0;
+  min-height: 3.25rem !important;
+  padding-block: 0.875rem !important;
+  line-height: 1.5rem !important;
+}
+
+.kova-empty-chat .kova-starter-grid,
+.kova-starter-grid {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.5rem;
   width: auto;
   max-width: 48rem;
-  padding: 1rem 0 0;
+  margin-inline: auto;
+  padding: 1.25rem 0 0;
   animation: none;
 }
 
-.kova-empty-chat .kova-starter-prompt:nth-child(n) {
+.kova-empty-chat .kova-starter-prompt:nth-child(n),
+.kova-starter-prompt {
   display: inline-flex;
   min-height: 2.75rem;
   max-width: 100%;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.875rem;
+  padding: 0.5rem 0.9rem;
   border-radius: 999px;
   background: transparent;
+  border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease !important;
 }
 
-.kova-empty-chat .kova-starter-icon {
+.kova-empty-chat .kova-starter-icon,
+.kova-starter-icon {
   display: inline-flex;
   width: 1rem;
   height: 1rem;
   flex: 0 0 1rem;
   border-radius: 0;
   background: transparent;
+  color: var(--muted-foreground);
 }
 
-.kova-empty-chat .kova-starter-prompt > span:last-child {
+.kova-empty-chat .kova-starter-prompt > span:last-child,
+.kova-starter-prompt > span:last-child {
   overflow: visible;
   color: var(--muted-foreground);
   font-size: 0.8125rem;
@@ -165,31 +512,112 @@ section.kova-empty-chat > div.kova-empty-chat-content {
   white-space: normal;
 }
 
-.kova-empty-chat .kova-starter-prompt:hover {
+.kova-empty-chat .kova-starter-prompt:hover,
+.kova-starter-prompt:hover {
   background: var(--accent);
+  border-color: color-mix(in oklab, var(--foreground) 12%, transparent);
   transform: none;
 }
 
-.kova-empty-chat .kova-starter-prompt:focus-visible {
+.kova-empty-chat .kova-starter-prompt:focus-visible,
+.kova-starter-prompt:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Message bubbles & streaming                                        */
+/* ------------------------------------------------------------------ */
+
+.kova-user-message {
+  border-radius: 22px !important;
+  background: var(--user-bubble) !important;
+  box-shadow: none !important;
+  padding: 0.75rem 1rem !important;
+}
+
+.kova-thinking-indicator {
+  min-height: 32px;
+}
+
+.kova-thinking-signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.kova-thinking-signal span {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--muted-foreground);
+  opacity: 0.35;
+  animation: kova-thinking-pulse 1.35s ease-in-out infinite;
+}
+
+.kova-thinking-signal span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.kova-thinking-signal span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes kova-thinking-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.28;
+    transform: scale(0.85);
+  }
+  40% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Visual refinement (spacing, elevation, light/dark)                 */
+/* ------------------------------------------------------------------ */
+
+/* Soften elevation so cards and menus feel native rather than heavy. */
+.kova-card,
+.kova-row,
+.kova-plan-card,
+.kova-connector-card {
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease !important;
+}
+
+.kova-card:hover,
+.kova-row:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Breakpoints & reduced motion                                       */
+/* ------------------------------------------------------------------ */
 
 @media (max-width: 479px) {
   .kova-composer [data-testid="thinking-upgrade-button"] {
     padding-inline: 0.625rem;
   }
 
-  /* Keep the full accessible name while giving the textarea room to type. */
   .kova-composer [data-testid="thinking-upgrade-button"] > span {
     display: none;
   }
 
-  .kova-empty-chat .kova-starter-grid {
+  .kova-empty-chat .kova-starter-grid,
+  .kova-starter-grid {
     width: 100%;
   }
 
-  .kova-empty-chat .kova-starter-prompt:nth-child(n) {
+  .kova-empty-chat .kova-starter-prompt:nth-child(n),
+  .kova-starter-prompt {
     flex: 0 1 calc(50% - 0.25rem);
     padding-inline: 0.625rem;
   }
@@ -202,8 +630,26 @@ section.kova-empty-chat > div.kova-empty-chat-content {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .kova-sidebar :is(a, button),
+  .kova-composer,
+  .kova-composer button,
+  .kova-nav-row,
+  .kova-chat-row,
+  .kova-starter-prompt,
+  .kova-thinking-signal span {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 @media (forced-colors: active) {
-  .kova-empty-chat .kova-composer {
+  .kova-empty-chat .kova-composer,
+  .kova-composer {
     border-color: CanvasText !important;
+  }
+
+  .kova-composer:focus-within {
+    outline-color: Highlight !important;
   }
 }
