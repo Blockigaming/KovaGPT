@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 187,
-  "latest": "20261019223039_kova_owned_email_dispatch.sql",
+  "count": 189,
+  "latest": "20261019225033_kova_owned_email_proof_reliability.sql",
   "migrations": [
     {
       "order": 1,
@@ -3908,6 +3908,27 @@
     },
     {
       "order": 187,
+      "filename": "20261019222616_kova_owned_argon2id_password_hashes.sql",
+      "timestamp": "20261019222616",
+      "sha256": "7d78987e4353bd3df87511f04581af3b31089c8c47083f4af575ba4fafae5ce6",
+      "tables": [],
+      "functions": [
+        "password_hash_algorithm",
+        "bind_password_hash_algorithm",
+        "kova_auth_change_password",
+        "kova_auth_begin_legacy_mfa_migration",
+        "kova_auth_activate_legacy_mfa_migration",
+        "kova_auth_upgrade_password_hash"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 188,
       "filename": "20261019223039_kova_owned_email_dispatch.sql",
       "timestamp": "20261019223039",
       "sha256": "12028d895d030c01b19a700c3b0969a1dd69a4f3cb8d452a45260ca2efafd792",
@@ -3920,6 +3941,25 @@
         "kova_auth_finish_email_dispatch"
       ],
       "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 189,
+      "filename": "20261019225033_kova_owned_email_proof_reliability.sql",
+      "timestamp": "20261019225033",
+      "sha256": "4c10986a763977e7fa832b560d9913c3c0b0f3a3a65662d7b07bc75755f45a0a",
+      "tables": [],
+      "functions": [
+        "guard_email_action_proof_window",
+        "kova_auth_consume_verification",
+        "kova_auth_recovery_target",
+        "kova_auth_consume_recovery"
+      ],
+      "destructive": true,
       "dataBackfill": true,
       "reversible": false,
       "rls": [],

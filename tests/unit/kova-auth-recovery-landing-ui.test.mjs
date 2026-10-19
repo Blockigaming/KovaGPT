@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
 import * as landing from "../../src/lib/kova-recovery-landing.mjs";
+import * as result from "../../src/lib/kova-recovery-result.mjs";
 
 const token = "A".repeat(43);
 const owner = "10000000-0000-4000-8000-000000000001";
@@ -17,7 +18,15 @@ function fixture({
   href = `https://kova.test/reset-password#token=${token}`,
   mode = "kova",
   delay,
-  response = Response.json({ session: { accountId: owner, emailVerified: true } }),
+  response = Response.json({
+    session: {
+      accountId: owner,
+      sessionId: "20000000-0000-4000-8000-000000000002",
+      email: "fixture-owner@example.test",
+      emailVerified: true,
+      assuranceLevel: "aal1",
+    },
+  }),
   callback,
 } = {}) {
   const calls = [],
@@ -69,6 +78,7 @@ function fixture({
         },
       },
       "@/lib/kova-recovery-landing.mjs": landing,
+      "@/lib/kova-recovery-result.mjs": result,
       "@/lib/oauth-session": {
         hasOAuthResponseInUrl: () => url.searchParams.has("code"),
         hasRecentPasswordRecoveryFlow: () => false,
@@ -172,16 +182,23 @@ for (const href of [
     assert.ok(!f.calls.includes("legacy"));
     assert.ok(!f.calls.includes("callback"));
   });
-test("reset failures clear both plaintext fields and an unconfirmed 200 cannot claim success", async () => {
+test("an unconfirmed 200 preserves the in-memory draft without claiming success or replaying", async () => {
   const f = fixture({ response: Response.json({}) });
   await f.flush();
   await f.input("new-pw", "a secure test password");
   await f.input("confirm-pw", "a secure test password");
   await f.submit();
   await f.flush();
-  assert.equal(f.find("input", (n) => n.props.id === "new-pw").props.value, "");
-  assert.equal(f.find("input", (n) => n.props.id === "confirm-pw").props.value, "");
+  assert.equal(
+    f.find("input", (n) => n.props.id === "new-pw").props.value,
+    "a secure test password",
+  );
+  assert.equal(
+    f.find("input", (n) => n.props.id === "confirm-pw").props.value,
+    "a secure test password",
+  );
   assert.deepEqual(f.redirects, []);
+  assert.equal(f.calls.filter((v) => Array.isArray(v)).length, 1);
   assert.ok(!f.messages.some(([kind]) => kind === "success"));
 });
 test("owned reset cannot duplicate a pending mutation or redirect after unmount", async () => {

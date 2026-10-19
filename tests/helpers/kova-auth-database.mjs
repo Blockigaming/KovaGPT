@@ -57,6 +57,9 @@ export async function passwordAccount(
     email = `${id}@example.invalid`,
     at = now,
     expiresAt = expiry,
+    verificationExpiresAt = new Date(
+      Math.min(Date.parse(expiresAt), Date.parse(at) + 60 * 60 * 1000),
+    ).toISOString(),
   } = {},
 ) {
   const hash = passwordHash ?? `scrypt-v1$32768$8$1$${"a".repeat(22)}$${"b".repeat(43)}`;
@@ -67,7 +70,7 @@ export async function passwordAccount(
   ]);
   await db.query(
     `select * from public.kova_auth_create_password_account($1,$2,'Fixture',$3,$4,$5,'{}'::jsonb,$6)`,
-    [id, email, hash, digest(`verify-${id}`), expiresAt, at],
+    [id, email, hash, digest(`verify-${id}`), verificationExpiresAt, at],
   );
   const session = (
     await db.query(`select * from public.kova_auth_consume_verification($1,$2,$3,$4)`, [

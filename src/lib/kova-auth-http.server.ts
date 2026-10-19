@@ -15,6 +15,11 @@ import {
   generateKovaToken,
   generateKovaTotpEnrollment,
   hashKovaPassword,
+  kovaPasswordHashNeedsUpgrade,
+  kovaPasswordHashWriteAlgorithm,
+  rehashKovaPassword,
+  KovaPasswordCapacityError,
+  KovaPasswordInfrastructureError,
   KOVA_AUTH_CHALLENGE_SECONDS,
   KOVA_AUTH_HANDOFF_SECONDS,
   KOVA_AUTH_SESSION_SECONDS,
@@ -41,6 +46,7 @@ import {
   createOAuthState,
   createPasswordAccount,
   createPasswordSession,
+  upgradePasswordHash,
   createRecovery,
   deleteCompatibilityPrincipal,
   finishGoogle,
@@ -117,6 +123,16 @@ function jsonError(error: string, status: number, retryAfter?: number): Response
   const headers = noStoreHeaders();
   if (retryAfter) headers.set("Retry-After", String(retryAfter));
   return Response.json({ error }, { status, headers });
+}
+
+function passwordHashFailure(error: unknown, invalidMessage: string): Response {
+  if (
+    error instanceof KovaPasswordCapacityError ||
+    error instanceof KovaPasswordInfrastructureError
+  ) {
+    return jsonError("Password processing is temporarily unavailable. Please retry.", 503);
+  }
+  return jsonError(invalidMessage, 400);
 }
 
 function kovaModeAvailable(): Response | null {
@@ -409,8 +425,11 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
   let passwordHash: string;
   try {
     passwordHash = await hashKovaPassword(password);
-  } catch {
-    return jsonError("Use a password with at least 12 characters.", 400);
+  } catch (error) {
+    return passwordHashFailure(
+      error,
+      "Use a password with at least 12 characters and at most 1,024 bytes.",
+    );
   }
 
   const verificationToken = generateKovaToken();
@@ -646,13 +665,41 @@ export async function handleKovaLogin(request: Request): Promise<Response> {
       );
     }
     const sessionToken = generateKovaToken();
+    const sessionDigest = digestKovaToken(sessionToken);
     const principal = await createPasswordSession({
       accountId: credential.accountId,
       credentialId: credential.credentialId,
       credentialRevision: credential.credentialRevision,
-      sessionDigest: digestKovaToken(sessionToken),
+      sessionDigest,
       sessionExpiresAt: futureIso(KOVA_AUTH_SESSION_SECONDS),
     });
+    if (kovaPasswordHashNeedsUpgrade(credential.passwordHash)) {
+      try {
+        // This optional migration follows completed password authentication only.
+        // Never retain a password while a second-factor challenge is pending.
+        // Keep legacy writes until every active and rollback reader is qualified.
+        // Config failure here must not strand an already verified login.
+        if (kovaPasswordHashWriteAlgorithm(process.env) === "argon2id") {
+          const upgradedHash = await rehashKovaPassword(password);
+          await upgradePasswordHash({
+            accountId: credential.accountId,
+            credentialId: credential.credentialId,
+            credentialRevision: credential.credentialRevision,
+            oldPasswordHash: credential.passwordHash,
+            newPasswordHash: upgradedHash,
+            sessionDigest,
+          });
+          // A false CAS leaves the concurrent credential/session lifecycle intact.
+          // It does not prove this session survived another security mutation.
+        }
+      } catch {
+        // A valid login must not fail because this optional storage upgrade did.
+        // Do not log passwords, hashes, tokens, account data, or error payloads.
+        console.error("[KovaAuth] Password hash upgrade deferred", {
+          code: "kova_password_upgrade_deferred",
+        });
+      }
+    }
     principal.displayName = credential.displayName;
     return sessionResponse(principal, sessionToken);
   } catch (error) {
@@ -828,8 +875,8 @@ export async function handleKovaMfaEnroll(request: Request): Promise<Response> {
         }
         try {
           passwordHash = await hashKovaPassword(body.newPassword);
-        } catch {
-          return jsonError("Choose a stronger valid password.", 400);
+        } catch (error) {
+          return passwordHashFailure(error, "Choose a stronger valid password.");
         }
       }
       const accountLimit = await rateLimit(
@@ -1156,8 +1203,11 @@ export async function handleKovaPasswordChange(request: Request): Promise<Respon
     let passwordHash: string;
     try {
       passwordHash = await hashKovaPassword(body.newPassword);
-    } catch {
-      return jsonError("Use a password with at least 12 characters and at most 1,024 bytes.", 400);
+    } catch (error) {
+      return passwordHashFailure(
+        error,
+        "Use a password with at least 12 characters and at most 1,024 bytes.",
+      );
     }
     const nextToken = generateKovaToken();
     const principal = await changePassword({
@@ -1298,7 +1348,47 @@ export async function handleKovaVerification(request: Request): Promise<Response
   const unavailable = kovaModeAvailable();
   if (unavailable) return unavailable;
   const target = new URL("/", publicOrigin());
-  const rawToken = new URL(request.url).searchParams.get("token") ?? "";
+  const invalid = () => {
+    target.searchParams.set("auth_error", "invalid_verification");
+    return new Response(null, {
+      status: 303,
+      headers: noStoreHeaders({ Location: target.toString() }),
+    });
+  };
+  if (request.method === "GET") {
+    const tokens = new URL(request.url).searchParams.getAll("token");
+    if (tokens.length !== 1 || !/^[A-Za-z0-9_-]{43,128}$/u.test(tokens[0])) return invalid();
+    // Mail scanners may follow GET links. The token remains unconsumed until
+    // the recipient explicitly submits this form on the public origin.
+    const headers = noStoreHeaders({
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy":
+        "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; style-src 'unsafe-inline'",
+      "X-Frame-Options": "DENY",
+    });
+    return new Response(
+      `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Verify your KovaGPT email</title><style>body{font:16px system-ui,sans-serif;background:#f7f9fc;color:#17253d;margin:0;min-height:100vh;display:grid;place-items:center}main{padding:32px;max-width:420px;background:white;border-radius:16px;box-shadow:0 8px 30px #17253d1a}button{font:inherit;background:#2563eb;color:white;border:0;border-radius:10px;padding:14px 20px;cursor:pointer}</style><main><h1>Verify your email</h1><p>Confirm your KovaGPT email address to finish creating your account.</p><form method="post" action="/api/auth/verify"><input type="hidden" name="token" value="${tokens[0]}"><button type="submit">Verify email</button></form></main></html>`,
+      { headers },
+    );
+  }
+  if (request.method !== "POST") return jsonError("Method not allowed.", 405);
+  const rejected = publicAuthMutationGuard(request);
+  if (rejected) return rejected;
+  if (
+    request.headers.get("content-type")?.split(";", 1)[0]?.toLowerCase() !==
+    "application/x-www-form-urlencoded"
+  )
+    return jsonError("Invalid verification request.", 415);
+  let rawToken: string;
+  try {
+    const form = new URLSearchParams(await readUtf8BodyBounded(request, 512));
+    const tokens = form.getAll("token");
+    if (tokens.length !== 1 || [...form.keys()].some((key) => key !== "token")) return invalid();
+    rawToken = tokens[0];
+  } catch {
+    return invalid();
+  }
+  if (!/^[A-Za-z0-9_-]{43,128}$/u.test(rawToken)) return invalid();
   const sessionToken = generateKovaToken();
   try {
     await consumeVerification({
@@ -1327,12 +1417,25 @@ export async function handleKovaVerification(request: Request): Promise<Response
       status: 303,
       headers: noStoreHeaders({ Location: target.toString() }),
     });
-  } catch {
-    target.searchParams.set("auth_error", "invalid_verification");
-    return new Response(null, {
-      status: 303,
-      headers: noStoreHeaders({ Location: target.toString() }),
+  } catch (error) {
+    if (
+      error instanceof KovaAuthStoreError &&
+      error.operation === "kova_auth_consume_verification" &&
+      error.databaseCode === "KVA01"
+    )
+      return invalid();
+    // The verification transaction may have committed before its reply was lost.
+    // Keep a user-controlled retry, without claiming the action was rolled back.
+    const headers = noStoreHeaders({
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy":
+        "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; style-src 'unsafe-inline'",
+      "X-Frame-Options": "DENY",
     });
+    return new Response(
+      `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Confirm your KovaGPT verification</title><main><h1>Verification could not be confirmed</h1><p>Your email may already be verified. <a href="/?sign-in=1">Try signing in</a>, or explicitly retry verification below. If this link was already used or expired, request a new one from the sign-in screen.</p><form method="post" action="/api/auth/verify"><input type="hidden" name="token" value="${rawToken}"><button type="submit">Retry verification</button></form></main></html>`,
+      { status: 503, headers },
+    );
   }
 }
 
@@ -1406,8 +1509,8 @@ export async function handleKovaRecoveryReset(request: Request): Promise<Respons
   try {
     recoveryDigest = digestKovaToken(token);
     passwordHash = await hashKovaPassword(password);
-  } catch {
-    return jsonError("The reset link or password is invalid.", 400);
+  } catch (error) {
+    return passwordHashFailure(error, "The reset link or password is invalid.");
   }
   try {
     const accountId = await recoveryTarget(recoveryDigest);
@@ -1429,10 +1532,21 @@ export async function handleKovaRecoveryReset(request: Request): Promise<Respons
     });
     return sessionResponse(principal, sessionToken);
   } catch (error) {
-    console.error("[KovaAuth] Recovery reset failed", {
-      error: error instanceof Error ? error.name : "unknown_error",
+    if (
+      error instanceof KovaAuthStoreError &&
+      error.operation === "kova_auth_consume_recovery" &&
+      error.databaseCode === "KVA01"
+    )
+      return jsonError("The reset link is invalid, expired, or no longer available.", 400);
+    // A transport error or malformed reply can follow a committed reset.
+    // Never tell the browser that a 503 proves the old password still applies.
+    console.error("[KovaAuth] Recovery reset unconfirmed", {
+      code: "kova_recovery_reset_unconfirmed",
     });
-    return jsonError("The reset link is invalid, expired, or temporarily unavailable.", 400);
+    return jsonError(
+      "The password update could not be confirmed. It may have completed. Try signing in with your new password, or retry here or request a new reset link.",
+      503,
+    );
   }
 }
 

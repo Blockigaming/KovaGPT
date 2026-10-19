@@ -43,7 +43,20 @@ function hardenResponse(response: Response): Response {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
   };
-  for (const [name, value] of Object.entries(securityHeaders)) headers.set(name, value);
+  for (const [name, value] of Object.entries(securityHeaders)) {
+    if (name === "Content-Security-Policy") {
+      // Browsers enforce every CSP policy. Keep a sensitive endpoint's tighter
+      // policy while also applying the application baseline.
+      headers.append(name, value);
+    } else if (
+      (name === "Referrer-Policy" && headers.get(name) === "no-referrer") ||
+      (name === "X-Frame-Options" && headers.get(name) === "DENY")
+    ) {
+      continue;
+    } else {
+      headers.set(name, value);
+    }
+  }
   if (!headers.has("Cache-Control") && response.status >= 400) {
     headers.set("Cache-Control", "no-store");
   }

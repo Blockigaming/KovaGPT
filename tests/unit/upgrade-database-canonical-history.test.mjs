@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
@@ -29,42 +30,83 @@ import {
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const REPAIRED = ["20260822122000", "20260822143000", "20260823113000", "20260903145843"];
+// Historical execution tests retain the exact reviewed 185-migration source
+// view. New checked-out migrations are separately rejected by the live planner.
+const pinnedManifestBytes = execFileSync(
+  "git",
+  ["show", "3ffdde6fe80e6511ab1e2f76b405c71a2858edfd:release-migrations.json"],
+  { cwd: ROOT },
+);
+const pinnedManifest = JSON.parse(pinnedManifestBytes);
+const readPinnedSource = (filename) =>
+  filename === join(ROOT, "release-migrations.json") ? pinnedManifestBytes : readFileSync(filename);
+const readPinnedDirectory = (directory) =>
+  directory === join(ROOT, "supabase/migrations")
+    ? pinnedManifest.migrations.map((entry) => entry.filename)
+    : readdirSync(directory);
+const planPinnedUpgrade = () => planUpgrade(ROOT, readPinnedSource, readPinnedDirectory);
+const pinnedCanonicalPlan = () =>
+  extendProposedCanonicalHistory(
+    extendCurrentHistory(planPinnedUpgrade(), readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT))),
+    ROOT,
+    readPinnedSource,
+    readPinnedDirectory,
+  );
 const inspectSource = () => ({
   commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   tree: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   trackedFileCount: 1,
-  readFile: readFileSync,
-  readDirectory: readdirSync,
+  readFile: readPinnedSource,
+  readDirectory: readPinnedDirectory,
 });
 
 test("revised history proposal rehearses 107 bodies and four conditional history records", () => {
-  const dry = rehearseUpgrade({ canonicalHistory: true, currentHistory: true, dryRun: true });
-  assert.equal(dry.baselineVersions, 98);
-  assert.equal(dry.pendingVersions.length, 111);
-  assert.equal(dry.replayPendingVersions.length, 107);
-  const extensionVersions = JSON.parse(readFileSync(join(ROOT, "release-migrations.json")))
-    .migrations.slice(157)
-    .map((entry) => entry.timestamp);
+  const historical = pinnedCanonicalPlan();
+  assert.equal(historical.baseline.length, 98);
+  assert.equal(historical.pending.length, 111);
+  assert.equal(historical.executionForward.length, 107);
+  const extensionVersions = pinnedManifest.migrations.slice(157).map((entry) => entry.timestamp);
   assert.equal(extensionVersions.length, 28);
-  assert.deepEqual(dry.canonicalHistoryProposal.deferredExtensionVersions, []);
-  assert.ok(extensionVersions.every((version) => dry.replayPendingVersions.includes(version)));
-  assert.deepEqual(dry.canonicalHistoryProposal.recordOnlyVersions, REPAIRED);
+  assert.deepEqual(historical.canonicalHistoryProposal.deferredExtensionVersions, []);
+  assert.ok(
+    extensionVersions.every((version) =>
+      historical.executionForward.some((entry) => entry.version === version),
+    ),
+  );
+  assert.deepEqual(historical.canonicalHistoryProposal.recordOnlyVersions, REPAIRED);
   assert.equal(
-    dry.canonicalHistoryProposal.scheduledRecordOnlyHypothesis.sourceActionApproved,
+    historical.canonicalHistoryProposal.scheduledRecordOnlyHypothesis.sourceActionApproved,
     false,
   );
-  assert.equal(dry.canonicalHistoryProposal.expectedFinalLedgerCount, 209);
-  assert.equal(dry.canonicalHistoryProposal.productionReleaseReady, false);
-  assert.equal(dry.executed, false);
+  assert.equal(historical.canonicalHistoryProposal.expectedFinalLedgerCount, 209);
+  assert.equal(historical.canonicalHistoryProposal.productionReleaseReady, false);
   assert.throws(
     () => rehearseUpgrade({ canonicalHistory: true, dryRun: true }),
     /upgrade_canonical_history_current_history_required/u,
   );
 });
 
-test("canonical history proposal rejects a changed body before local commands", () => {
+test("current forward migrations cannot enter the immutable historical execution proposal", () => {
+  const current = JSON.parse(readFileSync(join(ROOT, "release-migrations.json")));
+  assert.ok(current.count > pinnedManifest.count);
   const plan = extendCurrentHistory(
     planUpgrade(),
+    readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT)),
+  );
+  assert.equal(plan.forward.length, 111 + current.count - pinnedManifest.count);
+  assert.throws(
+    () => extendProposedCanonicalHistory(plan),
+    /upgrade_canonical_history_pending_mismatch/u,
+  );
+  assert.throws(
+    () => rehearseUpgrade({ canonicalHistory: true, currentHistory: true, dryRun: true }),
+    /upgrade_canonical_history_pending_mismatch/u,
+  );
+});
+
+test("canonical history proposal rejects a changed body before local commands", () => {
+  const plan = extendCurrentHistory(
+    planPinnedUpgrade(),
     readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT)),
   );
   plan.forward.find((row) => row.version === REPAIRED[0]).sha256 = "0".repeat(64);
@@ -76,7 +118,7 @@ test("canonical history proposal rejects a changed body before local commands", 
 
 test("canonical history proposal rejects a changed current migration", () => {
   const plan = extendCurrentHistory(
-    planUpgrade(),
+    planPinnedUpgrade(),
     readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT)),
   );
   plan.forward.find((row) => row.version === "20260925000821").sha256 = "0".repeat(64);
@@ -88,7 +130,7 @@ test("canonical history proposal rejects a changed current migration", () => {
 
 test("canonical rehearsal reads the decision and all manifests through its captured reader", () => {
   const plan = extendCurrentHistory(
-    planUpgrade(),
+    planPinnedUpgrade(),
     readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT)),
   );
   const files = new Set();
@@ -118,7 +160,9 @@ test("canonical rehearsal reads the decision and all manifests through its captu
 
 test("canonical history mock confines four repairs to local project and checks both ledgers", () => {
   const calls = [];
-  const recordOnlyNames = planUpgrade().forward.filter((row) => REPAIRED.includes(row.version));
+  const recordOnlyNames = planPinnedUpgrade().forward.filter((row) =>
+    REPAIRED.includes(row.version),
+  );
   let project;
   const result = rehearseUpgrade({
     canonicalHistory: true,
@@ -168,7 +212,7 @@ test("canonical history mock confines four repairs to local project and checks b
 
 test("canonical final scheduled catalog binds a read-only 209-version observation to its receipt", () => {
   const plan = extendProposedCanonicalHistory(
-    extendCurrentHistory(planUpgrade(), readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT))),
+    extendCurrentHistory(planPinnedUpgrade(), readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT))),
   );
   const finalVersions = [
     ...plan.baseline.map((row) => row.version),
@@ -327,7 +371,7 @@ test("canonical recurrence assessment rejects an unexpected baseline and never a
 
 test("scheduled hypothesis requires the pinned blank-line statement difference", () => {
   const canonical = extendProposedCanonicalHistory(
-    extendCurrentHistory(planUpgrade(), readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT))),
+    extendCurrentHistory(planPinnedUpgrade(), readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT))),
   );
   const alternative = extendScheduledRecordOnlyHypothesis(canonical);
   assert.equal(alternative.executionForward.length, 107);
@@ -339,7 +383,7 @@ test("scheduled hypothesis requires the pinned blank-line statement difference",
   assert.equal(canonical.executionForward.length, 107);
   assert.deepEqual(canonical.recordOnlyVersions, REPAIRED);
   const tampered = extendCurrentHistory(
-    planUpgrade(),
+    planPinnedUpgrade(),
     readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT)),
   );
   tampered.baseline.find((row) => row.version === "20260823092450").capturedStatementsSha256 =
@@ -363,16 +407,13 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
       ),
     ),
   );
-  const dry = rehearseUpgrade({
-    currentHistory: true,
-    canonicalHistory: true,
-    captureCanonicalScheduledCatalog: true,
-    scheduledRecordOnlyHypothesis: true,
-    dryRun: true,
-  });
+  const historical = extendScheduledRecordOnlyHypothesis(pinnedCanonicalPlan());
   const final = structuredClone(baseline);
   final.capturedAt = "2026-09-28T00:00:00.000Z";
-  final.ledgerVersions = [...baseline.ledgerVersions, ...dry.pendingVersions].sort();
+  final.ledgerVersions = [
+    ...baseline.ledgerVersions,
+    ...historical.pending.map((name) => name.slice(0, 14)),
+  ].sort();
   final.ledgerVersionCount = final.ledgerVersions.length;
   const baselineTables = JSON.parse(
     readFileSync(
@@ -423,7 +464,9 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
       if (args[0] === "migration" && args[1] === "repair") {
         repaired = true;
         assert.deepEqual(args.slice(5, 9), REPAIRED);
-        const scheduledFile = planUpgrade().forward.find((row) => row.version === "20260822143000");
+        const scheduledFile = planPinnedUpgrade().forward.find(
+          (row) => row.version === "20260822143000",
+        );
         assert.equal(
           readFileSync(join(options.cwd, "supabase/migrations", scheduledFile.name), "utf8"),
           HISTORY_ONLY_SENTINEL,
@@ -477,14 +520,9 @@ test("scheduled hypothesis replays 107 bodies with a fourth sentinel and separat
 });
 
 test("first remote omission is a distinct pinned synthetic baseline, never an accepted proof", () => {
-  const dry = rehearseUpgrade({
-    currentHistory: true,
-    canonicalHistory: true,
-    captureCanonicalScheduledCatalog: true,
-    scheduledRecordOnlyHypothesis: true,
-    firstRemoteOmission: true,
-    dryRun: true,
-  });
+  const dry = extendFirstRemoteScheduledOmission(
+    extendScheduledRecordOnlyHypothesis(pinnedCanonicalPlan()),
+  );
   assert.equal(dry.syntheticFixtureBodySubstitution.version, "20260823092107");
   assert.equal(dry.syntheticFixtureBodySubstitution.baselineMatchesCapturedStatements, false);
   assert.equal(dry.syntheticFixtureBodySubstitution.firstRemoteEffectProven, false);
@@ -495,7 +533,7 @@ test("first remote omission is a distinct pinned synthetic baseline, never an ac
   );
   const canonical = extendScheduledRecordOnlyHypothesis(
     extendProposedCanonicalHistory(
-      extendCurrentHistory(planUpgrade(), readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT))),
+      extendCurrentHistory(planPinnedUpgrade(), readFileSync(join(ROOT, CURRENT_HISTORY_SNAPSHOT))),
     ),
   );
   const changed = {
@@ -526,7 +564,10 @@ test("first remote omission is a distinct pinned synthetic baseline, never an ac
   );
   const after = structuredClone(baseline);
   after.capturedAt = "2026-09-28T00:00:00.000Z";
-  after.ledgerVersions = [...baseline.ledgerVersions, ...dry.pendingVersions].sort();
+  after.ledgerVersions = [
+    ...baseline.ledgerVersions,
+    ...dry.pending.map((name) => name.slice(0, 14)),
+  ].sort();
   after.ledgerVersionCount = after.ledgerVersions.length;
   const afterTables = structuredClone(tables);
   afterTables.capturedAt = after.capturedAt;

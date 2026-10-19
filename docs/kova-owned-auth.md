@@ -94,7 +94,7 @@ source phase:
 - service-role-only RPCs for password accounts, verification, recovery,
   opaque sessions, TOTP enrollment and login challenges, one-time MFA recovery
   code storage, Google state, and one-time cross-origin handoffs;
-- scrypt password hashing, SHA-256 token digests, AES-256-GCM OAuth-secret
+- bounded scrypt/Argon2id password verification, SHA-256 token digests, AES-256-GCM OAuth-secret
   encryption, Google ID-token verification, and five-minute ES256 RLS JWTs;
 - same-origin API routes for signup, password plus TOTP or one-time recovery-code
   login, TOTP enrollment and removal, logout, session rotation, email verification,
@@ -269,7 +269,7 @@ claiming end-to-end immediate revocation or a complete migration.
 
 `GET /api/auth/password` returns only whether the current verified Kova account
 has an owned password. `POST /api/auth/password` accepts exactly the current
-password and the new password. It rechecks the current password using scrypt,
+password and the new password. It rechecks the current password using its stored algorithm,
 binds the resulting credential ID/revision to the cookie owner, enforces MFA
 where required, and applies client/account throttling and CSRF protection.
 One transaction replaces the hash, retires pending recovery/MFA challenges,
@@ -296,6 +296,15 @@ do not constitute a deployed rehearsal or retire hosted authentication.
 The server and compiled browser must use matching `KOVA_AUTH_MODE` and
 `VITE_KOVA_AUTH_MODE` values. The default is `supabase`; `dual` and `kova` are
 activated only through an environment-specific deployment review.
+
+`KOVA_AUTH_PASSWORD_HASH_WRITE` defaults to `scrypt-v1`. Set it to `argon2id`
+only after the forward password-hash migration, native Node image, bounded KDF
+capacity, and a rollback image that reads both algorithms are qualified. Existing
+scrypt credentials remain verifiable. Email verification GET requests display a
+confirmation page without consuming the proof; only an explicit same-origin POST
+consumes it. Verification and recovery proofs are single-use and valid for at most
+one hour. Interrupted recovery requests preserve the password draft only in
+component memory and require an explicit retry; they never replay automatically.
 
 Kova OAuth and email links require exact HTTPS origins in
 `KOVA_AUTH_ORIGIN` and `KOVA_AUTH_PUBLIC_ORIGIN`. The JWT issuer must be an

@@ -57,7 +57,7 @@ test("all seven real product admission functions accept verified Kova identity d
         id,
         `scrypt-v1$32768$8$1$${"a".repeat(22)}$${"b".repeat(43)}`,
         digest("verify-product"),
-        expiry,
+        new Date(Date.parse(now) + 3600_000).toISOString(),
         now,
       ],
     );

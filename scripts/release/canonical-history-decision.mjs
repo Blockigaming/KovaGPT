@@ -156,9 +156,14 @@ export function buildCanonicalHistoryDecision({
     throw new Error("canonical_history_migration_tree_changed");
   const pinnedSource = pinned(checkpoint, sourcePath);
   const pinnedSourceManifest = JSON.parse(pinnedSource);
-  const source = json(sourcePath);
+  const historicalSourceBytes = pinned(currentSourceCommit, sourcePath);
+  const source = JSON.parse(historicalSourceBytes);
+  const observedSource = json(sourcePath);
   if (
-    !bytes(sourcePath).equals(pinned(currentSourceCommit, sourcePath)) ||
+    source.count !== currentSourceCount ||
+    observedSource.count < currentSourceCount ||
+    JSON.stringify(observedSource.migrations?.slice(0, currentSourceCount)) !==
+      JSON.stringify(source.migrations) ||
     execFileSync("git", ["rev-parse", `${currentSourceCommit}:supabase/migrations`], {
       cwd: repositoryRoot,
       encoding: "utf8",
@@ -176,7 +181,7 @@ export function buildCanonicalHistoryDecision({
   validateCanonicalHistoryCapture(lineage, baseline, supplement, sha256(bytes(baselinePath)));
   validateForwardExtension(
     pinnedSourceManifest,
-    source,
+    observedSource,
     readDirectory(join(repositoryRoot, "supabase/migrations")),
     (filename) => bytes(`supabase/migrations/${filename}`),
   );
@@ -300,7 +305,7 @@ export function buildCanonicalHistoryDecision({
     targetProjectRef: supplement.projectRef,
     sourceCheckpointCommit: currentSourceCommit,
     sourceMigrationTree: migrationTree,
-    sourceManifestSha256: sha256(bytes(sourcePath)),
+    sourceManifestSha256: sha256(historicalSourceBytes),
     lineageSha256: sha256(bytes(lineagePath)),
     historicalFixtureManifestSha256: sha256(bytes(baselinePath)),
     currentSupplementSha256: sha256(bytes(supplementPath)),
