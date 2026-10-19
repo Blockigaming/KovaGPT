@@ -4,6 +4,7 @@ import {
   createPublicKey,
   generateKeyPairSync,
   randomBytes,
+  scryptSync,
   sign,
   verify,
 } from "node:crypto";
@@ -25,6 +26,47 @@ import {
 function encodedJson(value) {
   return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
 }
+
+function legacyPasswordHash(password) {
+  const salt = Buffer.from("kova-test-salt16", "utf8");
+  const digest = scryptSync(password, salt, 32, {
+    N: 32768,
+    r: 8,
+    p: 1,
+    maxmem: 64 * 1024 * 1024,
+  });
+  return `scrypt-v1$32768$8$1$${salt.toString("base64url")}$${digest.toString("base64url")}`;
+}
+
+test("password verification enforces the UTF-8 maximum without imposing the new-password minimum", async () => {
+  const legacyPassword = "legacy";
+  const legacyHash = legacyPasswordHash(legacyPassword);
+  assert.equal(await verifyKovaPassword(legacyPassword, legacyHash), true);
+  assert.equal(await verifyKovaPassword("wrong", legacyHash), false);
+  await assert.rejects(() => hashKovaPassword(legacyPassword), /12 or more/u);
+
+  const atLimit = "\u{1f600}".repeat(256);
+  assert.equal(Buffer.byteLength(atLimit, "utf8"), 1024);
+  const atLimitHash = await hashKovaPassword(atLimit);
+  assert.equal(await verifyKovaPassword(atLimit, atLimitHash), true);
+
+  // A matching, well-formed legacy fixture makes this a regression test: the
+  // previous verifier accepted these bytes despite the password writer's cap.
+  const overLimit = `${atLimit}a`;
+  assert.ok(overLimit.length < 1024);
+  assert.equal(Buffer.byteLength(overLimit, "utf8"), 1025);
+  const overLimitHash = legacyPasswordHash(overLimit);
+  assert.equal(await verifyKovaPassword(overLimit, overLimitHash), false);
+  await assert.rejects(() => hashKovaPassword(overLimit), /1024 UTF-8 bytes/u);
+});
+
+test("password verification rejects oversized ASCII and malformed input", async () => {
+  const oversized = "a".repeat(1025);
+  assert.equal(await verifyKovaPassword(oversized, legacyPasswordHash(oversized)), false);
+  for (const value of [undefined, null, 1, {}, "\ud800"]) {
+    assert.equal(await verifyKovaPassword(value, "invalid"), false);
+  }
+});
 
 test("opaque tokens, normalized emails, and scrypt passwords fail closed", async () => {
   assert.equal(normalizeKovaEmail(" Owner@Example.COM "), "owner@example.com");

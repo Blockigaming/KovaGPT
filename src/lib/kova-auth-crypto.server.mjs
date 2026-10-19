@@ -22,6 +22,7 @@ const SCRYPT_R = 8;
 const SCRYPT_P = 1;
 const SCRYPT_BYTES = 32;
 const SCRYPT_MAX_MEMORY = 64 * 1024 * 1024;
+const PASSWORD_MAX_BYTES = 1024;
 const GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
 const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
@@ -164,7 +165,7 @@ export function verifyKovaTotp(code, base32Secret, now = Date.now()) {
 function validatePassword(password) {
   assertWellFormed(password, "Password");
   const byteLength = Buffer.byteLength(password, "utf8");
-  if (password.length < 12 || byteLength > 1024) {
+  if (password.length < 12 || byteLength > PASSWORD_MAX_BYTES) {
     throw new RangeError("Password must be 12 or more characters and at most 1024 UTF-8 bytes");
   }
 }
@@ -190,7 +191,11 @@ export async function hashKovaPassword(password) {
 
 export async function verifyKovaPassword(password, encoded) {
   try {
+    // Keep verification compatible with shorter legacy passwords while enforcing
+    // the same maximum UTF-8 size as password creation, before memory-hard work.
+    if (typeof password !== "string" || password.length > PASSWORD_MAX_BYTES) return false;
     assertWellFormed(password, "Password");
+    if (Buffer.byteLength(password, "utf8") > PASSWORD_MAX_BYTES) return false;
     if (typeof encoded !== "string") return false;
     const [version, n, r, p, saltText, digestText, ...extra] = encoded.split("$");
     if (

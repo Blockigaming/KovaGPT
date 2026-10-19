@@ -58,7 +58,12 @@ function verify(bundleDir, sourceAttestationPath) {
 }
 
 function browserSource(extra = "") {
-  return [`const url="${SUPABASE_URL}";`, `const key="${PUBLISHABLE_KEY}";`, extra].join("\n");
+  return [
+    `const url="${SUPABASE_URL}";`,
+    `const key="${PUBLISHABLE_KEY}";`,
+    'const authMode="kova-browser-auth-mode:supabase";',
+    extra,
+  ].join("\n");
 }
 
 test("served browser assets reject Stripe secret and webhook credentials", () => {

@@ -47,7 +47,10 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
 
 test("mobile header and sidebar controls meet touch and accessible-name contracts", () => {
   assert.match(topbar, /min-h-14/);
-  assert.match(topbar, /w-11 h-11/);
+  const menuButton = topbar.match(/<button\b[^>]*aria-label="Open menu"[^>]*>/u)?.[0] ?? "";
+  const menuClasses = new Set(menuButton.match(/className="([^"]*)"/u)?.[1].split(/\s+/u));
+  assert.ok(menuClasses.has("w-11"), "menu button must retain its 44px width");
+  assert.ok(menuClasses.has("h-11"), "menu button must retain its 44px height");
   assert.match(topbar, /aria-label="Open menu"/);
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
   assert.match(sidebar, /aria-label="Close sidebar"/);

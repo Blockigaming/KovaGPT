@@ -1,6 +1,28 @@
 # Azure staging deployment
 
-This staging template creates a low-cost Azure Container Apps environment for a digest-pinned KovaGPT image. It does not deploy production and must be reviewed with `az deployment group what-if` before any resource mutation.
+This staging template creates a low-cost Azure Container Apps environment for a digest-pinned KovaGPT image. It does not deploy production and must be reviewed with `az deployment group what-if` before any resource mutation. Its default app name is `kovagpt-stg-web`; it is not an update path for the existing `ca-kovagpt-staging` app.
+
+## Existing app: owned-auth preflight
+
+For the existing `ca-kovagpt-staging` app in `rg-kovagpt-staging`, use the read-only validator `scripts/azure/owned-auth-staging-preflight.mjs`. It creates no infrastructure, resolves no secret, runs no workflow, and deploys nothing. It does not use or start `ca-kovagpt-auth-rehearsal`.
+
+Copy `infra/azure/staging/owned-auth-preflight.example.json` to a private path outside the repository. The example deliberately fails until real observations and existing approval replace its placeholders. Set:
+
+| Field                     | Required evidence                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `subscriptionId`          | Verified existing Azure subscription UUID.                                                                                                                                                                                                                                                                                                                                  |
+| `sourceSha`, `sourceTree` | Exact reviewed 40-character commit and tree identifiers.                                                                                                                                                                                                                                                                                                                    |
+| `imageReference`          | Existing immutable `registry.azurecr.io/repository@sha256:<64 hex>` reference.                                                                                                                                                                                                                                                                                              |
+| `publicOrigin`            | Exact approved HTTPS staging origin, matching the app's ingress hostname or a configured custom domain.                                                                                                                                                                                                                                                                     |
+| `app`                     | Private existing-app Azure snapshot, or a reviewed copy with only the proposed update applied. It must contain `id`, `name`, `type`, ingress, secret names and container image/environment. Keep the entire snapshot private; do not print environment values.                                                                                                              |
+| `browserProvenance`       | Provenance extracted from that exact immutable image, with matching source/tree, bundle hash, verified source context, and `authMode: "kova"`. A runtime `VITE_KOVA_AUTH_MODE` value is not browser evidence.                                                                                                                                                               |
+| `approval`                | Existing owner approval bound to the same target ID, source SHA and image: `environment: "staging"`, `deployAuthorized: true`, `attempts: 1`, ISO currency, nonnegative integer `maximumCostMinor` and `quotedMaximumCostMinor`, future ISO `stopAt`, and independently verified `stopSafeguardVerified: true`. A zero ceiling permits only a verified zero-cost operation. |
+
+```bash
+node scripts/azure/owned-auth-staging-preflight.mjs /private/path/owned-auth-preflight.json
+```
+
+The checker requires server `KOVA_AUTH_MODE=kova`, matching compiled browser mode, HTTPS origins, key fingerprints and signing-key ID, configured secret references for the private signing/encryption and service-role keys, enabled email queue, and disabled generation. Errors contain fixed codes only. A pass verifies configuration consistency and authorization bounds; it does not establish database schema, actual key usability/import, email-worker delivery, green exact-source CI, or successful deployed signup/reset/revocation. Verify those independently before activation. Review original approval, price evidence and automatic stop evidence; writing `true` into a packet does not create authority. A proposed-state snapshot also does not prove the configuration is deployed.
 
 ## Security model
 

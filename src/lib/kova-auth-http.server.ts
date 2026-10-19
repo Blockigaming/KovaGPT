@@ -1,3 +1,4 @@
+import { renderKovaAuthEmail } from "@/lib/kova-auth-email.server.mjs";
 import { createHash, timingSafeEqual } from "node:crypto";
 import {
   clearKovaSessionCookie,
@@ -336,27 +337,33 @@ function emailPayload(input: {
   label: "kova-auth-verification" | "kova-auth-recovery";
   link: string;
   tokenDigest: string;
+  issuedAt: string;
+  expiresAt: string;
 }): Record<string, unknown> {
   if (process.env.KOVA_EMAIL_QUEUE_ENABLED !== "true") {
     throw new Error("Kova auth email delivery is not enabled");
   }
-  const verification = input.label === "kova-auth-verification";
-  const title = verification ? "Verify your KovaGPT email" : "Reset your KovaGPT password";
-  const action = verification ? "Verify email" : "Reset password";
-  const safeLink = input.link.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+  const content = renderKovaAuthEmail({
+    label: input.label,
+    recipient: input.to,
+    link: input.link,
+    publicOrigin: publicOrigin(),
+    issuedAt: input.issuedAt,
+    expiresAt: input.expiresAt,
+  });
   const messageId = generateKovaToken(32);
   return {
     message_id: messageId,
     to: input.to,
     from: "KovaGPT <noreply@kovagpt.com>",
     sender_domain: "notify.kovagpt.com",
-    subject: title,
-    html: `<p>${title}</p><p><a href="${safeLink}">${action}</a></p><p>If you did not request this, you can ignore this email.</p>`,
-    text: `${title}\n\n${input.link}\n\nIf you did not request this, you can ignore this email.`,
+    subject: content.subject,
+    html: content.html,
+    text: content.text,
     purpose: "auth",
     label: input.label,
     idempotency_key: `${input.label}:${input.tokenDigest}`,
-    queued_at: new Date().toISOString(),
+    queued_at: input.issuedAt,
   };
 }
 
@@ -408,6 +415,10 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
 
   const verificationToken = generateKovaToken();
   const verificationDigest = digestKovaToken(verificationToken);
+  const issuedAt = new Date().toISOString();
+  const expiresAt = new Date(
+    Date.parse(issuedAt) + KOVA_AUTH_CHALLENGE_SECONDS * 1000,
+  ).toISOString();
   try {
     const origin = publicOrigin();
     const link = new URL("/api/auth/verify", origin);
@@ -417,6 +428,8 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
       label: "kova-auth-verification",
       link: link.toString(),
       tokenDigest: verificationDigest,
+      issuedAt,
+      expiresAt,
     });
     const candidateAccountId = await createCompatibilityPrincipal();
     const created = await createPasswordAccount({
@@ -425,7 +438,7 @@ export async function handleKovaSignup(request: Request): Promise<Response> {
       displayName,
       passwordHash,
       verificationDigest,
-      verificationExpiresAt: futureIso(KOVA_AUTH_CHALLENGE_SECONDS),
+      verificationExpiresAt: expiresAt,
       emailPayload: payload,
     });
     if (!created.candidateUsed) {
@@ -472,17 +485,23 @@ export async function handleKovaVerificationResend(request: Request): Promise<Re
   try {
     const token = generateKovaToken();
     const verificationDigest = digestKovaToken(token);
+    const issuedAt = new Date().toISOString();
+    const expiresAt = new Date(
+      Date.parse(issuedAt) + KOVA_AUTH_CHALLENGE_SECONDS * 1000,
+    ).toISOString();
     const link = new URL("/api/auth/verify", publicOrigin());
     link.searchParams.set("token", token);
     await resendVerification({
       email,
       verificationDigest,
-      verificationExpiresAt: futureIso(KOVA_AUTH_CHALLENGE_SECONDS),
+      verificationExpiresAt: expiresAt,
       emailPayload: emailPayload({
         to: email,
         label: "kova-auth-verification",
         link: link.toString(),
         tokenDigest: verificationDigest,
+        issuedAt,
+        expiresAt,
       }),
     });
     return json(
@@ -1343,17 +1362,23 @@ export async function handleKovaRecoveryRequest(request: Request): Promise<Respo
   try {
     const recoveryToken = generateKovaToken();
     const recoveryDigest = digestKovaToken(recoveryToken);
+    const issuedAt = new Date().toISOString();
+    const expiresAt = new Date(
+      Date.parse(issuedAt) + KOVA_AUTH_CHALLENGE_SECONDS * 1000,
+    ).toISOString();
     const link = new URL("/reset-password", publicOrigin());
     link.hash = new URLSearchParams({ token: recoveryToken }).toString();
     await createRecovery({
       email,
       recoveryDigest,
-      recoveryExpiresAt: futureIso(KOVA_AUTH_CHALLENGE_SECONDS),
+      recoveryExpiresAt: expiresAt,
       emailPayload: emailPayload({
         to: email,
         label: "kova-auth-recovery",
         link: link.toString(),
         tokenDigest: recoveryDigest,
+        issuedAt,
+        expiresAt,
       }),
     });
     return json({ accepted: true }, { status: 202 });

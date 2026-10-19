@@ -1,0 +1,22 @@
+{
+  "subscriptionId": "REPLACE_WITH_EXISTING_APPROVED_SUBSCRIPTION_UUID",
+  "sourceSha": "REPLACE_WITH_EXACT_REVIEWED_40_HEX_COMMIT",
+  "sourceTree": "REPLACE_WITH_EXACT_REVIEWED_40_HEX_TREE",
+  "imageReference": "REPLACE_WITH_EXISTING_ACR_IMAGE_AT_SHA256_DIGEST",
+  "publicOrigin": "https://REPLACE_WITH_APPROVED_STAGING_HOST",
+  "app": null,
+  "browserProvenance": null,
+  "approval": {
+    "environment": "staging",
+    "targetId": "REPLACE_WITH_EXACT_EXISTING_STAGING_RESOURCE_ID",
+    "sourceSha": "REPLACE_WITH_SAME_REVIEWED_40_HEX_COMMIT",
+    "imageReference": "REPLACE_WITH_SAME_IMMUTABLE_IMAGE_REFERENCE",
+    "deployAuthorized": false,
+    "attempts": 1,
+    "currency": "USD",
+    "maximumCostMinor": null,
+    "quotedMaximumCostMinor": null,
+    "stopAt": null,
+    "stopSafeguardVerified": false
+  }
+}

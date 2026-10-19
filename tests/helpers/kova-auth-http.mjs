@@ -8,6 +8,7 @@ import * as crypto from "../../src/lib/kova-auth-crypto.server.mjs";
 import * as security from "../../src/lib/auth-security.mjs";
 import * as validation from "../../src/lib/auth-validation-policy.mjs";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
+import * as email from "../../src/lib/kova-auth-email.server.mjs";
 
 const compile = (path) =>
   ts.transpileModule(readFileSync(path, "utf8"), {
@@ -35,6 +36,7 @@ export function authHttp(options = {}) {
     "@/lib/auth-validation-policy.mjs": validation,
     "@/lib/chat-ingress.server.mjs": { resolveAnonymousClientKey: () => "fixture-client" },
     "@/lib/endpoint-reliability.mjs": reliability,
+    "@/lib/kova-auth-email.server.mjs": email,
     "@/lib/distributed-rate-limit.server": {
       async consumeApplicationRateLimit(input) {
         limits.push(plain(input));

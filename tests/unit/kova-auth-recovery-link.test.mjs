@@ -23,7 +23,9 @@ test("recovery emails use a fragment; the raw bearer is absent from the HTTP tar
     authRequest({ email: "owner@example.test" }, { path: "/api/auth/recovery/request" }),
   );
   assert.equal(response.status, 202);
-  const link = new URL(payload.p_email_payload.text.split("\n\n")[1]);
+  const link = new URL(
+    payload.p_email_payload.text.match(/^Reset password: (https:\/\/\S+)$/mu)[1],
+  );
   assert.equal(link.origin + link.pathname + link.search, base);
   const value = new URLSearchParams(link.hash.slice(1)).get("token");
   assert.match(value, /^[A-Za-z0-9_-]{43,128}$/u);
