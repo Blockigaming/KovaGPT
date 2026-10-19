@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { WorkOutputDownloadAction } from "@/components/WorkOutputDownloadAction";
 import {
   lazy,
@@ -1714,6 +1714,13 @@ function LibraryPage() {
                   Read-only snapshot · {visibleSharedPreview.snapshot.messages.length} messages ·{" "}
                   shared {new Date(visibleSharedPreview.created_at).toLocaleDateString()}
                 </DialogDescription>
+                <Link
+                  to="/share/$shareId"
+                  params={{ shareId: visibleSharedPreview.id }}
+                  className="mt-3 inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-4"
+                >
+                  Open full page
+                </Link>
               </header>
               <ol className="max-h-[70dvh] space-y-4 overflow-auto p-4 sm:p-6">
                 {visibleSharedPreview.snapshot.messages.map((message, index) => (

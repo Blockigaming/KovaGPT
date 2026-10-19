@@ -119,7 +119,7 @@ test("Canvas session identity and generation fence late history responses", () =
   const hook = readFileSync("src/lib/use-canvas-collaboration.ts", "utf8");
   assert.match(
     editor,
-    /key=\{JSON\.stringify\(\[user\?\.id, props\.chatId, props\.messageId, props\.projectId\]\)\}/,
+    /key=\{JSON\.stringify\(\[\s*user\?\.id,\s*props\.chatId,\s*props\.messageId,\s*props\.projectId,\s*props\.documentId,\s*\]\)\}/,
   );
   assert.match(editor, /if \(!props\.open\) return null/);
   const version = hook.slice(

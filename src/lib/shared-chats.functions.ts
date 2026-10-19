@@ -134,6 +134,30 @@ export const listSharedWithMe = createServerFn({ method: "GET" })
     return sharedChats;
   });
 
+export const getSharedWithMe = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<SharedChatInbox | null> => {
+    const { data: row, error } = await context.supabase
+      .from("shared_chats")
+      .select("id, title, owner_user_id, snapshot, created_at")
+      .eq("id", data.id)
+      .neq("owner_user_id", context.userId)
+      .neq("status", "revoked")
+      .maybeSingle();
+    if (error) throw new Error("This shared chat could not be loaded. Please retry.");
+    if (!row) return null;
+    const snapshot = SnapshotSchema.safeParse(row.snapshot);
+    if (!snapshot.success) return null;
+    return {
+      id: row.id,
+      title: row.title,
+      owner_user_id: row.owner_user_id,
+      snapshot: snapshot.data,
+      created_at: row.created_at,
+    };
+  });
+
 export const revokeSharedChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))

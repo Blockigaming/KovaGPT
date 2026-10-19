@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   ScriptOnce,
   Scripts,
@@ -16,7 +17,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
@@ -320,6 +321,32 @@ function RootThemeManager() {
   return null;
 }
 
+const ChatWorkspace = lazy(() => import("./index").then(({ KovaGPT }) => ({ default: KovaGPT })));
+function WorkspaceOutlet() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const savedChat = pathname.match(/^\/c\/([^/]+)\/?$/);
+  if (pathname !== "/" && !savedChat) return <Outlet />;
+  let conversationId: string | null = null;
+  if (savedChat) {
+    try {
+      conversationId = decodeURIComponent(savedChat[1]);
+    } catch {
+      return <NotFoundComponent />;
+    }
+  }
+  return (
+    <Suspense
+      fallback={
+        <main id="main-content" className="p-8" role="status">
+          Loading workspace…
+        </main>
+      }
+    >
+      <ChatWorkspace routeConversationId={conversationId} />
+    </Suspense>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
@@ -333,7 +360,7 @@ function RootComponent() {
         </a>
         <RootThemeManager />
         <PlatformRuntime />
-        <Outlet />
+        <WorkspaceOutlet />
         <Toaster />
       </QueryClientProvider>
     </ClerkProvider>
