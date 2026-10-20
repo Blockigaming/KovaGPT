@@ -11,14 +11,38 @@ const stripe = await readFile("src/lib/stripe.server.ts", "utf8");
 const paymentWebhook = await readFile("src/routes/api/public/payments/webhook.ts", "utf8");
 const home = await readFile("src/routes/index.tsx", "utf8");
 
-test("account deletion is authenticated, explicit, billing-safe, and server executed", () => {
-  assert.match(account, /requireUser\(request\)/);
-  assert.match(account, /confirmation !== "DELETE"/);
-  assert.match(account, /retireStripeCustomerForAccountDeletion\(billing\)/);
+test("account deletion is authenticated, explicit, billing-safe, and server executed", async () => {
+  assert.match(account, /makeAccountLifecycleHandlers\(\{ authenticate: requireUser \}\)/);
+  assert.doesNotMatch(account, /auth\.admin\.deleteUser|retireStripeCustomer|cleanupOwnedStorage/);
+  const [lifecycle, policy, worker, finalizer] = await Promise.all([
+    readFile("src/lib/account-lifecycle-handlers.mjs", "utf8"),
+    readFile("src/lib/account-lifecycle-policy.mjs", "utf8"),
+    readFile("src/lib/account-deletion-worker.server.ts", "utf8"),
+    readFile("src/lib/account-deletion-finalizer.server.ts", "utf8"),
+  ]);
+  assert.match(lifecycle, /await authenticate\(request\)/);
+  assert.match(lifecycle, /X-Kova-Expected-User/);
+  assert.match(lifecycle, /confirmation !== "DELETE"/);
+  assert.match(lifecycle, /auth\.authProvider !== "supabase"/);
+  assert.match(lifecycle, /scheduleAccountPolicyDeletion\(auth\.supabaseAdmin, auth\.userId\)/);
+  assert.match(lifecycle, /recoverAccountPolicy\(auth\.supabaseAdmin, auth\.userId\)/);
+  assert.doesNotMatch(
+    lifecycle,
+    /auth\.admin\.deleteUser|retireStripeCustomer|cleanupOwnedStorage/,
+  );
+  assert.match(policy, /ACCOUNT_RECOVERY_MS = 30 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(policy, /recovery - scheduled !== ACCOUNT_RECOVERY_MS/);
+  const dueAt = policy.indexOf('"kova_policy_due_deletions"');
+  const claimAt = policy.indexOf('"kova_policy_begin_finalization"');
+  const finalizeAt = policy.indexOf("await finalize(userId, claim)");
+  assert.ok(dueAt >= 0 && claimAt > dueAt && finalizeAt > claimAt);
+  assert.match(worker, /runAccountPolicyFinalizerBatch/);
+  assert.match(worker, /finalizeAccountAfterRecovery/);
+  assert.match(finalizer, /retireStripeCustomerForAccountDeletion\(billing\)/);
+  assert.match(finalizer, /auth\.admin\.deleteUser\(auth\.userId\)/u);
+  assert.match(finalizer, /irreversible/);
+  assert.doesNotMatch(finalizer, /releaseAccountExportDeletionFence/);
   assert.match(billingDeletion, /subscriptions\.cancel/);
-  assert.match(account, /auth\.admin\.deleteUser\(\s*auth\.userId/u);
-  assert.match(account, /irreversible/);
-  assert.doesNotMatch(account, /releaseAccountExportDeletionFence/);
   assert.match(settings, /requestAccountDeletion\(deletionUserKey, "DELETE"\)/);
   assert.match(settings, /deleteConfirmation !== "DELETE"/);
   assert.match(settings, /setDeleteAccountOpen\(true\)/);

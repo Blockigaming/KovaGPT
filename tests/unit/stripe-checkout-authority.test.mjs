@@ -3,8 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
-import { stripeSubscriptionBlocksCheckout } from "../../src/lib/stripe-subscription-status.mjs";
-import { BILLING_ENV, resolveBillingPlan, tierForLookupKey } from "../../src/lib/billing-plans.ts";
+import { BillingPolicyError } from "../../src/lib/billing-policy.mjs";
+import { BILLING_ENV, resolveBillingPlan } from "../../src/lib/billing-plans.ts";
 
 const source = await readFile("src/utils/payments.functions.ts", "utf8");
 const compiled = ts.transpileModule(
@@ -13,46 +13,13 @@ const compiled = ts.transpileModule(
 ).outputText;
 
 async function checkout({
-  history = [],
   localRows = [],
   priceId = "plus_monthly",
-  listError = false,
   enabled = true,
+  adapterError = null,
 } = {}) {
-  let sessionParams;
-  let observed = 0;
-  const stripe = {
-    customers: { search: async () => ({ data: [{ id: "cus_Fixture" }] }) },
-    prices: {
-      list: async () => ({
-        data: [
-          { id: resolveBillingPlan(priceId).livePriceId, lookup_key: priceId, type: "recurring" },
-        ],
-      }),
-    },
-    subscriptions: {
-      list: ({ customer, status, limit }) => ({
-        async *[Symbol.asyncIterator]() {
-          assert.equal(customer, "cus_Fixture");
-          assert.equal(status, "all");
-          assert.equal(limit, 100);
-          if (listError) throw new Error("upstream unavailable");
-          for (const subscription of history) {
-            observed++;
-            yield subscription;
-          }
-        },
-      }),
-    },
-    checkout: {
-      sessions: {
-        create: async (params) => {
-          sessionParams = params;
-          return { client_secret: "session_secret" };
-        },
-      },
-    },
-  };
+  let options;
+  let clientCreations = 0;
   const query = {
     select() {
       return this;
@@ -60,7 +27,7 @@ async function checkout({
     eq() {
       return this;
     },
-    order() {
+    abortSignal() {
       return this;
     },
     then(resolve) {
@@ -68,31 +35,23 @@ async function checkout({
     },
   };
   const context = {
-    createStripeClient: () => stripe,
-    durableStripeBillingEnabled: () => enabled,
-    resolveStripeCustomerId: async () => "cus_Fixture",
-    resolveDurableCheckoutSession: async ({ params }) => {
-      sessionParams = params;
-      return { client_secret: "session_secret" };
+    process: { env: { STRIPE_MONTHLY_INTRO_COUPON_ID: "nonsecret_fixture_coupon" } },
+    createStripeClient: () => {
+      clientCreations++;
+      return {};
     },
-    StripeCheckoutPendingError: class extends Error {},
-    supabaseAdmin: {
-      rpc: async () => ({
-        error: null,
-        data: {
-          idempotencyKey: "fixture-key",
-          stripeCustomerId: "cus_Fixture",
-          trialEligible: false,
-          outcome: "new",
-          sessionExpiresAt: new Date(Date.now() + 3600000).toISOString(),
-        },
-      }),
+    monthlyIntroBillingEnabled: () => enabled,
+    createMonthlyIntroCheckout: async (input) => {
+      options = input;
+      if (adapterError) throw adapterError;
+      return { client_secret: "nonsecret_fixture_secret" };
     },
+    BillingPolicyError,
+    AbortSignal,
+    supabaseAdmin: {},
     loose: (client) => client,
-    stripeSubscriptionBlocksCheckout,
     BILLING_ENV,
     resolveBillingPlan,
-    tierForLookupKey,
     CHECKOUT_RETURN_URL: "https://kovagpt.com/checkout/return",
     requireSupabaseAuth: {},
     console: { error() {} },
@@ -110,54 +69,55 @@ async function checkout({
   };
   vm.runInNewContext(`${compiled}\nglobalThis.checkout = createCheckoutSession;`, context);
   const result = await context.checkout({
-    data: { priceId },
+    data: { priceId, environment: "sandbox" },
     context: {
-      userId: "userFixture",
+      userId: "fixtureUser",
       claims: { email: "fixture@example.test" },
       supabase: { from: () => query },
     },
   });
-  return { result, sessionParams, observed };
+  return { result, options, clientCreations };
 }
 
-const ended = { status: "incomplete_expired" };
-test("authoritative history beyond page one blocks Checkout during webhook lag, including Pro", async () => {
-  const history = [...Array.from({ length: 150 }, () => ended), { status: "active" }];
-  const attempt = await checkout({ history, priceId: "pro_monthly" });
-  assert.match(attempt.result.error, /open subscription/u);
-  assert.equal(attempt.observed, 151);
-  assert.equal(attempt.sessionParams, undefined);
+test("handler passes canonical monthly Price, fixed URL, configured Coupon and live environment to the verified adapter", async () => {
+  const attempt = await checkout({ priceId: "pro_monthly" });
+  assert.equal(attempt.result.clientSecret, "nonsecret_fixture_secret");
+  assert.equal(attempt.options.plan, resolveBillingPlan("pro_monthly"));
+  assert.equal(attempt.options.environment, "live");
+  assert.equal(attempt.options.couponId, "nonsecret_fixture_coupon");
+  assert.equal(attempt.options.returnUrl, "https://kovagpt.com/checkout/return");
 });
 
-test("history lookup failures cannot open an unchecked Checkout Session", async () => {
-  const attempt = await checkout({ listError: true });
-  assert.match(attempt.result.error, /unavailable/u);
-  assert.equal(attempt.sessionParams, undefined);
-});
-
-test("unverified first-trial eligibility fails closed while proven returning history can checkout", async () => {
-  const first = await checkout();
-  assert.match(first.result.error, /30-day trial eligibility needs verification/u);
-  assert.equal(first.sessionParams, undefined);
-  const returning = await checkout({ history: [ended] });
-  assert.equal(returning.sessionParams.subscription_data.trial_period_days, undefined);
-  const staleExpired = await checkout({
+test("expired local history reaches the authoritative adapter, without reinstating trials", async () => {
+  const attempt = await checkout({
     localRows: [{ status: "active", current_period_end: "2020-01-01T00:00:00Z" }],
   });
-  assert.equal(staleExpired.result.clientSecret, "session_secret");
-  assert.equal(staleExpired.sessionParams.subscription_data.trial_period_days, undefined);
+  assert.equal(attempt.result.clientSecret, "nonsecret_fixture_secret");
+  assert.equal(attempt.options.plan.trialPeriodDays, 0);
 });
 
-test("malformed local periods continue to block Checkout without bypassing reviewed guards", async () => {
-  const attempt = await checkout({ localRows: [{ status: "active", current_period_end: null }] });
-  assert.match(attempt.result.error, /active subscription/u);
-  assert.equal(attempt.observed, 0);
-  assert.equal(attempt.sessionParams, undefined);
+test("malformed or open local subscription periods continue to block another Checkout", async () => {
+  for (const end of [null, "bad-date", new Date(Date.now() + 3600000).toISOString()]) {
+    const attempt = await checkout({ localRows: [{ status: "active", current_period_end: end }] });
+    assert.match(attempt.result.error, /active subscription/u);
+    assert.equal(attempt.options, undefined);
+  }
 });
 
-test("unverified rollout never starts Stripe Checkout", async () => {
-  const attempt = await checkout({ enabled: false, priceId: "pro_monthly" });
+test("unverified policy rollout stops before a Stripe client or adapter exists", async () => {
+  const attempt = await checkout({ enabled: false });
   assert.match(attempt.result.error, /verified rollout/u);
-  assert.equal(attempt.observed, 0);
-  assert.equal(attempt.sessionParams, undefined);
+  assert.equal(attempt.clientCreations, 0);
+  assert.equal(attempt.options, undefined);
+});
+
+test("authoritative active and unknown outcomes are handled without a second payment attempt", async () => {
+  const active = await checkout({
+    adapterError: new BillingPolicyError("billing_policy_active_subscription_exists"),
+  });
+  assert.match(active.result.error, /open subscription/u);
+  const pending = await checkout({
+    adapterError: new BillingPolicyError("billing_policy_checkout_reconciliation_pending"),
+  });
+  assert.match(pending.result.error, /no second payment attempt/u);
 });

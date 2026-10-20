@@ -1,4 +1,4 @@
-import { requestAccountDeletion } from "@/lib/account-deletion-client";
+import { parseAccountDeletionStatus, requestAccountDeletion } from "@/lib/account-deletion-client";
 import { PwaSettings } from "@/components/PwaSettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -300,9 +300,20 @@ export function SettingsDialog({
   const deletionOperationRef = useRef(0);
   const [deletionStatus, setDeletionStatus] = useState<{
     ownerId: string;
-    state: "active" | "deleting" | "unknown";
+    state: "active" | "scheduled" | "finalizing" | "deleted" | "unknown";
+    scheduledAt?: string | null;
+    recoverUntil?: string | null;
   } | null>(null);
   const deletionPending = deletionStatus?.ownerId === userKey && deletionStatus.state !== "active";
+  const deletionScheduled =
+    deletionStatus?.ownerId === userKey && deletionStatus.state === "scheduled";
+  // A fast or slow browser clock must not decide recovery eligibility. The
+  // scheduled server state offers the action; PostgreSQL enforces its deadline.
+  const deletionRecoverable = deletionScheduled;
+  const deletionDeadline =
+    deletionStatus?.ownerId === userKey && typeof deletionStatus.recoverUntil === "string"
+      ? new Date(deletionStatus.recoverUntil).toLocaleString()
+      : null;
   useEffect(() => {
     deletionOperationRef.current++;
     setUsage(null);
@@ -319,21 +330,14 @@ export function SettingsDialog({
     void requestAccountDeletion(userKey, "GET", lifetime.signal)
       .then(async (response) => {
         if (!response.ok) throw new Error("account_deletion_status_unavailable");
-        const result = (await response.json()) as { state?: string };
+        const result = parseAccountDeletionStatus(await response.json());
+        if (!result) throw new Error("account_deletion_status_unavailable");
         if (
           !lifetime.signal.aborted &&
           operation === deletionOperationRef.current &&
           currentAuthUserKeyRef.current === userKey
         )
-          setDeletionStatus({
-            ownerId: userKey,
-            state:
-              result.state === "active"
-                ? "active"
-                : result.state === "deleting"
-                  ? "deleting"
-                  : "unknown",
-          });
+          setDeletionStatus({ ownerId: userKey, ...result });
       })
       .catch(() => {
         /* A failed status read never claims deletion was rolled back. */
@@ -456,6 +460,92 @@ export function SettingsDialog({
     return result;
   };
 
+  const handleCheckDeletion = async () => {
+    if (deleteAccountBusy || !isLoaded || !userKey) return;
+    const deletionUserKey = userKey;
+    const operation = ++deletionOperationRef.current;
+    const currentDeletion = () =>
+      currentAuthUserKeyRef.current === deletionUserKey &&
+      deletionOperationRef.current === operation;
+    setDeleteAccountBusy(true);
+    try {
+      const response = await requestAccountDeletion(deletionUserKey, "GET");
+      const result = response.ok
+        ? parseAccountDeletionStatus(await response.json().catch(() => null))
+        : null;
+      if (currentDeletion()) {
+        setDeletionStatus(
+          result
+            ? { ownerId: deletionUserKey, ...result }
+            : {
+                ownerId: deletionUserKey,
+                state: "unknown",
+              },
+        );
+        if (!result)
+          toast.error("Deletion status could not be verified. No local data was removed.");
+      }
+    } catch {
+      if (currentDeletion()) {
+        setDeletionStatus({ ownerId: deletionUserKey, state: "unknown" });
+        toast.error("Deletion status could not be verified. No local data was removed.");
+      }
+    } finally {
+      if (currentDeletion()) setDeleteAccountBusy(false);
+    }
+  };
+
+  const handleRecoverAccount = async () => {
+    if (
+      deleteAccountBusy ||
+      !isLoaded ||
+      !userKey ||
+      deletionStatus?.ownerId !== userKey ||
+      deletionStatus.state !== "scheduled"
+    )
+      return;
+    const deletionUserKey = userKey;
+    const operation = ++deletionOperationRef.current;
+    const currentDeletion = () =>
+      currentAuthUserKeyRef.current === deletionUserKey &&
+      deletionOperationRef.current === operation;
+    setDeleteAccountBusy(true);
+    try {
+      const response = await requestAccountDeletion(deletionUserKey, "PATCH");
+      const body = await response.json().catch(() => null);
+      const result = response.status === 200 ? parseAccountDeletionStatus(body) : null;
+      if (!currentDeletion()) return;
+      setDeletionStatus(
+        result
+          ? { ownerId: deletionUserKey, ...result }
+          : {
+              ownerId: deletionUserKey,
+              state: "unknown",
+            },
+      );
+      if (result?.state === "active") {
+        setDeleteAccountOpen(false);
+        setDeleteConfirmation("");
+        toast.success(
+          "Your account was recovered. Your data, subscription and discount are unchanged.",
+        );
+      } else {
+        toast.error(
+          "Account recovery was not confirmed. Check deletion status; billing is unchanged.",
+        );
+      }
+    } catch {
+      if (currentDeletion()) {
+        setDeletionStatus({ ownerId: deletionUserKey, state: "unknown" });
+        toast.error(
+          "Account recovery was not confirmed. Check deletion status; no local data was removed.",
+        );
+      }
+    } finally {
+      if (currentDeletion()) setDeleteAccountBusy(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteConfirmation !== "DELETE" || deleteAccountBusy || !isLoaded || !userKey) return;
     const deletionUserKey = userKey;
@@ -474,7 +564,7 @@ export function SettingsDialog({
       if (currentDeletion()) {
         setDeletionStatus({ ownerId: deletionUserKey, state: "unknown" });
         toast.error(
-          "Deletion may have started. Retry to check its status and continue cleanup; completed cleanup cannot be undone.",
+          "Your deletion request may have been scheduled. Check its status; no local data was removed.",
         );
         setDeleteAccountBusy(false);
       }
@@ -482,31 +572,53 @@ export function SettingsDialog({
     }
 
     if (!response.ok) {
-      const result = (await response.json().catch(() => null)) as {
-        error?: string;
-        state?: string;
-      } | null;
+      const result = parseAccountDeletionStatus(await response.json().catch(() => null));
       if (currentDeletion()) {
-        setDeletionStatus({
-          ownerId: deletionUserKey,
-          state:
-            result?.state === "active"
-              ? "active"
-              : result?.state === "deleting"
-                ? "deleting"
-                : "unknown",
-        });
+        setDeletionStatus(
+          result
+            ? { ownerId: deletionUserKey, ...result }
+            : {
+                ownerId: deletionUserKey,
+                state: "unknown",
+              },
+        );
         toast.error(
           response.status === 401
             ? "Your sign-in is no longer valid. Deletion may have completed. Sign in again only if the account still exists to check its status; completed cleanup cannot be undone."
-            : result?.error || "Deletion status is uncertain. Retry to continue cleanup.",
+            : "Deletion was not confirmed. Check its status; no local data was removed.",
         );
         setDeleteAccountBusy(false);
       }
       return;
     }
 
-    // From this point on the server deletion is authoritative. Local UI,
+    if (response.status !== 204) {
+      const result = parseAccountDeletionStatus(await response.json().catch(() => null));
+      if (currentDeletion()) {
+        setDeletionStatus(
+          result
+            ? { ownerId: deletionUserKey, ...result }
+            : {
+                ownerId: deletionUserKey,
+                state: "unknown",
+              },
+        );
+        if (response.status === 202 && result?.state === "scheduled") {
+          setDeleteAccountOpen(false);
+          setDeleteConfirmation("");
+          toast.success(
+            "Account deletion is scheduled after 30 days. Recover before the deadline in Data controls. Billing is unchanged; cancel separately in Billing if needed.",
+          );
+        } else {
+          toast.error("Deletion is pending or unverified. No local data was removed.");
+        }
+        setDeleteAccountBusy(false);
+      }
+      return;
+    }
+
+    // Only a verified final 204 means server deletion is complete. Scheduling
+    // and recovery never clear data or sign out. Local UI,
     // storage, or sign-out failures may require browser cleanup, but must never
     // be reported as though the account remains active.
     let localCleanupIncomplete: boolean;
@@ -1598,16 +1710,30 @@ export function SettingsDialog({
                   onAction={() => importFileRef.current?.click()}
                 />
                 <SecurityRow
-                  title={deletionPending ? "Account deletion pending" : "Delete account"}
-                  body={
-                    deletionPending
-                      ? "Deletion has started or its outcome is still being verified. Completed cleanup cannot be undone. Retry to finish removing private data and the sign-in account."
-                      : "Cancel active subscriptions, disconnect stored credentials, and delete your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained."
+                  title={
+                    deletionScheduled
+                      ? "Account deletion scheduled"
+                      : deletionPending
+                        ? "Account deletion pending"
+                        : "Delete account"
                   }
-                  actionLabel={deletionPending ? "Retry deletion" : "Delete account"}
+                  body={
+                    deletionScheduled
+                      ? `Recovery deadline: ${deletionDeadline}. Your data remains intact during the 30-day recovery window. Billing continues unchanged; use Billing to cancel separately.`
+                      : deletionPending
+                        ? "Deletion is pending or its status is unverified. Check its status before assuming recovery or final cleanup. No local data is removed by a status check."
+                        : "Schedule deletion after a 30-day recovery window. Your subscription and discount remain unchanged; use Billing to cancel separately. Final deletion removes your account and private data. Legally required billing, security, and backup records may be retained."
+                  }
+                  actionLabel={
+                    deletionRecoverable
+                      ? "Recover account"
+                      : deletionPending
+                        ? "Check deletion status"
+                        : "Schedule deletion"
+                  }
                   danger
                   onAction={() => {
-                    setDeleteConfirmation(deletionPending ? "DELETE" : "");
+                    setDeleteConfirmation("");
                     setDeleteAccountOpen(true);
                   }}
                 />
@@ -1792,36 +1918,52 @@ export function SettingsDialog({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {deletionPending ? "Continue account deletion" : "Delete your account permanently?"}
+              {deletionRecoverable
+                ? "Recover your account?"
+                : deletionPending
+                  ? "Account deletion status"
+                  : "Schedule account deletion?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {deletionPending
-                ? "Deletion is pending or awaiting verification. Retry continues the same irreversible cleanup. Closing this dialog does not cancel deletion."
-                : "This cancels active subscriptions, disconnects stored credentials, and deletes your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained. This action cannot be undone. Type DELETE to continue."}
+              {deletionRecoverable
+                ? `Recover before ${deletionDeadline} to keep the same account and data. Your subscription and discount are unchanged; recovery does not cancel billing.`
+                : deletionPending
+                  ? "The recovery deadline may have passed or deletion status needs verification. A status check does not recover the account, start cleanup or change billing."
+                  : "Your account and data stay recoverable for 30 days before final deletion. Scheduling does not cancel billing or change your discount; cancel separately in Billing if desired. Legally required billing, security, and backup records may be retained. Type DELETE to schedule."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <Input
-            value={deleteConfirmation}
-            onChange={(event) => setDeleteConfirmation(event.target.value)}
-            placeholder="Type DELETE"
-            aria-label="Type DELETE to confirm"
-            autoComplete="off"
-            disabled={deleteAccountBusy}
-          />
+          {!deletionPending && (
+            <Input
+              value={deleteConfirmation}
+              onChange={(event) => setDeleteConfirmation(event.target.value)}
+              placeholder="Type DELETE"
+              aria-label="Type DELETE to confirm"
+              autoComplete="off"
+              disabled={deleteAccountBusy}
+            />
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteAccountBusy}>
               {deletionPending ? "Close" : "Cancel"}
             </AlertDialogCancel>
             <Button
               variant="destructive"
-              onClick={handleDeleteAccount}
-              disabled={deleteConfirmation !== "DELETE" || deleteAccountBusy}
+              onClick={
+                deletionRecoverable
+                  ? handleRecoverAccount
+                  : deletionPending
+                    ? handleCheckDeletion
+                    : handleDeleteAccount
+              }
+              disabled={(!deletionPending && deleteConfirmation !== "DELETE") || deleteAccountBusy}
             >
               {deleteAccountBusy
-                ? "Deleting…"
-                : deletionPending
-                  ? "Retry deletion"
-                  : "Delete account"}
+                ? "Working…"
+                : deletionRecoverable
+                  ? "Recover account"
+                  : deletionPending
+                    ? "Check deletion status"
+                    : "Schedule deletion"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

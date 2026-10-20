@@ -151,6 +151,7 @@ import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
 import { Route as ApiGoogleSelectRouteImport } from './routes/api/google/select'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
+import { Route as ApiInternalAccountDeletionsRouteImport } from './routes/api/internal/account-deletions'
 import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
 import { Route as ApiInternalChatSummariesRouteImport } from './routes/api/internal/chat-summaries'
 import { Route as ApiInternalDeveloperBillingRouteImport } from './routes/api/internal/developer-billing'
@@ -934,6 +935,12 @@ const ApiIntegrationsAccountsRoute = ApiIntegrationsAccountsRouteImport.update({
   path: '/api/integrations/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalAccountDeletionsRoute =
+  ApiInternalAccountDeletionsRouteImport.update({
+    id: '/api/internal/account-deletions',
+    path: '/api/internal/account-deletions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalAccountExportsRoute =
   ApiInternalAccountExportsRouteImport.update({
     id: '/api/internal/account-exports',
@@ -1423,6 +1430,7 @@ export interface FileRoutesByFullPath {
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
   '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
@@ -1631,6 +1639,7 @@ export interface FileRoutesByTo {
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
   '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
@@ -1840,6 +1849,7 @@ export interface FileRoutesById {
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
   '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
@@ -2050,6 +2060,7 @@ export interface FileRouteTypes {
     | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
     | '/api/internal/developer-billing'
@@ -2258,6 +2269,7 @@ export interface FileRouteTypes {
     | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
     | '/api/internal/developer-billing'
@@ -2466,6 +2478,7 @@ export interface FileRouteTypes {
     | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
     | '/api/internal/developer-billing'
@@ -2670,6 +2683,7 @@ export interface RootRouteChildren {
   ApiGoogleSelectRoute: typeof ApiGoogleSelectRoute
   ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
+  ApiInternalAccountDeletionsRoute: typeof ApiInternalAccountDeletionsRoute
   ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
   ApiInternalChatSummariesRoute: typeof ApiInternalChatSummariesRoute
   ApiInternalDeveloperBillingRoute: typeof ApiInternalDeveloperBillingRoute
@@ -3727,6 +3741,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIntegrationsAccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/account-deletions': {
+      id: '/api/internal/account-deletions'
+      path: '/api/internal/account-deletions'
+      fullPath: '/api/internal/account-deletions'
+      preLoaderRoute: typeof ApiInternalAccountDeletionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/account-exports': {
       id: '/api/internal/account-exports'
       path: '/api/internal/account-exports'
@@ -4424,6 +4445,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleSelectRoute: ApiGoogleSelectRoute,
   ApiGoogleStatusRoute: ApiGoogleStatusRoute,
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
+  ApiInternalAccountDeletionsRoute: ApiInternalAccountDeletionsRoute,
   ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,
   ApiInternalChatSummariesRoute: ApiInternalChatSummariesRoute,
   ApiInternalDeveloperBillingRoute: ApiInternalDeveloperBillingRoute,

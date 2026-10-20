@@ -191,48 +191,88 @@ test("preexisting fences gain a nonnullable irreversible start marker without re
     await db.close();
   }
 });
-async function loadTs(path, mocks = {}) {
-  let source = stripTypeScriptTypes(await readFile(path, "utf8")).replace(
-    /^import[\s\S]*?;\n/gmu,
-    "",
+async function loadTs(path) {
+  const source = stripTypeScriptTypes(await readFile(path, "utf8")).replace(
+    /(from\s*["'])@\/([^"']+)(["'])/gu,
+    (_match, prefix, relative, suffix) =>
+      `${prefix}${new URL(`../../src/${relative}`, import.meta.url).href}${suffix}`,
   );
-  const key = crypto.randomUUID();
-  globalThis[key] = mocks;
-  source = `const {${Object.keys(mocks).join(",")}}=globalThis[${JSON.stringify(key)}];\n` + source;
-  try {
-    return await import(
-      "data:text/javascript;base64," + Buffer.from(source).toString("base64") + "#" + key
-    );
-  } finally {
-    delete globalThis[key];
-  }
+  return import("data:text/javascript;base64," + Buffer.from(source).toString("base64"));
 }
-test("status helper requires a bounded RPC and validates deleting evidence", async () => {
+test("status helper requires one bounded policy RPC and preserves scheduled/finalizing authority", async (t) => {
   const { readAccountDeletionState } = await loadTs("src/lib/account-deletion-state.server.ts");
-  let received;
-  const admin = {
-    rpc(name, args) {
-      assert.equal(name, "read_account_deletion_state");
-      assert.equal(args.p_user_id, owner);
-      return {
-        abortSignal: async (signal) => {
-          received = signal;
-          return { data: { state: "deleting", startedAt: new Date().toISOString() }, error: null };
-        },
-      };
-    },
-  };
-  assert.equal((await readAccountDeletionState(admin, owner)).state, "deleting");
-  assert.ok(received instanceof AbortSignal);
-  await assert.rejects(
-    readAccountDeletionState(
-      {
-        rpc: () => ({
-          abortSignal: async () => ({ data: { state: "deleting", startedAt: null } }),
-        }),
+  const signal = new AbortController().signal;
+  const deadlines = [];
+  t.mock.method(AbortSignal, "timeout", (ms) => {
+    deadlines.push(ms);
+    return signal;
+  });
+  const scheduledAt = "2026-10-19T01:00:00.000Z";
+  const recoverUntil = "2026-11-18T01:00:00.000Z";
+  const fixture = (data, { error = null, transportError = null, bounded = true } = {}) => {
+    const calls = [];
+    const admin = {
+      rpc(name, args) {
+        calls.push({ name, args });
+        if (!bounded) return Promise.resolve({ data, error });
+        return {
+          abortSignal: async (received) => {
+            assert.equal(received, signal);
+            if (transportError) throw transportError;
+            return { data, error };
+          },
+        };
       },
-      owner,
-    ),
-    /unavailable/,
-  );
+    };
+    return { admin, calls };
+  };
+  const exactCall = [{ name: "kova_policy_account_status", args: { p_user: owner } }];
+  for (const [data, expected] of [
+    [
+      { state: "active", scheduledAt: null, recoverUntil: null },
+      { state: "active", startedAt: null },
+    ],
+    [
+      { state: "scheduled", scheduledAt, recoverUntil },
+      { state: "scheduled", startedAt: null },
+    ],
+    [
+      { state: "finalizing", scheduledAt, recoverUntil },
+      { state: "deleting", startedAt: scheduledAt },
+    ],
+  ]) {
+    const f = fixture(data);
+    assert.deepEqual(await readAccountDeletionState(f.admin, owner), expected);
+    assert.deepEqual(f.calls, exactCall);
+  }
+  for (const data of [
+    null,
+    undefined,
+    [],
+    { state: "deleted" },
+    { state: "deleting", startedAt: scheduledAt },
+    { state: "active", scheduledAt, recoverUntil },
+    { state: "scheduled", scheduledAt, recoverUntil: scheduledAt },
+    { state: "scheduled", scheduledAt, recoverUntil: "2026-11-17T01:00:00.000Z" },
+    { state: "finalizing", scheduledAt: "not-a-date", recoverUntil },
+  ]) {
+    const f = fixture(data);
+    await assert.rejects(readAccountDeletionState(f.admin, owner), /account_policy_/u);
+    assert.deepEqual(f.calls, exactCall);
+  }
+  for (const options of [
+    { error: { code: "NONSECRET_FIXTURE_RPC_ERROR" } },
+    { transportError: new Error("NONSECRET_FIXTURE_TRANSPORT_ERROR") },
+    { bounded: false },
+  ]) {
+    const f = fixture({ state: "active", scheduledAt: null, recoverUntil: null }, options);
+    await assert.rejects(readAccountDeletionState(f.admin, owner));
+    assert.deepEqual(f.calls, exactCall, "unavailable authority is not retried");
+  }
+  const f = fixture(null);
+  await assert.rejects(readAccountDeletionState(f.admin, "invalid-owner"), /principal_invalid/u);
+  assert.deepEqual(f.calls, []);
+  await assert.rejects(readAccountDeletionState(null, owner), /account_policy_unavailable/u);
+  assert.equal(deadlines.length, 14);
+  assert.ok(deadlines.every((ms) => ms === 10_000));
 });

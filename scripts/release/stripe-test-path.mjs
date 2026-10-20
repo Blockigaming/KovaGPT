@@ -55,8 +55,12 @@ export function verifyStripeTestPath({
   planSource,
   checkoutSource,
   checkoutReconciliationSource,
+  billingPolicySource,
+  billingPolicyParamsSource,
 }) {
   const failures = [];
+  const policyAdapter = /createMonthlyIntroCheckout\(\{/u.test(checkoutSource);
+  const sessionSource = policyAdapter ? (billingPolicyParamsSource ?? "") : checkoutSource;
   if (!/normalizeStripeEnvironment/u.test(webhookSource))
     failures.push("webhook environment parser missing");
   if (!/value === "sandbox" \|\| value === "live"/u.test(webhookSource))
@@ -92,7 +96,7 @@ export function verifyStripeTestPath({
   if (/unit_amount|1400|1600|8900/u.test(planSource))
     failures.push("source hard-codes Stripe price amounts");
 
-  const integrationIdentifier = checkoutSource.match(/integration_identifier:\s*"([^"]+)"/u)?.[1];
+  const integrationIdentifier = sessionSource.match(/integration_identifier:\s*"([^"]+)"/u)?.[1];
   if (!integrationIdentifier) {
     failures.push("embedded Checkout integration identifier missing");
   } else if (!INTEGRATION_IDENTIFIER_PATTERN.test(integrationIdentifier)) {
@@ -100,41 +104,112 @@ export function verifyStripeTestPath({
   } else if (integrationIdentifier !== EXPECTED_INTEGRATION_IDENTIFIER) {
     failures.push("embedded Checkout integration identifier changed");
   }
-  if (/payment_method_types\s*:/u.test(checkoutSource))
+  if (/payment_method_types\s*:/u.test(sessionSource))
     failures.push("Checkout payment methods must remain dynamic");
-  if (/automatic_tax\s*:/u.test(checkoutSource))
+  if (/automatic_tax\s*:/u.test(sessionSource))
     failures.push("automatic tax requires approved registrations");
   if (
-    !/const sessionParams:\s*Parameters<typeof stripe\.checkout\.sessions\.create>\[0\]/u.test(
-      checkoutSource,
-    )
+    !(policyAdapter
+      ? /const sessionParams:\s*Stripe\.Checkout\.SessionCreateParams/u.test(sessionSource)
+      : /const sessionParams:\s*Parameters<typeof stripe\.checkout\.sessions\.create>\[0\]/u.test(
+          sessionSource,
+        ))
   ) {
     failures.push("Checkout parameters are not SDK-typed");
   }
-  if (/sessionParams\s+as\s+Parameters</u.test(checkoutSource))
+  if (/sessionParams\s+as\s+(?:Parameters<|Stripe\.)/u.test(sessionSource))
     failures.push("Checkout parameters use an unsafe type assertion");
-  if (!/return_url:\s*CHECKOUT_RETURN_URL/u.test(checkoutSource))
+  if (
+    !(
+      policyAdapter ? /returnUrl:\s*CHECKOUT_RETURN_URL/u : /return_url:\s*CHECKOUT_RETURN_URL/u
+    ).test(checkoutSource)
+  )
     failures.push("fixed Checkout return URL missing");
-  if (/\breturnUrl\b|data\.returnUrl/u.test(checkoutSource))
+  if (
+    (policyAdapter
+      ? /data\.(?:returnUrl|return_url)|returnUrl:\s*data\./u
+      : /\breturnUrl\b|data\.returnUrl/u
+    ).test(checkoutSource)
+  )
     failures.push("Checkout return URL remains browser-selectable");
   if (!CHECKOUT_VALIDATOR_PATTERN.test(checkoutSource))
     failures.push("sanitized Checkout validator missing");
-  if (!/resolveStripeCustomerId/u.test(checkoutSource))
-    failures.push("durable Stripe customer mapping missing");
-  if (/customers\.(?:list|search|update)/u.test(checkoutSource))
-    failures.push("email or metadata customer reassignment remains reachable");
-  if (!/claim_stripe_checkout_attempt/u.test(checkoutSource))
-    failures.push("durable Checkout attempt claim missing");
-  if (!/_trial_eligible:\s*requestedTrialEligibility/u.test(checkoutSource))
-    failures.push("Checkout trial eligibility is not frozen in the durable attempt");
-  if (!/idempotencyKey:\s*`kova-checkout-/u.test(checkoutReconciliationSource ?? ""))
-    failures.push("Stripe Checkout idempotency key missing");
-  if (!/resolveDurableCheckoutSession\(\{/u.test(checkoutSource))
-    failures.push("durable Checkout reconciliation missing");
-  if (!/subscriptions\.list\(\{\s*customer:\s*customerId,\s*status:\s*"all"/u.test(checkoutSource))
-    failures.push("authoritative all-status subscription precheck missing");
-  if (!/stripeSubscriptionBlocksCheckout\(subscription, nowSeconds\)/u.test(checkoutSource))
-    failures.push("Checkout does not use the authoritative status projection");
+  if (policyAdapter) {
+    const policy = billingPolicySource ?? "";
+    if (
+      !/monthlyIntroBillingEnabled/u.test(checkoutSource) ||
+      !/requireMonthlyIntroReadiness/u.test(policy) ||
+      !/schemaVersion !== MONTHLY_INTRO_POLICY_VERSION/u.test(policy)
+    )
+      failures.push("monthly-intro version and shared-state readiness gates missing");
+    for (const name of [
+      "claim_customer",
+      "complete_customer",
+      "claim_checkout",
+      "attach_checkout",
+      "settle_checkout",
+    ]) {
+      if (!policy.includes(`kova_policy_${name}`))
+        failures.push(`monthly-intro durable ${name} contract missing`);
+    }
+    if (
+      !/claim\.idempotencyKey !== `kova-checkout:\$\{claim\.claimId\}`/u.test(policy) ||
+      !/idempotencyKey: claim\.idempotencyKey/u.test(policy)
+    )
+      failures.push("monthly-intro durable Checkout idempotency binding missing");
+    if (
+      !/coupon\.percent_off !== 50/u.test(policy) ||
+      !/coupon\.duration !== "once"/u.test(policy) ||
+      !/price\.recurring\?\.interval !== "month"/u.test(policy) ||
+      !/price\.recurring\?\.interval_count !== 1/u.test(policy)
+    )
+      failures.push("monthly-intro exact percentage, duration or monthly Price checks missing");
+    if (
+      /trial_period_days\s*:|trial_end\s*:/u.test(sessionSource) ||
+      /trialPeriodDays:\s*[1-9]/u.test(planSource)
+    )
+      failures.push("new Checkout must not issue a free trial");
+    if (
+      !/claim\.couponId/u.test(policy) ||
+      !/discounts:\s*\[\{ coupon: input\.couponId \}\]/u.test(sessionSource)
+    )
+      failures.push("intro Coupon not bound to the frozen account claim");
+    if (
+      !/subscriptions\.list\(\{\s*customer: customerId,\s*status: "all"/u.test(policy) ||
+      !/stripeSubscriptionBlocksCheckout/u.test(policy)
+    )
+      failures.push("authoritative all-status subscription precheck missing");
+    if (
+      /customers\.(?:list|update)/u.test(policy) ||
+      /customers\.search\(\{\s*query:\s*`?email/u.test(policy)
+    )
+      failures.push("email or Customer reassignment remains reachable");
+    if (
+      !/retrieveVerifiedSession/u.test(policy) ||
+      !/billing_policy_checkout_identity_mismatch/u.test(policy) ||
+      !/session\.customer !== customerId/u.test(policy)
+    )
+      failures.push("monthly-intro authoritative Session identity verification missing");
+  } else {
+    if (!/resolveStripeCustomerId/u.test(checkoutSource))
+      failures.push("durable Stripe customer mapping missing");
+    if (/customers\.(?:list|search|update)/u.test(checkoutSource))
+      failures.push("email or metadata customer reassignment remains reachable");
+    if (!/claim_stripe_checkout_attempt/u.test(checkoutSource))
+      failures.push("durable Checkout attempt claim missing");
+    if (!/_trial_eligible:\s*requestedTrialEligibility/u.test(checkoutSource))
+      failures.push("Checkout trial eligibility is not frozen in the durable attempt");
+    if (!/idempotencyKey:\s*`kova-checkout-/u.test(checkoutReconciliationSource ?? ""))
+      failures.push("Stripe Checkout idempotency key missing");
+    if (!/resolveDurableCheckoutSession\(\{/u.test(checkoutSource))
+      failures.push("durable Checkout reconciliation missing");
+    if (
+      !/subscriptions\.list\(\{\s*customer:\s*customerId,\s*status:\s*"all"/u.test(checkoutSource)
+    )
+      failures.push("authoritative all-status subscription precheck missing");
+    if (!/stripeSubscriptionBlocksCheckout\(subscription, nowSeconds\)/u.test(checkoutSource))
+      failures.push("Checkout does not use the authoritative status projection");
+  }
   if (/client_secret\s*\?\?\s*""/u.test(checkoutSource))
     failures.push("Checkout accepts a missing client secret");
   if (!/if \(!session\.client_secret\)/u.test(checkoutSource))
@@ -155,6 +230,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "src/lib/stripe-checkout-reconciliation.mjs",
       "utf8",
     ),
+    billingPolicySource: readFileSync("src/lib/billing-policy.mjs", "utf8"),
+    billingPolicyParamsSource: readFileSync("src/lib/billing-policy-params.ts", "utf8"),
   });
   if (failures.length) {
     console.error(`Stripe test-path contract failed:\n${failures.join("\n")}`);

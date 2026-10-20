@@ -164,15 +164,19 @@ test("billing checkout and entitlements use exact supported plan keys", () => {
   const apiAuth = read("src/lib/api-auth.server.ts");
   const clientTier = read("src/hooks/useTier.ts");
   const webhook = read("src/routes/api/public/payments/webhook.ts");
-  assert.match(plans, /plus_monthly:[\s\S]*tier: "plus"[\s\S]*trialPeriodDays: 30/);
+  assert.match(plans, /plus_monthly:[\s\S]*tier: "plus"[\s\S]*trialPeriodDays: 0/);
   assert.match(plans, /pro_monthly:[\s\S]*tier: "pro"[\s\S]*trialPeriodDays: 0/);
   assert.match(plans, /export const BILLING_ENV = "live" as const/);
   assert.match(plans, /Object\.prototype\.hasOwnProperty\.call\(BILLING_PLANS, value\)/);
   assert.ok(
-    checkout.indexOf("resolveBillingPlan(data.priceId)") < checkout.indexOf("stripe.prices.list"),
+    checkout.indexOf("resolveBillingPlan(data.priceId)") <
+      checkout.indexOf("createMonthlyIntroCheckout({"),
   );
-  assert.match(checkout, /lookup_keys: \[plan\.lookupKey\]/);
-  assert.match(checkout, /trial_period_days: plan\.trialPeriodDays/);
+  const policy = read("src/lib/billing-policy.mjs");
+  assert.match(policy, /lookup_keys: \[plan\.lookupKey\]/);
+  assert.match(policy, /coupon\.percent_off !== 50/);
+  assert.match(policy, /coupon\.duration !== "once"/);
+  assert.doesNotMatch(read("src/lib/billing-policy-params.ts"), /trial_period_days:|trial_end:/);
   for (const source of [checkout, apiAuth, clientTier])
     assert.doesNotMatch(source, /\.includes\(["'](?:plus|pro)["']\)/);
   assert.match(apiAuth, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, userId\)/);

@@ -32,8 +32,14 @@ test("does not expose a Checkout return URL browser input", async () => {
       "utf8",
     );
 
-  assert.match(serverSource, /return_url: CHECKOUT_RETURN_URL/);
-  assert.doesNotMatch(serverSource, /\breturnUrl\b|data\.returnUrl/);
+  assert.match(serverSource, /returnUrl: CHECKOUT_RETURN_URL/);
+  assert.doesNotMatch(serverSource, /data\.(?:returnUrl|return_url)/);
+  const policySource = await readFile(
+    new URL("../../src/lib/billing-policy.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(policySource, /p_return_url: returnUrl/);
+  assert.match(policySource, /session\.return_url !== claim\.returnUrl/);
   assert.doesNotMatch(componentSource, /\breturnUrl\b/);
   assert.doesNotMatch(hookSource, /\breturnUrl\b/);
   assert.doesNotMatch(pricingSource, /\breturnUrl\b|window\.location\.origin/);

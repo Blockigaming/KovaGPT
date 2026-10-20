@@ -141,15 +141,18 @@ test("every still-active subscription blocks a second Checkout session", async (
   assert.match(checkout, /if \(hasStillActiveSubscription\(subscriptionHistory \?\? \[\]\)\)/u);
   assert.doesNotMatch(checkout, /!existing\.cancel_at_period_end/u);
   assert.doesNotMatch(checkout, /\.limit\(1\)\s*\.maybeSingle\(\)/u);
-  assert.match(checkout, /\(subscriptionHistory \?\? \[\]\)\.length === 0/u);
-  assert.ok(
-    checkout.indexOf("if (hasStillActiveSubscription(") < checkout.indexOf("stripe.prices.list"),
-    "the current-subscription guard must run before Stripe Checkout work",
-  );
   assert.ok(
     checkout.indexOf("if (hasStillActiveSubscription(") <
-      checkout.indexOf("resolveDurableCheckoutSession({"),
+      checkout.indexOf("createMonthlyIntroCheckout({"),
     "the current-subscription guard must run before Checkout session creation",
+  );
+  const policy = await read("src/lib/billing-policy.mjs");
+  assert.match(policy, /kova_policy_claim_checkout/u);
+  assert.match(policy, /subscriptions\.list\(\{\s*customer: customerId,\s*status: "all"/u);
+  assert.match(policy, /stripeSubscriptionBlocksCheckout/u);
+  assert.doesNotMatch(
+    await read("src/lib/billing-policy-params.ts"),
+    /trial_period_days:|trial_end:/u,
   );
 });
 
@@ -209,7 +212,8 @@ test("subscription summary prefers an older active row over a newer expired row"
     payments.indexOf("export type SubscriptionSummary"),
   );
   assert.match(portal, /selectSubscriptionSummaryRow\(rows \?\? \[\]\)/u);
-  assert.match(portal, /customer: mapping\.stripe_customer_id/u);
-  assert.match(portal, /sub\.stripe_customer_id !== mapping\.stripe_customer_id/u);
+  assert.match(portal, /customer: mapping\.customerId/u);
+  assert.match(portal, /sub\.stripe_customer_id !== mapping\.customerId/u);
+  assert.match(portal, /kova_policy_customer_for_portal/u);
   assert.doesNotMatch(portal, /\.limit\(1\)\s*\.maybeSingle\(\)/u);
 });

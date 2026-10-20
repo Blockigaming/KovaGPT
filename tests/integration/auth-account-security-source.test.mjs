@@ -146,20 +146,46 @@ test("recovery and OAuth flows avoid open redirects, query-token consumption, an
 });
 
 test("account and memory mutations are bounded, no-store, and cross-site guarded", async () => {
-  const [account, memory] = await Promise.all([
+  const [account, lifecycle, policy, workerRoute, worker, finalizer, memory] = await Promise.all([
     read("src/routes/api/account.ts"),
+    read("src/lib/account-lifecycle-handlers.mjs"),
+    read("src/lib/account-lifecycle-policy.mjs"),
+    read("src/routes/api/internal/account-deletions.ts"),
+    read("src/lib/account-deletion-worker.server.ts"),
+    read("src/lib/account-deletion-finalizer.server.ts"),
     read("src/routes/api/memory.ts"),
   ]);
-  assert.match(account, /readUtf8BodyBounded\(request, MAX_DELETE_BODY_BYTES\)/);
-  assert.match(account, /mediaType !== "application\/json"/);
-  assert.match(account, /isCrossSiteMutation\(request\)/);
+  assert.match(account, /makeAccountLifecycleHandlers\(\{ authenticate: requireUser \}\)/);
+  assert.match(lifecycle, /readUtf8BodyBounded\(request, 1024\)/);
+  assert.match(lifecycle, /media !== "application\/json"/);
+  assert.match(lifecycle, /isCrossSiteMutation\(request\)/);
+  assert.match(lifecycle, /request\.headers\.get\("X-Kova-Expected-User"\) !== auth\.userId/);
+  assert.match(lifecycle, /body\.confirmation !== "DELETE"/);
+  assert.match(lifecycle, /DELETE: \(\{ request \}\) => handler\(request, "schedule"\)/);
+  assert.match(lifecycle, /PATCH: \(\{ request \}\) => handler\(request, "recover"\)/);
+  assert.match(lifecycle, /scheduleAccountPolicyDeletion\(auth\.supabaseAdmin, auth\.userId\)/);
+  assert.match(lifecycle, /recoverAccountPolicy\(auth\.supabaseAdmin, auth\.userId\)/);
+  assert.match(lifecycle, /action === "schedule" \? 202 : 200/);
+  assert.match(lifecycle, /billingChanged: false/);
+  assert.match(lifecycle, /"Cache-Control": "no-store"/);
+  assert.doesNotMatch(account + lifecycle, /deleteUser|retireStripe|finalizeAccountAfterRecovery/);
+  assert.doesNotMatch(account + lifecycle, /error instanceof Error \? error\.message/);
+  assert.match(policy, /ACCOUNT_RECOVERY_MS = 30 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(policy, /"kova_policy_due_deletions"/);
+  assert.match(policy, /"kova_policy_begin_finalization"/);
+  assert.match(workerRoute, /runtimeEnv\("ACCOUNT_DELETION_WORKER_SECRET"\)/);
+  assert.doesNotMatch(workerRoute, /runtimeEnv\("SCHEDULED_TASK_SECRET"\)/);
+  assert.match(worker, /runAccountPolicyFinalizerBatch\(/);
+  assert.match(worker, /finalizeAccountAfterRecovery\(/);
   assert.match(
-    account,
-    /prepareStripeAccountDeletion\(\{\s*supabase: auth\.supabaseAdmin,\s*userId: auth\.userId,/,
+    finalizer,
+    /confirmAccountFinalization\(auth\.supabaseAdmin, auth\.userId, claim\.attemptId\)/,
   );
-  assert.match(account, /auth\.admin\.deleteUser\(\s*auth\.userId/u);
-  assert.match(account, /"Cache-Control": "no-store"/);
-  assert.doesNotMatch(account, /error instanceof Error \? error\.message/);
+  assert.match(finalizer, /auth\.supabaseAdmin\.auth\.admin\.deleteUser\(auth\.userId\)/);
+  assert.ok(
+    finalizer.indexOf("confirmAccountFinalization(auth.supabaseAdmin") <
+      finalizer.indexOf("auth.supabaseAdmin.auth.admin.deleteUser(auth.userId)"),
+  );
   assert.equal(memory.match(/isCrossSiteMutation\(request\)/g)?.length, 2);
   assert.match(
     memory,

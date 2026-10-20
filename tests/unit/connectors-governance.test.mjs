@@ -100,12 +100,17 @@ test("connector OAuth callbacks are browser-bound and keep returns same-origin",
 });
 
 test("account deletion verifies every credential store before removing auth", () => {
-  const account = read("src/routes/api/account.ts");
+  const route = read("src/routes/api/account.ts");
+  const account = read("src/lib/account-deletion-finalizer.server.ts");
+  assert.match(route, /makeAccountLifecycleHandlers\(\{ authenticate: requireUser \}\)/);
+  assert.doesNotMatch(route, /auth\.admin\.deleteUser|disconnectAll/);
   const google = read("src/lib/google-oauth.server.ts");
   const github = read("src/lib/github-oauth.server.ts");
   const finance = read("src/finances/plaid.server.ts");
   const lifecycle = read("src/integrations/oauth-lifecycle.server.ts");
   const authDeletion = account.indexOf("auth.admin.deleteUser(");
+  const confirmAt = account.indexOf("await confirmAccountFinalization(");
+  assert.ok(confirmAt >= 0 && authDeletion > confirmAt);
 
   for (const cleanup of [
     "disconnectAllFinance(auth)",
