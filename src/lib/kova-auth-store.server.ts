@@ -298,6 +298,28 @@ export async function createPasswordSession(input: {
   return principalFromRow(firstRow(value, "kova_auth_create_session"));
 }
 
+export async function upgradePasswordHash(input: {
+  accountId: string;
+  credentialId: string;
+  credentialRevision: number;
+  oldPasswordHash: string;
+  newPasswordHash: string;
+  sessionDigest: string;
+}): Promise<boolean> {
+  const value = await rpc<unknown>("kova_auth_upgrade_password_hash", {
+    p_account_id: input.accountId,
+    p_credential_id: input.credentialId,
+    p_credential_revision: input.credentialRevision,
+    p_old_password_hash: input.oldPasswordHash,
+    p_new_password_hash: input.newPasswordHash,
+    p_session_digest_hex: input.sessionDigest,
+  });
+  if (typeof value !== "boolean") {
+    throw new KovaAuthStoreError("kova_auth_upgrade_password_hash");
+  }
+  return value;
+}
+
 function mfaChallengeFromRow(row: Record<string, unknown>): MfaChallenge {
   if (
     typeof row.account_id !== "string" ||

@@ -41,7 +41,7 @@ async function recoveryFixture(db, { at = now, until = expiry, token = "recovery
     await scalar(db, "select public.kova_auth_create_recovery($1,$2,$3,'{}',$4)", [
       email,
       digest(token),
-      until,
+      new Date(Math.min(Date.parse(until), Date.parse(at) + 3600_000)).toISOString(),
       at,
     ]),
     true,
@@ -76,7 +76,14 @@ test("Kova creates inert compatibility UUIDs without hosted credentials and clea
     assert.equal(await scalar(db, "select public.kova_auth_directory_email($1)", [id]), null);
     await db.query(
       "select * from public.kova_auth_create_password_account($1,$2,'Owned',$3,$4,$5,'{}',$6)",
-      [id, email, hash, digest("verify-new"), expiry, now],
+      [
+        id,
+        email,
+        hash,
+        digest("verify-new"),
+        new Date(Date.parse(now) + 3600_000).toISOString(),
+        now,
+      ],
     );
     assert.equal(
       await scalar(

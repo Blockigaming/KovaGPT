@@ -4,6 +4,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
+import vm from "node:vm";
+import { transformSync } from "esbuild";
 
 import { verifyBrowserConfig } from "../../scripts/azure/verify-browser-config.mjs";
 
@@ -76,8 +78,13 @@ function verify(bundleDir, overrides = {}) {
   });
 }
 
-function browserSource(extra = "") {
-  return [`const url="${SUPABASE_URL}";`, `const key="${PUBLISHABLE_KEY}";`, extra].join("\n");
+function browserSource(extra = "", authMode = "supabase") {
+  return [
+    `const url="${SUPABASE_URL}";`,
+    `const key="${PUBLISHABLE_KEY}";`,
+    `const authMode="kova-browser-auth-mode:${authMode}";`,
+    extra,
+  ].join("\n");
 }
 
 test("verified browser assets create key-free deterministic Git-archive provenance", () => {
@@ -103,6 +110,7 @@ test("verified browser assets create key-free deterministic Git-archive provenan
       assert.equal(parsed.sourceSha, SOURCE_SHA);
       assert.equal(parsed.sourceTree, SOURCE_TREE);
       assert.equal(parsed.sourceContext, "git-archive");
+      assert.equal(parsed.authMode, "supabase");
       assert.equal(parsed.publishableKeySha256, sha256(PUBLISHABLE_KEY));
       assert.match(parsed.browserBundleSha256, /^[a-f0-9]{64}$/u);
       assert.equal(parsed.scannedFiles, 1);
@@ -113,6 +121,101 @@ test("verified browser assets create key-free deterministic Git-archive provenan
       assert.doesNotMatch(written, new RegExp(PUBLISHABLE_KEY, "u"));
     },
   );
+});
+
+test("the compiled authentication marker controls the actual browser mode", () => {
+  const source = readFileSync("src/lib/kova-auth-browser.ts", "utf8");
+  for (const configured of [undefined, "", "supabase", "dual", "kova"]) {
+    const expectedAuthMode = configured || "supabase";
+    const compiled = transformSync(source, {
+      loader: "ts",
+      format: "cjs",
+      minify: true,
+      define: {
+        "import.meta.env.VITE_KOVA_AUTH_MODE":
+          configured === undefined ? "undefined" : JSON.stringify(configured),
+        "import.meta.env.VITE_KOVA_AUTH_ORIGIN": "undefined",
+      },
+    }).code;
+    const module = { exports: {} };
+    vm.runInNewContext(compiled, { module, exports: module.exports });
+    assert.equal(module.exports.browserKovaAuthMode(), expectedAuthMode);
+    assert.equal(module.exports.isKovaSessionActive(), expectedAuthMode !== "supabase");
+    withBundle(
+      {
+        "client/assets/app.js": [
+          `const url="${SUPABASE_URL}";`,
+          `const key="${PUBLISHABLE_KEY}";`,
+          compiled,
+        ].join("\n"),
+      },
+      ({ bundleDir }) => {
+        assert.equal(verify(bundleDir, { expectedAuthMode }).provenance.authMode, expectedAuthMode);
+      },
+    );
+  }
+  for (const configured of ["invalid", "KOVA", " kova "]) {
+    const compiled = transformSync(source, {
+      loader: "ts",
+      format: "cjs",
+      minify: true,
+      define: {
+        "import.meta.env.VITE_KOVA_AUTH_MODE": JSON.stringify(configured),
+        "import.meta.env.VITE_KOVA_AUTH_ORIGIN": "undefined",
+      },
+    }).code;
+    const module = { exports: {} };
+    assert.throws(
+      () => vm.runInNewContext(compiled, { module, exports: module.exports }),
+      /Invalid VITE_KOVA_AUTH_MODE/u,
+    );
+  }
+});
+
+test("browser auth mode verification rejects missing, stale, mixed and informational claims", () => {
+  const cases = [
+    {
+      "client/assets/app.js": browserSource().replace(
+        'const authMode="kova-browser-auth-mode:supabase";',
+        "",
+      ),
+      "client/auth-mode.txt": "kova-browser-auth-mode:kova",
+      "server/index.mjs": 'const mode="kova-browser-auth-mode:kova";',
+    },
+    { "client/assets/app.js": browserSource() },
+    {
+      "client/assets/app.js": browserSource(
+        'const staleMode="kova-browser-auth-mode:supabase";',
+        "kova",
+      ),
+    },
+    {
+      "client/assets/app.js": browserSource("", "kova"),
+      "client/auth-mode.txt": "kova-browser-auth-mode:dual",
+    },
+    {
+      "client/assets/app.js": browserSource(
+        'const invalidMode="kova-browser-auth-mode:invalid";',
+        "kova",
+      ),
+    },
+  ];
+  for (const files of cases) {
+    withBundle(files, ({ bundleDir }) => {
+      assert.throws(
+        () => verify(bundleDir, { expectedAuthMode: "kova" }),
+        /authentication mode was not found|mixed Kova authentication modes/u,
+      );
+    });
+  }
+  withBundle({ "client/assets/app.js": browserSource() }, ({ bundleDir }) => {
+    for (const expectedAuthMode of ["invalid", "KOVA", " kova ", ""]) {
+      assert.throws(
+        () => verify(bundleDir, { expectedAuthMode }),
+        /VITE_KOVA_AUTH_MODE must be exactly/u,
+      );
+    }
+  });
 });
 
 test("server-only configuration cannot satisfy browser verification", () => {
@@ -453,6 +556,9 @@ test("Docker, Azure, and runbook contracts require exact archive and digest prov
   assert.match(dockerfile, /ARG KOVA_VERIFY_BROWSER_CONFIG=false/u);
   assert.match(dockerfile, /KOVA_BUILD_SHA="\$KOVA_SOURCE_SHA" npm run build/u);
   assert.match(dockerfile, /KOVA_BROWSER_BUNDLE_DIR=dist\/client/u);
+  assert.match(dockerfile, /ARG VITE_KOVA_AUTH_MODE=supabase/u);
+  assert.match(dockerfile, /case "\$VITE_KOVA_AUTH_MODE" in/u);
+  assert.match(dockerfile, /VITE_KOVA_AUTH_MODE="\$VITE_KOVA_AUTH_MODE"/u);
   assert.match(dockerfile, /KOVA_SOURCE_ATTESTATION_PATH=\/app\/\.kova-source-attestation\.json/u);
   assert.match(dockerfile, /com\.kovagpt\.source\.tree/u);
   assert.match(dockerfile, /browser-config-provenance\.json/u);

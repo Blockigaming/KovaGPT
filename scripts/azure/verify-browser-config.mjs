@@ -30,6 +30,8 @@ const TEXT_EXTENSIONS = new Set([
   ".xml",
 ]);
 const EXECUTABLE_BROWSER_EXTENSIONS = new Set([".js", ".mjs"]);
+const BROWSER_AUTH_MODE_PATTERN = /\bkova-browser-auth-mode:([a-z0-9_-]+)\b/gu;
+const BROWSER_AUTH_MODES = new Set(["supabase", "dual", "kova"]);
 const MAX_SCANNED_BYTES = 128 * 1024 * 1024;
 
 const FORBIDDEN_SECRET_PATTERNS = [
@@ -320,6 +322,7 @@ export function verifyBrowserConfig({
   supabaseUrl = process.env.VITE_SUPABASE_URL,
   publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   stripePublishableKey = process.env.VITE_PAYMENTS_CLIENT_TOKEN || "",
+  expectedAuthMode = process.env.VITE_KOVA_AUTH_MODE || "supabase",
   sourceSha = process.env.KOVA_SOURCE_SHA,
   sourceTree = process.env.KOVA_SOURCE_TREE,
   sourceAttestationPath = process.env.KOVA_SOURCE_ATTESTATION_PATH,
@@ -331,6 +334,10 @@ export function verifyBrowserConfig({
 } = {}) {
   const { projectRef, normalizedUrl } = normalizeSupabaseUrl(supabaseUrl);
   const normalizedKey = normalizePublishableKey(publishableKey);
+  assertCondition(
+    BROWSER_AUTH_MODES.has(expectedAuthMode),
+    "VITE_KOVA_AUTH_MODE must be exactly supabase, dual, or kova",
+  );
   const stripeKey = String(stripePublishableKey);
   assertCondition(
     stripeKey === "" || /^pk_(?:live|test)_[A-Za-z0-9]{16,}$/u.test(stripeKey),
@@ -378,6 +385,8 @@ export function verifyBrowserConfig({
   const bundleHash = createHash("sha256");
   const discoveredProjectRefs = new Set();
   const discoveredPublishableKeys = new Set();
+  const discoveredAuthModes = new Set();
+  let executableExpectedAuthModeOccurrences = 0;
   let scannedBytes = 0;
   let expectedUrlOccurrences = 0;
   let expectedKeyOccurrences = 0;
@@ -402,6 +411,12 @@ export function verifyBrowserConfig({
       executableExpectedUrlOccurrences += urlOccurrences;
       executableExpectedKeyOccurrences += keyOccurrences;
       if (stripeKey) stripeExecutableOccurrences += countOccurrences(text, stripeKey);
+    }
+    for (const match of text.matchAll(BROWSER_AUTH_MODE_PATTERN)) {
+      discoveredAuthModes.add(match[1]);
+      if (file.executable && match[1] === expectedAuthMode) {
+        executableExpectedAuthModeOccurrences += 1;
+      }
     }
 
     for (const match of text.matchAll(SUPABASE_URL_PATTERN)) {
@@ -445,6 +460,14 @@ export function verifyBrowserConfig({
     executableExpectedKeyOccurrences > 0,
     "The intended Supabase publishable key was not found in executable browser assets",
   );
+  assertCondition(
+    executableExpectedAuthModeOccurrences > 0,
+    "The intended Kova authentication mode was not found in executable browser assets",
+  );
+  assertCondition(
+    discoveredAuthModes.size === 1 && discoveredAuthModes.has(expectedAuthMode),
+    "Unexpected or mixed Kova authentication modes were detected in browser assets",
+  );
 
   const unexpectedRefs = [...discoveredProjectRefs].filter((ref) => ref !== projectRef);
   assertCondition(
@@ -483,6 +506,7 @@ export function verifyBrowserConfig({
     sourceSha: normalizedSourceSha,
     sourceTree: normalizedSourceTree,
     sourceContext: sourceAttestation.context,
+    authMode: expectedAuthMode,
     supabaseProjectRef: projectRef,
     supabaseUrl: normalizedUrl,
     publishableKeySha256: sha256(normalizedKey),
@@ -517,6 +541,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   try {
     const result = verifyBrowserConfig();
     console.log(`BROWSER_CONFIG_PROJECT_REF=${result.provenance.supabaseProjectRef}`);
+    console.log(`BROWSER_CONFIG_AUTH_MODE=${result.provenance.authMode}`);
     console.log(`BROWSER_BUNDLE_SHA256=${result.provenance.browserBundleSha256}`);
     console.log(`BROWSER_CONFIG_PROVENANCE=${result.provenancePath}`);
   } catch (error) {

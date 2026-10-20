@@ -52,6 +52,14 @@ test("canonical inputs use the supplied source readers and work outside the chec
       cwd: tmpdir(),
       encoding: "utf8",
     });
+    if (
+      args.includes("--dry-run") &&
+      JSON.parse(readFileSync(join(ROOT, "release-migrations.json"))).count > 185
+    ) {
+      assert.equal(run.status, 1);
+      assert.match(run.stderr, /upgrade_canonical_history_pending_mismatch/u);
+      continue;
+    }
     assert.equal(run.status, 0, `${script}: ${run.stderr}`);
     if (args.includes("--dry-run")) {
       const result = JSON.parse(run.stdout);
@@ -99,6 +107,56 @@ test("the decision accounts for each current source-only and remote-only version
       .every((item) => item.reviewStatus === "blocked_requires_schema_proof"),
   );
   assert.equal(decision.status, "proposed_only_no_history_repair_or_production_action");
+});
+
+test("forward auth migrations are checked without changing the historical decision", () => {
+  const manifest = JSON.parse(readFileSync(join(ROOT, "release-migrations.json"), "utf8"));
+  const content = Buffer.from("-- New owned-auth migration fixture.\nselect 1;\n");
+  const filename = "20990101000000_kova_owned_forward_fixture.sql";
+  manifest.count += 1;
+  manifest.migrations.push({
+    ...manifest.migrations.at(-1),
+    order: manifest.count,
+    timestamp: filename.slice(0, 14),
+    filename,
+    sha256: createHash("sha256").update(content).digest("hex"),
+  });
+  const build = ({ observed = manifest, changedBytes = content, untracked = false } = {}) =>
+    buildCanonicalHistoryDecision({
+      root: ROOT,
+      readFile(pathname) {
+        if (pathname === join(ROOT, "release-migrations.json"))
+          return Buffer.from(JSON.stringify(observed));
+        if (pathname === join(ROOT, "supabase/migrations", filename)) return changedBytes;
+        return readFileSync(pathname);
+      },
+      readDirectory(directory) {
+        return [
+          ...readdirSync(directory),
+          filename,
+          ...(untracked ? ["20990102000000_kova_owned_untracked_fixture.sql"] : []),
+        ];
+      },
+    });
+  const expected = JSON.parse(readFileSync(join(ROOT, path), "utf8"));
+  const decision = build();
+  assert.deepEqual(decision, expected);
+  assert.equal(decision.sourceManifestSha256, expected.sourceManifestSha256);
+  assert.equal(decision.counts.proposedFinalLedgerCount, 209);
+  const changedPrefix = structuredClone(manifest);
+  changedPrefix.migrations[184].destructive = !changedPrefix.migrations[184].destructive;
+  assert.throws(
+    () => build({ observed: changedPrefix }),
+    /canonical_history_current_source_checkpoint_changed/u,
+  );
+  assert.throws(
+    () => build({ changedBytes: Buffer.from("select 2;\n") }),
+    /canonical_history_checked_out_migration_content_changed/u,
+  );
+  assert.throws(
+    () => build({ untracked: true }),
+    /canonical_history_checked_out_migration_set_changed/u,
+  );
 });
 
 test("capture validation rejects historical statement drift and wrong projects", () => {

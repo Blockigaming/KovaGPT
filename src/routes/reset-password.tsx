@@ -22,6 +22,10 @@ import {
   kovaPublicAuthJson,
 } from "@/lib/kova-auth-browser";
 import { readKovaRecoveryLanding } from "@/lib/kova-recovery-landing.mjs";
+import {
+  classifyKovaRecoveryResetResponse,
+  KOVA_RECOVERY_UNCONFIRMED_MESSAGE,
+} from "@/lib/kova-recovery-result.mjs";
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
@@ -45,6 +49,7 @@ function ResetPassword() {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitNotice, setSubmitNotice] = useState<string | null>(null);
   const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
   const recoveryLanding = useRef<ReturnType<typeof readKovaRecoveryLanding> | null>(null);
   const legacyContext = useRef<{
@@ -156,8 +161,13 @@ function ResetPassword() {
       toast.error("Passwords don't match.");
       return;
     }
+    setSubmitNotice(null);
     setLoading(true);
     submitting.current = true;
+    let preserveDraft = false;
+    let ownedResponseClassified = false;
+    let failureMessage =
+      "Your password could not be updated. Request a new reset link and try again.";
     try {
       if (useKovaRecovery && recoveryToken) {
         const response = await kovaPublicAuthJson("/api/auth/recovery/reset", {
@@ -168,12 +178,15 @@ function ResetPassword() {
           session?: { accountId?: unknown; emailVerified?: unknown };
           error?: unknown;
         } | null;
-        if (
-          !response.ok ||
-          typeof payload?.session?.accountId !== "string" ||
-          payload.session.emailVerified !== true
-        )
+        const outcome = classifyKovaRecoveryResetResponse(response.status, payload);
+        ownedResponseClassified = true;
+        if (!outcome.confirmed) {
+          preserveDraft = outcome.preserveDraft;
+          failureMessage = outcome.message;
           throw new Error("recovery_response_unconfirmed");
+        }
+        failureMessage =
+          "Your password update was confirmed. Try signing in with your new password.";
         if (!mounted.current) return;
         recoveryLanding.current = null;
         setRecoveryToken(null);
@@ -208,15 +221,25 @@ function ResetPassword() {
         toast.success("Password updated and other sessions signed out.");
       }
       navigate({ to: "/" });
-    } catch (err) {
-      console.error("[KovaAuth] Password update failed", {
-        error: err instanceof Error ? err.name : "unknown_error",
+    } catch {
+      if (useKovaRecovery && !ownedResponseClassified) {
+        // A lost response may follow a committed reset. Keep the draft only
+        // in this component's memory and leave any retry to the person.
+        preserveDraft = true;
+        failureMessage = KOVA_RECOVERY_UNCONFIRMED_MESSAGE;
+      }
+      console.error("[KovaAuth] Password update unconfirmed", {
+        code: "kova_password_update_unconfirmed",
       });
-      if (mounted.current)
-        toast.error("Your password could not be updated. Request a new reset link and try again.");
+      if (mounted.current) {
+        setSubmitNotice(failureMessage);
+        toast.error(failureMessage);
+      }
     } finally {
-      setPassword("");
-      setConfirm("");
+      if (!preserveDraft) {
+        setPassword("");
+        setConfirm("");
+      }
       setLoading(false);
       submitting.current = false;
     }
@@ -250,12 +273,21 @@ function ResetPassword() {
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3">
+            {submitNotice && (
+              <p
+                role="status"
+                className="text-sm text-muted-foreground rounded-lg border border-border p-3"
+              >
+                {submitNotice}
+              </p>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="new-pw">New password</Label>
               <Input
                 id="new-pw"
                 type="password"
                 autoComplete="new-password"
+                disabled={loading}
                 minLength={useKovaRecovery ? 12 : 6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -269,6 +301,7 @@ function ResetPassword() {
                 id="confirm-pw"
                 type="password"
                 autoComplete="new-password"
+                disabled={loading}
                 minLength={useKovaRecovery ? 12 : 6}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}

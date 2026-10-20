@@ -236,7 +236,7 @@ function harness(t, options = {}) {
           mkdirSync(bundle);
           writeFileSync(
             `${bundle}/index.js`,
-            `window.config=["https://${projectRef}.supabase.co","${browserKey}","${stripeKey}"];`,
+            `window.config=["https://${projectRef}.supabase.co","${browserKey}","${stripeKey}"];const authMode="kova-browser-auth-mode:supabase";`,
           );
           writeFileSync(
             `${parent}/expected-source.json`,

@@ -29,7 +29,11 @@ ENV NODE_ENV=production \
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN case "$VITE_KOVA_GOOGLE_AUTH_ENABLED" in \
+RUN case "$VITE_KOVA_AUTH_MODE" in \
+      supabase|dual|kova) ;; \
+      *) echo 'VITE_KOVA_AUTH_MODE must be supabase, dual, or kova' >&2; exit 1 ;; \
+    esac \
+    && case "$VITE_KOVA_GOOGLE_AUTH_ENABLED" in \
       true|false) ;; \
       *) echo 'VITE_KOVA_GOOGLE_AUTH_ENABLED must be true or false' >&2; exit 1 ;; \
     esac
@@ -48,6 +52,7 @@ RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" NODE_OPTIONS=--max-
         KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS" \
         VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
         VITE_SUPABASE_PUBLISHABLE_KEY="$VITE_SUPABASE_PUBLISHABLE_KEY" \
+        VITE_KOVA_AUTH_MODE="$VITE_KOVA_AUTH_MODE" \
         VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" \
         node scripts/azure/verify-browser-config.mjs; \
     elif [ "$KOVA_VERIFY_BROWSER_CONFIG" != "false" ]; then \
@@ -74,6 +79,9 @@ RUN groupadd --system --gid 10001 kova && \
 
 COPY --from=build --chown=kova:kova /app/dist ./dist
 COPY --from=build --chown=kova:kova /app/package.json ./package.json
+COPY --from=build --chown=kova:kova /app/scripts/auth-email/dispatch.mjs ./scripts/auth-email/dispatch.mjs
+COPY --from=build --chown=kova:kova /app/src/lib/kova-auth-email.server.mjs ./src/lib/kova-auth-email.server.mjs
+COPY --from=build --chown=kova:kova /app/src/config/public-config.ts ./src/config/public-config.ts
 
 USER kova
 EXPOSE 3000

@@ -12,6 +12,12 @@ import {
   verify as verifyBytes,
 } from "node:crypto";
 import { promisify } from "node:util";
+import {
+  createKovaPasswordWorkLimiter,
+  KovaPasswordCapacityError,
+} from "./kova-auth-password-work.server.mjs";
+
+export { KovaPasswordCapacityError } from "./kova-auth-password-work.server.mjs";
 
 const scrypt = promisify(scryptCallback);
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43,128}$/u;
@@ -22,6 +28,20 @@ const SCRYPT_R = 8;
 const SCRYPT_P = 1;
 const SCRYPT_BYTES = 32;
 const SCRYPT_MAX_MEMORY = 64 * 1024 * 1024;
+const PASSWORD_MAX_BYTES = 1024;
+const ARGON2ID_MEMORY_KIB = 19 * 1024;
+const ARGON2ID_TIME_COST = 2;
+const ARGON2ID_PARALLELISM = 1;
+const ARGON2ID_BYTES = 32;
+const ARGON2ID_PATTERN =
+  /^\$argon2id\$v=19\$m=19456,(?:t=2,p=1|p=1,t=2)\$([A-Za-z0-9+/]{22})\$([A-Za-z0-9+/]{43})$/u;
+// Candidate process bounds only. Deployment still requires capacity testing in
+// its actual memory envelope and distributed endpoint abuse controls.
+const runPasswordWork = createKovaPasswordWorkLimiter({
+  maxActive: 2,
+  maxQueued: 8,
+  maxQueueWaitMs: 2000,
+});
 const GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
 const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
@@ -161,37 +181,41 @@ export function verifyKovaTotp(code, base32Secret, now = Date.now()) {
   }
 }
 
-function validatePassword(password) {
+export class KovaPasswordInfrastructureError extends Error {
+  constructor() {
+    super("Password processing is temporarily unavailable");
+    this.name = "KovaPasswordInfrastructureError";
+    this.code = "kova_password_infrastructure";
+  }
+}
+
+function validatePasswordBytes(password) {
   assertWellFormed(password, "Password");
-  const byteLength = Buffer.byteLength(password, "utf8");
-  if (password.length < 12 || byteLength > 1024) {
+  if (
+    password.length > PASSWORD_MAX_BYTES ||
+    Buffer.byteLength(password, "utf8") > PASSWORD_MAX_BYTES
+  ) {
     throw new RangeError("Password must be 12 or more characters and at most 1024 UTF-8 bytes");
   }
 }
 
-export async function hashKovaPassword(password) {
-  validatePassword(password);
-  const salt = randomBytes(16);
-  const derived = await scrypt(password, salt, SCRYPT_BYTES, {
-    N: SCRYPT_N,
-    r: SCRYPT_R,
-    p: SCRYPT_P,
-    maxmem: SCRYPT_MAX_MEMORY,
-  });
-  return [
-    "scrypt-v1",
-    String(SCRYPT_N),
-    String(SCRYPT_R),
-    String(SCRYPT_P),
-    salt.toString("base64url"),
-    Buffer.from(derived).toString("base64url"),
-  ].join("$");
+function isCurrentArgon2idHash(encoded) {
+  if (typeof encoded !== "string") return false;
+  const match = ARGON2ID_PATTERN.exec(encoded);
+  if (!match) return false;
+  const salt = Buffer.from(match[1], "base64");
+  const digest = Buffer.from(match[2], "base64");
+  return (
+    salt.length === 16 &&
+    digest.length === ARGON2ID_BYTES &&
+    salt.toString("base64").replace(/=+$/u, "") === match[1] &&
+    digest.toString("base64").replace(/=+$/u, "") === match[2]
+  );
 }
 
-export async function verifyKovaPassword(password, encoded) {
+function legacyPasswordParts(encoded) {
   try {
-    assertWellFormed(password, "Password");
-    if (typeof encoded !== "string") return false;
+    if (typeof encoded !== "string" || encoded.length !== 86) return null;
     const [version, n, r, p, saltText, digestText, ...extra] = encoded.split("$");
     if (
       version !== "scrypt-v1" ||
@@ -200,19 +224,126 @@ export async function verifyKovaPassword(password, encoded) {
       p !== String(SCRYPT_P) ||
       extra.length > 0
     ) {
-      return false;
+      return null;
     }
     const salt = decodeBase64Url(saltText, "password salt");
     const expected = decodeBase64Url(digestText, "password digest");
-    if (salt.length !== 16 || expected.length !== SCRYPT_BYTES) return false;
-    const actual = await scrypt(password, salt, SCRYPT_BYTES, {
-      N: SCRYPT_N,
-      r: SCRYPT_R,
-      p: SCRYPT_P,
-      maxmem: SCRYPT_MAX_MEMORY,
-    });
-    return timingSafeEqual(Buffer.from(actual), expected);
+    if (salt.length !== 16 || expected.length !== SCRYPT_BYTES) return null;
+    return { salt, expected };
   } catch {
+    return null;
+  }
+}
+
+export function kovaPasswordHashNeedsUpgrade(encoded) {
+  return legacyPasswordParts(encoded) !== null;
+}
+
+// Keep legacy-only rollback revisions compatible until the additive schema and
+// dual-reader rollback build have both been qualified for Argon2id writes.
+export function kovaPasswordHashWriteAlgorithm(env = process.env) {
+  const configured = env.KOVA_AUTH_PASSWORD_HASH_WRITE;
+  if (configured === undefined || configured === "scrypt-v1") return "scrypt-v1";
+  if (configured === "argon2id") return "argon2id";
+  throw new KovaPasswordInfrastructureError();
+}
+
+async function legacyPasswordHash(password) {
+  return runPasswordWork(async () => {
+    try {
+      const salt = randomBytes(16);
+      const derived = await scrypt(password, salt, SCRYPT_BYTES, {
+        N: SCRYPT_N,
+        r: SCRYPT_R,
+        p: SCRYPT_P,
+        maxmem: SCRYPT_MAX_MEMORY,
+      });
+      return [
+        "scrypt-v1",
+        String(SCRYPT_N),
+        String(SCRYPT_R),
+        String(SCRYPT_P),
+        salt.toString("base64url"),
+        Buffer.from(derived).toString("base64url"),
+      ].join("$");
+    } catch {
+      throw new KovaPasswordInfrastructureError();
+    }
+  });
+}
+
+async function currentPasswordHash(password) {
+  return runPasswordWork(async () => {
+    try {
+      const argon2 = await import("argon2");
+      const encoded = await argon2.hash(password, {
+        type: argon2.argon2id,
+        version: 0x13,
+        memoryCost: ARGON2ID_MEMORY_KIB,
+        timeCost: ARGON2ID_TIME_COST,
+        parallelism: ARGON2ID_PARALLELISM,
+        hashLength: ARGON2ID_BYTES,
+        salt: randomBytes(16),
+      });
+      if (!isCurrentArgon2idHash(encoded)) throw new KovaPasswordInfrastructureError();
+      return encoded;
+    } catch {
+      throw new KovaPasswordInfrastructureError();
+    }
+  });
+}
+
+export async function hashKovaPassword(password, env = process.env) {
+  validatePasswordBytes(password);
+  if (password.length < 12) {
+    throw new RangeError("Password must be 12 or more characters and at most 1024 UTF-8 bytes");
+  }
+  return kovaPasswordHashWriteAlgorithm(env) === "argon2id"
+    ? currentPasswordHash(password)
+    : legacyPasswordHash(password);
+}
+
+// Only callers that have completed authentication may persist this replacement.
+// Rehashing preserves older password lengths rather than forcing a reset.
+export async function rehashKovaPassword(password) {
+  validatePasswordBytes(password);
+  return currentPasswordHash(password);
+}
+
+export async function verifyKovaPassword(password, encoded) {
+  try {
+    // Preserve shorter legacy passwords; reject malformed or oversized input
+    // and unsupported cost parameters before acquiring memory-hard capacity.
+    if (typeof password !== "string" || password.length > PASSWORD_MAX_BYTES) return false;
+    assertWellFormed(password, "Password");
+    if (Buffer.byteLength(password, "utf8") > PASSWORD_MAX_BYTES) return false;
+    const legacy = legacyPasswordParts(encoded);
+    const current = isCurrentArgon2idHash(encoded);
+    if (!legacy && !current) return false;
+    return await runPasswordWork(async () => {
+      try {
+        if (current) {
+          const argon2 = await import("argon2");
+          return await argon2.verify(encoded, password);
+        }
+        const actual = await scrypt(password, legacy.salt, SCRYPT_BYTES, {
+          N: SCRYPT_N,
+          r: SCRYPT_R,
+          p: SCRYPT_P,
+          maxmem: SCRYPT_MAX_MEMORY,
+        });
+        return timingSafeEqual(Buffer.from(actual), legacy.expected);
+      } catch {
+        throw new KovaPasswordInfrastructureError();
+      }
+    });
+  } catch (error) {
+    if (
+      error instanceof KovaPasswordCapacityError ||
+      error instanceof KovaPasswordInfrastructureError
+    ) {
+      throw error;
+    }
     return false;
   }
 }

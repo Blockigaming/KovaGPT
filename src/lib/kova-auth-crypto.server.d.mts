@@ -12,7 +12,18 @@ export function normalizeKovaEmail(value: string): string;
 export function generateKovaToken(bytes?: number): string;
 export function digestKovaToken(token: string): string;
 export function digestMatches(value: string, expectedHex: string): boolean;
-export function hashKovaPassword(password: string): Promise<string>;
+export function hashKovaPassword(password: string, env?: NodeJS.ProcessEnv): Promise<string>;
+export function kovaPasswordHashWriteAlgorithm(env?: NodeJS.ProcessEnv): "scrypt-v1" | "argon2id";
+export function rehashKovaPassword(password: string): Promise<string>;
+export function kovaPasswordHashNeedsUpgrade(encoded: string): boolean;
+export class KovaPasswordCapacityError extends Error {
+  readonly code: "kova_password_capacity";
+  constructor();
+}
+export class KovaPasswordInfrastructureError extends Error {
+  readonly code: "kova_password_infrastructure";
+  constructor();
+}
 export function verifyKovaPassword(password: string, encoded: string): Promise<boolean>;
 export function verifyKovaTotp(code: string, base32Secret: string, now?: number): boolean;
 export function generateKovaTotpEnrollment(email: string): { secret: string; uri: string };
