@@ -22,6 +22,7 @@ async function runFinalization({
   failWork = false,
   failAcknowledgement = false,
   failConfirmation = false,
+  failNotificationPreparation = false,
   organizationFailure = null,
   initialState = "finalizing",
   authFailure = null,
@@ -118,6 +119,13 @@ async function runFinalization({
       assert.equal(attempt, ATTEMPT);
       if (failConfirmation) throw new Error("account_policy_confirmation_unverified");
     },
+    prepareAccountDeletionNotification: async (_admin, owner, attempt) => {
+      calls.push("deletion-notice-prepare");
+      assert.equal(owner, OWNER);
+      assert.equal(attempt, ATTEMPT);
+      if (failNotificationPreparation)
+        throw new Error("account_email_deletion_preparation_unconfirmed");
+    },
   };
   const admin = {
     auth: {
@@ -187,6 +195,7 @@ const successCalls = [
   "github-disconnect",
   "oauth-disconnect",
   "auth-finalization-confirm",
+  "deletion-notice-prepare",
   "auth-delete",
 ];
 
@@ -198,6 +207,17 @@ test("due-account finalization preserves private-cleanup, external-retirement an
   assert.equal(result.renewals.length, 8);
   assert.deepEqual(result.renewals[0], []);
   assert.ok(result.renewals.at(-1).includes("oauth-disconnect"));
+});
+
+test("optional deletion notice failure preserves confirmed deletion and never repeats it", async () => {
+  const result = await runFinalization({ failNotificationPreparation: true });
+  assert.equal(result.response.status, 204);
+  assert.ok(
+    result.calls.indexOf("auth-finalization-confirm") <
+      result.calls.indexOf("deletion-notice-prepare"),
+  );
+  assert.equal(result.calls.filter((call) => call === "auth-delete").length, 1);
+  assert.equal(result.state, "deleted");
 });
 
 test("pending export cleanup leaves paid service, private Work and connectors intact", async () => {

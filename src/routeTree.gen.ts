@@ -113,6 +113,7 @@ import { Route as WritingToolSlugRouteImport } from './routes/writing.$toolSlug'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
 import { Route as SectionCategoryArticleSlugRouteImport } from './routes/$section.$category.$articleSlug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiAccountEmailPreferencesRouteImport } from './routes/api/account/email-preferences'
 import { Route as ApiAccountExportRouteImport } from './routes/api/account/export'
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
 import { Route as ApiAdminDeveloperBillingRouteImport } from './routes/api/admin/developer-billing'
@@ -743,6 +744,12 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     id: '/.mcp/invoke-tool/$tool',
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAccountEmailPreferencesRoute =
+  ApiAccountEmailPreferencesRouteImport.update({
+    id: '/email-preferences',
+    path: '/email-preferences',
+    getParentRoute: () => ApiAccountRoute,
   } as any)
 const ApiAccountExportRoute = ApiAccountExportRouteImport.update({
   id: '/export',
@@ -1392,6 +1399,7 @@ export interface FileRoutesByFullPath {
   '/writing/': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/email-preferences': typeof ApiAccountEmailPreferencesRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
@@ -1601,6 +1609,7 @@ export interface FileRoutesByTo {
   '/writing': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/email-preferences': typeof ApiAccountEmailPreferencesRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
@@ -1811,6 +1820,7 @@ export interface FileRoutesById {
   '/writing/': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/email-preferences': typeof ApiAccountEmailPreferencesRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
@@ -2022,6 +2032,7 @@ export interface FileRouteTypes {
     | '/writing/'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/email-preferences'
     | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/developer-billing'
@@ -2231,6 +2242,7 @@ export interface FileRouteTypes {
     | '/writing'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/email-preferences'
     | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/developer-billing'
@@ -2440,6 +2452,7 @@ export interface FileRouteTypes {
     | '/writing/'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/email-preferences'
     | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/developer-billing'
@@ -3475,6 +3488,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/account/email-preferences': {
+      id: '/api/account/email-preferences'
+      path: '/email-preferences'
+      fullPath: '/api/account/email-preferences'
+      preLoaderRoute: typeof ApiAccountEmailPreferencesRouteImport
+      parentRoute: typeof ApiAccountRoute
+    }
     '/api/account/export': {
       id: '/api/account/export'
       path: '/export'
@@ -4235,10 +4255,12 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
 )
 
 interface ApiAccountRouteChildren {
+  ApiAccountEmailPreferencesRoute: typeof ApiAccountEmailPreferencesRoute
   ApiAccountExportRoute: typeof ApiAccountExportRoute
 }
 
 const ApiAccountRouteChildren: ApiAccountRouteChildren = {
+  ApiAccountEmailPreferencesRoute: ApiAccountEmailPreferencesRoute,
   ApiAccountExportRoute: ApiAccountExportRoute,
 }
 

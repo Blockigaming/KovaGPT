@@ -1,5 +1,6 @@
 // Current launch is Supabase; no owned-Auth grants, credentials or session lifecycle changes.
 import type { AuthedCaller } from "@/lib/api-auth.server";
+import { prepareAccountDeletionNotification } from "@/lib/account-email-lifecycle.server.mjs";
 import { createStripeClient } from "@/lib/stripe.server";
 import { disconnectAllGoogle } from "@/lib/google-oauth.server";
 import { disconnectAllGitHub } from "@/lib/github-oauth.server";
@@ -334,6 +335,18 @@ export async function finalizeAccountAfterRecovery(
       authDeletionAttempted = true;
       let deleteError: { code?: string } | null = null;
       await confirmAccountFinalization(auth.supabaseAdmin, auth.userId, claim.attemptId);
+      // Snapshot only after verified cleanup/policy confirmation. The outbox
+      // remains held until actual Auth-user deletion commits; bridge cleanup
+      // or an ambiguous delete response cannot assert final delivery.
+      try {
+        await prepareAccountDeletionNotification(auth.supabaseAdmin, auth.userId, claim.attemptId);
+      } catch {
+        // Optional mail cannot prevent a confirmed account deletion. Without a
+        // prepared snapshot, the delete hook emits no final-account notice.
+        console.warn("[account-delete] optional deletion notification unavailable", {
+          code: "account_email_preparation_unconfirmed",
+        });
+      }
       deleteError = (await auth.supabaseAdmin.auth.admin.deleteUser(auth.userId)).error;
       if (deleteError) {
         console.error("[account-delete] auth deletion failed", {

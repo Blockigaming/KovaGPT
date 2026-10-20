@@ -1,5 +1,6 @@
 import { isCrossSiteMutation } from "./auth-security.mjs";
 import { BodyReadError, readUtf8BodyBounded } from "./endpoint-reliability.mjs";
+import { recordAccountLifecycleNotification } from "./account-email-lifecycle.server.mjs";
 import {
   readAccountPolicy,
   scheduleAccountPolicyDeletion,
@@ -56,14 +57,54 @@ export function makeAccountLifecycleHandlers({ authenticate }) {
         );
     }
     try {
+      let previous;
+      if (action === "recover") {
+        try {
+          previous = await readAccountPolicy(auth.supabaseAdmin, auth.userId);
+        } catch {
+          /* Recovery itself remains available; report notification uncertainty below. */
+        }
+      }
       const state =
         action === "status"
           ? await readAccountPolicy(auth.supabaseAdmin, auth.userId)
           : action === "schedule"
             ? await scheduleAccountPolicyDeletion(auth.supabaseAdmin, auth.userId)
             : await recoverAccountPolicy(auth.supabaseAdmin, auth.userId);
+      let emailNotification;
+      if (action === "schedule" && state.state === "scheduled") {
+        try {
+          const current = await readAccountPolicy(auth.supabaseAdmin, auth.userId);
+          emailNotification =
+            current.state === "scheduled" && current.scheduledAt === state.scheduledAt
+              ? await recordAccountLifecycleNotification(
+                  auth.supabaseAdmin,
+                  auth.userId,
+                  "account_deletion_scheduled",
+                  state,
+                )
+              : "not_applicable";
+        } catch {
+          emailNotification = "unconfirmed";
+        }
+      } else if (action === "recover") {
+        emailNotification =
+          previous?.state === "active"
+            ? "not_applicable"
+            : await recordAccountLifecycleNotification(
+                auth.supabaseAdmin,
+                auth.userId,
+                "account_recovered",
+                previous,
+              );
+      }
       return json(
-        { ...state, billingChanged: false, accountId: auth.userId },
+        {
+          ...state,
+          billingChanged: false,
+          accountId: auth.userId,
+          ...(emailNotification ? { emailNotification } : {}),
+        },
         action === "schedule" ? 202 : 200,
       );
     } catch {
