@@ -160,13 +160,22 @@ test("saved-memory deletion is authenticated, serialized after writes, and truth
   );
 });
 
-test("family-plan entitlement is resolved by the server and picks the highest active tier", () => {
+test("family-plan entitlement uses the bounded authoritative effective-tier resolver", () => {
   const auth = read("src/lib/api-auth.server.ts");
   const chatApi = read("src/routes/api/chat.ts");
 
   const resolver = read("src/lib/billing-entitlement.server.ts");
   assert.match(auth, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, userId\)/);
-  assert.match(resolver, /rpc\("effective_user_plan_tier"/);
+  assert.match(resolver, /return resolveTier\(supabaseAdmin, userId, "effective_user_plan_tier"\)/);
+  assert.match(resolver, /\.rpc\(routine, \{ _user_id: userId \}\)/);
+  assert.match(resolver, /\.abortSignal\(AbortSignal\.timeout\(10_000\)\)/);
+  assert.match(resolver, /readonly status = 503/);
+  assert.match(resolver, /throw new BillingEntitlementUnavailableError\(\)/);
+  assert.match(
+    resolver,
+    /result\.error !== null[\s\S]*result\.data !== "free"[\s\S]*result\.data !== "plus"[\s\S]*result\.data !== "pro"/,
+  );
+  assert.doesNotMatch(resolver, /return "free"/);
   assert.match(
     chatApi,
     /callerTier = isOwner[\s\S]{0,80}\? "pro"[\s\S]{0,160}preflight\.run\("plan_entitlement"[\s\S]{0,100}getCallerTier\(auth\)/,
