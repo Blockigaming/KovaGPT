@@ -31,14 +31,13 @@ const EMPTY_STATE_STARTERS = [
  */
 export function HomeChatStarters({ setInput }: { setInput: Dispatch<SetStateAction<string>> }) {
   return (
-    <div className="kova-starter-grid" role="list">
+    <div className="kova-starter-grid">
       {EMPTY_STATE_STARTERS.map((starter) => {
         const Icon = starter.icon;
         return (
           <button
             key={starter.label}
             type="button"
-            role="listitem"
             className="kova-starter-prompt"
             aria-label={`Start with ${starter.label}`}
             onClick={() => {

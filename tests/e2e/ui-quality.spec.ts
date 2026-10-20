@@ -84,7 +84,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.shell.width).toBeCloseTo(metrics.axisWidth, 1);
     expect(metrics.shell.width).toBeLessThanOrEqual(768);
     expect(metrics.shell.width).toBeGreaterThanOrEqual(640);
-    expect(metrics.composerHeight).toBe(50);
+    expect(metrics.composerHeight).toBe(52);
     expect(metrics.controlSize).toBe(44);
     expect(metrics.shell.height).toBeCloseTo(metrics.composerHeight + metrics.borderBlock, 1);
     expect(metrics.row?.height).toBeCloseTo(metrics.composerHeight, 1);
@@ -211,6 +211,7 @@ for (const theme of ["light", "dark"] as const) {
     });
     await page.addInitScript((selectedTheme) => {
       localStorage.setItem("kova-theme-mode", selectedTheme);
+      localStorage.setItem("kova-sidebar-open", "1");
     }, theme);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
@@ -239,6 +240,7 @@ for (const theme of ["light", "dark"] as const) {
     expect(await greetingMark.getAttribute("aria-label")).toBeNull();
     expect(await greetingMark.locator("circle, path").count()).toBeGreaterThanOrEqual(2);
     if (page.viewportSize()!.width >= 1024) {
+      await expect(page.getByRole("main")).toHaveAttribute("data-sidebar", "open");
       const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand:visible");
       await expect(sidebarBrand).toHaveCount(1);
       await expect(sidebarBrand).toHaveText("KovaGPT");
