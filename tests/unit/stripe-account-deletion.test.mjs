@@ -192,17 +192,24 @@ test("Customer retirement is idempotent only with an exact deleted-Customer proo
 });
 
 test("account deletion uses mappings and the Customer barrier before auth removal", async () => {
+  const route = await readFile(new URL("../../src/routes/api/account.ts", import.meta.url), "utf8");
   const source = await readFile(
-    new URL("../../src/routes/api/account.ts", import.meta.url),
+    new URL("../../src/lib/account-deletion-finalizer.server.ts", import.meta.url),
     "utf8",
   );
+  assert.match(route, /makeAccountLifecycleHandlers\(\{ authenticate: requireUser \}\)/);
+  assert.doesNotMatch(route, /auth\.admin\.deleteUser|retireStripeCustomer|cleanupOwnedStorage/);
   const fence = source.lastIndexOf("cleanupAccountExportsBeforeAccountDeletion(");
-  const prepare = source.indexOf("preparedBilling = await prepareStripeAccountDeletion");
+  const prepare = source.indexOf("preparedBilling = claim.customers.map");
+  const customer = source.indexOf("await billing.stripe.customers.retrieve(billing.customerId)");
   const storage = source.lastIndexOf("cleanupOwnedStorageBeforeAccountDeletion(");
   const cleanup = source.indexOf("await disconnectAllOAuth(auth.userId)");
   const authoritative = source.lastIndexOf("retireStripeCustomerForAccountDeletion");
   const authDelete = source.indexOf("auth.admin.deleteUser(");
-  assert.ok(fence >= 0 && prepare > fence && storage > prepare);
+  assert.ok(fence >= 0 && prepare > fence && customer > prepare && storage > customer);
+  assert.match(source, /environments\.has\(mapping\.environment\)/);
+  assert.match(source, /customer\.id !== billing\.customerId/);
+  assert.match(source, /billing\.retiredAt !== null && customer\.deleted !== true/);
   assert.ok(authoritative > storage && cleanup > authoritative && authDelete > cleanup);
   assert.doesNotMatch(
     source,

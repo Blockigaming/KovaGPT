@@ -98,10 +98,32 @@ test("current forward migrations cannot enter the immutable historical execution
     () => extendProposedCanonicalHistory(plan),
     /upgrade_canonical_history_pending_mismatch/u,
   );
-  assert.throws(
-    () => rehearseUpgrade({ canonicalHistory: true, currentHistory: true, dryRun: true }),
-    /upgrade_canonical_history_pending_mismatch/u,
-  );
+  for (const variant of [
+    {},
+    { scheduledRecordOnlyHypothesis: true, captureCanonicalScheduledCatalog: true },
+    {
+      scheduledRecordOnlyHypothesis: true,
+      captureCanonicalScheduledCatalog: true,
+      firstRemoteOmission: true,
+    },
+  ]) {
+    let commands = 0;
+    assert.throws(
+      () =>
+        rehearseUpgrade({
+          canonicalHistory: true,
+          currentHistory: true,
+          dryRun: true,
+          ...variant,
+          execute() {
+            commands += 1;
+            throw new Error("unexpected_local_command");
+          },
+        }),
+      /upgrade_canonical_history_pending_mismatch/u,
+    );
+    assert.equal(commands, 0);
+  }
 });
 
 test("canonical history proposal rejects a changed body before local commands", () => {

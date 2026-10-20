@@ -1,31 +1,19 @@
+import { readAccountPolicy } from "@/lib/account-lifecycle-policy.mjs";
+
 export type AccountDeletionState = {
-  state: "active" | "deleting" | "deleted";
+  state: "active" | "scheduled" | "deleting" | "deleted";
   startedAt: string | null;
 };
-type Admin = { rpc: unknown };
-type Rpc = (
-  name: string,
-  args: Record<string, unknown>,
-) => { abortSignal(signal: AbortSignal): PromiseLike<{ data: unknown; error: unknown }> };
+
+/** Retain the old internal deleting spelling only for irreversible finalization.
+ * A missing policy row is not proof that Auth was deleted. */
 export async function readAccountDeletionState(
-  admin: Admin,
+  admin: unknown,
   userId: string,
 ): Promise<AccountDeletionState> {
-  if (typeof admin.rpc !== "function") throw new Error("account_deletion_status_unavailable");
-  const result = await (admin.rpc as Rpc)
-    .call(admin, "read_account_deletion_state", {
-      p_user_id: userId,
-    })
-    .abortSignal(AbortSignal.timeout(10000));
-  const row = result.data as Partial<AccountDeletionState> | null;
-  if (
-    result.error ||
-    !row ||
-    !["active", "deleting", "deleted"].includes(row.state ?? "") ||
-    (row.state === "deleting"
-      ? typeof row.startedAt !== "string" || !Number.isFinite(Date.parse(row.startedAt))
-      : row.startedAt !== null)
-  )
-    throw new Error("account_deletion_status_unavailable");
-  return row as AccountDeletionState;
+  const value = await readAccountPolicy(admin, userId);
+  return {
+    state: value.state === "finalizing" ? "deleting" : value.state,
+    startedAt: value.state === "finalizing" ? value.scheduledAt : null,
+  };
 }

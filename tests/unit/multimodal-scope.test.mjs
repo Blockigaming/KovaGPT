@@ -6,7 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-test("required Voice and browser read-aloud remain safely unavailable", () => {
+test("interactive Voice and browser-native speech remain unavailable", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
   const capabilityRegistry = read("src/lib/capability-registry.ts");
   const chatInput = read("src/components/ChatInput.tsx");
@@ -20,7 +20,7 @@ test("required Voice and browser read-aloud remain safely unavailable", () => {
   for (const source of [chatInput, chatMessage]) {
     assert.doesNotMatch(
       source,
-      /SpeechRecognition|webkitSpeechRecognition|speechSynthesis|SpeechSynthesisUtterance|Start voice input|Read aloud|MicOff|Dictate|dictation/i,
+      /SpeechRecognition|webkitSpeechRecognition|speechSynthesis|SpeechSynthesisUtterance|Start voice input|MicOff|Dictate|dictation/i,
     );
   }
   assert.doesNotMatch(chatMessage, /OPENAI_API_KEY|audio\/speech|realtime/);

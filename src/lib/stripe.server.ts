@@ -17,6 +17,12 @@ export function durableStripeBillingEnabled(): boolean {
   return process.env.STRIPE_BILLING_RUNTIME === "durable";
 }
 
+// A separately versioned contract; never silently activate the old durable
+// webhook/entitlement rollout when configuring the monthly introductory policy.
+export function monthlyIntroBillingEnabled(): boolean {
+  return process.env.KOVA_BILLING_POLICY_VERSION === "monthly-intro-v1";
+}
+
 const stripeClients = new Map<StripeEnv, { apiKey: string; client: Stripe }>();
 
 export type VerifiedStripeEvent = {
@@ -51,6 +57,8 @@ export function createStripeClient(env: StripeEnv): Stripe {
 
   const client = new Stripe(connectionApiKey, {
     apiVersion: "2026-08-26.dahlia",
+    maxNetworkRetries: 0,
+    timeout: 10_000,
   });
   stripeClients.set(env, { apiKey: connectionApiKey, client });
   return client;

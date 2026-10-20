@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
+import { ResponseSpeechButton } from "./ResponseSpeechButton";
 import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
 import { extractCharts } from "./chat-chart-utils";
@@ -932,6 +933,20 @@ function ChatMessageInner({
               role="toolbar"
               aria-label="Response actions"
             >
+              {isSignedIn &&
+                principalResolved &&
+                userKey &&
+                chatId &&
+                !temporary &&
+                !message.generationStatus &&
+                !message.pendingImage && (
+                  <ResponseSpeechButton
+                    ownerId={userKey}
+                    chatId={chatId}
+                    messageId={message.id}
+                    content={message.content}
+                  />
+                )}
               {memorySources && (
                 <button
                   type="button"

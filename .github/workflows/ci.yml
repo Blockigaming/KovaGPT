@@ -452,16 +452,36 @@ jobs:
       - run: npm run release:db:isolated
       - name: Rehearse upgrade from captured production history
         run: npm run release:db:upgrade -- --capture-scheduled-candidate --capture-acl-detail
+      - name: Verify current source rejects the historical proposal
+        # This dry-run test writes no synthetic database receipts. The full
+        # historical fixture suite already runs in verify's unit-test step.
+        run: node --test --test-name-pattern='current forward migrations cannot enter the immutable historical execution proposal' tests/unit/upgrade-database-canonical-history.test.mjs
+      - name: Check historical proposal compatibility
+        id: canonical_history
+        # The proposal pins an older migration inventory. Its expected rejection
+        # must not prevent current-source schema checks or authorize newer SQL.
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from "node:fs";
+          import { rehearseUpgrade } from "./scripts/release/upgrade-database.mjs";
+          let compatible = false;
+          try {
+            rehearseUpgrade({ canonicalHistory: true, currentHistory: true, dryRun: true });
+            compatible = true;
+          } catch (error) {
+            if (error.message !== "upgrade_canonical_history_pending_mismatch") throw error;
+            console.log("Historical SQL proposal remains rejected for this migration inventory; no proposal SQL executed.");
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `compatible=${compatible}\n`);
+          NODE
       - name: Rehearse proposed canonical history sequence
-        # Fresh staging keeps the pinned production-history proposal dormant.
-        # Fresh migrations and the captured-history upgrade above still run.
-        if: (github.head_ref || github.ref_name) != 'codex/kova-staging-owned-auth-20261019'
+        if: steps.canonical_history.outputs.compatible == 'true'
         run: node scripts/release/upgrade-database.mjs --canonical-history
       - name: Compare scheduled history-only hypothesis in isolated database
-        if: (github.head_ref || github.ref_name) != 'codex/kova-staging-owned-auth-20261019'
+        if: steps.canonical_history.outputs.compatible == 'true'
         run: node scripts/release/upgrade-database.mjs --canonical-history --scheduled-record-only-hypothesis
       - name: Compare first remote scheduled-body omission in isolated database
-        if: (github.head_ref || github.ref_name) != 'codex/kova-staging-owned-auth-20261019'
+        if: steps.canonical_history.outputs.compatible == 'true'
         run: node scripts/release/upgrade-database.mjs --canonical-history --scheduled-record-only-hypothesis --omit-first-remote-scheduled-body
       - run: npm run release:schema && git diff --exit-code -- database-contract.json
       - name: Upload upgrade rehearsal evidence

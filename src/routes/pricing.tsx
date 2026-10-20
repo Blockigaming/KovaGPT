@@ -16,6 +16,8 @@ import {
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 
 const PRICING_TIERS = ["free", "plus", "pro"] as const;
+const MONTHLY_INTRO_NOTE =
+  "Eligible accounts: 50% off the first paid month, once per account. Regular monthly pricing follows.";
 
 function displayPrice(monthlyPriceUsd: number): string {
   return monthlyPriceUsd === 0 ? "$0" : `$${monthlyPriceUsd}`;
@@ -228,7 +230,7 @@ function PricingPage() {
             description={CAPABILITY_REGISTRY.plans.plus.description}
             cta="Start Plus"
             highlight
-            note={`${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial for eligible first-time subscribers`}
+            note={MONTHLY_INTRO_NOTE}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!, event.currentTarget)
             }
@@ -243,6 +245,7 @@ function PricingPage() {
             taxNotice
             description={CAPABILITY_REGISTRY.plans.pro.description}
             cta="Upgrade to Pro"
+            note={MONTHLY_INTRO_NOTE}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!, event.currentTarget)
             }
@@ -263,8 +266,8 @@ function PricingPage() {
         </section>
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-5 text-muted-foreground">
-          Stripe hosts checkout. Confirm the price, trial eligibility, renewal date, and available
-          payment methods before purchase.
+          Stripe hosts checkout. Confirm the introductory discount eligibility, first-month amount,
+          regular renewal price and date, tax, and available payment methods before purchase.
         </p>
 
         <p className="mx-auto mt-5 max-w-2xl text-center text-xs leading-5 text-muted-foreground">

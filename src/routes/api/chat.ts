@@ -1528,6 +1528,11 @@ export const Route = createFileRoute("/api/chat")({
                       stream: false,
                     },
                     { signal: hopCtl.signal },
+                    {
+                      ownerId: auth?.userId ?? "",
+                      operationId: request.headers.get("x-kova-acceptance-operation") ?? "",
+                      chatId: chatId ?? "",
+                    },
                   );
                 } catch {
                   clearTimeout(hopTimer);
@@ -1836,9 +1841,17 @@ export const Route = createFileRoute("/api/chat")({
             try {
               await assertSelectedContextsCurrent(request.signal);
               providerCalls += 1;
-              upstream = await chatCompletions(finalBody, {
-                signal: request.signal,
-              });
+              upstream = await chatCompletions(
+                finalBody,
+                {
+                  signal: request.signal,
+                },
+                {
+                  ownerId: auth?.userId ?? "",
+                  operationId: request.headers.get("x-kova-acceptance-operation") ?? "",
+                  chatId: chatId ?? "",
+                },
+              );
             } catch (error) {
               const contextFailure = error instanceof ChatPreflightError;
               await finalizeGeneration({

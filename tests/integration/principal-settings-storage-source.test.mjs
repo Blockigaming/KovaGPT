@@ -61,20 +61,49 @@ test("the legacy settings fallback is gated to an explicit guest migration", asy
 });
 
 test("account, memory, and local-device deletion keep their storage scopes distinct", async () => {
-  const [settings, home, images] = await Promise.all([
+  const [settings, home, images, policy] = await Promise.all([
     read("src/components/SettingsDialog.tsx"),
     read("src/routes/index.tsx"),
     read("src/routes/images.tsx"),
+    read("src/lib/account-lifecycle-policy.mjs"),
   ]);
+
+  const deletionStart = settings.indexOf("  const handleDeleteAccount = async () => {");
+  const deletionEnd = settings.indexOf("  const handleClearSavedMemory = async () => {");
+  assert.ok(deletionStart >= 0 && deletionEnd > deletionStart);
+  const deletion = settings.slice(deletionStart, deletionEnd);
+  const pendingStart = deletion.indexOf("    if (response.status !== 204) {");
+  const finalCleanupStart = deletion.indexOf("    // Only a verified final 204");
+  assert.ok(pendingStart > 0 && finalCleanupStart > pendingStart);
+  const pending = deletion.slice(pendingStart, finalCleanupStart);
 
   assert.match(
     settings,
     /const clearLocalBrowserData = async \([\s\S]{0,180}targetUserKey[\s\S]{0,160}await resetPrincipalDeviceData\(targetUserKey\)/,
   );
   assert.match(
-    settings,
-    /const handleDeleteAccount = async \(\) => \{[\s\S]{0,180}const deletionUserKey = userKey[\s\S]{0,2600}const cleanupResult = await clearLocalBrowserData\(deletionUserKey\);[\s\S]{0,360}currentAuthUserKeyRef\.current === deletionUserKey[\s\S]{0,100}onClearAll\(\);\s*setDeleteAccountOpen/,
+    deletion,
+    /const deletionUserKey = userKey;[\s\S]*currentAuthUserKeyRef\.current === deletionUserKey &&[\s\S]*deletionOperationRef\.current === operation/,
   );
+  assert.match(deletion, /requestAccountDeletion\(deletionUserKey, "DELETE"\)/);
+  assert.match(pending, /response\.status === 202 && result\?\.state === "scheduled"/);
+  assert.match(pending, /return;\s*\}\s*$/);
+  assert.doesNotMatch(pending, /clearLocalBrowserData|onClearAll\(|signOut\(/);
+  assert.match(pending, /Recover before the deadline[\s\S]*Billing is unchanged/);
+  assert.match(
+    deletion.slice(finalCleanupStart),
+    /const cleanupResult = await clearLocalBrowserData\(deletionUserKey\);[\s\S]*currentAuthUserKeyRef\.current === deletionUserKey[\s\S]*onClearAll\(\);\s*setDeleteAccountOpen/,
+  );
+  const recovery = settings.slice(
+    settings.indexOf("  const handleRecoverAccount = async () => {"),
+    deletionStart,
+  );
+  assert.match(recovery, /deletionStatus\.state !== "scheduled"/);
+  assert.match(recovery, /requestAccountDeletion\(deletionUserKey, "PATCH"\)/);
+  assert.match(recovery, /if \(!currentDeletion\(\)\) return/);
+  assert.doesNotMatch(recovery, /clearLocalBrowserData|onClearAll\(|signOut\(/);
+  assert.match(policy, /ACCOUNT_RECOVERY_MS = 30 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(policy, /recovery - scheduled !== ACCOUNT_RECOVERY_MS/);
   assert.match(
     settings,
     /localCleanupIncomplete = !cleanupResult\.resolved \|\| cleanupFailureCount > 0[\s\S]{0,500}Account deletion completed, but some data in this browser could not be removed/,

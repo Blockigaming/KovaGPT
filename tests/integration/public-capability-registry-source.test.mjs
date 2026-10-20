@@ -47,7 +47,23 @@ test("published mode and plan copy is derived from enforced source data", () => 
   assert.match(pricing, /features=\{CAPABILITY_REGISTRY\.plans\.free\.features\}/);
   assert.match(pricing, /features=\{CAPABILITY_REGISTRY\.plans\.plus\.features\}/);
   assert.match(pricing, /features=\{CAPABILITY_REGISTRY\.plans\.pro\.features\}/);
-  assert.match(pricing, /CAPABILITY_REGISTRY\.plans\.plus\.trialPeriodDays/);
+  for (const tier of ["free", "plus", "pro"]) {
+    assert.ok(
+      pricing.includes(`price={displayPrice(CAPABILITY_REGISTRY.plans.${tier}.monthlyPriceUsd)}`),
+    );
+  }
+  const plans = read("src/lib/billing-plans.ts");
+  for (const tier of ["plus", "pro"]) {
+    assert.match(plans, new RegExp(`${tier}_monthly: \\{[^}]*trialPeriodDays: 0`));
+  }
+  assert.match(pricing, /50% off the first paid month, once per account/);
+  assert.doesNotMatch(pricing, /trialPeriodDays|Start (?:your )?free trial/i);
+  const params = read("src/lib/billing-policy-params.ts");
+  const policy = read("src/lib/billing-policy.mjs");
+  assert.match(params, /line_items: \[\{ price: input\.priceId, quantity: 1 \}\]/);
+  assert.doesNotMatch(params, /trial_period_days:|trial_end:|price_data:/);
+  assert.match(policy, /price\.id !== plan\.livePriceId/);
+  assert.match(policy, /price\.lookup_key !== plan\.lookupKey/);
 });
 
 test("retired modes and unsupported product promises stay off public routes", () => {

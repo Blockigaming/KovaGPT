@@ -6,12 +6,17 @@ const route = readFileSync("src/routes/api/account.ts", "utf8");
 const cleanup = readFileSync("src/lib/account-storage-cleanup.server.ts", "utf8");
 
 test("account deletion finishes ordered Storage cleanup before Auth deletion", () => {
-  const storageAt = route.indexOf("cleanupOwnedStorageBeforeAccountDeletion(");
-  const authDeleteAt = route.indexOf("auth.admin.deleteUser(");
+  const finalizer = readFileSync("src/lib/account-deletion-finalizer.server.ts", "utf8");
+  assert.match(route, /makeAccountLifecycleHandlers\(\{ authenticate: requireUser \}\)/);
+  assert.doesNotMatch(route, /cleanupOwnedStorageBeforeAccountDeletion|auth\.admin\.deleteUser/);
+  const storageAt = finalizer.lastIndexOf("cleanupOwnedStorageBeforeAccountDeletion(");
+  const confirmAt = finalizer.lastIndexOf("await confirmAccountFinalization(");
+  const authDeleteAt = finalizer.indexOf("auth.admin.deleteUser(");
   assert.ok(storageAt > 0);
-  assert.ok(authDeleteAt > storageAt);
-  assert.match(route, /account_storage_cleanup_pending/u);
-  assert.match(route, /Retry-After": "5"/u);
+  assert.ok(confirmAt > storageAt && authDeleteAt > confirmAt);
+  assert.match(finalizer, /if \(!storageCleanup\.complete\)/u);
+  assert.match(finalizer, /account_storage_cleanup_pending/u);
+  assert.match(finalizer, /Retry-After": "5"/u);
 });
 
 test("account Storage cleanup keeps Library last and releases metadata after bytes", () => {

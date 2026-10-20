@@ -86,6 +86,7 @@ import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-te
 import { Route as ApiPushRouteImport } from './routes/api/push'
 import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
 import { Route as ApiSitesRouteImport } from './routes/api/sites'
+import { Route as ApiSpeechRouteImport } from './routes/api/speech'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiTrustedContactsRouteImport } from './routes/api/trusted-contacts'
 import { Route as ApiVersionRouteImport } from './routes/api/version'
@@ -150,6 +151,7 @@ import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
 import { Route as ApiGoogleSelectRouteImport } from './routes/api/google/select'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
+import { Route as ApiInternalAccountDeletionsRouteImport } from './routes/api/internal/account-deletions'
 import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
 import { Route as ApiInternalChatSummariesRouteImport } from './routes/api/internal/chat-summaries'
 import { Route as ApiInternalDeveloperBillingRouteImport } from './routes/api/internal/developer-billing'
@@ -603,6 +605,11 @@ const ApiSitesRoute = ApiSitesRouteImport.update({
   path: '/api/sites',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSpeechRoute = ApiSpeechRouteImport.update({
+  id: '/api/speech',
+  path: '/api/speech',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTitleRoute = ApiTitleRouteImport.update({
   id: '/api/title',
   path: '/api/title',
@@ -928,6 +935,12 @@ const ApiIntegrationsAccountsRoute = ApiIntegrationsAccountsRouteImport.update({
   path: '/api/integrations/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalAccountDeletionsRoute =
+  ApiInternalAccountDeletionsRouteImport.update({
+    id: '/api/internal/account-deletions',
+    path: '/api/internal/account-deletions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalAccountExportsRoute =
   ApiInternalAccountExportsRouteImport.update({
     id: '/api/internal/account-exports',
@@ -1352,6 +1365,7 @@ export interface FileRoutesByFullPath {
   '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
   '/api/sites': typeof ApiSitesRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/title': typeof ApiTitleRoute
   '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
@@ -1416,6 +1430,7 @@ export interface FileRoutesByFullPath {
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
   '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
@@ -1559,6 +1574,7 @@ export interface FileRoutesByTo {
   '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
   '/api/sites': typeof ApiSitesRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/title': typeof ApiTitleRoute
   '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
@@ -1623,6 +1639,7 @@ export interface FileRoutesByTo {
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
   '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
@@ -1767,6 +1784,7 @@ export interface FileRoutesById {
   '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
   '/api/sites': typeof ApiSitesRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/title': typeof ApiTitleRoute
   '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
@@ -1831,6 +1849,7 @@ export interface FileRoutesById {
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
   '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
@@ -1976,6 +1995,7 @@ export interface FileRouteTypes {
     | '/api/push'
     | '/api/readyz'
     | '/api/sites'
+    | '/api/speech'
     | '/api/title'
     | '/api/trusted-contacts'
     | '/api/version'
@@ -2040,6 +2060,7 @@ export interface FileRouteTypes {
     | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
     | '/api/internal/developer-billing'
@@ -2183,6 +2204,7 @@ export interface FileRouteTypes {
     | '/api/push'
     | '/api/readyz'
     | '/api/sites'
+    | '/api/speech'
     | '/api/title'
     | '/api/trusted-contacts'
     | '/api/version'
@@ -2247,6 +2269,7 @@ export interface FileRouteTypes {
     | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
     | '/api/internal/developer-billing'
@@ -2390,6 +2413,7 @@ export interface FileRouteTypes {
     | '/api/push'
     | '/api/readyz'
     | '/api/sites'
+    | '/api/speech'
     | '/api/title'
     | '/api/trusted-contacts'
     | '/api/version'
@@ -2454,6 +2478,7 @@ export interface FileRouteTypes {
     | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
     | '/api/internal/developer-billing'
@@ -2598,6 +2623,7 @@ export interface RootRouteChildren {
   ApiPushRoute: typeof ApiPushRouteWithChildren
   ApiReadyzRoute: typeof ApiReadyzRoute
   ApiSitesRoute: typeof ApiSitesRoute
+  ApiSpeechRoute: typeof ApiSpeechRoute
   ApiTitleRoute: typeof ApiTitleRoute
   ApiTrustedContactsRoute: typeof ApiTrustedContactsRoute
   ApiVersionRoute: typeof ApiVersionRoute
@@ -2657,6 +2683,7 @@ export interface RootRouteChildren {
   ApiGoogleSelectRoute: typeof ApiGoogleSelectRoute
   ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
+  ApiInternalAccountDeletionsRoute: typeof ApiInternalAccountDeletionsRoute
   ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
   ApiInternalChatSummariesRoute: typeof ApiInternalChatSummariesRoute
   ApiInternalDeveloperBillingRoute: typeof ApiInternalDeveloperBillingRoute
@@ -3259,6 +3286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSitesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/speech': {
+      id: '/api/speech'
+      path: '/api/speech'
+      fullPath: '/api/speech'
+      preLoaderRoute: typeof ApiSpeechRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/title': {
       id: '/api/title'
       path: '/api/title'
@@ -3705,6 +3739,13 @@ declare module '@tanstack/react-router' {
       path: '/api/integrations/accounts'
       fullPath: '/api/integrations/accounts'
       preLoaderRoute: typeof ApiIntegrationsAccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/account-deletions': {
+      id: '/api/internal/account-deletions'
+      path: '/api/internal/account-deletions'
+      fullPath: '/api/internal/account-deletions'
+      preLoaderRoute: typeof ApiInternalAccountDeletionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/internal/account-exports': {
@@ -4344,6 +4385,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPushRoute: ApiPushRouteWithChildren,
   ApiReadyzRoute: ApiReadyzRoute,
   ApiSitesRoute: ApiSitesRoute,
+  ApiSpeechRoute: ApiSpeechRoute,
   ApiTitleRoute: ApiTitleRoute,
   ApiTrustedContactsRoute: ApiTrustedContactsRoute,
   ApiVersionRoute: ApiVersionRoute,
@@ -4403,6 +4445,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleSelectRoute: ApiGoogleSelectRoute,
   ApiGoogleStatusRoute: ApiGoogleStatusRoute,
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
+  ApiInternalAccountDeletionsRoute: ApiInternalAccountDeletionsRoute,
   ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,
   ApiInternalChatSummariesRoute: ApiInternalChatSummariesRoute,
   ApiInternalDeveloperBillingRoute: ApiInternalDeveloperBillingRoute,
