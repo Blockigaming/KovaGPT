@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 190,
+  "migrationCount": 191,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -304,6 +304,7 @@
     "accept_project_invite",
     "account_email_before_delete",
     "account_email_claim_dispatch",
+    "account_email_defaults",
     "account_email_defaults",
     "account_email_dispatch_allowed",
     "account_email_finish_dispatch",
@@ -2548,6 +2549,7 @@
     "all on function kova_auth_guard.session_is_active() from public, anon, authenticated, service_role",
     "all on function kova_private.accept_project_invite(uuid) from public, anon",
     "all on function kova_private.account_email_before_delete() from public,anon,authenticated,service_role",
+    "all on function kova_private.account_email_defaults() from public, anon, authenticated, service_role",
     "all on function kova_private.account_email_defaults() from public,anon,authenticated,service_role",
     "all on function kova_private.account_email_dispatch_allowed(kova_private.account_email_events) from public,anon,authenticated,service_role",
     "all on function kova_private.account_email_from_audit() from public,anon,authenticated,service_role",
@@ -3498,5 +3500,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "99e512323c7c59a78c08df4558e0f713c3786deaf904bb7b843efa35aef3d7d3"
+  "sha256": "d5b0f82e6a3939231d9403e727f78b5e3ab29105f9c4b4526e6bf499f7daf760"
 }

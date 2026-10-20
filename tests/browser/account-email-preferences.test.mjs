@@ -102,11 +102,11 @@ test("account email controls persist each event, handle uncertain writes, and is
     const toggle = (name) => page.getByRole("switch", { name, exact: true });
     await toggle("Password changed").waitFor();
 
-    await t.test("only the six requested security/deletion defaults are enabled", async () => {
+    await t.test("all account email defaults are enabled with individual controls", async () => {
       assert.equal(await page.getByRole("switch").count(), 9);
-      assert.equal(await page.getByRole("switch", { checked: true }).count(), 6);
-      assert.equal(await toggle("New sign-in").isChecked(), false);
-      assert.equal(await toggle("Email address changed").isChecked(), false);
+      assert.equal(await page.getByRole("switch", { checked: true }).count(), 9);
+      assert.equal(await toggle("New sign-in").isChecked(), true);
+      assert.equal(await toggle("Email address changed").isChecked(), true);
       assert.match(
         await page.locator("body").innerText(),
         /Verification and password-reset emails you request are still sent/,
@@ -121,10 +121,10 @@ test("account email controls persist each event, handle uncertain writes, and is
       await toggle("New sign-in").focus();
       await page.keyboard.press("Space");
       await page.getByRole("status").filter({ hasText: "Email preference saved." }).waitFor();
-      assert.deepEqual(requests.at(-1).body, { preferences: { new_login: true } });
+      assert.deepEqual(requests.at(-1).body, { preferences: { new_login: false } });
       await page.getByRole("button", { name: "Reload email preferences" }).click();
       await toggle("New sign-in").waitFor();
-      assert.equal(await toggle("New sign-in").isChecked(), true);
+      assert.equal(await toggle("New sign-in").isChecked(), false);
       await toggle("Password changed").click();
       await page.getByRole("status").filter({ hasText: "Email preference saved." }).waitFor();
       assert.equal(await toggle("Password changed").isChecked(), false);
@@ -142,7 +142,7 @@ test("account email controls persist each event, handle uncertain writes, and is
         assert.doesNotMatch(await page.locator("body").innerText(), /internal delivery/);
         await page.getByRole("button", { name: "Reload email preferences" }).click();
         await toggle("New sign-in").waitFor();
-        assert.equal(await toggle("New sign-in").isChecked(), false);
+        assert.equal(await toggle("New sign-in").isChecked(), true);
       },
     );
 

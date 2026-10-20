@@ -55,6 +55,9 @@ test("catalogue implements owner defaults without turning requested action mail 
       "security_method_removed",
       "account_deletion_scheduled",
       "account_deleted",
+      "new_login",
+      "email_changed",
+      "account_recovered",
     ],
   );
   assert.equal(parseAccountEmailPreferencePatch({ email_verification: false }), null);
@@ -76,13 +79,13 @@ test("GET reads server-owned preferences and PATCH saves only the supplied known
     preferences: DEFAULT_ACCOUNT_EMAIL_PREFERENCES,
   });
   const patch = await handlers.PATCH({
-    request: request("PATCH", { preferences: { new_login: true } }),
+    request: request("PATCH", { preferences: { new_login: false } }),
   });
   assert.equal(patch.status, 200);
-  assert.equal((await patch.json()).preferences.new_login, true);
+  assert.equal((await patch.json()).preferences.new_login, false);
   assert.deepEqual(
     calls.find(([kind]) => kind === "update"),
-    ["update", owner, { new_login: true }],
+    ["update", owner, { new_login: false }],
   );
   assert.equal(calls[0][1].identity, `account:${owner}`);
 });

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 190,
-  "latest": "20261020183948_account_email_notifications.sql",
+  "count": 191,
+  "latest": "20261020195253_account_email_all_enabled_defaults.sql",
   "migrations": [
     {
       "order": 1,
@@ -3995,6 +3995,20 @@
       "rls": [],
       "policies": [],
       "indexes": ["account_email_pending_expiry_idx"]
+    },
+    {
+      "order": 191,
+      "filename": "20261020195253_account_email_all_enabled_defaults.sql",
+      "timestamp": "20261020195253",
+      "sha256": "c84e09664a69fb7542b0d06a8d1af76ad4585f1b409da8b3f25f83a217bcaf24",
+      "tables": [],
+      "functions": ["account_email_defaults"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

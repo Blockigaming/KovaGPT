@@ -42,19 +42,19 @@ export const ACCOUNT_EMAIL_EVENTS = Object.freeze(
       key: "new_login",
       label: "New sign-in",
       description: "When a successful sign-in creates a session.",
-      defaultEnabled: false,
+      defaultEnabled: true,
     },
     {
       key: "email_changed",
       label: "Email address changed",
       description: "When your verified account email address changes.",
-      defaultEnabled: false,
+      defaultEnabled: true,
     },
     {
       key: "account_recovered",
       label: "Account deletion canceled",
       description: "When a scheduled account deletion is canceled.",
-      defaultEnabled: false,
+      defaultEnabled: true,
     },
   ].map((event) => Object.freeze(event)),
 );

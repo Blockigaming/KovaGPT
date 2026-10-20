@@ -15,9 +15,10 @@ account selectors, unknown events and nonboolean values. Updates merge only the
 supplied events in PostgreSQL, so two tabs changing different events preserve
 both changes. The UI stores no authoritative delivery preference locally.
 
-Defaults are on for password changes, security-method addition/change/removal,
-deletion scheduled and account deleted. New sign-in, email-address changed and
-deletion canceled are off. These switches affect notification messages only.
+All account-event email defaults are on, including new sign-in, email-address
+changes and deletion cancellation. Every event can still be turned off
+individually. A forward migration changes only the fallback defaults; saved
+user choices are preserved. These switches affect notification messages only.
 
 Successful owned-auth audit events enqueue notifications in the same database
 transaction as the security mutation. Failed/rolled-back mutations produce no

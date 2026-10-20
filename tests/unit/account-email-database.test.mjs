@@ -14,6 +14,10 @@ const migration = await readFile(
   "supabase/migrations/20261020183948_account_email_notifications.sql",
   "utf8",
 );
+const allEnabledDefaults = await readFile(
+  "supabase/migrations/20261020195253_account_email_all_enabled_defaults.sql",
+  "utf8",
+);
 const defaults = {
   password_changed: true,
   security_method_added: true,
@@ -21,14 +25,15 @@ const defaults = {
   security_method_removed: true,
   account_deletion_scheduled: true,
   account_deleted: true,
-  new_login: false,
-  email_changed: false,
-  account_recovered: false,
+  new_login: true,
+  email_changed: true,
+  account_recovered: true,
 };
 const prior = () => new Date(Date.now() - 60_000).toISOString();
-async function fixture() {
+async function fixture({ upgradeDefaults = true } = {}) {
   const db = await authDatabase();
   await db.exec(migration);
+  if (upgradeDefaults) await db.exec(allEnabledDefaults);
   await livePasswordAccount(db);
   return db;
 }
@@ -68,14 +73,32 @@ async function prepare(db, row) {
   ).rows[0].value;
 }
 
+test("all-enabled forward defaults preserve saved opt-outs and leave fresh accounts enabled", async () => {
+  const db = await fixture({ upgradeDefaults: false });
+  try {
+    await update(db, { new_login: false, password_changed: false });
+    await db.exec(allEnabledDefaults);
+    const saved = await preferences(db);
+    assert.equal(saved.new_login, false);
+    assert.equal(saved.password_changed, false);
+    // Removing fixture-only preferences represents a fresh account's fallback.
+    await db.query("delete from kova_private.account_email_preferences where account_id=$1", [
+      owner,
+    ]);
+    assert.deepEqual(await preferences(db), defaults);
+  } finally {
+    await db.close();
+  }
+});
+
 test("account preferences default exactly, merge independent edits and reject unknown or unverified input", async () => {
   const db = await fixture();
   try {
     assert.deepEqual(await preferences(db), defaults);
     await update(db, { password_changed: false });
-    const result = await update(db, { new_login: true });
+    const result = await update(db, { new_login: false });
     assert.equal(result.password_changed, false);
-    assert.equal(result.new_login, true);
+    assert.equal(result.new_login, false);
     assert.equal(result.account_deleted, true);
     for (const patch of [{}, { unknown: true }, { new_login: "true" }, [], null]) {
       await assert.rejects(update(db, patch), /account_email_preferences_invalid/);
@@ -102,6 +125,7 @@ test("successful real MFA mutation queues a default notice atomically; rejected 
     assert.equal(rows.length, 1);
     assert.equal(rows[0].event_type, "security_method_added");
     assert.deepEqual(rows[0].metadata, {});
+    await update(db, { new_login: false });
     await audit(db, "password_changed", "rejected");
     await audit(db, "password_login");
     rows = (await db.query("select * from kova_private.account_email_events")).rows;
@@ -252,6 +276,7 @@ test("explicit lifecycle records are deduped, preference-gated and never accept 
       (await db.query("select count(*)::int n from kova_private.account_email_events")).rows[0].n,
       1,
     );
+    await update(db, { account_recovered: false });
     assert.equal(
       (await db.query(sql, [owner, "account_recovered", "recovered", now, "{}"])).rows[0].value,
       null,
