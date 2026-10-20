@@ -47,7 +47,7 @@ test("Google OAuth routes use the documented configuration, exact redirect, and 
   assert.match(callbackRoute, /Max-Age=0/);
 });
 
-test("required Voice stays unavailable without adding provider secrets or billing claims", () => {
+test("interactive Voice stays unavailable without adding provider secrets or billing claims", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
   const capabilityRegistry = read("src/lib/capability-registry.ts");
   const chat = read("src/components/ChatInput.tsx");
@@ -62,7 +62,7 @@ test("required Voice stays unavailable without adding provider secrets or billin
   for (const source of [chat, message]) {
     assert.doesNotMatch(
       source,
-      /SpeechRecognition|webkitSpeechRecognition|speechSynthesis|SpeechSynthesisUtterance|Start voice input|Read aloud|MicOff|Dictate|dictation/i,
+      /SpeechRecognition|webkitSpeechRecognition|speechSynthesis|SpeechSynthesisUtterance|Start voice input|MicOff|Dictate|dictation/i,
     );
   }
   assert.match(start, /microphone=\(\)/g);

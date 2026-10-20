@@ -86,6 +86,7 @@ import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-te
 import { Route as ApiPushRouteImport } from './routes/api/push'
 import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
 import { Route as ApiSitesRouteImport } from './routes/api/sites'
+import { Route as ApiSpeechRouteImport } from './routes/api/speech'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiTrustedContactsRouteImport } from './routes/api/trusted-contacts'
 import { Route as ApiVersionRouteImport } from './routes/api/version'
@@ -601,6 +602,11 @@ const ApiReadyzRoute = ApiReadyzRouteImport.update({
 const ApiSitesRoute = ApiSitesRouteImport.update({
   id: '/api/sites',
   path: '/api/sites',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSpeechRoute = ApiSpeechRouteImport.update({
+  id: '/api/speech',
+  path: '/api/speech',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTitleRoute = ApiTitleRouteImport.update({
@@ -1352,6 +1358,7 @@ export interface FileRoutesByFullPath {
   '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
   '/api/sites': typeof ApiSitesRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/title': typeof ApiTitleRoute
   '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
@@ -1559,6 +1566,7 @@ export interface FileRoutesByTo {
   '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
   '/api/sites': typeof ApiSitesRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/title': typeof ApiTitleRoute
   '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
@@ -1767,6 +1775,7 @@ export interface FileRoutesById {
   '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
   '/api/sites': typeof ApiSitesRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/title': typeof ApiTitleRoute
   '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
@@ -1976,6 +1985,7 @@ export interface FileRouteTypes {
     | '/api/push'
     | '/api/readyz'
     | '/api/sites'
+    | '/api/speech'
     | '/api/title'
     | '/api/trusted-contacts'
     | '/api/version'
@@ -2183,6 +2193,7 @@ export interface FileRouteTypes {
     | '/api/push'
     | '/api/readyz'
     | '/api/sites'
+    | '/api/speech'
     | '/api/title'
     | '/api/trusted-contacts'
     | '/api/version'
@@ -2390,6 +2401,7 @@ export interface FileRouteTypes {
     | '/api/push'
     | '/api/readyz'
     | '/api/sites'
+    | '/api/speech'
     | '/api/title'
     | '/api/trusted-contacts'
     | '/api/version'
@@ -2598,6 +2610,7 @@ export interface RootRouteChildren {
   ApiPushRoute: typeof ApiPushRouteWithChildren
   ApiReadyzRoute: typeof ApiReadyzRoute
   ApiSitesRoute: typeof ApiSitesRoute
+  ApiSpeechRoute: typeof ApiSpeechRoute
   ApiTitleRoute: typeof ApiTitleRoute
   ApiTrustedContactsRoute: typeof ApiTrustedContactsRoute
   ApiVersionRoute: typeof ApiVersionRoute
@@ -3257,6 +3270,13 @@ declare module '@tanstack/react-router' {
       path: '/api/sites'
       fullPath: '/api/sites'
       preLoaderRoute: typeof ApiSitesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/speech': {
+      id: '/api/speech'
+      path: '/api/speech'
+      fullPath: '/api/speech'
+      preLoaderRoute: typeof ApiSpeechRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/title': {
@@ -4344,6 +4364,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPushRoute: ApiPushRouteWithChildren,
   ApiReadyzRoute: ApiReadyzRoute,
   ApiSitesRoute: ApiSitesRoute,
+  ApiSpeechRoute: ApiSpeechRoute,
   ApiTitleRoute: ApiTitleRoute,
   ApiTrustedContactsRoute: ApiTrustedContactsRoute,
   ApiVersionRoute: ApiVersionRoute,

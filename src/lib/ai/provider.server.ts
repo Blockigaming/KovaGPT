@@ -18,6 +18,7 @@ import {
 } from "@/lib/ai/provider-transport.server.mjs";
 
 export type JsonObject = Record<string, unknown>;
+export type GenerationAcceptanceScope = { ownerId: string; operationId: string; chatId: string };
 
 export type ProviderCapability =
   | "chat"
@@ -526,16 +527,17 @@ async function providerFetch(
   body: JsonObject,
   init?: RequestInit,
   images?: { image: ProviderImageInput; mask?: ProviderImageInput },
+  acceptanceScope?: GenerationAcceptanceScope,
 ): Promise<Response> {
   const unavailable = providerUnavailableEnvelope(capability);
   if (unavailable) throw new AiProviderError(unavailable);
 
   const target = providerTarget(capability);
   const config = getAiProviderConfig();
-  const requestBody = withProviderModel(body, capability);
+  let requestBody = withProviderModel(body, capability);
   const deployment = typeof requestBody.model === "string" ? requestBody.model : undefined;
   const startedAt = Date.now();
-  const deadline = createRequestDeadline(
+  let deadline = createRequestDeadline(
     init?.signal ?? undefined,
     config.timeoutMs,
     "provider_request",
@@ -551,6 +553,28 @@ async function providerFetch(
   });
 
   try {
+    const acceptanceMode = env("KOVA_GENERATION_ACCEPTANCE_ENABLED");
+    if (acceptanceMode && acceptanceMode !== "false") {
+      const { generationAcceptance } = await import("@/lib/generation-acceptance-runtime.server");
+      if (!acceptanceScope) throw new Error("generation_acceptance_denied");
+      const admission = await generationAcceptance.run(acceptanceScope, () =>
+        generationAcceptance.openAI({
+          provider: target.provider,
+          path,
+          body: requestBody,
+          signal: deadline.signal,
+        }),
+      );
+      if (!admission || admission.expiresAt <= Date.now())
+        throw new Error("generation_acceptance_denied");
+      requestBody = admission.body;
+      deadline.cleanup();
+      deadline = createRequestDeadline(
+        init?.signal ?? undefined,
+        Math.min(config.timeoutMs, admission.expiresAt - Date.now()),
+        "provider_request",
+      );
+    }
     const headers = await providerHeaders(target, deadline.signal);
     const requestHeaders = new Headers({
       ...Object.fromEntries(new Headers(init?.headers).entries()),
@@ -654,13 +678,19 @@ export async function developerResponses(body: JsonObject, init?: RequestInit): 
   return providerFetch("/responses", body.stream === true ? "streaming" : "chat", body, init);
 }
 
-export async function chatCompletions(body: JsonObject, init?: RequestInit): Promise<Response> {
+export async function chatCompletions(
+  body: JsonObject,
+  init?: RequestInit,
+  acceptanceScope?: GenerationAcceptanceScope,
+): Promise<Response> {
   const stream = body.stream === true;
   const response = await providerFetch(
     "/responses",
     stream ? "streaming" : "chat",
     toResponsesRequest(body),
     init,
+    undefined,
+    acceptanceScope,
   );
   if (!response.ok) return response;
   return stream ? responsesStreamToChatStream(response) : responsesJsonToChatJson(response);

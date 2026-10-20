@@ -1075,7 +1075,6 @@ function KovaGPT() {
       retryConversationId?: string,
       retryHistory?: Message[],
     ) => {
-      const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
       if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
       if (!canWriteChatHistory(userKey)) {
@@ -1446,46 +1445,9 @@ function KovaGPT() {
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
             e instanceof TypeError;
           const category = err.category || (isNetwork ? "network_failure" : undefined);
-          const retryableCategory =
-            category === "model_timeout" ||
-            category === "streaming_interruption" ||
-            category === "network_failure" ||
-            category === "model_provider_failure";
-          // Respect the server's retryability signal. Configuration and
-          // authentication failures cannot heal through repeated requests and
-          // previously made the composer look stuck while it silently retried.
-          const canAutoRetry =
-            err.retryable !== false && retryableCategory && _retryAttempt < MAX_AUTO_RETRIES;
-
-          if (canAutoRetry) {
-            // Exponential backoff: 600ms, 1800ms. Strip the failed turn so
-            // the retry can recreate it without duplicate messages.
-            const backoffMs = 600 * Math.pow(3, _retryAttempt);
-            setConversations((prev) =>
-              prev.map((c) =>
-                c.id === nextConvId
-                  ? {
-                      ...c,
-                      messages: c.messages.filter(
-                        (m) => m.id !== assistantMsg.id && m.id !== userMsg.id,
-                      ),
-                    }
-                  : c,
-              ),
-            );
-            setIsStreaming(false);
-            abortRef.current = null;
-            if (inFlightTargetRef.current?.controller === controller)
-              inFlightTargetRef.current = null;
-            inFlightRef.current = false;
-            retryTimerRef.current = window.setTimeout(() => {
-              retryTimerRef.current = null;
-              if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
-              send(text, atts, retryTool, _retryAttempt + 1, nextConvId, priorMessages);
-            }, backoffMs);
-            return;
-          }
-
+          // A failed transport/stream may already have generated billable output.
+          // Keep the partial response and require an explicit Retry action;
+          // silently replaying with a new message ID can duplicate generation.
           const requestId = err.requestId;
           const friendly =
             category === "rate_limit"
