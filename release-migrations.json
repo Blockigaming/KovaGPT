@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 189,
-  "latest": "20261019225033_kova_owned_email_proof_reliability.sql",
+  "count": 190,
+  "latest": "20261020183948_account_email_notifications.sql",
   "migrations": [
     {
       "order": 1,
@@ -3965,6 +3965,36 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 190,
+      "filename": "20261020183948_account_email_notifications.sql",
+      "timestamp": "20261020183948",
+      "sha256": "120c75ba546c7f4ffff7483c77a7147f7364b89b1f15adb45283601b0b0323ba",
+      "tables": ["kova_private", "kova_private"],
+      "functions": [
+        "account_email_defaults",
+        "account_email_recipient",
+        "account_email_preferences_for",
+        "account_email_get_preferences",
+        "account_email_update_preferences",
+        "enqueue_account_email",
+        "account_email_record_lifecycle",
+        "account_email_prepare_account_deletion",
+        "account_email_from_audit",
+        "account_email_before_delete",
+        "account_email_dispatch_allowed",
+        "account_email_claim_dispatch",
+        "account_email_prepare_dispatch",
+        "account_email_finish_dispatch",
+        "account_email_purge_expired"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["account_email_pending_expiry_idx"]
     }
   ]
 }

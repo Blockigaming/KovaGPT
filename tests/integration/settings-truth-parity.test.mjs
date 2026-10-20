@@ -106,7 +106,8 @@ test("settings does not expose local switches for unenforced email, family, or l
   const settings = read("src/components/SettingsDialog.tsx");
   const mapWidget = read("src/components/MapWidget.tsx");
 
-  assert.match(settings, /Optional email preferences are unavailable/);
+  assert.match(settings, /<AccountEmailPreferences ownerId=\{isLoaded \? userKey : null\}/);
+  assert.doesNotMatch(settings, /Always on|cannot be turned\s+off for security/);
   assert.match(settings, /Family controls are not available yet/);
   assert.match(settings, /Device location is not requested/);
   assert.doesNotMatch(settings, /title="Product updates"|title="Tips & guides"/);

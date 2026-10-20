@@ -1,5 +1,6 @@
 import { parseAccountDeletionStatus, requestAccountDeletion } from "@/lib/account-deletion-client";
 import { PwaSettings } from "@/components/PwaSettings";
+import { AccountEmailPreferences } from "@/components/AccountEmailPreferences";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -158,8 +159,8 @@ export const DEFAULT_SETTINGS: Settings = {
   webSearch: true,
   sendOnEnter: true,
   mode: "system",
-  notifyEmail: true,
-  notifyProduct: true,
+  notifyEmail: false,
+  notifyProduct: false,
   parentalMode: false,
   trainingOptOut: false,
   theme: DEFAULT_THEME,
@@ -529,6 +530,10 @@ export function SettingsDialog({
         toast.success(
           "Your account was recovered. Your data, subscription and discount are unchanged.",
         );
+        if (body?.emailNotification === "unconfirmed")
+          toast.warning(
+            "Your account was recovered, but we couldn’t confirm its email notification.",
+          );
       } else {
         toast.error(
           "Account recovery was not confirmed. Check deletion status; billing is unchanged.",
@@ -593,7 +598,8 @@ export function SettingsDialog({
     }
 
     if (response.status !== 204) {
-      const result = parseAccountDeletionStatus(await response.json().catch(() => null));
+      const body = await response.json().catch(() => null);
+      const result = parseAccountDeletionStatus(body);
       if (currentDeletion()) {
         setDeletionStatus(
           result
@@ -609,6 +615,10 @@ export function SettingsDialog({
           toast.success(
             "Account deletion is scheduled after 30 days. Recover before the deadline in Data controls. Billing is unchanged; cancel separately in Billing if needed.",
           );
+          if (body?.emailNotification === "unconfirmed")
+            toast.warning(
+              "Deletion is scheduled. We couldn’t confirm its email notification; check the recovery deadline in Data controls.",
+            );
         } else {
           toast.error("Deletion is pending or unverified. No local data was removed.");
         }
@@ -1527,33 +1537,7 @@ export function SettingsDialog({
               >
                 <h3 className="text-sm font-semibold">Notifications</h3>
                 <PwaSettings ownerId={isLoaded ? userKey : null} />
-                <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-4">
-                  <div>
-                    <p className="text-sm font-medium">Account &amp; security emails</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Sign-in alerts, verification, and important account changes cannot be turned
-                      off for security.
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-                    Always on
-                  </span>
-                </div>
-                <div className="rounded-lg border border-dashed border-border p-4" role="note">
-                  <p className="text-sm font-medium">Optional email preferences are unavailable</p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Product-update and tips controls are not connected to the delivery service yet,
-                    so KovaGPT does not show switches that would have no effect. Use the unsubscribe
-                    link in an optional email or contact support for help.
-                  </p>
-                  <Link
-                    to="/contact-support"
-                    onClick={() => onOpenChange(false)}
-                    className="mt-3 inline-flex min-h-11 items-center text-sm font-medium underline"
-                  >
-                    Contact support
-                  </Link>
-                </div>
+                <AccountEmailPreferences ownerId={isLoaded ? userKey : null} />
               </TabsContent>
 
               {/* PARENTAL */}

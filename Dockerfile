@@ -80,7 +80,10 @@ RUN groupadd --system --gid 10001 kova && \
 COPY --from=build --chown=kova:kova /app/dist ./dist
 COPY --from=build --chown=kova:kova /app/package.json ./package.json
 COPY --from=build --chown=kova:kova /app/scripts/auth-email/dispatch.mjs ./scripts/auth-email/dispatch.mjs
+COPY --from=build --chown=kova:kova /app/scripts/auth-email/notification-dispatch.mjs ./scripts/auth-email/notification-dispatch.mjs
 COPY --from=build --chown=kova:kova /app/src/lib/kova-auth-email.server.mjs ./src/lib/kova-auth-email.server.mjs
+COPY --from=build --chown=kova:kova /app/src/lib/kova-account-email.server.mjs ./src/lib/kova-account-email.server.mjs
+COPY --from=build --chown=kova:kova /app/src/lib/account-email-preferences.mjs ./src/lib/account-email-preferences.mjs
 COPY --from=build --chown=kova:kova /app/src/config/public-config.ts ./src/config/public-config.ts
 
 USER kova

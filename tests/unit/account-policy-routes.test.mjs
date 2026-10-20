@@ -8,14 +8,19 @@ const OWNER = "11111111-1111-4111-8111-111111111111";
 const ATTEMPT = "22222222-2222-4222-8222-222222222222";
 const WORKER_SECRET = "nonsecret-worker-fixture-".repeat(3);
 const active = { state: "active", scheduledAt: null, recoverUntil: null };
-const scheduledAt = "2026-10-19T01:00:00.000Z";
+const scheduledAt = new Date().toISOString();
 const scheduled = {
   state: "scheduled",
   scheduledAt,
   recoverUntil: new Date(Date.parse(scheduledAt) + 30 * 86400000).toISOString(),
 };
 
-function publicFixture({ provider = "supabase", failure = false, authenticated = true } = {}) {
+function publicFixture({
+  provider = "supabase",
+  failure = false,
+  authenticated = true,
+  notificationFailure = false,
+} = {}) {
   const calls = [];
   let state = active;
   const admin = {
@@ -25,6 +30,11 @@ function publicFixture({ provider = "supabase", failure = false, authenticated =
         abortSignal: async (signal) => {
           assert.ok(signal instanceof AbortSignal);
           if (failure) return { error: new Error("private upstream transport detail"), data: null };
+          if (name === "account_email_record_lifecycle") {
+            return notificationFailure
+              ? { error: new Error("private mail queue detail"), data: null }
+              : { data: "33333333-3333-4333-8333-333333333333", error: null };
+          }
           if (name === "kova_policy_schedule_deletion") state = scheduled;
           if (name === "kova_policy_recover_deletion") state = active;
           return { data: state, error: null };
@@ -56,13 +66,29 @@ function publicFixture({ provider = "supabase", failure = false, authenticated =
   };
 }
 
-test("public scheduling performs only the owner-bound policy RPC and returns a recoverable 202", async () => {
+test("public scheduling confirms policy before an owner-derived notice and returns recoverable 202", async () => {
   const f = publicFixture();
   const response = await f.run("DELETE", { confirmation: "DELETE" });
   assert.equal(response.status, 202);
   const body = await response.json();
-  assert.deepEqual(body, { ...scheduled, accountId: OWNER, billingChanged: false });
-  assert.deepEqual(f.calls, [{ name: "kova_policy_schedule_deletion", args: { p_user: OWNER } }]);
+  assert.deepEqual(body, {
+    ...scheduled,
+    accountId: OWNER,
+    billingChanged: false,
+    emailNotification: "queued",
+  });
+  assert.deepEqual(
+    f.calls.map(({ name }) => name),
+    [
+      "kova_policy_schedule_deletion",
+      "kova_policy_account_status",
+      "account_email_record_lifecycle",
+    ],
+  );
+  assert.deepEqual(f.calls[0].args, { p_user: OWNER });
+  assert.equal(f.calls[2].args.p_account_id, OWNER);
+  assert.equal(f.calls[2].args.p_event_type, "account_deletion_scheduled");
+  assert.equal(Object.hasOwn(f.calls[2].args, "recipient"), false);
   assert.equal(response.headers.get("Cache-Control"), "no-store");
   assert.equal(response.headers.get("Set-Cookie"), null);
 });
@@ -72,15 +98,29 @@ test("public recovery preserves the same account and delegates deadline authorit
   await f.run("DELETE", { confirmation: "DELETE" });
   const response = await f.run("PATCH", { action: "recover" });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ...active, accountId: OWNER, billingChanged: false });
-  assert.deepEqual(f.calls.at(-1), {
+  assert.deepEqual(await response.json(), {
+    ...active,
+    accountId: OWNER,
+    billingChanged: false,
+    emailNotification: "queued",
+  });
+  assert.deepEqual(f.calls.at(-2), {
     name: "kova_policy_recover_deletion",
     args: { p_user: OWNER },
   });
+  assert.equal(f.calls.at(-1).args.p_event_type, "account_recovered");
   assert.equal(
     f.calls.some(({ name }) => /begin_finalization|confirm_finalization|retir/.test(name)),
     false,
   );
+});
+
+test("notification uncertainty does not replay deletion or misreport its confirmed policy result", async () => {
+  const f = publicFixture({ notificationFailure: true });
+  const response = await f.run("DELETE", { confirmation: "DELETE" });
+  assert.equal(response.status, 202);
+  assert.equal((await response.json()).emailNotification, "unconfirmed");
+  assert.equal(f.calls.filter(({ name }) => name === "kova_policy_schedule_deletion").length, 1);
 });
 
 test("GET returns owner-bound state without starting cleanup or recovery", async () => {
