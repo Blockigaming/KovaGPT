@@ -266,6 +266,14 @@ function fixture({
   };
 }
 
+async function waitFor(predicate, message) {
+  const deadline = performance.now() + 2000;
+  while (!predicate()) {
+    assert.ok(performance.now() < deadline, message);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
 test("application route → actual repaired adapter → incremental client completion", async () => {
   const f = fixture();
   const response = await f.post();
@@ -277,7 +285,10 @@ test("application route → actual repaired adapter → incremental client compl
       visible += event.choices?.[0]?.delta?.content ?? "";
     },
   });
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  await waitFor(
+    () => visible === "Visible ",
+    "first content must arrive before upstream completion",
+  );
   assert.equal(visible, "Visible ", "first content must arrive before upstream completion");
   f.finish();
   await consuming;
@@ -322,7 +333,10 @@ test("client Stop cancels the actual application stream and provider body", asyn
   const consuming = consumeChatSse(response.body, { signal: f.requestAbort.signal });
   f.requestAbort.abort();
   await assert.rejects(consuming, (error) => error.name === "AbortError");
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  await waitFor(
+    () => f.cancelled && f.providerSignal.aborted && f.finalizations.length > 0,
+    "Stop must cancel the provider and settle the application stream",
+  );
   assert.equal(f.cancelled, true);
   assert.equal(f.providerSignal.aborted, true);
   assert.ok(["aborted", "client_disconnected"].includes(f.finalizations[0].status));
@@ -474,11 +488,17 @@ function composer(f) {
   };
 }
 
+const waitForPartialOutput = (ui) =>
+  waitFor(
+    () => ui.streaming && ui.items[0]?.messages[1]?.content === "Visible ",
+    "the composer must expose partial output before upstream completion",
+  );
+
 test("actual composer callback → route → adapter → visible completion clears loading", async () => {
   const f = fixture(),
     ui = composer(f);
   const sending = ui.send();
-  await new Promise((resolve) => setTimeout(resolve, 25));
+  await waitForPartialOutput(ui);
   assert.equal(ui.streaming, true);
   assert.equal(ui.items[0].messages[1].content, "Visible ");
   f.finish();
@@ -509,10 +529,13 @@ test("actual composer cancellation clears loading and aborts downstream provider
   const f = fixture(),
     ui = composer(f);
   const sending = ui.send();
-  await new Promise((resolve) => setTimeout(resolve, 25));
+  await waitForPartialOutput(ui);
   ui.context.abortRef.current.abort(new DOMException("kova_user_stopped_generation", "AbortError"));
   await sending;
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  await waitFor(
+    () => f.cancelled && f.providerSignal.aborted,
+    "composer Stop must cancel the downstream provider",
+  );
   assert.equal(ui.streaming, false);
   assert.equal(ui.context.inFlightRef.current, false);
   assert.equal(f.cancelled, true);
@@ -524,7 +547,7 @@ test("partial provider failure retains visible output, exits loading and require
   const f = fixture(),
     ui = composer(f);
   const sending = ui.send();
-  await new Promise((resolve) => setTimeout(resolve, 25));
+  await waitForPartialOutput(ui);
   assert.equal(ui.items[0].messages[1].content, "Visible ");
   f.fail();
   await sending;
@@ -537,9 +560,10 @@ test("partial provider failure retains visible output, exits loading and require
 });
 
 test("actual application guard clamps final output and permits only one quoted OpenAI request", async () => {
-  const capture = fixture({ prompt: ACCEPTANCE_PROMPT });
-  const capturing = composer(capture).send();
-  await new Promise((resolve) => setTimeout(resolve, 25));
+  const capture = fixture({ prompt: ACCEPTANCE_PROMPT }),
+    captureUi = composer(capture);
+  const capturing = captureUi.send();
+  await waitForPartialOutput(captureUi);
   capture.finish();
   await capturing;
   const a = createAcceptanceFixture({
@@ -550,7 +574,7 @@ test("actual application guard clamps final output and permits only one quoted O
   const f = fixture({ acceptance: a, prompt: ACCEPTANCE_PROMPT }),
     ui = composer(f);
   const sending = ui.send();
-  await new Promise((resolve) => setTimeout(resolve, 25));
+  await waitForPartialOutput(ui);
   assert.equal(f.providerBody.max_output_tokens, 64);
   assert.equal(acceptanceDigest(f.providerBody), a.plan.openAI.bodySha256);
   f.finish();
