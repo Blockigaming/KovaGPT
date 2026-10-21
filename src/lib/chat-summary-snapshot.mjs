@@ -325,3 +325,5 @@ export function chatRequestProfile(settings) {
     webSearch: settings.webSearch,
   };
 }
+
+export { withResponsePresentation } from "./spec400-response-preferences.mjs";

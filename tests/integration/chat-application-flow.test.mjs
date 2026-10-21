@@ -484,6 +484,7 @@ function composer(f) {
     require: (name) => {
       assert.equal(name, "@/lib/chat-summary-snapshot.mjs");
       return {
+        withResponsePresentation,
         createChatHistoryPayload: async (messages) => ({ messages }),
         chatRequestProfile: () => ({}),
         fetchForPrincipal: async (owner, url, init) => {

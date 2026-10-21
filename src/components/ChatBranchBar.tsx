@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, GitBranch, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLayout } from "@/hooks/use-mobile";
@@ -43,7 +43,7 @@ export function ChatBranchBar({
   activeBranch: BranchView | null;
   loading?: boolean;
   error?: string | null;
-  onActivate: (branchId: string) => Promise<unknown>;
+  onActivate: (branchId: string) => Promise<boolean>;
   onRetry?: () => void;
   /** Shown when branches are device-only (guest) rather than account-backed. */
   durableHint?: string;
@@ -52,6 +52,13 @@ export function ChatBranchBar({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (!loading && !error && branches.length === 0) return null;
@@ -69,14 +76,17 @@ export function ChatBranchBar({
     busyRef.current = true;
     setBusy(true);
     try {
-      await onActivate(branchId);
+      const activated = await onActivate(branchId);
+      if (!activated) return;
+      // A successful activation may have unmounted this picker by navigating.
       toast.success("Switched branch");
-      setSheetOpen(false);
+      if (mountedRef.current) setSheetOpen(false);
     } catch (err) {
+      if (!mountedRef.current) return;
       toast.error(err instanceof Error ? err.message : "That branch could not be activated.");
     } finally {
       busyRef.current = false;
-      setBusy(false);
+      if (mountedRef.current) setBusy(false);
     }
   };
 

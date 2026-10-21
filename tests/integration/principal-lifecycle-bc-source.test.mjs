@@ -7,6 +7,10 @@ const agentSource = read("src/components/AgentWorkspace.tsx");
 const commandSource = read("src/components/CommandPalette.tsx");
 const settingsSource = read("src/components/SettingsDialog.tsx");
 const storageSource = read("src/lib/principal-browser-storage.mjs");
+const deletionHandlers = settingsSource.slice(
+  settingsSource.indexOf("  const handleCheckDeletion ="),
+  settingsSource.indexOf("  const handleClearSavedMemory ="),
+);
 
 test("mounted AgentWorkspace invalidates stale generations after principal cleanup", () => {
   assert.match(agentSource, /const storageGenerationRef = useRef\(0\)/);
@@ -35,8 +39,36 @@ test("cleanup copy names ownerless purging and account scheduling cannot trigger
     settingsSource,
     /Other profiles' scoped data,[\s\S]{0,100}device-wide\s+display\s+preferences,[\s\S]{0,80}cloud data are preserved/,
   );
-  assert.doesNotMatch(settingsSource, /handleDeleteAccount|requestAccountDeletion|deletionUserKey/);
-  assert.match(settingsSource, /<AccountDeletionGraceView[\s\S]*?status="unavailable"/);
+  assert.match(deletionHandlers, /requestAccountDeletion\(deletionUserKey, "GET"\)/);
+  assert.match(deletionHandlers, /requestAccountDeletion\(deletionUserKey, "PATCH"\)/);
+  assert.match(deletionHandlers, /requestAccountDeletion\(deletionUserKey, "DELETE"\)/);
+  assert.match(
+    deletionHandlers,
+    /if \(deleteConfirmation !== "DELETE" \|\| deleteAccountBusy \|\| !isLoaded \|\| !userKey\) return/,
+  );
+  const finalBoundary = deletionHandlers.indexOf("// Only a verified final 204");
+  assert.ok(finalBoundary > 0, "the final-deletion cleanup boundary remains explicit");
+  const beforeFinal = deletionHandlers.slice(0, finalBoundary);
+  const pending = beforeFinal.slice(beforeFinal.indexOf("if (response.status !== 204)"));
+  assert.match(pending, /response\.status === 202 && result\?\.state === "scheduled"/);
+  assert.match(pending, /Account deletion is scheduled after 30 days/);
+  assert.match(pending, /return;\s*\}\s*$/);
+  assert.doesNotMatch(
+    beforeFinal,
+    /\b(?:clearLocalBrowserData|onClearAll|onOpenChange|signOut)\s*\(/,
+    "status checks, recovery, failures and scheduling cannot clear local data or sign out",
+  );
+  const final = deletionHandlers.slice(finalBoundary);
+  assert.match(final, /await clearLocalBrowserData\(deletionUserKey\)/);
+  assert.match(
+    final,
+    /if \(currentAuthUserKeyRef\.current === deletionUserKey\) \{\s*onClearAll\(\)/,
+  );
+  assert.match(
+    final,
+    /if \(currentAuthUserKeyRef\.current === deletionUserKey\) await clerk\?\.signOut\(\)/,
+  );
+  assert.doesNotMatch(settingsSource, /<AccountDeletionGraceView[\s\S]*?status="unavailable"/);
   assert.doesNotMatch(
     settingsSource,
     /clearLocalBrowserData\(\);\s*onClearAll\(\);[\s\S]{0,120}toast\.success/,
@@ -125,7 +157,7 @@ test("live handoff producers and consumers use the tested principal envelope hel
     sources.home,
     /candidates\.sort\(\(left, right\) => right\.createdAt - left\.createdAt\)/,
   );
-  assert.match(sources.home, /\}, \[principalReady, userKey\]\);/);
+  assert.match(sources.home, /\}, \[principalReady, userKey, setInput, setSelectedTool\]\);/);
 });
 
 test("handoff helpers remove before parsing and retain no ownerless fallback", () => {
@@ -194,5 +226,17 @@ test("same-principal cleanup blocks late writes and account-switch UI flashes", 
   );
   assert.match(settingsSource, /deleteAccountReturnRef\.current\?\.ownerId === userKey/);
   assert.match(settingsSource, /previous\.ownerId !== currentAuthUserKeyRef\.current/);
-  assert.doesNotMatch(settingsSource, /deletionUserKey|handleDeleteAccount/);
+  for (const name of ["handleCheckDeletion", "handleRecoverAccount", "handleDeleteAccount"]) {
+    const start = deletionHandlers.indexOf(`const ${name} =`);
+    assert.ok(start >= 0, `${name} remains explicit`);
+    const next = deletionHandlers.indexOf("  const handle", start + 1);
+    const handler = deletionHandlers.slice(start, next < 0 ? undefined : next);
+    assert.match(handler, /const deletionUserKey = userKey/);
+    assert.match(handler, /const operation = \+\+deletionOperationRef\.current/);
+    assert.match(
+      handler,
+      /currentAuthUserKeyRef\.current === deletionUserKey &&\s*deletionOperationRef\.current === operation/,
+    );
+    assert.match(handler, /if \(currentDeletion\(\)\) setDeleteAccountBusy\(false\)/);
+  }
 });

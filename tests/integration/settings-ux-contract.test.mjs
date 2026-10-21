@@ -8,6 +8,17 @@ const settingsSource = await readFile(
   new URL("../../src/components/SettingsDialog.tsx", import.meta.url),
   "utf8",
 );
+const settingsModelSource = await readFile(
+  new URL("../../src/lib/settings-types.ts", import.meta.url),
+  "utf8",
+);
+const parsedModel = ts.createSourceFile(
+  "settings-types.ts",
+  settingsModelSource,
+  ts.ScriptTarget.Latest,
+  true,
+  ts.ScriptKind.TS,
+);
 const stylesSource = await readFile(new URL("../../src/styles.css", import.meta.url), "utf8");
 const browserSource = await readFile(
   new URL("../e2e/settings-theme-transition.spec.ts", import.meta.url),
@@ -33,21 +44,20 @@ const matching = (root, predicate) => {
   visit(root);
   return matches;
 };
-const variable = (name) => {
+const variable = (name, root = parsed) => {
   const matches = matching(
-    parsed,
-    (node) => ts.isVariableDeclaration(node) && node.name.getText(parsed) === name,
+    root,
+    (node) => ts.isVariableDeclaration(node) && node.name.getText(root) === name,
   );
   assert.equal(matches.length, 1, `Expected one ${name} declaration`);
   return matches[0];
 };
 const property = (node, name) =>
-  node.properties.find(
-    (item) => ts.isPropertyAssignment(item) && item.name.getText(parsed) === name,
-  )?.initializer;
+  node.properties.find((item) => ts.isPropertyAssignment(item) && item.name.getText() === name)
+    ?.initializer;
 const attribute = (node, name) =>
   node.attributes.properties.find(
-    (item) => ts.isJsxAttribute(item) && item.name.getText(parsed) === name,
+    (item) => ts.isJsxAttribute(item) && item.name.getText() === name,
   );
 const execute = (expression, dependencies = {}) =>
   new Function(
@@ -109,7 +119,10 @@ test("Settings select controls expose stable accessible names", () => {
     ["formal", "Formal"],
     ["conversational", "Conversational"],
   ]);
-  assert.equal(property(variable("DEFAULT_SETTINGS").initializer, "responseTone").text, "direct");
+  assert.equal(
+    property(variable("DEFAULT_SETTINGS", parsedModel).initializer, "responseTone").text,
+    "direct",
+  );
   for (const [value] of options) {
     const settings = { responseTone: "direct", responseLength: "short" };
     let changed;
@@ -173,13 +186,15 @@ test("settings navigation is centralized and routes every rendered category", ()
   for (const tab of dialogTabs)
     assert.equal(panels.filter((value) => value === tab.value).length, 1, tab.label);
 
-  const sections = execute(variable("SETTINGS_SECTIONS").initializer.getText(parsed));
+  const sections = execute(
+    variable("SETTINGS_SECTIONS", parsedModel).initializer.getText(parsedModel),
+  );
   const sectionFunction = matching(
-    parsed,
+    parsedModel,
     (node) => ts.isFunctionDeclaration(node) && node.name?.text === "settingsSectionForTab",
   );
   assert.equal(sectionFunction.length, 1);
-  const sectionForTab = execute(sectionFunction[0].getText(parsed).replace(/^export\s+/, ""), {
+  const sectionForTab = execute(sectionFunction[0].getText(parsedModel).replace(/^export\s+/, ""), {
     SETTINGS_SECTIONS: sections,
   });
   const pageTabs = categories("pageGroups");

@@ -13,7 +13,9 @@ test("saved-memory reads and POSTs require explicit browser consent and paid ent
   const chatApi = read("src/routes/api/chat.ts");
   const parser = read("src/lib/endpoint-reliability.mjs");
 
-  assert.match(settings, /rememberAcross: false/);
+  const settingsModel = read("src/lib/settings-types.ts");
+  assert.match(settingsModel, /rememberAcross: false/);
+  assert.match(settings, /from "@\/lib\/settings-types"/);
   assert.match(page, /setSettingsPrincipal\(storagePrincipal\)/);
   assert.match(page, /if \(!settingsReady\) return;[\s\S]{0,120}blockMemoryWrites/);
   assert.match(

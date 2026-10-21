@@ -1,4 +1,4 @@
-import { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
+import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
 import {
   snapshotNextPrompt,
   sameNextPromptScope,
@@ -10,19 +10,14 @@ import {
   type NextPrompt,
   type NextPromptScope,
 } from "@/lib/chat-send-next";
-import { sameReviewedMemoryConversation } from "@/lib/reviewed-memory-policy.mjs";
+import { sameReviewedMemoryConversation } from "@/lib/reviewed-memory-conversation.mjs";
 import { appendFollowupToDraft } from "@/lib/response-followups.mjs";
-import { withResponsePresentation } from "@/lib/spec400-response-preferences.mjs";
 import type { ResultDescriptor } from "@/components/ArtifactEditor";
-import { splitGenerativeContent, type GenerativeWidget } from "@/lib/generative-ui.mjs";
-import { GenerativeCanvas } from "@/components/generative-ui/GenerativeCanvas";
-import { awaitSavedComposerVoiceTurn, type ComposerVoiceTurn } from "@/lib/composer-voice-turn";
+import { splitGenerativeContent } from "@/lib/generative-ui.mjs";
+import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
 import { loadChatHistoryDevice } from "@/lib/chat-history-idb.mjs";
 
-type WorkspaceResultDescriptor = ResultDescriptor & {
-  widget?: GenerativeWidget;
-  canvasSourceKey?: string;
-};
+import type { WorkspaceResultDescriptor } from "@/components/WorkspaceResultContent";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import {
   beginChatEdit,
@@ -47,18 +42,15 @@ import {
   Suspense,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type SetStateAction,
 } from "react";
-import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, Sliders, Files, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { PanelLeft, Files } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { ConversationHeaderActions } from "@/components/ConversationHeaderActions";
 
-import { ChatMessage } from "@/components/ChatMessage";
+import type { TranscriptMessageRenderer } from "@/components/ActiveChatTranscript";
 import {
   ChatInput,
   type ComposerToolId,
@@ -66,23 +58,45 @@ import {
   type RecentLibraryFile,
 } from "@/components/ChatInput";
 import { MobileTopBar } from "@/components/MobileTopBar";
-import { CommandPalette } from "@/components/CommandPalette";
-import { ChatBranchBar } from "@/components/ChatBranchBar";
-import { useChatBranches } from "@/hooks/useChatBranches";
 
-import {
-  type Settings,
-  DEFAULT_SETTINGS,
-  settingsSectionForTab,
-} from "@/components/SettingsDialog";
+import { type Settings, DEFAULT_SETTINGS, settingsSectionForTab } from "@/lib/settings-types";
 
+const ConversationHeaderActions = lazy(() =>
+  import("@/components/ConversationHeaderActions").then((module) => ({
+    default: module.ConversationHeaderActions,
+  })),
+);
+const CommandPalette = lazy(() =>
+  import("@/components/CommandPalette").then((module) => ({ default: module.CommandPalette })),
+);
+const ActiveChatTranscript = lazy(() =>
+  import("@/components/ActiveChatTranscript").then((module) => ({
+    default: module.ActiveChatTranscript,
+  })),
+);
+
+const QuotaRejectedDraftPreview = lazy(() =>
+  import("@/components/QuotaRejectedDraftPreview").then((module) => ({
+    default: module.QuotaRejectedDraftPreview,
+  })),
+);
+const WorkspaceResultDivider = lazy(() =>
+  import("@/components/WorkspaceResultContent").then((module) => ({
+    default: module.WorkspaceResultDivider,
+  })),
+);
+const WorkspaceResultContent = lazy(() =>
+  import("@/components/WorkspaceResultContent").then((module) => ({
+    default: module.WorkspaceResultContent,
+  })),
+);
+const SignUpPrompt = lazy(() =>
+  import("@/components/SignUpPrompt").then((module) => ({ default: module.SignUpPrompt })),
+);
 const ReviewedMemoryDialog = lazy(() =>
   import("@/components/ReviewedMemoryDialog").then((module) => ({
     default: module.ReviewedMemoryDialog,
   })),
-);
-const ArtifactEditor = lazy(() =>
-  import("@/components/ArtifactEditor").then((module) => ({ default: module.ArtifactEditor })),
 );
 const HomeChatStarters = lazy(() =>
   import("@/components/HomeChatStarters").then((module) => ({ default: module.HomeChatStarters })),
@@ -159,7 +173,6 @@ import {
   type TemporaryChatContext,
   type ConversationWorkflowSkill,
   deriveTitle,
-  branchConversation,
   chatStoragePrincipal,
   clearDraft,
   clearPendingActive,
@@ -230,6 +243,38 @@ export const Route = createFileRoute("/")({
 });
 
 const EMPTY_CONVERSATIONS: Conversation[] = [];
+
+function pendingMessageAttachments(items: Message["attachments"]): PendingAttachment[] {
+  return (items ?? []).map((attachment) =>
+    attachment.kind === "image"
+      ? {
+          kind: "image" as const,
+          dataUrl: attachment.dataUrl,
+          name: "Attached image",
+          status: COMPLETE,
+        }
+      : attachment.kind === "text_file"
+        ? {
+            kind: "text_file" as const,
+            dataUrl: "",
+            name: attachment.name,
+            size: attachment.size ?? undefined,
+            fileType: attachment.fileType,
+            textContent: attachment.content,
+            status: COMPLETE,
+          }
+        : {
+            kind: "library_file" as const,
+            dataUrl: "",
+            name: attachment.name,
+            size: attachment.size ?? undefined,
+            libraryItemId: attachment.libraryItemId,
+            fileType: attachment.fileType,
+            sourceProject: attachment.sourceProject,
+            status: COMPLETE,
+          },
+  );
+}
 
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
@@ -1304,32 +1349,6 @@ function KovaGPT() {
     if (activeTemporaryContext !== null) setTempChatContext(activeTemporaryContext);
   }, [activeTemporary, activeTemporaryContext]);
 
-  // Branch rows are keyed by the family's root conversation, so a branched chat
-  // and its original share one durable branch tree.
-  const branchRootId = active ? (active.branchRootId ?? active.id) : null;
-  const branchState = useChatBranches(branchRootId, Boolean(active?.temporary));
-
-  /**
-   * Switching a branch must switch what the person is actually reading. If the
-   * mapped conversation is not on this device we say so instead of pretending.
-   */
-  const activateBranch = useCallback(
-    async (branchId: string) => {
-      const target = branchState.branches.find((branch) => branch.id === branchId);
-      if (!target) throw new Error("That branch no longer exists.");
-      const exists = conversations.some(
-        (conversation) => conversation.id === target.conversationId,
-      );
-      if (!exists) {
-        throw new Error("That branch's conversation isn't available on this device.");
-      }
-      await branchState.activate(branchId);
-      setActiveId(target.conversationId);
-      return target;
-    },
-    [branchState, conversations, setActiveId],
-  );
-
   /**
    * Applies an accepted inline edit or a restored version to a message. The
    * original text is kept in the durable version chain, so nothing is lost.
@@ -1366,52 +1385,12 @@ function KovaGPT() {
 
   const greeting = "What are you working on?";
 
-  const updateNearBottom = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
-    const near = distance < 120;
-    nearBottomRef.current = near;
-    setShowJumpToLatest(!near && Boolean(active?.messages.length));
-  }, [active?.messages.length]);
-
-  const activeMessageCount = active?.messages.length;
-  const latestMessageContent = active?.messages.at(-1)?.content;
-
-  // Keep the same visible text line when responsive navigation reflows the transcript.
-  const hasTranscript = principalReady && Boolean(activeMessageCount);
   const transcriptScope = JSON.stringify([storagePrincipal, activeId, principalReady]);
   const transcriptScopeRef = useRef(transcriptScope);
   transcriptScopeRef.current = transcriptScope;
   const readingAnchorControllerRef = useRef<ReturnType<
     typeof createTranscriptReadingAnchorController
   > | null>(null);
-  useLayoutEffect(() => {
-    const element = scrollRef.current;
-    if (!hasTranscript || !element) return;
-    const controller = createTranscriptReadingAnchorController(element, {
-      isCurrent: () =>
-        transcriptScopeRef.current === transcriptScope && scrollRef.current === element,
-      isFollowingBottom: () => nearBottomRef.current,
-    });
-    readingAnchorControllerRef.current = controller;
-    return () => {
-      controller.dispose();
-      if (readingAnchorControllerRef.current === controller)
-        readingAnchorControllerRef.current = null;
-    };
-  }, [transcriptScope, hasTranscript]);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    if (nearBottomRef.current) {
-      el.scrollTo({ top: el.scrollHeight, behavior: isStreaming ? "auto" : "smooth" });
-      setShowJumpToLatest(false);
-    } else {
-      setShowJumpToLatest(true);
-    }
-  }, [activeMessageCount, latestMessageContent, isStreaming]);
 
   useEffect(() => {
     if (!settingsReady) return;
@@ -1710,6 +1689,23 @@ function KovaGPT() {
   }, [setConversations, userKey]);
 
   useEffect(() => {
+    // Own pending-palette Escape before Sidebar's document listener. Mounted
+    // menus/dialogs and IME composition retain their existing key handling.
+    const onPendingPaletteEscape = (event: KeyboardEvent) => {
+      if (
+        !commandOpen ||
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.keyCode === 229 ||
+        (event.target instanceof Element &&
+          event.target.closest('[role="menu"], [role="dialog"], [role="alertdialog"], dialog'))
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      setCommandOpen(false);
+    };
     const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
       if ((event.metaKey || event.ctrlKey) && key === "k") {
@@ -1722,8 +1718,12 @@ function KovaGPT() {
         newChat();
       }
     };
+    window.addEventListener("keydown", onPendingPaletteEscape, true);
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onPendingPaletteEscape, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [commandOpen, newChat, openCommandPalette]);
 
   const historyAction = useCallback(
@@ -2060,8 +2060,12 @@ function KovaGPT() {
       try {
         const activeTool = retryTool;
         controller.signal.throwIfAborted();
-        const { createChatHistoryPayload, fetchForPrincipal, chatRequestProfile } =
-          await import("@/lib/chat-summary-snapshot.mjs");
+        const {
+          createChatHistoryPayload,
+          fetchForPrincipal,
+          chatRequestProfile,
+          withResponsePresentation,
+        } = await import("@/lib/chat-summary-snapshot.mjs");
         const authFetch = (input: RequestInfo | URL, init: RequestInit) =>
           fetchForPrincipal(userKey, input, init);
         const historyPayload = await createChatHistoryPayload(
@@ -2618,6 +2622,8 @@ function KovaGPT() {
     const turn = await pending;
     if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
     if (!turn) throw new Error("voice_chat_failed");
+    const { awaitSavedComposerVoiceTurn } = await import("@/lib/composer-voice-turn");
+    if (!isCurrent()) throw new DOMException("Voice turn cancelled", "AbortError");
     return awaitSavedComposerVoiceTurn({
       turn,
       signal,
@@ -2791,36 +2797,9 @@ function KovaGPT() {
       className="mx-3 mb-3 space-y-2 rounded-lg border p-3 text-sm"
       data-testid="quota-rejected-draft"
     >
-      <p role="status">Your message was not sent because of a usage limit. This version is kept.</p>
-      <p className="max-h-32 overflow-auto whitespace-pre-wrap break-words">
-        {draft.text ? draft.text.slice(0, 400) : "Attached material"}
-      </p>
-      {draft.text.length > 400 && (
-        <p className="text-xs text-muted-foreground">
-          Preview shortened to 400 characters. Restore keeps the full message.
-        </p>
-      )}
-      {draft.attachments.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {draft.attachments
-            .slice(0, 3)
-            .map((file) => (file.name.length > 80 ? `${file.name.slice(0, 80)}…` : file.name))
-            .join(", ")}
-          {(draft.attachments.length > 3 ||
-            draft.attachments.some((file) => file.name.length > 80)) && (
-            <>
-              {" "}
-              (Attachment preview shortened. Restore keeps all {draft.attachments.length}{" "}
-              attachments.)
-            </>
-          )}
-        </p>
-      )}
-      <p className="text-xs text-muted-foreground">
-        Keep or clear your newer draft before restoring this version. Restoring does not send it.
-        Kept only while this chat stays open. Up to three versions can be kept; restore or discard
-        one before sending more.
-      </p>
+      <Suspense fallback={null}>
+        <QuotaRejectedDraftPreview draft={draft} />
+      </Suspense>
       <button
         type="button"
         className="min-h-11 rounded-md border px-3 disabled:opacity-50"
@@ -2885,35 +2864,180 @@ function KovaGPT() {
 
   // Image generation removed; can be reintroduced when user explicitly asks.
 
-  const conversationActions = (compact = false) =>
-    active && chatStarted ? (
-      <ConversationHeaderActions
-        key={`${storagePrincipal}:${active.id}:${compact}`}
-        conversation={active}
-        signedIn={Boolean(isLoaded && isSignedIn)}
-        userTier={tier}
-        compact={compact}
-        isStreaming={isStreaming}
-        navigationBlocked={Boolean(input || attachments.length || isStreaming)}
-        onShare={(trigger) => {
-          shareReturnFocusRef.current = trigger;
-          shareReturnUrlRef.current = window.location.href;
-          setShareChatId(active.id);
-        }}
-        onRename={(title) => renameChat(active.id, title)}
-        onTogglePin={() => toggleChatPin(active.id)}
-        onArchive={() => historyAction("archive", active.id)}
-        onDelete={() => deleteChat(active.id)}
-        onOpenContext={(trigger) =>
-          window.dispatchEvent(
-            new CustomEvent("kova-open-message-context", { detail: { trigger } }),
+  const renderTranscriptMessage: TranscriptMessageRenderer = (m, i, ChatMessage, onBranch) => {
+    if (!active) return null;
+    const isLastAssistant = m.role === "assistant" && i === active.messages.length - 1;
+    // Find the user message that prompted this assistant reply (immediately before).
+    const priorUser =
+      m.role === "assistant" && i > 0 && active.messages[i - 1]?.role === "user"
+        ? active.messages[i - 1]
+        : null;
+    return (
+      <ChatMessage
+        key={m.id}
+        message={m}
+        chatId={active.id}
+        onSaveMemory={
+          canReviewMemory && m.role === "assistant"
+            ? (trigger) => {
+                if (!userKey || !active || !canReviewMemory) return;
+                setReviewedMemoryTarget({
+                  ownerId: userKey,
+                  generation: storageGenerationRef.current,
+                  conversation: active,
+                  trigger,
+                  url: window.location.href,
+                });
+              }
+            : undefined
+        }
+        onOpenResult={openResult}
+        onOpenCanvas={(widget, trigger, sourceKey) =>
+          openResult(
+            {
+              title: widget.title,
+              initialContent: JSON.stringify(widget, null, 2),
+              kind: "writing",
+              initialMode: "edit",
+              widget,
+              canvasSourceKey: sourceKey,
+              chatId: null,
+              messageId: null,
+              projectId: null,
+            },
+            trigger,
           )
         }
-        onManagePlugins={(trigger) => {
-          openSettings("linked");
-          settingsReturnFocusRef.current = trigger;
+        onSelectSuggestion={
+          isLastAssistant && !isStreaming
+            ? (suggestion) => prepareResponseDraft(suggestion)?.()
+            : undefined
+        }
+        temporary={Boolean(active.temporary)}
+        onReplaceContent={
+          m.role === "assistant" && !isStreaming
+            ? (messageId, next) => replaceMessageContent(active.id, messageId, next)
+            : undefined
+        }
+        userKey={userKey}
+        principalResolved={isLoaded}
+        streaming={isStreaming && isLastAssistant}
+        streamingStartedAt={
+          isStreaming &&
+          isLastAssistant &&
+          inFlightTargetRef.current?.conversationId === active.id &&
+          inFlightTargetRef.current.assistantMessageId === m.id
+            ? inFlightTargetRef.current.startedAt
+            : undefined
+        }
+        onUpdatePendingConfirm={(messageId, next) => {
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== active.id) return c;
+              return {
+                ...c,
+                messages: c.messages.map((msg) =>
+                  msg.id !== messageId
+                    ? msg
+                    : {
+                        ...msg,
+                        pendingConfirms: (msg.pendingConfirms ?? []).map((pc) =>
+                          pc.actionId === next.actionId ? next : pc,
+                        ),
+                      },
+                ),
+              };
+            }),
+          );
         }}
+        onDraftPrompt={isLastAssistant && !isStreaming ? prepareResponseDraft : undefined}
+        onFollowUp={isLastAssistant && !isStreaming ? (prompt) => send(prompt, []) : undefined}
+        onEdit={
+          m.role === "user" && !isStreaming
+            ? () => {
+                if (hasPendingChatAttachments(attachments)) {
+                  toast.message("Wait for attachments to finish before editing a previous prompt.");
+                  return;
+                }
+                setInput(m.content);
+                setAttachments(pendingMessageAttachments(m.attachments));
+                setEditingMessage((previous) =>
+                  beginChatEdit(previous, storagePrincipal, active.id, m.id, input, attachments),
+                );
+                window.setTimeout(
+                  () =>
+                    document
+                      .querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')
+                      ?.focus(),
+                  0,
+                );
+              }
+            : undefined
+        }
+        onRetry={
+          isLastAssistant &&
+          !isStreaming &&
+          retryTimerRef.current === null &&
+          priorUser &&
+          (m.generationStatus !== "failed" ||
+            retryableFailedResponsesRef.current.has(
+              JSON.stringify([storagePrincipal, active.id, m.id]),
+            ))
+            ? () => {
+                if (
+                  !nextPromptMountedRef.current ||
+                  !sameNextPromptScope(nextPromptScope, nextPromptScopeRef.current)
+                )
+                  return;
+                const retryHistory = active.messages.slice(0, -2);
+                send(
+                  priorUser.content,
+                  pendingMessageAttachments(priorUser.attachments),
+                  m.requestedTool ?? null,
+                  0,
+                  active.id,
+                  retryHistory,
+                  m.generationStatus === "failed" ? priorUser.id : undefined,
+                );
+              }
+            : undefined
+        }
+        onBranch={onBranch}
       />
+    );
+  };
+
+  const conversationActions = (compact = false) =>
+    active && chatStarted ? (
+      <Suspense fallback={null}>
+        <ConversationHeaderActions
+          key={`${storagePrincipal}:${active.id}:${compact}`}
+          conversation={active}
+          signedIn={Boolean(isLoaded && isSignedIn)}
+          userTier={tier}
+          compact={compact}
+          isStreaming={isStreaming}
+          navigationBlocked={Boolean(input || attachments.length || isStreaming)}
+          onShare={(trigger) => {
+            shareReturnFocusRef.current = trigger;
+            shareReturnUrlRef.current = window.location.href;
+            setShareChatId(active.id);
+          }}
+          onRename={(title) => renameChat(active.id, title)}
+          onTogglePin={() => toggleChatPin(active.id)}
+          onArchive={() => historyAction("archive", active.id)}
+          onDelete={() => deleteChat(active.id)}
+          onOpenContext={(trigger) =>
+            window.dispatchEvent(
+              new CustomEvent("kova-open-message-context", { detail: { trigger } }),
+            )
+          }
+          onManagePlugins={(trigger) => {
+            openSettings("linked");
+            settingsReturnFocusRef.current = trigger;
+          }}
+        />
+      </Suspense>
     ) : null;
 
   return (
@@ -3283,311 +3407,26 @@ function KovaGPT() {
               </section>
             ) : (
               <>
-                <div
-                  ref={scrollRef}
-                  data-chat-transcript="true"
-                  onScroll={updateNearBottom}
-                  className="kova-conversation-scroll flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-14 pt-5 lg:pb-20 lg:pt-8"
-                  aria-label="Conversation"
-                >
-                  {active.branchOrigin && (
-                    <div className="mx-auto mb-5 flex w-[calc(100%-2rem)] max-w-[48rem] items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-sm">
-                      <div className="min-w-0">
-                        <span className="font-medium">Branched conversation</span>
-                        <span className="ml-1 text-muted-foreground">
-                          from {active.branchOrigin.title}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="shrink-0 rounded-lg px-2.5 py-1.5 font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        onClick={() => {
-                          const origin = active.branchOrigin;
-                          if (!origin) return;
-                          const sourceExists = conversations.some(
-                            (conversation) => conversation.id === origin.conversationId,
-                          );
-                          if (sourceExists) setActiveId(origin.conversationId);
-                          else toast.error("The source conversation is no longer available");
-                        }}
-                      >
-                        View source
-                      </button>
-                    </div>
-                  )}
-                  <ChatBranchBar
-                    branches={branchState.branches}
-                    activeBranch={branchState.activeBranch}
-                    loading={branchState.loading}
-                    error={branchState.error}
-                    onActivate={activateBranch}
-                    onRetry={branchState.refresh}
-                    durableHint={
-                      isSignedIn
-                        ? "Branching keeps the original path; sharing snapshots the active branch only."
-                        : "Branches are stored on this device until you sign in."
-                    }
+                <Suspense fallback={null}>
+                  <ActiveChatTranscript
+                    key={transcriptScope}
+                    active={active}
+                    conversations={conversations}
+                    setActiveId={setActiveId}
+                    setConversations={setConversations}
+                    isSignedIn={Boolean(isSignedIn)}
+                    isStreaming={isStreaming}
+                    chatRulesActive={chatRulesActive}
+                    openChatWorkspace={openChatWorkspace}
+                    scrollRef={scrollRef}
+                    nearBottomRef={nearBottomRef}
+                    readingAnchorControllerRef={readingAnchorControllerRef}
+                    transcriptScope={transcriptScope}
+                    transcriptScopeRef={transcriptScopeRef}
+                    setShowJumpToLatest={setShowJumpToLatest}
+                    renderMessage={renderTranscriptMessage}
                   />
-                  {chatRulesActive && (
-                    <div className="mx-auto flex w-full max-w-[48rem] px-3 pt-2 lg:px-0">
-                      <button
-                        type="button"
-                        onClick={(event) => openChatWorkspace(event.currentTarget)}
-                        className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >
-                        <Sliders className="h-3.5 w-3.5" /> Chat rules are active
-                      </button>
-                    </div>
-                  )}
-                  {active.messages.map((m, i) => {
-                    const isLastAssistant =
-                      m.role === "assistant" && i === active.messages.length - 1;
-                    // Find the user message that prompted this assistant reply (immediately before).
-                    const priorUser =
-                      m.role === "assistant" && i > 0 && active.messages[i - 1]?.role === "user"
-                        ? active.messages[i - 1]
-                        : null;
-                    return (
-                      <ChatMessage
-                        key={m.id}
-                        message={m}
-                        chatId={active.id}
-                        onSaveMemory={
-                          canReviewMemory && m.role === "assistant"
-                            ? (trigger) => {
-                                if (!userKey || !active || !canReviewMemory) return;
-                                setReviewedMemoryTarget({
-                                  ownerId: userKey,
-                                  generation: storageGenerationRef.current,
-                                  conversation: active,
-                                  trigger,
-                                  url: window.location.href,
-                                });
-                              }
-                            : undefined
-                        }
-                        onOpenResult={openResult}
-                        onOpenCanvas={(widget, trigger, sourceKey) =>
-                          openResult(
-                            {
-                              title: widget.title,
-                              initialContent: JSON.stringify(widget, null, 2),
-                              kind: "writing",
-                              initialMode: "edit",
-                              widget,
-                              canvasSourceKey: sourceKey,
-                              chatId: null,
-                              messageId: null,
-                              projectId: null,
-                            },
-                            trigger,
-                          )
-                        }
-                        onSelectSuggestion={
-                          isLastAssistant && !isStreaming
-                            ? (suggestion) => prepareResponseDraft(suggestion)?.()
-                            : undefined
-                        }
-                        temporary={Boolean(active.temporary)}
-                        onReplaceContent={
-                          m.role === "assistant" && !isStreaming
-                            ? (messageId, next) => replaceMessageContent(active.id, messageId, next)
-                            : undefined
-                        }
-                        userKey={userKey}
-                        principalResolved={isLoaded}
-                        streaming={isStreaming && isLastAssistant}
-                        streamingStartedAt={
-                          isStreaming &&
-                          isLastAssistant &&
-                          inFlightTargetRef.current?.conversationId === active.id &&
-                          inFlightTargetRef.current.assistantMessageId === m.id
-                            ? inFlightTargetRef.current.startedAt
-                            : undefined
-                        }
-                        onUpdatePendingConfirm={(messageId, next) => {
-                          setConversations((prev) =>
-                            prev.map((c) => {
-                              if (c.id !== active.id) return c;
-                              return {
-                                ...c,
-                                messages: c.messages.map((msg) =>
-                                  msg.id !== messageId
-                                    ? msg
-                                    : {
-                                        ...msg,
-                                        pendingConfirms: (msg.pendingConfirms ?? []).map((pc) =>
-                                          pc.actionId === next.actionId ? next : pc,
-                                        ),
-                                      },
-                                ),
-                              };
-                            }),
-                          );
-                        }}
-                        onDraftPrompt={
-                          isLastAssistant && !isStreaming ? prepareResponseDraft : undefined
-                        }
-                        onFollowUp={
-                          isLastAssistant && !isStreaming ? (prompt) => send(prompt, []) : undefined
-                        }
-                        onEdit={
-                          m.role === "user" && !isStreaming
-                            ? () => {
-                                if (hasPendingChatAttachments(attachments)) {
-                                  toast.message(
-                                    "Wait for attachments to finish before editing a previous prompt.",
-                                  );
-                                  return;
-                                }
-                                setInput(m.content);
-                                setAttachments(
-                                  (m.attachments ?? []).map((attachment) =>
-                                    attachment.kind === "image"
-                                      ? {
-                                          kind: "image" as const,
-                                          dataUrl: attachment.dataUrl,
-                                          name: "Attached image",
-                                          status: COMPLETE,
-                                        }
-                                      : attachment.kind === "text_file"
-                                        ? {
-                                            kind: "text_file" as const,
-                                            dataUrl: "",
-                                            name: attachment.name,
-                                            size: attachment.size ?? undefined,
-                                            fileType: attachment.fileType,
-                                            textContent: attachment.content,
-                                            status: COMPLETE,
-                                          }
-                                        : {
-                                            kind: "library_file" as const,
-                                            dataUrl: "",
-                                            name: attachment.name,
-                                            size: attachment.size ?? undefined,
-                                            libraryItemId: attachment.libraryItemId,
-                                            fileType: attachment.fileType,
-                                            sourceProject: attachment.sourceProject,
-                                            status: COMPLETE,
-                                          },
-                                  ),
-                                );
-                                setEditingMessage((previous) =>
-                                  beginChatEdit(
-                                    previous,
-                                    storagePrincipal,
-                                    active.id,
-                                    m.id,
-                                    input,
-                                    attachments,
-                                  ),
-                                );
-                                window.setTimeout(
-                                  () =>
-                                    document
-                                      .querySelector<HTMLTextAreaElement>(
-                                        'textarea[aria-label="Message KovaGPT"]',
-                                      )
-                                      ?.focus(),
-                                  0,
-                                );
-                              }
-                            : undefined
-                        }
-                        onRetry={
-                          isLastAssistant &&
-                          !isStreaming &&
-                          retryTimerRef.current === null &&
-                          priorUser &&
-                          (m.generationStatus !== "failed" ||
-                            retryableFailedResponsesRef.current.has(
-                              JSON.stringify([storagePrincipal, active.id, m.id]),
-                            ))
-                            ? () => {
-                                if (
-                                  !nextPromptMountedRef.current ||
-                                  !sameNextPromptScope(nextPromptScope, nextPromptScopeRef.current)
-                                )
-                                  return;
-                                const retryHistory = active.messages.slice(0, -2);
-                                send(
-                                  priorUser.content,
-                                  (priorUser.attachments ?? []).map((attachment) =>
-                                    attachment.kind === "image"
-                                      ? {
-                                          kind: "image" as const,
-                                          dataUrl: attachment.dataUrl,
-                                          name: "Attached image",
-                                          status: COMPLETE,
-                                        }
-                                      : attachment.kind === "text_file"
-                                        ? {
-                                            kind: "text_file" as const,
-                                            dataUrl: "",
-                                            name: attachment.name,
-                                            size: attachment.size ?? undefined,
-                                            fileType: attachment.fileType,
-                                            textContent: attachment.content,
-                                            status: COMPLETE,
-                                          }
-                                        : {
-                                            kind: "library_file" as const,
-                                            dataUrl: "",
-                                            name: attachment.name,
-                                            size: attachment.size ?? undefined,
-                                            libraryItemId: attachment.libraryItemId,
-                                            fileType: attachment.fileType,
-                                            sourceProject: attachment.sourceProject,
-                                            status: COMPLETE,
-                                          },
-                                  ),
-                                  m.requestedTool ?? null,
-                                  0,
-                                  active.id,
-                                  retryHistory,
-                                  m.generationStatus === "failed" ? priorUser.id : undefined,
-                                );
-                              }
-                            : undefined
-                        }
-                        onBranch={() => {
-                          if (isStreaming) {
-                            toast.message("Wait for this response to finish before branching");
-                            return;
-                          }
-                          try {
-                            const branched = branchConversation(active, m.id);
-                            setConversations((prev) => [branched, ...prev]);
-                            setActiveId(branched.id);
-                            toast.success("Branched into a new chat");
-                            // The original path is untouched; record the branch point
-                            // so it survives a reload for signed-in users.
-                            void branchState
-                              .createBranch({
-                                conversationId: branched.id,
-                                branchFromMessageId: m.id,
-                                branchFromMessageIndex: i,
-                                messageIds: active.messages.slice(0, i + 1).map((msg) => msg.id),
-                                label: branched.title?.slice(0, 120) ?? null,
-                                parentBranchId: branchState.activeBranch?.id ?? null,
-                              })
-                              .catch((error) => {
-                                toast.error(
-                                  error instanceof Error
-                                    ? error.message
-                                    : "The branch point could not be saved.",
-                                );
-                              });
-                          } catch (error) {
-                            toast.error(
-                              error instanceof Error ? error.message : "Could not branch chat",
-                            );
-                          }
-                        }}
-                      />
-                    );
-                  })}
-                </div>
+                </Suspense>
                 <div className="spec400-composer-dock relative shrink-0 lg:pb-2 lg:pt-2">
                   {showJumpToLatest && (
                     <button
@@ -3697,38 +3536,14 @@ function KovaGPT() {
             )}
           </div>
           {result && wideResult && (
-            <div
-              role="separator"
-              aria-label="Resize conversation and result"
-              aria-orientation="vertical"
-              aria-valuemin={20}
-              aria-valuemax={80}
-              aria-valuenow={Math.round(paneRatio * 100)}
-              tabIndex={0}
-              className="spec400-pane-divider"
-              onPointerDown={(event) => {
-                event.preventDefault();
-                event.currentTarget.setPointerCapture(event.pointerId);
-              }}
-              onPointerMove={(event) => {
-                if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-                const bounds = workspaceRef.current?.getBoundingClientRect();
-                if (bounds) setLayoutRatio((event.clientX - bounds.left) / bounds.width);
-              }}
-              onPointerUp={(event) => {
-                if (event.currentTarget.hasPointerCapture(event.pointerId))
-                  event.currentTarget.releasePointerCapture(event.pointerId);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                  event.preventDefault();
-                  setLayoutRatio(paneRatio + (event.key === "ArrowLeft" ? -0.02 : 0.02));
-                } else if (event.key === "Home") {
-                  event.preventDefault();
-                  setPaneRatio(0.45);
-                }
-              }}
-            />
+            <Suspense fallback={<div className="spec400-pane-divider" aria-hidden="true" />}>
+              <WorkspaceResultDivider
+                workspaceRef={workspaceRef}
+                paneRatio={paneRatio}
+                setLayoutRatio={setLayoutRatio}
+                setPaneRatio={setPaneRatio}
+              />
+            </Suspense>
           )}
           {result && (
             <section
@@ -3740,102 +3555,23 @@ function KovaGPT() {
               aria-labelledby={!wideResult ? "result-tab" : undefined}
               aria-label={wideResult ? "Result" : undefined}
             >
-              {wideResult && (
-                <div className="spec400-layout-controls">
-                  <button
-                    type="button"
-                    className="spec400-icon-button"
-                    aria-label="Narrow conversation"
-                    title="Narrow conversation"
-                    onClick={() => setLayoutRatio(paneRatio - 0.05)}
-                  >
-                    <ChevronLeft aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    className="spec400-icon-button"
-                    aria-label="Widen conversation"
-                    title="Widen conversation"
-                    onClick={() => setLayoutRatio(paneRatio + 0.05)}
-                  >
-                    <ChevronRight aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    className="spec400-toolbar-button"
-                    onClick={() => setPaneRatio(0.45)}
-                  >
-                    <RotateCcw aria-hidden="true" />
-                    Reset layout
-                  </button>
-                </div>
-              )}
               <Suspense fallback={<p role="status">Loading result editor…</p>}>
-                {result.widget ? (
-                  <div className="flex h-full min-h-0 flex-col overflow-y-auto p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <h2 className="font-semibold">{result.title}</h2>
-                      <button
-                        type="button"
-                        className="min-h-11 rounded-full border border-border px-4 text-sm hover:bg-accent"
-                        onClick={closeResult}
-                      >
-                        Close Canvas
-                      </button>
-                    </div>
-                    <GenerativeCanvas
-                      expanded
-                      widget={result.widget}
-                      key={`${storagePrincipal}:${activeId}:${result.canvasSourceKey ?? result.title}`}
-                      onDraftChange={(widget) => {
-                        const scope = resultScopeRef.current;
-                        if (scope && resultPrincipalRef.current === storagePrincipal)
-                          resultDraftsRef.current.set(scope, {
-                            ...result,
-                            widget,
-                            initialContent: JSON.stringify(widget, null, 2),
-                          });
-                      }}
-                      onOpenEditor={(content, kind, title) =>
-                        openResult({
-                          title,
-                          initialContent: content,
-                          canvasSourceKey: `${result.canvasSourceKey}:editor`,
-                          kind,
-                          initialMode: "edit",
-                          chatId: null,
-                          messageId: null,
-                          projectId: null,
-                        })
-                      }
-                    />
-                  </div>
-                ) : (
-                  <ArtifactEditor
-                    key={`${result.chatId ?? "session"}:${result.messageId ?? result.canvasSourceKey ?? result.title}`}
-                    {...result}
-                    open
-                    embedded
-                    onResetLayout={!wideResult ? () => setPaneRatio(0.45) : undefined}
-                    onDraftChange={(content) => {
-                      const scope = resultScopeRef.current;
-                      if (scope && resultPrincipalRef.current === storagePrincipal)
-                        resultDraftsRef.current.set(scope, { ...result, initialContent: content });
-                    }}
-                    onClose={closeResult}
-                    onImprove={(prompt) => {
-                      setInput((draft) => (draft.trim() ? `${draft}\n\n${prompt}` : prompt));
-                      setResultTab("conversation");
-                      requestAnimationFrame(() =>
-                        document
-                          .querySelector<HTMLTextAreaElement>(
-                            'textarea[aria-label="Message KovaGPT"]',
-                          )
-                          ?.focus(),
-                      );
-                    }}
-                  />
-                )}
+                <WorkspaceResultContent
+                  result={result}
+                  wideResult={wideResult}
+                  paneRatio={paneRatio}
+                  setLayoutRatio={setLayoutRatio}
+                  setPaneRatio={setPaneRatio}
+                  closeResult={closeResult}
+                  storagePrincipal={storagePrincipal}
+                  activeId={activeId}
+                  resultScopeRef={resultScopeRef}
+                  resultPrincipalRef={resultPrincipalRef}
+                  resultDraftsRef={resultDraftsRef}
+                  openResult={openResult}
+                  setInput={setInput}
+                  setResultTab={setResultTab}
+                />
               </Suspense>
             </section>
           )}
@@ -3956,24 +3692,32 @@ function KovaGPT() {
         )}
       </Suspense>
 
-      <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
+      {signupPromptOpen && (
+        <Suspense fallback={null}>
+          <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
+        </Suspense>
+      )}
 
-      <CommandPalette
-        open={commandOpen}
-        query={commandQuery}
-        onQueryChange={setCommandQuery}
-        conversations={historyConversations}
-        archivedConversations={archivedConversations}
-        workspaceItems={workspaceItems}
-        workspaceStatus={workspaceStatus}
-        retryWorkspaceSearch={retryWorkspaceSearch}
-        onClose={() => setCommandOpen(false)}
-        onNewChat={newChat}
-        onSelectChat={setActiveId}
-        onSelectArchived={(conversation) => historyAction("restore", conversation)}
-        onOpenSettings={() => openSettings("general")}
-        returnFocusTarget={commandReturnFocusRef.current}
-      />
+      {commandOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            open={commandOpen}
+            query={commandQuery}
+            onQueryChange={setCommandQuery}
+            conversations={historyConversations}
+            archivedConversations={archivedConversations}
+            workspaceItems={workspaceItems}
+            workspaceStatus={workspaceStatus}
+            retryWorkspaceSearch={retryWorkspaceSearch}
+            onClose={() => setCommandOpen(false)}
+            onNewChat={newChat}
+            onSelectChat={setActiveId}
+            onSelectArchived={(conversation) => historyAction("restore", conversation)}
+            onOpenSettings={() => openSettings("general")}
+            returnFocusTarget={commandReturnFocusRef.current}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

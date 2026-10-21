@@ -80,13 +80,4 @@ export function syncedReviewedMemorySource(state, conversation, ownerId) {
   return { ...source, revision: record.revision };
 }
 
-export function sameReviewedMemoryConversation(left, right, ownerId) {
-  try {
-    return (
-      canonicalChatHistory(normalizeChatHistory(left, ownerId)) ===
-      canonicalChatHistory(normalizeChatHistory(right, ownerId))
-    );
-  } catch {
-    return false;
-  }
-}
+export { sameReviewedMemoryConversation } from "./reviewed-memory-conversation.mjs";

@@ -341,6 +341,8 @@ test("Result opener wiring carries the exact button; Conversation is a stable na
   assert.match(message, /openResult\("edit", event\.currentTarget\)/);
   assert.match(message, /onOpenResult\([\s\S]{0,750}trigger,\s*\)/);
   assert.match(source, /id="conversation-pane"\s+tabIndex=\{-1\}\s+aria-label="Conversation"/);
-  assert.match(source, /onClose=\{closeResult\}/);
+  const content = readFileSync("src/components/WorkspaceResultContent.tsx", "utf8");
+  assert.match(source, /closeResult=\{closeResult\}/);
+  assert.match(content, /onClose=\{closeResult\}/);
   assert.match(source, /useEffect\(\(\) => \(\) => resultFocusCleanupRef\.current\?\.\(\), \[\]\)/);
 });

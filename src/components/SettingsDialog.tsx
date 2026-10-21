@@ -5,8 +5,7 @@ import "@/styles/settings-page-layout.css";
 import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { AppearanceSettings } from "@/components/AppearanceSettings";
 import { ProfileSettings } from "@/components/ProfileSettings";
-import { APPEARANCE_DEFAULTS } from "@/lib/appearance-preferences.mjs";
-import { formatDisplayDateTime, type TimeFormatPreference } from "@/lib/time-format";
+import { formatDisplayDateTime } from "@/lib/time-format";
 import { useTimeFormatPreference } from "@/hooks/use-time-format-preference";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { parseAccountDeletionStatus, requestAccountDeletion } from "@/lib/account-deletion-client";
@@ -131,73 +130,18 @@ import {
 import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
-import { applyThemeMode, DEFAULT_THEME, type ThemeColors, type ThemeMode } from "@/lib/theme";
+import { applyThemeMode, type ThemeMode } from "@/lib/theme";
 import { authFetch } from "@/lib/auth-fetch";
 
-export type Mood = "neutral" | "friendly" | "professional" | "concise";
-
-export type Settings = {
-  displayName: string;
-  email: string;
-  extraFacts: string;
-  customInstructions: string;
-  mood: Mood;
-  responseLength: "short" | "medium" | "long";
-  responseFormat: "automatic" | "plain" | "markdown";
-  responseTone: "direct" | "formal" | "conversational";
-  readingSize: 16 | 18 | 20;
-  readingWidth: 680 | 760 | 900;
-  density: "comfortable" | "compact";
-  motion: "full" | "reduced";
-  rememberAcross: boolean;
-  webSearch: boolean;
-  sendOnEnter: boolean;
-  mode: ThemeMode;
-  timeFormat: TimeFormatPreference;
-  // Notifications
-  notifyEmail?: boolean;
-  notifyProduct?: boolean;
-  // Parental controls
-  parentalMode?: boolean;
-  // Deprecated local-only value retained so old device exports still import safely.
-  // It is not exposed as an account- or provider-level training control.
-  trainingOptOut?: boolean;
-  // deprecated fields kept so old localStorage payloads still load
-  preferredPronouns?: string;
-  phone?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  region?: string;
-  postalCode?: string;
-  country?: string;
-  language?: string;
-  showTimestamps?: boolean;
-  theme?: ThemeColors;
-};
-
-// Shared persisted-settings default; exported here until the settings schema is separated from the dialog.
-// eslint-disable-next-line react-refresh/only-export-components
-export const DEFAULT_SETTINGS: Settings = {
-  displayName: "",
-  email: "",
-  extraFacts: "",
-  customInstructions: "",
-  mood: "neutral",
-  responseLength: "medium",
-  responseFormat: "automatic",
-  responseTone: "direct",
-  ...APPEARANCE_DEFAULTS,
-  timeFormat: "system",
-  rememberAcross: false,
-  webSearch: true,
-  sendOnEnter: true,
-  notifyEmail: true,
-  notifyProduct: false,
-  parentalMode: false,
-  trainingOptOut: false,
-  theme: DEFAULT_THEME,
-};
+import {
+  DEFAULT_SETTINGS,
+  settingsSectionForTab,
+  type Mood,
+  type Settings,
+} from "@/lib/settings-types";
+// Preserve the existing component-module API for code that imports this view.
+export { DEFAULT_SETTINGS, SETTINGS_SECTIONS, settingsSectionForTab } from "@/lib/settings-types";
+export type { Mood, Settings } from "@/lib/settings-types";
 
 const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "neutral", label: "Neutral", hint: "Balanced and helpful" },
@@ -274,31 +218,6 @@ const TAB_GROUPS: TabGroup[] = [
   },
 ];
 
-export const SETTINGS_SECTIONS = {
-  profile: "personalization",
-  appearance: "appearance",
-  responses: "general",
-  notifications: "notifications",
-  connections: "linked",
-  privacy: "data",
-  usage: "usage",
-  billing: "billing",
-  memory: "memory",
-  security: "security",
-  storage: "storage",
-  shortcuts: "shortcuts",
-  email: "email",
-  parental: "parental",
-  report: "report",
-  help: "help",
-  about: "about",
-  location: "location",
-  family: "family",
-  logout: "logout",
-} as const;
-export function settingsSectionForTab(tab?: string) {
-  return Object.entries(SETTINGS_SECTIONS).find(([, value]) => value === tab)?.[0] ?? "profile";
-}
 function SettingsPageContent({ children, className }: ComponentProps<typeof DialogContent>) {
   return (
     <section className={`kova-settings-page ${className ?? ""}`} aria-label="Settings">
@@ -1184,9 +1103,13 @@ export function SettingsDialog({
             target.focus({ preventScroll: true });
             return document.activeElement === target;
           };
-          // A closed mobile drawer is still mounted and has layout rectangles,
-          // but its inert Settings button cannot take focus. Use its menu opener.
-          if (!restore(previous))
+          // A desktop menu item unmounts when Settings opens; its account
+          // trigger remains available. A closed mobile drawer instead restores
+          // its visible menu opener. Both fallbacks use the same focus guards.
+          if (
+            !restore(previous) &&
+            !restore(document.querySelector<HTMLElement>('[aria-label="Account menu"]'))
+          )
             restore(document.querySelector<HTMLElement>('[aria-label="Open menu"]'));
         }}
       >

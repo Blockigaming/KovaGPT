@@ -75,8 +75,21 @@ const retryResponse = find(
 const quotaScopeEffect = effects.find(
   (effect) => effect.includes("quotaRejectedDraftsRef.current") && effect.includes("retained"),
 );
+const keptPreviewAst = ts.createSourceFile(
+  "QuotaRejectedDraftPreview.tsx",
+  readFileSync("src/components/QuotaRejectedDraftPreview.tsx", "utf8"),
+  ts.ScriptTarget.Latest,
+  true,
+  ts.ScriptKind.TSX,
+);
+const keptPreviewDefinition = keptPreviewAst.statements
+  .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "QuotaRejectedDraftPreview")
+  .getText(keptPreviewAst)
+  .replace(/^export /u, "");
 const compiled = ts.transpileModule(
-  `globalThis.send = ${sendSource};\nglobalThis.queue = ${initializer("queueNextPrompt").getText(ast)};\nglobalThis.dispatch = ${dispatch};\nglobalThis.reconcileScope = ${scopeEffect};\nglobalThis.stop = ${arrow("stop")};\nglobalThis.cancel = ${cancel};\nglobalThis.startLifetime = ${unmountEffect};
+  `${keptPreviewDefinition}
+  globalThis.pendingMessageAttachments = ${find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "pendingMessageAttachments").getText(ast)};
+  globalThis.send = ${sendSource};\nglobalThis.queue = ${initializer("queueNextPrompt").getText(ast)};\nglobalThis.dispatch = ${dispatch};\nglobalThis.reconcileScope = ${scopeEffect};\nglobalThis.stop = ${arrow("stop")};\nglobalThis.cancel = ${cancel};\nglobalThis.startLifetime = ${unmountEffect};
   globalThis.reconcileNotice = ${noticeScopeEffect};
   globalThis.readVisibleNotice = () => ${initializer("visibleRequestNotice").getText(ast)};
   globalThis.renderNotice = (pending = false) => (${initializer("requestStatusPanel").getText(ast)})(pending);
@@ -106,6 +119,7 @@ function fixture() {
   const context = {
     ...helpers,
     React,
+    Suspense: React.Suspense,
     SignInButton: ({ children }) => React.cloneElement(children, { "data-auth-dialog": "sign-in" }),
     composerRevisionRef: { current: 0 },
     quotaRejectedDrafts: [],
@@ -218,6 +232,7 @@ function fixture() {
     chatRequestMessages: (prior, user) => [...prior, user],
     chatResponseError: async (response) => response.error,
     summaryModule: Promise.resolve({
+      withResponsePresentation: (profile) => profile,
       createChatHistoryPayload: async (messages) => ({ messages }),
       chatRequestProfile: () => ({}),
       fetchForPrincipal: (principal, url, args) => {

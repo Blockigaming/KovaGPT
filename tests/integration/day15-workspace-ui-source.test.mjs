@@ -56,11 +56,14 @@ test("per-chat rules and pinned files have a real management surface", () => {
 
 test("the chat route wires branches, rules disclosure, and edit application", () => {
   const source = read("src/routes/index.tsx");
-  assert.match(source, /useChatBranches/u);
-  assert.match(source, /<ChatBranchBar/u);
+  const transcript = read("src/components/ActiveChatTranscript.tsx");
+  assert.match(source, /<ActiveChatTranscript/u);
+  assert.match(source, /renderMessage=\{renderTranscriptMessage\}/u);
+  assert.match(transcript, /useChatBranches/u);
+  assert.match(transcript, /<ChatBranchBar/u);
   assert.match(source, /ChatWorkspaceDialog/u);
   assert.match(source, /replaceMessageContent/u);
-  assert.match(source, /Chat rules are active/u);
+  assert.match(transcript, /Chat rules are active/u);
   // Mobile users reach the same surface from the top bar.
   assert.match(source, /onOpenChatSettings/u);
 });

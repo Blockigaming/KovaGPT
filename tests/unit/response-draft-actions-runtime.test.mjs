@@ -54,6 +54,7 @@ const compiled = ts.transpileModule(
 ${helpers}
 ${restore}
 ${stopMarker}
+${find(route, (node) => ts.isFunctionDeclaration(node) && node.name?.text === "pendingMessageAttachments").getText(route)}
 globalThis.setInput = ${arrow("setInput")};
 globalThis.prepare = ${initializer(route, "prepareResponseDraft").getText(route)};
 globalThis.readDraft = () => ${attribute(route, "onDraftPrompt", "prepareResponseDraft")};

@@ -89,10 +89,18 @@ function fixture() {
   const opener = target("Settings", drawer);
   const menu = target("Open menu");
   const surface = target("Settings dialog");
-  const state = { activeModal: null, menu, mobileHome: false, tab: "general", focusRequest: 0 };
+  const state = {
+    activeModal: null,
+    account: null,
+    menu,
+    mobileHome: false,
+    tab: "general",
+    focusRequest: 0,
+  };
   document.activeElement = opener;
   document.querySelector = (selector) => {
     if (selector === '[aria-label="Open menu"]') return state.menu;
+    if (selector === '[aria-label="Account menu"]') return state.account;
     assert.equal(selector, '[aria-modal="true"]:not([data-state="closed"]), dialog[open]');
     return state.activeModal;
   };
@@ -287,4 +295,30 @@ test("each opening captures its current invoker and URL, including callers witho
     ["Settings", { preventScroll: true }],
     ["Next Settings invoker", { preventScroll: true }],
   ]);
+});
+
+test("desktop Settings restores the Account menu after its opening item unmounts", () => {
+  const f = fixture();
+  const account = f.target("Account menu");
+  f.state.account = account;
+  f.state.menu = null;
+  f.open();
+  f.opener.isConnected = false;
+  f.dismiss();
+  assert.equal(f.document.activeElement, account);
+  assert.deepEqual(f.focused, [["Account menu", { preventScroll: true }]]);
+});
+
+test("an unavailable desktop Account menu obeys the existing mobile fallback guards", () => {
+  for (const property of ["isConnected", "hasLayout", "acceptsFocus"]) {
+    const f = fixture();
+    const account = f.target("Account menu");
+    f.state.account = account;
+    account[property] = false;
+    f.open();
+    f.opener.isConnected = false;
+    f.dismiss();
+    assert.equal(f.document.activeElement, f.menu);
+    assert.deepEqual(f.focused, [["Open menu", { preventScroll: true }]]);
+  }
 });

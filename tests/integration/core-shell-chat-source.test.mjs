@@ -6,6 +6,7 @@ const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const topbar = await readFile("src/components/MobileTopBar.tsx", "utf8");
 const input = await readFile("src/components/ChatInput.tsx", "utf8");
 const index = await readFile("src/routes/index.tsx", "utf8");
+const transcript = await readFile("src/components/ActiveChatTranscript.tsx", "utf8");
 const temporaryControls = await readFile("src/components/TemporaryChatStartDialog.tsx", "utf8");
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const chatStore = await readFile("src/lib/chat-store.ts", "utf8");
@@ -113,9 +114,10 @@ test("destructive chat actions use an accessible confirmation dialog", () => {
 test("chat viewport only autoscrolls near bottom and exposes jump-to-latest", () => {
   assert.match(index, /nearBottomRef/);
   assert.match(index, /showJumpToLatest/);
-  assert.match(index, /distance < 120/);
+  assert.match(transcript, /distance < 120/);
   assert.match(index, /Jump to latest/);
-  assert.match(index, /onScroll=\{updateNearBottom\}/);
+  assert.match(index, /<ActiveChatTranscript/u);
+  assert.match(transcript, /onScroll=\{updateNearBottom\}/);
 });
 
 test("message component keeps reachable assistant actions and safe streaming states", () => {

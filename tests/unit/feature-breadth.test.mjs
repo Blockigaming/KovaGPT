@@ -74,7 +74,9 @@ test("eligible assistant outputs open the Result workspace with their original c
   for (const field of ["chatId", "messageId", "projectId"])
     assert.match(opener, new RegExp(String.raw`${field}: temporary \? null :`));
   const route = read("src/routes/index.tsx");
-  assert.match(route, /<ArtifactEditor[\s\S]*?\{\.\.\.result\}[\s\S]*?embedded/);
+  const content = read("src/components/WorkspaceResultContent.tsx");
+  assert.match(route, /<WorkspaceResultContent/u);
+  assert.match(content, /<ArtifactEditor[\s\S]*?\{\.\.\.result\}[\s\S]*?embedded/);
   assert.match(
     route,
     /resultPrincipalRef\.current !== storagePrincipal[\s\S]*?resultDraftsRef\.current\.clear\(\)/,

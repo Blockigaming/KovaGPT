@@ -250,9 +250,12 @@ function bridgeFixture({ active = null } = {}) {
     CHAT_HISTORY_CHANGED_EVENT: "history-changed",
     window: { addEventListener() {}, removeEventListener() {} },
   };
+  context.voiceTurnModule = Promise.resolve({
+    awaitSavedComposerVoiceTurn: context.awaitSavedComposerVoiceTurn,
+  });
   vm.runInNewContext(
     js(
-      `globalThis.change = ${initializer("changeComposerVoiceMode").getText(route)}; globalThis.submit = ${initializer("submitComposerVoiceTurn").getText(route)}; globalThis.readEligible = () => ${initializer("composerVoiceEligible").getText(route)};`,
+      `globalThis.change = ${initializer("changeComposerVoiceMode").getText(route)}; globalThis.submit = ${initializer("submitComposerVoiceTurn").getText(route).replace('await import("@/lib/composer-voice-turn")', "await voiceTurnModule")}; globalThis.readEligible = () => ${initializer("composerVoiceEligible").getText(route)};`,
     ),
     context,
   );
@@ -433,3 +436,34 @@ test("stale chat voice cancellation disposes its own request without clearing de
   f.requests[0].reject(new DOMException("cancelled", "AbortError"));
   assert.equal(await pending, undefined);
 });
+
+for (const change of ["owner", "chat", "abort"]) {
+  test(`late voice helper loading cannot authorize speech after ${change} cancellation`, async () => {
+    const f = bridgeFixture();
+    f.context.change("voice");
+    f.state.turn = {
+      ownerId: "owner-a",
+      chatId: "chat-a",
+      messageId: "reply-a",
+      content: "exact completed answer",
+    };
+    const loading = deferred();
+    f.context.voiceTurnModule = loading.promise;
+    const controller = new AbortController();
+    const pending = f.context.submit("spoken turn", controller.signal);
+    await settle();
+    assert.equal(f.state.sends.length, 1);
+    assert.equal(f.state.waits.length, 0);
+    if (change === "owner") f.context.storageGenerationRef.current += 1;
+    else if (change === "chat") {
+      f.context.nextPromptScopeRef.current = {
+        ...f.context.nextPromptScopeRef.current,
+        conversationId: "chat-b",
+      };
+    } else controller.abort();
+    loading.resolve({ awaitSavedComposerVoiceTurn: f.context.awaitSavedComposerVoiceTurn });
+    await assert.rejects(pending, (error) => error.name === "AbortError");
+    assert.equal(f.state.waits.length, 0);
+    assert.equal(f.state.saves.length, 0);
+  });
+}

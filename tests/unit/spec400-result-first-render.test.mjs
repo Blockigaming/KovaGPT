@@ -129,8 +129,13 @@ test("216: primary Result actions retain one horizontal-scroll row without wrapp
 
 test("54: tabbed Result layout puts reset in More and retains split controls only in wide layout", () => {
   const route = readFileSync("src/routes/index.tsx", "utf8");
-  assert.match(route, /\{wideResult && \(\s*<div className="spec400-layout-controls">/);
-  assert.match(route, /onResetLayout=\{!wideResult \? \(\) => setPaneRatio\(0\.45\) : undefined\}/);
+  const content = readFileSync("src/components/WorkspaceResultContent.tsx", "utf8");
+  assert.match(route, /<WorkspaceResultContent/u);
+  assert.match(content, /\{wideResult && \(\s*<div className="spec400-layout-controls">/);
+  assert.match(
+    content,
+    /onResetLayout=\{!wideResult \? \(\) => setPaneRatio\(0\.45\) : undefined\}/,
+  );
   assert.match(route, /id="result-pane"\s+tabIndex=\{-1\}/);
   assert.match(route, /scheduleResultFocus\(origin, "result", descriptor\)/);
   assert.match(

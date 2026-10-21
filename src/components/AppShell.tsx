@@ -2,7 +2,7 @@ import { moveChatToTrash } from "@/lib/chat-trash";
 import { toast } from "sonner";
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { settingsSectionForTab } from "@/components/SettingsDialog";
+import { settingsSectionForTab } from "@/lib/settings-types";
 import { Sidebar } from "@/components/Sidebar";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),

@@ -57,7 +57,7 @@ test("home hydrates and serves its scripts and styles from the Node origin", asy
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(
-    page.getByRole("heading", { level: 1, name: "What can I help with?" }),
+    page.getByRole("heading", { level: 1, name: "What are you working on?", exact: true }),
   ).toBeVisible();
   const assets = await page
     .locator('script[src], link[rel="stylesheet"]')
@@ -109,20 +109,43 @@ test("public catalog loads on navigation while missing public pages remain unava
 test("hosted-auth integration opens and validates the existing password flow without sending credentials", async ({
   page,
 }) => {
+  const authenticationPosts: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (
+      request.method() === "POST" &&
+      (/^\/auth\/v1\/(?:token|signup|otp|recover)(?:\/|$)/u.test(path) ||
+        path.startsWith("/api/auth/"))
+    ) {
+      authenticationPosts.push(path);
+    }
+  });
   await page.goto("/auth?email=azure-test%40example.invalid&mode=sign-in", {
     waitUntil: "domcontentloaded",
   });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("heading", { name: "Enter your password" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Log in to Kova", exact: true }),
+  ).toBeVisible();
+  const email = page.getByLabel("Email address", { exact: true });
+  await expect(email).toHaveValue("azure-test@example.invalid");
+  await expect(email).toHaveJSProperty("readOnly", true);
   const password = page.getByLabel("Password", { exact: true });
-  const submit = page.getByRole("button", { name: "Continue", exact: true });
+  const submit = page.getByRole("button", { name: "Log in", exact: true });
+  await expect(submit).toBeDisabled();
+  await password.fill("short");
   await expect(submit).toBeDisabled();
   await password.fill("synthetic-not-submitted");
   await expect(submit).toBeEnabled();
   await page.getByRole("button", { name: "Edit", exact: true }).click();
-  await page.getByLabel("Email address").fill("invalid");
-  await page.getByLabel("Email address").blur();
+  await expect(email).toBeFocused();
+  await expect(email).toHaveJSProperty("readOnly", false);
+  await email.fill("invalid");
+  await email.blur();
+  await expect(email).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText("Enter a valid email address.", { exact: true })).toBeVisible();
   await expect(submit).toBeDisabled();
+  expect(authenticationPosts).toEqual([]);
 });
 
 test("guest Projects and Library routes hydrate without an external service", async ({ page }) => {
@@ -141,27 +164,44 @@ test("authenticated shell streams a synthetic response through the existing chat
   page,
 }) => {
   await installAuthenticatedFixture(page);
-  await page.route("**/api/chat", (route) =>
-    route.fulfill({
+  let chatRequests = 0;
+  await page.route("**/api/chat", (route) => {
+    chatRequests += 1;
+    expect(route.request().method()).toBe("POST");
+    expect(route.request().postDataJSON().messages.at(-1)?.content).toBe(
+      "Synthetic local transport check",
+    );
+    return route.fulfill({
       status: 200,
       contentType: "text/event-stream",
       body: 'data: {"choices":[{"delta":{"content":"Azure local stream verified"}}]}\n\ndata: [DONE]\n\n',
-    }),
-  );
+    });
+  });
   await page.route("**/api/title", (route) =>
     route.fulfill({ json: { title: "Azure local test" } }),
   );
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
+  const account = page
+    .getByRole("navigation", { name: "Primary navigation", exact: true })
+    .getByRole("button", { name: "Account menu", exact: true });
+  await expect(account).toBeVisible();
+  await account.click();
+  const accountMenu = page.getByRole("menu");
   await expect(
-    page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
+    accountMenu.getByText("shell-parity@example.invalid", { exact: true }),
   ).toBeVisible();
+  await expect(accountMenu.getByRole("menuitem", { name: "Log out", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(accountMenu).toBeHidden();
+  await expect(account).toBeFocused();
   const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
   await composer.fill("Synthetic local transport check");
   await composer.press("Enter");
   await expect(
     page.getByText("Azure local stream verified", { exact: true }).first(),
   ).toBeVisible();
+  expect(chatRequests).toBe(1);
 });
 
 test("retired integration routes stay absent and chat rejects malformed ingress", async ({
