@@ -5,16 +5,13 @@ import vm from "node:vm";
 import ts from "typescript";
 
 const compile = (path) =>
-  ts.transpileModule(
-    readFileSync(path, "utf8").replaceAll("import.meta.env", "TEST_ENV"),
-    {
-      compilerOptions: {
-        module: ts.ModuleKind.CommonJS,
-        target: ts.ScriptTarget.ES2022,
-        jsx: ts.JsxEmit.ReactJSX,
-      },
+  ts.transpileModule(readFileSync(path, "utf8").replaceAll("import.meta.env", "TEST_ENV"), {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+      jsx: ts.JsxEmit.ReactJSX,
     },
-  ).outputText;
+  }).outputText;
 const sources = {
   browser: compile("src/lib/kova-auth-browser.ts"),
   client: compile("src/integrations/supabase/client.ts"),
@@ -51,10 +48,7 @@ function fixture({
   const location = new URL("https://kova.test/?sign-in=1");
   location.assign = (url) => {
     events.push({ type: "navigate", url });
-    if (
-      ownedNavigationFails &&
-      new URL(url).pathname === "/api/auth/google/start"
-    )
+    if (ownedNavigationFails && new URL(url).pathname === "/api/auth/google/start")
       throw new Error("navigation_failed");
   };
   const modules = {
@@ -76,10 +70,7 @@ function fixture({
     "@/components/ui/button": { Button: "button" },
     "@/components/NovaLogo": { NovaLogo: "logo" },
     "lucide-react": Object.fromEntries(
-      ["AlertTriangle", "ArrowLeft", "KeyRound", "Loader2"].map((name) => [
-        name,
-        name,
-      ]),
+      ["AlertTriangle", "ArrowLeft", "KeyRound", "Loader2"].map((name) => [name, name]),
     ),
     sonner: {
       toast: {
@@ -98,8 +89,7 @@ function fixture({
     },
     "@/lib/passkey-support": { browserSupportsPasskeys: () => false },
     "@/lib/kova-auth-passkey-browser": {
-      signInWithKovaPasskey: () =>
-        assert.fail("No passkey attempt in Google fixtures"),
+      signInWithKovaPasskey: () => assert.fail("No passkey attempt in Google fixtures"),
     },
     "@/lib/utils": { cn: (...values) => values.join(" ") },
     "./config": {
@@ -109,8 +99,7 @@ function fixture({
       },
     },
     "@/lib/kova-auth-data-fetch": {
-      createKovaDataFetch: () =>
-        assert.fail("Hosted action must not use the Kova data client"),
+      createKovaDataFetch: () => assert.fail("Hosted action must not use the Kova data client"),
     },
     "@supabase/supabase-js": {
       createClient: (_url, _key, options) => {
@@ -180,12 +169,8 @@ function fixture({
     events,
     browser,
     tree,
-    hosted: renderedButtons.find(
-      (node) => text(node) === "Log in with existing Google",
-    ),
-    owned: renderedButtons.find(
-      (node) => text(node) === "Continue with Google",
-    ),
+    hosted: renderedButtons.find((node) => text(node) === "Log in with existing Google"),
+    owned: renderedButtons.find((node) => text(node) === "Continue with Google"),
     count: (type) => events.filter((event) => event.type === type).length,
   };
 }
@@ -326,10 +311,7 @@ test("concurrent clicks initiate only one hosted provider operation", async () =
 });
 
 for (const [label, result] of [
-  [
-    "provider rejection",
-    { data: null, error: new Error("provider_start_failed") },
-  ],
+  ["provider rejection", { data: null, error: new Error("provider_start_failed") }],
   ["missing redirect", { data: {}, error: null }],
 ])
   test(`${label} does not navigate or select owned fallback`, async () => {

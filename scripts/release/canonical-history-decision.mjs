@@ -18,6 +18,26 @@ const checkpoint = "5734b9e3d96224b06cdf2bc6f824078738b86ce1";
 const decisionCommit = "bd0d2878ea41b4972bae13494288bd15c24b51aa";
 const decisionSha256 = "6c0aa894709e131dade3c93e3597fbd45c3a55ec8cdde8130babfdfb34552df0";
 const mergedMainMigration = "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4.sql";
+// These reviewed forward migrations use existing non-Kova names. Bind each
+// exception to its exact body instead of admitting arbitrary non-Kova files.
+const reviewedForwardMigrations = new Map([
+  [
+    "20261018163000_daily_upload_identity.sql",
+    "de8ee5f0fce40a75d792b82713eabe3f2f45be5eb1967bca01ad86c0d90cf3b4",
+  ],
+  [
+    "20261020183948_account_email_notifications.sql",
+    "120c75ba546c7f4ffff7483c77a7147f7364b89b1f15adb45283601b0b0323ba",
+  ],
+  [
+    "20261020195253_account_email_all_enabled_defaults.sql",
+    "c84e09664a69fb7542b0d06a8d1af76ad4585f1b409da8b3f25f83a217bcaf24",
+  ],
+  [
+    "20261021130544_production_owned_email_worker.sql",
+    "049732b03bb42692eac4f7490c742b71b46f85f7205863b8d2f4d1d07649a0ac",
+  ],
+]);
 const pinnedMigrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
 const migrationTree = "3b688ddbfaa4b91ae2a85506915a959d66f85cd9";
 const currentSourceCommit = "3ffdde6fe80e6511ab1e2f76b405c71a2858edfd";
@@ -112,7 +132,8 @@ export function validateForwardExtension(baseline, current, filenames, readBytes
       (index > 0 && entry.timestamp <= current.migrations[index - 1].timestamp) ||
       (index >= baseline.count &&
         !entry.filename.includes("_kova_") &&
-        entry.filename !== mergedMainMigration)
+        entry.filename !== mergedMainMigration &&
+        reviewedForwardMigrations.get(entry.filename) !== entry.sha256)
     )
       throw new Error("canonical_history_forward_extension_changed");
   }

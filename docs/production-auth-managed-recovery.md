@@ -10,10 +10,10 @@ The existing `.github/workflows/backup-supabase-production.yml` filters managed 
 
 The added `.github/workflows/capture-managed-auth-production.yml` is a capture-only route: current `main`, exact reviewed `source_sha == github.sha`, protected `production` environment, `CAPTURE_ONLY`, `approved_database_build=17.6.1.155`, one concurrent execution, 30-minute job timeout. It reuses only these already named protected secrets:
 
-| Protected secret | Runtime input | Purpose |
-|---|---|---|
-| `KOVA_PRODUCTION_DATABASE_URL` | same name | Production read-only export connection; exact project direct host or port-5432 session pooler, verified TLS |
-| `KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926` | `KOVA_PRODUCTION_BACKUP_PASSPHRASE` | AES-256 GPG envelope; keep this original version under existing custody |
+| Protected secret                             | Runtime input                       | Purpose                                                                                                     |
+| -------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `KOVA_PRODUCTION_DATABASE_URL`               | same name                           | Production read-only export connection; exact project direct host or port-5432 session pooler, verified TLS |
+| `KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926` | `KOVA_PRODUCTION_BACKUP_PASSPHRASE` | AES-256 GPG envelope; keep this original version under existing custody                                     |
 
 The workflow must be integrated into reviewed main before dispatch. It requires existing PostgreSQL-17 clients, GPG, GNU `timeout` and a trusted public CA bundle on the runner and fails before DB reads when unavailable. No runner/client qualification is claimed here. It creates no cloud resource or credential. The code refuses transaction-pooler port 6543 and connection-string option injection. It does not print a connection string, key, raw account row, password hash or database diagnostic.
 
@@ -45,17 +45,17 @@ The source target is always forbidden for restore. Localhost/tunnels, production
 
 Required restore environment, supplied privately by the approved operator rather than pasted into chat:
 
-| Input | Required binding |
-|---|---|
-| `KOVA_AUTH_RECOVERY_CONFIRMATION` | `RESTORE_ISOLATED` |
-| `KOVA_AUTH_BACKUP_ENCRYPTED_SHA256` | Exact ciphertext hash from capture receipt |
-| `KOVA_APPROVED_BACKUP_SOURCE_SHA` | Exact integrated source SHA from capture |
-| `KOVA_PRODUCTION_BACKUP_PASSPHRASE` | Existing protected original passphrase version |
-| `APPROVED_ISOLATED_PG17_DATABASE_URL` | Passwordless isolated URI, `sslmode=verify-full`, explicit `sslrootcert` path |
-| `PGPASSFILE` | Owned regular 0600 file; preserve original custody; no `PGPASSWORD` |
-| `APPROVED_ISOLATED_HOST`, `APPROVED_ISOLATED_DBNAME`, `APPROVED_ISOLATED_PORT` | Independently approved exact destination |
-| `APPROVED_ISOLATED_SERVER_IP`, `APPROVED_ISOLATED_SYSTEM_IDENTIFIER` | Independently pinned target address/cluster |
-| `KOVA_AUTH_RESTORE_ATTESTATION`, `KOVA_AUTH_RESTORE_ATTESTATION_SHA256` | Private file and exact hash of independently reviewed isolation/image evidence |
+| Input                                                                          | Required binding                                                               |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `KOVA_AUTH_RECOVERY_CONFIRMATION`                                              | `RESTORE_ISOLATED`                                                             |
+| `KOVA_AUTH_BACKUP_ENCRYPTED_SHA256`                                            | Exact ciphertext hash from capture receipt                                     |
+| `KOVA_APPROVED_BACKUP_SOURCE_SHA`                                              | Exact integrated source SHA from capture                                       |
+| `KOVA_PRODUCTION_BACKUP_PASSPHRASE`                                            | Existing protected original passphrase version                                 |
+| `APPROVED_ISOLATED_PG17_DATABASE_URL`                                          | Passwordless isolated URI, `sslmode=verify-full`, explicit `sslrootcert` path  |
+| `PGPASSFILE`                                                                   | Owned regular 0600 file; preserve original custody; no `PGPASSWORD`            |
+| `APPROVED_ISOLATED_HOST`, `APPROVED_ISOLATED_DBNAME`, `APPROVED_ISOLATED_PORT` | Independently approved exact destination                                       |
+| `APPROVED_ISOLATED_SERVER_IP`, `APPROVED_ISOLATED_SYSTEM_IDENTIFIER`           | Independently pinned target address/cluster                                    |
+| `KOVA_AUTH_RESTORE_ATTESTATION`, `KOVA_AUTH_RESTORE_ATTESTATION_SHA256`        | Private file and exact hash of independently reviewed isolation/image evidence |
 
 Attestation schema (replace placeholders with actual reviewed nonsecret metadata; do not copy as an approval):
 
@@ -94,14 +94,14 @@ It verifies ciphertext/source/member pins, then checks the actual connected serv
 
 Even successful actual capture and isolated restore set `fullProjectRecoveryQualified=false`. The following separate existing provider/operator evidence is still required before root can claim the backup/restore contract passes:
 
-| Separate scope | Required private qualification |
-|---|---|
-| Storage object bytes | Enumerate complete object versions and capture/download bytes through the supported provider route into encrypted backup; restore objects in isolation and verify byte/size/checksum/version receipts. `storage.objects` metadata and ownership do not back up bytes. Prove an empty-byte scope if actually empty. |
-| Managed Auth configuration | Supported export/record and isolated recovery of provider settings, Google OAuth client/callback, redirect allowlist, Auth URLs, SMTP, hooks, session/password/MFA settings and external OAuth-client custody. Encrypt private configuration; emit sanitized scope receipts. |
-| Hosted runtime key custody | Establish supported provider recovery of hosted signing/JWT/envelope/MFA keys and any associated original encryption material. Preserving encrypted database records is necessary; a new owned AES key cannot decrypt hosted provider envelopes. Do not rotate/revoke originals to solve this gate. |
-| Database role password custody | This capture preserves role attributes, membership, settings, owners and grants, but intentionally does not extract server login passwords. Supported provider/approved custody must qualify reconnect/recovery separately. |
-| Side effects and infrastructure | Recover definitions/config without enabling Cron, workers, hooks, production egress or hosted services on the restore target. Capture service/image/config versions and original private settings through supported access. |
-| Hosted account acceptance | Verify recovery of Google login and account UUID/identity linkage through supported provider adoption; a database hash is not a functioning OAuth/login receipt. |
+| Separate scope                  | Required private qualification                                                                                                                                                                                                                                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Storage object bytes            | Enumerate complete object versions and capture/download bytes through the supported provider route into encrypted backup; restore objects in isolation and verify byte/size/checksum/version receipts. `storage.objects` metadata and ownership do not back up bytes. Prove an empty-byte scope if actually empty. |
+| Managed Auth configuration      | Supported export/record and isolated recovery of provider settings, Google OAuth client/callback, redirect allowlist, Auth URLs, SMTP, hooks, session/password/MFA settings and external OAuth-client custody. Encrypt private configuration; emit sanitized scope receipts.                                       |
+| Hosted runtime key custody      | Establish supported provider recovery of hosted signing/JWT/envelope/MFA keys and any associated original encryption material. Preserving encrypted database records is necessary; a new owned AES key cannot decrypt hosted provider envelopes. Do not rotate/revoke originals to solve this gate.                |
+| Database role password custody  | This capture preserves role attributes, membership, settings, owners and grants, but intentionally does not extract server login passwords. Supported provider/approved custody must qualify reconnect/recovery separately.                                                                                        |
+| Side effects and infrastructure | Recover definitions/config without enabling Cron, workers, hooks, production egress or hosted services on the restore target. Capture service/image/config versions and original private settings through supported access.                                                                                        |
+| Hosted account acceptance       | Verify recovery of Google login and account UUID/identity linkage through supported provider adoption; a database hash is not a functioning OAuth/login receipt.                                                                                                                                                   |
 
 The live aggregate already established that both existing hosted identities use Google. Keep their production login serving. This gate is bound to base `db8ca50c78be9bd72399673621a9c5386a3e8a39`/tree `48cb5889dc7f60df7414201564b8cf049ae12161` plus the reviewed `dual-hosted-google.patch` (SHA-256 `72d37cd3d7740c80ffd12a8058482a7669eed49ee83929f8cf51344aa8928289`), not the original image. After the exact repaired image/provenance is qualified, matching compiled/server `dual` may preserve the explicit **Log in with existing Google** entry while `VITE_KOVA_GOOGLE_AUTH_ENABLED=false`. Require actual hosted `external.google` availability and both owners' live hosted start/consent through `https://kovagpt.com/~oauth/callback` to their same UUID and real backend authorization. This is an explicit entry, never silent fallback after owned failure; active/rejected owned cookies and unavailable probes must fail closed through `resolveLegacyAuthContext`. Workflow defaults remain `supabase`/Google `false` until the source-bound activation gate passes.
 

@@ -17,7 +17,11 @@ import { GOOGLE_UNCONFIGURED_MESSAGE } from "@/lib/auth-providers";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
 import { cn } from "@/lib/utils";
-import { browserKovaAuthEnabled, browserKovaAuthMode, browserKovaAuthOrigin } from "@/lib/kova-auth-browser";
+import {
+  browserKovaAuthEnabled,
+  browserKovaAuthMode,
+  browserKovaAuthOrigin,
+} from "@/lib/kova-auth-browser";
 
 type Mode = "sign-in" | "sign-up";
 type Step = "identify" | "magic-sent";
@@ -44,7 +48,9 @@ export function AuthDialog({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [passkeySupported, setPasskeySupported] = useState(false);
-  const [loadingMethod, setLoadingMethod] = useState<"email" | "google" | "hosted-google" | "passkey" | null>(null);
+  const [loadingMethod, setLoadingMethod] = useState<
+    "email" | "google" | "hosted-google" | "passkey" | null
+  >(null);
   const [emailTouched, setEmailTouched] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const submittingRef = useRef(false);
@@ -76,10 +82,8 @@ export function AuthDialog({
   // Preserve an explicit existing-account path during adoption. This never
   // runs as a fallback after an owned sign-in fails.
   const showHostedGoogle = browserKovaAuthMode() === "dual" && !isSignUp;
-  const hostedGoogleAvailable =
-    showHostedGoogle && providers.resolved && providers.google;
-  const hostedGooglePending =
-    showHostedGoogle && !providers.resolved && !providers.error;
+  const hostedGoogleAvailable = showHostedGoogle && providers.resolved && providers.google;
+  const hostedGooglePending = showHostedGoogle && !providers.resolved && !providers.error;
   // Only claim Google is available once the deployment has confirmed it.
   const googleAvailable = useKovaAuth
     ? import.meta.env.VITE_KOVA_GOOGLE_AUTH_ENABLED === "true"
@@ -161,9 +165,7 @@ export function AuthDialog({
 
   const handleHostedGoogle = async () => {
     if (!hostedGoogleAvailable) {
-      toast.error(
-        "Existing Google sign-in is unavailable. Close this dialog and try again.",
-      );
+      toast.error("Existing Google sign-in is unavailable. Close this dialog and try again.");
       return;
     }
     if (!guard("hosted-google")) return;
@@ -428,16 +430,11 @@ export function AuthDialog({
                   type="button"
                   onClick={handleHostedGoogle}
                   disabled={loading || !hostedGoogleAvailable}
-                  aria-busy={
-                    loadingMethod === "hosted-google" || hostedGooglePending
-                  }
+                  aria-busy={loadingMethod === "hosted-google" || hostedGooglePending}
                   className="w-full h-11 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-2 px-4 text-[15px] font-medium disabled:opacity-60"
                 >
                   {loadingMethod === "hosted-google" || hostedGooglePending ? (
-                    <Loader2
-                      className="h-5 w-5 animate-spin"
-                      aria-hidden="true"
-                    />
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
                   ) : null}
                   <span aria-live="polite">Log in with existing Google</span>
                 </button>
