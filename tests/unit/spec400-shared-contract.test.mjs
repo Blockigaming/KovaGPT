@@ -15,9 +15,21 @@ test("shared specification does not replace the baseline palette", () => {
   const css = read("src/styles/spec400-system.css");
   for (const token of ["background", "foreground", "primary", "accent", "card", "sidebar"])
     assert.doesNotMatch(css, new RegExp(`--${token}\\s*:`));
-  assert.match(css, /--kova-radius-card:\s*0\.75rem/);
-  assert.match(css, /width:\s*248px/);
-  assert.match(css, /width:\s*72px/);
+  const geometry = read("src/styles/visual-tokens.css");
+  assert.doesNotMatch(css, /--(?:radius|kova-radius-[a-z-]+|kova-sidebar(?:-rail)?-width)\s*:/);
+  assert.match(geometry, /--radius: var\(--kova-radius-card\)/);
+  assert.match(geometry, /--kova-radius-card:\s*20px;/);
+  assert.match(geometry, /--kova-sidebar-width:\s*256px;/);
+  assert.match(geometry, /--kova-sidebar-rail-width:\s*72px;/);
+  const sidebar = read("src/styles/sidebar-core.css");
+  assert.match(
+    sidebar,
+    /\.kova-sidebar\[data-kova-core-sidebar\]\s*\{\s*width: var\(--kova-sidebar-width\);\s*min-width: var\(--kova-sidebar-width\)/,
+  );
+  assert.match(
+    sidebar,
+    /\.kova-sidebar-rail\[data-kova-core-rail\]\s*\{\s*width: var\(--kova-sidebar-rail-width\);\s*min-width: var\(--kova-sidebar-rail-width\)/,
+  );
 });
 test("all six locally hosted IBM font files are actual WOFF2 assets", () => {
   for (const family of ["Sans", "Mono"])

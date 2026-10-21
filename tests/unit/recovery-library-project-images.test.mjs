@@ -119,7 +119,19 @@ test("successful image generation does not clear a newer prompt draft", async ()
 test("Library shared preview and item/version inspectors keep bounded, padded scroll surfaces", () => {
   const libraryContents = dialogContents(library);
   const versionContents = dialogContents(versions);
-  assert.equal(libraryContents.length, 2, "Library still has item and shared-snapshot previews");
+  assert.equal(
+    libraryContents.length,
+    3,
+    "Library retains item, shared-snapshot and recovery dialogs",
+  );
+  const recovery = libraryContents.find(
+    (surface) => surface.className === "max-h-[90dvh] overflow-y-auto",
+  );
+  assert.ok(recovery, "Recovery has its own bounded scrolling surface");
+  assert.match(
+    recovery.source,
+    /<ChatTrashPanel key=\{principal \?\? "guest"\} userKey=\{userKey\}/,
+  );
   assert.equal(versionContents.length, 1, "Version history uses its own inspector component");
   const shared = libraryContents.find((surface) => surface.className.startsWith("mx-auto gap-0"));
   assert.ok(shared, "Shared snapshots keep their centered responsive preview");

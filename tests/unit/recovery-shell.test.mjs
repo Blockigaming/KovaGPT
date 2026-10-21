@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import postcss from "postcss";
 const read = (p) => readFileSync(new URL("../../" + p, import.meta.url), "utf8");
 test("principal transitions invalidate pending retry callbacks and dismiss account notices", () => {
   const s = read("src/routes/index.tsx");
@@ -30,8 +31,25 @@ test("workspace palette has a touch reachable sidebar entry", () => {
 });
 test("mobile modal geometry centers capped sheets and leaves full viewport scrims square", () => {
   assert.match(read("src/components/ui/dialog.tsx"), /inset-x-0 mx-auto/);
-  assert.match(
-    read("src/styles.css"),
-    /button.kova-sidebar-scrim\s*\{\s*border-radius: 0 !important/,
+  const sheet = postcss.parse(read("src/styles.css"));
+  const scrim = sheet.nodes.find(
+    (node) =>
+      node.type === "rule" &&
+      node.selector === ":is(.kova-assistant, .kova-app-shell) button.kova-sidebar-scrim",
+  );
+  assert.ok(scrim, "Square scrims are scoped to the actual application roots");
+  assert.equal(scrim.parent.type, "root");
+  const radius = scrim.nodes.find((node) => node.type === "decl" && node.prop === "border-radius");
+  assert.equal(radius.value, "0");
+  assert.ok(!radius.important, "Scrims retain square geometry without an important override");
+  const geometry = postcss.parse(read("src/styles/control-geometry.css"));
+  const policy = geometry.nodes.find(
+    (node) => node.type === "rule" && node.selector.startsWith("body"),
+  );
+  const exclusions = policy.selector.match(/:not\(\s*:where\(([\s\S]+)\)\s*\)$/)?.[1];
+  assert.ok(exclusions);
+  assert.ok(
+    postcss.list.comma(exclusions).includes(".kova-sidebar-scrim"),
+    "The pill default must exclude full-viewport scrims",
   );
 });

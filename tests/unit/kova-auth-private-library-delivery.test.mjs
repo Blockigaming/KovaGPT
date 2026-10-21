@@ -6,6 +6,7 @@ import ts from "typescript";
 import { z } from "zod";
 import * as contract from "../../src/lib/kova-auth-contract.mjs";
 import * as security from "../../src/lib/auth-security.mjs";
+import * as validationPolicy from "../../src/lib/auth-validation-policy.mjs";
 import { digestKovaToken } from "../../src/lib/kova-auth-crypto.server.mjs";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
@@ -129,6 +130,7 @@ function fixture(options = {}) {
     },
     "@/lib/billing-entitlement.server": {},
     "@/lib/auth-security.mjs": security,
+    "@/lib/auth-validation-policy.mjs": validationPolicy,
     "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => "kova" },
     "@/lib/kova-auth-crypto.server.mjs": {
       digestKovaToken,

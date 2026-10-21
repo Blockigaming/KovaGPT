@@ -157,24 +157,27 @@ test("shared listbox options have the same 44px minimum as menu rows", () => {
 });
 
 test("menu keyboard highlight does not recolor ordinary dialog or presentation-surface actions", () => {
-  const highlighted = rules("src/styles/chatgpt-parity.css", ":focus-visible").filter((rule) =>
-    declarations(rule, "background").some(
-      (decl) => decl.value === "var(--accent)" && decl.important,
-    ),
-  );
-  assert.equal(highlighted.length, 1);
-  const highlight = highlighted[0];
-  const outer = highlight.selector.match(/^:where\(([^)]+)\)/);
-  assert.ok(outer, "Menu focus uses an explicit semantic ancestor scope");
-  const scopes = outer[1].split(",").map((selector) => selector.trim());
-  assert.deepEqual(
-    new Set(scopes),
-    new Set(['[role="menu"]', '[role="listbox"]', ".kova-model-menu"]),
-  );
-  assert.equal(declarations(highlight, "outline")[0].value, "none");
-  assert.equal(declarations(highlight, "box-shadow")[0].value, "none");
-  assert.ok(highlight.selector.includes('[role="menuitem"]'));
-  assert.ok(highlight.selector.includes('[role="option"]'));
+  for (const path of ["src/styles/chatgpt-parity.css", "src/styles/chatgpt-final-parity.css"]) {
+    const highlighted = rules(path, ":focus-visible").filter((rule) =>
+      declarations(rule, "background").some(
+        (decl) => decl.value === "var(--accent)" && decl.important,
+      ),
+    );
+    assert.equal(highlighted.length, 1, path);
+    const highlight = highlighted[0];
+    const outer = highlight.selector.match(/^:where\(([^)]+)\)/);
+    assert.ok(outer, "Menu focus uses an explicit semantic ancestor scope");
+    const scopes = outer[1].split(",").map((selector) => selector.trim());
+    assert.deepEqual(
+      new Set(scopes),
+      new Set(['[role="menu"]', '[role="listbox"]', ".kova-model-menu"]),
+      path,
+    );
+    assert.equal(declarations(highlight, "outline")[0].value, "none");
+    assert.equal(declarations(highlight, "box-shadow")[0].value, "none");
+    assert.ok(highlight.selector.includes('[role="menuitem"]'));
+    assert.ok(highlight.selector.includes('[role="option"]'));
+  }
 
   const ordinary = rules("src/styles/spec400-system.css", ":focus-visible").find((rule) =>
     declarations(rule, "outline").some((decl) => decl.value === "2px solid var(--ring)"),

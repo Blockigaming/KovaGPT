@@ -23,7 +23,7 @@ test("lightbox autofocus remains on the uniquely identified white primary action
   assert.match(images, /data-image-lightbox/);
 });
 
-test("focused primary action defeats the important generic accent and preserves black-on-white contrast in both themes", () => {
+test("focused primary action preserves black-on-white contrast while generic accent is limited to menus", () => {
   assert.ok(rule);
   assert.equal(
     rule.parent.type,
@@ -40,10 +40,18 @@ test("focused primary action defeats the important generic accent and preserves 
   const generic = parity.nodes.find(
     (node) =>
       node.type === "rule" &&
-      node.selector.includes(':where([role="menu"], [role="listbox"], [role="dialog"]') &&
+      declaration(node, "background")?.value === "var(--accent)" &&
       node.selector.endsWith(":focus-visible"),
   );
   assert.ok(generic);
+  const scopes = generic.selector.match(/^:where\(([^)]+)\)/)?.[1];
+  assert.ok(scopes);
+  assert.deepEqual(
+    new Set(postcss.list.comma(scopes)),
+    new Set(['[role="menu"]', '[role="listbox"]', ".kova-model-menu"]),
+    "Ordinary dialog actions must not inherit the menu accent",
+  );
+  assert.doesNotMatch(generic.selector, /\[role="dialog"\]/);
   assert.equal(declaration(generic, "background").value, "var(--accent)");
   assert.equal(declaration(generic, "background").important, true);
   // Generic :where() contributes zero specificity, leaving :focus-visible (0,1,0).

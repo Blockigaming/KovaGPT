@@ -218,16 +218,62 @@ test("single Library delete rollback restores only its failed item", () => {
   assert.deepEqual(items, [a, c, fresh]);
 });
 
-test("Project settings saves preserve mounted drafts and guard post-account-switch effects", () => {
-  const settings = source.slice(
-    source.indexOf("<SettingsTab"),
-    source.indexOf("</TabsContent>", source.indexOf("<SettingsTab")),
+test("Project settings saves preserve mounted drafts and guard post-account-switch effects", async () => {
+  const settings = findNode(
+    source,
+    (node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText() === "SettingsTab",
   );
-  assert.doesNotMatch(settings, /await refresh\(/);
-  assert.equal(
-    (settings.match(/currentRequestKeyRef.current !== operationRequestKey/g) ?? []).length,
-    4,
-  );
+  const save = findNode(settings, (node) => ts.isArrowFunction(node));
+  assert.doesNotMatch(save, /refresh\(/);
+  for (const [switched, fails] of [
+    [false, false],
+    [true, false],
+    [false, true],
+    [true, true],
+  ]) {
+    let resolve, reject;
+    const pending = new Promise((yes, no) => {
+      resolve = yes;
+      reject = no;
+    });
+    const calls = [];
+    const currentRequestKeyRef = { current: "owner:project" };
+    let project = { id: "project", name: "Before", description: "Retained" };
+    const run = compile(`return (${save});`, {
+      requestKey: "owner:project",
+      currentRequestKeyRef,
+      projectId: "project",
+      fnUpdate: (input) => {
+        calls.push(["update", input]);
+        return pending;
+      },
+      setProject: (update) => {
+        project = update(project);
+        calls.push(["project"]);
+      },
+      toast: { success: (message) => calls.push(["success", message]) },
+    });
+    const operation = run({ name: "After" });
+    assert.deepEqual(calls, [["update", { data: { id: "project", name: "After" } }]]);
+    assert.equal(project.name, "Before", "an unconfirmed save must not replace the project");
+    if (switched) currentRequestKeyRef.current = "other-owner:project";
+    const failure = new Error("Save failed");
+    if (fails) reject(failure);
+    else resolve();
+    if (fails && !switched) await assert.rejects(operation, (error) => error === failure);
+    else await operation;
+    if (switched || fails) {
+      assert.equal(project.name, "Before");
+      assert.equal(
+        calls.length,
+        1,
+        "a failed or stale save cannot update another account or report success",
+      );
+    } else {
+      assert.deepEqual(project, { id: "project", name: "After", description: "Retained" });
+      assert.deepEqual(calls.at(-1), ["success", "Saved"]);
+    }
+  }
   const component = source.slice(source.indexOf("function SettingsTab"));
   assert.match(component, /disabled=\{saving \|\| !name.trim\(\)\}/);
   assert.match(component, /if \(saving \|\| !name.trim\(\)\) return/);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { observeTableOverflow } from "../../src/lib/table-overflow.ts";
 import {
   createHookHarness,
   deferred,
@@ -59,6 +60,7 @@ function fixture(initial = {}) {
     "./ResponseImage": image,
     "lucide-react": icons,
     "./response-output-blocks.css": {},
+    "@/lib/table-overflow": { observeTableOverflow },
   });
   const markdownHooks = createHookHarness();
   let imageHooks;

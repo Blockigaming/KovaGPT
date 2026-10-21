@@ -104,7 +104,7 @@ for (const width of [320, 390, 768, 1440]) {
         theme,
       );
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-        "Now you canchat, learn & createall in one place.",
+        "Chat, learn and create in KovaGPT.",
       );
       const choices = page.getByRole("group", { name: "Choose an example" });
       const answer = page.locator("#workflow-example-content");

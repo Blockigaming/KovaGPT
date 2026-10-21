@@ -19,7 +19,7 @@ const phoneRule = (selector) => {
   );
 };
 
-test("scheduled editor phone geometry explicitly wins against shared important caps and corners", () => {
+test("scheduled editor phone geometry retains viewport caps and semantic panel corners", () => {
   const rule = phoneRule("body .spec400-schedule-dialog[data-kova-dialog-surface]");
   for (const [property, value] of Object.entries({
     inset: "0",
@@ -27,7 +27,6 @@ test("scheduled editor phone geometry explicitly wins against shared important c
     "max-width": "100%",
     height: "100dvh",
     "max-height": "100dvh",
-    "border-radius": "0",
   })) {
     assert.equal(rule[property].value, value);
     assert.equal(
@@ -36,6 +35,15 @@ test("scheduled editor phone geometry explicitly wins against shared important c
       `${property} must override generic important geometry`,
     );
   }
+  assert.equal(rule["border-radius"].value, "var(--kova-radius-panel)");
+  assert.ok(!rule["border-radius"].important);
+  const panelTokens = [];
+  postcss
+    .parse(readFileSync("src/styles/visual-tokens.css", "utf8"))
+    .walkDecls("--kova-radius-panel", (decl) =>
+      panelTokens.push({ scope: decl.parent.selector, value: decl.value }),
+    );
+  assert.deepEqual(panelTokens, [{ scope: ":root", value: "24px" }]);
   assert.equal(rule.translate.value, "none");
   assert.equal(rule.transform.value, "none");
   assert.equal(rule.margin.value, "0");

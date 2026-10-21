@@ -1698,6 +1698,24 @@ test("a separate chat stream interrupts Voice recording instead of reusing the m
 async function playingResponseSpeech(events) {
   const hooks = createHookHarness();
   const calls = [];
+  const requested = deferred();
+  const playing = deferred();
+  const ready = async (promise, stage) => {
+    let timer;
+    try {
+      await Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error(`Response speech never reached ${stage}`)),
+            5000,
+          );
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
   const props = {
     ownerId: "owner-a",
     chatId: "chat-a",
@@ -1714,6 +1732,7 @@ async function playingResponseSpeech(events) {
         authFetch: (url, init) => {
           const pending = deferred();
           calls.push({ url, init, ...pending });
+          requested.resolve();
           return pending.promise;
         },
       },
@@ -1724,6 +1743,7 @@ async function playingResponseSpeech(events) {
             createSink: (callbacks) => ({
               async write() {
                 callbacks.onPlaying();
+                playing.resolve();
               },
               async end() {},
               dispose() {
@@ -1743,12 +1763,14 @@ async function playingResponseSpeech(events) {
   const render = () => hooks.render(ResponseSpeechButton, props);
   let tree = render();
   elements(tree, (n) => n.type === "button")[0].props.onClick();
-  for (let i = 0; i < 20 && !calls.length; i++) await settle();
+  // SHA-256 runs on the host worker pool; event-loop turns are not a deadline
+  // under the full concurrent CI suite. Await the actual transport transition.
+  await ready(requested.promise, "the authenticated speech request");
   assert.equal(calls.length, 1);
   calls[0].resolve(
     new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "audio/mpeg" } }),
   );
-  for (let i = 0; i < 10; i++) await settle();
+  await ready(playing.promise, "audio playback");
   tree = render();
   assert.equal(
     elements(tree, (n) => n.type === "button")[0].props["aria-label"],

@@ -199,15 +199,22 @@ test("billing checkout and entitlements use exact supported plan keys", () => {
   const apiAuth = read("src/lib/api-auth.server.ts");
   const clientTier = read("src/hooks/useTier.ts");
   const webhook = read("src/routes/api/public/payments/webhook.ts");
-  assert.match(plans, /plus_monthly:[\s\S]*tier: "plus"[\s\S]*trialPeriodDays: 30/);
-  assert.match(plans, /pro_monthly:[\s\S]*tier: "pro"[\s\S]*trialPeriodDays: 0/);
+  const policy = read("src/lib/billing-policy.mjs");
+  const checkoutParams = read("src/lib/billing-policy-params.ts");
+  assert.match(plans, /plus_monthly:\s*\{[^}]*tier: "plus"[^}]*trialPeriodDays: 0/);
+  assert.match(plans, /pro_monthly:\s*\{[^}]*tier: "pro"[^}]*trialPeriodDays: 0/);
   assert.match(plans, /export const BILLING_ENV = "live" as const/);
   assert.match(plans, /Object\.prototype\.hasOwnProperty\.call\(BILLING_PLANS, value\)/);
   assert.ok(
-    checkout.indexOf("resolveBillingPlan(data.priceId)") < checkout.indexOf("stripe.prices.list"),
+    checkout.indexOf("const plan = resolveBillingPlan(data.priceId)") <
+      checkout.indexOf("const session = await createMonthlyIntroCheckout("),
   );
-  assert.match(checkout, /lookup_keys: \[plan\.lookupKey\]/);
-  assert.match(checkout, /trial_period_days: plan\.trialPeriodDays/);
+  assert.match(checkout, /if \(!plan\) throw new Error\("Invalid priceId"\)/);
+  assert.match(checkout, /createMonthlyIntroCheckout\(\{[\s\S]*?\n\s*plan,/);
+  assert.match(policy, /lookup_keys: \[plan\.lookupKey\]/);
+  assert.match(policy, /price\.id !== plan\.livePriceId/);
+  assert.match(checkoutParams, /line_items: \[\{ price: input\.priceId, quantity: 1 \}\]/);
+  assert.doesNotMatch(checkoutParams, /trial_period_days:|trial_end:/);
   for (const source of [checkout, apiAuth, clientTier])
     assert.doesNotMatch(source, /\.includes\(["'](?:plus|pro)["']\)/);
   assert.match(apiAuth, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, userId\)/);

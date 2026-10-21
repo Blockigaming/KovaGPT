@@ -235,6 +235,7 @@ function loginSurface(dialog, options = {}) {
   const modules = {
     "@/lib/kova-auth-browser": {
       browserKovaAuthEnabled: () => owned,
+      browserKovaAuthMode: () => (owned ? "kova" : "supabase"),
       browserKovaAuthOrigin: () => "https://kova.test",
       kovaAuthJson: () => {
         throw Error("Unexpected password request");

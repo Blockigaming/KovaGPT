@@ -92,10 +92,38 @@ for (const [name, result] of [
 }
 test("Context instructions editing matches the existing owner-only update contract", () => {
   const route = readFileSync("src/routes/projects.$projectId.tsx", "utf8");
-  assert.match(
+  assert.match(route, /const isOwner = project\.role === "owner"/);
+  assert.match(route, /const archived = !!project\.archived_at/);
+  const file = ts.createSourceFile(
+    "project.tsx",
     route,
-    /<ProjectInstructionsTab\s+project=\{project\}\s+canEdit=\{project.role === "owner"\}/,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
   );
+  let canEdit;
+  function find(node) {
+    if (
+      ts.isJsxSelfClosingElement(node) &&
+      node.tagName.getText(file) === "ProjectInstructionsTab"
+    ) {
+      const attribute = node.attributes.properties.find(
+        (item) => item.name?.getText(file) === "canEdit",
+      );
+      canEdit = attribute?.initializer?.expression?.getText(file);
+    }
+    ts.forEachChild(node, find);
+  }
+  find(file);
+  assert.ok(canEdit, "the mounted instructions editor has an explicit capability gate");
+  const editable = new Function("isOwner", "archived", `return (${canEdit});`);
+  for (const [role, archived, expected] of [
+    ["owner", false, true],
+    ["owner", true, false],
+    ["editor", false, false],
+    ["viewer", false, false],
+  ])
+    assert.equal(editable(role === "owner", archived), expected, `${role}, archived=${archived}`);
   assert.match(route, /Only the project owner can change these instructions\./);
 });
 

@@ -313,11 +313,13 @@ test("the actual workspace uses specified heading, surface, control and icon geo
   )[0];
   assert.match(surface.props.className, /\brounded-xl\b/);
   const theme = readFileSync("src/styles.css", "utf8");
-  const tokens = readFileSync("src/styles/spec400-system.css", "utf8");
-  assert.match(theme, /--radius-lg: var\(--radius\)/);
+  const tokens = readFileSync("src/styles/visual-tokens.css", "utf8");
+  const structural = readFileSync("src/styles/spec400-system.css", "utf8");
+  assert.match(theme, /--radius-lg: var\(--kova-radius-control\)/);
   assert.match(theme, /--radius-xl: var\(--kova-radius-card\)/);
-  assert.match(tokens, /:root:root\s*\{[^}]*--radius: 0\.5rem/s);
-  assert.match(tokens, /:root:root\s*\{[^}]*--kova-radius-card: 0\.75rem/s);
+  assert.match(tokens, /:root\s*\{[^}]*--kova-radius-control: 14px;/s);
+  assert.match(tokens, /:root\s*\{[^}]*--kova-radius-card: 20px;/s);
+  assert.doesNotMatch(structural, /:root:root|--(?:radius|kova-radius-[a-z-]+)\s*:/);
   for (const control of elements(f.render(), (node) => node.type === "button")) {
     assert.match(control.props.className, /\brounded-lg\b/);
     assert.match(control.props.className, /\b(?:min-h-11|h-11|min-h-20)\b/);

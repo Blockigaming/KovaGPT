@@ -126,28 +126,100 @@ test("account change and closed/reopened lifetime reject stale confirmation and 
   }
 });
 
-test("production entry has only unavailable presentation and no old DELETE or cleanup controller", () => {
-  assert.match(settings, /<AccountDeletionGraceView[\s\S]*?status="unavailable"/);
+test("production entry binds scheduling and recovery to the confirmed account without preview state", () => {
+  const parsed = ts.createSourceFile("SettingsDialog.tsx", settings, ts.ScriptTarget.Latest, true);
+  const elements = [];
+  const collect = (node) => {
+    if (ts.isJsxElement(node)) elements.push(node);
+    ts.forEachChild(node, collect);
+  };
+  collect(parsed);
+  const dialogs = elements.filter(
+    (node) =>
+      node.openingElement.tagName.getText(parsed) === "AlertDialog" &&
+      node.getText(parsed).includes("Schedule account deletion?"),
+  );
+  assert.equal(dialogs.length, 1);
+  const dialog = dialogs[0];
+  const expression = (node, name) => {
+    const attribute = node.openingElement.attributes.properties.find(
+      (item) => ts.isJsxAttribute(item) && item.name.getText(parsed) === name,
+    );
+    assert.ok(attribute && ts.isJsxExpression(attribute.initializer));
+    return attribute.initializer.expression.getText(parsed);
+  };
+  const evaluate = (code, values) =>
+    new Function(...Object.keys(values), `return (${code});`)(...Object.values(values));
+  const account = {
+    deleteAccountOpen: true,
+    open: true,
+    tab: "data",
+    isLoaded: true,
+    userKey: "owner-a",
+    deleteAccountReturnRef: { current: { ownerId: "owner-a" } },
+  };
+  const visible = (overrides = {}) =>
+    Boolean(evaluate(expression(dialog, "open"), { ...account, ...overrides }));
+  assert.equal(visible(), true);
+  for (const overrides of [
+    { deleteAccountOpen: false },
+    { open: false },
+    { tab: "storage" },
+    { isLoaded: false },
+    { userKey: "owner-b" },
+    { deleteAccountReturnRef: { current: null } },
+  ])
+    assert.equal(visible(overrides), false);
+
+  const actions = elements.filter(
+    (node) =>
+      node.openingElement.tagName.getText(parsed) === "Button" &&
+      node.getText(parsed).includes("? handleRecoverAccount"),
+  );
+  assert.equal(actions.length, 1);
+  const action = actions[0];
+  const handlers = {
+    handleDeleteAccount: () => {},
+    handleRecoverAccount: () => {},
+    handleCheckDeletion: () => {},
+  };
+  for (const [recoverable, pending, expected] of [
+    [false, false, handlers.handleDeleteAccount],
+    [true, true, handlers.handleRecoverAccount],
+    [false, true, handlers.handleCheckDeletion],
+  ])
+    assert.equal(
+      evaluate(expression(action, "onClick"), {
+        ...handlers,
+        deletionRecoverable: recoverable,
+        deletionPending: pending,
+      }),
+      expected,
+    );
+  for (const [pending, confirmation, busy, expected] of [
+    [false, "", false, true],
+    [false, "delete", false, true],
+    [false, "DELETE", false, false],
+    [false, "DELETE", true, true],
+    [true, "", false, false],
+    [true, "", true, true],
+  ])
+    assert.equal(
+      evaluate(expression(action, "disabled"), {
+        deletionPending: pending,
+        deleteConfirmation: confirmation,
+        deleteAccountBusy: busy,
+      }),
+      expected,
+    );
+  const element = dialog.getText(parsed);
+  assert.match(element, /recoverable for 30 days before final deletion/);
+  assert.doesNotMatch(element, /Delete your account permanently|Continue account deletion/);
+  assert.match(settings, /setDeleteAccountOpen\(false\);\s*\}, \[open, tab, userKey, isLoaded\]\)/);
   assert.doesNotMatch(
     settings,
-    /requestAccountDeletion|account-deletion-client|handleDeleteAccount|deleteConfirmation|deletionOperationRef/,
+    /<AccountDeletionGraceView|account-deletion-preview|SAMPLE_REQUESTED_AT|SAMPLE_EFFECTIVE_AT/,
   );
-  const element = settings.slice(
-    settings.indexOf("      <AccountDeletionGraceView"),
-    settings.indexOf("\n    </Dialog>", settings.indexOf("      <AccountDeletionGraceView")),
-  );
-  // Archived-chat deletion has its own retry copy; only account-deletion UI is unavailable.
-  assert.doesNotMatch(
-    element,
-    /Retry deletion|Delete your account permanently|Continue account deletion/,
-  );
-  assert.doesNotMatch(
-    element,
-    /onSchedule|onRecover|schedule=|signOut|clearLocalBrowserData|onClearAll|fetch/,
-  );
-  assert.match(element, /deleteAccountReturnRef\.current\?\.ownerId === userKey/);
-  assert.match(settings, /setDeleteAccountOpen\(false\);\s*\}, \[open, tab, userKey, isLoaded\]\)/);
-  assert.doesNotMatch(settings, /account-deletion-preview|SAMPLE_REQUESTED_AT|SAMPLE_EFFECTIVE_AT/);
 });
 
 test("shared view and private controller have no data mutation, provider, or real identity escape hatch", () => {

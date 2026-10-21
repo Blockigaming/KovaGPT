@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
+import postcss from "postcss";
 import { installInputModality } from "../../src/lib/input-modality.mjs";
 function fixture() {
   const attrs = new Map();
@@ -74,16 +75,58 @@ test("portal menu keyboard activation and cleanup preserve explicit modality", (
   dispose();
   assert.equal(f.mode(), "pointer");
 });
-test("pointer overrides are root-scoped, layered and do not remove keyboard rules", () => {
-  const css = readFileSync("src/styles.css", "utf8").split("/* Pointer interaction uses")[1];
-  assert.match(css, /@layer base/);
-  assert.match(css, /\[role="menu"\]/);
-  assert.match(css, /html\[data-kova-input-modality="pointer"\]/);
-  assert.match(css, /\.kova-composer-button:not\(\.kova-send-button\)/);
-  assert.match(css, /\.kova-sidebar-shortcut-choice/);
-  assert.match(css, /--tw-ring-offset-shadow/);
-  assert.match(css, /background-color: var\(--accent\)/);
-  assert.doesNotMatch(css, /modality="keyboard"/);
+test("pointer row overrides are root-scoped and preserve shared keyboard focus", () => {
+  const sheet = postcss.parse(readFileSync("src/styles.css", "utf8"));
+  const pointerRules = [];
+  sheet.walkRules((rule) => {
+    if (rule.selector.includes('data-kova-input-modality="pointer"')) pointerRules.push(rule);
+  });
+  assert.equal(pointerRules.length, 2);
+  for (const rule of pointerRules) {
+    assert.match(rule.selector, /^html\[data-kova-input-modality="pointer"\]\s+\.kova-chat-row/);
+    assert.doesNotMatch(rule.selector, /modality="keyboard"/);
+    for (const node of rule.nodes)
+      if (node.type === "decl")
+        assert.ok(
+          !/^(?:outline(?:-.+)?|box-shadow|--tw-ring-.+)$/.test(node.prop),
+          `Pointer row handling must not suppress keyboard focus: ${node}`,
+        );
+  }
+  assert.ok(
+    pointerRules[0].nodes.some(
+      (node) => node.prop === "background-color" && node.value === "var(--accent)",
+    ),
+  );
+  assert.ok(
+    pointerRules[1].nodes.some(
+      (node) => node.prop === "background" && node.value === "transparent" && node.important,
+    ),
+  );
+  const geometry = postcss.parse(readFileSync("src/styles/control-geometry.css", "utf8"));
+  const fieldFocus = geometry.nodes.find(
+    (node) => node.type === "rule" && node.selector.endsWith(":focus-visible"),
+  );
+  assert.ok(fieldFocus);
+  assert.ok(
+    fieldFocus.nodes.some(
+      (node) => node.prop === "outline" && node.value === "2px solid var(--ring)",
+    ),
+    "Shared keyboard field outlines remain visible",
+  );
+  const parity = postcss.parse(readFileSync("src/styles/chatgpt-parity.css", "utf8"));
+  const actionFocus = parity.nodes.find(
+    (node) =>
+      node.type === "rule" &&
+      node.selector.startsWith(":where(button, a, input, textarea, select,") &&
+      node.selector.endsWith(":focus-visible"),
+  );
+  assert.ok(actionFocus);
+  assert.ok(
+    actionFocus.nodes.some(
+      (node) => node.prop === "outline" && node.value === "2px solid var(--parity-focus)",
+    ),
+    "Shared keyboard action outlines remain visible",
+  );
   assert.match(
     readFileSync("src/components/conversation-header.css", "utf8"),
     /button:focus-visible/,

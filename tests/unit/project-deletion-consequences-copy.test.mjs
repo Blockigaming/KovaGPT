@@ -84,12 +84,13 @@ for (const [state, deletingProject] of [
   });
 }
 
-test("project Settings danger and confirmation copy both disclose saved Results without changing deletion callbacks", () => {
+test("project Settings danger and route confirmation disclose saved Results and preserve explicit deletion", async () => {
   const detail = parse("src/routes/projects.$projectId.tsx");
   const settings = detail.nodes.find(
     (node) => ts.isFunctionDeclaration(node) && node.name?.text === "SettingsTab",
   );
-  const onDelete = () => assert.fail("Copy inspection must never request deletion");
+  const requested = [];
+  const onDelete = (trigger) => requested.push(trigger);
   const render = compile(`${settings.getText(detail.source)}; return SettingsTab;`, {
     React: {
       createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
@@ -107,14 +108,86 @@ test("project Settings danger and confirmation copy both disclose saved Results 
     tree,
     (node) => node.type === "p" && text(node).includes("Deleting a project"),
   )[0];
-  const dialog = elements(tree, (node) => node.type === "ConfirmDialog")[0];
-  for (const copy of [text(danger), dialog.props.message]) {
+  const dialog = detail.nodes.find(
+    (node) =>
+      ts.isJsxSelfClosingElement(node) &&
+      node.tagName.getText(detail.source) === "ConfirmDialog" &&
+      node.attributes.properties.some(
+        (attribute) =>
+          attribute.name?.getText(detail.source) === "open" &&
+          attribute.initializer?.expression?.getText(detail.source) === "deleteOpen",
+      ),
+  );
+  assert.ok(dialog, "the shared route owns the deletion confirmation");
+  const attribute = (name) =>
+    dialog.attributes.properties.find((item) => item.name?.getText(detail.source) === name);
+  const value = (name) => {
+    const initial = attribute(name)?.initializer;
+    return initial
+      ? compile(`return (${(initial.expression ?? initial).getText(detail.source)});`, {
+          project: { name: "Research" },
+        })
+      : true;
+  };
+  for (const copy of [text(danger), value("message")]) {
     assertConsequences(copy.replace(/\s+/g, " "));
     assert.match(copy, /stored file\s+copies/i);
     assert.match(copy, /retry/);
   }
-  assert.equal(dialog.props.title, "Delete “Research”?");
-  assert.equal(dialog.props.confirmLabel, "Delete forever");
-  assert.equal(dialog.props.destructive, true);
-  assert.equal(dialog.props.onConfirm, onDelete);
+  assert.equal(value("title"), "Delete “Research”?");
+  assert.equal(value("confirmLabel"), "Delete forever");
+  assert.equal(value("destructive"), true);
+  const deleteButton = elements(
+    tree,
+    (node) => node.type === "Button" && text(node).includes("Delete project"),
+  )[0];
+  const trigger = {};
+  deleteButton.props.onClick({ currentTarget: trigger });
+  assert.deepEqual(
+    requested,
+    [trigger],
+    "Settings forwards the actual invoker, not an immediate deletion",
+  );
+  const mounted = detail.nodes.find(
+    (node) =>
+      ts.isJsxSelfClosingElement(node) && node.tagName.getText(detail.source) === "SettingsTab",
+  );
+  assert.equal(
+    mounted.attributes.properties
+      .find((item) => item.name?.getText(detail.source) === "onDelete")
+      .initializer.expression.getText(detail.source),
+    "openProjectDelete",
+  );
+  const opener = detail.nodes.find(
+    (node) =>
+      ts.isVariableDeclaration(node) && node.name.getText(detail.source) === "openProjectDelete",
+  );
+  assert.doesNotMatch(opener.initializer.getText(detail.source), /fnDelete|navigate\(/);
+  assert.match(opener.initializer.getText(detail.source), /setDeleteOpen\(true\)/);
+  for (const isOwner of [true, false]) {
+    const calls = [];
+    const confirm = compile(
+      `return (${attribute("onConfirm").initializer.expression.getText(detail.source)});`,
+      {
+        isOwner,
+        requestKey: "owner:project",
+        projectId: "project",
+        currentRequestKeyRef: { current: "owner:project" },
+        setDeleteError: (error) => calls.push(["error", error]),
+        fnDelete: async (input) => calls.push(["delete", input]),
+        toast: { success: (message) => calls.push(["success", message]) },
+        navigate: async (input) => calls.push(["navigate", input]),
+        refresh: () => assert.fail("successful deletion must not run recovery refresh"),
+      },
+    );
+    assert.equal(calls.length, 0);
+    await confirm();
+    if (isOwner) {
+      assert.deepEqual(
+        calls.find(([kind]) => kind === "delete"),
+        ["delete", { data: { id: "project" } }],
+      );
+      assert.deepEqual(calls.at(-1), ["navigate", { to: "/projects" }]);
+    } else assert.deepEqual(calls, [], "a non-owner cannot execute the route confirmation");
+  }
 });

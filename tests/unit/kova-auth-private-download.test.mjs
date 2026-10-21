@@ -7,6 +7,7 @@ import { z } from "zod";
 import * as download from "../../src/lib/kova-auth-private-download.mjs";
 import * as contract from "../../src/lib/kova-auth-contract.mjs";
 import * as security from "../../src/lib/auth-security.mjs";
+import * as validationPolicy from "../../src/lib/auth-validation-policy.mjs";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as policy from "../../src/lib/project-files-policy.mjs";
@@ -185,6 +186,7 @@ async function fixture(kind = "project", options = {}) {
     "@supabase/supabase-js": { createClient: (_url, key) => (key === "admin" ? admin : user) },
     "@/lib/billing-entitlement.server": {},
     "@/lib/auth-security.mjs": security,
+    "@/lib/auth-validation-policy.mjs": validationPolicy,
     "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => "kova" },
     "@/lib/kova-auth-crypto.server.mjs": {
       digestKovaToken,
