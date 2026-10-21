@@ -496,10 +496,10 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
       ),
     )
     .toBe(true);
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await expect(savedRow).toHaveCount(1);
-  await expect(savedRow.locator(".kova-chat-row-main")).toHaveText("Workspace quality review");
+  // Guest history is retained for navigation inside this tab, so the named
+  // conversation must reopen after leaving it without another generation.
+  await page.getByRole("button", { name: "New chat", exact: true }).click();
+  await expectEmptyWorkspaceLandmarks(page);
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
   }
@@ -508,6 +508,32 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   await expect(page.locator(".kova-assistant-message")).toContainText("Stability");
   await expect(page.locator(".kova-assistant-message table")).toBeVisible();
   await expect(page.locator(".kova-assistant-message pre code")).toBeVisible();
+  expect(chatRequests).toBe(1);
+  expect(titleRequests).toBe(1);
+  // A fresh load deliberately purges guest content. Durable authenticated
+  // history is a separate acceptance path and is not claimed by this fixture.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+  await expectEmptyWorkspaceLandmarks(page);
+  await expect(page.locator(".kova-user-message, .kova-assistant-message")).toHaveCount(0);
+  if (page.viewportSize()!.width < 1024) {
+    await page.getByRole("button", { name: "Open menu", exact: true }).click();
+  }
+  await expect(savedRow).toHaveCount(0);
+  const guestStorage = await page.evaluate(() => ({
+    conversations: JSON.parse(localStorage.getItem("nova-gpt-conversations-v3:guest") ?? "[]"),
+    pendingActive: localStorage.getItem("nova-gpt-pending-active:v2:guest"),
+    legacy: ["nova-gpt-conversations-v2", "kovagpt:archived", "nova-gpt-pending-active"].map(
+      (key) => localStorage.getItem(key),
+    ),
+    containsPriorContent: Array.from({ length: localStorage.length }, (_, index) =>
+      localStorage.getItem(localStorage.key(index) ?? ""),
+    ).some((value) => value?.includes("Stability") || value?.includes("Workspace quality review")),
+  }));
+  expect(guestStorage.conversations).toEqual([]);
+  expect(guestStorage.pendingActive).toBeNull();
+  expect(guestStorage.legacy).toEqual([null, null, null]);
+  expect(guestStorage.containsPriorContent).toBe(false);
   expect(chatRequests).toBe(1);
   expect(titleRequests).toBe(1);
 });
