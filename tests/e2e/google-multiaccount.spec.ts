@@ -43,7 +43,7 @@ test("workflow skill load failures stay contained and can be retried", async ({ 
   const error = page.getByRole("alert").filter({ hasText: "Workflow skills could not be loaded." });
   await expect(error).toBeVisible();
   await expect(page.getByText("first@example.test", { exact: true })).toBeVisible();
-  await expect(page.getByRole("alert", { name: "We couldn't load this workspace" })).toHaveCount(0);
+  await expect(page.getByRole("alert", { name: "This page couldn’t load" })).toHaveCount(0);
 
   // Restore a valid empty list through the same transport and exercise the real retry UI.
   await page.route("**/_serverFn/**", async (route) =>

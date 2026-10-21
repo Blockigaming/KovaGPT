@@ -37,7 +37,10 @@ test("web-search responses stream bounded source records to the message UI", () 
   assert.match(chat, /kind: "web_sources"/u);
   assert.match(chat, /responseSourcesDelta\(webSources\)/u);
   assert.match(home, /normalizeResponseSources\(delta\.sources\)/u);
-  assert.match(message, /Sources for this response/iu);
+  assert.match(message, /Sources returned with this response/iu);
+  assert.match(message, /normalizeSourceRetrievedAt\(source\.retrievedAt\)/u);
+  assert.match(message, /Published: \{source\.publishedAt\}/u);
+  assert.match(message, /Retrieval time not provided/u);
   assert.match(history, /item\.sources = message\.sources\.map\(responseSource\)/u);
   assert.match(projectChat, /normalizeResponseSources\(delta\.sources\)/u);
   assert.match(styles, /button\.kova-message-source-toggle\s*\{[\s\S]*?width: auto/u);

@@ -335,7 +335,7 @@ function FilesPage() {
                     </div>
                     <Link
                       to="/library"
-                      className="min-h-10 rounded-lg border px-3 py-2 text-sm hover:bg-accent"
+                      className="kova-button min-h-10 rounded-lg border px-3 py-2 text-sm hover:bg-accent"
                     >
                       Open
                     </Link>

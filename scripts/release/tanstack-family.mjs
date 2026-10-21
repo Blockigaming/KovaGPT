@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 const approved = {
-  "@tanstack/react-start": "1.168.60",
-  "@tanstack/react-router": "1.170.41",
-  "@tanstack/router-plugin": "1.168.42",
-  "@tanstack/router-core": "1.171.34",
-  "@tanstack/history": "1.162.4",
+  "@tanstack/react-start": "1.168.34",
+  "@tanstack/react-router": "1.170.18",
+  "@tanstack/router-plugin": "1.168.23",
+  "@tanstack/router-core": "1.171.15",
+  "@tanstack/history": "1.162.0",
 };
 for (const [name, version] of Object.entries(approved)) {
   const pkg = JSON.parse(

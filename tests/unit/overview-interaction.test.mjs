@@ -6,6 +6,7 @@ test("overview example selection updates the response and exposes a single selec
   const hooks = createHookHarness();
   const { ProductOverview } = loadUiModule("src/components/public/ProductOverview.tsx", {
     react: hooks.react,
+    "@/components/NovaLogo": { NovaLogo: "NovaLogo" },
     "lucide-react": Object.fromEntries(
       [
         "ArrowRight",

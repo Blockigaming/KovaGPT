@@ -1,0 +1,420 @@
+{
+  "snapshotUTC": "2026-10-19T01:36:25.942841+00:00",
+  "sourceCommit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+  "scope": "Finite core400 readiness reconciliation, before subsequent source corrections. No application edits/builds/tests/browser/network in this reconciliation. Local image files were visually inspected.",
+  "rules": [
+    "The19 palette overrides preserve original9cc coloring;400 geometry still applies.",
+    "Screens/tests/control records are evidence, never completed-requirement numerators.",
+    "The separate75-configuration additional-page census is excluded.",
+    "Current1fc Project/Library rendered pass was pending at snapshot and is not inferred from f35 source.",
+    "Full1440 originals were physically clipped; no full1440 acceptance credit."
+  ],
+  "ledgerSnapshot": {
+    "requirementCount": 400,
+    "statusCounts": {
+      "partial": 72,
+      "preserved": 11,
+      "implemented_source_pending_render": 200,
+      "implemented_source": 39,
+      "owner_override_preserved": 19,
+      "preserved_tested": 2,
+      "blocked_contract": 7,
+      "partial_contract_bound": 43,
+      "verified_local_ui": 3,
+      "external_measurement_pending": 1,
+      "test_prepared": 3
+    },
+    "alreadyWholeClosedIds": [350, 353, 354],
+    "interpretation": "Three existing local auth closures. This proposal adds no overall completion percentage and does not alter acceptance.json."
+  },
+  "narrowClosureCandidates": [
+    {
+      "ids": [350, 353, 354],
+      "decision": "Retain already-recorded local UI closures",
+      "scope": "Configured login heading/labels; password visibility state and retained input focus; recovery entry and preserved synthetic email. No login/recovery submission.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/routes/auth.tsx",
+          "lines": "395\u2013409,526\u2013566,594\u2013658,661\u2013671,717",
+          "blobSHA256": "006cb305d78281faa3bf1861ef16038b80f8a802e9a8cabc2359b04348fa585e"
+        },
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/auth/ForgotPasswordDialog.tsx",
+          "lines": "34\u201347",
+          "blobSHA256": "de41111b080f9331c509e4b1120cdf9d77d2de8be4a27500666eecb7f53a9b1e"
+        }
+      ],
+      "images": [
+        {
+          "path": "kova-spec400-review-9c59085/auth1024-light.jpg",
+          "sha256": "bc955ce4216ade191d6c98b2714f8bdc9e92b1e2ca351d78240771159dc0d1cb"
+        },
+        {
+          "path": "kova-spec400-review-9c59085/auth390-dark.jpg",
+          "sha256": "b80dce6a663a9ce18f58513e2a1fceac4d173e991a27e161c062cc60815bb72a"
+        }
+      ],
+      "receipts": [
+        {
+          "path": "kova-spec400-review-638a162/receipt.md",
+          "sha256": "efcd8c83203550a6fb72f04d50f1417d26ba9fd6f4d5de8f232e2cf43f64d3f4"
+        },
+        {
+          "path": "kova-spec400-review-9c59085/receipt.md",
+          "sha256": "b78af3452ab93f28d295af132ceebb2f657f6efca9602ea703a27cbd15956305"
+        },
+        {
+          "path": "kova-spec400-independent-review/auth-local-350-353-354-closure.json",
+          "sha256": "c186df747dd5f65c097fd0a4ed047037aa053da381c5af6503693e6ea7ec1fe8"
+        }
+      ],
+      "currentMapping": "Auth has added scoped error handling since9c; exact toggle/recovery props remain. Recovery component unchanged from638 through1fc.",
+      "unchangedRecoveryComponent": true
+    },
+    {
+      "ids": [349],
+      "decision": "Candidate local layout closure",
+      "scope": "Configured email/password login, no authenticated sidebar, centered400px desktop panel;390px panel358px without overflow. Not provider lifecycle acceptance.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/routes/auth.tsx",
+          "lines": "383\u2013409,426\u2013435,526\u2013671",
+          "blobSHA256": "006cb305d78281faa3bf1861ef16038b80f8a802e9a8cabc2359b04348fa585e"
+        }
+      ],
+      "images": [
+        {
+          "path": "kova-spec400-review-9c59085/auth1024-light.jpg",
+          "sha256": "bc955ce4216ade191d6c98b2714f8bdc9e92b1e2ca351d78240771159dc0d1cb"
+        },
+        {
+          "path": "kova-spec400-review-9c59085/auth390-dark.jpg",
+          "sha256": "b80dce6a663a9ce18f58513e2a1fceac4d173e991a27e161c062cc60815bb72a"
+        }
+      ],
+      "receipts": [
+        {
+          "path": "kova-spec400-review-9c59085/receipt.md",
+          "sha256": "b78af3452ab93f28d295af132ceebb2f657f6efca9602ea703a27cbd15956305"
+        }
+      ],
+      "limit": "Account/provider-specific conditional forms still require their own coverage; no whole auth-family claim."
+    },
+    {
+      "ids": [321],
+      "decision": "Candidate local preview closure",
+      "scope": "Existing appearance preview contains example navigation row, normal paragraph, content box and real Button; local reading-size change was observed.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/AppearanceSettings.tsx",
+          "lines": "129\u2013178",
+          "blobSHA256": "8156557743bcbf1908ed4576703c2773b2cf45b7b75c09f07b8b12b81c965bd4"
+        }
+      ],
+      "images": [
+        {
+          "path": "kova-spec400-review-638a162/appearance-preview390-dark.jpg",
+          "sha256": "b9641340c7d73f0ec89887c99529d63f12ae6310b5158b5060359642984eae9c"
+        }
+      ],
+      "receipts": [
+        {
+          "path": "kova-spec400-review-638a162/receipt.md",
+          "sha256": "efcd8c83203550a6fb72f04d50f1417d26ba9fd6f4d5de8f232e2cf43f64d3f4"
+        }
+      ],
+      "unchangedComponentSince638": true,
+      "limit": "Image shows16px reset state; receipt independently records20px change. Does not certify every saved setting or cross-device sync."
+    },
+    {
+      "ids": [322],
+      "decision": "Candidate local reset closure",
+      "scope": "Reset restores Dark/Comfortable/16px/760px/Full, retains response preferences/data by bounded property spread, retains button focus.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/AppearanceSettings.tsx",
+          "lines": "179\u2013201",
+          "blobSHA256": "8156557743bcbf1908ed4576703c2773b2cf45b7b75c09f07b8b12b81c965bd4"
+        },
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/lib/appearance-preferences.mjs",
+          "lines": "1\u201313",
+          "blobSHA256": "78764a8c79ea70ab1abf55df7b846bade8ab70010f10871ee40dfe65504dc6e9"
+        }
+      ],
+      "images": [
+        {
+          "path": "kova-spec400-review-638a162/appearance-preview390-dark.jpg",
+          "sha256": "b9641340c7d73f0ec89887c99529d63f12ae6310b5158b5060359642984eae9c"
+        }
+      ],
+      "receipts": [
+        {
+          "path": "kova-spec400-review-638a162/receipt.md",
+          "sha256": "efcd8c83203550a6fb72f04d50f1417d26ba9fd6f4d5de8f232e2cf43f64d3f4"
+        }
+      ],
+      "unchangedResetSince638": true,
+      "limit": "Device-scoped preference reset only; no account-wide sync claim."
+    }
+  ],
+  "boundedEvidenceToReconcileWithoutWholeClosure": [
+    {
+      "ids": [5, 45, 102, 126, 127, 132, 137, 392],
+      "claim": "Old228 notes must not be reused as current defects.990 records neutral Temporary dialog, representative20px shared icons/24px padding, correct profile menu, linked task validation, wide-table native max scroll and30-message DOM. f35 records corrected comfortable Library/Projects loading and long-prompt phone. Mobile toast still unverified.",
+      "receipts": [
+        {
+          "path": "kova-spec400-review-990b2c8/receipt.md",
+          "sha256": "10e89f63b8edc4b5454656b9d4d82327995945abc59bd0914fd47981e73476e0"
+        },
+        {
+          "path": "kova-spec400-review-f35f129/receipt.md",
+          "sha256": "993d93a295a8c6bdd6ca0f2738d929de1e70639eaf32b87b670c9e9bf3ef507f"
+        }
+      ],
+      "images": [
+        {
+          "path": "kova-spec400-review-990b2c8/temporary390-light.jpg",
+          "sha256": "d209daf3ad7bb580493a4b3af49989c6f39d34600a6249005c2a3fe282e1d3b2"
+        },
+        {
+          "path": "kova-spec400-review-990b2c8/wide-table-right390-dark.jpg",
+          "sha256": "cd03aa44056013797f5c280693d4bdf4ea4564b2e06e234c830779b75607152c"
+        },
+        {
+          "path": "kova-spec400-review-f35f129/library-loading390-dark.jpg",
+          "sha256": "333e0b3a27b85672d09308fadb72e4d1a14b2095090a0949cd3379a2befef845"
+        },
+        {
+          "path": "kova-spec400-review-f35f129/projects-loading390-dark.jpg",
+          "sha256": "34ac7b861c3aa411ce4d55e33837ebd2ff768be033969ef9170f9c42754dd973"
+        },
+        {
+          "path": "kova-spec400-review-f35f129/long-prompt390-light.jpg",
+          "sha256": "d71840ed5edaeb269a449952174798037bfe4f5a4b8c49e273db8e668dc8f164"
+        }
+      ],
+      "limit": "No image of the990 profile menu/task validation summary; their native receipt is bounded interaction evidence. Wide-table capture shows right edge, not every column or all30 bodies."
+    },
+    {
+      "ids": [129, 130, 131, 394],
+      "claim": "Task dirty Cancel is now a named in-app discard alert with Keep editing focus; Escape preserves draft/returns Cancel and discard restores New scheduled task.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/ScheduledTaskEditor.tsx",
+          "lines": "1194\u20131255",
+          "blobSHA256": "eb1861aeb7b43d2aaded04bfa4e0b8feafb93276ee09b87c3ed5e68df880e2dd"
+        }
+      ],
+      "receipts": [
+        {
+          "path": "kova-spec400-review-f35f129/receipt.md",
+          "sha256": "993d93a295a8c6bdd6ca0f2738d929de1e70639eaf32b87b670c9e9bf3ef507f"
+        }
+      ],
+      "images": [
+        {
+          "path": "kova-spec400-review-f35f129/task-discard390-dark.jpg",
+          "sha256": "d5dd45e7d08cf35f22387faf69f0d53510cf5f3302d8b60c46359845415fa49e"
+        }
+      ],
+      "limit": "Closes this former defect, not all dialog/destructive operations."
+    }
+  ],
+  "rankedIndependentSourceFixes": [
+    {
+      "rank": 1,
+      "key": "result-comment-delete",
+      "ids": [124, 130, 131, 394],
+      "finding": "Both session and durable Result comments delete immediately, without named consequence confirmation. Durable failures are transient toast-only.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/ArtifactEditor.tsx",
+          "lines": "967\u20131019",
+          "blobSHA256": "dfc61e935be4511902b93e6f22e2481706407afb959225c3ca296b131f0a9290"
+        },
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/CanvasComments.tsx",
+          "lines": "29\u201338,122\u2013129",
+          "blobSHA256": "c9083958dae8a0b549ffc6765919a1abf6fdcf20c06ae0091d49afd7bcc7d37b"
+        }
+      ],
+      "finiteChange": "Add captured-comment named confirmation, safe Cancel focus, exact target/account/document guards and visible error-preserving retry. No server-delete implementation change."
+    },
+    {
+      "rank": 2,
+      "key": "result-operation-errors",
+      "ids": [124, 133, 138, 245],
+      "finding": "Existing Save to Library, export and version-preview failures use ordinary4s toasts. No persistent operation-specific recovery panel for these branches.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/ArtifactEditor.tsx",
+          "lines": "343\u2013359,505\u2013538,612\u2013630,891\u2013910",
+          "blobSHA256": "dfc61e935be4511902b93e6f22e2481706407afb959225c3ca296b131f0a9290"
+        },
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/ui/sonner.tsx",
+          "lines": "23\u201334",
+          "blobSHA256": "8ff608f71f165a10c9699974137ebf977ba60e92c8ab325a626649410c7b8b57"
+        }
+      ],
+      "finiteChange": "Persist actionable error in the Result scope, retaining draft and operation context; clear on same-operation retry/success or account/document change; stale completions must not leak."
+    },
+    {
+      "rank": 3,
+      "key": "settings-section-search",
+      "ids": [113, 114, 305],
+      "finding": "The responsive Section selector contains exactly8 normal destinations (plus any current legacy section), with no internal search.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/SettingsDialog.tsx",
+          "lines": "745\u2013765,911\u2013928",
+          "blobSHA256": "6999be7d25346d330eb0d49c2b0c53bdf1c2ab32d2da6766e4d02ca604f7a895"
+        }
+      ],
+      "finiteChange": "Use existing accessible searchable picker with current-value checkmark; preserve selectTab/deep-route behavior and current unavailable/legacy option."
+    },
+    {
+      "rank": 4,
+      "key": "chat-branch-selection",
+      "ids": [113, 114, 367],
+      "finding": "Actual desktop and mobile branch choices have unbounded list cardinality; no search and active selection is text only.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/ChatBranchBar.tsx",
+          "lines": "58\u201395,114\u2013163",
+          "blobSHA256": "3bfad56534a13208ea1ea9585233ef4b5ff0af80216f33371ff4b5d65dd0782b"
+        }
+      ],
+      "finiteChange": "Internal search only when>7 selectable branches; current value visibly checkmarked; preserve active/disabled semantics, stable identity and keyboard navigation."
+    },
+    {
+      "rank": 5,
+      "key": "comment-visible-label",
+      "ids": [120, 369],
+      "finding": "Both comment composers have only placeholder/aria-label, not a persistent visible field label.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/ArtifactEditor.tsx",
+          "lines": "967\u2013973",
+          "blobSHA256": "dfc61e935be4511902b93e6f22e2481706407afb959225c3ca296b131f0a9290"
+        },
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/CanvasComments.tsx",
+          "lines": "50\u201357",
+          "blobSHA256": "c9083958dae8a0b549ffc6765919a1abf6fdcf20c06ae0091d49afd7bcc7d37b"
+        }
+      ],
+      "finiteChange": "Add visible associated Comment label above each existing field; preserve meaning, selection anchor and pending draft."
+    },
+    {
+      "rank": 6,
+      "key": "unused-radio-indicator",
+      "ids": [114],
+      "finding": "Shared Dropdown/Context RadioItem indicators use Circle. No direct consumers exist outside primitive definition files in current src, so this is source conformance only.",
+      "sources": [
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/ui/dropdown-menu.tsx",
+          "lines": "121\u2013141",
+          "blobSHA256": "c7c2bda3ab9df632751248b471f1f3b31fcc8d29f578f90889b66f8de8290d14"
+        },
+        {
+          "commit": "1fc515e67a28b109f1a73b6cd415a9fb421e0f12",
+          "path": "src/components/ui/context-menu.tsx",
+          "lines": "117\u2013138",
+          "blobSHA256": "1898cfd065a32868eb27af55b750cfd483cf8d291a63ca1762322f1c868ba35c"
+        }
+      ],
+      "finiteChange": "Swap glyph to Check without changing Radix radio semantics; do not count as a rendered defect or completed menu inventory."
+    }
+  ],
+  "finiteRemainingLocalVerification": [
+    {
+      "ids": [130, 131, 139, 394, 398],
+      "gate": "Accept separately-running1fc Project/Library focus/recovery receipt only when exact built source, originals and outcomes return. Do not reimplement already-fixed controls."
+    },
+    {
+      "ids": [
+        52, 53, 54, 79, 80, 132, 140, 361, 366, 367, 368, 374, 389, 390, 391, 392, 393, 397, 398
+      ],
+      "gate": "Exact successor native matrix for changed controls plus full1440 pixels, mobile toast clearance, clipboard-failure selectable content, narrow/modal keyboard behavior, contrasting text/control pairs, long labels/large text/text spacing and remaining draft/destructive branches. These are measurement/coverage gates, not automatically missing source features."
+    },
+    {
+      "ids": [113],
+      "gate": "Known dynamic native selectors may exceed7 options: ChatProjectDialog226\u2013240; WorkExecutionPanel207\u2013221 and308\u2013324; ScheduledTaskEditor787\u2013811,842\u2013861,889\u2013911,926\u2013942. No source search exists there; keep these as bounded follow-on selectable-list conformance, not a new route census."
+    }
+  ],
+  "externalOwnerOrMeasurementGates": [
+    {
+      "ids": [145, 160, 169, 173, 180, 183, 186, 188, 190],
+      "category": "Existing chat/data contracts",
+      "gate": "Need authoritative recent-work project/last-opened metadata, general-chat project relation, supported prompt-improvement operation, page-level extraction facts, delivery acknowledgement, remote-stop acknowledgement, queue semantics and transport reconnect states. Do not invent these from visual fixtures.",
+      "evidence": [
+        "docs/spec400/chat-composer-evidence.json",
+        "docs/spec400/scope-and-contracts.md"
+      ]
+    },
+    {
+      "ids": [221, 232, 234, 236, 237, 252, 257, 258, 260, 280, 287, 288, 289, 301, 384, 387, 396],
+      "category": "Provenance, lifecycle and sharing contracts",
+      "gate": "Missing durable User/AI origin, saved-result source chat/message backlinks, retrieval time/other source kinds, per-task delivery preferences/result URLs, chat-to-scheduler receipt producer, file project/modified/processing/Trash contracts, dependency-impact data and public Result link/revoke service. Existing private frozen snapshot sharing remains distinct.",
+      "evidence": [
+        "docs/spec400/responses-results-coverage.md",
+        "docs/spec400/management-evidence.json",
+        "docs/spec400/scope-and-contracts.md"
+      ]
+    },
+    {
+      "ids": [308, 309, 310, 311, 312, 313, 315, 327, 332, 334, 358],
+      "category": "Account/provider facts and authority",
+      "gate": "Account profile/photo/email/timezone/format/cross-device persistence, notification delivery categories, session list/reauth metadata and service resend availability need real supported contracts. Account30-day recovery is isolated preview; production UI unavailable and old irreversible endpoint unchanged. No local fixture can authorize activating it.",
+      "evidence": [
+        "docs/spec400/profile-appearance-evidence.json",
+        "docs/spec400/account-deletion-grace-review.md",
+        "docs/spec400/auth-evidence.json"
+      ]
+    },
+    {
+      "ids": [339, 343, 346, 347, 348, 359, 360, 395],
+      "category": "Authorized provider test environment",
+      "gate": "Real upcoming charges/invoices/cancellation/proration fields and safe checkout/portal/auth return/session-expiry lifecycle tests. Need proper test configuration/authorization; no production charges, subscriptions, login or real deletion for UI demonstration.",
+      "evidence": [
+        "docs/spec400/billing-evidence.json",
+        "docs/spec400/auth-evidence.json",
+        "docs/spec400/scope-and-contracts.md"
+      ]
+    },
+    {
+      "ids": [194, 195, 196, 225, 230, 233, 237, 245, 246, 298, 300, 303],
+      "category": "Connected operation verification",
+      "gate": "Actual response-instruction compliance/retrieval, supported office export fidelity, rewriting/collaboration/save/media download, and connector lifecycle must be checked with genuine permitted services. Local renderer/sample checks establish only presentation and guards.",
+      "evidence": [
+        "docs/spec400/responses-results-coverage.md",
+        "docs/spec400/plugins-evidence.json"
+      ]
+    },
+    {
+      "ids": [377, 378],
+      "category": "Deployment/measurement",
+      "gate": "Real-user p75 LCP/INP/CLS by mobile/desktop and real request acceptance/first-useful-output/completion telemetry. No local build timing or screenshot substitutes.",
+      "evidence": ["docs/spec400/acceptance.json#377", "docs/spec400/acceptance.json#378"]
+    }
+  ],
+  "stoppingCondition": "Reconcile these bounded closures, implement six exact source corrections, accept the existing1fc retest independently, then only explicit local coverage and external gates remain in this finite handoff. This is not an assertion that every untouched control was exhaustively audited."
+}

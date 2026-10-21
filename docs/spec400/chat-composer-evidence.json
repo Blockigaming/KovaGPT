@@ -1,0 +1,1122 @@
+{
+  "baseline": "9cc0d1fd70832e6ac7d5f1ff003cf22b02de9f32",
+  "colorOverride": "Preserve current9cc colors",
+  "scope": "Chat/composer and main-chat Result integration",
+  "sourceCheckpoint": "Uncommitted source ready for combined build",
+  "files": [
+    "src/components/ChatInput.tsx",
+    "src/components/HomeChatStarters.tsx",
+    "src/components/ComposerContextPanel.tsx",
+    "src/components/ConversationHeaderActions.tsx",
+    "src/routes/index.tsx",
+    "src/styles/spec400-chat.css",
+    "src/lib/spec400-response-preferences.mjs"
+  ],
+  "tests": {
+    "focused": "33 tests pass: composer rendering12, presentation2, existing keyboard/draft/preferences16, geometry/idempotency3",
+    "eslint": "Focused source files pass",
+    "typecheck": "Final full combined tsc --noEmit passed; no diagnostics.",
+    "browser": "Prepared, not run; awaiting combined build",
+    "command": "node_modules/.bin/playwright test --config=playwright.spec400-chat.config.ts"
+  },
+  "items": [
+    {
+      "id": 12,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 51,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "760px ordinary chat column; result split only for an actual editable result, with 45/55 default when main area>=1000px,420px minimum panes, Conversation/Result tabs below threshold, pointer/keyboard/button resizing and Reset layout. Context is300px desktop/fullscreen phones. CSS source cascade assertions pass; browser geometry pending."
+    },
+    {
+      "id": 52,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "760px ordinary chat column; result split only for an actual editable result, with 45/55 default when main area>=1000px,420px minimum panes, Conversation/Result tabs below threshold, pointer/keyboard/button resizing and Reset layout. Context is300px desktop/fullscreen phones. CSS source cascade assertions pass; browser geometry pending."
+    },
+    {
+      "id": 53,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "760px ordinary chat column; result split only for an actual editable result, with 45/55 default when main area>=1000px,420px minimum panes, Conversation/Result tabs below threshold, pointer/keyboard/button resizing and Reset layout. Context is300px desktop/fullscreen phones. CSS source cascade assertions pass; browser geometry pending."
+    },
+    {
+      "id": 54,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "760px ordinary chat column; result split only for an actual editable result, with 45/55 default when main area>=1000px,420px minimum panes, Conversation/Result tabs below threshold, pointer/keyboard/button resizing and Reset layout. Context is300px desktop/fullscreen phones. CSS source cascade assertions pass; browser geometry pending."
+    },
+    {
+      "id": 55,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "760px ordinary chat column; result split only for an actual editable result, with 45/55 default when main area>=1000px,420px minimum panes, Conversation/Result tabs below threshold, pointer/keyboard/button resizing and Reset layout. Context is300px desktop/fullscreen phones. CSS source cascade assertions pass; browser geometry pending."
+    },
+    {
+      "id": 57,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "760px ordinary chat column; result split only for an actual editable result, with 45/55 default when main area>=1000px,420px minimum panes, Conversation/Result tabs below threshold, pointer/keyboard/button resizing and Reset layout. Context is300px desktop/fullscreen phones. CSS source cascade assertions pass; browser geometry pending."
+    },
+    {
+      "id": 141,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 142,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 143,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 144,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 145,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Continue working shows up to three real recent non-temporary conversations for signed-in accounts. Only updatedAt is present; displayed Updated date is honest. Project and last-opened metadata are unavailable and not fabricated."
+    },
+    {
+      "id": 146,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 147,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 148,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 149,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 150,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 151,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 152,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 153,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 154,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 155,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 156,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 157,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 158,
+      "status": "preserved_tested",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Existing principal/conversation-scoped text drafts and in-memory attachment drafts retained. Temporary text never enters normal draft storage. Existing draft/preference tests pass. Result draft cache is session-only and cleared on principal changes."
+    },
+    {
+      "id": 159,
+      "status": "preserved_tested",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Existing principal/conversation-scoped text drafts and in-memory attachment drafts retained. Temporary text never enters normal draft storage. Existing draft/preference tests pass. Result draft cache is session-only and cleared on principal changes."
+    },
+    {
+      "id": 160,
+      "status": "blocked_contract",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "General-chat Conversation has no project association. Existing project route supports its own context. No removable project chip or fictional association was added."
+    },
+    {
+      "id": 161,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Context groups Project instructions, Files, Saved results, Conversation context. Actual attached material is inspectable with origin/readiness/remove, saved references use existing Library attach, and chat rules/pins keep existing backend. General-chat project instructions are explicitly absent. Pinned-file inspection remains existing backend UI."
+    },
+    {
+      "id": 162,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Context groups Project instructions, Files, Saved results, Conversation context. Actual attached material is inspectable with origin/readiness/remove, saved references use existing Library attach, and chat rules/pins keep existing backend. General-chat project instructions are explicitly absent. Pinned-file inspection remains existing backend UI."
+    },
+    {
+      "id": 163,
+      "status": "blocked_contract",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Named @ project-file/saved-result insertion is absent from existing retrieval contract. No cosmetic reference chips were introduced."
+    },
+    {
+      "id": 164,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Context groups Project instructions, Files, Saved results, Conversation context. Actual attached material is inspectable with origin/readiness/remove, saved references use existing Library attach, and chat rules/pins keep existing backend. General-chat project instructions are explicitly absent. Pinned-file inspection remains existing backend UI."
+    },
+    {
+      "id": 165,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 166,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 167,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 168,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 169,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Entitled existing model controls are inside Options where supported. Auto routing is explicitly unavailable because trusted classifier/runtime contract is absent; no auto-to-instant alias."
+    },
+    {
+      "id": 170,
+      "status": "preserved",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Mode IDs, routing, authentication and Free-plan entitlement gates retained. Options explains that higher effort does not guarantee correctness; no fabricated latency/usage measurements."
+    },
+    {
+      "id": 171,
+      "status": "preserved",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Mode IDs, routing, authentication and Free-plan entitlement gates retained. Options explains that higher effort does not guarantee correctness; no fabricated latency/usage measurements."
+    },
+    {
+      "id": 172,
+      "status": "blocked_contract",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "No supported improve-instructions preview operation exists. No fake rewrite or provider call was added."
+    },
+    {
+      "id": 173,
+      "status": "blocked_contract",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "No supported improve-instructions preview operation exists. No fake rewrite or provider call was added."
+    },
+    {
+      "id": 174,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 175,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Attach displays actual inline format/file-size/2-slot limits and configured daily allowance before file selection. Remaining daily allowance is server-authoritative and not invented from a local estimate."
+    },
+    {
+      "id": 176,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Local file read/extraction is truthfully Processing, completed readable inputs Ready, failures explicit and removals announced. Library references are checked when sent, never mislabeled readable. Underlying upload API does not expose real upload percentages/stages; indeterminate processing used."
+    },
+    {
+      "id": 177,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Local file read/extraction is truthfully Processing, completed readable inputs Ready, failures explicit and removals announced. Library references are checked when sent, never mislabeled readable. Underlying upload API does not expose real upload percentages/stages; indeterminate processing used."
+    },
+    {
+      "id": 178,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Local file read/extraction is truthfully Processing, completed readable inputs Ready, failures explicit and removals announced. Library references are checked when sent, never mislabeled readable. Underlying upload API does not expose real upload percentages/stages; indeterminate processing used."
+    },
+    {
+      "id": 179,
+      "status": "blocked_contract",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "PDF extractor returns text/note only, not page counts, page-range selection or affected-page indexes. Its actual extraction note is now retained and visible in pending attachments. Missing page metadata is not invented."
+    },
+    {
+      "id": 180,
+      "status": "blocked_contract",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "PDF extractor returns text/note only, not page counts, page-range selection or affected-page indexes. Its actual extraction note is now retained and visible in pending attachments. Missing page metadata is not invented."
+    },
+    {
+      "id": 181,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 182,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 183,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Existing optimistic turn insertion and request pipeline retained. Composer announces Sending message. Distinct server-confirmed pending delivery status is not supplied by the current message contract."
+    },
+    {
+      "id": 184,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Duplicate activation blocked by composer latch and existing in-flight guard. Automatic retry now carries original userMsg.id through the existing Idempotency-Key header, rather than generating a second request identity. Dedicated source assertion passes."
+    },
+    {
+      "id": 185,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Implemented with existing 9cc color tokens. Focused rendering and keyboard tests pass; final browser verification awaits combined build."
+    },
+    {
+      "id": 186,
+      "status": "blocked_contract",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Existing Stop aborts the local fetch and marks partial answer stopped. There is no server cancellation acknowledgement, so confirmed remote Stopped/Stopping states cannot be implemented truthfully without backend work."
+    },
+    {
+      "id": 187,
+      "status": "preserved",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Existing partial-answer retention and response retry mechanisms retained; response worker owns Continue/Retry presentation."
+    },
+    {
+      "id": 188,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Next prompt remains editable while response runs; supporting text says to send after completion. No auto queue. True Send next during generation lacks an established queue contract."
+    },
+    {
+      "id": 189,
+      "status": "preserved",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Existing near-bottom tracking and Jump to latest remain intact; result layout gives conversation one scroll region."
+    },
+    {
+      "id": 190,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Offline state uses actual browser online status and preserves draft. No trustworthy transport-level Reconnecting/Connected state is exposed."
+    },
+    {
+      "id": 304,
+      "status": "partial",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "Normal Settings opens stable /settings/$section and preserves draft/active conversation. Existing in-place dialog is intentionally retained for attachments, temporary chats, active responses, or open Result to avoid dropping nonpersistent work."
+    },
+    {
+      "id": 363,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "VisualViewport handling preserved; no mobile autofocus except intentional starter/expand actions. New toolbar uses44px targets, semantic controls, accessible names, and concise status announcements. Narrow layout/source assertions present; browser verification pending."
+    },
+    {
+      "id": 364,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "VisualViewport handling preserved; no mobile autofocus except intentional starter/expand actions. New toolbar uses44px targets, semantic controls, accessible names, and concise status announcements. Narrow layout/source assertions present; browser verification pending."
+    },
+    {
+      "id": 366,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "VisualViewport handling preserved; no mobile autofocus except intentional starter/expand actions. New toolbar uses44px targets, semantic controls, accessible names, and concise status announcements. Narrow layout/source assertions present; browser verification pending."
+    },
+    {
+      "id": 367,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "VisualViewport handling preserved; no mobile autofocus except intentional starter/expand actions. New toolbar uses44px targets, semantic controls, accessible names, and concise status announcements. Narrow layout/source assertions present; browser verification pending."
+    },
+    {
+      "id": 368,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "VisualViewport handling preserved; no mobile autofocus except intentional starter/expand actions. New toolbar uses44px targets, semantic controls, accessible names, and concise status announcements. Narrow layout/source assertions present; browser verification pending."
+    },
+    {
+      "id": 369,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "VisualViewport handling preserved; no mobile autofocus except intentional starter/expand actions. New toolbar uses44px targets, semantic controls, accessible names, and concise status announcements. Narrow layout/source assertions present; browser verification pending."
+    },
+    {
+      "id": 370,
+      "status": "implemented_source",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "VisualViewport handling preserved; no mobile autofocus except intentional starter/expand actions. New toolbar uses44px targets, semantic controls, accessible names, and concise status announcements. Narrow layout/source assertions present; browser verification pending."
+    },
+    {
+      "id": 389,
+      "status": "test_prepared",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "New blocked-egress actual-app Playwright suite covers320/390/820/1440/1920 widths, both themes, empty and populated chat, expansion draft retention, Context and Options. Not run until combined build."
+    },
+    {
+      "id": 390,
+      "status": "test_prepared",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "New blocked-egress actual-app Playwright suite covers320/390/820/1440/1920 widths, both themes, empty and populated chat, expansion draft retention, Context and Options. Not run until combined build."
+    },
+    {
+      "id": 393,
+      "status": "test_prepared",
+      "evidence": [
+        "src/components/ChatInput.tsx",
+        "src/components/HomeChatStarters.tsx",
+        "src/components/ComposerContextPanel.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/index.tsx",
+        "src/styles/spec400-chat.css",
+        "src/lib/spec400-response-preferences.mjs"
+      ],
+      "notes": "New blocked-egress actual-app Playwright suite covers320/390/820/1440/1920 widths, both themes, empty and populated chat, expansion draft retention, Context and Options. Not run until combined build."
+    }
+  ],
+  "interactions": [
+    {
+      "id": "chat.starter.write",
+      "control": "Write something",
+      "eventAndResult": "Fill empty draft and focus composer",
+      "errorBehavior": "Existing nonempty draft preserved",
+      "notes": "No submission",
+      "screen": "Chat"
+    },
+    {
+      "id": "chat.starter.summarize",
+      "control": "Summarize a file",
+      "eventAndResult": "Fill draft asking for attached-file summary",
+      "errorBehavior": "Existing nonempty draft preserved",
+      "notes": "File attachment remains explicit",
+      "screen": "Chat"
+    },
+    {
+      "id": "chat.starter.compare",
+      "control": "Compare options",
+      "eventAndResult": "Fill comparison draft and focus composer",
+      "errorBehavior": "Existing nonempty draft preserved",
+      "notes": "No submission",
+      "screen": "Chat"
+    },
+    {
+      "id": "chat.continue",
+      "control": "Recent conversation",
+      "eventAndResult": "Select existing conversation",
+      "errorBehavior": "Only stored non-temporary owner chats shown",
+      "notes": "Updated metadata only",
+      "screen": "Chat"
+    },
+    {
+      "id": "composer.attach",
+      "control": "Attach",
+      "eventAndResult": "Open supported files/tools picker",
+      "errorBehavior": "Sign-in, current limits, duplicate detection and file errors retain draft",
+      "notes": "No automatic external transmission",
+      "screen": "Chat"
+    },
+    {
+      "id": "composer.context",
+      "control": "Context/header Context",
+      "eventAndResult": "Open structured drawer",
+      "errorBehavior": "Absent material described; removal is scoped to next message",
+      "notes": "No account-wide auto attachment",
+      "screen": "Chat"
+    },
+    {
+      "id": "composer.options",
+      "control": "Options",
+      "eventAndResult": "Open Format/Length/Tone/Effort",
+      "errorBehavior": "Plan gates preserved; unsupported Auto explained",
+      "notes": "Preferences subordinate to explicit current prompt",
+      "screen": "Chat"
+    },
+    {
+      "id": "composer.send",
+      "control": "Send message",
+      "eventAndResult": "Submit valid draft through existing API",
+      "errorBehavior": "Empty/invalid/offline/loading blocked; repeated activation latched",
+      "notes": "Automatic retries reuse same idempotency ID",
+      "screen": "Chat"
+    },
+    {
+      "id": "composer.stop",
+      "control": "Stop generating",
+      "eventAndResult": "Abort current local response stream",
+      "errorBehavior": "Partial content retained",
+      "notes": "Remote cancellation acknowledgement unavailable",
+      "screen": "Chat"
+    },
+    {
+      "id": "composer.expand",
+      "control": "Expand input",
+      "eventAndResult": "Open same-draft editor",
+      "errorBehavior": "Close/backdrop/Escape keeps changes and returns focus",
+      "notes": "No auto submission",
+      "screen": "Chat"
+    },
+    {
+      "id": "composer.attachment.inspect",
+      "control": "Attachment row",
+      "eventAndResult": "Inspect actual image/extracted text/reference metadata",
+      "errorBehavior": "Readability and extraction failures are explicit",
+      "notes": "Image is full-aspect, not cropped",
+      "screen": "Chat"
+    },
+    {
+      "id": "composer.attachment.remove",
+      "control": "Remove attachment",
+      "eventAndResult": "Remove selected item and cancel pending document read",
+      "errorBehavior": "Remaining draft/material untouched",
+      "notes": "Removed announcement",
+      "screen": "Chat"
+    },
+    {
+      "id": "composer.attachment.retry",
+      "control": "Retry file",
+      "eventAndResult": "Remove failed pending item and reopen native file picker",
+      "errorBehavior": "No network operation blindly repeated",
+      "notes": "User chooses replacement",
+      "screen": "Chat"
+    },
+    {
+      "id": "result.open",
+      "control": "Open result",
+      "eventAndResult": "Render actual editor in result pane",
+      "errorBehavior": "Existing backend/save/version behavior retained",
+      "notes": "No static fake preview",
+      "screen": "Chat"
+    },
+    {
+      "id": "result.resize",
+      "control": "Divider/arrows",
+      "eventAndResult": "Resize45/55 panes with420px minimum",
+      "errorBehavior": "Ratio stored on current device",
+      "notes": "Pointer/keyboard/non-dragging alternatives",
+      "screen": "Chat"
+    },
+    {
+      "id": "result.reset",
+      "control": "Reset layout",
+      "eventAndResult": "Restore45/55 ratio",
+      "errorBehavior": "Does not change content",
+      "notes": "Local device setting",
+      "screen": "Chat"
+    },
+    {
+      "id": "result.tabs",
+      "control": "Conversation/Result",
+      "eventAndResult": "Switch narrow pane view",
+      "errorBehavior": "Editor remains mounted while hidden",
+      "notes": "Draft retained",
+      "screen": "Chat"
+    },
+    {
+      "id": "settings.open",
+      "control": "Settings",
+      "eventAndResult": "Stable settings route when safe",
+      "errorBehavior": "In-place fallback protects attachments/temp/stream/result",
+      "notes": "Scoped draft preserved",
+      "screen": "Chat"
+    }
+  ]
+}

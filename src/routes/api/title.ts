@@ -104,19 +104,22 @@ export const Route = createFileRoute("/api/title")({
             });
           }
 
-          const upstream = await chatCompletions({
-            model: modelForRole("UTILITY"),
-            max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
+          const upstream = await chatCompletions(
+            {
+              model: modelForRole("UTILITY"),
+              max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
 
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You write concise chat titles. Read the conversation and return a clear 3 to 5 word title summarizing the main topic. No quotes. No trailing punctuation. No emoji. No dashes. Return only the title.",
-              },
-              { role: "user", content: excerpt },
-            ],
-          });
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You write concise chat titles. Read the conversation and return a clear 3 to 5 word title summarizing the main topic. No quotes. No trailing punctuation. No emoji. No dashes. Return only the title.",
+                },
+                { role: "user", content: excerpt },
+              ],
+            },
+            { signal: request.signal },
+          );
 
           if (!upstream.ok) {
             return new Response(JSON.stringify({ title: "New chat" }), {

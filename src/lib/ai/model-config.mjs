@@ -88,8 +88,8 @@ export const ROUTING_THRESHOLDS = Object.freeze({
 const MODEL_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{2,63}$/i;
 
 /**
- * Model ids are configuration, so an invalid or placeholder value must fail
- * safe (fall back to the built-in default) instead of reaching the provider.
+ * Model ids are configuration. Validate their shape without sending malformed
+ * or placeholder values to a provider.
  * @param {unknown} value
  * @returns {boolean}
  */
@@ -114,6 +114,12 @@ export function resolveRoleModel(role, env = {}) {
     return { modelId: fallback, source: "default" };
   }
   if (!isValidModelId(raw)) {
+    // Text selection must fail closed when an operator supplied a bad override;
+    // using a different model would conceal the configuration error and spend
+    // against an unselected model. Keep image/embedding routing unchanged.
+    if (role !== "IMAGE_GENERATION" && role !== "EMBEDDING") {
+      throw new Error(`unsupported_ai_model:${key}`);
+    }
     return { modelId: fallback, source: "default", invalidOverride: String(raw).slice(0, 64) };
   }
   return { modelId: String(raw).trim(), source: "env" };

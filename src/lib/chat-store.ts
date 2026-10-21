@@ -1,3 +1,10 @@
+import { normalizeResponseFollowups } from "./response-followups.mjs";
+import {
+  normalizeTaskCreatedReceipt,
+  normalizeTaskCreationFailureReceipt,
+  type TaskCreatedReceipt,
+  type TaskCreationFailureReceipt,
+} from "./task-created-receipt.mjs";
 import { normalizeMemorySources, type MemorySources } from "./memory-sources.mjs";
 import type { ModeId } from "./modes";
 import {
@@ -68,6 +75,9 @@ export type Attachment =
       sourceProject?: string | null;
     };
 export type Activity = {
+  taskReceipt?: TaskCreatedReceipt;
+  taskFailure?: TaskCreationFailureReceipt;
+  error?: string;
   tool: string;
   label: string;
   status: "done" | "running" | "failed" | "canceled";
@@ -92,6 +102,7 @@ export type PendingConfirm = {
   resultText?: string;
 };
 export type Message = {
+  followups?: string[];
   id: string;
   role: Role;
   content: string;
@@ -246,6 +257,7 @@ function sanitizeMessageMemorySources(
     const {
       memorySources: rawSources,
       sources: rawResponseSources,
+      followups: rawFollowups,
       generationStatus,
       requestedTool,
       activities: rawActivities,
@@ -261,6 +273,16 @@ function sanitizeMessageMemorySources(
     const activities = Array.isArray(rawActivities)
       ? rawActivities
           .filter(isActivity)
+          .map((activity) => {
+            const { taskReceipt, taskFailure, ...rest } = activity;
+            const receipt = normalizeTaskCreatedReceipt(taskReceipt);
+            const failure = normalizeTaskCreationFailureReceipt(taskFailure);
+            return {
+              ...rest,
+              ...(receipt ? { taskReceipt: receipt } : {}),
+              ...(failure ? { taskFailure: failure } : {}),
+            };
+          })
           .map((activity) =>
             retiredResearchProgress !== undefined && activity.status === "running"
               ? { ...activity, status: "failed" as const }
@@ -269,6 +291,9 @@ function sanitizeMessageMemorySources(
       : undefined;
     return {
       ...rest,
+      ...(message.role === "assistant" && normalizeResponseFollowups(rawFollowups).length
+        ? { followups: normalizeResponseFollowups(rawFollowups) }
+        : {}),
       ...(activities?.length ? { activities } : {}),
       ...(memorySources ? { memorySources } : {}),
       ...(responseSources ? { sources: responseSources } : {}),
@@ -281,7 +306,7 @@ function sanitizeMessageMemorySources(
   });
 }
 
-function sanitizeArchivedConversations(
+export function sanitizeArchivedConversations(
   value: unknown[],
   userKey: ChatStorageUserKey,
 ): Conversation[] {
@@ -592,6 +617,7 @@ export function clearPrincipalChatStorage(userKey: ChatStorageUserKey) {
 
   removeKey(conversationStorageKey(userKey));
   removeKey(archivedConversationStorageKey(userKey));
+  removeKey(`kova-chat-trash-v1:${chatStoragePrincipal(userKey)}`);
   removeKey(pendingActiveStorageKey(userKey));
 
   const draftPrefix = `${scopedKey(DRAFT_KEY_BASE, userKey)}:`;

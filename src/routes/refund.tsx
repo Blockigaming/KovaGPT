@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { LegalArticle } from "@/components/LegalArticle";
 import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/refund")({
@@ -24,11 +25,7 @@ export const Route = createFileRoute("/refund")({
 function RefundPage() {
   return (
     <PublicShell>
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="mx-auto w-full max-w-3xl flex-1 px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5"
-      >
+      <LegalArticle>
         <h1>Refund Policy</h1>
         <p>
           KovaGPT subscriptions help provide access to AI tools, usage limits, image generation,
@@ -66,7 +63,7 @@ function RefundPage() {
         <p className="mt-8">
           <Link to="/">← Back to KovaGPT</Link>
         </p>
-      </main>
+      </LegalArticle>
     </PublicShell>
   );
 }

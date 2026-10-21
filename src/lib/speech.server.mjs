@@ -4,6 +4,7 @@ import {
   createRequestDeadline,
   waitForPromiseWithSignal,
 } from "./ai/provider-transport.server.mjs";
+import { readVoiceCatalog, selectCatalogVoice, TTS_MODEL_IDS } from "./voice/catalog.server.mjs";
 
 export const SPEECH_LIMITS = Object.freeze({
   textChars: 4000,
@@ -17,6 +18,28 @@ const json = (code, status, headers = {}) =>
     { error: code },
     { status, headers: { "Cache-Control": "private, no-store", ...headers } },
   );
+
+export function speechConfiguration(env, tier, requestedVoiceId) {
+  const enabled =
+    env("KOVA_SPEECH_ENABLED") === "true" && env("KOVA_GENERATION_DISABLED") !== "true";
+  const apiKey = env("ELEVENLABS_API_KEY");
+  const catalog = readVoiceCatalog(env, tier);
+  if (
+    !enabled ||
+    !apiKey ||
+    !catalog.valid ||
+    (requestedVoiceId === undefined && catalog.defaultVoiceId === null)
+  )
+    return { enabled: false };
+  const selected = selectCatalogVoice(catalog, requestedVoiceId);
+  if ("error" in selected) throw fail(`speech_${selected.error}`, selected.status);
+  return {
+    enabled,
+    apiKey,
+    voiceId: selected.providerVoiceId,
+    modelId: selected.modelId,
+  };
+}
 
 export async function loadOwnedSpeechMessage(auth, input, signal) {
   const result = await auth.supabaseUser
@@ -70,6 +93,7 @@ export function createSpeechHandler({
     const cancellation = new AbortController();
     const deadline = createRequestDeadline(cancellation.signal, SPEECH_LIMITS.timeoutMs, "speech");
     let reader;
+    let outputController;
     let closed = false;
     let admissionTimer;
     const finish = () => {
@@ -82,6 +106,12 @@ export function createSpeechHandler({
     };
     const cancelReader = () => {
       void reader?.cancel().catch(() => undefined);
+      // Cancelling upstream alone leaves an already queued first MP3 chunk
+      // readable downstream. Error the output too so Stop discards that audio.
+      if (outputController) {
+        outputController.error(new Error("speech_stream_interrupted"));
+        finish();
+      }
     };
     const abort = () => cancellation.abort(new DOMException("Speech stopped", "AbortError"));
     if (request.signal.aborted) abort();
@@ -122,7 +152,10 @@ export function createSpeechHandler({
         !input ||
         typeof input !== "object" ||
         Array.isArray(input) ||
-        Object.keys(input).sort().join(",") !== "chatId,contentSha256,messageId,ownerId" ||
+        Object.keys(input)
+          .filter((key) => key !== "voiceId")
+          .sort()
+          .join(",") !== "chatId,contentSha256,messageId,ownerId" ||
         typeof input.chatId !== "string" ||
         !ID.test(input.chatId) ||
         typeof input.messageId !== "string" ||
@@ -131,11 +164,20 @@ export function createSpeechHandler({
       )
         throw fail("speech_invalid_request", 400);
       if (input.ownerId !== auth.userId) throw fail("speech_account_changed", 409);
-      const settings = config();
+      if (
+        input.voiceId !== undefined &&
+        (typeof input.voiceId !== "string" || !/^[A-Za-z0-9_-]{1,64}$/u.test(input.voiceId))
+      )
+        throw fail("speech_invalid_voice", 400);
+      const settings = await wait(config(auth, input));
+      // Preserve the legacy handler configuration while allowing only the
+      // existing server-owned catalog models for an explicit selection.
+      const modelId = settings.modelId ?? "eleven_multilingual_v2";
       if (
         settings.enabled !== true ||
         !settings.apiKey ||
-        !/^[A-Za-z0-9_-]{1,80}$/u.test(settings.voiceId ?? "")
+        !/^[A-Za-z0-9_-]{1,128}$/u.test(settings.voiceId ?? "") ||
+        !TTS_MODEL_IDS.includes(modelId)
       )
         throw fail("speech_not_configured", 503);
       const text = await wait(loadMessage(auth, input, deadline.signal));
@@ -181,7 +223,7 @@ export function createSpeechHandler({
             chatId: input.chatId,
             messageId: input.messageId,
             voiceId: settings.voiceId,
-            modelId: "eleven_multilingual_v2",
+            modelId,
             text,
             signal: deadline.signal,
           }),
@@ -207,14 +249,14 @@ export function createSpeechHandler({
               "Content-Type": "application/json",
               Accept: "audio/mpeg",
             },
-            body: JSON.stringify({ text, model_id: "eleven_multilingual_v2" }),
+            body: JSON.stringify({ text, model_id: modelId }),
           },
         ),
       );
       if (
         !upstream.ok ||
         !upstream.body ||
-        upstream.headers.get("content-type")?.split(";", 1)[0] !== "audio/mpeg"
+        upstream.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "audio/mpeg"
       ) {
         void upstream.body?.cancel().catch(() => undefined);
         throw fail(
@@ -229,9 +271,16 @@ export function createSpeechHandler({
       await wait(revalidate(auth, deadline.signal));
       let bytes = 0;
       const body = new ReadableStream({
+        start(controller) {
+          outputController = controller;
+          if (deadline.signal.aborted) cancelReader();
+        },
         async pull(controller) {
+          if (closed) return;
           try {
+            deadline.signal.throwIfAborted();
             const chunk = first ?? (await wait(reader.read()));
+            deadline.signal.throwIfAborted();
             first = null;
             if (chunk.done) {
               finish();

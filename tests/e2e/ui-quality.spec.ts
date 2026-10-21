@@ -300,7 +300,7 @@ test("unknown routes retain the themed shell state and semantic landmarks", asyn
   await waitForKovaHydration(page);
   await expect(page.getByRole("main")).toHaveCount(1);
   await expect(
-    page.getByRole("heading", { level: 1, name: "We couldn't find that page" }),
+    page.getByRole("heading", { level: 1, name: "This page isn’t available" }),
   ).toBeVisible();
   const home = page.getByRole("link", { name: "Return home" });
   await expect(home).toBeVisible();

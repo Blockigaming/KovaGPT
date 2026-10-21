@@ -93,8 +93,8 @@ test("install metadata is complete and support identity is consistent", () => {
     assert.doesNotMatch(source, /help@kovagpt\.com/);
     assert.match(source, /support@kovagpt\.com/);
   }
-  assert.doesNotMatch(help, /Settings → Billing/);
-  assert.match(help, /Settings → Subscription/);
+  assert.match(help, /Settings → Billing/);
+  assert.doesNotMatch(help, /Settings → Subscription/);
 });
 
 test("enterprise inquiry form is labeled and describes the email handoff truthfully", () => {

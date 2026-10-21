@@ -6,6 +6,7 @@ import { build } from "esbuild";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { consumeChatSse, chatResponseError } from "../../src/lib/chat-sse-client.mjs";
+import { withResponsePresentation } from "../../src/lib/spec400-response-preferences.mjs";
 import { createAcceptanceFixture } from "../helpers/generation-acceptance.mjs";
 import {
   ACCEPTANCE_PROMPT,
@@ -258,7 +259,7 @@ function fixture({
     finish() {
       controller.enqueue(
         encoder.encode(
-          'data: {"type":"response.output_text.delta","delta":"completion."}\n\ndata: {"type":"response.completed","response":{"usage":{"input_tokens":4,"output_tokens":2}}}\n\n',
+          'data: {"type":"response.output_text.delta","delta":"completion."}\n\ndata: {"type":"response.completed","response":{"status":"completed","usage":{"input_tokens":4,"output_tokens":2}}}\n\n',
         ),
       );
       controller.close();
@@ -369,6 +370,14 @@ const compiledSend = ts.transpileModule(`globalThis.composerSend = ${sendSource}
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 
+const nextPromptHelpers = {};
+new Function(
+  "exports",
+  ts.transpileModule(readFileSync("src/lib/chat-send-next.ts", "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText,
+)(nextPromptHelpers);
+
 function composer(f) {
   const ownerId = f.ownerId;
   let items = [],
@@ -395,6 +404,30 @@ function composer(f) {
     abortRef: ref(null),
     inFlightTargetRef: ref(null),
     retryActionEpochRef: ref(new Map()),
+    // Current mounted Home callback also owns the next-message/quota recovery
+    // scope. Keep these fixture state bindings in step with its real closure.
+    ...nextPromptHelpers,
+    nextPromptScopeRef: ref({
+      principal: ownerId,
+      conversationId: f.chatId,
+      temporary: false,
+      temporaryContext: "clean",
+      lifetime: 0,
+    }),
+    nextPromptMountedRef: ref(true),
+    nextPromptRef: ref(null),
+    quotaRejectedDraftsRef: ref([]),
+    composerDraftRef: ref({ text: "", attachments: [], tool: null }),
+    composerRevisionRef: ref(0),
+    retryableFailedResponsesRef: ref(new Set()),
+    stopComposerVoiceRequestRef: ref(no),
+    updateNextPrompt: (value) => {
+      context.nextPromptRef.current = value;
+    },
+    updateQuotaRejectedDrafts: (value) => {
+      context.quotaRejectedDraftsRef.current = value;
+    },
+    updateRequestNotice: no,
     activeId: f.chatId,
     conversations: [],
     editingMessage: null,
@@ -443,6 +476,7 @@ function composer(f) {
     USER_STOP_REASON: "kova_user_stopped_generation",
     consumeChatSse,
     chatResponseError,
+    withResponsePresentation,
     AbortController,
     DOMException,
     Error,

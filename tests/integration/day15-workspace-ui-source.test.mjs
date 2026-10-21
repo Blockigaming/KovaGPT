@@ -74,5 +74,10 @@ test("mobile top bar exposes chat settings with an accessible target", () => {
 
 test("sharing discloses that only the active branch is snapshotted", () => {
   const source = read("src/components/ShareChatDialog.tsx");
-  assert.match(source, /branch you are currently viewing/u);
+  assert.match(source, /branch you’re viewing before sharing/u);
+  assert.match(
+    source,
+    /Only the text shown above is included\. Attachments, tool data and other branches\s+aren’t shared/u,
+  );
+  assert.match(source, /Later replies and edits won’t update/u);
 });

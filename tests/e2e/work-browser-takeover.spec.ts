@@ -111,6 +111,7 @@ async function fixture(page: Page, { delayFill = false } = {}) {
   await page.getByLabel("Execution history").selectOption(runId);
   const panel = page.getByRole("region", { name: "Private Work browser", exact: true });
   await expect(panel).toBeVisible();
+  await panel.getByRole("button", { name: "Open browser controls", exact: true }).click();
   return { panel, requests, releaseFill };
 }
 test("owner takeover sends exact revision and target, keeps credentials transient and renders page text inertly", async ({
@@ -118,7 +119,7 @@ test("owner takeover sends exact revision and target, keeps credentials transien
 }) => {
   const f = await fixture(page);
   await f.panel.getByRole("button", { name: "Read current page", exact: true }).click();
-  await expect(f.panel.getByText("Safe account page", { exact: false })).toBeVisible();
+  await expect(f.panel.locator(".work-browser-preview-text")).toContainText("Safe account page");
   expect(
     await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, "injectedBrowser")),
   ).toBe(false);
@@ -137,13 +138,13 @@ test("owner takeover sends exact revision and target, keeps credentials transien
   expect(
     await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage })),
   ).not.toContain("ephemeral-owner-password");
-  await f.panel.getByRole("button", { name: "Give control to Work" }).click();
-  await expect(f.panel.getByRole("button", { name: "Take control", exact: true })).toBeVisible();
+  await f.panel.getByRole("button", { name: "Return control" }).click();
+  await expect(f.panel.getByRole("button", { name: "Take over", exact: true })).toBeVisible();
   await expect(f.panel.getByLabel("Page control")).toHaveCount(0);
-  await f.panel.getByRole("button", { name: "Take control", exact: true }).click();
+  await f.panel.getByRole("button", { name: "Take over", exact: true }).click();
   await expect(f.panel.getByText("You have control.", { exact: false })).toBeVisible();
-  await f.panel.getByRole("button", { name: "Close browser", exact: true }).click();
-  await expect(f.panel.getByRole("button", { name: "Open and take control" })).toBeVisible();
+  await f.panel.getByRole("button", { name: "End session", exact: true }).click();
+  await expect(f.panel.getByRole("button", { name: "Open and take over" })).toBeVisible();
 });
 test("principal clear aborts an in-flight private command and rejects its delayed page result", async ({
   page,

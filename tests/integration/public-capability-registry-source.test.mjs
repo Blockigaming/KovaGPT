@@ -56,7 +56,6 @@ test("published mode and plan copy is derived from enforced source data", () => 
   for (const tier of ["plus", "pro"]) {
     assert.match(plans, new RegExp(`${tier}_monthly: \\{[^}]*trialPeriodDays: 0`));
   }
-  assert.match(pricing, /50% off the first paid month, once per account/);
   assert.doesNotMatch(pricing, /trialPeriodDays|Start (?:your )?free trial/i);
   const params = read("src/lib/billing-policy-params.ts");
   const policy = read("src/lib/billing-policy.mjs");
@@ -64,6 +63,10 @@ test("published mode and plan copy is derived from enforced source data", () => 
   assert.doesNotMatch(params, /trial_period_days:|trial_end:|price_data:/);
   assert.match(policy, /price\.id !== plan\.livePriceId/);
   assert.match(policy, /price\.lookup_key !== plan\.lookupKey/);
+  assert.match(pricing, /introductoryOfferForTier\("plus"\)/);
+  assert.match(pricing, /introductoryOfferForTier\("pro"\)/);
+  assert.match(read("src/lib/introductory-offer.ts"), /CAPABILITY_REGISTRY\.plans\[tier\]/);
+  assert.doesNotMatch(pricing, /30-day trial for eligible first-time subscribers/);
 });
 
 test("retired modes and unsupported product promises stay off public routes", () => {
@@ -101,10 +104,14 @@ test("retired modes and unsupported product promises stay off public routes", ()
   }
 });
 
-test("known limitations and required unavailable Voice remain explicit", () => {
-  assert.match(registry, /voiceScope: "required_unavailable"/);
-  assert.match(registry, /voice:[\s\S]*availability: "unavailable"/);
-  assert.match(registry, /PDF, Word, PowerPoint, and Excel extraction is not currently supported/);
+test("known limitations and required provider-dependent Voice remain explicit", () => {
+  assert.match(registry, /voiceScope: "required_provider_dependent"/);
+  assert.match(registry, /voice:[\s\S]*availability: "provider-dependent"/);
+  assert.match(registry, /Microphone conversations require explicit Start and Finish turn/);
+  assert.match(registry, /extracts readable text from supported PDF, DOCX, XLSX, and PPTX files/);
+  assert.match(registry, /Library original PDF preview is separate from extracted text/);
+  assert.match(registry, /Office originals can be downloaded but are not rendered/);
+  assert.doesNotMatch(registry, /extraction is not currently supported/);
   assert.match(registry, /Editing an uploaded or generated image is not currently available/);
   assert.match(
     registry,
@@ -117,9 +124,12 @@ test("known limitations and required unavailable Voice remain explicit", () => {
   assert.match(registry, /Background scheduled execution is unavailable in this deployment/);
   assert.match(
     registry,
-    /Live voice and audio are required KovaGPT scope but are not currently available/u,
+    /Transcription, speech synthesis, voice conversion, and saved-response Read aloud depend on configured voice access/u,
   );
-  assert.match(registry, /consent, safety, latency, provider, device/u);
+  assert.match(
+    registry,
+    /Provider access, commercial entitlement, browser permission, and actual playback/u,
+  );
   assert.doesNotMatch(aiWriter, /voice notes|audio notes|microphone input|audio upload/i);
   for (const unsupportedAudioClaim of [
     /turn .{0,40}\bvoice notes\b into/i,

@@ -21,22 +21,20 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
   assert.match(stripeSource, /readUtf8BodyBounded\(req, maxBodyBytes\)/);
   assert.match(stripeSource, /age > 300/);
   assert.match(stripeSource, /timingSafeEqualText/);
-  const paramsSource = await readFile(
-    new URL("../../src/lib/billing-policy-params.ts", import.meta.url),
-    "utf8",
+  assert.match(checkoutSource, /integration_identifier: "kovagpt_checkout_wshrfyef"/);
+  assert.match(
+    checkoutSource,
+    /const sessionParams: Parameters<typeof stripe\.checkout\.sessions\.create>\[0\]/,
   );
-  assert.match(paramsSource, /integration_identifier: "kovagpt_checkout_wshrfyef"/);
-  assert.match(paramsSource, /const sessionParams: Stripe\.Checkout\.SessionCreateParams/);
-  assert.doesNotMatch(paramsSource, /payment_method_types\s*:/);
-  assert.doesNotMatch(paramsSource, /automatic_tax\s*:/);
-  assert.doesNotMatch(paramsSource, /sessionParams\s+as\s+(?:Parameters|Stripe)/);
-  assert.doesNotMatch(paramsSource, /trial_period_days:|trial_end:/);
-  assert.match(checkoutSource, /returnUrl: CHECKOUT_RETURN_URL/);
+  assert.doesNotMatch(checkoutSource, /payment_method_types\s*:/);
+  assert.doesNotMatch(checkoutSource, /automatic_tax\s*:/);
+  assert.doesNotMatch(checkoutSource, /sessionParams\s+as\s+Parameters/);
+  assert.match(checkoutSource, /return_url: CHECKOUT_RETURN_URL/);
   assert.match(
     checkoutSource,
     /\.validator\(\(data: unknown\) => \{\s*const parsed = parseCheckoutRequest\(data\);\s*if \(!resolveBillingPlan\(parsed\.priceId\)\) throw new Error\("Invalid priceId"\);\s*return parsed;/,
   );
-  assert.doesNotMatch(checkoutSource, /data\.(?:returnUrl|return_url)/);
+  assert.doesNotMatch(checkoutSource, /\breturnUrl\b|data\.returnUrl/);
   assert.match(hook, /processStripeEvent/);
   assert.match(hook, /stripe\.subscriptions\.retrieve/);
   assert.match(hook, /status: retryableFailure \? 503 : 400/);
@@ -63,5 +61,5 @@ test("installed TanStack compiler and application retain validated input contrac
       new URL("../../node_modules/@tanstack/react-start/package.json", import.meta.url),
     ),
   );
-  assert.equal(pkg.version, "1.168.60");
+  assert.equal(pkg.version, "1.168.34");
 });

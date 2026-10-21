@@ -1,0 +1,313 @@
+/* Checkpoint 1b sidebar: one width owner, semantic rows and 44px targets. */
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] {
+  --sidebar-gutter: 16px;
+  --sidebar-row-height: 44px;
+  --sidebar-icon-slot: 20px;
+  border-radius: 0;
+  border-right: 1px solid var(--border);
+  background: #fcfcfc;
+  transition:
+    width 180ms ease,
+    translate 180ms ease,
+    transform 180ms ease,
+    visibility 0ms;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-state="closed"] {
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    width 180ms ease,
+    translate 180ms ease,
+    transform 180ms ease,
+    visibility 0ms 180ms;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-inner {
+  opacity: 1;
+  transition: none;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-header {
+  min-height: calc(56px + var(--safe-top));
+  flex-shrink: 0;
+  padding: calc(6px + var(--safe-top)) 6px 6px 16px;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-brand {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-primary {
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 4px var(--sidebar-gutter) 8px;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-nav-row {
+  width: 100%;
+  min-height: var(--sidebar-row-height) !important;
+  height: var(--sidebar-row-height);
+  flex: 0 0 var(--sidebar-row-height);
+  justify-content: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 0 10px !important;
+  border: 0;
+  border-radius: var(--kova-radius-sidebar);
+  background: transparent;
+  color: var(--foreground);
+  box-shadow: none;
+  filter: none;
+  transform: none;
+  font-size: 16px !important;
+  font-weight: 400;
+}
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar[data-kova-core-sidebar]
+  .kova-nav-row.is-active {
+  font-weight: 500;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-nav-row:hover {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: var(--kova-icon-stroke, 2);
+}
+/* Softer controls share a radius; the logo and circular account avatar keep
+   their original geometry. Lucide strokes stay rounded at every scale. */
+:is(.kova-assistant, .kova-app-shell)
+  :is(.kova-sidebar[data-kova-core-sidebar], .kova-sidebar-rail[data-kova-core-rail])
+  svg.lucide {
+  stroke-width: var(--kova-icon-stroke, 2);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-history {
+  margin: 0;
+  padding: 20px var(--sidebar-gutter) 16px;
+}
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar[data-kova-core-sidebar]
+  .kova-sidebar-history
+  h2 {
+  margin-bottom: 8px;
+  padding: 0 12px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-empty {
+  padding: 12px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-chat-row {
+  height: 44px;
+  border-radius: var(--kova-radius-sidebar);
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-chat-row-main {
+  min-height: 44px;
+  padding-left: 12px;
+  font-size: 14px;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-footer {
+  min-height: 76px;
+  flex-shrink: 0;
+  padding: 12px 16px max(12px, var(--safe-bottom));
+  border-top: 0 !important;
+}
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar[data-kova-core-sidebar]
+  .kova-account-copy
+  strong {
+  font-size: 14px;
+}
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar[data-kova-core-sidebar]
+  .kova-account-copy
+  small {
+  font-size: 12px;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-guest-account-options {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-kova-core-rail] {
+  padding-inline: 10px;
+  overflow: hidden;
+  border-radius: 0;
+  transition:
+    width 180ms ease,
+    padding 180ms ease,
+    visibility 0ms;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-state="closed"] {
+  padding-inline: 0;
+  border-right: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    width 180ms ease,
+    padding 180ms ease,
+    visibility 0ms 180ms;
+}
+.kova-sidebar-scrim[data-state] {
+  opacity: 1;
+  visibility: visible;
+  animation: none;
+  transition:
+    opacity 180ms ease,
+    visibility 0ms;
+}
+.kova-sidebar-scrim[data-state="closed"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 180ms ease,
+    visibility 0ms 180ms;
+}
+.kova-rename-dialog {
+  width: min(384px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+@media (max-width: 1023px) {
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] {
+    --sidebar-row-height: 44px;
+    border-radius: 0 24px 24px 0;
+  }
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-header-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    flex: 0 0 44px;
+  }
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-inner {
+    width: 100%;
+    min-width: 0;
+  }
+}
+/* Touch history rows must accommodate both the title and options hit areas. */
+@media (max-width: 1023px), (pointer: coarse) {
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] {
+    --sidebar-row-height: 44px;
+  }
+
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-chat-row {
+    height: 44px;
+    min-height: 44px;
+  }
+  :is(.kova-assistant, .kova-app-shell)
+    .kova-sidebar[data-kova-core-sidebar]
+    .kova-chat-row
+    > button {
+    height: 44px;
+    min-height: 44px;
+  }
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-chat-options {
+    width: 44px;
+    min-width: 44px;
+    flex-basis: 44px;
+  }
+}
+/* At short heights the fixed header, search and account area cannot leave a
+   usable navigation viewport. Let the complete sidebar flow and scroll. */
+@media (max-height: 420px) {
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-inner {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-scroll {
+    flex: none;
+    overflow: visible;
+  }
+  :is(.kova-assistant, .kova-app-shell)
+    .kova-sidebar[data-kova-core-sidebar]
+    .kova-sidebar-search-wrap {
+    flex-shrink: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar],
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-kova-core-rail],
+  .kova-sidebar-scrim[data-state] {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Observed neutral sidebar surfaces, independent of the surrounding route. */
+.dark :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] {
+  background: #000;
+}
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar[data-kova-core-sidebar]
+  :is(.kova-sidebar-inner, .kova-sidebar-header, .kova-sidebar-footer) {
+  background: inherit;
+}
+
+/* Active navigation keeps the selected-chat surface after pointer focus moves. */
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar[data-kova-core-sidebar]
+  .kova-nav-row:is([aria-current="page"], .is-active) {
+  background: var(--sidebar-hover, var(--accent));
+}
+
+/* Wider chat actions keep the existing vertical rhythm and phone edge clearance. */
+.kova-sidebar-chat-menu {
+  width: 208px;
+  max-width: min(var(--radix-dropdown-menu-content-available-width, 100vw), calc(100vw - 24px));
+}
+.kova-sidebar-chat-menu [role="menuitem"] {
+  padding-inline: 12px;
+}
+
+/* Widths live here rather than competing route/parity declarations. */
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] {
+  width: var(--kova-sidebar-width);
+  min-width: var(--kova-sidebar-width);
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-state="closed"] {
+  width: 0;
+  min-width: 0;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-kova-core-rail] {
+  width: var(--kova-sidebar-rail-width);
+  min-width: var(--kova-sidebar-rail-width);
+  padding-inline: 14px;
+}
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-state="closed"] {
+  width: 0;
+  min-width: 0;
+  padding-inline: 0;
+}
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar[data-kova-core-sidebar]
+  .kova-nav-row.kova-new-chat {
+  border-radius: var(--kova-radius-button);
+}
+/* Rail navigation remains a 14px row control. Square action buttons are circles. */
+:is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-kova-core-rail] .kova-rail-button {
+  border-radius: var(--kova-radius-control);
+}
+@media (max-width: 1023px) {
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar],
+  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-state="closed"] {
+    width: var(--kova-sidebar-drawer-width);
+    min-width: 0;
+    max-width: calc(100vw - 24px);
+  }
+}
+/* Creation and customization are actions, not destination rows. */
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar-rail[data-kova-core-rail]
+  :is(.kova-rail-button.kova-new-chat, .kova-rail-customize) {
+  border-radius: var(--kova-radius-button);
+}

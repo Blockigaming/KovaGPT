@@ -22,7 +22,12 @@ const Comments = z
   )
   .max(100);
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
-type Props = { projectId: string; members: ProjectMember[]; role: "owner" | "editor" | "viewer" };
+type Props = {
+  projectId: string;
+  members: ProjectMember[];
+  role: "owner" | "editor" | "viewer";
+  readOnly?: boolean;
+};
 export function ProjectCollaboration(props: Props) {
   const { user } = useUser();
   return (
@@ -37,6 +42,7 @@ function ProjectCollaborationSession({
   projectId,
   members,
   role,
+  readOnly = false,
   userId,
 }: Props & { userId?: string }) {
   const [comments, setComments] = useState<ProjectComment[]>([]),
@@ -109,7 +115,7 @@ function ProjectCollaborationSession({
     [comments, onlyMentions, userId],
   );
   const submit = async () => {
-    if (!body.trim() || role === "viewer" || !userId) return;
+    if (readOnly || !body.trim() || role === "viewer" || !userId) return;
     setSending(true);
     try {
       const key = JSON.stringify([body, anchor, mentions]);
@@ -156,7 +162,7 @@ function ProjectCollaborationSession({
           My mentions
         </button>
       </div>
-      {role !== "viewer" && !denied ? (
+      {!readOnly && role !== "viewer" && !denied ? (
         <div className="mt-4 rounded-2xl border p-4">
           <textarea
             value={body}
@@ -277,7 +283,7 @@ function ProjectCollaborationSession({
                     </p>
                   )}
                 </div>
-                {(comment.author_id === userId || role === "owner") && (
+                {!readOnly && (comment.author_id === userId || role === "owner") && (
                   <button
                     aria-label="Delete comment"
                     onClick={() => setDeletingComment(comment)}
@@ -300,7 +306,7 @@ function ProjectCollaborationSession({
         destructive
         disabled={deletePending}
         onConfirm={async () => {
-          if (!deletingComment || deletePending || !userId) return;
+          if (readOnly || !deletingComment || deletePending || !userId) return;
           setDeletePending(true);
           try {
             const rows = await collaborationRequest(userId, "project_comment_delete", {

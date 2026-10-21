@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { acceptMessageVersion, listMessageVersions } from "@/lib/chat-workspace.functions";
-import { localVersions } from "@/lib/local-chat-workspace.mjs";
+import { localVersions, saveLocalVersion } from "@/lib/local-chat-workspace.mjs";
 import { safeBrowserStorage } from "@/lib/principal-browser-storage.mjs";
+import { ResponseVersionDiff } from "./ResponseVersionDiff";
 
 type Entry = {
   id: string;
@@ -35,6 +36,7 @@ export function MessageVersionHistoryDialog({
   messageId,
   currentContent,
   onRestore,
+  compareInitially = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,6 +44,7 @@ export function MessageVersionHistoryDialog({
   messageId?: string | null;
   currentContent: string;
   onRestore: (content: string) => void;
+  compareInitially?: boolean;
 }) {
   const { isSignedIn } = useUser();
   const listFn = useServerFn(listMessageVersions);
@@ -94,6 +97,12 @@ export function MessageVersionHistoryDialog({
   useEffect(() => {
     if (open) void load();
   }, [load, open]);
+  useEffect(() => {
+    if (open && compareInitially)
+      setExpanded(
+        [...entries].reverse().find((entry) => entry.content !== currentContent)?.id ?? null,
+      );
+  }, [compareInitially, currentContent, entries, open]);
 
   const restore = useCallback(
     async (entry: Entry) => {
@@ -101,6 +110,13 @@ export function MessageVersionHistoryDialog({
       setError(null);
       try {
         if (entry.durable) await acceptFn({ data: { versionId: entry.id } });
+        else if (chatId && messageId)
+          saveLocalVersion(safeBrowserStorage("localStorage"), chatId, messageId, {
+            content: entry.content,
+            originalContent: currentContent,
+            source: "restore",
+            instruction: `Restored version ${entry.version}`,
+          });
         onRestore(entry.content);
         toast.success(
           entry.durable ? `Restored version ${entry.version}` : "Restored from this device",
@@ -112,14 +128,16 @@ export function MessageVersionHistoryDialog({
         setRestoring(null);
       }
     },
-    [acceptFn, onOpenChange, onRestore],
+    [acceptFn, onOpenChange, onRestore, chatId, messageId, currentContent],
   );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[640px]">
         <DialogHeader>
-          <DialogTitle>Version history</DialogTitle>
+          <DialogTitle>
+            {compareInitially ? "Compare response versions" : "Version history"}
+          </DialogTitle>
           <DialogDescription>
             {isSignedIn
               ? "Saved edits for this response, newest last."
@@ -139,7 +157,7 @@ export function MessageVersionHistoryDialog({
             <button
               type="button"
               onClick={() => void load()}
-              className="min-h-11 rounded-full border border-border px-4 text-sm font-medium hover:bg-accent"
+              className="min-h-11 rounded-lg border border-border px-4 text-sm font-medium hover:bg-accent"
             >
               Try again
             </button>
@@ -170,17 +188,17 @@ export function MessageVersionHistoryDialog({
                       <button
                         type="button"
                         onClick={() => setExpanded(expanded === entry.id ? null : entry.id)}
-                        className="min-h-11 rounded-full px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                        className="min-h-11 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
                         aria-expanded={expanded === entry.id}
                       >
-                        {expanded === entry.id ? "Hide" : "View"}
+                        {expanded === entry.id ? "Hide preview" : "Preview version"}
                       </button>
                       <button
                         type="button"
                         onClick={() => void restore(entry)}
-                        disabled={restoring !== null || isCurrent}
+                        disabled={restoring !== null || isCurrent || expanded !== entry.id}
                         aria-busy={restoring === entry.id}
-                        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
                       >
                         {restoring === entry.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -197,9 +215,17 @@ export function MessageVersionHistoryDialog({
                     </p>
                   )}
                   {expanded === entry.id && (
-                    <pre className="mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-muted/40 px-3 py-2 text-xs font-sans">
-                      {entry.content}
-                    </pre>
+                    <div className="max-h-72 overflow-y-auto">
+                      <ResponseVersionDiff before={entry.content} after={currentContent} />
+                      <details>
+                        <summary className="min-h-11 cursor-pointer py-3 text-xs text-muted-foreground">
+                          Full previous version
+                        </summary>
+                        <pre className="whitespace-pre-wrap break-words rounded-lg bg-muted/40 px-3 py-2 text-xs font-sans">
+                          {entry.content}
+                        </pre>
+                      </details>
+                    </div>
                   )}
                 </li>
               );

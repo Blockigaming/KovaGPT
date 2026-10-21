@@ -31,9 +31,11 @@ test("server-routed basic, advanced and premium responses use the approved exact
   }
 });
 
-test("identity follows authorized routing when requests are downgraded or upgraded", () => {
-  const route = routeModel({ task: "chat", mode: "max", tier: "free", text: "Hello" });
-  assert.equal(kovaModelIdentityForRole(route.role).label, "KovaGPT 4.6 Cosmo");
+test("identity follows authorized routing and locked Free requests have no response identity", () => {
+  assert.throws(
+    () => routeModel({ task: "chat", mode: "max", tier: "free", text: "Hello" }),
+    /mode_not_entitled/,
+  );
   assert.equal(kovaModelIdentityForRole("IMAGE_ANALYSIS").label, "KovaGPT 4.6 Cosmo");
   const upgraded = routeModel({
     task: "chat",

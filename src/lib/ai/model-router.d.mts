@@ -54,3 +54,5 @@ export function scoreComplexity(
   },
 ): { score: number; reasons: string[] };
 export function routeModel(input: RouteInput): RouteDecision;
+
+export function freeModeUpgradeRequired(tier: string, mode: string, deepMode?: boolean): boolean;

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Check, X, Loader2, Mail, Calendar, FileEdit, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { authFetch } from "@/lib/auth-fetch";
 import type { PendingConfirm } from "@/lib/chat-store";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 
 const TOOL_LABEL: Record<string, { label: string; Icon: typeof Mail }> = {
   gmail_send: { label: "Send email", Icon: Mail },
@@ -19,13 +20,40 @@ export function ToolConfirmCard({
   onUpdate: (next: PendingConfirm) => void;
 }) {
   const [busy, setBusy] = useState<"confirm" | "cancel" | null>(null);
+  const feedbackId = useId();
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  const busyRef = useRef(false);
+  const mounted = useRef(true);
+  const request = useRef(0);
+  const currentConfirm = useRef(confirm);
+  const stopFocusTracking = useRef<(() => void) | null>(null);
+  currentConfirm.current = confirm;
+  useEffect(() => {
+    mounted.current = true;
+    busyRef.current = false;
+    setBusy(null);
+    return () => {
+      mounted.current = false;
+      request.current += 1;
+      stopFocusTracking.current?.();
+    };
+  }, [confirm.actionId]);
   const meta = TOOL_LABEL[confirm.tool] ?? { label: confirm.tool, Icon: AlertCircle };
   const Icon = meta.Icon;
   const preview = confirm.argsPreview as Record<string, unknown>;
   const reconnectRetry = confirm.status === "failed" && /reconnect/i.test(confirm.resultText ?? "");
   const isTerminal = confirm.status !== "pending" && !reconnectRetry;
 
-  const reconcileAmbiguousSend = async () => {
+  // Recoverable failures still need persistent feedback beside their Retry/Cancel controls.
+  const hasFeedback = confirm.status !== "pending" || !!confirm.resultText;
+  const needsAttention = !["confirmed", "cancelled"].includes(confirm.status);
+
+  const updateConfirm = (next: PendingConfirm) => {
+    currentConfirm.current = next;
+    onUpdate(next);
+  };
+
+  const reconcileAmbiguousSend = async (isCurrent: () => boolean) => {
     try {
       const statusResponse = await authFetch(
         `/api/chat/confirm?action_id=${encodeURIComponent(confirm.actionId)}`,
@@ -35,9 +63,10 @@ export function ToolConfirmCard({
         status?: "pending" | "processing" | "confirmed" | "cancelled" | "failed" | "expired";
         result_text?: string;
       };
+      if (!isCurrent()) return;
       if (statusResponse.ok && statusJson.ok) {
         if (statusJson.status === "confirmed") {
-          onUpdate({
+          updateConfirm({
             ...confirm,
             status: "confirmed",
             resultText: statusJson.result_text || "Email sent.",
@@ -46,12 +75,16 @@ export function ToolConfirmCard({
           return;
         }
         if (statusJson.status === "pending") {
-          onUpdate({ ...confirm, status: "pending", resultText: undefined });
+          updateConfirm({
+            ...confirm,
+            status: "pending",
+            resultText: "The send request did not complete. Review the email before trying again.",
+          });
           toast.error("The send request did not complete. Review the email before trying again.");
           return;
         }
         if (statusJson.status === "cancelled" || statusJson.status === "expired") {
-          onUpdate({
+          updateConfirm({
             ...confirm,
             status: statusJson.status === "cancelled" ? "cancelled" : "failed",
             resultText:
@@ -66,14 +99,31 @@ export function ToolConfirmCard({
       // The status check is best-effort. Fall through to a truthful ambiguous state.
     }
 
+    if (!isCurrent()) return;
     const message =
       "KovaGPT could not verify whether Gmail sent this email. Check Sent mail before sending again.";
-    onUpdate({ ...confirm, status: "uncertain", resultText: message });
+    updateConfirm({ ...confirm, status: "uncertain", resultText: message });
     toast.warning("Send result could not be verified", { description: message });
   };
 
-  const decide = async (decision: "confirm" | "cancel") => {
-    if (busy || isTerminal) return;
+  const decide = async (decision: "confirm" | "cancel", trigger: HTMLButtonElement) => {
+    if (!mounted.current || busyRef.current || isTerminal || currentConfirm.current !== confirm)
+      return;
+    busyRef.current = true;
+    const attempt = ++request.current;
+    const isCurrent = () =>
+      mounted.current &&
+      request.current === attempt &&
+      currentConfirm.current.actionId === confirm.actionId;
+    const openedUrl = window.location.href;
+    let focusMoved = document.activeElement !== trigger;
+    const onFocus = (event: FocusEvent) => {
+      if (event.target !== trigger && event.target !== document.body) focusMoved = true;
+    };
+    stopFocusTracking.current?.();
+    document.addEventListener("focusin", onFocus, true);
+    const stopTracking = () => document.removeEventListener("focusin", onFocus, true);
+    stopFocusTracking.current = stopTracking;
     setBusy(decision);
     try {
       const res = await authFetch("/api/chat/confirm", {
@@ -87,6 +137,7 @@ export function ToolConfirmCard({
         error?: string;
         error_code?: string;
       };
+      if (!isCurrent()) return;
       if (!res.ok || !json.ok) {
         const err = json.error || `Failed (${res.status})`;
         if (
@@ -95,34 +146,50 @@ export function ToolConfirmCard({
           (json.error_code === "completion_persistence_ambiguous" ||
             /could not (?:confirm|verify).*completed/i.test(err))
         ) {
-          await reconcileAmbiguousSend();
+          await reconcileAmbiguousSend(isCurrent);
           return;
         }
-        onUpdate({ ...confirm, status: "failed", resultText: err });
+        updateConfirm({ ...confirm, status: "failed", resultText: err });
         toast.error(err);
         return;
       }
-      onUpdate({
+      updateConfirm({
         ...confirm,
         status: decision === "confirm" ? "confirmed" : "cancelled",
         resultText: json.result_text,
       });
       toast.success(decision === "confirm" ? "Done" : "Cancelled");
     } catch (e) {
+      if (!isCurrent()) return;
       if (decision === "confirm" && confirm.tool === "gmail_send") {
-        await reconcileAmbiguousSend();
+        await reconcileAmbiguousSend(isCurrent);
       } else {
         const err = e instanceof Error ? e.message : "Network error";
-        onUpdate({ ...confirm, status: "failed", resultText: err });
+        updateConfirm({ ...confirm, status: "failed", resultText: err });
         toast.error(err);
       }
     } finally {
-      setBusy(null);
+      if (isCurrent()) {
+        busyRef.current = false;
+        setBusy(null);
+        requestAnimationFrame(() => {
+          const focused = document.activeElement;
+          restoreDialogFocus(
+            feedbackRef.current,
+            openedUrl,
+            !isCurrent() || focusMoved || (focused !== trigger && focused !== document.body),
+          );
+          stopTracking();
+        });
+      } else stopTracking();
     }
   };
 
   return (
-    <div className="my-3 rounded-2xl border border-border bg-accent/30 p-4 text-sm">
+    <div
+      aria-busy={!!busy}
+      className="my-3 rounded-2xl border border-border bg-accent/30 p-4 text-sm"
+    >
       <div className="flex items-center gap-2 font-medium">
         <Icon className="h-4 w-4 text-primary" />
         <span>{meta.label}</span>
@@ -186,43 +253,54 @@ export function ToolConfirmCard({
           )}
         </div>
       )}
-      {isTerminal ? (
+      {hasFeedback && (
         <div
-          className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs ${
+          ref={feedbackRef}
+          id={feedbackId}
+          role={needsAttention ? "alert" : "status"}
+          aria-atomic="true"
+          tabIndex={-1}
+          className={`mt-3 max-w-full items-start gap-1.5 px-2.5 text-xs ${
+            needsAttention ? "flex rounded-lg py-2" : "inline-flex rounded-full py-1"
+          } ${
             confirm.status === "confirmed"
               ? "bg-primary/10 text-primary"
               : confirm.status === "cancelled"
                 ? "bg-muted text-muted-foreground"
                 : confirm.status === "uncertain"
                   ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                  : "bg-destructive/10 text-destructive"
+                  : "bg-destructive/10 text-foreground"
           }`}
         >
           {confirm.status === "confirmed" ? (
-            <Check className="h-3 w-3" />
+            <Check className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
           ) : confirm.status === "cancelled" ? (
-            <X className="h-3 w-3" />
+            <X className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
           ) : (
-            <AlertCircle className="h-3 w-3" />
+            <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
           )}
-          {confirm.resultText ??
-            (confirm.status === "confirmed"
-              ? "Done"
-              : confirm.status === "cancelled"
-                ? "Cancelled"
-                : "Failed")}
+          <span className="min-w-0 break-words">
+            {confirm.resultText ??
+              (confirm.status === "confirmed"
+                ? "Done"
+                : confirm.status === "cancelled"
+                  ? "Cancelled"
+                  : "Failed")}
+          </span>
         </div>
-      ) : (
+      )}
+      {!isTerminal && (
         <div className="mt-3 flex gap-2">
           <button
-            onClick={() => decide("confirm")}
+            onClick={(event) => void decide("confirm", event.currentTarget)}
+            aria-describedby={hasFeedback ? feedbackId : undefined}
             disabled={!!busy}
-            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50"
           >
             {busy === "confirm" ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Check className="h-3 w-3" />
+              <Check className="h-5 w-5" aria-hidden="true" />
             )}
             {reconnectRetry
               ? "Retry"
@@ -233,14 +311,15 @@ export function ToolConfirmCard({
                   : "Confirm"}
           </button>
           <button
-            onClick={() => decide("cancel")}
+            onClick={(event) => void decide("cancel", event.currentTarget)}
+            aria-describedby={hasFeedback ? feedbackId : undefined}
             disabled={!!busy}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-accent disabled:opacity-50"
           >
             {busy === "cancel" ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
-              <X className="h-3 w-3" />
+              <X className="h-5 w-5" aria-hidden="true" />
             )}
             Cancel
           </button>

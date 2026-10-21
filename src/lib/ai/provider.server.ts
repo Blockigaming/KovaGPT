@@ -288,8 +288,8 @@ function fetchManagedIdentityTokenForTarget(target: ProviderTarget, signal?: Abo
     : fetchCognitiveServicesManagedIdentityToken(signal);
 }
 
-export function getAiProviderConfig(): ProviderConfig {
-  const target = providerTarget();
+export function getAiProviderConfig(capability?: ProviderCapability): ProviderConfig {
+  const target = providerTarget(capability);
   return {
     provider: target.provider,
     baseUrl: target.baseUrl,
@@ -304,7 +304,9 @@ export function getAiProviderConfig(): ProviderConfig {
   };
 }
 
-export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
+export function validateAiProviderConfig(
+  capability?: ProviderCapability,
+): ProviderErrorEnvelope | null {
   let generationEnabled: boolean;
   try {
     generationEnabled = getAiRuntimeConfig().generationEnabled;
@@ -326,7 +328,7 @@ export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
   }
 
   try {
-    if (providerTarget().auth !== "missing") return null;
+    if (providerTarget(capability).auth !== "missing") return null;
   } catch {
     // Invalid endpoints fail closed without exposing their value.
   }
@@ -340,7 +342,7 @@ export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
 }
 
 export function providerCapabilities(): ProviderCapability[] {
-  return getAiProviderConfig().capabilities;
+  return parseCapabilities(env("KOVA_AI_CAPABILITIES"));
 }
 
 export function supportsProviderCapability(capability: ProviderCapability): boolean {
@@ -349,7 +351,7 @@ export function supportsProviderCapability(capability: ProviderCapability): bool
 
 export function providerCapabilityConfigured(capability: ProviderCapability): boolean {
   try {
-    if (providerTarget().auth === "missing" || !supportsProviderCapability(capability)) {
+    if (!supportsProviderCapability(capability)) {
       return false;
     }
 
@@ -368,7 +370,7 @@ export function providerCapabilityConfigured(capability: ProviderCapability): bo
 export function providerUnavailableEnvelope(
   capability?: ProviderCapability,
 ): ProviderErrorEnvelope | null {
-  const configError = validateAiProviderConfig();
+  const configError = validateAiProviderConfig(capability);
   if (configError) return configError;
   if (capability && !supportsProviderCapability(capability)) {
     return {
@@ -529,11 +531,22 @@ async function providerFetch(
   images?: { image: ProviderImageInput; mask?: ProviderImageInput },
   acceptanceScope?: GenerationAcceptanceScope,
 ): Promise<Response> {
+  // A qualification host never executes a provider call, even if another
+  // ingress reaches this seam or generation configuration was cached earlier.
+  const captureMode = env("KOVA_REQUEST_CAPTURE_ENABLED");
+  if (captureMode && captureMode !== "false") {
+    throw new AiProviderError({
+      error: "Provider execution is disabled during request capture.",
+      code: "provider_unavailable",
+      status: 503,
+      retryable: false,
+    });
+  }
   const unavailable = providerUnavailableEnvelope(capability);
   if (unavailable) throw new AiProviderError(unavailable);
 
   const target = providerTarget(capability);
-  const config = getAiProviderConfig();
+  const config = getAiProviderConfig(capability);
   let requestBody = withProviderModel(body, capability);
   const deployment = typeof requestBody.model === "string" ? requestBody.model : undefined;
   const startedAt = Date.now();
@@ -703,6 +716,11 @@ export async function streamingChatCompletions(
   return chatCompletions({ ...body, stream: true }, init);
 }
 
+/** Pure: the same conversion and final model mapping used by providerFetch. */
+export function prepareChatResponsesRequest(body: JsonObject): JsonObject {
+  return withProviderModel(toResponsesRequest(body), body.stream === true ? "streaming" : "chat");
+}
+
 function toResponsesRequest(body: JsonObject): JsonObject {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const instructions: string[] = [];
@@ -745,20 +763,48 @@ function toResponsesRequest(body: JsonObject): JsonObject {
   };
   const serverOutputCeiling = maximumServerOutputForModel(String(body.model ?? ""));
   if (instructions.length) request.instructions = instructions.join("\n\n");
-  if (Array.isArray(body.tools)) request.tools = body.tools;
-  if (body.tool_choice !== undefined) request.tool_choice = body.tool_choice;
+  if (Array.isArray(body.tools)) request.tools = body.tools.map(normalizeResponsesTool);
+  if (body.tool_choice !== undefined)
+    request.tool_choice = normalizeResponsesToolChoice(body.tool_choice);
   if (typeof body.max_tokens === "number")
     request.max_output_tokens = Math.min(body.max_tokens, serverOutputCeiling);
   if (typeof body.max_completion_tokens === "number")
     request.max_output_tokens = Math.min(body.max_completion_tokens, serverOutputCeiling);
   if (request.max_output_tokens === undefined) request.max_output_tokens = serverOutputCeiling;
-  request.reasoning =
-    body.reasoning && typeof body.reasoning === "object"
-      ? body.reasoning
-      : { effort: "low", summary: "auto" };
+  const configuredModel = (["instant", "normal", "thinking", "deep", "utility"] as const)
+    .map(modelForPolicy)
+    .find((model) => model.id === body.model);
+  if (configuredModel?.reasoning !== false)
+    request.reasoning =
+      body.reasoning && typeof body.reasoning === "object"
+        ? body.reasoning
+        : { effort: "low", summary: "auto" };
   request.store = false;
   if (providerTarget("chat").provider === "openai") request.service_tier = "default";
   return request;
+}
+
+function normalizeResponsesTool(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const tool = value as Record<string, unknown>;
+  if (tool.type !== "function" || !tool.function || typeof tool.function !== "object") return value;
+  const fn = tool.function as Record<string, unknown>;
+  return {
+    type: "function",
+    name: fn.name,
+    ...(fn.description !== undefined ? { description: fn.description } : {}),
+    parameters: fn.parameters ?? null,
+    // Preserve the existing Chat Completions schemas' non-strict default.
+    strict: fn.strict ?? false,
+  };
+}
+
+function normalizeResponsesToolChoice(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const choice = value as Record<string, unknown>;
+  if (choice.type !== "function" || !choice.function || typeof choice.function !== "object")
+    return value;
+  return { type: "function", name: (choice.function as Record<string, unknown>).name };
 }
 
 function normalizeResponsesContent(message: Record<string, unknown>): unknown {
@@ -810,9 +856,27 @@ function responseOutputToMessage(value: JsonObject): JsonObject {
 async function responsesJsonToChatJson(response: Response): Promise<Response> {
   let value: JsonObject;
   try {
-    value = (await response.json()) as JsonObject;
+    // Bound native metadata before conversion; limiting only the translated
+    // chat JSON lets ignored provider fields bypass the tool-hop response cap.
+    value = (await (await bufferSuccessfulProviderResponse(response)).json()) as JsonObject;
   } catch (error) {
     throw normalizeProviderError(error);
+  }
+  // An HTTP-200 Responses body may still be failed, cancelled or incomplete.
+  // Tool hops must never turn that partial result into a successful chat reply.
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    value.error ||
+    value.status !== "completed"
+  ) {
+    throw new AiProviderError({
+      error: "KovaGPT couldn't complete that response. Please try again.",
+      code: "provider_bad_response",
+      retryable: true,
+      status: 502,
+    });
   }
   const message = responseOutputToMessage(value);
   const usage = value.usage as JsonObject | undefined;

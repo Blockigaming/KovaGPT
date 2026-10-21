@@ -1,5 +1,12 @@
 const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
 let stopActive = null;
+let playbackEpoch = 0;
+
+// A microphone session must not record audio from a response that is still
+// speaking. Reuse the active player's ordinary Stop path and state cleanup.
+export function stopActiveSpeechPlayback() {
+  stopActive?.();
+}
 
 function eventOnce(target, event, signal) {
   return new Promise((resolve, reject) => {
@@ -93,9 +100,11 @@ export function createSpeechPlayback({
   fetchImpl = fetch,
   createSink = createBrowserSpeechSink,
   onState,
+  onEnded,
 }) {
   let current = null;
   const stop = () => {
+    playbackEpoch++;
     const old = current;
     current = null;
     if (stopActive === stop) stopActive = null;
@@ -109,6 +118,7 @@ export function createSpeechPlayback({
     onState("idle");
   };
   const start = async (input) => {
+    const requestInput = Object.freeze({ ...input });
     stopActive?.();
     stop();
     stopActive = stop;
@@ -137,7 +147,13 @@ export function createSpeechPlayback({
           if (live()) onState("playing");
         },
         onEnded: () => {
-          if (live()) stop();
+          if (!live()) return;
+          const endedEpoch = playbackEpoch + 1;
+          stop();
+          // The idle callback may itself Stop, change account/chat, or start
+          // another player. Only the still-current natural ending can advance
+          // a voice turn; fetched bytes and ordinary Stop never call onEnded.
+          if (playbackEpoch === endedEpoch) onEnded?.(requestInput);
         },
         onError: () => fail("speech_playback_failed"),
       });
@@ -145,8 +161,8 @@ export function createSpeechPlayback({
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
-        headers: { "Content-Type": "application/json", "X-Kova-Owner": input.ownerId },
-        body: JSON.stringify(input),
+        headers: { "Content-Type": "application/json", "X-Kova-Owner": requestInput.ownerId },
+        body: JSON.stringify(requestInput),
         signal: run.controller.signal,
       });
       if (!live()) {

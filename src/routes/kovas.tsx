@@ -359,7 +359,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
   );
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5 overflow-y-auto p-4 sm:p-6">
-      <header className="flex flex-wrap items-center gap-3">
+      <header className="flex flex-wrap items-center gap-2">
         <div className="mr-auto">
           <h1 className="text-2xl font-semibold">Custom Kovas</h1>
           <p className="text-sm text-muted-foreground">
@@ -368,7 +368,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
         </div>
         {ownerId ? (
           <button
-            className="rounded bg-primary px-3 py-2 text-primary-foreground"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] bg-primary px-3 py-2 text-primary-foreground"
             disabled={disabled}
             onClick={() => {
               generation.current++;
@@ -387,7 +387,9 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
           </button>
         ) : (
           <SignInButton mode="modal">
-            <button className="rounded border px-3 py-2">Sign in to create or chat</button>
+            <button className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] border px-3 py-2">
+              Sign in to create or chat
+            </button>
           </SignInButton>
         )}
       </header>
@@ -421,21 +423,25 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
           before editing.
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <button
-          className="underline"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
           disabled={disabled || !ownerId}
           onClick={() => setScope("owned")}
         >
           My Kovas
         </button>
-        <button className="underline" disabled={disabled} onClick={() => setScope("directory")}>
+        <button
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
+          disabled={disabled}
+          onClick={() => setScope("directory")}
+        >
           Community directory
         </button>
-        <label className="ml-auto text-sm">
-          Search loaded Kovas{" "}
+        <label className="ml-auto flex max-w-full flex-wrap items-center gap-2 text-sm">
+          Search loaded Kovas
           <input
-            className="rounded border bg-background px-2 py-1"
+            className="min-h-11 min-w-11 max-w-full rounded-[var(--kova-radius-input)] border bg-background px-3 py-2"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -444,6 +450,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((card) => (
           <button
+            data-kova-button-shape="preserve"
             key={card.id}
             className="rounded-xl border p-4 text-left"
             disabled={disabled || !ownerId}
@@ -489,9 +496,9 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
               This Kova is unavailable following moderation. Its owner can still inspect or edit it.
             </p>
           )}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             <button
-              className="rounded bg-primary px-3 py-2 text-primary-foreground"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] bg-primary px-3 py-2 text-primary-foreground"
               disabled={disabled || view.blocked}
               onClick={() => void startChat()}
             >
@@ -500,7 +507,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
             {view.config.starters.map((s, i) => (
               <button
                 key={i}
-                className="rounded border px-3 py-2 text-sm"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] border px-3 py-2 text-sm"
                 disabled={disabled || view.blocked}
                 onClick={() => void startChat(s)}
               >
@@ -508,12 +515,16 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
               </button>
             ))}
             {view.owned && (
-              <button className="underline" disabled={disabled} onClick={() => setEditing(true)}>
+              <button
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
+                disabled={disabled}
+                onClick={() => setEditing(true)}
+              >
                 Edit Kova
               </button>
             )}
             <button
-              className="underline"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
               disabled={disabled || view.blocked || (!view.owned && !view.config.allowFork)}
               onClick={() => {
                 if (
@@ -530,7 +541,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
             </button>
             {view.publicationVersion && (
               <button
-                className="underline"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
                 disabled={disabled}
                 onClick={() => {
                   const reason = window.prompt(

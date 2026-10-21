@@ -55,13 +55,16 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   const billing = read("src/utils/payments.functions.ts");
   const pricing = read("src/routes/pricing.tsx");
 
-  assert.match(settings, /v: "billing",\s*label: "Billing"/);
+  assert.match(settings, /v: "billing",\s*label: "Subscriptions"/);
   assert.doesNotMatch(settings, /hideBilling|tabs\.filter\(\(t\) => t\.v !== "billing"\)/);
   assert.match(settings, /onClick=\{handleRestore\}/);
   assert.match(settings, /Refresh billing status/);
   assert.match(settings, /Select Refresh billing status to retry/);
   assert.match(settings, /This shared plan is managed by the Family Sharing owner/);
-  assert.match(settings, /Your own .* subscription is still[\s\S]*billed and can be managed below/);
+  assert.match(
+    settings,
+    /Your own .* subscription is\s+still[\s\S]*billed and can be managed below/,
+  );
   assert.match(settings, /billing conflict was detected/i);
   assert.match(settings, /No Stripe billing account is linked/);
   assert.doesNotMatch(settings, /plan changes in the Stripe billing portal/);

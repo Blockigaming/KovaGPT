@@ -177,7 +177,7 @@ test("shell error and not-found states use safe copy, landmarks, and real recove
     root,
     /function NotFoundComponent\(\)[\s\S]*?<main id="main-content" tabIndex=\{-1\}/,
   );
-  assert.match(root, /We couldn't find that page/);
+  assert.match(root, /This page isn’t available/);
   assert.match(
     root,
     /function ErrorComponent[\s\S]*?<main id="main-content" tabIndex=\{-1\} className="kova-state-screen"/,

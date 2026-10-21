@@ -1,0 +1,2299 @@
+{
+  "scope": "All supplemental inventory except Careers/job-related; isolated local review only",
+  "baseCoreCommit": "e38c31f53c6dd749a9e1e5d1ebc3be03381a9fcf",
+  "sourceInventory": "libfile_b2355137ae708191ba56ab2bea6c67a8",
+  "sourceRowCount": 84,
+  "excludedRows": ["INV-024", "INV-025", "INV-045"],
+  "renderers": [
+    "PublicShell",
+    "PublicPageView",
+    "PublicDetailPageView",
+    "ProductOverview",
+    "ReviewDirectory",
+    "ReviewWorkspace",
+    "ReviewFamilySurface"
+  ],
+  "reviewConfigurationCount": 75,
+  "implementedFiles": [
+    "docs/spec400/acceptance.json",
+    "src/components/public/ProductOverview.tsx",
+    "src/components/public/PublicShell.tsx",
+    "src/components/public/PublicSite.tsx",
+    "src/routes/$section.$articleSlug.tsx",
+    "src/routes/$section.$category.$articleSlug.tsx",
+    "src/routes/$slug.tsx",
+    "tests/unit/public-shell-responsive.test.mjs",
+    "src/components/public/ReviewWorkspace.tsx",
+    "src/components/public/spec400-public.css",
+    "src/lib/review-page-content.ts",
+    "tests/unit/spec400-additional-review.test.mjs",
+    "docs/spec400/additional-pages-evidence.json",
+    "src/components/public/ReviewFamilySurface.tsx"
+  ],
+  "routeRows": [
+    {
+      "id": "INV-001",
+      "section": "1. Public route inventory",
+      "externalPath": "/",
+      "purpose": "Main introduction, product demonstrations, developer entry points, news, and sales links.",
+      "status": "existing",
+      "renderer": "PublicSite/ProductOverview",
+      "supportedContent": "Existing product overview content and example tabs; primary Try action links /.",
+      "boundary": "Owner-approved company/market claims, dates and statistics remain required.",
+      "owner": "public",
+      "planningTarget": "/overview",
+      "implementedTarget": "/overview",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-002",
+      "section": "1. Public route inventory",
+      "externalPath": "/[product]",
+      "purpose": "Consumer assistant overview.",
+      "status": "existing",
+      "renderer": "PublicPageView",
+      "supportedContent": "Existing consumer assistant overview.",
+      "boundary": "Describe only supported Kova modes and available tools.",
+      "owner": "public",
+      "planningTarget": "/chat",
+      "implementedTarget": "/overview",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-003",
+      "section": "1. Public route inventory",
+      "externalPath": "/[product]/business",
+      "purpose": "Business assistant offering.",
+      "status": "existing",
+      "renderer": "PublicPageView",
+      "supportedContent": "Existing business/enterprise pages and status caveats.",
+      "boundary": "No new SLA, retention, compliance, price or procurement promise.",
+      "owner": "public",
+      "planningTarget": "/business; /enterprise",
+      "implementedTarget": "/business",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-004",
+      "section": "1. Public route inventory",
+      "externalPath": "/[product]/government",
+      "purpose": "Government offering.",
+      "status": "existing",
+      "renderer": "PublicDetailPageView",
+      "supportedContent": "Existing government-use overview.",
+      "boundary": "Owner must approve government offer, certifications, residency and contracting claims.",
+      "owner": "public",
+      "planningTarget": "/solutions/industries/government",
+      "implementedTarget": "/solutions/industries/government",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-005",
+      "section": "1. Public route inventory",
+      "externalPath": "/[product]/use-cases",
+      "purpose": "Application examples across different kinds of work.",
+      "status": "existing",
+      "renderer": "PublicPageView",
+      "supportedContent": "Existing Kova use-case index/detail content.",
+      "boundary": "Examples are illustrative, not assured performance.",
+      "owner": "public",
+      "planningTarget": "/use-cases",
+      "implementedTarget": "/use-cases",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-006",
+      "section": "1. Public route inventory",
+      "externalPath": "/build",
+      "purpose": "Coding and building product overview.",
+      "status": "existing",
+      "renderer": "PublicPageView + Work route",
+      "supportedContent": "Public coding overview can link actual work workspace.",
+      "boundary": "No arbitrary code execution or service activation inferred.",
+      "owner": "public",
+      "planningTarget": "/codex; /work",
+      "implementedTarget": "/build \u2192 /code-helper",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-007",
+      "section": "1. Public route inventory",
+      "externalPath": "/bot",
+      "purpose": "Persistent assistant product overview.",
+      "status": "new-review",
+      "renderer": "PublicPageView + scoped review states",
+      "supportedContent": "Reuse Kova /gpts, /remote and custom-Kova concepts.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/bot (proposed review overview)",
+      "implementedTarget": "/bot",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-008",
+      "section": "1. Public route inventory",
+      "externalPath": "/bot#download",
+      "purpose": "Download section within that overview.",
+      "status": "anchor-state",
+      "renderer": "Existing download status",
+      "supportedContent": "One overview section or link, not a separate screen.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/download or /bot#download",
+      "implementedTarget": "/bot#download",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-009",
+      "section": "1. Public route inventory",
+      "externalPath": "/bot/marketplace",
+      "purpose": "Catalog of specialized assistants.",
+      "status": "existing",
+      "renderer": "Public assistant directory + custom Kovas",
+      "supportedContent": "Public catalog is intentionally empty; /kovas supports private configurations with server gates.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/assistants; /kovas",
+      "implementedTarget": "/bot/marketplace \u2192 /assistants",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-010",
+      "section": "1. Public route inventory",
+      "externalPath": "/bot/guides",
+      "purpose": "Guides for using assistants.",
+      "status": "existing",
+      "renderer": "Publication directory + authored guide",
+      "supportedContent": "Reuse existing authored guide entries; add assistant setup/review guide only from actual controls.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/guides; /getting-started",
+      "implementedTarget": "/bot/guides \u2192 /guides",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-011",
+      "section": "1. Public route inventory",
+      "externalPath": "/bot/use-cases",
+      "purpose": "Examples of assistant workflows.",
+      "status": "state-or-existing",
+      "renderer": "Existing examples + review sections",
+      "supportedContent": "Show supported chat/configuration examples and clearly inactive persistent workflow concepts.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/use-cases; /bot review workflow section",
+      "implementedTarget": "/bot/use-cases \u2192 /use-cases",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-012",
+      "section": "1. Public route inventory",
+      "externalPath": "/changelog/bot",
+      "purpose": "Persistent assistant updates.",
+      "status": "state-or-existing",
+      "renderer": "Authored publication/update renderer",
+      "supportedContent": "Use actual authored records; empty filtered updates is meaningful.",
+      "boundary": "No fabricated release date/version or shipping claim.",
+      "owner": "public",
+      "planningTarget": "/changelog or /release-notes with scoped filter",
+      "implementedTarget": "/changelog/bot \u2192 /changelog",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-013",
+      "section": "1. Public route inventory",
+      "externalPath": "/voice",
+      "purpose": "Voice product overview.",
+      "status": "existing-review",
+      "renderer": "Existing public Voice page + scoped preview states",
+      "supportedContent": "Existing unavailable service/readiness content; private picker/layout review can be added.",
+      "boundary": "No microphone capture, live ElevenLabs call, playback, language coverage or voice quality claim.",
+      "owner": "public",
+      "planningTarget": "/voice",
+      "implementedTarget": "/voice \u2192 review action /review/voice",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-014",
+      "section": "1. Public route inventory",
+      "externalPath": "/api",
+      "purpose": "Developer API overview.",
+      "status": "existing",
+      "renderer": "Developer index/docs",
+      "supportedContent": "Existing API docs and links to actual console.",
+      "boundary": "Do not mark paid execution ready without operator pricing/service verification.",
+      "owner": "public",
+      "planningTarget": "/developers",
+      "implementedTarget": "/developers",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-015",
+      "section": "1. Public route inventory",
+      "externalPath": "/api/imagine",
+      "purpose": "Image and video API product page.",
+      "status": "existing-plus-review",
+      "renderer": "Developer documentation",
+      "supportedContent": "Existing image-generation documentation is reusable.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/developers/image-generation; optional media API review section",
+      "implementedTarget": "/review/api-imagine",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-016",
+      "section": "1. Public route inventory",
+      "externalPath": "/api/changelog",
+      "purpose": "API changes.",
+      "status": "state-or-existing",
+      "renderer": "Authored update renderer",
+      "supportedContent": "Use existing authored API changes when present, otherwise honest no-updates state.",
+      "boundary": "No invented SDK versions or changelog history.",
+      "owner": "public",
+      "planningTarget": "/changelog or /release-notes with developer filter",
+      "implementedTarget": "/changelog",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-017",
+      "section": "1. Public route inventory",
+      "externalPath": "/pricing",
+      "purpose": "Pricing information.",
+      "status": "existing",
+      "renderer": "Canonical price/config-driven views",
+      "supportedContent": "Consumer and developer pricing remain separate existing products.",
+      "boundary": "Keep current prices, currency, allowances and actual quote readiness.",
+      "owner": "core",
+      "planningTarget": "/pricing; /developers/pricing",
+      "implementedTarget": "/pricing",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-018",
+      "section": "1. Public route inventory",
+      "externalPath": "/solutions",
+      "purpose": "Solutions directory.",
+      "status": "existing",
+      "renderer": "PublicPageView",
+      "supportedContent": "Existing solutions index and detail families.",
+      "boundary": "No implied certified industry deployment.",
+      "owner": "public",
+      "planningTarget": "/solutions",
+      "implementedTarget": "/solutions",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-019",
+      "section": "1. Public route inventory",
+      "externalPath": "/solutions/customer-support",
+      "purpose": "Customer support applications.",
+      "status": "new-review",
+      "renderer": "PublicDetailPageView",
+      "supportedContent": "Can organize existing conversation/knowledge retrieval capabilities into a support workflow.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/solutions/customer-support (proposed review detail)",
+      "implementedTarget": "/solutions/customer-support",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-020",
+      "section": "1. Public route inventory",
+      "externalPath": "/solutions/legal",
+      "purpose": "Legal-work applications.",
+      "status": "new-review",
+      "renderer": "PublicDetailPageView",
+      "supportedContent": "Document analysis/research review with professional-review guidance.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/solutions/legal (proposed review detail)",
+      "implementedTarget": "/solutions/legal",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-021",
+      "section": "1. Public route inventory",
+      "externalPath": "/solutions/security",
+      "purpose": "Security-work applications.",
+      "status": "new-review",
+      "renderer": "PublicDetailPageView",
+      "supportedContent": "Existing security/permission boundaries as workflow context.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/solutions/security (proposed review detail)",
+      "implementedTarget": "/solutions/security",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-022",
+      "section": "1. Public route inventory",
+      "externalPath": "/company",
+      "purpose": "Mission, principles, locations, and company timeline.",
+      "status": "existing",
+      "renderer": "PublicPageView",
+      "supportedContent": "Existing Kova-authored overview and mission content.",
+      "boundary": "Locations, corporate identity, leadership and timeline need owner-approved facts.",
+      "owner": "public",
+      "planningTarget": "/about; /mission; /our-structure",
+      "implementedTarget": "/company \u2192 /about",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-023",
+      "section": "1. Public route inventory",
+      "externalPath": "/colossus",
+      "purpose": "Computing infrastructure overview.",
+      "status": "new-review",
+      "renderer": "PublicDetailPageView",
+      "supportedContent": "A clearly labeled infrastructure status/review surface.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/infrastructure (proposed review detail)",
+      "implementedTarget": "/infrastructure",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-024",
+      "section": "1. Public route inventory",
+      "externalPath": "/careers",
+      "purpose": "Benefits, hiring process, and featured jobs.",
+      "status": "excluded-career",
+      "owner": "none",
+      "boundary": "Owner expressly excludes Careers/job-related scope.",
+      "planningTarget": null,
+      "implementedTarget": null,
+      "implementationState": "excluded-careers"
+    },
+    {
+      "id": "INV-025",
+      "section": "1. Public route inventory",
+      "externalPath": "/careers/open-roles",
+      "purpose": "Searchable or filterable job directory.",
+      "status": "excluded-career",
+      "owner": "none",
+      "boundary": "Owner expressly excludes Careers/job-related scope.",
+      "planningTarget": null,
+      "implementedTarget": null,
+      "implementationState": "excluded-careers"
+    },
+    {
+      "id": "INV-026",
+      "section": "1. Public route inventory",
+      "externalPath": "/news",
+      "purpose": "Announcement directory.",
+      "status": "existing",
+      "renderer": "PUBLICATION_SECTIONS",
+      "supportedContent": "Existing authored publication directory.",
+      "boundary": "No fabricated news cards or dates.",
+      "owner": "public",
+      "planningTarget": "/news",
+      "implementedTarget": "/news",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-027",
+      "section": "1. Public route inventory",
+      "externalPath": "/news/[slug]",
+      "purpose": "Individual announcement or article.",
+      "status": "dynamic-existing",
+      "renderer": "PUBLICATION_BY_KEY + article renderer",
+      "supportedContent": "Only actual publication records; unknown ID gets meaningful missing view.",
+      "boundary": "Dynamic pattern is not one additional page per hypothetical slug.",
+      "owner": "public",
+      "planningTarget": "/news/{existing authored slug}",
+      "implementedTarget": "/news/{existing authored slug}",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-028",
+      "section": "1. Public route inventory",
+      "externalPath": "/contact",
+      "purpose": "General contact destination.",
+      "status": "existing",
+      "renderer": "Contact support route",
+      "supportedContent": "Existing inquiry fields and real submission/failure states.",
+      "boundary": "Private review must not submit or imply delivery.",
+      "owner": "core",
+      "planningTarget": "/contact-support",
+      "implementedTarget": "/contact \u2192 /contact-support",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-029",
+      "section": "1. Public route inventory",
+      "externalPath": "/contact-sales",
+      "purpose": "Sales inquiry destination.",
+      "status": "existing",
+      "renderer": "Existing sales overview/action",
+      "supportedContent": "Preserve current destination, purpose and no-service caveat.",
+      "boundary": "Owner facts for sales recipient, response time and enterprise offer.",
+      "owner": "public",
+      "planningTarget": "/contact-sales",
+      "implementedTarget": "/contact-sales; /review/sales-request",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-030",
+      "section": "1. Public route inventory",
+      "externalPath": "/safety",
+      "purpose": "Safety information.",
+      "status": "existing",
+      "renderer": "PublicPageView + authored safety route",
+      "supportedContent": "Existing Kova safety guidance.",
+      "boundary": "Do not borrow third-party research, evaluation results or model training summary.",
+      "owner": "public",
+      "planningTarget": "/safety; /ai-safety",
+      "implementedTarget": "/safety",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-031",
+      "section": "1. Public route inventory",
+      "externalPath": "/security",
+      "purpose": "Security information.",
+      "status": "existing",
+      "renderer": "PublicPageView",
+      "supportedContent": "Existing security information and limitations.",
+      "boundary": "No invented SOC/ISO, encryption, incident or pentest claims.",
+      "owner": "public",
+      "planningTarget": "/security",
+      "implementedTarget": "/security",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-032",
+      "section": "1. Public route inventory",
+      "externalPath": "/privacy-portal",
+      "purpose": "Privacy-request destination.",
+      "status": "existing-plus-review",
+      "renderer": "Privacy document + actual Data control actions",
+      "supportedContent": "Create a review privacy-request entry only if it points to actual supported export/delete/contact mechanism.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "core+public",
+      "planningTarget": "/privacy; /settings/data (actual final key to verify)",
+      "implementedTarget": "/privacy-portal",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-033",
+      "section": "1. Public route inventory",
+      "externalPath": "/legal",
+      "purpose": "Legal document directory.",
+      "status": "existing",
+      "renderer": "PublicPageView policy directory",
+      "supportedContent": "Current legal documents plus clearly labeled compatibility/status references.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/policies",
+      "implementedTarget": "/legal",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-034",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/terms-of-service",
+      "purpose": "Consumer service terms.",
+      "status": "existing",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Current canonical terms; preserve exact owner-authored wording.",
+      "boundary": "No rewriting obligations from the external reference.",
+      "owner": "public",
+      "planningTarget": "/terms",
+      "implementedTarget": "/legal/terms-of-service \u2192 /terms",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-035",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/terms-of-service-enterprise",
+      "purpose": "Enterprise service terms.",
+      "status": "existing-status",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing compatibility status + current terms/contact link.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/policies/services-agreement",
+      "implementedTarget": "/legal/terms-of-service-enterprise",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-036",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/startup-program-terms",
+      "purpose": "Startup program terms.",
+      "status": "new-review",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Subject-specific program boundary/review page.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/legal/startup-program-terms (review status)",
+      "implementedTarget": "/legal/startup-program-terms",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-037",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/[product]-bot-terms",
+      "purpose": "Persistent assistant terms.",
+      "status": "new-review",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Persistent assistant terms status and current /terms link.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/legal/assistant-terms (review status)",
+      "implementedTarget": "/legal/kova-bot-terms",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-038",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/bot-sharing-terms",
+      "purpose": "Terms for third-party assistant templates.",
+      "status": "existing-status",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing compatibility status plus actual private-sharing constraints.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/policies/sharing-publication-policy",
+      "implementedTarget": "/legal/bot-sharing-terms",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-039",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/x-subscription-terms-of-service",
+      "purpose": "Bundled subscription consumer terms.",
+      "status": "shared-review",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "One bundled-subscription boundary view can cover these external product-specific aliases.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/legal/bundled-subscription (review status)",
+      "implementedTarget": "/legal/x-subscription-terms-of-service",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-040",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/bundled-subscription-terms",
+      "purpose": "Subscription purchase and renewal terms.",
+      "status": "shared-review",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Link canonical /terms and /refund with current purchase contracts.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/legal/bundled-subscription (review status)",
+      "implementedTarget": "/legal/bundled-subscription-terms",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-041",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/x-subscription-[product]-addendum",
+      "purpose": "Product-specific subscription addendum.",
+      "status": "anchor-state",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Product-specific addendum status in same boundary view.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/legal/bundled-subscription#product-addendum (review section)",
+      "implementedTarget": "/legal/x-subscription-kova-addendum",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-042",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/x-subscription-cursor-addendum",
+      "purpose": "Companion coding-product subscription addendum.",
+      "status": "anchor-state",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Coding companion addendum status in same boundary view.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/legal/bundled-subscription#coding-addendum (review section)",
+      "implementedTarget": "/legal/x-subscription-cursor-addendum",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-043",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/acceptable-use-policy",
+      "purpose": "Permitted and prohibited use.",
+      "status": "existing",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing Kova acceptable-use content.",
+      "boundary": "Retain exact actual policy and owner review status.",
+      "owner": "public",
+      "planningTarget": "/acceptable-use",
+      "implementedTarget": "/legal/acceptable-use-policy \u2192 /acceptable-use",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-044",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/privacy-policy",
+      "purpose": "Privacy policy.",
+      "status": "existing",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Current canonical privacy content.",
+      "boundary": "No imported training/retention/subprocessor claims.",
+      "owner": "public",
+      "planningTarget": "/privacy",
+      "implementedTarget": "/legal/privacy-policy \u2192 /privacy",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-045",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/recruitment-privacy-notice",
+      "purpose": "Applicant privacy information.",
+      "status": "excluded-career",
+      "owner": "none",
+      "boundary": "Owner expressly excludes Careers/job-related scope.",
+      "planningTarget": null,
+      "implementedTarget": null,
+      "implementationState": "excluded-careers"
+    },
+    {
+      "id": "INV-046",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/europe-privacy-policy-addendum",
+      "purpose": "Regional privacy addendum.",
+      "status": "existing-status",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing regional notice and explicit compatibility status.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/regional-notices; /policies/eu-services-privacy-policy",
+      "implementedTarget": "/legal/europe-privacy-policy-addendum",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-047",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/cookie-policy",
+      "purpose": "Cookie policy.",
+      "status": "existing",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing cookie information/preferences.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/cookie-policy",
+      "implementedTarget": "/legal/cookie-policy \u2192 /cookie-policy",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-048",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/faq",
+      "purpose": "Consumer FAQ.",
+      "status": "existing",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing authored help/search/article workflow.",
+      "boundary": "No new legal answers invented to fill reference categories.",
+      "owner": "public",
+      "planningTarget": "/help",
+      "implementedTarget": "/legal/faq \u2192 /help",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-049",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/faq-enterprise",
+      "purpose": "Enterprise FAQ.",
+      "status": "new-review",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Business questions with known source answers or owner-decision status.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/legal/enterprise-faq (review detail)",
+      "implementedTarget": "/legal/faq-enterprise",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-050",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/ccpa",
+      "purpose": "Privacy transparency report.",
+      "status": "existing-status",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing explicit compatibility/status page.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/policies/privacy-policy/california-privacy-rights-reporting",
+      "implementedTarget": "/legal/ccpa",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-051",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/law-enforcement",
+      "purpose": "Legal-request information.",
+      "status": "existing-plus-review",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing legal-request subject route is related, not equivalent to criminal request policy.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/policies/civil-user-data-requests; /legal/law-enforcement (review status)",
+      "implementedTarget": "/legal/law-enforcement",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-052",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/subprocessor-list",
+      "purpose": "Data subprocessors.",
+      "status": "existing-status",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing non-adoption status with current privacy/contact destination.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/policies/sub-processor-list",
+      "implementedTarget": "/legal/subprocessor-list",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-053",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/baa",
+      "purpose": "Healthcare-related agreement destination.",
+      "status": "new-review",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Subject-specific unavailable agreement status.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/legal/baa (review status)",
+      "implementedTarget": "/legal/baa",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-054",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/data-processing-addendum",
+      "purpose": "Data processing agreement.",
+      "status": "existing-status",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing compatibility status; current controlling document takes priority.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/policies/data-processing-addendum",
+      "implementedTarget": "/legal/data-processing-addendum",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-055",
+      "section": "2. Legal and policy routes",
+      "externalPath": "/legal/brand-guidelines",
+      "purpose": "Identity and asset usage rules.",
+      "status": "existing",
+      "renderer": "PublicDetailPageView/legal review section",
+      "supportedContent": "Existing Kova identity and assets.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public",
+      "planningTarget": "/brand",
+      "implementedTarget": "/legal/brand-guidelines \u2192 /brand",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-056",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/",
+      "purpose": "New conversation entry screen.",
+      "status": "existing",
+      "renderer": "Assistant new-chat state",
+      "supportedContent": "Assistant new-chat state",
+      "boundary": "Use spec400 shell/composer and real account model gates.",
+      "owner": "core",
+      "planningTarget": "/",
+      "implementedTarget": "/",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-057",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/sign-in?return_to=%2F",
+      "purpose": "Sign-in flow returning to chat.",
+      "status": "auth-state",
+      "renderer": "Existing account workflow",
+      "supportedContent": "Existing account workflow",
+      "boundary": "External query is a state, not a new independent login design.",
+      "owner": "core",
+      "planningTarget": "Existing sign-in entry \u2192 /auth with validated return",
+      "implementedTarget": "/auth?mode=sign-in&returnTo=%2F",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-058",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/sign-up?return_to=%2F",
+      "purpose": "Registration flow returning to chat.",
+      "status": "auth-state",
+      "renderer": "Existing registration workflow",
+      "supportedContent": "Existing registration workflow",
+      "boundary": "Preserve auth provider and safe return contract.",
+      "owner": "core",
+      "planningTarget": "Existing sign-up entry \u2192 /auth with validated return",
+      "implementedTarget": "/auth?mode=sign-up&returnTo=%2F",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-059",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/imagine",
+      "purpose": "Media creation homepage.",
+      "status": "existing",
+      "renderer": "Existing image creation/library",
+      "supportedContent": "Existing image creation/library",
+      "boundary": "Use real assets, model and supported edit contracts.",
+      "owner": "core",
+      "planningTarget": "/images",
+      "implementedTarget": "/images",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-060",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/sign-in?return_to=%2Fimagine",
+      "purpose": "Sign-in flow returning to media creation.",
+      "status": "auth-state",
+      "renderer": "Same auth component",
+      "supportedContent": "Same auth component",
+      "boundary": "Do not transplant external /imagine redirect; verify Kova return handling.",
+      "owner": "core",
+      "planningTarget": "Existing sign-in entry with safe /images return",
+      "implementedTarget": "/auth?mode=sign-in&returnTo=%2Fimages",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-061",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/sign-up?return_to=%2Fimagine",
+      "purpose": "Registration flow returning to media creation.",
+      "status": "auth-state",
+      "renderer": "Same registration component",
+      "supportedContent": "Same registration component",
+      "boundary": "Same validated return requirement.",
+      "owner": "core",
+      "planningTarget": "Existing sign-up entry with safe /images return",
+      "implementedTarget": "/auth?mode=sign-up&returnTo=%2Fimages",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-062",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/history",
+      "purpose": "Conversation history.",
+      "status": "state-or-existing",
+      "renderer": "Actual conversation IDs/store",
+      "supportedContent": "Actual conversation IDs/store",
+      "boundary": "History is a data view, not authorization to invent saved-chat URLs.",
+      "owner": "core",
+      "planningTarget": "Existing CommandPalette/history in assistant; optional canonical history route",
+      "implementedTarget": "/ (existing history/search)",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-063",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/history?tab=shared-with-me",
+      "purpose": "Conversations shared with the current team member.",
+      "status": "tab-state",
+      "renderer": "listSharedWithMe/shared-chats.functions",
+      "supportedContent": "Mounted Library disclosure uses listSharedWithMe in baseline lines430\u2013431, heading1350.",
+      "boundary": "/share-inbox is PWA incoming text, not this view; preserve actual recipient rights.",
+      "owner": "core",
+      "planningTarget": "/library \u2192 Shared chats \u2192 Shared with me",
+      "implementedTarget": "/library (Shared chats)",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-064",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/share-links",
+      "purpose": "Management of public conversation links.",
+      "status": "tab-state",
+      "renderer": "Shared-chat manager contracts",
+      "supportedContent": "Mounted Library uses listMySharedChats and revokeSharedChat (baseline430\u2013431,837\u2013838).",
+      "boundary": "Actual shares are recipient-scoped snapshots; do not relabel them public links.",
+      "owner": "core",
+      "planningTarget": "/library \u2192 Shared chats \u2192 sent shares",
+      "implementedTarget": "/library (Shared chats)",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-065",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/release-notes",
+      "purpose": "Product update destination.",
+      "status": "existing",
+      "renderer": "Authored update directory",
+      "supportedContent": "Authored update directory",
+      "boundary": "Existing content only.",
+      "owner": "core",
+      "planningTarget": "/release-notes; /changelog",
+      "implementedTarget": "/release-notes; /changelog",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-066",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/release-notes/[date-slug]",
+      "purpose": "Dated product update.",
+      "status": "dynamic-existing",
+      "renderer": "PUBLICATION_BY_KEY",
+      "supportedContent": "PUBLICATION_BY_KEY",
+      "boundary": "No arbitrary date slug or invented release.",
+      "owner": "core",
+      "planningTarget": "/release-notes/{existing authored slug}",
+      "implementedTarget": "/release-notes/{existing authored slug}",
+      "implementationState": "existing-kova-route-or-safe-alias",
+      "states": ["existing authored or configured state"],
+      "validation": "Source mapped; service/runtime behavior belongs to core owner and final browser pass."
+    },
+    {
+      "id": "INV-067",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/imagine/post/[id]",
+      "purpose": "Individual media post.",
+      "status": "item-state",
+      "renderer": "Existing image-history/Library identity",
+      "supportedContent": "Existing image-history/Library identity",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "core",
+      "planningTarget": "/images selected existing image ID or review detail",
+      "implementedTarget": "/review/media-post",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-068",
+      "section": "5. Assistant website \u2014 verified routes",
+      "externalPath": "/imagine/agent/[id]",
+      "purpose": "Media agent project surface.",
+      "status": "new-review",
+      "renderer": "Meaningful local agent-project preview",
+      "supportedContent": "Meaningful local agent-project preview",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core coordination",
+      "planningTarget": "/review/media-agent/{local review ID} (proposed)",
+      "implementedTarget": "/review/media-agent",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-069",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-photo-edit",
+      "purpose": "Photo editing workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/photo-edit (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-photo-edit",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-070",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-ecommerce-listing",
+      "purpose": "Product listing photography workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/ecommerce-listing (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-ecommerce-listing",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-071",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-hero-product-reveal",
+      "purpose": "Product reveal workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/hero-product-reveal (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-hero-product-reveal",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-072",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-living-sprite",
+      "purpose": "Character sprite workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/living-sprite (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-living-sprite",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-073",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-mascot-maker",
+      "purpose": "Mascot creation workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/mascot-maker (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-mascot-maker",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-074",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-aspect-ratio",
+      "purpose": "Image resizing workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/aspect-ratio (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-aspect-ratio",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-075",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-profile-picture",
+      "purpose": "Profile image creation workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/profile-picture (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-profile-picture",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-076",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-product-color-change",
+      "purpose": "Product recoloring workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/product-color-change (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-product-color-change",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-077",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-ugc-photos",
+      "purpose": "Casual promotional photography workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/ugc-photos (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-ugc-photos",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-078",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-professional-headshot",
+      "purpose": "Professional portrait workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/professional-headshot (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-professional-headshot",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-079",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-restyle",
+      "purpose": "Image restyling workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/restyle (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-restyle",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-080",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-background-removal",
+      "purpose": "Background removal or replacement workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/background-removal (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-background-removal",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-081",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-collage",
+      "purpose": "Photo collage workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/collage (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-collage",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-082",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-icon-maker",
+      "purpose": "Icon creation workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/icon-maker (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-icon-maker",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-083",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-emoji-creator",
+      "purpose": "Emoji creation workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/emoji-creator (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-emoji-creator",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    },
+    {
+      "id": "INV-084",
+      "section": "6. Media template routes \u2014 observed",
+      "externalPath": "/imagine/template/imagine-editorial-poster",
+      "purpose": "Editorial product poster workflow.",
+      "status": "template-state",
+      "renderer": "One template directory + reusable template detail/form",
+      "supportedContent": "Reference label can organize a clearly local, unsent configuration. Existing image presets/assets and supported operations remain authoritative.",
+      "boundary": "Local draft only; no service, publication, agreement acceptance, account mutation or claim of availability.",
+      "owner": "public-review + core Images coordination",
+      "planningTarget": "/review/media/templates/editorial-poster (proposed), linking /images only for supported actions",
+      "implementedTarget": "/review/media-editorial-poster",
+      "implementationState": "implemented-local-review",
+      "states": [
+        "initial-local-draft",
+        "editable",
+        "preview",
+        "saved-in-tab",
+        "restore",
+        "reset-confirmation",
+        "reset-cancel",
+        "copy-failure"
+      ]
+    }
+  ],
+  "nonRouteGroups": [
+    {
+      "id": "PUBLIC-NAV",
+      "inventorySections": [3, 4],
+      "owner": "public",
+      "shape": "Shared header/footer, groups and cookie preferences; not separate routes per control",
+      "source": "PublicShell/PublicSite/PublicSections",
+      "acceptance": "Every navigation item resolves to Kova canonical/review destination; keyboard menus and mobile drawer bounded; / returns assistant only where explicitly labeled Try Kova, public home returns /overview; no new advertising or cookie claims.",
+      "implementedTargets": ["PublicShell", "PublicFooter", "ProductOverview"],
+      "reviewEvidence": "Local component source/hook tests only; no rendered-browser acceptance"
+    },
+    {
+      "id": "MEDIA",
+      "inventorySections": [6, 11, 12, 13],
+      "owner": "public-review + core Images",
+      "shape": "Template directory/detail, Image/Video/Agent mode states, ratio/quality options and editor overlays",
+      "source": "routes/images.tsx, image-history, Library image contracts",
+      "acceptance": "Review-only unsupported video/upscale/loop/audio/first-last-frame states stay visibly unavailable. Existing generation/edit action routes remain gated. Sixteen templates share one renderer but each needs its actual form/content reviewed.",
+      "implementedTargets": [
+        "/review/media-{template}",
+        "/review/media-video",
+        "/review/media-references",
+        "/images"
+      ],
+      "reviewEvidence": "Local component source/hook tests only; no rendered-browser acceptance"
+    },
+    {
+      "id": "HISTORY-SHARING",
+      "inventorySections": [14],
+      "owner": "core",
+      "shape": "Search, history, share review, received/sent sharing manager; not external private URL copies",
+      "source": "CommandPalette, ShareChatDialog, shared-chats.functions, Library shared managers",
+      "acceptance": "Preserve actual conversation identity, recipient scope, archive behavior, complete snapshot preview and revoke contracts. No public link sharing inferred.",
+      "implementedTargets": ["/", "/library"],
+      "reviewEvidence": "Local component source/hook tests only; no rendered-browser acceptance"
+    },
+    {
+      "id": "PROJECT-WORK",
+      "inventorySections": [15, 16],
+      "owner": "core + public-review",
+      "shape": "Existing project workspace, Context/Chats, Result, Work run/planning states; unsupported tools have local review states",
+      "source": "projects routes, ArtifactEditor, work.tsx, scheduled-tasks.tsx",
+      "acceptance": "Spreadsheet/diagram/3D/electronics/folder-upload concepts are not real editing support until validated. Financial/email triggers remain service-gated. Schedule receipt and next runs use actual scheduler.",
+      "implementedTargets": [
+        "/projects",
+        "/work",
+        "/scheduled-tasks",
+        "/review/project-diagram",
+        "/review/project-3d",
+        "/review/project-electronics",
+        "/review/project-folders",
+        "/review/automation-email",
+        "/review/automation-financial"
+      ],
+      "reviewEvidence": "Local component source/hook tests only; no rendered-browser acceptance"
+    },
+    {
+      "id": "SETTINGS-AUTH",
+      "inventorySections": [17],
+      "owner": "core",
+      "shape": "Stable Settings subroutes, MFA/recovery/account overlays",
+      "source": "SettingsDialog page surface, settings.$section, auth.tsx",
+      "acceptance": "New spec stable pages supersede external dialog appearance. Only actual account/provider policies; no fake SSO/MFA or social-data access.",
+      "implementedTargets": ["/settings/{section}", "/auth"],
+      "reviewEvidence": "Local component source/hook tests only; no rendered-browser acceptance"
+    },
+    {
+      "id": "BILLING",
+      "inventorySections": [18],
+      "owner": "core",
+      "shape": "Canonical consumer/developer billing with actual pending/error states; proposed credits/autotopup represented as unavailable if absent",
+      "source": "pricing.tsx, Settings billing, developers.console/pricing, checkout.return",
+      "acceptance": "Do not invent recurring credits, exchange rates, payment methods, team pricing, taxes, allowance or purchase success. No payment activation in private review.",
+      "implementedTargets": ["/pricing", "/settings/billing", "/developers/pricing"],
+      "reviewEvidence": "Local component source/hook tests only; no rendered-browser acceptance"
+    },
+    {
+      "id": "TEAM",
+      "inventorySections": [19],
+      "owner": "public-review + organization owner",
+      "shape": "Existing organization/member admin plus clearly local team-review states",
+      "source": "organization.tsx, OrganizationAdminPage, account roles",
+      "acceptance": "Real member roles and tenant boundaries; retention UI is a draft, not activated retention. Invites/licenses/SSO/policy/save outcomes only when actual contract succeeds. No test transmission.",
+      "implementedTargets": ["/review/team-{subject}", "/organization"],
+      "reviewEvidence": "Local component source/hook tests only; no rendered-browser acceptance"
+    },
+    {
+      "id": "VOICE",
+      "inventorySections": [20],
+      "owner": "public-review",
+      "shape": "Public overview plus local call-state/voice-picker/settings review",
+      "source": "Existing /voice and unavailable voice presentation",
+      "acceptance": "New scope permits design, not actual mic/audio/provider calls. Unavailable state visible; no fabricated previews or languages.",
+      "implementedTargets": ["/voice", "/review/voice"],
+      "reviewEvidence": "Local component source/hook tests only; no rendered-browser acceptance"
+    },
+    {
+      "id": "PERSISTENT-ASSISTANT",
+      "inventorySections": [20],
+      "owner": "public-review + core coordination",
+      "shape": "Profile/group/template/skills/routines/computer/teach/notification/shared-output states",
+      "source": "/kovas, /assistants, /notifications, /work, current share/download contracts",
+      "acceptance": "Use existing Kova config/notification contracts where supported. Computer access, teach recording, continuous execution and public/team template marketplace remain unavailable pending actual service. Support ID copy copies only a real existing ID; PDF is real local export or explicitly unavailable.",
+      "implementedTargets": ["/bot", "/review/assistant-{subject}"],
+      "reviewEvidence": "Local component source/hook tests only; no rendered-browser acceptance"
+    }
+  ],
+  "reviewConfigurations": [
+    {
+      "route": "/review/project-diagram",
+      "family": "developer",
+      "title": "Diagram review"
+    },
+    {
+      "route": "/review/project-3d",
+      "family": "developer",
+      "title": "3D model review"
+    },
+    {
+      "route": "/review/project-electronics",
+      "family": "developer",
+      "title": "Electronics file review"
+    },
+    {
+      "route": "/review/project-folders",
+      "family": "developer",
+      "title": "Folder upload plan"
+    },
+    {
+      "route": "/review/automation-email",
+      "family": "developer",
+      "title": "Email trigger plan"
+    },
+    {
+      "route": "/review/automation-financial",
+      "family": "developer",
+      "title": "Financial trigger plan"
+    },
+    {
+      "route": "/review/voice",
+      "family": "voice",
+      "title": "Voice conversation"
+    },
+    {
+      "route": "/review/assistant-profile",
+      "family": "assistant",
+      "title": "Assistant profile"
+    },
+    {
+      "route": "/review/assistant-conversation",
+      "family": "assistant",
+      "title": "Assistant conversation"
+    },
+    {
+      "route": "/review/assistant-details",
+      "family": "assistant",
+      "title": "Conversation details"
+    },
+    {
+      "route": "/review/assistant-group",
+      "family": "assistant",
+      "title": "Group conversation settings"
+    },
+    {
+      "route": "/review/assistant-template",
+      "family": "assistant",
+      "title": "Assistant template"
+    },
+    {
+      "route": "/review/assistant-shared-template",
+      "family": "assistant",
+      "title": "Shared template preview"
+    },
+    {
+      "route": "/review/assistant-skills",
+      "family": "assistant",
+      "title": "Assistant skills"
+    },
+    {
+      "route": "/review/assistant-routines",
+      "family": "assistant",
+      "title": "Assistant routines"
+    },
+    {
+      "route": "/review/assistant-computer",
+      "family": "assistant",
+      "title": "Computer view"
+    },
+    {
+      "route": "/review/assistant-teach",
+      "family": "assistant",
+      "title": "Teach a task"
+    },
+    {
+      "route": "/review/assistant-notifications",
+      "family": "assistant",
+      "title": "Assistant notifications"
+    },
+    {
+      "route": "/review/assistant-shared-output",
+      "family": "assistant",
+      "title": "Shared output"
+    },
+    {
+      "route": "/review/media-photo-edit",
+      "family": "media",
+      "title": "Photo editing"
+    },
+    {
+      "route": "/review/media-ecommerce-listing",
+      "family": "media",
+      "title": "Product listing photography"
+    },
+    {
+      "route": "/review/media-hero-product-reveal",
+      "family": "media",
+      "title": "Product reveal"
+    },
+    {
+      "route": "/review/media-living-sprite",
+      "family": "media",
+      "title": "Character sprite"
+    },
+    {
+      "route": "/review/media-mascot-maker",
+      "family": "media",
+      "title": "Mascot creation"
+    },
+    {
+      "route": "/review/media-aspect-ratio",
+      "family": "media",
+      "title": "Image resizing"
+    },
+    {
+      "route": "/review/media-profile-picture",
+      "family": "media",
+      "title": "Profile image"
+    },
+    {
+      "route": "/review/media-product-color-change",
+      "family": "media",
+      "title": "Product recoloring"
+    },
+    {
+      "route": "/review/media-ugc-photos",
+      "family": "media",
+      "title": "Promotional photography"
+    },
+    {
+      "route": "/review/media-professional-headshot",
+      "family": "media",
+      "title": "Professional portrait"
+    },
+    {
+      "route": "/review/media-restyle",
+      "family": "media",
+      "title": "Image restyling"
+    },
+    {
+      "route": "/review/media-background-removal",
+      "family": "media",
+      "title": "Background removal"
+    },
+    {
+      "route": "/review/media-collage",
+      "family": "media",
+      "title": "Photo collage"
+    },
+    {
+      "route": "/review/media-icon-maker",
+      "family": "media",
+      "title": "Icon creation"
+    },
+    {
+      "route": "/review/media-emoji-creator",
+      "family": "media",
+      "title": "Emoji creation"
+    },
+    {
+      "route": "/review/media-editorial-poster",
+      "family": "media",
+      "title": "Editorial poster"
+    },
+    {
+      "route": "/review/media-text-edit",
+      "family": "media",
+      "title": "Text editing"
+    },
+    {
+      "route": "/review/media-precise-edit",
+      "family": "media",
+      "title": "Precise editing"
+    },
+    {
+      "route": "/review/media-loop",
+      "family": "media",
+      "title": "Looping video"
+    },
+    {
+      "route": "/review/media-post",
+      "family": "media",
+      "title": "Media post"
+    },
+    {
+      "route": "/review/media-agent",
+      "family": "media",
+      "title": "Media project"
+    },
+    {
+      "route": "/review/media-references",
+      "family": "media",
+      "title": "Reference images"
+    },
+    {
+      "route": "/review/media-video",
+      "family": "media",
+      "title": "Video settings"
+    },
+    {
+      "route": "/review/team-workspace",
+      "family": "team",
+      "title": "Team workspace"
+    },
+    {
+      "route": "/review/team-licenses",
+      "family": "team",
+      "title": "License assignment"
+    },
+    {
+      "route": "/review/team-invitations",
+      "family": "team",
+      "title": "Team invitations"
+    },
+    {
+      "route": "/review/team-settings",
+      "family": "team",
+      "title": "Team settings"
+    },
+    {
+      "route": "/review/team-usage",
+      "family": "team",
+      "title": "Team usage"
+    },
+    {
+      "route": "/review/team-members",
+      "family": "team",
+      "title": "Connector members"
+    },
+    {
+      "route": "/review/team-sharing",
+      "family": "team",
+      "title": "Team sharing"
+    },
+    {
+      "route": "/review/team-retention",
+      "family": "team",
+      "title": "Organization retention"
+    },
+    {
+      "route": "/review/legal-cookie-policy",
+      "family": "legal",
+      "title": "Cookie policy review"
+    },
+    {
+      "route": "/review/legal-enterprise-faq",
+      "family": "legal",
+      "title": "Enterprise questions"
+    },
+    {
+      "route": "/review/legal-terms-of-service-enterprise",
+      "family": "legal",
+      "title": "Enterprise service terms"
+    },
+    {
+      "route": "/review/legal-startup-program-terms",
+      "family": "legal",
+      "title": "Startup program terms"
+    },
+    {
+      "route": "/review/legal-kova-bot-terms",
+      "family": "legal",
+      "title": "Persistent assistant terms"
+    },
+    {
+      "route": "/review/legal-bot-sharing-terms",
+      "family": "legal",
+      "title": "Assistant sharing terms"
+    },
+    {
+      "route": "/review/legal-x-subscription-terms-of-service",
+      "family": "legal",
+      "title": "Bundled consumer terms"
+    },
+    {
+      "route": "/review/legal-bundled-subscription-terms",
+      "family": "legal",
+      "title": "Subscription purchase and renewal terms"
+    },
+    {
+      "route": "/review/legal-x-subscription-kova-addendum",
+      "family": "legal",
+      "title": "Product subscription addendum"
+    },
+    {
+      "route": "/review/legal-x-subscription-cursor-addendum",
+      "family": "legal",
+      "title": "Companion product addendum"
+    },
+    {
+      "route": "/review/legal-europe-privacy-policy-addendum",
+      "family": "legal",
+      "title": "Regional privacy addendum"
+    },
+    {
+      "route": "/review/legal-ccpa",
+      "family": "legal",
+      "title": "Privacy transparency report"
+    },
+    {
+      "route": "/review/legal-law-enforcement",
+      "family": "legal",
+      "title": "Legal requests"
+    },
+    {
+      "route": "/review/legal-subprocessor-list",
+      "family": "legal",
+      "title": "Subprocessors"
+    },
+    {
+      "route": "/review/legal-baa",
+      "family": "legal",
+      "title": "Healthcare agreement"
+    },
+    {
+      "route": "/review/legal-data-processing-addendum",
+      "family": "legal",
+      "title": "Data processing agreement"
+    },
+    {
+      "route": "/review/legal-brand-guidelines",
+      "family": "legal",
+      "title": "Brand usage review"
+    },
+    {
+      "route": "/review/solution-customer-support",
+      "family": "request",
+      "title": "Customer support evaluation"
+    },
+    {
+      "route": "/review/solution-legal",
+      "family": "request",
+      "title": "Legal-work evaluation"
+    },
+    {
+      "route": "/review/solution-security",
+      "family": "request",
+      "title": "Security-work evaluation"
+    },
+    {
+      "route": "/review/privacy-request",
+      "family": "request",
+      "title": "Privacy request preparation"
+    },
+    {
+      "route": "/review/sales-request",
+      "family": "request",
+      "title": "Sales inquiry preparation"
+    },
+    {
+      "route": "/review/infrastructure",
+      "family": "infrastructure",
+      "title": "Infrastructure evidence"
+    },
+    {
+      "route": "/review/api-imagine",
+      "family": "developer",
+      "title": "Media API planning"
+    },
+    {
+      "route": "/review/government",
+      "family": "request",
+      "title": "Government evaluation"
+    }
+  ],
+  "checks": {
+    "focusedTests": {
+      "command": "node --test tests/unit/spec400-additional-review.test.mjs tests/unit/public-shell-responsive.test.mjs tests/unit/public-foundation.test.mjs tests/unit/public-detail-pages.test.mjs tests/unit/public-helper-reflow.test.mjs",
+      "passed": 38,
+      "failed": 0,
+      "kind": "source and component hook/state, not DOM",
+      "coverage": [
+        "All75review routes resolve with noindex metadata",
+        "Local preview/save/restore/reset cancellation",
+        "Principal-scoped storage and keyed account transition remount",
+        "Voice preview start/pause/resume/stop",
+        "Copy and download failure preserving drafts",
+        "No provider APIs or recording in review runtime",
+        "Public shell responsive source contracts",
+        "Existing detail/public foundations"
+      ]
+    },
+    "typecheck": {
+      "command": "node_modules/.bin/tsc --noEmit --pretty false",
+      "exitCode": 0,
+      "note": "Purpose-specific revision checked separately; no full build."
+    },
+    "fullBuild": "Not run by worker; lead owns build",
+    "browser": "Not run; environment launcher restriction honored; lead native browser review pending"
+  },
+  "actualGaps": [
+    "Exact built-byte browser QA remains pending across phone, desktop, narrow, tablet, ultrawide, themes, text zoom and keyboard. Source tests do not prove visual acceptance.",
+    "Review configurations share family-specific planning controls; they are not seventy-five independent live product implementations.",
+    "Voice has text-only start/pause/resume/end and illustrative preference choices. No microphone, real voice, audio preview or call service exists.",
+    "Persistent assistant computer/teach/skills/routines/templates/notifications are local instruction and readiness previews, not live execution or access. No support request ID exists to copy.",
+    "Shared-output preview exports a real local JSON draft only. PDF generation, actual published snapshots and owner share controls require a real supported output.",
+    "Media templates offer local reference/ratio/frame-role/quality/audio-brief preview; no image edits, video generation, upscale, looping or provider upload occurs.",
+    "Team/license/invitation/usage/retention previews do not establish entitlements or mutate organizations.",
+    "Specialized legal pages contain readiness checklists, not invented agreements, subprocessors, notices, terms or acceptance controls.",
+    "Existing legal/admin publication gates are retained; unapproved legacy policy routes may intentionally remain unavailable.",
+    "Core authentication, billing, history, sharing, Images, Projects, Library, Work and Settings service acceptance is owned by the core implementation; this map is not new proof of those operations."
+  ],
+  "preserved": [
+    "Root / remains assistant",
+    "Original logo and current public light/dark palette",
+    "Existing authored public records and legal/admin caveats",
+    "No Careers links in new navigation or review directory",
+    "No provider calls, deployment, spend, credentials or new permissions",
+    "Drafts scoped by account principal and page; account transitions remount visible state before restoration"
+  ],
+  "representativeReviewRoutes": [
+    "/review/media-photo-edit",
+    "/review/voice",
+    "/review/assistant-teach",
+    "/review/team-retention",
+    "/legal/baa"
+  ],
+  "purposeSpecificRevision": {
+    "reason": "Replaced generic title/notes/checklist-first form with purpose-specific primary reading and workflow surfaces.",
+    "legal": "Read-only publication/version/scope status, subject-specific document topics and existing policy links; questions secondary.",
+    "voice": "Call-state preview first; style/language/speed illustrative preferences secondary.",
+    "media": "Reference and composition first; per-template editing instruction; frame-role/quality/audio proposal controls restricted to video, loop and reveal.",
+    "team": "Retention scope and positive-whole-day proposal with live summary; role/sharing proposals; usage explicitly unavailable. No active policy or entitlement implied.",
+    "assistant": "Profile configuration; teach manual steps with numbered preview; routine trigger summary; disconnected computer display; no-notification/no-shared-output state.",
+    "product": "Persistent-assistant overview with profile/task-preview entry points, accurate local capabilities and explicit service boundaries.",
+    "infrastructure": "Disclosure-status reading surface with unverified evidence categories rather than fabricated metrics.",
+    "secondaryTools": "Save/restore/reset, notes, readiness and JSON export moved under secondary disclosures.",
+    "accountSafety": "Principal+page scope retained, account changes keyed to fresh component before display, no cross-account restoration.",
+    "testsAdded": [
+      "Legal read-only primary status",
+      "Retention fields and summary",
+      "Photo-edit excludes unrelated video controls",
+      "Voice primary heading and teach step preview",
+      "No provider APIs in family renderer"
+    ]
+  },
+  "routePurposeCorrection": "Known catalog, guides, use cases and existing policy content use canonical destinations; local planning configurations remain under /review."
+}

@@ -1,0 +1,509 @@
+.kova-conversation-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+}
+.kova-conversation-actions button {
+  -webkit-tap-highlight-color: transparent;
+}
+.kova-conversation-share,
+.kova-conversation-icon {
+  display: inline-flex;
+  min-height: 44px;
+  min-width: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--kova-radius-button);
+  color: var(--foreground);
+  background: transparent;
+  border: 0;
+  transition: background-color 120ms ease;
+}
+.kova-conversation-share {
+  gap: 8px;
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 400;
+}
+.kova-conversation-actions svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.kova-conversation-actions button:hover,
+.kova-conversation-actions button[data-state="open"] {
+  background: var(--accent);
+}
+.kova-conversation-actions button:focus-visible,
+.kova-output-row:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-conversation-menu,
+.kova-conversation-submenu,
+.kova-conversation-outputs {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-menu);
+  max-width: calc(100vw - 24px);
+  max-height: min(
+    70dvh,
+    var(
+      --radix-dropdown-menu-content-available-height,
+      var(--radix-popover-content-available-height, 70dvh)
+    )
+  );
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 12px;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 12%);
+}
+.kova-conversation-menu {
+  width: 288px;
+}
+.kova-conversation-submenu {
+  width: 280px;
+}
+.kova-conversation-menu [role="menuitem"],
+.kova-conversation-submenu [role="menuitem"] {
+  min-height: 44px;
+  padding: 10px 16px;
+  gap: 14px;
+  border-radius: var(--kova-radius-compact);
+  font-size: 15px;
+  line-height: 1.4;
+}
+.kova-conversation-menu [role="menuitem"] > svg,
+.kova-conversation-submenu [role="menuitem"] > svg {
+  width: 19px;
+  height: 19px;
+}
+.kova-conversation-menu [role="separator"] {
+  margin: 8px;
+}
+.kova-conversation-menu .kova-conversation-delete {
+  color: var(--foreground);
+}
+.kova-conversation-menu .kova-conversation-delete > svg {
+  color: var(--destructive);
+}
+.kova-conversation-menu .kova-conversation-delete:focus,
+.kova-conversation-menu .kova-conversation-delete:hover,
+.kova-conversation-menu .kova-conversation-delete[data-highlighted] {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--destructive) 9%, transparent);
+}
+.kova-conversation-outputs {
+  width: 352px;
+  padding: 18px;
+}
+.kova-conversation-outputs h2 {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin: 2px 4px 8px;
+  font-weight: 500;
+}
+.kova-output-list {
+  display: grid;
+  gap: 2px;
+}
+.kova-output-row {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 6px;
+  border-radius: var(--kova-radius-compact);
+  text-align: left;
+  font-size: 14px;
+}
+.kova-output-row:hover {
+  background: var(--accent);
+}
+.kova-output-row > svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.kova-output-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+.kova-output-label {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  font-size: 12px;
+}
+.kova-header-note {
+  margin: 6px 6px 10px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.kova-header-title-input {
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-input);
+  background: var(--background);
+  color: var(--foreground);
+}
+.kova-header-title-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-header-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+.kova-header-dialog-buttons button {
+  min-height: 44px;
+}
+.kova-header-text-preview {
+  max-height: 50dvh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: var(--kova-radius-output);
+  background: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.kova-header-image-preview {
+  max-height: 55dvh;
+  width: 100%;
+  object-fit: contain;
+}
+.kova-conversation-actions-compact {
+  gap: 0;
+}
+.kova-conversation-actions-compact .kova-conversation-share {
+  padding: 0;
+}
+.kova-conversation-actions-compact .kova-conversation-share span {
+  display: none;
+}
+.kova-conversation-sources {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.kova-source-group > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 6px;
+  border-radius: var(--kova-radius-compact);
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
+}
+.kova-source-group > summary::-webkit-details-marker {
+  display: none;
+}
+.kova-source-group > summary:hover,
+.kova-source-memory:hover {
+  background: var(--accent);
+}
+.kova-source-group > summary > span {
+  flex: 1;
+}
+.kova-source-group > summary svg,
+.kova-source-browser > svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.kova-source-group > summary > svg:last-child {
+  width: 14px;
+}
+.kova-source-group[open] > summary > svg:last-child {
+  transform: rotate(90deg);
+}
+.kova-source-group small,
+.kova-source-browser small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-source-group ol {
+  list-style: none;
+  margin: 2px 0 8px 30px;
+  padding: 0;
+}
+.kova-source-group a {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: var(--kova-radius-compact);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.kova-source-group a:hover {
+  background: var(--accent);
+}
+.kova-source-memory {
+  display: block;
+  min-height: 44px;
+  width: calc(100% - 30px);
+  margin-left: 30px;
+  padding: 8px;
+  text-align: left;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.kova-source-browser {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 6px;
+  min-height: 52px;
+}
+.kova-source-browser > span:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+.kova-source-browser strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+}
+.kova-source-browser small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.kova-source-state {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.kova-source-state-active {
+  color: var(--foreground);
+}
+.kova-source-group summary:focus-visible,
+.kova-source-group a:focus-visible,
+.kova-source-memory:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-conversation-sources:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.kova-browser-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.kova-browser-section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.kova-browser-card {
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  border: 0;
+  border-radius: var(--kova-radius-output);
+  background: transparent;
+  color: var(--foreground);
+}
+.kova-browser-card:hover:not(:disabled) .kova-browser-card-action {
+  color: var(--foreground);
+}
+.kova-browser-card:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.kova-browser-card-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-height: 156px;
+  padding: 20px;
+  border-radius: var(--kova-radius-output);
+  background: var(--muted);
+}
+.kova-browser-card-content > svg {
+  width: 24px;
+  height: 24px;
+  opacity: 0.65;
+}
+.kova-browser-card-content strong {
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.kova-browser-card-content small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-browser-card-footer {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 2px 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.kova-browser-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.kova-browser-card-footer svg {
+  width: 14px;
+  height: 14px;
+}
+.kova-sample-browser-thumbnail {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: #fafafa;
+  color: #262626;
+  border-radius: 18px;
+  min-height: 180px;
+  text-align: left;
+}
+.kova-sample-browser-toolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  color: #999;
+  font-size: 9px;
+  background: #ededed;
+}
+.kova-sample-browser-toolbar span {
+  margin-left: 12px;
+  font-size: 10px;
+}
+.kova-sample-browser-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 24px 36px;
+  font-size: 11px;
+}
+.kova-sample-browser-page strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+.kova-sample-browser-line {
+  display: block;
+  height: 6px;
+  border-radius: 6px;
+  background: #e5e5e5;
+  width: 85%;
+}
+.kova-sample-browser-line:last-child {
+  width: 60%;
+}
+.kova-sample-browser-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  border-radius: 9px;
+  background: #444;
+  color: #fff;
+  padding: 5px 9px;
+  font-size: 10px;
+}
+
+.kova-browser-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.kova-browser-section-heading h2 {
+  margin-bottom: 0;
+}
+.kova-browser-section-heading .kova-source-state {
+  font-size: 12px;
+}
+
+.kova-conversation-actions-compact .kova-conversation-share {
+  display: none;
+}
+
+/* Phone overflow follows the compact, floating reference surface. */
+.kova-conversation-menu-phone {
+  width: clamp(220px, 59vw, 260px);
+  padding: 12px 10px;
+  border-radius: var(--kova-radius-menu);
+  background: color-mix(in srgb, var(--popover) 89%, transparent);
+  backdrop-filter: blur(24px) saturate(115%);
+  -webkit-backdrop-filter: blur(24px) saturate(115%);
+  border-color: color-mix(in srgb, var(--foreground) 12%, transparent);
+  box-shadow:
+    0 14px 45px rgb(0 0 0 / 18%),
+    inset 0 1px 0 rgb(255 255 255 / 5%);
+}
+.kova-conversation-menu-title {
+  padding: 0 14px 8px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kova-conversation-menu-phone [role="menuitem"] {
+  min-height: 44px;
+  padding: 8px 14px;
+  gap: 14px;
+  font-size: 16px;
+  border-radius: var(--kova-radius-compact);
+}
+.kova-conversation-menu-phone [role="menuitem"] > svg {
+  width: 21px;
+  height: 21px;
+}
+.kova-conversation-menu-phone .kova-mobile-secondary {
+  display: none;
+}
+.kova-find-results {
+  max-height: 45dvh;
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+}
+.kova-find-result {
+  padding: 12px;
+  border-radius: 16px;
+  text-align: left;
+  min-height: 44px;
+  background: var(--accent);
+}
+.kova-find-result span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-find-result p {
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  margin-top: 4px;
+}

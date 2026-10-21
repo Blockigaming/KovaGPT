@@ -1,0 +1,3442 @@
+{
+  "schema": "kova-spec400-acceptance-reconciliation-proposal-v1",
+  "candidate_commit": "22850d3e92c4046315642be89779808a3dd267e6",
+  "candidate_tree": "6d4af71275bcda78602cb28de4f09a13a47b1c29",
+  "baseline_commit": "9cc0d1fd70832e6ac7d5f1ff003cf22b02de9f32",
+  "created_at_utc": "2026-10-19T00:29:00Z",
+  "mode": "Read-only reconciliation. Only external reconciliation artifacts were written. No browser, build, test/install, network, provider write, source edit or acceptance edit.",
+  "scope": {
+    "priority_ranges": ["1\u201360", "92\u2013140", "331\u2013360", "383\u2013400"],
+    "additional_literal_pending": [79, 80, 365],
+    "requirements_reconciled": 160,
+    "literal_pending_reconciled": 84,
+    "all_acceptance_status_counts": {
+      "pending": 84,
+      "implemented_source": 39,
+      "implemented_source_pending_render": 183,
+      "partial": 17,
+      "owner_override_preserved": 19,
+      "preserved_tested": 2,
+      "blocked_contract": 5,
+      "partial_contract_bound": 43,
+      "preserved": 4,
+      "external_measurement_pending": 1,
+      "test_prepared": 3
+    }
+  },
+  "interpretation": [
+    "Proposal dispositions describe the supported narrow claim,not full requirement acceptance. Every remaining condition is retained.",
+    "bounded_rendered_checked always refers to cited prior commit/cell/receipt; it is NOT current228 render verification.",
+    "Same-file blob comparisons identify potentially unchanged implementation only; shared style/dependency changes still invalidate visual carry-forward.",
+    "guard-22850d3.md and successor-22850d3-pixel-gate.md are assignments,not result receipts.",
+    "Existing authored test counts were not rerun here; screenshots were not freshly inspected by this worker. Their hashes were independently checked against existing reviewer ledgers.",
+    "Preserve original9cc/current palette and localized owner blue response override,Free/business/auth/provider contracts,and no live provider claims."
+  ],
+  "literal_pending_proposed_counts": {
+    "partial": 49,
+    "preserved": 7,
+    "implemented_source": 21,
+    "bounded_rendered_checked": 5,
+    "blocked_contract": 2
+  },
+  "logo_sha256": {
+    "baseline9cc": "566cd64480ac25307146106efc073064f2c2161935babb9625a370469dc24ae2",
+    "candidate228": "566cd64480ac25307146106efc073064f2c2161935babb9625a370469dc24ae2"
+  },
+  "concrete_remaining_gaps": [
+    {
+      "id": "G01",
+      "kind": "source_gap",
+      "requirements": [42],
+      "finding": "Eight combined pinned+recent rows, rather than eight recent chats.",
+      "source": "src/components/Sidebar.tsx:1054\u20131082",
+      "next": "Reconcile intended count; keep pinned access and searchable full history."
+    },
+    {
+      "id": "G02",
+      "kind": "source_gap",
+      "requirements": [45],
+      "finding": "Customize sidebar interrupts required Profile, Settings, Usage, Billing, Help, divider, Log out order.",
+      "source": "src/components/Sidebar.tsx:1131\u20131193",
+      "next": "Preserve customization entry while restoring required ordered group."
+    },
+    {
+      "id": "G03",
+      "kind": "source_gap",
+      "requirements": [133],
+      "finding": "All toasts default 4s; examined actionable authentication/MFA failures use no persistent duration or inline operation error.",
+      "source": "src/components/ui/sonner.tsx:28;src/routes/auth.tsx:163\u2013167,207\u2013220;src/components/MfaPanel.tsx:357\u2013360",
+      "next": "Keep actionable errors visible until resolved/dismissed and verify keyboard/error placement."
+    },
+    {
+      "id": "G04",
+      "kind": "source_gap",
+      "requirements": [126],
+      "finding": "Long task editor has one generic error alert without linked invalid-field summary.",
+      "source": "src/components/ScheduledTaskEditor.tsx:423\u2013458,1043\u20131063",
+      "next": "Add field-associated errors/summary for submitted validation; preserve actual scheduler validation."
+    },
+    {
+      "id": "G05",
+      "kind": "source_gap",
+      "requirements": [137],
+      "finding": "Projects loading grid uses auto-fill240/gap 16; populated project grid uses content 620/960 and 24 desktop gaps.",
+      "source": "src/components/states.tsx:34\u201357;src/routes/projects.tsx:771\u2013776;src/styles/spec400-management.css:111\u2013125",
+      "next": "Compare loading/final geometry at same container widths; reuse matching row/card skeletons."
+    },
+    {
+      "id": "G06",
+      "kind": "source_gap",
+      "requirements": [5, 102, 127, 132],
+      "finding": "Remaining shared-consumer mismatches include Temporary Chat Sparkles, default Button SVG 16px, standard dialog base gap 16/phone padding 20, and toast composer clearance not established.",
+      "source": "src/components/TemporaryChatStartDialog.tsx:88;src/components/ui/button.tsx:8;src/components/ui/dialog.tsx:50\u201357;src/components/ui/sonner.tsx:31",
+      "next": "Audit scoped applicable consumers/rendered results; do not assume token declarations overrule every legacy class."
+    },
+    {
+      "id": "G07",
+      "kind": "source_and_contract_gap",
+      "requirements": [332, 358, 359, 360],
+      "finding": "Active sessions lacks device/activity list; resend timing is client policy; auth return/session-expiry flows untested.",
+      "source": "src/components/MfaPanel.tsx:631\u2013642;src/routes/auth.tsx:288,307;src/lib/oauth-session.ts:44\u2013102",
+      "next": "Check actual service capabilities and run authorized synthetic/test-environment lifecycle cases; never invent session or resend data."
+    },
+    {
+      "id": "G08",
+      "kind": "pending_successor_retest",
+      "requirements": [26, 27, 57, 96, 101, 130, 131, 333],
+      "finding": "228 patches9c navigation crash, media/remove and dialog/focus issues, delete consequence copy, project/task/plugin hierarchy, phone shells, image reveal, Usage cap, Work controls and timer permission/audio behavior.",
+      "source": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/guard-22850d3.md",
+      "next": "Use current reviewer\u2019s exact228 receipt/pixels. This proposal does not close those checks from source."
+    },
+    {
+      "id": "G09",
+      "kind": "contract_block",
+      "requirements": [9, 339, 343, 346, 347, 384, 387, 395, 396],
+      "finding": "Upcoming billing fields/invoices, provider lifecycle, public result links, and production chat-created task receipt remain bounded by real contracts.",
+      "source": "docs/spec400/billing-evidence.json;docs/spec400/responses-results-coverage.md;docs/spec400/scope-and-contracts.md",
+      "next": "Disclose gaps and preserve Free/auth/pricing/provider permissions. Unavailable UI is not missing operation completion."
+    },
+    {
+      "id": "G10",
+      "kind": "coverage_gap",
+      "requirements": [
+        15, 21, 23, 24, 79, 80, 140, 389, 390, 391, 392, 393, 394, 397, 398, 399, 400
+      ],
+      "finding": "No full 1440 frame, all-page/state/theme matrix, 30-message/genuinely-wide-table coverage, rendered clipboard failure, complete destructive/return paths, or complete interaction/package reconciliation.",
+      "source": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/receipt.md",
+      "next": "Keep complete acceptance open; distinguish fixtures, source tests, pixels, workflows and live services."
+    }
+  ],
+  "items": [
+    {
+      "id": 1,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Implement this as KovaGPT\u2019s complete interface specification.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Core and added review surfaces are implemented to differing depths; complete interface acceptance is still open.",
+      "evidence_refs": ["scope", "render638", "render9c", "gate228"],
+      "rendered_image_refs": [],
+      "remaining": "Finish inventory/state matrix, affected228 retests and real contract gates; no all 400/perfection statement.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 2,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Continue the supplied project.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Separate candidate retains baseline ancestry and supplied project; inspected authority modules/assets remain present.",
+      "evidence_refs": ["scope", "payment", "policy", "logo"],
+      "rendered_image_refs": [],
+      "remaining": "This audit does not prove every working feature or user-data preservation flow.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 3,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Stop using percentage similarity to ChatGPT as the design objective.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Current scope and acceptance are stated against the400-item Kova specification and concrete gates.",
+      "evidence_refs": ["scope", "gate228"],
+      "rendered_image_refs": [],
+      "remaining": "Do not replace qualitative/spec acceptance with percentage similarity.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 4,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use this visual direction throughout:",
+      "proposed_disposition": "partial",
+      "supported_claim": "Structural tokens use retained9cc palette; localized response blue override is separate.",
+      "evidence_refs": ["tokens", "scope", "render638"],
+      "rendered_image_refs": [],
+      "remaining": "Global palette replacement is owner-overridden; complete all-page visual review remains open.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 5,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Make the application feel like a polished productivity tool.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Representative Chat/Settings/auth surfaces use restrained shared presentation.",
+      "evidence_refs": ["render638", "temporary"],
+      "rendered_image_refs": [],
+      "remaining": "Sparkles still appears in TemporaryChatStartDialog.tsx:88; no exhaustive decorative-symbol removal audit.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 6,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep Chat as the familiar name for conversations.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Core sidebar labels are New chat, Search, Chat, Projects, Scheduled tasks, Library, Plugins.",
+      "evidence_refs": ["side"],
+      "rendered_image_refs": [],
+      "remaining": "Cross-screen synonym audit remains broader than these source locations; visibility retains authentication/capability gates.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 7,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep the sidebar.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "Single persistent sidebar/selected Chat/recent row is recorded in the complete 1024 Dark core image.",
+      "evidence_refs": ["side", "tokens", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "This is prior 638 core-cell evidence, not every route/width or current 228 pixels.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 8,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep existing business rules authoritative.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Inspected payment, quota and model-policy authorities retain baseline contracts; Free image/upload copy uses the established3/day and 2/day limits.",
+      "evidence_refs": ["payment", "limits", "policy", "plans", "scope"],
+      "rendered_image_refs": [],
+      "remaining": "Not a complete semantic diff of every business/security contract or live entitlement acceptance.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 9,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use real application configuration for variable facts.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Billing/Usage/Library distinguish canonical/measured values from unavailable upcoming-charge, invoice and some metadata contracts.",
+      "evidence_refs": ["plans", "billdoc", "detaildoc", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Do not fabricate storage limits, server timezone, provider states or prices to fill gaps.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 10,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Separate demonstration behavior from connected functionality.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "Prior 9c synthetic image/media/export/Usage samples and unavailable providers are explicitly bounded by the receipt.",
+      "evidence_refs": ["scope", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "No live-operation success is established; audit every success producer separately.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 11,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Do not introduce unsupported capabilities.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Plugins, Work and Billing explain unsupported service actions in representative reviewed states.",
+      "evidence_refs": ["operational", "render9c", "billdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Not every ordinary workflow was audited; preserve disabled/service states and no new permissions.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 12,
+      "current_status": "implemented_source",
+      "literal_pending": false,
+      "requirement_title": "Keep Voice and Deep Research outside this redesign.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Ordinary composer stays outside Voice/Deep Research; later owner expansion permits separately labeled private Voice review.",
+      "evidence_refs": ["scope", "chatdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Provider integration/paid or live Voice remains gated; preserve latest scope override.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 13,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Preserve the approved Kova logo.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Approved /kova-logo.png remains byte-identical to 9cc; proportion-preserving shared component is used.",
+      "evidence_refs": ["logo", "render638"],
+      "rendered_image_refs": ["638a162/auth1024-light.jpg", "9c59085/auth1024-light.jpg"],
+      "remaining": "No separate approved light/dark asset is established; do not invent variants.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 14,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Create shared components before redesigning individual screens.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared Sidebar, WorkspacePageHeader, Button/Input/Dialog, response boxes and Toaster exist.",
+      "evidence_refs": ["side", "head", "button", "input", "dialog", "copy", "toast"],
+      "rendered_image_refs": [],
+      "remaining": "Legacy/raw controls and modal variants remain; component existence does not establish universal consistency.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 15,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Create an interaction inventory.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Management and response documents define many control/event/result/error rows.",
+      "evidence_refs": ["mgmtdoc", "responsedoc", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "No single exhaustive build-to-control inventory reconciliation establishes every visible control/state/link.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 16,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Make the main sidebar order:",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Required core destinations appear in requested order before history; existing Images/More remain afterward.",
+      "evidence_refs": ["side"],
+      "rendered_image_refs": [],
+      "remaining": "Signed-in and scheduler eligibility retain authority; exact collapsed/mobile interaction states need scoped rendered checks.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 17,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Preserve additional enabled product areas.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Existing Work remains reachable and honestly unavailable execution is reviewed at 9c.",
+      "evidence_refs": ["side", "work", "render9c"],
+      "rendered_image_refs": ["9c59085/work1024-light.jpg"],
+      "remaining": "228 preparation geometry changed; graph/run-body/live execution not reviewed.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 18,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep account utilities at the bottom of the sidebar.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Help/account footer and direct primary destinations remain; Settings/Usage/Billing are in account menu.",
+      "evidence_refs": ["side", "tokens"],
+      "rendered_image_refs": [],
+      "remaining": "Full mobile/collapsed/access-state review is not established.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 19,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use these exact primary labels:",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Core sidebar labels are New chat, Search, Chat, Projects, Scheduled tasks, Library, Plugins.",
+      "evidence_refs": ["side"],
+      "rendered_image_refs": [],
+      "remaining": "Cross-screen synonym audit remains broader than these source locations; visibility retains authentication/capability gates.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 20,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep existing conversation URLs working.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Project/chat identifier route and existing chat identity/data flow remain.",
+      "evidence_refs": ["routechat", "chat"],
+      "rendered_image_refs": [],
+      "remaining": "All old conversation deep-link, refresh and Back/Forward paths were not exercised.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 21,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Give every main destination a stable URL.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Stable core and Settings routes exist; exact generation-stable Library link/reload behavior was checked at 9c.",
+      "evidence_refs": ["routesettings", "routechat", "detaildoc", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Every destination, browser Back/Forward and independent-tab continuation remains unverified.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 22,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Map renamed routes through redirects.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Renaming Apps presentation to Plugins retains established /apps destination instead of breaking existing route.",
+      "evidence_refs": ["side", "scope"],
+      "rendered_image_refs": [],
+      "remaining": "No complete historical-route/redirect matrix has been reconciled; do not infer all old links work.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 23,
+      "current_status": "partial",
+      "literal_pending": false,
+      "requirement_title": "Preserve navigation state.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Principal-scoped list preference storage plus Library same-tab reload check exists; folder preference source was subsequently extended.",
+      "evidence_refs": ["listdoc", "folderdoc", "detaildoc", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Universal scroll restoration, every list/remount and independent-tab search parity are not established.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 24,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Preserve unfinished input while navigating.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Text drafts remain scoped to principal/chat; attachment/result drafts are mounted-only and navigation is guarded. Project Context retains draft/Cancel behavior.",
+      "evidence_refs": ["chat", "signin", "projectdetail", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "No universal cross-route form/document draft system or full network-failure/recovery chain proved.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 25,
+      "current_status": "partial",
+      "literal_pending": false,
+      "requirement_title": "Use breadcrumbs on detail pages.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Library detail has clickable parent and preserved list return; Project detail breadcrumb exists.",
+      "evidence_refs": ["detaildoc", "projectdetail", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Current 228 Project hierarchy changed and needs retest; no all-detail-page audit.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 26,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use one page title per screen.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared header/action placement exists; prior duplicate management headers were explicitly assigned and patched in228 source.",
+      "evidence_refs": ["head", "project", "projectdetail", "tasks", "gate228"],
+      "rendered_image_refs": [],
+      "remaining": "Await actual228 Projects/Tasks/Plugins/title/action pixels; prior 9c defect images do not close it.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 27,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep main actions in predictable positions.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared header/action placement exists; prior duplicate management headers were explicitly assigned and patched in228 source.",
+      "evidence_refs": ["head", "project", "projectdetail", "tasks", "gate228"],
+      "rendered_image_refs": [],
+      "remaining": "Await actual228 Projects/Tasks/Plugins/title/action pixels; prior 9c defect images do not close it.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 28,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use object-specific overflow menus.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Conversation, project, Library and task object menus retain identity-specific operations and destructive separation.",
+      "evidence_refs": ["side", "project", "library", "tasks", "mgmtdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Specific role/selection/destructive behavior must still be checked per operation; no broad mutation execution claim.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 29,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Do not bury primary navigation inside the account menu.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Help/account footer and direct primary destinations remain; Settings/Usage/Billing are in account menu.",
+      "evidence_refs": ["side", "tokens"],
+      "rendered_image_refs": [],
+      "remaining": "Full mobile/collapsed/access-state review is not established.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 30,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep familiar controls recognizable.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Representative tabs/search/fields/menus follow familiar shared controls.",
+      "evidence_refs": ["button", "input", "dialog", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Qualitative consistency across every surface is not established.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 31,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use a 248-pixel expanded desktop sidebar.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 32,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use a 72-pixel collapsed desktop sidebar.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 33,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use the persistent desktop sidebar at viewport widths of 1,024 CSS pixels and above.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 34,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Make the sidebar header 64 pixels tall.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Source defines64px/16px sidebar header, 28px logo, 2px selected marker, independently scrollable history/fixed footer, 56px profile and 32px avatar.",
+      "evidence_refs": ["tokens", "side", "logo"],
+      "rendered_image_refs": [],
+      "remaining": "Precise computed geometry and every loading/collapsed footer state remain unverified.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 35,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Render the sidebar logo symbol at 28\u00d728 pixels.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Source defines64px/16px sidebar header, 28px logo, 2px selected marker, independently scrollable history/fixed footer, 56px profile and 32px avatar.",
+      "evidence_refs": ["tokens", "side", "logo"],
+      "rendered_image_refs": [],
+      "remaining": "Precise computed geometry and every loading/collapsed footer state remain unverified.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 36,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Make New chat a 44-pixel-tall button.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 37,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Make sidebar navigation rows 44 pixels tall.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 38,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use 14-pixel, weight-500 sidebar labels.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 39,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Mark the selected sidebar row with a neutral raised background and a two-pixel accent marker.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Source defines64px/16px sidebar header, 28px logo, 2px selected marker, independently scrollable history/fixed footer, 56px profile and 32px avatar.",
+      "evidence_refs": ["tokens", "side", "logo"],
+      "rendered_image_refs": [],
+      "remaining": "Precise computed geometry and every loading/collapsed footer state remain unverified.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 40,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use hover as a temporary neutral background change.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 41,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Separate navigation from recent chats with 20 pixels of space and a \u201cRecent chats\u201d label.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 42,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Show eight recent chats initially.",
+      "proposed_disposition": "partial",
+      "supported_claim": "View all chats opens search and initial sidebar collection is capped.",
+      "evidence_refs": ["side"],
+      "rendered_image_refs": [],
+      "remaining": "Source uses up to 8 combined pinned+recent items; it does not show8 recents in addition to pinned. Clarify or correct exact requirement without discarding pinned access.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 43,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep the sidebar footer fixed while recent chats scroll.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Source defines64px/16px sidebar header, 28px logo, 2px selected marker, independently scrollable history/fixed footer, 56px profile and 32px avatar.",
+      "evidence_refs": ["tokens", "side", "logo"],
+      "rendered_image_refs": [],
+      "remaining": "Precise computed geometry and every loading/collapsed footer state remain unverified.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 44,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use a 56-pixel profile row in the footer.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Source defines64px/16px sidebar header, 28px logo, 2px selected marker, independently scrollable history/fixed footer, 56px profile and 32px avatar.",
+      "evidence_refs": ["tokens", "side", "logo"],
+      "rendered_image_refs": [],
+      "remaining": "Precise computed geometry and every loading/collapsed footer state remain unverified.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 45,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Open the profile menu above the profile row.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Profile menu opens above account row and contains the required destinations.",
+      "evidence_refs": ["side"],
+      "rendered_image_refs": [],
+      "remaining": "Customize sidebar is inserted between Settings and Usage at 1149\u20131158, breaking specified exact order; retain feature while reconciling placement.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 46,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Display the signed-in account clearly.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Actual profile identity fields are used when present; Profile read-only identity was checked at 638.",
+      "evidence_refs": ["side", "profiledoc", "render638"],
+      "rendered_image_refs": [],
+      "remaining": "Sidebar fallback Account/initial and default Free remain in source; loading/unknown-plan truthfulness needs explicit fixture review.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 47,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use a 64-pixel desktop main header.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 48,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use a 56-pixel mobile main header.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 49,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use 32-pixel main-content padding on desktop, 24 pixels on tablets, and 16 pixels on phones.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 50,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Limit ordinary management pages to 1,200 pixels of content width.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Scoped shared CSS/source defines sidebar248/72, breakpoint 1024, navigation44, 14px labels, header64/56 and content 32/24/16/max1200.",
+      "evidence_refs": ["tokens", "side", "mgmtcss", "render638"],
+      "rendered_image_refs": ["638a162/desktop1024-dark.jpg"],
+      "remaining": "Prior 1024/phone samples support only their visible cells; collapsed focus tooltips/all breakpoint and safe-area behavior need dedicated rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 51,
+      "current_status": "implemented_source",
+      "literal_pending": false,
+      "requirement_title": "Limit the ordinary chat reading column to 760 pixels.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Chat reading width/result-only container split, min panes, ratio reset and Context drawer have source and focused tests.",
+      "evidence_refs": ["chat", "chatcss", "chatdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Full 1440/split/resizer/state-preservation pixels are not established by the1024 image.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 52,
+      "current_status": "implemented_source",
+      "literal_pending": false,
+      "requirement_title": "Use a two-pane layout only when an editable result exists.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Chat reading width/result-only container split, min panes, ratio reset and Context drawer have source and focused tests.",
+      "evidence_refs": ["chat", "chatcss", "chatdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Full 1440/split/resizer/state-preservation pixels are not established by the1024 image.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 53,
+      "current_status": "implemented_source",
+      "literal_pending": false,
+      "requirement_title": "Keep each result-layout pane at least 420 pixels wide.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Chat reading width/result-only container split, min panes, ratio reset and Context drawer have source and focused tests.",
+      "evidence_refs": ["chat", "chatcss", "chatdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Full 1440/split/resizer/state-preservation pixels are not established by the1024 image.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 54,
+      "current_status": "implemented_source",
+      "literal_pending": false,
+      "requirement_title": "Make the pane divider resizable.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Chat reading width/result-only container split, min panes, ratio reset and Context drawer have source and focused tests.",
+      "evidence_refs": ["chat", "chatcss", "chatdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Full 1440/split/resizer/state-preservation pixels are not established by the1024 image.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 55,
+      "current_status": "implemented_source",
+      "literal_pending": false,
+      "requirement_title": "Add a Context drawer that is 300 pixels wide on desktop.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Chat reading width/result-only container split, min panes, ratio reset and Context drawer have source and focused tests.",
+      "evidence_refs": ["chat", "chatcss", "chatdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Full 1440/split/resizer/state-preservation pixels are not established by the1024 image.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 56,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use a 420-pixel inspector for Sources, Versions, and file details.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Sources/Result/Library inspector patterns exist; Library source has420px desktop/current phone treatment.",
+      "evidence_refs": ["detaildoc", "responsedoc", "mgmtcss"],
+      "rendered_image_refs": [],
+      "remaining": "Uniform one-inspector/state-preserving Sources/Versions/file tabs not proved; Library phone geometry changed after9c.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 57,
+      "current_status": "implemented_source",
+      "literal_pending": false,
+      "requirement_title": "Make drawers full-screen on phones.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Context phone fullscreen source exists;228 corrects Task/Library/Plugin inset phone shells.",
+      "evidence_refs": ["chatdoc", "mgmtcss", "plugcss", "taskfocus", "gate228"],
+      "rendered_image_refs": [],
+      "remaining": "Earlier9c inspector/editor screenshots were known failures; no current 228 rendered closure yet.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 58,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use a maximum three-column project grid.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Project grid uses 1/2/3 columns at content 620/960 and 24px desktop/16px mobile gaps.",
+      "evidence_refs": ["mgmtcss", "mgmtdoc"],
+      "rendered_image_refs": [],
+      "remaining": "No rendered threshold/skeleton-to-final geometry matrix was supplied.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 59,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use 24-pixel grid gaps on desktop and 16 pixels on mobile.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Project grid uses 1/2/3 columns at content 620/960 and 24px desktop/16px mobile gaps.",
+      "evidence_refs": ["mgmtcss", "mgmtdoc"],
+      "rendered_image_refs": [],
+      "remaining": "No rendered threshold/skeleton-to-final geometry matrix was supplied.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 60,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep scroll ownership clear.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared Settings/management and Result pane sources define intended scroll ownership.",
+      "evidence_refs": ["tokens", "chatdoc", "responsedoc"],
+      "rendered_image_refs": [],
+      "remaining": "Nested/long/short viewport scroll behavior across every screen remains open.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 79,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep ordinary text contrast at least 4.5:1.",
+      "proposed_disposition": "partial",
+      "supported_claim": "638 Light/Dark code foreground and blue inline text contrast have bounded evidence.",
+      "evidence_refs": ["render638", "tokens"],
+      "rendered_image_refs": ["638a162/code320-light.jpg", "638a162/code320-dark.jpg"],
+      "remaining": "No all-text/placeholder/hover/boundary/icon/focus contrast matrix. Palette remains owner-controlled.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 80,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Validate functional control contrast separately.",
+      "proposed_disposition": "partial",
+      "supported_claim": "638 Light/Dark code foreground and blue inline text contrast have bounded evidence.",
+      "evidence_refs": ["render638", "tokens"],
+      "rendered_image_refs": ["638a162/code320-light.jpg", "638a162/code320-dark.jpg"],
+      "remaining": "No all-text/placeholder/hover/boundary/icon/focus contrast matrix. Palette remains owner-controlled.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 92,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use spacing tokens of 4, 8, 12, 16, 20, 24, 32, 40, 48, and 64 pixels.",
+      "proposed_disposition": "partial",
+      "supported_claim": "All specified spacing tokens are centrally declared at system.css:54\u201363.",
+      "evidence_refs": ["tokens"],
+      "rendered_image_refs": [],
+      "remaining": "Consumers still contain direct/arbitrary spacing; central declaration alone does not establish global token adoption.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 93,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use eight pixels between icons and labels in buttons.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Shared buttons use8px label gaps and primary navigation uses 12px.",
+      "evidence_refs": ["button", "tokens"],
+      "rendered_image_refs": [],
+      "remaining": "Consumer-specific inline icon margins still need consistency audit.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 94,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use 16-pixel internal padding for compact panels and 24 pixels for substantial panels.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 95,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use 24 pixels between related page sections and 32 pixels between major sections.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 96,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use eight-pixel button and input corners, 12-pixel content-box corners, and 16-pixel dialog corners.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 97,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use one-pixel borders for ordinary surfaces.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 98,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use one shadow token for menus and another for dialogs.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 99,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Remove decorative shadows from ordinary cards.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 100,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Give every button one visual surface.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 101,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use 44-pixel default buttons with 16-pixel horizontal padding.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 102,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use one icon family with a consistent 20-pixel size and stroke weight.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Scoped composer/management controls specify20px; provider logos preserved.",
+      "evidence_refs": ["chatcss", "mgmtcss", "button", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Shared Button default SVG is16px (button.tsx:8); other16px icons remain. One family/stroke/20px everywhere is not established.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 103,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Make primary buttons fit their labels on desktop.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 104,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Keep secondary buttons neutral and destructive buttons clearly labeled.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 105,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Implement button states explicitly:",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared scoped geometry/control states are implemented and several prior core/Billing surfaces were reviewed.",
+      "evidence_refs": ["tokens", "button", "dialog", "mgmtcss", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Global consistency is not proved: generic/raw controls remain;228 Work/Images/management geometry still awaits rendering.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 106,
+      "current_status": "partial",
+      "literal_pending": false,
+      "requirement_title": "Use a 16-pixel spinner in loading buttons.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Some pending buttons use16px Loader2 with label; Save schedule changes text to Saving.",
+      "evidence_refs": ["mfafield", "task"],
+      "rendered_image_refs": [],
+      "remaining": "No universal loading spinner/width-preservation implementation; task footer has text-only pending label.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 107,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Prevent repeat activation while an operation is pending.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Auth, task/export/share mutations have synchronous repeat/lifetime guards; existing project create guards retained.",
+      "evidence_refs": ["auth", "task", "exportdoc", "share", "mgmtdoc"],
+      "rendered_image_refs": [],
+      "remaining": "All subscription/message/project mutation paths and fast duplicate-activation outcomes need bounded runtime coverage.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 108,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Explain disabled actions in persistent supporting text when the reason matters.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "Unavailable Plugins, Work, Billing and task service explanations were visible in prior 9c cells.",
+      "evidence_refs": ["render9c", "operational", "billdoc"],
+      "rendered_image_refs": ["9c59085/plugin-detail390-dark.jpg", "9c59085/work1024-light.jpg"],
+      "remaining": "This credits meaningful explanations in sampled states, not all disabled controls.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 109,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use explicit action names.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Create project, Save schedule, Prepare download and explicit object actions are present.",
+      "evidence_refs": ["project", "task", "export", "copy"],
+      "rendered_image_refs": [],
+      "remaining": "Not a complete action-label inventory.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 110,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Keep ordinary icon tooltips short.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Tooltip provider exists with 300ms default hover delay; shared Radix behavior has not been exercised in this reconciliation.",
+      "evidence_refs": ["tooltip", "side"],
+      "rendered_image_refs": [],
+      "remaining": "Approximately400ms hover/immediate-focus behavior is not established for every icon; many sidebar controls use native title attributes.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 111,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Do not put required instructions inside tooltips.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Shared menu/tab CSS and underlying component families implement standard row, selected-state and tab semantics.",
+      "evidence_refs": ["tokens", "side", "billing", "task"],
+      "rendered_image_refs": [],
+      "remaining": "400ms/focus tooltip timing, checkmarks and required helper copy need actual per-menu keyboard review; source coverage is bounded to listed families.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 112,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use 44-pixel menu rows.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Shared menu/tab CSS and underlying component families implement standard row, selected-state and tab semantics.",
+      "evidence_refs": ["tokens", "side", "billing", "task"],
+      "rendered_image_refs": [],
+      "remaining": "400ms/focus tooltip timing, checkmarks and required helper copy need actual per-menu keyboard review; source coverage is bounded to listed families.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 113,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use menu search when a selectable list exceeds seven items.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Search exists in provider directory and timezone selection; supported controls preserve keyboard primitives.",
+      "evidence_refs": ["task", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "No audit proves every selectable menu with>7 options has internal search; directory search is not menu-search proof.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 114,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use checkmarks to show the currently selected menu value.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared Checkbox menu items render a checkmark; shared Radio menu items render a filled dot.",
+      "evidence_refs": ["dropdown"],
+      "rendered_image_refs": [],
+      "remaining": "The specified checkmark treatment is not applied universally to selected menu values; inspect actual menu families and preserve selection semantics.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 115,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Put destructive menu actions after a divider.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Conversation, project, Library and task object menus retain identity-specific operations and destructive separation.",
+      "evidence_refs": ["side", "project", "library", "tasks", "mgmtdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Specific role/selection/destructive behavior must still be checked per operation; no broad mutation execution claim.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 116,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use tabs only for views of the same object or page.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Shared menu/tab CSS and underlying component families implement standard row, selected-state and tab semantics.",
+      "evidence_refs": ["tokens", "side", "billing", "task"],
+      "rendered_image_refs": [],
+      "remaining": "400ms/focus tooltip timing, checkmarks and required helper copy need actual per-menu keyboard review; source coverage is bounded to listed families.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 117,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Make the active tab visible through text weight and an underline.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Shared menu/tab CSS and underlying component families implement standard row, selected-state and tab semantics.",
+      "evidence_refs": ["tokens", "side", "billing", "task"],
+      "rendered_image_refs": [],
+      "remaining": "400ms/focus tooltip timing, checkmarks and required helper copy need actual per-menu keyboard review; source coverage is bounded to listed families.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 118,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use switches for settings that save immediately.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Immediate preference controls coexist with explicit Save/Cancel forms.",
+      "evidence_refs": ["profiledoc", "settings", "projectdetail"],
+      "rendered_image_refs": [],
+      "remaining": "Every switch versus submitted-checkbox persistence semantic is unverified.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 119,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use radios for mutually exclusive choices.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Temporary context uses mutually exclusive RadioGroup with clickable full labels/descriptions.",
+      "evidence_refs": ["temporary"],
+      "rendered_image_refs": [],
+      "remaining": "This is one concrete family; no universal radio-choice audit.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 120,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use persistent form labels above inputs.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Auth/project/task forms have persistent labels and some helpers/errors.",
+      "evidence_refs": ["auth", "project", "task"],
+      "rendered_image_refs": [],
+      "remaining": "Long-task errors are a generic alert rather than consistently field-associated messages; no global form-layout closure.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 121,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use 44-pixel text inputs with 12-pixel horizontal padding.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Shared Input44px/12px/16px phone text and ordinary textarea resizing coexist with controlled composer expansion.",
+      "evidence_refs": ["input", "textarea", "chatcss"],
+      "rendered_image_refs": [],
+      "remaining": "Consumer class overrides and mobile keyboard overlap remain separate rendered checks.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 122,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep textarea resizing available on desktop where it helps.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Shared Input44px/12px/16px phone text and ordinary textarea resizing coexist with controlled composer expansion.",
+      "evidence_refs": ["input", "textarea", "chatcss"],
+      "rendered_image_refs": [],
+      "remaining": "Consumer class overrides and mobile keyboard overlap remain separate rendered checks.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 123,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Validate fields after they have been visited and after submission.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Auth/project rename use touched validation; task/share/export failed-operation source preserves requests; several specific field messages exist.",
+      "evidence_refs": ["auth", "project", "task", "share", "exportdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Not all forms have visited-field validation, specific per-field errors or tested failure-focus retention.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 124,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Preserve valid form input after submission fails.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Auth/project rename use touched validation; task/share/export failed-operation source preserves requests; several specific field messages exist.",
+      "evidence_refs": ["auth", "project", "task", "share", "exportdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Not all forms have visited-field validation, specific per-field errors or tested failure-focus retention.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 125,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use specific field-error messages.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Auth/project rename use touched validation; task/share/export failed-operation source preserves requests; several specific field messages exist.",
+      "evidence_refs": ["auth", "project", "task", "share", "exportdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Not all forms have visited-field validation, specific per-field errors or tested failure-focus retention.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 126,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Add an error summary to long submitted forms.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Long task form has an alert for an operation error, but not a linked field-error summary.",
+      "evidence_refs": ["task"],
+      "rendered_image_refs": [],
+      "remaining": "Implement/verify a submitted-error summary whose links focus actual invalid fields; do not count generic role=alert as complete.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 127,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use a 560-pixel maximum width for standard dialogs.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared Dialog provides560px desktop cap, Close, title/footer primitives; task dirty-close decision exists.",
+      "evidence_refs": ["dialog", "task", "taskfocus"],
+      "rendered_image_refs": [],
+      "remaining": "Base gap 16/phone padding 20 differs from requested24px; full-width narrow footer and all unsaved-close semantics require affected228 and family checks.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 128,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Place dialog actions in the footer.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared Dialog provides560px desktop cap, Close, title/footer primitives; task dirty-close decision exists.",
+      "evidence_refs": ["dialog", "task", "taskfocus"],
+      "rendered_image_refs": [],
+      "remaining": "Base gap 16/phone padding 20 differs from requested24px; full-width narrow footer and all unsaved-close semantics require affected228 and family checks.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 129,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Give every dialog a visible title and close control.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared Dialog provides560px desktop cap, Close, title/footer primitives; task dirty-close decision exists.",
+      "evidence_refs": ["dialog", "task", "taskfocus"],
+      "rendered_image_refs": [],
+      "remaining": "Base gap 16/phone padding 20 differs from requested24px; full-width narrow footer and all unsaved-close semantics require affected228 and family checks.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 130,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Manage modal focus properly.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Prior recovery/share/reset/Library focus/cancel checks exist;228 patches known Library delete/export/task/Context/media focus failures.",
+      "evidence_refs": [
+        "dialog",
+        "render638",
+        "render9c",
+        "deletefocus",
+        "focusdoc",
+        "taskfocus",
+        "gate228"
+      ],
+      "rendered_image_refs": [],
+      "remaining": "Current patches are source-only until receipt. No every-dialog focus trap/Escape/opener/destructive-outcome claim.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 131,
+      "current_status": "partial",
+      "literal_pending": false,
+      "requirement_title": "Use confirmation dialogs for destructive consequences.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Prior recovery/share/reset/Library focus/cancel checks exist;228 patches known Library delete/export/task/Context/media focus failures.",
+      "evidence_refs": [
+        "dialog",
+        "render638",
+        "render9c",
+        "deletefocus",
+        "focusdoc",
+        "taskfocus",
+        "gate228"
+      ],
+      "rendered_image_refs": [],
+      "remaining": "Current patches are source-only until receipt. No every-dialog focus trap/Escape/opener/destructive-outcome claim.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 132,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use a 360-pixel-wide desktop toast region near the bottom right.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Toaster source uses 360px desktop and 16px mobile side insets.",
+      "evidence_refs": ["toast"],
+      "rendered_image_refs": [],
+      "remaining": "Bottom/composer overlap and short-height behavior not established by source; mobile offset is only 1rem+safe-area.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 133,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Dismiss ordinary success toasts after four seconds.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Ordinary toast default is4s.",
+      "evidence_refs": ["toast", "auth", "mfa"],
+      "rendered_image_refs": [],
+      "remaining": "Errors needing action also inherit4s unless overridden; auth/MFA failures examined have no persistent duration/inline operation error. Needs error-lifetime reconciliation.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 134,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Do not place important success information only in a toast.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Export statuses, persisted task receipts, project Context and Billing summary update from operation/state data, not permanent success placeholders.",
+      "evidence_refs": ["exportdoc", "receipt", "mgmtdoc", "billdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Per-operation live truth and all stale-account outcomes are not comprehensively rendered.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 135,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Show \u201cSaving\u2026\u201d and \u201cSaved\u201d only when accurate.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Export statuses, persisted task receipts, project Context and Billing summary update from operation/state data, not permanent success placeholders.",
+      "evidence_refs": ["exportdoc", "receipt", "mgmtdoc", "billdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Per-operation live truth and all stale-account outcomes are not comprehensively rendered.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 136,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use empty states with one heading, one explanation, and one primary action.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Shared empty-state source and list-specific empty actions exist.",
+      "evidence_refs": ["states", "project", "library", "tasks"],
+      "rendered_image_refs": [],
+      "remaining": "Prior 9c receipt explicitly did not credit available empty/error list fixtures; all main pages remain untested.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 137,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use skeletons that match the eventual component dimensions.",
+      "proposed_disposition": "partial",
+      "supported_claim": "List/grid skeleton components exist.",
+      "evidence_refs": ["states", "project", "library"],
+      "rendered_image_refs": [],
+      "remaining": "Projects loading SkeletonGrid uses auto-fill240/gap 16 while final grid uses 620/960/gap 24; exact final-dimension matching is not established.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 138,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep error panels compact and actionable.",
+      "proposed_disposition": "partial",
+      "supported_claim": "OperationalState and list/error panels provide failure text/retry; export uncertainty is persistent.",
+      "evidence_refs": ["operational", "states", "exportdoc", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Some generic defaults lack preserved-work detail; all page failures and actionable focus remain unverified.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 139,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use \u201cRetry\u201d only when retrying is safe.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "Prior 9c export503 stays uncertain/read-only after remount and rejects duplicate Request; failed fixture can retry after known failure.",
+      "evidence_refs": ["exportdoc", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "This is isolated fixture coverage. All external mutations must independently preserve their idempotency/uncertainty contract.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 140,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep all standard components responsive by construction.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Narrow320/390 representative controls, code/table/auth and current-source responsive rules exist.",
+      "evidence_refs": ["tokens", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Translated text, all long labels, max font sizes, large numbers and every validation message are not fully exercised.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 331,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Make temporary-chat status visible before sending.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Temporary status is shown before sending and explains history/memory/context behavior without promising zero retention.",
+      "evidence_refs": ["temporary", "chat"],
+      "rendered_image_refs": [],
+      "remaining": "Runtime privacy-mode transitions and storage behavior still need dedicated acceptance; preserve mounted-only drafts.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 332,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Show active sessions with device information and last activity when the backend supports them.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Existing other-session sign-out supports owned/legacy server contracts and verifies returned success.",
+      "evidence_refs": ["mfa"],
+      "rendered_image_refs": [],
+      "remaining": "Active sessions shows no per-device/last-activity list. Backend list/reauth capability must be verified before adding unsupported data.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 333,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Keep data export asynchronous when necessary.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "Prior 9c isolated export queued\u2192processing\u2192completed, ready link preparation, failed retry and unknown503/read-only remount were exercised.",
+      "evidence_refs": ["exportdoc", "render9c", "focusdoc"],
+      "rendered_image_refs": ["9c59085/export-ready390-dark.jpg"],
+      "remaining": "No download/live export. Cancellation not credited.228 Request/Prepare focus changes await retest.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 334,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use a dedicated account-deletion flow.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Dedicated account deletion has consequence text, Cancel and typed DELETE with existing auth-backed handler.",
+      "evidence_refs": ["settings"],
+      "rendered_image_refs": [],
+      "remaining": "No account deletion or identity-reauth lifecycle was exercised; do not weaken backend gates or perform production confirmation.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 335,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Design Usage with the current plan, each applicable allowance, and its reset time.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "Prior 9c Usage fixture displays measured messages3, images0/3, uploads0/2 without fabricated percentage.",
+      "evidence_refs": ["limits", "plans", "render9c"],
+      "rendered_image_refs": ["9c59085/usage1024-light.jpg"],
+      "remaining": "Historical fixture reset is not current live reset;228 width cap correction still needs pixels.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 336,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Display measured usage separately from estimates.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "Prior 9c Usage fixture displays measured messages3, images0/3, uploads0/2 without fabricated percentage.",
+      "evidence_refs": ["limits", "plans", "render9c"],
+      "rendered_image_refs": ["9c59085/usage1024-light.jpg"],
+      "remaining": "Historical fixture reset is not current live reset;228 width cap correction still needs pixels.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 337,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "When a limit is reached, preserve the draft.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Chat draft preservation and limit/connection hints are source-backed.",
+      "evidence_refs": ["chat", "chatdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Actual limit-hit\u2192draft\u2192recovery chain not established by supplied receipts.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 338,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Design Billing with Overview, Plans, and Invoices tabs.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "Overview/Plans/Invoices switch/focus and truthful unavailable states checked at 638;9c retains corrected Billing presentation.",
+      "evidence_refs": ["billdoc", "render638", "render9c"],
+      "rendered_image_refs": [
+        "638a162/billing-invoices390-light.jpg",
+        "9c59085/billing390-dark.jpg"
+      ],
+      "remaining": "No payment/portal operation or all billing states.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 339,
+      "current_status": "partial_contract_bound",
+      "literal_pending": false,
+      "requirement_title": "Show the current subscription prominently in Overview.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Verified Free/no active subscription says Not applicable next charge in9c receipt; supported subscription fields use actual summary.",
+      "evidence_refs": ["billdoc", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Authoritative upcoming charge and actual interval contract gaps remain; no fabricated estimates.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 340,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Provide a clear Manage subscription button.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Billing uses existing portal/checkout authorities, canonical Free/Plus/Pro comparison/current-plan wording, tax copy and verified payment-failure states.",
+      "evidence_refs": ["billing", "billdoc", "payment", "plans", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Only bounded tab/visible plan/unavailable states rendered; portal/checkout/payment outcomes were not activated.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 341,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Design Plans as aligned Free, Plus, and Pro cards.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Billing uses existing portal/checkout authorities, canonical Free/Plus/Pro comparison/current-plan wording, tax copy and verified payment-failure states.",
+      "evidence_refs": ["billing", "billdoc", "payment", "plans", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Only bounded tab/visible plan/unavailable states rendered; portal/checkout/payment outcomes were not activated.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 342,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Label the active plan \u201cCurrent plan.\u201d",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Billing uses existing portal/checkout authorities, canonical Free/Plus/Pro comparison/current-plan wording, tax copy and verified payment-failure states.",
+      "evidence_refs": ["billing", "billdoc", "payment", "plans", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Only bounded tab/visible plan/unavailable states rendered; portal/checkout/payment outcomes were not activated.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 343,
+      "current_status": "partial_contract_bound",
+      "literal_pending": false,
+      "requirement_title": "Preserve upgrade and downgrade timing.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Provider remains authoritative for timing, proration, cancellation/end dates and supported resume capability.",
+      "evidence_refs": ["payment", "billdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Live/provider sandbox timing, proration and resume availability still require proper test environment; no new promises.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 344,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Show monthly price and applicable tax wording before checkout.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Billing uses existing portal/checkout authorities, canonical Free/Plus/Pro comparison/current-plan wording, tax copy and verified payment-failure states.",
+      "evidence_refs": ["billing", "billdoc", "payment", "plans", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Only bounded tab/visible plan/unavailable states rendered; portal/checkout/payment outcomes were not activated.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 345,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Do not invent discounts, trials, countdowns, or promo-code fields.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Billing uses existing portal/checkout authorities, canonical Free/Plus/Pro comparison/current-plan wording, tax copy and verified payment-failure states.",
+      "evidence_refs": ["billing", "billdoc", "payment", "plans", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Only bounded tab/visible plan/unavailable states rendered; portal/checkout/payment outcomes were not activated.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 346,
+      "current_status": "partial_contract_bound",
+      "literal_pending": false,
+      "requirement_title": "Show pending cancellation with the actual access-end date.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Provider remains authoritative for timing, proration, cancellation/end dates and supported resume capability.",
+      "evidence_refs": ["payment", "billdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Live/provider sandbox timing, proration and resume availability still require proper test environment; no new promises.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 347,
+      "current_status": "partial_contract_bound",
+      "literal_pending": false,
+      "requirement_title": "Use Invoices to show actual invoice date, amount, status, and download link.",
+      "proposed_disposition": "blocked_contract",
+      "supported_claim": "Invoices honestly discloses missing invoice record fields and routes eligible account to existing provider portal.",
+      "evidence_refs": ["billdoc", "render638"],
+      "rendered_image_refs": ["638a162/billing-invoices390-light.jpg"],
+      "remaining": "Current app read contract lacks actual invoice date/amount/status/download records; unavailable panel is not implemented invoice history.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 348,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Handle payment failure with a clear Update payment method action.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Billing uses existing portal/checkout authorities, canonical Free/Plus/Pro comparison/current-plan wording, tax copy and verified payment-failure states.",
+      "evidence_refs": ["billing", "billdoc", "payment", "plans", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Only bounded tab/visible plan/unavailable states rendered; portal/checkout/payment outcomes were not activated.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 349,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Design login without the authenticated sidebar.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "9c authenticating panel is400px at 1024 and 358px at 390 with exact login heading and no authenticated sidebar.",
+      "evidence_refs": ["auth", "authcap", "render9c"],
+      "rendered_image_refs": ["9c59085/auth1024-light.jpg", "9c59085/auth390-dark.jpg"],
+      "remaining": "No auth submit or all configured-method stages.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 350,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use the exact login heading \u201cLog in to Kova.\u201d",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "9c authenticating panel is400px at 1024 and 358px at 390 with exact login heading and no authenticated sidebar.",
+      "evidence_refs": ["auth", "authcap", "render9c"],
+      "rendered_image_refs": ["9c59085/auth1024-light.jpg", "9c59085/auth390-dark.jpg"],
+      "remaining": "No auth submit or all configured-method stages.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 351,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Show only configured identity providers.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Configured identity providers and existing adapter gates retained.",
+      "evidence_refs": ["auth", "authdialog", "authdoc"],
+      "rendered_image_refs": [],
+      "remaining": "No external provider connection/sign-in validation.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 352,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Allow password managers, autofill, and pasting into credentials and verification codes.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Credential and MFA fields use appropriate autocomplete and do not block normal paste in inspected components.",
+      "evidence_refs": ["auth", "mfafield", "authdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Password-manager/autofill/OS-device integration is not rendered or real-device certified.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 353,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Provide Show password and Hide password controls.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "638 password Show/Hide retained field focus; Forgot retained review@example.test and Cancel returned opener;9c retains earlier behavior attribution.",
+      "evidence_refs": ["auth", "recovery", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "No recovery submission or live password behavior claimed.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 354,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Place \u201cForgot password?\u201d beside the password section.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "638 password Show/Hide retained field focus; Forgot retained review@example.test and Cancel returned opener;9c retains earlier behavior attribution.",
+      "evidence_refs": ["auth", "recovery", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "No recovery submission or live password behavior claimed.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 355,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use account-safe recovery confirmation text.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Account-safe recovery wording, matching signup component and existing Terms/Privacy links are in source.",
+      "evidence_refs": ["auth", "recovery", "authdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Signup/recovery states/legal destinations not comprehensively rendered; no legal acceptance or invented policy.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 356,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Keep signup visually identical to login.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Account-safe recovery wording, matching signup component and existing Terms/Privacy links are in source.",
+      "evidence_refs": ["auth", "recovery", "authdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Signup/recovery states/legal destinations not comprehensively rendered; no legal acceptance or invented policy.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 357,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Display existing terms and privacy links clearly.",
+      "proposed_disposition": "implemented_source",
+      "supported_claim": "Account-safe recovery wording, matching signup component and existing Terms/Privacy links are in source.",
+      "evidence_refs": ["auth", "recovery", "authdoc"],
+      "rendered_image_refs": [],
+      "remaining": "Signup/recovery states/legal destinations not comprehensively rendered; no legal acceptance or invented policy.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 358,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Use a single paste-friendly verification-code field.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Single authenticator-code fields allow paste and one-time-code autofill.",
+      "evidence_refs": ["auth", "mfafield"],
+      "rendered_image_refs": [],
+      "remaining": "Resend cooldown comes from existing client policy (auth.tsx:288, 307), not a newly verified service availability field; no verification/resend flow tested.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 359,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Preserve the original destination through authentication.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Existing safe remembered destination/callback return logic is retained.",
+      "evidence_refs": ["redirect", "auth"],
+      "rendered_image_refs": [],
+      "remaining": "Project/Billing/shared-result return chains not exercised; no universal redirect acceptance.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 360,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Handle session expiration in place.",
+      "proposed_disposition": "partial",
+      "supported_claim": "In-place auth launcher preserves pending draft constraints; expired-auth state text exists.",
+      "evidence_refs": ["signin", "operational", "redirect", "chat"],
+      "rendered_image_refs": [],
+      "remaining": "No end-to-end session-expiry\u2192reauth\u2192same-screen recovery proof, especially temporary/attachment work.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 365,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Make page actions reachable without hover.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Object-specific visible More/action controls exist in core lists and conversation source.",
+      "evidence_refs": ["side", "project", "library", "tasks"],
+      "rendered_image_refs": [],
+      "remaining": "All actions touch/keyboard reachable without hover across styles and states need explicit rendered checks.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 383,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Design a Help page with searchable documentation and the supported contact mechanism.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "9c Help search export my data returned one answer; disclosure retained focus. Supported contact source does not automatically include conversations.",
+      "evidence_refs": ["help", "render9c"],
+      "rendered_image_refs": ["9c59085/help390-dark.jpg"],
+      "remaining": "Lower support form/submission not rendered or submitted; no contact delivery claim.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 384,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep shared-result pages visually consistent but minimal.",
+      "proposed_disposition": "blocked_contract",
+      "supported_claim": "Existing supported sharing is authenticated recipient-scoped snapshot review in Library; not a public minimal shared-result page.",
+      "evidence_refs": ["shareapi", "responsedoc", "sharedoc"],
+      "rendered_image_refs": [],
+      "remaining": "Public result link/standalone public page contract absent. Do not add fabricated share URLs or expose private navigation.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 385,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Make sharing private by default.",
+      "proposed_disposition": "bounded_rendered_checked",
+      "supported_claim": "9c exact two-message private snapshot reviewed; Back retained recipient and Cancel returned Share chat.",
+      "evidence_refs": ["snapshot", "share", "sharedoc", "render9c"],
+      "rendered_image_refs": ["9c59085/share1024-light.jpg"],
+      "remaining": "No final Share or recipient lookup; not public-link implementation.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 386,
+      "current_status": "implemented_source_pending_render",
+      "literal_pending": false,
+      "requirement_title": "Use frozen snapshots for ordinary share links.",
+      "proposed_disposition": "preserved",
+      "supported_claim": "Snapshot payload is frozen at all message levels; existing server recipient-scoped snapshot contract remains.",
+      "evidence_refs": ["snapshot", "shareapi", "sharedoc"],
+      "rendered_image_refs": [],
+      "remaining": "No live post-share mutation/revocation test; ordinary public share links remain unavailable.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 387,
+      "current_status": "partial",
+      "literal_pending": false,
+      "requirement_title": "Provide a share-link management list.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Library has actual owned recipient-scoped shared-object/recipient/status/date/Revoke list.",
+      "evidence_refs": ["library", "shareapi", "sharedoc"],
+      "rendered_image_refs": [],
+      "remaining": "Public share-link access settings/creation/revocation not implemented; no live revoke test.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 388,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Keep internal security and database material private.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Inspected share helper excludes attachments/tools/private metadata; original capture fixtures are synthetic.",
+      "evidence_refs": ["snapshot", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "No complete public-bundle/download/review-package secret and internal-material audit; do not mark globally safe from this check.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 389,
+      "current_status": "test_prepared",
+      "literal_pending": false,
+      "requirement_title": "Test the complete UI at 390\u00d7844 and 1440\u00d7900.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Exact prior 320/390 and complete 1024 images in both themes plus Appearance preview/reset behavior exist.",
+      "evidence_refs": ["render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Full 1440 pixels absent; tablet/ultrawide/all themes/every saved appearance option/font-load failure/reduced motion stress remain open.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 390,
+      "current_status": "test_prepared",
+      "literal_pending": false,
+      "requirement_title": "Test both themes and every saved appearance setting.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Exact prior 320/390 and complete 1024 images in both themes plus Appearance preview/reset behavior exist.",
+      "evidence_refs": ["render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Full 1440 pixels absent; tablet/ultrawide/all themes/every saved appearance option/font-load failure/reduced motion stress remain open.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 391,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Test every main page in empty, loading, populated, and failed states.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Representative populated/default/unavailable cells and export states exist.",
+      "evidence_refs": ["render638", "render9c", "gate228"],
+      "rendered_image_refs": [],
+      "remaining": "Every main-page empty/loading/populated/failed matrix remains incomplete. Available list fixtures were not credited in9c.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 392,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Test long-content cases explicitly.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Prior 11270-character paste, code/small table and long-name Library visible intervals exist.",
+      "evidence_refs": ["render638", "render9c", "prior1c"],
+      "rendered_image_refs": [],
+      "remaining": "30-message conversation, long reusable prompt and genuinely wide table full horizontal union remain unverified.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 393,
+      "current_status": "test_prepared",
+      "literal_pending": false,
+      "requirement_title": "Test data-preservation flows.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Principal/chat draft isolation source and prior paste/Undo checks exist; project Context Cancel preserves original text.",
+      "evidence_refs": ["chat", "chatdoc", "render638", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "No complete navigation\u2192failure\u2192recovery\u2192unrelated-draft-preservation sequence;228 focus behavior changed.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 394,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Test every destructive operation through cancellation and confirmation.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Prior reset/retention/Share cancel paths and successor selected-object confirmation source exist.",
+      "evidence_refs": ["render638", "render9c", "deletefocus", "settings"],
+      "rendered_image_refs": [],
+      "remaining": "Every destructive Cancel+confirm identity outcome not tested. No production deletion is authorized or needed for visual review.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 395,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Test every purchase and authentication return path in the proper test environment.",
+      "proposed_disposition": "blocked_contract",
+      "supported_claim": "Configured purchase/auth paths are preserved and prior review intentionally performs no submit.",
+      "evidence_refs": ["authdoc", "billdoc", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "Proper authorized auth/payment test environments and complete return-path evidence required; local samples cannot substitute.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 396,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Test the scheduled-task receipt specifically.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Strict persisted task receipt renderer/source and a prior validated synthetic visible bubble exist.",
+      "evidence_refs": ["receipt", "taskbubble", "responsedoc", "prior1c"],
+      "rendered_image_refs": ["1c3ac7c/receipt390-dark.jpg"],
+      "remaining": "Production chat-to-scheduler producer absent; no real creation\u2192receipt\u2192correct schedule acceptance.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 397,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Test copyable content boxes specifically.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Prior 320 Light/Dark code copy/footer and exact paste behavior support selected content-box checks.",
+      "evidence_refs": ["copy", "responsedoc", "render638", "prior1c"],
+      "rendered_image_refs": ["638a162/code320-light.jpg", "638a162/code320-dark.jpg"],
+      "remaining": "Clipboard-failure rendered state, desktop Copy placement/exact-text workflow and full long-code horizontal union still need evidence.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 398,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Check the interaction inventory against the finished build.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Management and response documents define many control/event/result/error rows.",
+      "evidence_refs": ["mgmtdoc", "responsedoc", "render9c"],
+      "rendered_image_refs": [],
+      "remaining": "No single exhaustive build-to-control inventory reconciliation establishes every visible control/state/link.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 399,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Deliver one complete reviewable application package.",
+      "proposed_disposition": "partial",
+      "supported_claim": "Separate reviewable candidate plus400 ledger and bounded review records exist.",
+      "evidence_refs": ["scope", "render638", "render9c", "gate228"],
+      "rendered_image_refs": [],
+      "remaining": "Full package is not accepted; current 228 affected rendering, inventory reconciliation, privacy/package audit and genuine contract blockers must remain disclosed.",
+      "whole_requirement_closed": false
+    },
+    {
+      "id": 400,
+      "current_status": "pending",
+      "literal_pending": true,
+      "requirement_title": "Finish against this acceptance rule:",
+      "proposed_disposition": "partial",
+      "supported_claim": "Core and added review surfaces are implemented to differing depths; complete interface acceptance is still open.",
+      "evidence_refs": ["scope", "render638", "render9c", "gate228"],
+      "rendered_image_refs": [],
+      "remaining": "Finish inventory/state matrix, affected228 retests and real contract gates; no all 400/perfection statement.",
+      "whole_requirement_closed": false
+    }
+  ],
+  "evidence_catalog": {
+    "tokens": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/styles/spec400-system.css",
+      "lines": "44\u201369,101\u2013250",
+      "claim": "Central structural, spacing, font, sidebar, header and focus tokens; current palette references retained.",
+      "blob": "63582b4adddd70802e51a9e59964f20dae30c74b",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "side": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/Sidebar.tsx",
+      "lines": "635\u2013648,919\u2013980,1011\u20131215",
+      "claim": "Primary navigation, pinned/recent grouping, fixed Help/account footer and exact profile menu implementation.",
+      "blob": "e9d83cef3777a34b54dcdf8ddb13a5e905693180",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "logo": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/NovaLogo.tsx",
+      "lines": "28\u201349",
+      "claim": "Original /kova-logo.png reused with square dimensions and object-contain.",
+      "blob": "1df870a8c08f4db5333c846bfe21708bc5bbf26c",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "head": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/WorkspacePageHeader.tsx",
+      "lines": "1\u201348",
+      "claim": "Shared title/description/actions header; no universal one-title claim.",
+      "blob": "d6e378442b0123d48e77a85785604a8c6ac98464",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "button": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ui/button.tsx",
+      "lines": "7\u201330",
+      "claim": "44px default/icon buttons, 8px icon-label gap; default nested SVG is16px, not universal20px.",
+      "blob": "b5531fd73733eefb5e8552d33eb9bf88246a9850",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "input": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ui/input.tsx",
+      "lines": "5\u201317",
+      "claim": "44px text inputs, 12px horizontal padding and 16px phone text.",
+      "blob": "9605c8cf0b1ec39bca4f4a9371b2053ffe2ba98a",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "textarea": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ui/textarea.tsx",
+      "lines": "1\u201328",
+      "claim": "Shared textarea leaves browser resizing available; consumer overrides need individual checks.",
+      "blob": "f142abd19d4db1591ec05631fd1d2aa57840990a",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "dialog": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ui/dialog.tsx",
+      "lines": "39\u201376,98\u2013105",
+      "claim": "Radix modal plumbing and visible Close; desktop 560px cap. Base gap 16 and phone padding 20 do not establish universal24px spacing.",
+      "blob": "a7c316f91ddedc3062ce6a09b30e443c532a9f51",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "tooltip": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ui/tooltip.tsx",
+      "lines": "8\u201322",
+      "claim": "Tooltip provider defaults300ms hover delay; focus behavior delegated to Radix and not executed here.",
+      "blob": "ad39cb70c24b0f9e0b2043873506e5ecfa1be1c4",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "dropdown": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ui/dropdown-menu.tsx",
+      "lines": "98\u2013140",
+      "claim": "Checkbox menu indicator is a Check; Radio menu indicator remains a filled Circle.",
+      "blob": "d7abb446aa627a7567ef777d45e5fb9d2270d657",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "toast": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ui/sonner.tsx",
+      "lines": "7\u201341",
+      "claim": "360px region, 4-second default, dismiss button, 16px mobile sides; no error-specific infinite-duration default.",
+      "blob": "7f2751cef2fec2c3b81ce6ba7977fac3eecf24ea",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "mgmtcss": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/styles/spec400-management.css",
+      "lines": "1\u2013218,220\u2013end",
+      "claim": "Management geometry, 620/960 container project-grid breakpoints, phone dialog/inspector changes.",
+      "blob": "913befb51549b8e39e58a9ad66ba0aac9d6f1779",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "plugcss": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/styles/spec400-plugins.css",
+      "lines": "1\u2013end",
+      "claim": "Plugin geometry and successor phone inspector overrides.",
+      "blob": "74eb283f92b20fa1aa63881bf6d446a43e6c2b7d",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "chatcss": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/styles/spec400-chat.css",
+      "lines": "1\u2013174; later layout rules",
+      "claim": "Controlled composer expansion and scoped button/icon sizing; result/context layout source.",
+      "blob": "20b18eeaf726ed399169966722bdf50446dabd89",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "chat": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/routes/index.tsx",
+      "lines": "341\u2013451,567\u2013583; Result layout",
+      "claim": "Principal/conversation-scoped drafts, mounted-only attachment and result drafts, privacy-aware navigation gates.",
+      "blob": "58e52914ad142485248c52c64254b9342893e9f0",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "temporary": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/TemporaryChatStartDialog.tsx",
+      "lines": "40\u2013108,140\u2013152",
+      "claim": "Before-send context choice and persistent temporary-chat disclosure; Sparkles icon remains at 88.",
+      "blob": "531a8f27a7f745bd9e534cb8d3fc749d4a1ead8d",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "project": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/routes/projects.tsx",
+      "lines": "215;771\u2013832;1261\u20131450",
+      "claim": "Project list states, object menus, visited rename validation, creation and discard dialogs.",
+      "blob": "a79ebb605acabbaf4bb2c56df637083af8fe7532",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "projectdetail": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/routes/projects.$projectId.tsx",
+      "lines": "whole component; current header and Context handlers",
+      "claim": "Per-project Context, saved/draft state and successor Cancel-focus/header changes.",
+      "blob": "42a3dd81207a93fa19a228e2874ecba05ce402e6",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "library": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/routes/library.tsx",
+      "lines": "1613\u20131700,2091\u20132176,2180\u20132415,2519\u20132534",
+      "claim": "Private share manager, loading/list/detail routes, exact-object revoke/delete confirmations; successor changed.",
+      "blob": "634bb13459f2982f1a6ecfbf382c8579da50f2a9",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "libdelete": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/lib/library-delete-confirmation.ts",
+      "lines": "1\u201399",
+      "claim": "Successor names targets and distinguishes recoverable chat Trash from permanent file deletion.",
+      "blob": "05cea7e8ec11b1e906b28db7c958820fb61eec68",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "task": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ScheduledTaskEditor.tsx",
+      "lines": "400\u2013467,1043\u20131063",
+      "claim": "Dirty/modal guards; generic alert; labeled fields; gated Save schedule. No linked field-error summary in this long editor.",
+      "blob": "6422699088bf704a29fd0053529d4df07d1b6f1f",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "tasks": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/routes/scheduled-tasks.tsx",
+      "lines": "whole component; header/editor lifecycle",
+      "claim": "Task page and object menus, current editor opener restoration and header consolidation.",
+      "blob": "af915f6c3cc81411dd121cbc3a57d1d1dbd9755a",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "export": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/AccountExportPanel.tsx",
+      "lines": "whole component",
+      "claim": "Owned asynchronous export statuses; uncertain-operation/readback guards; successor focus handoff.",
+      "blob": "1cac4fbc9d82ec9e74432aa5f7526c27bf7df833",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "auth": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/routes/auth.tsx",
+      "lines": "122\u2013220,275\u2013313,370\u2013395,474\u2013641",
+      "claim": "Configured login/signup/MFA forms, repeat-submit guard, credential autocomplete, recovery and actual return helper; resend cooldown is local policy.",
+      "blob": "094d55d7ff9e9fb07bb003e2d6751e82bef2565c",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "authcap": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/styles/spec400-system.css",
+      "lines": "455\u2013462",
+      "claim": "400px main auth cap and phone width calculation.",
+      "blob": "63582b4adddd70802e51a9e59964f20dae30c74b",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "authdialog": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/auth/AuthDialog.tsx",
+      "lines": "1\u2013end",
+      "claim": "Existing configured-method/auth adapter dialog; not a provider acceptance result.",
+      "blob": "db0ed118dd253dfa93330259af666f881b51081d",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "recovery": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/auth/ForgotPasswordDialog.tsx",
+      "lines": "17\u2013end",
+      "claim": "Account-safe recovery, prefilled email and existing provider API.",
+      "blob": "87e2c82334dd0bd582da15a990549e2a1ef39ffc",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "mfa": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/MfaPanel.tsx",
+      "lines": "336\u2013363,631\u2013642",
+      "claim": "Supported sign-out-other-sessions control, but Active sessions section has no device/activity list.",
+      "blob": "c008f2a97a07bee12420e7d90a774b6fc028c428",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "mfafield": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/auth/MfaChallengeDialog.tsx",
+      "lines": "115\u2013143",
+      "claim": "Single paste-friendly authenticator-code field; no email resend invented in this field.",
+      "blob": "525aebcd310a67158fac68a4938edbbb2ded5081",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "redirect": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/lib/oauth-session.ts",
+      "lines": "44\u2013102",
+      "claim": "Existing remembered safe post-auth destination and callback parameter handling.",
+      "blob": "4b146d4c26cdb3f072807320df3b68fc255abc3c",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "signin": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ComposerSignInDialog.tsx",
+      "lines": "35\u2013103",
+      "claim": "In-place sign-in launcher; blocks navigation when attachments/pending message would be lost.",
+      "blob": "a43f10c9837612655b77d6a5f7207683acacef69",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "operational": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/OperationalState.tsx",
+      "lines": "5\u201351,67\u2013103",
+      "claim": "Explicit unavailable/auth/rate-limit states; retry restricted by capability state, not an idempotency guarantee.",
+      "blob": "4966d307a8651712c4a685938bcc7f0d107a4b8a",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "settings": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/SettingsDialog.tsx",
+      "lines": "1920\u20131941,2056\u20132074,2230\u20132301",
+      "claim": "Security integration, dedicated irreversible-account-delete explanation/cancel/typed confirmation using existing flow.",
+      "blob": "b41db2de456123fd16cb2e1a1e328d0c3d173eb9",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "billing": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/BillingWorkspace.tsx",
+      "lines": "whole component",
+      "claim": "Provider-authoritative Overview/Plans/Invoices UI and explicit unavailable fields.",
+      "blob": "103ca6fc170c5b0d9e6ef5b2e6fc13144f15c540",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "plans": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/lib/capability-registry.ts",
+      "lines": "published plan/allowance definitions",
+      "claim": "Canonical prices/allowances; baseline diff changes Free image/upload presentation to 3/day and 2/day, not charging policy.",
+      "blob": "76c3dbf68fefdd97f6168efaf7fa80320d4e5e36",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "limits": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/lib/limits.ts",
+      "lines": "whole file",
+      "claim": "Existing UTC usage boundary source.",
+      "blob": "d986f1bd3e45fb5832a5468099cccc0bfa57ca06",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "payment": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/utils/payments.functions.ts",
+      "lines": "getSubscriptionSummary/createPortalSession/createCheckoutSession",
+      "claim": "Existing financial server contracts; byte-identical to baseline in inspected candidate.",
+      "blob": "5b5bd8c787629f09e2123a51bc775b6439154217",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "policy": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/lib/kova-chat-policy.mjs",
+      "lines": "31\u2013139",
+      "claim": "Existing serving/entitlement restrictions; byte-identical to baseline in inspected candidate.",
+      "blob": "86d22966f05fa6f8079b5e8335546b5f0de1dd69",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "help": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/routes/help.tsx",
+      "lines": "54\u2013104,253\u2013338,380\u2013405",
+      "claim": "Searchable Help/disclosures and supported contact form; submitted payload is entered form data plus page URL/user agent, not automatic chat contents.",
+      "blob": "074812148c5b85c871c202c8da207154685cea1e",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "share": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ShareChatDialog.tsx",
+      "lines": "125\u2013156,174\u2013240,309\u2013314",
+      "claim": "Separate review and final Share, guarded request lifetime; uncertain failure tells user to check Library.",
+      "blob": "6005c63d8b0ab038a194460fbacba103fe8f909b",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "snapshot": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/lib/share-chat-preview.ts",
+      "lines": "18\u201357",
+      "claim": "Frozen user/assistant text-only snapshot excludes attachments/tools/private metadata.",
+      "blob": "a190c66f9bf1d16cb6dfe773a438d6a08e2dfcd4",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "shareapi": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/lib/shared-chats.functions.ts",
+      "lines": "29\u2013152",
+      "claim": "Existing authenticated recipient-scoped snapshot/list/revoke contract; no public bearer-link service.",
+      "blob": "90c1fb96cf37b587b087d50e87ed66f4a904ede7",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "states": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/states.tsx",
+      "lines": "29\u2013143",
+      "claim": "Shared skeleton/empty/error components. SkeletonGrid auto-fill240/gap 16 differs from final project-grid 620/960/gap 24 rules.",
+      "blob": "e5d3d23b68567f34b7ec615e7899d89d0788b7bf",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "copy": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/ResponseMarkdown.tsx",
+      "lines": "20\u2013145",
+      "claim": "Exact-source content-box copy, two-second feedback and selectable fallback.",
+      "blob": "28c9204ee1fcfe58ceef45e6c07f50b5200c0e47",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "receipt": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/lib/task-created-receipt.mjs",
+      "lines": "1\u2013end",
+      "claim": "Only validated persisted-result successful task identity can render success; malformed/synthetic inputs fail closed.",
+      "blob": "9fb7cfcafa9a67f5fe7efe750a8385d647dadaff",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "taskbubble": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/TaskCreatedBubble.tsx",
+      "lines": "1\u2013end",
+      "claim": "Task receipt link/gray bubble/green check presentation.",
+      "blob": "6a35ff31e2fbdb6990819205d52fe0e71e59312f",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "work": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/components/WorkExecutionPanel.tsx",
+      "lines": "whole component",
+      "claim": "Existing Work preparation remains; successor adjusts control geometry without claiming service execution.",
+      "blob": "e22cf0131a37aafd10b64f52c39111d3b2709bef",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "images": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/routes/images.tsx",
+      "lines": "whole component",
+      "claim": "Successor local-result reveal and presentation source, not live image generation acceptance.",
+      "blob": "5d02ab7fc558f675b345ce1ca04a61b4c257681d",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": false,
+        "review9c59085": false
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "routechat": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/routes/projects.$projectId.chat.$chatId.tsx",
+      "lines": "44\u2013end",
+      "claim": "Existing project/conversation identifier route remains.",
+      "blob": "01d4e02fdabe424668fa8dc040a381cbf2419533",
+      "same_file_blob_as": {
+        "baseline9cc": true,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "routesettings": {
+      "kind": "source",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "src/routes/settings.$section.tsx",
+      "lines": "1\u2013end",
+      "claim": "Stable Settings section URLs; modal preserved for data-sensitive navigation cases.",
+      "blob": "a57d9e051d23cc38efdd041c2c9c72ce6c6db10c",
+      "same_file_blob_as": {
+        "baseline9cc": false,
+        "review638a162": true,
+        "review9c59085": true
+      },
+      "limitation": "Source inspection only. Identical file blobs do not prove unchanged transitive styles, dependencies, runtime, or full rendered acceptance."
+    },
+    "scope": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/scope-and-contracts.md",
+      "claim": "Owner current-color override; original artifact separation; protected service/business/auth/provider boundaries.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "mgmtdoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/management-evidence.json",
+      "claim": "Source/handler tests and distributed control-event-result-error inventory; several older gaps superseded by Library detail evidence.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "chatdoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/chat-composer-evidence.json",
+      "claim": "Chat/composer/result source and focused tests; browser coverage must come from exact rendered receipts.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "responsedoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/responses-results-coverage.md",
+      "claim": "Response/Result interaction inventory, source tests, and missing production task producer/public share-link contracts.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "authdoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/auth-evidence.json",
+      "claim": "Focused auth checks plus prior 638 rendered behavior;400px sizing corrected in later9c receipt.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "billdoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/billing-evidence.json",
+      "claim": "Per-requirement338\u2013348 source/contracts, provider verification exclusions.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "exportdoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/account-export-evidence.md",
+      "claim": "Asynchronous export/unknown-result rules and mocked tests; original download-link projection correction.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "focusdoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/account-export-focus-evidence.md",
+      "claim": "228 request/prepare focus correction with handler tests; awaits rendered receipt.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "detaildoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/library-detail-evidence.md",
+      "claim": "Generation-stable Library route, measured storage and explicit metadata gaps; supersedes older no-detail-URL claim.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "sharedoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/private-share-evidence.md",
+      "claim": "Recipient-scoped frozen share review with separate final submit.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "folderdoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/library-folder-preferences-evidence.md",
+      "claim": "Successor folder preference reconciliation; source/handler evidence only.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "listdoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/list-preferences-evidence.md",
+      "claim": "Principal-scoped list preferences; no universal scroll claim.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "profiledoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/profile-appearance-evidence.json",
+      "claim": "Profile read-only contract limits and device-local appearance defaults/preferences.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "deletefocus": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/library-delete-confirmation-evidence.md",
+      "claim": "Successor selected-target/consequence/Cancel focus correction; no production delete.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "taskfocus": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/scheduled-task-dialog-focus-evidence.md",
+      "claim": "Successor exact-opener restoration/mobile dialog source and tests.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "navfocus": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/drawer-navigation-focus-evidence.md",
+      "claim": "Drawer navigation controller; later queueMicrotask receiver correction is source-only until retest.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "notifydoc": {
+      "kind": "existing_document",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "path": "docs/spec400/browser-notification-permission-evidence.md",
+      "claim": "Timer/notification permission and audio changes are explicit-action guarded in source.",
+      "limitation": "Existing authored evidence; any claimed tests were not rerun by this reconciliation."
+    },
+    "render638": {
+      "kind": "rendered_receipt",
+      "commit": "638a1629d7cd49c79dfc1decd55bc40ce9db2780",
+      "path": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/receipt.md",
+      "claim": "Bounded cloud-Chromium synthetic core behavior and actual images; full 1024 frame, phone 320/390 representatives only."
+    },
+    "render9c": {
+      "kind": "rendered_receipt",
+      "commit": "9c59085fa1037281eca1af13926fabc1f6dd7337",
+      "path": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/receipt.md",
+      "claim": "Bounded synthetic auth/Billing/Library/export/share/tasks/plugins/images/Usage/Work/Help and additional families; explicit unresolved defects and exclusions."
+    },
+    "prior1c": {
+      "kind": "review_ledger",
+      "path": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1c3ac7c.json",
+      "claim": "Prior task receipt/paste/table/Library original-image intervals; not a current 228 rendered pass."
+    },
+    "gate228": {
+      "kind": "unexecuted_review_plan",
+      "commit": "22850d3e92c4046315642be89779808a3dd267e6",
+      "paths": [
+        "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/guard-22850d3.md",
+        "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/successor-22850d3-pixel-gate.md"
+      ],
+      "claim": "Assigned guard/pixel retests. Do not interpret imperative checklist headings as completed interactions."
+    }
+  },
+  "original_image_evidence": {
+    "1c3ac7c/receipt390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/receipt390-dark.jpg",
+      "sha256": "9ce504f040c2617502d90fc62d0e70fcc671d3c3b08197e9ae0ae71dd5457c61",
+      "pixels": [390, 844],
+      "sourceCommit": "1c3ac7c71bf0684801704d7c118f4c3f953b06b9",
+      "theme": "dark",
+      "inspection": "actual original viewed",
+      "scope": "Visible short user turn, Kova label, validated-fixture receipt, writing box, phone header and composer",
+      "creditExclusions": [
+        "Writing-box footer is partly obscured by Jump to latest; no full footer visibility credit",
+        "No production task creation/persistence claim"
+      ],
+      "finding": "No additional visual defect in the captured interval",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1c3ac7c.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "1c3ac7c/table-followups390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/table-followups390-dark.jpg",
+      "sha256": "5d62ae09d6f9de8ec805072b57b2b31ccc055d95ca1d828f306c465951b5ba8a",
+      "pixels": [390, 844],
+      "sourceCommit": "1c3ac7c71bf0684801704d7c118f4c3f953b06b9",
+      "theme": "dark",
+      "inspection": "actual original viewed",
+      "scope": "Visible left horizontal table position, blue inline code/key tokens, response action row, three follow-ups and phone composer",
+      "creditExclusions": [
+        "Right-hand table continuation not captured",
+        "No draft-preservation/no-send interaction credit from pixels alone"
+      ],
+      "finding": "No additional visual defect in the captured interval",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1c3ac7c.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "1c3ac7c/library390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/library390-light.jpg",
+      "sha256": "aa55aed6c6e2f057a074ef147b24da6fd67450d4c72f26432d986b08f7287cdd",
+      "pixels": [390, 844],
+      "sourceCommit": "1c3ac7c71bf0684801704d7c118f4c3f953b06b9",
+      "theme": "light",
+      "inspection": "actual original viewed",
+      "scope": "Top Library viewport: title/actions, closed disclosures, search/filter/sort/view/tabs and all four visible records; no expanded Filters or preview credit",
+      "finding": "Earlier font/density finding visibly corrected; first row approximately y406, clear long-name wrapping",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1c3ac7c.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "1c3ac7c/settings390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/settings390-light.jpg",
+      "sha256": "bbe46d7d6675bfec9fc5f35d004e8baa6dd467101d7929c85e811229d90b1629",
+      "pixels": [390, 844],
+      "sourceCommit": "1c3ac7c71bf0684801704d7c118f4c3f953b06b9",
+      "theme": "light",
+      "inspection": "actual original viewed",
+      "scope": "Top Settings Appearance viewport: page/title, Section selector, Appearance title and controls through Motion label; lower settings body excluded",
+      "finding": "P2 shared page-header alignment: separate Timers row and headings inset beyond selector/fields",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1c3ac7c.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "1c3ac7c/paste320-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/paste320-light.jpg",
+      "sha256": "fbdc34a82c4ece94347d1c52da155d9f378e5b3a6864adecfe3dd58f247193ed",
+      "pixels": [320, 700],
+      "sourceCommit": "1c3ac7c71bf0684801704d7c118f4c3f953b06b9",
+      "theme": "light",
+      "inspection": "actual original viewed",
+      "scope": "Guest empty chat, compact local pasted-text chip, Not attached state, preserved visible draft and helper; no preview/save behavior credit from pixels",
+      "finding": "No visual containment defect in this state",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1c3ac7c.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "1c3ac7c/table320-light-right.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/table320-light-right.jpg",
+      "sha256": "b2a586936ff1f3f2102f1beb42bcccdddf30beca69f6593fbbb2272b7bedb51a",
+      "pixels": [320, 700],
+      "sourceCommit": "1c3ac7c71bf0684801704d7c118f4c3f953b06b9",
+      "theme": "light",
+      "inspection": "actual original viewed",
+      "scope": "Right horizontal table position showing trailing status cells, response actions/follow-ups and composer; table header/first row above viewport excluded",
+      "finding": "P3 orphan More button wraps to its own response-action row",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1c3ac7c.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "1c3ac7c/copy320-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/copy320-light.jpg",
+      "sha256": "bdc225112f6b71037546bb9f284e1812737654f6da57bfa280d19dc2045f44ea",
+      "pixels": [320, 700],
+      "sourceCommit": "1c3ac7c71bf0684801704d7c118f4c3f953b06b9",
+      "theme": "light",
+      "inspection": "actual original viewed",
+      "scope": "Writing-box lower text and Copied footer, explanatory line, next code-box viewport and composer; earlier writing text excluded",
+      "finding": "Writing-box footer readable; P1 code-body contrast failure on Light surface",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1c3ac7c.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/code320-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/code320-light.jpg",
+      "sha256": "8fed9173d9896fd448964928b79fca3a523a71d10868bf12e4eb8183a0a4c406",
+      "pixels": [320, 700],
+      "inspection": "actual original viewed",
+      "scope": "Visible code box at left horizontal position including Copied footer; next prose-box heading and start only",
+      "result": "Closes C03 Light contrast defect. Native horizontal code continuation remains outside this position; Dark preservation guard pending.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/table-actions320-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/table-actions320-light.jpg",
+      "sha256": "658966de85148fa0f864726d4a2fffee2dfbf734b7f58a3887f9f1e890ed4efb",
+      "pixels": [320, 700],
+      "inspection": "actual original viewed",
+      "scope": "Lower two table rows, complete response action row, follow-ups and composer",
+      "result": "Closes C02 orphan More: six response controls share one row. Header/upper table row are outside this frame.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/settings390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/settings390-light.jpg",
+      "sha256": "0e19b17c50bc1ac4c5bb8524e23be4ff19328c4535dd12512d0d8391b22e12fc",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Top Settings Appearance: one Section selector, aligned heading/body, full Theme controls and Density start",
+      "result": "Closes C01 page-header/Timers alignment. No lower controls or other settings-section credit.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/appearance-preview390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/appearance-preview390-dark.jpg",
+      "sha256": "b9641340c7d73f0ec89887c99529d63f12ae6310b5158b5060359642984eae9c",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Lower Appearance: Motion, illustrative preview and Reset appearance confirmation",
+      "result": "Preview and reset controls readable/contained. Screenshot displays reset defaults; change/reset behavior is separately attributed to browser owner.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/billing390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/billing390-dark.jpg",
+      "sha256": "30b7313576aab8cfd65425c15a635cebacfdb22defc0fb7778b7e93e5bfed762",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Billing Plans tab top: shared header/tabs, intro and upper Free plan through Storage heading",
+      "result": "Visible content contained; lower plans/actions and other tabs not inspected. P3 new plan-card radius16px differs from12px content token.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/code320-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/code320-dark.jpg",
+      "sha256": "6380adc4cd834f8656f102fe25794a5273a67e7a7a59e5687565cc90b22f4d6a",
+      "pixels": [320, 700],
+      "inspection": "actual original viewed",
+      "scope": "Visible code box at left horizontal position, Copied footer and start of following prose box",
+      "result": "Dark preservation guard closes C03 theme residual; no complete horizontal code text union",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/desktop1024-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/desktop1024-dark.jpg",
+      "sha256": "446e671a1b852abbb71c25b4d78af120f132d1a24e73f1c424dee35218e51e4e",
+      "pixels": [1024, 768],
+      "inspection": "actual original viewed",
+      "scope": "Complete1024 screenshot: single sidebar/selected Chat/recent row/header, semantic table, response actions/follow-ups and composer",
+      "result": "Earlier duplicate rail/font/header/label/radius defects visibly corrected at this width; no full1440 split pixel claim",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/auth1024-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/auth1024-light.jpg",
+      "sha256": "a682279ae860e16001f988cb0d2c628d3a9d707944de32ede687f41f60094c7c",
+      "pixels": [1024, 768],
+      "inspection": "actual original viewed",
+      "scope": "Login password-stage card, displayed email, recovery/submit/email-link and legal links",
+      "result": "Assigned440px versus400px cap remains. Logo identity query closed: NovaLogo uses /kova-logo.png; current asset SHA256566cd64480ac25307146106efc073064f2c2161935babb9625a370469dc24ae2 matches9cc. No brand-change finding.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/billing-overview390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/billing-overview390-light.jpg",
+      "sha256": "2f6a41e07c731e29e067fbfdb1ccef6a9896b1f45ef8a814d7b690324109e3db",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Overview from header through plan/status/interval/date/charge explanation and first Usage row",
+      "result": "Visible hierarchy/values readable; lower Usage/management remains outside capture. View plans pill radius is a confirmed8px-token miss",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/billing-invoices390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/billing-invoices390-light.jpg",
+      "sha256": "c176f2884daa61956c0e06043e302314e8be7346c7dbf5b9f1ea618c503088d3",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Invoices heading, complete unavailable explanation and disabled Stripe portal control",
+      "result": "Unavailable state readable. Yellow button paint excluded from product-color finding because browser computed white70% withopacity.48, pending corroboration if needed",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "638a162/billing-plans-lower390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/billing-plans-lower390-light.jpg",
+      "sha256": "f4a0d66467f6b0776c7b3ba85d93ee98d56fc8d288f91acb77da9195ba4ea114",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Prior plan action tail, full visible Pro card and checkout/change explanation",
+      "result": "Lower action is reachable and text wraps. Plan action10px radius differs from8px control token; no Plus body or fullPlansunion credit",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/auth1024-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/auth1024-light.jpg",
+      "sha256": "bc955ce4216ade191d6c98b2714f8bdc9e92b1e2ca351d78240771159dc0d1cb",
+      "pixels": [1024, 768],
+      "inspection": "actual original viewed",
+      "scope": "Full visible authentication form, logo, fields, primary action and legal links",
+      "result": "400px desktop form cap visually closed; original Kova logo retained.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/auth390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/auth390-dark.jpg",
+      "sha256": "b80dce6a663a9ce18f58513e2a1fceac4d173e991a27e161c062cc60815bb72a",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Full visible phone authentication form and footer",
+      "result": "Readable and contained at390 Dark; no authentication submission.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/billing390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/billing390-dark.jpg",
+      "sha256": "16f867eb214dfa852445a72967477523964be8c2a85d99b3dd1f7f77413a354b",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Billing Section/heading, tabs, Plans introduction and upper Free card through Storage heading",
+      "result": "Card corner correction visible; lower View plans/Upgrade controls are outside this frame and not independently closed here.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/share1024-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/share1024-light.jpg",
+      "sha256": "46a3cda5f4dd4dafb84e3cb6c28ba3d3cffac0ddf431816c1bac6b80422e0f77",
+      "pixels": [1024, 768],
+      "inspection": "actual original viewed",
+      "scope": "Entire shared-chat review dialog: recipient, two-message snapshot, limits and Cancel/Back/Share footer",
+      "result": "Clear readable hierarchy and primary action; no share submitted.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/export-ready390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/export-ready390-dark.jpg",
+      "sha256": "a3feb799c8a987552d42905d81ffdb5ee3f710c42f50cdd5a1d03a9b5b3e9fdd",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Account export Completed state and ready-link controls; beginning of device export below",
+      "result": "Visible status/details/actions readable. Browser-reported focus replacement defects remain separate.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/projects390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/projects390-light.jpg",
+      "sha256": "bd7f7477756c5e4046e1828c4c3fa713a2776343ae1e1ac1714f3135487979c0",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Directory heading/actions/search/sort/tabs and first project card",
+      "result": "Existing standalone utility row and explanatory copy delay first card; scoped management-header consolidation assigned.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/project-context390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/project-context390-light.jpg",
+      "sha256": "4e1934a82a793b772e3b77686aa94b80f63ae8e5fdc78a376d1cd1a616a3c924",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Project utility/header sequence, Context navigation and beginning of Instructions editor",
+      "result": "C06: utility controls before project identity cause excessive first-action delay; lead source correction awaits successor pixels.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/tasks390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/tasks390-dark.jpg",
+      "sha256": "363141cb01c49cdd3e300879be9e295e56671c9fb9c85f7a671853ed84c6f2a0",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Scheduled task heading/actions/filter region and first visible task metadata",
+      "result": "C05: standalone Timers and separated Refresh row delay first task to about492px; timezone distinction is readable.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/task-editor390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/task-editor390-dark.jpg",
+      "sha256": "9598c50e23eaf77a728a659ed36a9c36d6f390ca34e65014cf0030651c7ec0e2",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Task editor visible title/prompt/frequency/date/time/timezone and sticky action footer",
+      "result": "C07: inset rounded phone shell conflicts with fullscreen requirement; narrow footer remains horizontal. Already assigned.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/plugins390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/plugins390-dark.jpg",
+      "sha256": "5383e876b07cda4a55f8993c90fc70c2c5c2e03108f447876b99948adfc8b267",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Directory heading/filter/search/category/count and first provider card",
+      "result": "C05: duplicated utility/header rhythm delays first provider. Actual logo/purpose/unavailable state remain readable.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/plugin-detail390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/plugin-detail390-dark.jpg",
+      "sha256": "deabe401c4072a4e68671d0798b2a2dcaf6277513cabe93d6a159951e04762a9",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Unavailable Outlook detail panel, proposed permissions and visible footer/close region",
+      "result": "C08: inset rounded inspector geometry persists; no provider connection inferred.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/library-detail390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/library-detail390-dark.jpg",
+      "sha256": "c0923661826403b105ce7ebf5cc9c4ab37d070bdc54b7ab9ac23848dbe2a5842",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Library title/action row, metadata, Preview/Extracted text tabs and synthetic text preview",
+      "result": "C08/C09: inset inspector plus title squeezed to Rel\u2026 and narrow wrapped type/date by adjacent actions.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/images390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/images390-light.jpg",
+      "sha256": "91f12e5a4a92d5201d37f6b8b3b0efff59452aeccede394d2b50f879ab31fd5f",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Images title/prompt/shape/edit controls, preset carousel and beginning of Image history",
+      "result": "C10: old34px heading/pill/control corner geometry is still visible.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/image-result390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/image-result390-light.jpg",
+      "sha256": "18aa59f6338c4e34e40e9f908c18051ddfe353f21e1fc985b8158401ff1e6f2f",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Images prompt/preset region and only upper portion of newly returned synthetic sample",
+      "result": "Known completion reveal defect: image actions are below viewport. No full result-body credit.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/image-viewer390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/image-viewer390-light.jpg",
+      "sha256": "d64e94dcbecc23aa5b61780f26e717bb066333e7f497c403b6957a6e6c898385",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Entire visible sample image, prompt caption and Reuse/Generate/Save/Download/Remove controls",
+      "result": "Image and controls readable/contained; sample is not asserted to match the requested app icon or to be real generation.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/usage1024-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/usage1024-light.jpg",
+      "sha256": "022d74eeb6f057ee8c35ab704c8e7c117a30fa6b7b1dd9f6e6f0a0d6d95a96a6",
+      "pixels": [1024, 768],
+      "inspection": "actual original viewed",
+      "scope": "Settings selector, Usage daily activity rows, limits explanation and plans link",
+      "result": "C11: content about878px wide at1024, exceeding760px spec cap; values are fixture state.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/work1024-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/work1024-light.jpg",
+      "sha256": "4ad21826381143c8e809759dca5648412cdc86d1beb81c0862913caa34b6a63c",
+      "pixels": [1024, 768],
+      "inspection": "actual original viewed",
+      "scope": "Saved-work unavailable notice, Planning sessions and visible preparation form through disabled Start",
+      "result": "C12: legacy small select/text-action controls visible. No lower body, graph, run or execution coverage.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/help390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/help390-dark.jpg",
+      "sha256": "4b243c99c2ccf46eabb577afc4b71850cd3fe5b5d7f6c50a7f1f6ef2b6836137",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Help header/search/categories and expanded one-answer search result",
+      "result": "Readable current accordion/search template; no lower support form or other answer coverage.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/core-templates-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/retention390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/retention390-dark.jpg",
+      "sha256": "68a482da9e209e7b24872c638f27a56ee277f58f01578ce329ab78d9347f8004",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Review top and scope/days controls through summary start",
+      "result": "A01/A03 corrected at 390 Dark; first scope control approximately y368",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-families-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/reset390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/reset390-dark.jpg",
+      "sha256": "757e86935f7a3b9a26ce9b45185e8e6de06ea282df2dce1a71b43609354ceeb8",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Expanded review tools, readiness disclosure and revealed Reset confirmation with Cancel and Reset actions",
+      "result": "Confirmation readable and contained; actual reveal and return focus separately verified by the browser owner",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-families-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/media390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/media390-light.jpg",
+      "sha256": "04991596853c32395cdd65a76268c3a6bdd17e02c1111523284aca0baf028c8d",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Review top, compact empty reference, file chooser and Composition aspect control",
+      "result": "A01/A02/A03 corrected at 390 Light; chooser approximately y485; no lower editing-control credit",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-families-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/media-reference390-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/media-reference390-light.jpg",
+      "sha256": "a1d8866a035ac74fd59b426b7cf590f78ce1970f341aafd3b6e999b5d9fe3ee6",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Loaded synthetic local reference with letterboxing, filename and Remove control; disclaimer partly below the viewport",
+      "result": "Actual reference preserves aspect and containment; Remove focus residual already assigned by the browser owner",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-families-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/api1024-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/api1024-dark.jpg",
+      "sha256": "2315cf28bc550f6455760ef7cff53db54fab400dc9c549e0b801236f881232a3",
+      "pixels": [1024, 768],
+      "inspection": "actual original viewed",
+      "scope": "Media API planning top: populated input/output fields, populated local summary and documentation/workspace actions; third field below viewport",
+      "result": "A05 and A06 corrected in this desktop cell. No endpoint or provider implementation inferred.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-families-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/api-lower1024-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/api-lower1024-dark.jpg",
+      "sha256": "ed47f86f041b000018af4dfac63600ea2d41c91905c3e6806c2802b755117f1a",
+      "pixels": [1024, 768],
+      "inspection": "actual original viewed",
+      "scope": "Overlapping lower API brief: all three text fields, action links, card bottoms and secondary disclosure headers",
+      "result": "Completes visible primary brief with preceding image; disclosure bodies not inspected.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-families-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/notifications390-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/notifications390-dark.jpg",
+      "sha256": "c4c90f2f84ff2f5b87114d5e466c88e4c2a1b311c7d5bc27de0c58c3b57aa5d1",
+      "pixels": [390, 844],
+      "inspection": "actual original viewed",
+      "scope": "Notification unavailable state, secondary disclosure headers and beginning of public footer",
+      "result": "A07 corrected; service limitation is clear and unrelated support/instruction copy removed.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-families-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/legal320-dark.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/legal320-dark.jpg",
+      "sha256": "306fbf87b47579fd96dd20985c9ef6fbc66245504013f151426a51444a55f232",
+      "pixels": [320, 700],
+      "inspection": "actual original viewed",
+      "scope": "Legal BAA top, unavailable document explanation and beginning of metadata",
+      "result": "A01/A03 narrow legal guard corrected. No complete legal body or legal approval.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-families-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    },
+    "9c59085/overview1024-light.jpg": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/overview1024-light.jpg",
+      "sha256": "e5daf660bdbc05903d3bb82648f658cbe49e5123470e8aa41950898798ae8957",
+      "pixels": [1024, 768],
+      "inspection": "actual original viewed",
+      "scope": "Overview hero and illustrated chat through its mock composer",
+      "result": "A04 corrected: plain attribution, rectangular user/composer geometry. Mock composer is aria-hidden illustration, not functional control.",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-families-9c59085.json",
+      "attribution": "Existing independent reviewer inspected original; this worker has not rerun or personally re-inspected the rendered state.",
+      "hash_rechecked": true
+    }
+  },
+  "untouched_acceptance_sha256": "2200f96266e7c39c1955a2d69adfca503f247ae44c4995aadc03722084f847d4",
+  "later_workspace_observation": {
+    "head_at_final_qa": "f0f40f6b530c901b2a6e5e582149f7077c1f7ff3",
+    "note": "Workspace advanced during reconciliation. This proposal still describes immutable 22850d3; active later edits are not treated as reviewed or as closing these findings."
+  }
+}

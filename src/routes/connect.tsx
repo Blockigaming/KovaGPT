@@ -54,14 +54,14 @@ function ConnectPage() {
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             to="/apps"
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            className="kova-button inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
           >
             View available apps
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
           <Link
             to="/contact-support"
-            className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+            className="kova-button inline-flex min-h-11 items-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
           >
             Contact support
           </Link>

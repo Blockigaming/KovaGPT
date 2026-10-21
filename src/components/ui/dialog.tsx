@@ -50,11 +50,11 @@ const DialogContent = React.forwardRef<
         "fixed z-50 flex min-w-0 flex-col gap-4 [overflow-wrap:anywhere] border border-border bg-background shadow-xl duration-150 data-[state=closed]:pointer-events-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         // Mobile (<sm): bottom sheet — cap height and scroll body, respect safe areas
-        "inset-x-0 bottom-0 top-auto w-full max-w-full rounded-t-2xl rounded-b-none border-b-0 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
+        "inset-x-0 mx-auto bottom-0 top-auto w-full max-w-full rounded-t-2xl rounded-b-none border-b-0 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]",
         "max-h-[92dvh] overflow-y-auto overscroll-contain",
         "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         // sm+ (tablet/desktop/preview iframe): centered modal
-        "sm:inset-auto sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:w-[min(92vw,720px)] sm:max-w-[92vw] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-xl sm:border-b sm:p-6 sm:pb-6 sm:max-h-[88dvh]",
+        "sm:mx-0 sm:inset-auto sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:w-[min(92vw,560px)] sm:max-w-[92vw] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border-b sm:p-6 sm:pb-6 sm:max-h-[88dvh]",
         "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0",
         className,
       )}
@@ -68,9 +68,9 @@ const DialogContent = React.forwardRef<
       {children}
       <DialogPrimitive.Close
         data-kova-dialog-close=""
-        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-[var(--kova-radius-compact)] opacity-65 ring-offset-background cursor-pointer transition hover:bg-accent hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none sm:h-10 sm:w-10 data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-[var(--kova-radius-button)] opacity-65 ring-offset-background cursor-pointer transition hover:bg-accent hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
       >
-        <X className="h-4 w-4" />
+        <X className="h-5 w-5" />
         <span className="sr-only">{closeLabel}</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
@@ -98,7 +98,7 @@ DialogHeader.displayName = "DialogHeader";
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end [&>button]:h-auto [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:max-w-full [&>button]:whitespace-normal",
+      "mt-2 flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end [&>button]:h-auto [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:max-w-full [&>button]:whitespace-normal",
       className,
     )}
     {...props}

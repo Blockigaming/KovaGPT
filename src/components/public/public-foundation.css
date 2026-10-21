@@ -62,7 +62,7 @@
   justify-content: center;
   gap: 0.625rem;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--kova-radius-button);
   background: var(--foreground);
   color: var(--background);
   padding: 0.75rem 1.25rem;
@@ -88,7 +88,7 @@
 [data-public-shell] .public-workflow-example {
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 1.5rem;
+  border-radius: var(--kova-radius-card);
   background: var(--muted);
 }
 [data-public-shell] .public-example-toolbar {
@@ -134,7 +134,7 @@
 [data-public-shell] .public-example-prompt {
   justify-self: end;
   max-width: 90%;
-  border-radius: 1.5rem;
+  border-radius: var(--kova-radius-message);
   padding: 1rem 1.25rem;
   background: var(--background);
   font-size: 0.9375rem;
@@ -206,7 +206,7 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: var(--kova-radius-output);
 }
 [data-public-shell] .public-table-scroll table {
   width: 100%;
@@ -320,7 +320,7 @@
   overflow: hidden;
   padding: clamp(1.25rem, 2.5vw, 2rem);
   padding-bottom: 0;
-  border-radius: 1.25rem;
+  border-radius: var(--kova-radius-card);
   background: var(--muted);
 }
 [data-public-shell] :is(.public-use-case, .public-control-grid article) h3 {
@@ -421,7 +421,7 @@
   justify-content: space-between;
   gap: 2rem;
   padding: clamp(1.5rem, 5vw, 4rem);
-  border-radius: 1.25rem;
+  border-radius: var(--kova-radius-card);
   background: var(--muted);
 }
 [data-public-shell] .public-plan-band h2 {
@@ -451,7 +451,7 @@
   flex-direction: column;
   padding: clamp(1.5rem, 3vw, 2.5rem);
   border: 1px solid var(--border);
-  border-radius: 1.25rem;
+  border-radius: var(--kova-radius-card);
 }
 [data-public-shell] .public-control-grid .public-action {
   margin-top: auto;
@@ -725,7 +725,7 @@
   grid-template-columns: 11.25rem minmax(0, 1fr);
   max-width: 58rem;
   margin: 0 auto;
-  border-radius: 0.75rem;
+  border-radius: var(--kova-radius-card);
   background: var(--background);
   box-shadow: 0 12px 32px rgb(0 0 0 / 10%);
 }
@@ -748,7 +748,7 @@
 [data-public-shell] .public-example-sidebar .public-example-sidebar-brand {
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
-  font-weight: 550;
+  font-weight: 500;
 }
 [data-public-shell] .public-example-sidebar small {
   margin: 1.5rem 0.625rem 0.25rem;
@@ -804,7 +804,7 @@
   margin: 0 1.5rem 1.25rem;
   padding: 0.875rem 1rem;
   border: 1px solid var(--border);
-  border-radius: 1.5rem;
+  border-radius: var(--kova-radius-composer);
   color: var(--muted-foreground);
   font-size: 0.8125rem;
 }
@@ -840,7 +840,7 @@
 }
 [data-public-shell] .public-use-case {
   padding: 1.5rem 1.5rem 0;
-  border-radius: 0.5rem;
+  border-radius: var(--kova-radius-card);
   background: var(--muted);
 }
 [data-public-shell] .public-use-case h3 {
@@ -853,10 +853,10 @@
 [data-public-shell]
   .public-use-case
   :is(.public-document-illustration, .public-learning-illustration, .public-plan-illustration) {
-  border-radius: 0.625rem 0.625rem 0 0;
+  border-radius: var(--kova-radius-output) var(--kova-radius-output) 0 0;
 }
 [data-public-shell] .public-plan-band {
-  border-radius: 0.5rem;
+  border-radius: var(--kova-radius-card);
   padding: clamp(2rem, 5vw, 4rem);
 }
 [data-public-shell] .public-plan-band h2 {
@@ -873,7 +873,7 @@
   gap: 1rem;
 }
 [data-public-shell] .public-control-grid article {
-  border-radius: 0.5rem;
+  border-radius: var(--kova-radius-card);
   padding: 1.5rem;
 }
 [data-public-shell] .public-control-grid article h3 {
@@ -890,7 +890,7 @@
   gap: 2rem;
   margin-bottom: 4rem;
   padding: clamp(2rem, 5vw, 3rem);
-  border-radius: 0.5rem;
+  border-radius: var(--kova-radius-card);
   background: var(--muted);
   text-align: start;
 }

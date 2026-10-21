@@ -1,0 +1,70 @@
+{
+  "snapshotUTC": "2026-10-19T00:51:00Z",
+  "targetSource": "990b2c8",
+  "recommendation": "Close only local UI requirements350,353,354 after lead validates this mapping. Preserve historical image attribution. Do not interpret this supplement as live authentication acceptance.",
+  "items": [
+    {
+      "id": 350,
+      "scope": "Existing configured two-stage login page after entering a synthetic email",
+      "evidence": ["9c59085 auth1024-light.jpg", "9c59085 auth390-dark.jpg"],
+      "result": "Exact Log in to Kova heading, visible Email address/Password labels and primary Log in are painted. Current990 source retains these strings and control roles."
+    },
+    {
+      "id": 353,
+      "scope": "Login-page password visibility toggle",
+      "evidence": [
+        "638a162 receipt.md Auth local synthetic email bullet",
+        "638a162 auth1024-light.jpg",
+        "990b2c8 src/routes/auth.tsx lines626\u2013638"
+      ],
+      "result": "Browser owner records native Show/Hide type switching and retained field focus. Exact toggle block is unchanged: mousedown prevents blur, click toggles showPassword and focuses passwordInputRef, aria-pressed and changing accessible label expose state.",
+      "unchangedBlockSHA256": "5fd5cccdd980ffc9a5eafaf7d810ed71c40f6ae5806958e2e99a73284a1d738b"
+    },
+    {
+      "id": 354,
+      "scope": "Login-page recovery entry",
+      "evidence": [
+        "638a162 receipt.md Auth local synthetic email bullet",
+        "9c59085 auth1024-light.jpg",
+        "990b2c8 src/routes/auth.tsx lines651\u2013658,717",
+        "src/components/auth/ForgotPasswordDialog.tsx lines34\u201347"
+      ],
+      "result": "Forgot password is adjacent to the password section. Native opening retained the synthetic entered email; Cancel returned the opener. Current route still passes initialEmail=email and the entire recovery component is unchanged.",
+      "unchangedRecoveryComponentSHA256": "de41111b080f9331c509e4b1120cdf9d77d2de8be4a27500666eecb7f53a9b1e"
+    }
+  ],
+  "evidenceHashes": [
+    {
+      "path": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/auth1024-light.jpg",
+      "sha256": "bc955ce4216ade191d6c98b2714f8bdc9e92b1e2ca351d78240771159dc0d1cb"
+    },
+    {
+      "path": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/auth390-dark.jpg",
+      "sha256": "b80dce6a663a9ce18f58513e2a1fceac4d173e991a27e161c062cc60815bb72a"
+    },
+    {
+      "path": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/auth1024-light.jpg",
+      "sha256": "a682279ae860e16001f988cb0d2c628d3a9d707944de32ede687f41f60094c7c"
+    },
+    {
+      "path": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/receipt.md",
+      "sha256": "efcd8c83203550a6fb72f04d50f1417d26ba9fd6f4d5de8f232e2cf43f64d3f4"
+    },
+    {
+      "path": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/receipt.md",
+      "sha256": "b78af3452ab93f28d295af132ceebb2f657f6efca9602ea703a27cbd15956305"
+    }
+  ],
+  "sourceMapping": {
+    "authRoute638And9cIdentical": true,
+    "visibilityToggle638To990Identical": true,
+    "recoveryComponent638To990Identical": true,
+    "currentDifference": "990 auth route adds persistent error-feedback lifecycle and local resend-delay wording. Password input onChange additionally dismisses resolved password validation. It does not alter the reviewed heading/labels, visibility-toggle handler or recovery email prop. AuthDialog is the configured email-method entry, not another password form."
+  },
+  "limitations": [
+    "These original images remain638/9c, not990 captures.",
+    "Browser owner performed native interactions; independent reviewer inspected originals and source mapping.",
+    "No login, sign-up, recovery email request, provider redirect, MFA, session-expiry or password-manager flow was submitted or certified.",
+    "No full auth-family, all-width/theme or broader400-item acceptance is inferred."
+  ]
+}

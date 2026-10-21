@@ -6,6 +6,7 @@ import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { OrganizationScimControls } from "@/components/OrganizationScimControls";
 import { Input } from "@/components/ui/input";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import {
   organizationErrorMessage,
   organizationRequest,
@@ -14,6 +15,9 @@ import {
   type OrganizationRole,
   type OrganizationWorkspace,
 } from "@/lib/organization-client";
+
+type OrganizationReadState =
+  { status: "loading" | "available" | "unavailable" } | { status: "error"; message: string };
 
 export default function OrganizationAdminPage() {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -43,6 +47,7 @@ function OrganizationContent({ userId }: { userId: string }) {
   const [index, setIndex] = useState<OrganizationWorkspace | null>(null),
     [workspace, setWorkspace] = useState<OrganizationWorkspace | null>(null),
     [selected, setSelected] = useState<string | null>(null);
+  const [readState, setReadState] = useState<OrganizationReadState>({ status: "loading" });
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
     [notice, setNotice] = useState<string | null>(null),
@@ -56,9 +61,28 @@ function OrganizationContent({ userId }: { userId: string }) {
     [confirmation, setConfirmation] = useState("");
   const controller = useRef(new AbortController()),
     readEpoch = useRef(0);
+  const readStatus = useRef<HTMLDivElement>(null),
+    readRetry = useRef<HTMLButtonElement>(null),
+    organizationSelect = useRef<HTMLSelectElement>(null),
+    unavailablePanel = useRef<HTMLElement>(null),
+    readFocus = useRef<{
+      epoch: number;
+      lifetime: AbortController;
+      trigger: HTMLElement;
+      url: string;
+    } | null>(null);
   const refresh = useCallback(
-    async (organizationId: string | null) => {
+    async (organizationId: string | null, trigger?: HTMLElement) => {
+      const active = controller.current;
+      if (active.signal.aborted) return;
       const epoch = ++readEpoch.current;
+      const isCurrent = () =>
+        epoch === readEpoch.current && active === controller.current && !active.signal.aborted;
+      readFocus.current = trigger
+        ? { epoch, lifetime: active, trigger, url: window.location.href }
+        : null;
+      setReadState({ status: "loading" });
+      setIndex(null);
       setWorkspace(null);
       setSelected(organizationId);
       setRetry(null);
@@ -68,13 +92,15 @@ function OrganizationContent({ userId }: { userId: string }) {
         const data = await organizationRequest<OrganizationWorkspace>(
           userId,
           "/api/organizations",
-          controller.current.signal,
+          active.signal,
         );
-        if (epoch !== readEpoch.current || controller.current.signal.aborted) return;
+        if (!isCurrent()) return;
+        if (typeof data?.available !== "boolean") throw new Error("organization_response_invalid");
         setIndex(data);
         if (!data.available) {
           setWorkspace(null);
           setSelected(null);
+          setReadState({ status: "unavailable" });
           return;
         }
         const current =
@@ -86,15 +112,32 @@ function OrganizationContent({ userId }: { userId: string }) {
           const detail = await organizationRequest<OrganizationWorkspace>(
             userId,
             `/api/organizations?organizationId=${current}`,
-            controller.current.signal,
+            active.signal,
           );
-          if (epoch !== readEpoch.current || controller.current.signal.aborted) return;
+          if (!isCurrent()) return;
+          if (typeof detail?.available !== "boolean")
+            throw new Error("organization_response_invalid");
+          if (!detail.available) {
+            setIndex(detail);
+            setSelected(null);
+            setReadState({ status: "unavailable" });
+            return;
+          }
           setWorkspace(detail);
           setNewName(detail.organization?.name ?? "");
         } else setWorkspace(null);
+        setReadState({ status: "available" });
       } catch (cause) {
-        if (!controller.current.signal.aborted && epoch === readEpoch.current)
-          setError(organizationErrorMessage(cause));
+        if (!isCurrent()) return;
+        setReadState({
+          status: "error",
+          message:
+            cause instanceof OrganizationRequestError && cause.status === 401
+              ? "Sign in again to load organization access for this account."
+              : cause instanceof OrganizationRequestError && cause.status === 403
+                ? "You don’t have permission to view this organization. Retry to check your access."
+                : "Organization access could not be loaded. Try again.",
+        });
       }
     },
     [userId],
@@ -103,8 +146,35 @@ function OrganizationContent({ userId }: { userId: string }) {
     const active = new AbortController();
     controller.current = active;
     void refresh(null);
-    return () => active.abort();
+    return () => {
+      active.abort();
+      readFocus.current = null;
+    };
   }, [refresh]);
+  useEffect(() => {
+    const pending = readFocus.current;
+    if (!pending) return;
+    if (readState.status !== "loading") readFocus.current = null;
+    if (
+      pending.epoch !== readEpoch.current ||
+      pending.lifetime !== controller.current ||
+      pending.lifetime.signal.aborted ||
+      (document.activeElement !== document.body &&
+        document.activeElement !== pending.trigger &&
+        document.activeElement !== readStatus.current)
+    )
+      return;
+    restoreDialogFocus(
+      readState.status === "loading"
+        ? readStatus.current
+        : readState.status === "available"
+          ? organizationSelect.current
+          : readState.status === "error"
+            ? readRetry.current
+            : unavailablePanel.current,
+      pending.url,
+    );
+  }, [readState]);
   async function mutate(
     action: string,
     payload: Record<string, unknown>,
@@ -209,7 +279,14 @@ function OrganizationContent({ userId }: { userId: string }) {
     owner = org?.role === "owner",
     admin = owner || org?.role === "admin";
   return (
-    <div className="space-y-5" aria-busy={busy}>
+    <div
+      ref={readStatus}
+      role="region"
+      aria-label="Organization access"
+      tabIndex={-1}
+      className="space-y-5"
+      aria-busy={busy || readState.status === "loading"}
+    >
       {error && (
         <div
           role="alert"
@@ -233,10 +310,31 @@ function OrganizationContent({ userId }: { userId: string }) {
           {notice}
         </p>
       )}
-      {!index ? (
+      {readState.status === "loading" ? (
         <p role="status">Loading organization availability…</p>
-      ) : !index.available ? (
-        <section className="rounded-2xl border bg-muted/20 p-6">
+      ) : readState.status === "error" ? (
+        <div
+          role="alert"
+          className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
+        >
+          <p>{readState.message}</p>
+          <Button
+            ref={readRetry}
+            className="mt-3"
+            variant="outline"
+            disabled={busy}
+            onClick={(event) => void refresh(selected, event.currentTarget)}
+          >
+            Retry loading organization access
+          </Button>
+        </div>
+      ) : readState.status === "unavailable" ? (
+        <section
+          ref={unavailablePanel}
+          tabIndex={-1}
+          aria-label="Organization administration is not available yet"
+          className="rounded-xl border bg-muted/20 p-6"
+        >
           <h2 className="text-lg font-semibold">
             Organization administration is not available yet
           </h2>
@@ -248,21 +346,22 @@ function OrganizationContent({ userId }: { userId: string }) {
             Enterprise requirements and commercial terms are confirmed separately.
           </p>
         </section>
-      ) : (
+      ) : index ? (
         <>
           <section className="flex flex-wrap items-end gap-3">
             <label className="min-w-0 flex-1 text-sm">
               Organization
               <select
+                ref={organizationSelect}
                 aria-label="Choose organization"
                 value={selected ?? ""}
                 disabled={busy}
                 onChange={(event) => {
                   setWorkspace(null);
                   setRetry(null);
-                  void refresh(event.target.value || null);
+                  void refresh(event.target.value || null, event.currentTarget);
                 }}
-                className="mt-1 h-10 w-full rounded-lg border bg-background px-3"
+                className="mt-1 h-11 w-full rounded-lg border bg-background px-3"
               >
                 <option value="">Choose an organization</option>
                 {index.organizations?.map((item) => (
@@ -272,7 +371,11 @@ function OrganizationContent({ userId }: { userId: string }) {
                 ))}
               </select>
             </label>
-            <Button variant="outline" disabled={busy} onClick={() => void refresh(selected)}>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={(event) => void refresh(selected, event.currentTarget)}
+            >
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
@@ -667,7 +770,7 @@ function OrganizationContent({ userId }: { userId: string }) {
             </>
           )}
         </>
-      )}
+      ) : null}
     </div>
   );
 }

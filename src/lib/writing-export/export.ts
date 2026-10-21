@@ -1,10 +1,9 @@
 import { downloadBytes, safeDocumentFilename } from "./common";
 export type DocumentExportFormat = "pdf" | "docx" | "xlsx" | "pptx";
-export async function downloadDocument(
+export async function createDocumentFile(
   format: DocumentExportFormat,
   title: string,
   content: string,
-  isCurrent: () => boolean = () => true,
 ) {
   const writers = {
     pdf: async () => (await import("./pdf")).createDocumentPdf(title, content),
@@ -19,7 +18,16 @@ export async function downloadDocument(
     pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   };
   const bytes = await writers[format]();
+  return { bytes, type: types[format], filename: safeDocumentFilename(title, format) };
+}
+export async function downloadDocument(
+  format: DocumentExportFormat,
+  title: string,
+  content: string,
+  isCurrent: () => boolean = () => true,
+) {
+  const { bytes, type, filename } = await createDocumentFile(format, title, content);
   if (!isCurrent()) return false;
-  downloadBytes(bytes, types[format], safeDocumentFilename(title, format));
+  downloadBytes(bytes, type, filename);
   return true;
 }

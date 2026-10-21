@@ -134,7 +134,7 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   assert.match(chatStore, /export function saveConversations\([\s\S]*?\): boolean/);
   assert.match(dialog, /Save to history/);
   assert.match(page, /onSave=\{saveTemporaryChat\}/);
-  assert.match(dialog, /You cannot change this choice after the chat starts/);
+  assert.match(dialog, /Temporary mode and context stay fixed after your first message/);
   assert.match(dialog, /Nothing from this temporary chat will be added to memory/);
 });
 

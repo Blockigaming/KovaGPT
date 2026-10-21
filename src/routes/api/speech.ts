@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireVerifiedUser } from "@/lib/api-auth.server";
+import { getCallerTier, requireVerifiedUser } from "@/lib/api-auth.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { runtimeEnv } from "@/lib/runtime-env.server";
-import { createSpeechHandler } from "@/lib/speech.server.mjs";
+import { createSpeechHandler, speechConfiguration } from "@/lib/speech.server.mjs";
 import { assertImagePrincipal } from "@/lib/multimodal/image-source.server.mjs";
 
 // Reuse the existing live-session/deletion-fence check; no new Auth implementation.
@@ -20,15 +20,23 @@ const speechPost = () =>
         () => generationAcceptance.speech({ ...input, ownerId, chatId }),
       );
     },
-    config: () => ({
-      enabled:
-        runtimeEnv("KOVA_SPEECH_ENABLED") === "true" &&
-        runtimeEnv("KOVA_GENERATION_DISABLED") !== "true",
-      apiKey: runtimeEnv("ELEVENLABS_API_KEY"),
-      voiceId: runtimeEnv("ELEVENLABS_VOICE_ID"),
-    }),
+    config: async (auth, input) =>
+      speechConfiguration(runtimeEnv, await getCallerTier(auth), input.voiceId),
   });
 
 export const Route = createFileRoute("/api/speech")({
-  server: { handlers: { POST: ({ request }) => speechPost()(request) } },
+  server: {
+    handlers: {
+      POST: ({ request }) => {
+        const captureMode = runtimeEnv("KOVA_REQUEST_CAPTURE_ENABLED");
+        if (captureMode && captureMode !== "false") {
+          return Response.json(
+            { error: "Speech is disabled during request capture.", code: "request_capture_denied" },
+            { status: 503, headers: { "Cache-Control": "private, no-store" } },
+          );
+        }
+        return speechPost()(request);
+      },
+    },
+  },
 });

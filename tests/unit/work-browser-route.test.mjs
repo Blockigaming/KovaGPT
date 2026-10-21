@@ -44,7 +44,7 @@ function load(file, modules) {
   );
   return exports;
 }
-function fixture() {
+function fixture(tier = "plus") {
   const calls = [];
   let entitlement = true,
     confirmed = true;
@@ -72,6 +72,7 @@ function fixture() {
   };
   const caller = { userId: owner, supabaseAdmin: db };
   const server = load("src/lib/work-browser.server.ts", {
+    "@/lib/api-auth.server": { getCallerTier: async () => tier },
     "@/lib/work-execution.server": {
       getWorkExecution: async (_, id) => {
         calls.push({ name: "getRun" });
@@ -234,5 +235,25 @@ test("owner input policy matches fixed runner key and scroll bounds", () => {
       key: "Space",
     }).key,
     "Space",
+  );
+});
+
+test("Free cannot list or control Cloud browser; verified owner may still close an existing session", async () => {
+  const f = fixture("free");
+  assert.equal((await f.route.handleWorkBrowser(f.request())).status, 403);
+  assert.equal(
+    (
+      await f.route.handleWorkBrowser(
+        new Request(
+          `https://app-fixture.net/api/work/browser?runId=${runId}&expectedUserId=${owner}`,
+        ),
+      )
+    ).status,
+    403,
+  );
+  assert.equal(f.calls.length, 0);
+  assert.equal(
+    (await f.route.handleWorkBrowser(f.request({ ...f.input, operation: "close" }))).status,
+    200,
   );
 });

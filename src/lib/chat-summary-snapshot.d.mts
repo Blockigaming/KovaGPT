@@ -17,7 +17,6 @@ type Dependencies = {
   }>;
   fetchImpl?: typeof fetch;
   signal?: AbortSignal;
-  contextOnly?: boolean;
 };
 export function createChatSummarySnapshot(
   messages: Conversation["messages"],

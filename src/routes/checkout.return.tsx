@@ -198,9 +198,9 @@ function CheckoutReturn() {
   })();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
+    <div className="flex min-h-screen items-center justify-center bg-background px-5 py-10 text-foreground">
       <main
-        className="max-w-md text-center"
+        className="flex w-full min-w-0 max-w-md flex-col items-center text-center [overflow-wrap:anywhere] [&>p]:leading-relaxed"
         aria-live="polite"
         aria-busy={Boolean(
           session_id && (!isLoaded || (isSignedIn && verification.kind === "checking")),
@@ -210,7 +210,7 @@ function CheckoutReturn() {
         {status}
         <Link
           to="/"
-          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
+          className="kova-button inline-flex min-h-11 items-center justify-center rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
         >
           Back to KovaGPT
         </Link>

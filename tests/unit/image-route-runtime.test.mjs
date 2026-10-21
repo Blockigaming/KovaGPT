@@ -9,7 +9,7 @@ import * as reliability from "../../src/lib/endpoint-reliability.mjs";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 const owner = "11111111-1111-4111-8111-111111111111",
   id = "22222222-2222-4222-8222-222222222222";
-function fixture() {
+function fixture({ textUnavailable = false } = {}) {
   const state = {
     enabled: false,
     quota: 0,
@@ -42,7 +42,10 @@ function fixture() {
     "@/lib/modes": { DAILY_IMAGE_LIMIT_BY_TIER: { free: 2 } },
     "@/lib/ai/provider.server": {
       AiProviderError: ProviderError,
-      missingAiProviderResponse: () => null,
+      missingAiProviderResponse: () =>
+        textUnavailable
+          ? Response.json({ error: "synthetic_text_unavailable" }, { status: 503 })
+          : null,
       providerUnavailableResponse: () => null,
       providerErrorResponse: (error) =>
         Response.json({ error: error.message }, { status: error.status }),
@@ -137,6 +140,13 @@ test("invalid, oversized, unsupported and unavailable image edits consume no quo
   state.badSource = true;
   assert.equal((await post({ prompt: "Edit", operation: "edit", parentImageId: id })).status, 409);
   assert.equal(state.quota, 0);
+});
+test("the configured image provider remains usable when the separate text provider is unavailable", async () => {
+  const { state, post } = fixture({ textUnavailable: true });
+  const response = await post({ prompt: "Synthetic lake" });
+  assert.equal(response.status, 200);
+  assert.equal(state.generate, 1);
+  assert.equal(state.quota, 1);
 });
 test("supported edit returns actual source provenance and checks source and principal again before exposing output", async () => {
   const { state, post } = fixture();

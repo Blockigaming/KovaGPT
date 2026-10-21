@@ -44,12 +44,17 @@ test("account deletion is authenticated, explicit, billing-safe, and server exec
   assert.doesNotMatch(finalizer, /releaseAccountExportDeletionFence/);
   assert.match(billingDeletion, /subscriptions\.cancel/);
   assert.match(settings, /requestAccountDeletion\(deletionUserKey, "DELETE"\)/);
+  assert.match(settings, /requestAccountDeletion\(deletionUserKey, "PATCH"\)/);
   assert.match(settings, /deleteConfirmation !== "DELETE"/);
   assert.match(settings, /setDeleteAccountOpen\(true\)/);
 });
 
 test("manual chat retry removes the failed turn before resending it", () => {
-  assert.match(home, /m\.id !== assistantMsg\.id && m\.id !== userMsg\.id/);
+  assert.match(home, /const retryHistory = active\.messages\.slice\(0, -2\)/);
+  assert.match(home, /const priorMessages =\s*retryHistory \?\?/);
+  assert.match(home, /messages: \[\.\.\.priorMessages, userMsg, assistantMsg\]/);
+  assert.match(home, /id: requestId \?\? newId\(\)/);
+  assert.doesNotMatch(home, /canAutoRetry|MAX_AUTO_RETRIES/);
 });
 
 test("writing validates bounded input and provider availability before charging quota", () => {

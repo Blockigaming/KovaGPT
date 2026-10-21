@@ -5,6 +5,7 @@ import { Bookmark, Check, Copy, Download, Eraser, Loader2, Sparkles, Wand2 } fro
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { SearchablePicker } from "@/components/ui/searchable-picker";
 import { authFetch } from "@/lib/auth-fetch";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
@@ -34,6 +35,16 @@ export const Route = createFileRoute("/write")({
 const STORAGE_KEY_BASE = "kova-write-draft";
 const TITLE_KEY_BASE = "kova-write-title";
 const VERSIONS_KEY_BASE = "kova.write.versions.v1";
+const TONE_OPTIONS = [
+  { value: "professional", label: "Professional" },
+  { value: "casual", label: "Casual" },
+  { value: "friendly", label: "Friendly" },
+  { value: "confident", label: "Confident" },
+  { value: "playful", label: "Playful" },
+  { value: "academic", label: "Academic" },
+  { value: "persuasive", label: "Persuasive" },
+  { value: "concise", label: "Concise" },
+];
 
 type Action =
   "improve" | "expand" | "shorten" | "grammar" | "continue" | "tone" | "outline" | "custom";
@@ -472,28 +483,22 @@ function WritePage() {
           {actionButton("expand", "Expand")}
           {actionButton("continue", "Continue")}
           {actionButton("outline", "Outline")}
-          <div className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-background py-0.5 pl-2 pr-1">
-            <select
+          <div className="inline-flex min-h-11 items-center gap-1 rounded-md border border-border bg-background py-0.5 pl-2 pr-1">
+            <SearchablePicker
+              options={TONE_OPTIONS}
               value={tone}
               disabled={!documentReady}
-              onChange={(e) => setTone(e.target.value)}
-              className="min-h-11 bg-transparent text-xs outline-none"
+              onValueChange={setTone}
+              searchLabel="Search tones"
+              emptyText="No tones found."
+              className="min-h-11 min-w-11 rounded-md bg-background px-2 py-1 text-xs text-foreground"
               aria-label="Tone"
-            >
-              <option value="professional">Professional</option>
-              <option value="casual">Casual</option>
-              <option value="friendly">Friendly</option>
-              <option value="confident">Confident</option>
-              <option value="playful">Playful</option>
-              <option value="academic">Academic</option>
-              <option value="persuasive">Persuasive</option>
-              <option value="concise">Concise</option>
-            </select>
+            />
             <button
               type="button"
               onClick={() => run("tone")}
               disabled={!!busy || !documentReady}
-              className="inline-flex min-h-11 items-center gap-1 rounded-full px-2 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50"
+              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-50"
             >
               {busy === "tone" ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -590,7 +595,16 @@ function WritePage() {
             className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             <Bookmark className={`h-3 w-3 ${saved ? "fill-current" : ""}`} />
-            {saved ? "Saved" : saving ? "Saving…" : "Save to Library"}
+            {saved ? (
+              "Saved"
+            ) : saving ? (
+              <span className="spec400-loading-label">
+                <span className="spec400-loading-spinner" aria-hidden="true" />
+                Saving…
+              </span>
+            ) : (
+              "Save to Library"
+            )}
           </button>
           <button
             type="button"
@@ -605,7 +619,7 @@ function WritePage() {
             type="button"
             onClick={saveVersion}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             Save version
           </button>
@@ -613,7 +627,7 @@ function WritePage() {
             type="button"
             onClick={restoreLatestVersion}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             Restore latest
           </button>
@@ -621,7 +635,7 @@ function WritePage() {
             type="button"
             onClick={() => void exportDocument("docx")}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             Download DOCX
           </button>
@@ -629,7 +643,7 @@ function WritePage() {
             type="button"
             onClick={() => void exportDocument("pdf")}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             Download PDF
           </button>
@@ -639,7 +653,7 @@ function WritePage() {
               type="button"
               onClick={() => void exportDocument(format)}
               disabled={!documentReady}
-              className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
             >
               Download {format.toUpperCase()}
             </button>
@@ -648,7 +662,7 @@ function WritePage() {
             type="button"
             onClick={() => void exportDocument("html")}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center text-xs underline disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             Download HTML
           </button>

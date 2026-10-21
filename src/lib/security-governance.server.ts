@@ -95,8 +95,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 export const PLAN_LIMITS: Record<"free" | "plus" | "pro", Record<EntitlementKey, number>> = {
   free: {
     messages: 25,
-    images: 0,
-    uploads: 5,
+    images: 3,
+    uploads: 2,
     fileSizeMb: 10,
     projects: 2,
     projectFiles: 10,

@@ -1,0 +1,313 @@
+/* One neutral frame; content and actions stay in their own grid areas. */
+.kova-response-output {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "header actions" "body body" "error error";
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-block: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-output);
+  background: var(--surface-secondary, var(--card));
+  color: var(--foreground);
+  box-shadow: none;
+}
+.kova-response-output-header {
+  grid-area: header;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-inline: 16px;
+  min-width: 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 18px;
+}
+.kova-response-output-label {
+  overflow-wrap: anywhere;
+}
+.kova-response-output-language {
+  color: var(--muted-foreground);
+}
+.kova-response-output-content {
+  grid-area: body;
+  padding: 16px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  user-select: text;
+  font-family: inherit;
+}
+.kova-response-output-content > :first-child {
+  margin-top: 0;
+}
+.kova-response-output-content > :last-child {
+  margin-bottom: 0;
+}
+.prose-chat .kova-response-output pre {
+  color: var(--foreground);
+  --code-block-fg: var(--foreground);
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  background: transparent;
+  white-space: pre;
+  font-size: 14px;
+  line-height: 22px;
+}
+.kova-response-output pre code {
+  color: inherit;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.kova-response-copy-panel {
+  grid-area: actions;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.kova-response-copy-button,
+.kova-response-download-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border-radius: var(--kova-radius-button);
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.kova-response-copy-panel svg {
+  width: 20px;
+  height: 20px;
+}
+.kova-response-copy-panel button:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.kova-response-copy-panel button:focus-visible,
+.kova-response-copy-error button:focus-visible,
+.kova-citation-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-response-copy-panel button:disabled {
+  opacity: 0.6;
+}
+.kova-copy-mobile-label {
+  display: none;
+}
+.kova-response-copy-error {
+  grid-area: error;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 18px;
+}
+.kova-response-copy-error button {
+  text-decoration: underline;
+  min-height: 44px;
+}
+.kova-citation-link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kova-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+}
+.kova-response-image {
+  display: block;
+  max-width: 100%;
+}
+.kova-response-image img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-output);
+  background: var(--surface-secondary);
+}
+.kova-response-image a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 13px;
+}
+.kova-response-image a svg {
+  width: 16px;
+  height: 16px;
+}
+@media (max-width: 767px) {
+  .kova-response-output {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "header" "body" "actions" "error";
+  }
+  .kova-response-copy-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 8px;
+    gap: 8px;
+    border-top: 1px solid var(--border);
+    border-bottom: 0;
+  }
+  .kova-response-copy-panel button {
+    flex: 1 1 auto;
+    width: auto;
+    min-height: 44px;
+    border-radius: var(--kova-radius-button);
+  }
+  .kova-copy-mobile-label {
+    display: inline;
+  }
+  .kova-copy-desktop-label {
+    display: none;
+  }
+}
+.kova-image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-block: 8px;
+}
+.kova-image-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+  padding: 0 16px;
+  font-size: 13px;
+}
+.kova-image-actions svg {
+  width: 20px;
+  height: 20px;
+}
+.kova-image-actions button:disabled {
+  opacity: 0.6;
+}
+
+/* Owner response-reference override: only authored inline code gets a blue accent. */
+body .prose-chat :not(pre) > code {
+  color: #1555a5 !important;
+  background: #eaf2ff !important;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.12em 0.3em;
+  font-family: var(--font-mono) !important;
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+html.dark body .prose-chat :not(pre) > code {
+  color: #8cbeff !important;
+  background: #172b45 !important;
+}
+body .prose-chat .kova-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-output);
+  background: var(--background);
+}
+body .prose-chat .kova-table-scroll table {
+  width: 100%;
+  min-width: 100%;
+  margin: 0;
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+body .prose-chat .kova-table-scroll :is(th, td) {
+  min-width: 8rem;
+  white-space: normal;
+  overflow-wrap: break-word;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  text-align: start;
+  vertical-align: top;
+}
+body .prose-chat .kova-table-scroll th {
+  background: var(--surface-secondary, var(--muted));
+  color: var(--foreground);
+  font-weight: 600;
+}
+body .prose-chat .kova-table-scroll tbody tr:last-child td {
+  border-bottom: 0;
+}
+body .prose-chat .kova-table-scroll:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-response-followups {
+  display: grid;
+  gap: 4px;
+  max-width: 100%;
+  margin-top: 16px;
+}
+.kova-response-followups button {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px;
+  border-radius: var(--kova-radius-button);
+  color: var(--muted-foreground);
+  text-align: start;
+}
+.kova-response-followups button:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.kova-response-followups svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin-top: 3px;
+}
+.kova-response-followups span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A text cue outside the horizontal scrolling region, never an overlay. */
+.kova-table-overflow-cue {
+  padding: 8px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 20px;
+}
+/* Reserve every feedback label in one grid cell so copying never shifts actions. */
+.kova-copy-label-stack {
+  display: inline-grid;
+}
+.kova-copy-label-stack > span {
+  grid-area: 1 / 1;
+}
+.kova-copy-label-reserve {
+  visibility: hidden;
+  pointer-events: none;
+}

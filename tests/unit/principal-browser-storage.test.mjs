@@ -481,3 +481,19 @@ test("principal cleanup events match only their resolved principal", () => {
   assert.equal(isPrincipalBrowserStorageClearedEvent(dispatched, null), false);
   assert.equal(dispatchPrincipalBrowserStorageCleared(undefined, target), false);
 });
+
+test("voice selection cleanup is account-scoped and preserves other accounts", () => {
+  const a = principalScopedStorageKey("kova-voice-selection-v1", "account/a");
+  const b = principalScopedStorageKey("kova-voice-selection-v1", "account/b");
+  const local = new MemoryStorage([
+    [a, "voice-a"],
+    [b, "voice-b"],
+  ]);
+  const result = clearPrincipalBrowserStorage("account/a", {
+    localStorage: local,
+    sessionStorage: new MemoryStorage(),
+  });
+  assert.equal(result.local.failures.length, 0);
+  assert.equal(local.getItem(a), null);
+  assert.equal(local.getItem(b), "voice-b");
+});

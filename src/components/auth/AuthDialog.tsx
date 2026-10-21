@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { resolveLegacyAuthContext, supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, KeyRound, Loader2 } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
@@ -17,7 +17,7 @@ import { GOOGLE_UNCONFIGURED_MESSAGE } from "@/lib/auth-providers";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
 import { cn } from "@/lib/utils";
-import { browserKovaAuthEnabled, browserKovaAuthOrigin } from "@/lib/kova-auth-browser";
+import { browserKovaAuthEnabled, browserKovaAuthMode, browserKovaAuthOrigin } from "@/lib/kova-auth-browser";
 
 type Mode = "sign-in" | "sign-up";
 type Step = "identify" | "magic-sent";
@@ -44,7 +44,7 @@ export function AuthDialog({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [passkeySupported, setPasskeySupported] = useState(false);
-  const [loadingMethod, setLoadingMethod] = useState<"email" | "google" | "passkey" | null>(null);
+  const [loadingMethod, setLoadingMethod] = useState<"email" | "google" | "hosted-google" | "passkey" | null>(null);
   const [emailTouched, setEmailTouched] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const submittingRef = useRef(false);
@@ -73,6 +73,13 @@ export function AuthDialog({
 
   const isSignUp = mode === "sign-up";
   const emailValid = isValidEmail(email);
+  // Preserve an explicit existing-account path during adoption. This never
+  // runs as a fallback after an owned sign-in fails.
+  const showHostedGoogle = browserKovaAuthMode() === "dual" && !isSignUp;
+  const hostedGoogleAvailable =
+    showHostedGoogle && providers.resolved && providers.google;
+  const hostedGooglePending =
+    showHostedGoogle && !providers.resolved && !providers.error;
   // Only claim Google is available once the deployment has confirmed it.
   const googleAvailable = useKovaAuth
     ? import.meta.env.VITE_KOVA_GOOGLE_AUTH_ENABLED === "true"
@@ -82,7 +89,7 @@ export function AuthDialog({
     : providers.resolved && !providers.google;
   const googleCheckFailed = !useKovaAuth && Boolean(providers.error);
 
-  const guard = (method: "email" | "google" | "passkey") => {
+  const guard = (method: "email" | "google" | "hosted-google" | "passkey") => {
     if (submittingRef.current) return false;
     submittingRef.current = true;
     setLoading(true);
@@ -152,6 +159,41 @@ export function AuthDialog({
     }
   };
 
+  const handleHostedGoogle = async () => {
+    if (!hostedGoogleAvailable) {
+      toast.error(
+        "Existing Google sign-in is unavailable. Close this dialog and try again.",
+      );
+      return;
+    }
+    if (!guard("hosted-google")) return;
+    try {
+      // The shared authority gate rejects active/rejected owned cookies and
+      // unavailable probes. It never forces the client onto hosted authority.
+      const context = await resolveLegacyAuthContext();
+      context.assertCurrent();
+      rememberPostAuthRedirect();
+      const { data, error } = await context.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: getOAuthRedirectUri(),
+          skipBrowserRedirect: true,
+        },
+      });
+      context.assertCurrent();
+      if (error) throw error;
+      if (!data?.url) throw new Error("hosted_google_redirect_missing");
+      window.location.assign(data.url);
+    } catch (err) {
+      console.error("[KovaAuth] Existing Google authentication failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("Google sign in could not start. Please try again.");
+    } finally {
+      release();
+    }
+  };
+
   const handlePasskey = async () => {
     const supported = browserSupportsPasskeys();
     if ((!useKovaAuth && (!providers.resolved || !providers.passkeys)) || !supported) {
@@ -213,7 +255,7 @@ export function AuthDialog({
         aria-modal="true"
         className={cn(
           "kova-auth-surface gap-0 overflow-y-auto border-border/60 bg-card shadow-xl",
-          "p-7 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:max-w-[440px] sm:p-9 sm:pb-9",
+          "p-7 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:max-w-[400px] sm:p-9 sm:pb-9",
           "[&>button.absolute]:!h-11 [&>button.absolute]:!w-11",
         )}
         onCloseAutoFocus={(event) => {
@@ -232,13 +274,13 @@ export function AuthDialog({
             {step === "magic-sent"
               ? "Sign-in link requested"
               : isSignUp
-                ? "Create your account"
-                : "Log in or sign up"}
+                ? "Create your Kova account"
+                : "Log in to Kova"}
           </DialogTitle>
           <DialogDescription className="mt-2 max-w-[320px] text-[15px]">
             {step === "magic-sent"
               ? `We asked our email provider to send a sign-in link to ${email}. Delivery can take a few minutes — check your spam folder too.`
-              : "You'll get smarter responses, save your chats, and access KovaGPT across devices."}
+              : "Continue with your configured sign-in method."}
           </DialogDescription>
         </div>
 
@@ -248,7 +290,7 @@ export function AuthDialog({
             <>
               <form onSubmit={handleContinueEmail} className="space-y-3">
                 <div>
-                  <label htmlFor="kova-auth-email" className="sr-only">
+                  <label htmlFor="kova-auth-email" className="mb-2 block text-sm">
                     Email address
                   </label>
                   <Input
@@ -275,7 +317,7 @@ export function AuthDialog({
                       emailTouched && !emailValid ? "kova-auth-email-error" : undefined
                     }
                     className={cn(
-                      "h-14 rounded-xl text-[15px] px-4",
+                      "h-11 text-[15px] px-3",
                       emailTouched &&
                         !emailValid &&
                         "border-destructive focus-visible:ring-destructive",
@@ -290,7 +332,7 @@ export function AuthDialog({
                 <Button
                   type="submit"
                   disabled={loading || !emailValid}
-                  className="w-full h-14 rounded-xl text-[15px] font-medium"
+                  className="w-full h-12 rounded-full px-5 text-[15px] font-medium"
                 >
                   Continue
                 </Button>
@@ -315,7 +357,7 @@ export function AuthDialog({
                   onClick={() => void handlePasskey()}
                   disabled={loading}
                   aria-busy={loadingMethod === "passkey"}
-                  className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-border bg-background text-[15px] font-medium transition hover:bg-accent disabled:opacity-60"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-border bg-background px-4 text-[15px] font-medium transition hover:bg-accent disabled:opacity-60"
                 >
                   {loadingMethod === "passkey" ? (
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -327,27 +369,31 @@ export function AuthDialog({
               ) : null}
 
               {googleUnavailable || googleCheckFailed ? (
-                <div
-                  role="status"
-                  className="flex items-start gap-2.5 rounded-xl border border-border bg-muted/40 px-4 py-3 text-left text-[13px] text-muted-foreground"
-                >
-                  <AlertTriangle
-                    className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <span>
-                    {googleUnavailable
-                      ? GOOGLE_UNCONFIGURED_MESSAGE
-                      : "Google sign-in status couldn't be checked. Continue with your email address."}
-                  </span>
-                </div>
+                hostedGoogleAvailable || hostedGooglePending ? null : (
+                  <div
+                    role="status"
+                    className="flex items-start gap-2.5 rounded-xl border border-border bg-muted/40 px-4 py-3 text-left text-[13px] text-muted-foreground"
+                  >
+                    <AlertTriangle
+                      className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {showHostedGoogle && providers.error
+                        ? "Existing Google sign-in couldn't be checked. Close this dialog and try again."
+                        : googleUnavailable
+                          ? GOOGLE_UNCONFIGURED_MESSAGE
+                          : "Google sign-in status couldn't be checked. Continue with your email address."}
+                    </span>
+                  </div>
+                )
               ) : (
                 <button
                   type="button"
                   onClick={handleGoogle}
                   disabled={loading || !googleAvailable}
                   aria-busy={loading || (!useKovaAuth && !providers.resolved)}
-                  className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                  className="w-full h-11 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-2 px-4 text-[15px] font-medium disabled:opacity-60"
                 >
                   {loadingMethod === "google" || (!useKovaAuth && !providers.resolved) ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -377,12 +423,32 @@ export function AuthDialog({
                 </button>
               )}
 
+              {hostedGoogleAvailable || hostedGooglePending ? (
+                <button
+                  type="button"
+                  onClick={handleHostedGoogle}
+                  disabled={loading || !hostedGoogleAvailable}
+                  aria-busy={
+                    loadingMethod === "hosted-google" || hostedGooglePending
+                  }
+                  className="w-full h-11 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-2 px-4 text-[15px] font-medium disabled:opacity-60"
+                >
+                  {loadingMethod === "hosted-google" || hostedGooglePending ? (
+                    <Loader2
+                      className="h-5 w-5 animate-spin"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  <span aria-live="polite">Log in with existing Google</span>
+                </button>
+              ) : null}
+
               {!useKovaAuth ? (
                 <button
                   type="button"
                   onClick={() => void requestMagicLink(false)}
                   disabled={loading || !emailValid}
-                  className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                  className="w-full h-11 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-2 px-4 text-[15px] font-medium disabled:opacity-60"
                 >
                   Email me a sign-in link
                 </button>
@@ -397,9 +463,9 @@ export function AuthDialog({
                 variant="outline"
                 disabled={loading || cooldown > 0}
                 onClick={() => void requestMagicLink(true)}
-                className="w-full h-12 rounded-xl text-sm"
+                className="w-full h-11 rounded-full px-4 text-sm"
               >
-                {cooldown > 0 ? `Resend available in ${cooldown}s` : "Resend the link"}
+                {cooldown > 0 ? `Retry in ${cooldown}s (local delay)` : "Resend the link"}
               </Button>
               <button
                 type="button"
@@ -407,7 +473,7 @@ export function AuthDialog({
                   setStep("identify");
                   setCooldown(0);
                 }}
-                className="w-full h-12 rounded-xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
+                className="w-full h-11 rounded-full px-4 text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" /> Use a different email
               </button>
@@ -423,7 +489,7 @@ export function AuthDialog({
                 Already have an account?{" "}
                 <button
                   type="button"
-                  className="font-medium text-foreground underline underline-offset-2"
+                  className="inline-flex min-h-11 items-center rounded-full px-4 font-medium text-foreground underline underline-offset-2"
                   onClick={() => {
                     setMode("sign-in");
                     setStep("identify");
@@ -437,7 +503,7 @@ export function AuthDialog({
                 New to KovaGPT?{" "}
                 <button
                   type="button"
-                  className="font-medium text-foreground underline underline-offset-2"
+                  className="inline-flex min-h-11 items-center rounded-full px-4 font-medium text-foreground underline underline-offset-2"
                   onClick={() => {
                     setMode("sign-up");
                     setStep("identify");

@@ -52,8 +52,22 @@ test("signed-in users can navigate and mutate real Library folders", () => {
 });
 
 test("folder requests use authenticated bounded network calls", () => {
-  assert.match(client, /fetchWithTimeoutAuthenticated/);
-  assert.match(client, /15_000/);
+  assert.match(client, /originalLibraryHeaders\(ownerId, current\)/);
+  assert.match(client, /AbortSignal\.any\(\[signal, AbortSignal\.timeout\(15_000\)\]\)/);
+  assert.match(
+    client,
+    /current\.throwIfAborted\(\);[\s\S]*await originalLibraryHeaders\(ownerId, current\);[\s\S]*current\.throwIfAborted\(\);[\s\S]*await fetch\(path,/,
+  );
+  assert.match(client, /credentials: "same-origin"/);
+  assert.match(client, /mode: "same-origin"/);
+  assert.match(client, /redirect: "error"/);
+  assert.match(client, /headers: \{ \.\.\.headers,/);
+  assert.match(client, /signal: current/);
+  assert.match(
+    client,
+    /readResponseBytesBounded\(response, 512 \* 1024, \{\s*signal,\s*timeoutMs: 15_000/,
+  );
+  assert.match(client, /return responseObject\(response, current\)/);
   assert.match(client, /\/api\/library\/folders/);
   assert.match(client, /\/api\/library\/bulk-move/);
   assert.match(client, /Cache-Control|cache: "no-store"/);
@@ -70,7 +84,10 @@ test("bulk moves and folder deletion preserve truthful limits and data copy", ()
 
 test("folder UI keeps async loads, principals, and mutation state consistent", () => {
   assert.match(folders, /refreshKey: number/);
-  assert.match(folders, /\[enabled, load, principalKey, refreshKey\]/);
+  assert.match(folders, /\[enabled, load, ownerId, principalKey, refreshKey\]/);
+  assert.match(folders, /createWorkViewLifetime\(ownerId, resetState\)/);
+  assert.match(folders, /requestControllerRef\.current = lifetime\.controller/);
+  assert.match(folders, /lifetime\.dispose\(\)/);
   assert.match(folders, /const generation = \+\+generationRef\.current/);
   assert.match(folders, /if \(!isCurrent\(\)\) return/);
   assert.match(folders, /if \(isCurrent\(\)\) setBusy\(null\)/);

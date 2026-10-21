@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import ts from "typescript";
+import { parseAllowedBillingPortalUrl } from "../../src/lib/billing-portal-url.mjs";
 
 const settingsSource = await readFile(
   new URL("../../src/components/SettingsDialog.tsx", import.meta.url),
@@ -11,6 +13,49 @@ const browserSource = await readFile(
   new URL("../e2e/settings-theme-transition.spec.ts", import.meta.url),
   "utf8",
 );
+const routeSource = await readFile(
+  new URL("../../src/routes/settings.$section.tsx", import.meta.url),
+  "utf8",
+);
+const parsed = ts.createSourceFile(
+  "SettingsDialog.tsx",
+  settingsSource,
+  ts.ScriptTarget.Latest,
+  true,
+  ts.ScriptKind.TSX,
+);
+const matching = (root, predicate) => {
+  const matches = [];
+  function visit(node) {
+    if (predicate(node)) matches.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(root);
+  return matches;
+};
+const variable = (name) => {
+  const matches = matching(
+    parsed,
+    (node) => ts.isVariableDeclaration(node) && node.name.getText(parsed) === name,
+  );
+  assert.equal(matches.length, 1, `Expected one ${name} declaration`);
+  return matches[0];
+};
+const property = (node, name) =>
+  node.properties.find(
+    (item) => ts.isPropertyAssignment(item) && item.name.getText(parsed) === name,
+  )?.initializer;
+const attribute = (node, name) =>
+  node.attributes.properties.find(
+    (item) => ts.isJsxAttribute(item) && item.name.getText(parsed) === name,
+  );
+const execute = (expression, dependencies = {}) =>
+  new Function(
+    ...Object.keys(dependencies),
+    ts.transpileModule(`return (${expression});`, {
+      compilerOptions: { target: ts.ScriptTarget.ES2022 },
+    }).outputText,
+  )(...Object.values(dependencies));
 
 test("signed-out storage copy matches the implemented guest lifecycle", () => {
   assert.match(settingsSource, /Signed-out chats stay in this tab until you refresh or close it\./);
@@ -24,13 +69,55 @@ test("signed-out storage copy matches the implemented guest lifecycle", () => {
 });
 
 test("Settings select controls expose stable accessible names", () => {
-  for (const label of [
-    "Preferred response length",
-    "Response tone",
-    "Filter library by item type",
-    "Appearance",
-  ]) {
+  for (const label of ["Preferred response length", "Filter library by item type", "Appearance"]) {
     assert.match(settingsSource, new RegExp(`aria-label="${label}"`));
+  }
+  const toneControls = matching(
+    parsed,
+    (node) =>
+      ts.isJsxElement(node) &&
+      node.openingElement.tagName.getText(parsed) === "select" &&
+      attribute(node.openingElement, "value")?.initializer?.expression?.getText(parsed) ===
+        "settings.responseTone",
+  );
+  assert.equal(toneControls.length, 1);
+  const tone = toneControls[0];
+  assert.ok(ts.isJsxElement(tone.parent));
+  assert.equal(tone.parent.openingElement.tagName.getText(parsed), "label");
+  assert.equal(
+    tone.parent.children
+      .filter(ts.isJsxText)
+      .map((node) => node.text)
+      .join("")
+      .trim(),
+    "Tone",
+    "The native select must retain its actual visible, enclosing accessible label",
+  );
+  const options = tone.children.filter(ts.isJsxElement).map((node) => {
+    assert.equal(node.openingElement.tagName.getText(parsed), "option");
+    return [
+      attribute(node.openingElement, "value").initializer.text,
+      node.children
+        .filter(ts.isJsxText)
+        .map((child) => child.text)
+        .join("")
+        .trim(),
+    ];
+  });
+  assert.deepEqual(options, [
+    ["direct", "Direct"],
+    ["formal", "Formal"],
+    ["conversational", "Conversational"],
+  ]);
+  assert.equal(property(variable("DEFAULT_SETTINGS").initializer, "responseTone").text, "direct");
+  for (const [value] of options) {
+    const settings = { responseTone: "direct", responseLength: "short" };
+    let changed;
+    execute(attribute(tone.openingElement, "onChange").initializer.expression.getText(parsed), {
+      settings,
+      onChange: (next) => (changed = next),
+    })({ target: { value } });
+    assert.deepEqual(changed, { ...settings, responseTone: value });
   }
   assert.doesNotMatch(settingsSource, /aria-label="Language"/);
 });
@@ -49,29 +136,77 @@ test("signed-in settings uses searchable navigation and a purpose-built mobile d
 });
 
 test("settings navigation is centralized and routes every rendered category", () => {
-  for (const category of [
-    "General",
-    "Personalization",
-    "Memory",
-    "Billing",
-    "Usage",
-    "Email",
-    "Appearance",
-    "Notifications",
-    "Keyboard shortcuts",
-    "Location",
-    "Parental controls",
-    "Safety & security",
-    "Data control",
-    "Storage",
-    "Apps",
-    "Family Center",
-    "Report an issue",
-    "Help center",
-    "About",
-    "Log out",
-  ])
-    assert.ok(settingsSource.includes(`label: "${category}"`), category);
+  const categories = (name) =>
+    matching(variable(name), ts.isObjectLiteralExpression)
+      .filter((node) => property(node, "v") && property(node, "label"))
+      .map((node) => ({ value: property(node, "v").text, label: property(node, "label").text }));
+  const dialogTabs = categories("TAB_GROUPS");
+  assert.deepEqual(
+    dialogTabs.map((tab) => tab.label),
+    [
+      "Responses",
+      "Profile",
+      "Memory",
+      "Subscriptions",
+      "Usage",
+      "Email",
+      "Appearance",
+      "Notifications",
+      "Keyboard shortcuts",
+      "Location",
+      "Parental controls",
+      "Safety & security",
+      "Data control",
+      "Storage",
+      "Apps",
+      "Family Center",
+      "Report an issue",
+      "Help center",
+      "About",
+      "Log out",
+    ],
+  );
+  const panels = matching(
+    parsed,
+    (node) => ts.isJsxOpeningElement(node) && node.tagName.getText(parsed) === "TabsContent",
+  ).map((node) => attribute(node, "value")?.initializer?.text);
+  for (const tab of dialogTabs)
+    assert.equal(panels.filter((value) => value === tab.value).length, 1, tab.label);
+
+  const sections = execute(variable("SETTINGS_SECTIONS").initializer.getText(parsed));
+  const sectionFunction = matching(
+    parsed,
+    (node) => ts.isFunctionDeclaration(node) && node.name?.text === "settingsSectionForTab",
+  );
+  assert.equal(sectionFunction.length, 1);
+  const sectionForTab = execute(sectionFunction[0].getText(parsed).replace(/^export\s+/, ""), {
+    SETTINGS_SECTIONS: sections,
+  });
+  const pageTabs = categories("pageGroups");
+  assert.deepEqual(
+    pageTabs.map((tab) => sectionForTab(tab.value)),
+    [
+      "profile",
+      "appearance",
+      "responses",
+      "notifications",
+      "connections",
+      "privacy",
+      "usage",
+      "billing",
+    ],
+  );
+  for (const tab of pageTabs) {
+    assert.equal(sections[sectionForTab(tab.value)], tab.value);
+    assert.equal(panels.filter((value) => value === tab.value).length, 1, tab.label);
+  }
+  assert.match(routeSource, /initialTab=\{tab\}/);
+  assert.match(routeSource, /SETTINGS_SECTIONS\[section as keyof typeof SETTINGS_SECTIONS\]/);
+  assert.match(
+    routeSource,
+    /navigate\(\{ to: "\/settings\/\$section", params: \{ section: next \} \}\)/,
+  );
+  assert.match(settingsSource, /if \(page\) onSectionChange\?\.\(settingsSectionForTab\(value\)\)/);
   assert.match(settingsSource, /group\.tabs\.map\(\(\{ v, icon: Icon, label \}\) =>/);
   assert.match(settingsSource, /<TabsList className="kova-settings-nav"/);
   assert.match(settingsSource, /<TabsTrigger[\s\S]*?value=\{v\}/);
@@ -164,11 +299,69 @@ test("workspace sizing is authenticated-only and mobile safe areas are applied o
   );
 });
 
-test("Settings polish retains the billing portal safety gates", () => {
-  assert.match(
-    settingsSource,
-    /if \(portalLoading \|\| !subSummary\?\.hasBillingAccount \|\| !subSummary\.billingPortalAvailable\)/,
-  );
+test("Settings polish retains the billing portal safety gates", async () => {
+  const fixture = (overrides = {}, response = { url: "https://billing.stripe.com/test" }) => {
+    const calls = [],
+      events = [];
+    const scope = { current: { epoch: 1, view: 1 } };
+    const dependencies = {
+      open: true,
+      loggedIn: true,
+      portalLoading: false,
+      portalPendingRef: { current: false },
+      subSummary: { hasBillingAccount: true, billingPortalAvailable: true },
+      billingScopeRef: scope,
+      billingIsCurrent: (epoch) => epoch === scope.current.epoch,
+      createPortalSession: async (input) => {
+        calls.push(input);
+        return response;
+      },
+      parseAllowedBillingPortalUrl,
+      setPortalLoading: (value) => events.push(["loading", value]),
+      window: { location: { assign: (value) => events.push(["redirect", value]) } },
+      toast: { error: (message) => events.push(["error", message]) },
+      ...overrides,
+    };
+    return {
+      calls,
+      events,
+      run: execute(variable("handleManageBilling").initializer.getText(parsed), dependencies),
+    };
+  };
+  for (const overrides of [
+    { open: false },
+    { loggedIn: false },
+    { portalPendingRef: { current: true } },
+    { portalLoading: true },
+    { subSummary: null },
+    { subSummary: { hasBillingAccount: false, billingPortalAvailable: true } },
+    { subSummary: { hasBillingAccount: true, billingPortalAvailable: false } },
+  ]) {
+    const f = fixture(overrides);
+    await f.run();
+    assert.deepEqual(f.calls, [], JSON.stringify(overrides));
+    assert.deepEqual(f.events, [], "A rejected gate cannot navigate or start loading");
+  }
+  const allowed = fixture();
+  await allowed.run();
+  assert.deepEqual(allowed.calls, [{ data: {} }]);
+  assert.deepEqual(allowed.events, [
+    ["loading", true],
+    ["redirect", "https://billing.stripe.com/test"],
+    ["loading", false],
+  ]);
+  for (const response of [
+    { url: "https://untrusted.invalid/test" },
+    { error: "provider failure" },
+  ]) {
+    const f = fixture({}, response);
+    await f.run();
+    assert.deepEqual(f.events, [
+      ["loading", true],
+      ["error", "The billing portal couldn't be opened. Try again."],
+      ["loading", false],
+    ]);
+  }
   assert.match(settingsSource, /const portalUrl = parseAllowedBillingPortalUrl\(res\.url\);/);
   assert.match(
     settingsSource,

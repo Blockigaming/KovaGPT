@@ -4,47 +4,55 @@ const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, 
 const EVENTS = {
   password_changed: {
     subject: "Your KovaGPT password changed",
+    occurredLabel: "Password changed",
     heading: "Your password changed",
     introduction: "The password for your KovaGPT account was changed.",
-    help: "If this was not you, reset your password and review your active sessions in Settings → Security.",
-    action: "Review account security",
+    help: "If this was not you, reset your password. Then sign in and review your active sessions in Settings → Security.",
+    action: "Sign in to review",
     path: "/auth",
   },
   security_method_added: {
     subject: "A security method was added to your KovaGPT account",
+    occurredLabel: "Method added",
     heading: "Security method added",
     introduction: "A sign-in or verification method was added to your KovaGPT account.",
-    help: "If this was not you, review your security methods and active sessions in Settings → Security.",
-    action: "Review account security",
+    help: "If this was not you, sign in and open Settings → Security to review your methods and active sessions.",
+    action: "Sign in to review",
     path: "/auth",
   },
   security_method_changed: {
     subject: "A security method changed on your KovaGPT account",
+    occurredLabel: "Method updated",
     heading: "Security method changed",
     introduction: "A sign-in or verification method on your KovaGPT account was updated.",
-    help: "If this was not you, review your security methods and active sessions in Settings → Security.",
-    action: "Review account security",
+    help: "If this was not you, sign in and open Settings → Security to review your methods and active sessions.",
+    action: "Sign in to review",
     path: "/auth",
   },
   security_method_removed: {
     subject: "A security method was removed from your KovaGPT account",
+    occurredLabel: "Method removed",
     heading: "Security method removed",
     introduction: "A sign-in or verification method was removed from your KovaGPT account.",
-    help: "If this was not you, review your security methods and active sessions in Settings → Security.",
-    action: "Review account security",
+    help: "If this was not you, sign in and open Settings → Security to review your methods and active sessions.",
+    action: "Sign in to review",
     path: "/auth",
   },
   account_deletion_scheduled: {
     subject: "Your KovaGPT account is scheduled for deletion",
+    occurredLabel: "Deletion scheduled",
     heading: "Account deletion scheduled",
     introduction:
       "Your KovaGPT account is scheduled for deletion after the 30-day recovery period.",
-    help: "You can recover your account before the deadline in Settings → Data controls. Scheduling deletion does not cancel billing; manage subscriptions separately in Billing. If you did not request this, review your account now.",
-    action: "Review your account",
+    help: "To cancel deletion before the deadline, sign in and open Settings → Data controls. If you did not request this, review your account now.",
+    billing:
+      "Scheduling deletion does not cancel billing; manage subscriptions separately in Billing.",
+    action: "Sign in to review",
     path: "/auth",
   },
   account_deleted: {
     subject: "Your KovaGPT account has been deleted",
+    occurredLabel: "Deletion completed",
     heading: "Your account was deleted",
     introduction: "Your KovaGPT account has been deleted.",
     help: "Records we must retain for legal or security obligations may remain under our retention policy. If you did not request this, contact support@kovagpt.com.",
@@ -53,30 +61,34 @@ const EVENTS = {
   },
   new_login: {
     subject: "A new sign-in to your KovaGPT account",
+    occurredLabel: "Signed in",
     heading: "New sign-in",
     introduction: "A new session was started for your KovaGPT account.",
-    help: "If this was not you, review your active sessions and change your password in Settings → Security.",
-    action: "Review account security",
+    help: "If this was not you, sign in and open Settings → Security. Change your password and review your active sessions.",
+    action: "Sign in to review",
     path: "/auth",
   },
   email_changed: {
     subject: "Your KovaGPT email address changed",
+    occurredLabel: "Email changed",
     heading: "Email address changed",
     introduction: "The email address on your KovaGPT account was changed.",
-    help: "If this was not you, review your account security and contact support@kovagpt.com.",
-    action: "Review account security",
+    help: "If this was not you, sign in and review Settings → Security. If you cannot sign in, contact support@kovagpt.com.",
+    action: "Sign in to review",
     path: "/auth",
   },
   account_recovered: {
-    subject: "Your KovaGPT account was recovered",
-    heading: "Your account was recovered",
+    subject: "Your KovaGPT deletion request was canceled",
+    occurredLabel: "Deletion canceled",
+    heading: "Account deletion canceled",
     introduction: "The scheduled deletion of your KovaGPT account was cancelled.",
-    help: "If this was not you, review your active sessions and security methods in Settings → Security.",
-    action: "Review your account",
+    help: "If this was not you, sign in and review your active sessions in Settings → Security. Review your deletion status in Settings → Data controls.",
+    action: "Sign in to review",
     path: "/auth",
   },
   welcome: {
     subject: "Welcome to KovaGPT",
+    occurredLabel: "Account ready",
     heading: "Welcome to KovaGPT",
     introduction: "Your KovaGPT account is ready. You can start a conversation whenever you like.",
     help: "You control optional account emails in Settings → Notifications.",
@@ -138,6 +150,7 @@ function timestamp(value) {
     throw new Error("account_email_timestamp_invalid");
   return {
     time,
+    iso: new Date(time).toISOString(),
     text: new Date(time)
       .toISOString()
       .replace("T", " ")
@@ -169,7 +182,7 @@ export function renderKovaAccountEmail(input) {
       ? "This notice confirms completed account deletion."
       : "Manage account email preferences in Settings → Notifications.";
   const details = [
-    `Time: ${occurred.text}`,
+    `${content.occurredLabel}: ${occurred.text}`,
     ...(deadline ? [`Recovery deadline: ${deadline.text}`] : []),
   ];
   const text = [
@@ -178,6 +191,7 @@ export function renderKovaAccountEmail(input) {
     content.introduction,
     ...details,
     content.help,
+    ...(content.billing ? [content.billing] : []),
     `${content.action}: ${actionUrl}`,
     preferenceCopy,
     "KovaGPT will never ask you to reply with your password, verification code, or recovery code.",
@@ -220,9 +234,11 @@ export function renderKovaAccountEmail(input) {
 <h1 class="kova-heading" style="font-size:28px;line-height:1.2;font-weight:600;letter-spacing:-.025em;margin:0 0 20px;">${escapeHtml(content.heading)}</h1>
 <p class="kova-text" style="margin:0 0 24px;">${escapeHtml(content.introduction)}</p>
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;margin:0 0 24px;"><tr><td class="kova-detail" style="padding:16px 18px;border:1px solid #e5e5e5;border-radius:12px;background-color:#f7f7f8;">
-${details.map((detail) => `<p class="kova-text" style="font-size:13px;margin:4px 0;">${escapeHtml(detail)}</p>`).join("\n")}
+<p class="kova-text" style="font-size:13px;margin:4px 0;">${escapeHtml(content.occurredLabel)}: <time datetime="${escapeHtml(occurred.iso)}">${escapeHtml(occurred.text)}</time></p>
+${deadline ? `<div style="margin-top:14px;"><p class="kova-text" style="font-size:12px;margin:0 0 5px;"><strong>Recovery deadline</strong></p><p class="kova-text" style="font-size:18px;font-weight:600;line-height:1.4;margin:0;"><time datetime="${escapeHtml(deadline.iso)}">${escapeHtml(deadline.text)}</time></p></div>` : ""}
 </td></tr></table>
 <p class="kova-text" style="margin:0 0 22px;">${escapeHtml(content.help)}</p>
+${content.billing ? `<p class="kova-muted" style="font-size:13px;margin:0 0 22px;">${escapeHtml(content.billing)}</p>` : ""}
 <p style="margin:26px 0 28px;"><a class="kova-button" href="${escapeHtml(actionUrl)}" style="display:inline-block;min-height:20px;padding:14px 22px;border-radius:10px;background-color:#202123;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;">${escapeHtml(content.action)}</a></p>
 <p class="kova-muted" style="font-size:12px;margin:0 0 18px;">${escapeHtml(preferenceCopy)}</p>
 <div class="kova-divider" style="margin-top:32px;padding-top:22px;border-top:1px solid #e5e5e5;">

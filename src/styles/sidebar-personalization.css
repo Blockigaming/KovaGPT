@@ -1,0 +1,261 @@
+/* Owner sidebar refinement: a shared desktop canvas and a distinct phone drawer.
+   Extra scope keeps legacy shell layers from changing this component's geometry. */
+:is(.kova-assistant, .kova-app-shell)
+  :is(
+    .kova-sidebar[data-kova-core-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail]
+  )[data-kova-refined-sidebar][data-state] {
+  --sidebar-row-height: 44px;
+
+  background: var(--assistant-canvas, var(--background)) !important;
+  border-radius: 0;
+  border-right-color: transparent !important;
+}
+
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar[data-kova-refined-sidebar][data-kova-core-sidebar]
+  :is(.kova-sidebar-inner, .kova-sidebar-header, .kova-sidebar-footer) {
+  background: inherit;
+}
+
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar[data-kova-refined-sidebar][data-kova-core-sidebar]
+  :is(.kova-header-button, .kova-account-action, .kova-chat-options) {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
+}
+
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar[data-kova-refined-sidebar][data-kova-core-sidebar]
+  :is(.kova-chat-row, .kova-chat-row-main) {
+  min-height: 44px;
+  height: 44px;
+}
+
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar-rail[data-kova-refined-sidebar][data-kova-core-rail] {
+  gap: 8px;
+}
+
+.kova-sidebar-rail[data-kova-refined-sidebar] .kova-rail-shortcuts {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar-rail[data-kova-refined-sidebar][data-kova-core-rail]
+  .kova-rail-button {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
+  color: var(--muted-foreground);
+}
+/* Shared rail geometry is owned by sidebar-core.css. */
+
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar-rail[data-kova-refined-sidebar][data-kova-core-rail]
+  .kova-rail-button:is(:hover, [aria-current="page"]) {
+  background: var(--sidebar-active);
+  color: var(--foreground);
+}
+
+:is(.kova-assistant, .kova-app-shell)
+  :is(.kova-sidebar, .kova-sidebar-rail)[data-kova-refined-sidebar]
+  :is(.kova-sidebar-icon, .kova-rail-button)
+  svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: var(--kova-icon-stroke, 2);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+:is(.kova-assistant, .kova-app-shell)
+  .kova-sidebar-rail[data-kova-refined-sidebar][data-kova-core-rail]
+  .kova-rail-button
+  svg {
+  stroke-width: 2;
+}
+
+.kova-sidebar-rail[data-kova-refined-sidebar] .kova-rail-account {
+  margin-top: 4px;
+}
+
+.kova-sidebar-rail[data-kova-refined-sidebar] .kova-rail-account:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kova-sidebar-personalization {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-panel);
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 16px 64px #0003;
+}
+
+.kova-sidebar-personalization::backdrop {
+  background: #0007;
+}
+
+.kova-sidebar-personalization-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kova-sidebar-personalization h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.kova-sidebar-personalization-heading button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: var(--kova-radius-button);
+}
+
+.kova-sidebar-personalization svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  stroke-width: var(--kova-icon-stroke, 2);
+}
+
+.kova-sidebar-personalization p {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.kova-sidebar-personalization fieldset {
+  min-width: 0;
+  margin: 20px 0 14px;
+}
+
+.kova-sidebar-personalization legend {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.kova-sidebar-shortcut-choice {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: var(--kova-radius-sidebar);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.kova-sidebar-shortcut-choice > span {
+  flex: 1;
+}
+
+.kova-sidebar-shortcut-choice input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--foreground);
+}
+
+.kova-sidebar-personalization button:not([role="switch"]):hover,
+.kova-sidebar-shortcut-choice:hover {
+  background: var(--sidebar-hover);
+}
+
+.kova-sidebar-personalization button:focus-visible,
+.kova-sidebar-shortcut-choice:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kova-sidebar-personalization .kova-sidebar-personalization-note {
+  font-size: 12px;
+}
+
+.kova-sidebar-personalization .kova-sidebar-personalization-error {
+  margin-top: 12px;
+  color: var(--destructive);
+}
+
+.kova-sidebar-personalization-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.kova-sidebar-personalization-actions button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+  font-size: 14px;
+}
+
+.kova-sidebar-personalization-actions button:last-child {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+@media (max-width: 1023px) {
+  :is(.kova-assistant, .kova-app-shell)
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state] {
+    border-radius: 0 var(--kova-radius-panel) var(--kova-radius-panel) 0;
+    background: #f3f3f3 !important;
+  }
+
+  .dark
+    :is(.kova-assistant, .kova-app-shell)
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state] {
+    background: #171717 !important;
+  }
+}
+
+/* Original navigation glyphs share a consistent, rounded optical weight. */
+:is(.kova-assistant, .kova-app-shell) [data-kova-navigation-glyph] {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: currentColor;
+  stroke: currentColor;
+  stroke-width: var(--kova-icon-stroke, 2);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+:is(.kova-assistant, .kova-app-shell)
+  :is(.kova-sidebar, .kova-sidebar-rail)[data-kova-refined-sidebar]
+  :is(.kova-new-chat, .kova-rail-customize)
+  svg {
+  width: 20px;
+  height: 20px;
+}

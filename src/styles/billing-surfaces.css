@@ -1,0 +1,402 @@
+/* ChatGPT Account/Payment reference: official Payment_details screenshot linked by
+   https://help.openai.com/en/articles/12362718-removing-a-payment-method.
+   Kova keeps its own data, entitlement copy and actions; presentation only. */
+[role="dialog"].kova-settings-dialog.kova-settings-reference
+  .kova-billing-tab-panel
+  > :is(.kova-billing-section, .kova-billing-secondary-section) {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+[role="dialog"].kova-settings-dialog.kova-settings-reference
+  .kova-billing-tab-panel
+  > section
+  + :is(.kova-billing-section, .kova-billing-secondary-section) {
+  margin-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 20px;
+}
+
+.kova-billing-plan-summary,
+.kova-billing-section-heading,
+.kova-billing-management-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.kova-billing-plan-summary > div,
+.kova-billing-management-copy {
+  min-width: 0;
+}
+
+[role="dialog"].kova-settings-dialog.kova-settings-reference
+  .kova-settings-content
+  > .kova-billing-details
+  h3 {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+.kova-billing-copy {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.kova-billing-copy:not(.text-destructive) {
+  color: var(--muted-foreground);
+}
+
+.kova-billing-details .kova-billing-plan-note {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.kova-billing-view-plans,
+.kova-billing-details .kova-billing-management-row button {
+  display: inline-flex;
+  min-height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+  padding: 9px 16px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  box-shadow: none;
+}
+
+.kova-billing-view-plans:hover,
+.kova-billing-details .kova-billing-management-row button:hover:not(:disabled) {
+  background: var(--accent);
+}
+
+.kova-billing-details .kova-billing-management-row button:disabled {
+  opacity: 0.5;
+}
+
+.kova-billing-section-heading {
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.kova-billing-reset {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kova-specific usage is displayed as the simple label/value settings rows. */
+.kova-billing-details .kova-billing-metrics {
+  display: block;
+  margin: 0;
+}
+
+.kova-billing-metrics > div {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 10px 0;
+}
+
+.kova-billing-metrics > div + div {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.kova-billing-metrics dt,
+.kova-billing-metrics dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.kova-billing-metrics dd {
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.kova-billing-usage-note,
+.kova-billing-management-status {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.kova-billing-usage-note {
+  color: var(--muted-foreground);
+}
+
+.kova-billing-management-row + .kova-billing-management-row {
+  margin-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 16px;
+}
+
+.kova-billing-row-label {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.kova-billing-secondary-section p {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.kova-billing-details .kova-billing-help-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.kova-billing-help-links a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  text-underline-offset: 3px;
+}
+
+.kova-billing-security-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.kova-billing-security-note svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+@media (max-width: 767px) {
+  .kova-billing-plan-summary,
+  .kova-billing-management-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .kova-billing-details .kova-billing-management-row button {
+    max-width: 100%;
+    min-width: 44px;
+    white-space: normal;
+  }
+
+  /* Inline support addresses follow their paragraph's line box. Standalone
+     help/action links keep the 44px targets defined above. */
+  .kova-billing-details p a[href^="mailto:"] {
+    display: inline;
+    min-height: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Billing uses only the existing Kova palette and the verified billing contract. */
+.kova-billing-workspace {
+  container: billing / inline-size;
+  min-width: 0;
+}
+.kova-billing-workspace .kova-billing-tabs {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 50px;
+  height: auto;
+  margin-bottom: 24px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--muted);
+}
+.kova-billing-tabs [role="tab"] {
+  min-height: 44px;
+  padding: 8px 16px;
+}
+body .kova-settings-dialog .kova-billing-workspace > [role="tabpanel"].kova-billing-tab-panel {
+  min-width: 0;
+  margin-top: 0;
+  padding: 0 !important;
+}
+.kova-billing-tab-panel > section + section,
+.kova-billing-tab-panel > nav {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-subtle);
+}
+.kova-billing-facts {
+  margin-top: 20px;
+}
+.kova-billing-payment-alert {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.kova-billing-payment-alert h4 {
+  font-weight: 600;
+}
+.kova-billing-payment-alert button,
+.kova-billing-invoices button {
+  min-height: 44px;
+}
+.kova-billing-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-block: 24px;
+}
+.kova-billing-plan-card {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 11;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+}
+.kova-billing-plan-card[data-current-plan="true"] {
+  border-color: var(--foreground);
+}
+.kova-billing-plan-card h4 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.kova-billing-plan-price strong {
+  font-size: 28px;
+  font-weight: 600;
+}
+.kova-billing-plan-price span,
+.kova-billing-plan-tax,
+.kova-billing-plan-trial {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+.kova-billing-plan-features {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 6;
+  gap: 14px;
+}
+.kova-billing-plan-features > div {
+  min-width: 0;
+}
+.kova-billing-plan-features dt {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.kova-billing-plan-features dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.kova-billing-plan-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  width: 100%;
+  white-space: normal;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+  font-size: 13px;
+  text-align: center;
+}
+.kova-billing-plan-action:hover:not(:disabled) {
+  background: var(--accent);
+}
+.kova-billing-plan-action:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-billing-invoices {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+.kova-billing-security-note {
+  margin-top: 16px;
+}
+@container billing (max-width: 680px) {
+  .kova-billing-plan-grid {
+    grid-template-columns: 1fr;
+  }
+  .kova-billing-plan-card {
+    grid-template-rows: auto;
+    grid-row: auto;
+  }
+  .kova-billing-plan-features {
+    grid-template-rows: none;
+    grid-row: auto;
+  }
+  .kova-billing-plan-trial:empty {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .kova-billing-plan-grid {
+    grid-template-columns: 1fr;
+  }
+  .kova-billing-plan-card {
+    grid-template-rows: auto;
+    grid-row: auto;
+  }
+  .kova-billing-plan-features {
+    grid-template-rows: none;
+    grid-row: auto;
+  }
+  .kova-billing-plan-trial:empty {
+    display: none;
+  }
+  .kova-billing-tabs [role="tab"] {
+    padding-inline: 12px;
+  }
+  .kova-billing-metrics > div {
+    align-items: start;
+    gap: 12px;
+  }
+  .kova-billing-metrics dt {
+    flex: 1;
+  }
+  .kova-billing-metrics dd {
+    max-width: 60%;
+  }
+}

@@ -536,7 +536,16 @@ export function WorkflowSkillsPanel({ userKey }: { userKey: string }) {
               Cancel
             </Button>
             <Button type="submit" disabled={busy}>
-              {busy ? "Saving…" : editing ? "Save new version" : "Create and install"}
+              {busy ? (
+                <span className="spec400-loading-label">
+                  <span className="spec400-loading-spinner" aria-hidden="true" />
+                  Saving…
+                </span>
+              ) : editing ? (
+                "Save new version"
+              ) : (
+                "Create and install"
+              )}
             </Button>
           </div>
         </form>

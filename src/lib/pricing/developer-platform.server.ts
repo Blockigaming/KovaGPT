@@ -14,6 +14,7 @@ import {
   imageGenerations,
   getAiProviderConfig,
   providerModelId,
+  type ProviderCapability,
 } from "@/lib/ai/provider.server";
 import { withDeveloperBilling } from "./developer-billing.server";
 import { prepareDeveloperQuote } from "./developer-metering.mjs";
@@ -175,7 +176,7 @@ async function preparePublicRequest(identity: DeveloperIdentity, kind: string, r
   const files = await loadDeveloperFileContent(identity, parsed.body, references.ids);
   parsed.body = files.body;
   const version = await currentPricing(identity);
-  const provider = getAiProviderConfig().provider;
+  const provider = getAiProviderConfig(parsed.capability).provider;
   const contracts = version.public_price_configuration?.contracts;
   const contract = Array.isArray(contracts)
     ? contracts.find(
@@ -316,7 +317,8 @@ export async function handleDeveloperApi(request: Request, operation: string) {
             .filter(
               (entry: { capability: string; provider: string }) =>
                 identity.capabilities.includes(entry.capability) &&
-                entry.provider === getAiProviderConfig().provider,
+                entry.provider ===
+                  getAiProviderConfig(entry.capability as ProviderCapability).provider,
             )
             .map((entry: { publicModel: string; capability: string }) => ({
               id: entry.publicModel,

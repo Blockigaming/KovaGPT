@@ -102,7 +102,7 @@ test("public catalog loads on navigation while missing public pages remain unava
   expect(missing?.status()).toBe(404);
   await waitForKovaHydration(page);
   await expect(
-    page.getByRole("heading", { name: "We couldn't find that page", exact: true }),
+    page.getByRole("heading", { name: "This page isn’t available", exact: true }),
   ).toBeVisible();
 });
 

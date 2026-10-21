@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Archive, Copy, FileStack, Loader2, Plus, RefreshCw, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { SearchablePicker } from "@/components/ui/searchable-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -37,7 +38,9 @@ export function ProjectTemplatesDialog({
   onOpenChange,
   userId,
   onCopied,
+  onCloseAutoFocus,
 }: {
+  onCloseAutoFocus?: (event: Event) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
@@ -269,7 +272,7 @@ export function ProjectTemplatesDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:w-[min(94vw,1040px)]">
+        <DialogContent className="sm:w-[min(94vw,1040px)]" onCloseAutoFocus={onCloseAutoFocus}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileStack className="h-5 w-5" aria-hidden="true" /> Project templates
@@ -340,6 +343,7 @@ export function ProjectTemplatesDialog({
               <div className="max-h-52 space-y-1 overflow-y-auto md:max-h-[48vh]">
                 {templates.map((template) => (
                   <button
+                    data-kova-button-shape="preserve"
                     type="button"
                     key={template.id}
                     aria-pressed={selectedId === template.id && mode !== "create"}
@@ -368,11 +372,6 @@ export function ProjectTemplatesDialog({
                   </button>
                 ))}
               </div>
-              {templates.length === 50 && (
-                <p className="text-xs text-muted-foreground">
-                  Showing the 50 most recently updated templates.
-                </p>
-              )}
               <details className="text-xs text-muted-foreground">
                 <summary className="cursor-pointer py-2">Receive a shared template</summary>
                 <p className="mb-2">
@@ -537,19 +536,18 @@ export function ProjectTemplatesDialog({
                   </div>
                   <label className="block text-sm">
                     Published version
-                    <select
-                      className="mt-1 min-h-11 w-full rounded-md border bg-background px-3"
-                      value={selectedVersion}
+                    <SearchablePicker
+                      aria-label="Published version"
+                      className="mt-1 w-full"
+                      value={String(selectedVersion)}
                       disabled={busy || Boolean(pending)}
-                      onChange={(event) => setSelectedVersion(Number(event.target.value))}
-                    >
-                      {selected.versions.map((version) => (
-                        <option key={version.version} value={version.version}>
-                          Version {version.version}
-                          {version.version === selected.currentVersion ? " (latest)" : ""}
-                        </option>
-                      ))}
-                    </select>
+                      searchLabel="Search published versions"
+                      onValueChange={(value) => setSelectedVersion(Number(value))}
+                      options={selected.versions.map((version) => ({
+                        value: String(version.version),
+                        label: `Version ${version.version}${version.version === selected.currentVersion ? " (latest)" : ""}`,
+                      }))}
+                    />
                   </label>
                   {previewLoading && (
                     <p role="status" className="text-sm text-muted-foreground">

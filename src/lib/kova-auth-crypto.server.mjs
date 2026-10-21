@@ -428,7 +428,14 @@ function signingConfiguration(env) {
     throw new Error("Kova auth signing key fingerprint mismatch");
   }
   const parsedIssuer = new URL(issuer);
-  if (parsedIssuer.protocol !== "https:" || parsedIssuer.href !== issuer) {
+  if (
+    parsedIssuer.protocol !== "https:" ||
+    parsedIssuer.href !== issuer ||
+    parsedIssuer.username ||
+    parsedIssuer.password ||
+    parsedIssuer.search ||
+    parsedIssuer.hash
+  ) {
     throw new Error("Kova auth issuer must be an exact HTTPS URL");
   }
   return { privateKey, publicKey, keyId, issuer };

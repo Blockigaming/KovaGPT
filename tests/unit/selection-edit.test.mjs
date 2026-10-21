@@ -105,3 +105,54 @@ test("failures are described honestly and never claim a change", () => {
   }
   assert.match(describeRewriteFailure(0), /not changed/);
 });
+
+test("history disclosure follows the actual acceptance scope, including a signed-in local Result", async () => {
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync("src/components/SelectionEditDialog.tsx", "utf8");
+  const expression = source.match(
+    /\{temporary\s*\? "Temporary chat: this edit[\s\S]*?history\."\}/u,
+  )?.[0];
+  assert.ok(expression);
+  const describe = new Function(
+    "temporary",
+    "chatId",
+    "messageId",
+    "isSignedIn",
+    `return (${expression.slice(1, -1)});`,
+  );
+  assert.match(describe(false, null, null, true), /local Result.*not saved to chat history/);
+  assert.match(describe(false, "chat", null, true), /local Result/);
+  assert.match(describe(false, "chat", "message", true), /saved to this chat's version history/);
+  assert.match(describe(false, "chat", "message", false), /on this device only/);
+  assert.match(describe(true, "chat", "message", true), /Temporary chat.*not saved/);
+});
+
+test("editable proposal and accepted-text preview remain distinct after rejecting a change", async () => {
+  const { readFileSync } = await import("node:fs");
+  const source = readFileSync("src/components/SelectionEditDialog.tsx", "utf8");
+  assert.match(source, /Proposed replacement \(editable\)/);
+  assert.match(source, /value=\{draft\}/);
+  assert.match(source, /Only checked changes will be applied/);
+  assert.match(source, /Preview accepted text[\s\S]*?<pre[^>]*>[\s\S]*?\{reviewedDraft\}/);
+  assert.match(source, /useEffect\(\(\) => setRejectedChanges\(\[\]\), \[draft, selected\]\)/);
+  assert.match(
+    source,
+    /applySelectionEdit\(target.source, target.start, target.end, reviewedDraft\)/,
+  );
+});
+
+test("accepted preview retains rejected original lines and applies only checked changes", async () => {
+  const { resultRevisionDiff, applyReviewedDiff } =
+    await import("../../src/lib/result-revision-diff.mjs");
+  const original = "First original line.\nUnchanged middle.\nLast original line.\n";
+  const proposal = "First proposed line.\nUnchanged middle.\nLast proposed line.\n";
+  const chunks = resultRevisionDiff(original, proposal);
+  const changed = chunks.flatMap((chunk, index) => (chunk.kind === "change" ? [index] : []));
+  assert.equal(changed.length, 2);
+  assert.equal(
+    applyReviewedDiff(chunks, [changed[0]]),
+    "First original line.\nUnchanged middle.\nLast proposed line.\n",
+  );
+  assert.equal(applyReviewedDiff(chunks, changed), original);
+  assert.equal(applyReviewedDiff(chunks), proposal);
+});

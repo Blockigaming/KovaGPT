@@ -27,13 +27,7 @@ export const getMyDailyUsage = createServerFn({ method: "GET" })
 
     if (error) {
       console.error("[getMyDailyUsage] read error", error.message);
-      return {
-        date: ymd,
-        chats: 0,
-        images: 0,
-        uploads: 0,
-        resetsAt: nextMidnight.toISOString(),
-      };
+      throw new Error("Usage data is temporarily unavailable. Please try again.");
     }
 
     if (!data) {

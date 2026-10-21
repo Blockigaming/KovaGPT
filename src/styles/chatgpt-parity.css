@@ -8,8 +8,7 @@
   --parity-focus: color-mix(in oklab, var(--foreground) 55%, transparent);
   --parity-motion-fast: 100ms;
   --parity-motion-standard: 150ms;
-  --parity-radius-control: 0.5rem;
-  --parity-radius-menu: 0.75rem;
+
   --parity-shadow-menu: 0 8px 24px rgb(0 0 0 / 12%), 0 1px 2px rgb(0 0 0 / 8%);
   --parity-shadow-modal: 0 18px 48px rgb(0 0 0 / 18%);
 }
@@ -37,7 +36,6 @@
 }
 .kova-nav-row {
   min-height: 36px !important;
-  border-radius: 8px !important;
   gap: 10px !important;
   font-size: 14px !important;
   transition:
@@ -56,7 +54,6 @@
 }
 .kova-chat-row {
   min-height: 36px !important;
-  border-radius: 8px !important;
   transition:
     background-color 140ms ease,
     transform 140ms var(--ease-spring, ease) !important;
@@ -69,7 +66,6 @@
   backdrop-filter: none !important;
 }
 .kova-action {
-  border-radius: 8px !important;
   transition:
     background-color 100ms ease,
     color 100ms ease !important;
@@ -84,7 +80,6 @@
   --composer-control: 36px !important;
   --composer-inset: 10px !important;
   border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent) !important;
-  border-radius: 28px !important;
   background: var(--surface-composer) !important;
   box-shadow: none !important;
   transition:
@@ -99,6 +94,12 @@
   outline-offset: 2px;
   border-color: color-mix(in oklab, var(--foreground) 12%, transparent) !important;
   box-shadow: none !important;
+}
+
+.kova-profile-disabled-outline:disabled {
+  opacity: 1;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
 }
 .kova-composer-button {
   transition:
@@ -129,7 +130,6 @@
 }
 .kova-glass {
   border: 1px solid var(--border) !important;
-  border-radius: var(--parity-radius-menu) !important;
   background: var(--popover) !important;
   box-shadow: var(--parity-shadow-menu) !important;
   backdrop-filter: none !important;
@@ -141,7 +141,6 @@
 }
 .kova-user-message {
   border: 0 !important;
-  border-radius: 24px !important;
   box-shadow: none !important;
 }
 .kova-message-actions {
@@ -189,11 +188,9 @@
 }
 .prose-chat pre {
   border: 1px solid var(--border);
-  border-radius: 8px !important;
   box-shadow: none !important;
 }
 .prose-chat :not(pre) > code {
-  border-radius: 4px;
   padding: 2px 4px;
   font-size: 0.875em;
 }
@@ -219,17 +216,17 @@
 
 /* Pages and cards */
 .kova-page {
-  max-width: var(--parity-page-max) !important;
-  padding: 24px !important;
+  max-width: var(--page-max, var(--parity-page-max)) !important;
+  padding: var(--page-padding, 24px) !important;
 }
-.kova-page-header {
+.kova-page:not(.kova-file-directory) > .kova-page-header {
   margin-bottom: 24px !important;
 }
 .kova-page-title {
   font-family: inherit !important;
-  font-size: 28px !important;
-  line-height: 36px !important;
-  font-weight: 600 !important;
+  font-size: var(--page-title-size, 28px) !important;
+  line-height: var(--page-title-line, 36px) !important;
+  font-weight: var(--page-title-weight, 600) !important;
   letter-spacing: -0.02em !important;
 }
 .kova-page-description {
@@ -242,7 +239,6 @@
 .kova-plan-card,
 .kova-connector-card {
   border: 1px solid var(--border) !important;
-  border-radius: 12px !important;
   background: var(--card) !important;
   box-shadow: none !important;
   transform: none !important;
@@ -260,7 +256,6 @@
 }
 .kova-empty-state {
   border: 0 !important;
-  border-radius: 12px !important;
   background: var(--muted) !important;
   padding: 32px !important;
 }
@@ -277,35 +272,24 @@
 .bg-gradient-kova-soft {
   background: var(--foreground) !important;
 }
-.kova-secondary-page :is(input, textarea, select):focus-visible,
-.kova-settings-dialog :is(input, textarea, select):focus-visible,
-.kova-auth-surface :is(input, textarea, select):focus-visible {
-  border-color: var(--parity-focus) !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
 .kova-settings-dialog [role="tab"][aria-selected="true"],
 .kova-secondary-page [role="tab"][aria-selected="true"] {
   box-shadow: none !important;
   background: var(--accent) !important;
+  color: var(--foreground) !important;
 }
 .kova-auth-surface {
-  border-radius: 12px !important;
   box-shadow: var(--parity-shadow-modal) !important;
 }
 
 /* Menus, dialogs, sheets and notifications */
 :where([role="menu"], [role="listbox"], .kova-model-menu) {
-  border-radius: var(--parity-radius-menu) !important;
   box-shadow: var(--parity-shadow-menu) !important;
 }
 :where([role="menuitem"], [role="option"]) {
-  min-height: 36px;
-  border-radius: 8px !important;
   transition: background-color 100ms ease !important;
 }
 [data-kova-dialog-surface] {
-  border-radius: 12px !important;
   box-shadow: var(--parity-shadow-modal) !important;
 }
 [data-sonner-toast] {
@@ -315,8 +299,7 @@
 
 @media (max-width: 1023px) {
   .kova-page {
-    padding: 16px !important;
-    padding-bottom: max(24px, var(--safe-bottom)) !important;
+    padding: var(--page-padding, 16px 16px max(24px, var(--safe-bottom))) !important;
   }
   .kova-message {
     padding-inline: 16px !important;
@@ -331,15 +314,9 @@
 }
 
 @media (max-width: 640px) {
-  .kova-composer {
-    border-radius: 24px !important;
-  }
   .kova-page-title {
-    font-size: 24px !important;
-    line-height: 32px !important;
-  }
-  [data-kova-dialog-surface] {
-    border-radius: 16px 16px 0 0 !important;
+    font-size: var(--page-title-size, 24px) !important;
+    line-height: var(--page-title-line, 32px) !important;
   }
 }
 
@@ -354,8 +331,9 @@
   }
 }
 
-/* Menu rows: keep only the soft grey highlight, never a hard outline box. */
-:where([role="menu"], [role="listbox"], [role="dialog"], .kova-model-menu, .kova-glass)
+/* Menu rows use their own focus highlight. Dialog actions retain their
+   variant color pair and the shared keyboard outline. */
+:where([role="menu"], [role="listbox"], .kova-model-menu)
   :where(button, [role="menuitem"], [role="option"]):focus-visible {
   outline: none !important;
   box-shadow: none !important;
@@ -365,20 +343,6 @@
   border: 0 !important;
 }
 
-/* Text fields: focus reads as a subtle border shift, never a bright outline box. */
-:where(
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not(
-      [type="submit"]
-    ),
-  textarea,
-  select
-):focus-visible,
-html :is(input, textarea, select):focus,
-html :is(input, textarea, select):focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-  border-color: color-mix(in oklab, var(--foreground) 32%, transparent) !important;
-}
 .kova-composer:focus-within {
   outline-width: 2px !important;
   outline-style: solid !important;

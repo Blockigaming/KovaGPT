@@ -1,0 +1,789 @@
+/* Specification 400 management surfaces. Preserve the approved baseline colors. */
+.spec400-management,
+.kova-core-page.kova-file-directory.spec400-management {
+  --page-max: 1200px;
+  --page-padding: 32px;
+  --page-title-size: 28px;
+  --page-title-line: 36px;
+  --page-title-weight: 600;
+  --surface-card-radius: var(--kova-radius-card);
+  width: 100%;
+  max-width: 1200px;
+  min-width: 0;
+  margin-inline: auto;
+  padding: 32px;
+  container-type: inline-size;
+}
+.spec400-management h1,
+.kova-core-page.kova-file-directory.spec400-management .kova-page-title {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  letter-spacing: normal !important;
+}
+.spec400-management h2 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+.spec400-management h3 {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+.spec400-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.spec400-page-header p {
+  margin-top: 8px;
+  color: var(--muted-foreground);
+}
+.spec400-supporting {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  margin-block: 8px;
+  overflow-wrap: anywhere;
+}
+.spec400-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--kova-radius-button);
+  background: var(--foreground);
+  color: var(--background);
+  font-weight: 500;
+}
+.spec400-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.spec400-primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.spec400-primary svg,
+.spec400-icon-button svg {
+  width: 20px;
+  height: 20px;
+}
+.spec400-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--kova-radius-button);
+}
+.spec400-icon-button:hover {
+  background: var(--accent);
+}
+.spec400-management :is(button, input, select, textarea, a, summary):focus-visible,
+.spec400-schedule-dialog :is(button, input, select, textarea, a, summary):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kova-core-page.kova-file-directory.spec400-management .kova-file-filters button {
+  border-radius: 0;
+  border-width: 0 0 2px;
+  min-height: 44px;
+}
+.kova-core-page.kova-file-directory.spec400-management .kova-file-filters [aria-pressed="true"] {
+  border-color: var(--foreground);
+  font-weight: 600;
+}
+.kova-core-page.kova-file-directory.spec400-management .kova-file-filters {
+  border-bottom: 1px solid var(--border);
+}
+/* Grid thresholds depend on available CONTENT width, not viewport width. */
+.kova-core-page.kova-file-directory.spec400-projects .kova-grid.kova-file-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+@container (min-width: 620px) {
+  .kova-core-page.kova-file-directory.spec400-projects .kova-grid.kova-file-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (min-width: 960px) {
+  .kova-core-page.kova-file-directory.spec400-projects .kova-grid.kova-file-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.kova-core-page.kova-file-directory.spec400-projects .kova-file-grid .kova-project-file {
+  border-radius: var(--kova-radius-card);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+.kova-core-page.kova-file-directory.spec400-projects .kova-file-grid .kova-project-file-link {
+  min-height: 156px;
+  padding: 20px;
+}
+.kova-core-page.kova-file-directory.spec400-projects .kova-project-file-name h3 {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+.kova-core-page.kova-file-directory.spec400-projects .kova-project-file-date {
+  margin-top: auto;
+  padding-top: 16px;
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+}
+.kova-core-page.kova-file-directory.spec400-projects .kova-project-file-menu {
+  top: 8px;
+  right: 8px;
+  transform: none;
+}
+.spec400-project-detail {
+  padding-block: 32px;
+}
+.spec400-breadcrumb-current {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+}
+.spec400-project-navigation {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.spec400-project-navigation [role="tablist"] {
+  height: auto;
+  background: transparent;
+  padding: 0;
+}
+.spec400-project-navigation [role="tab"] {
+  min-height: 44px;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  box-shadow: none;
+}
+.spec400-project-navigation [role="tab"][data-state="active"] {
+  background: transparent;
+  border-color: var(--foreground);
+  font-weight: 600;
+}
+.spec400-project-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  padding-bottom: 8px;
+}
+.spec400-project-tools select,
+.spec400-library-metadata-filters select {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-input);
+  padding: 8px 12px;
+  background: var(--background);
+  color: var(--foreground);
+  max-width: 100%;
+}
+.spec400-context-files {
+  display: grid;
+  gap: 12px;
+}
+.spec400-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+.spec400-management-dialog[data-kova-dialog-surface] {
+  width: min(560px, calc(100vw - 32px));
+  max-width: 560px;
+  border-radius: var(--kova-radius-panel);
+  padding: 24px;
+}
+.spec400-management-dialog form > div + div {
+  margin-top: 16px;
+}
+.spec400-schedules [role="tablist"] {
+  border-bottom: 1px solid var(--border);
+}
+.spec400-schedules [role="tab"] {
+  min-height: 44px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  border-bottom: 2px solid transparent;
+}
+.spec400-schedules [role="tab"][aria-selected="true"] {
+  color: var(--foreground);
+  border-color: var(--foreground);
+  font-weight: 600;
+}
+.spec400-count {
+  margin-left: 4px;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+.spec400-schedules .kova-row {
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  padding: 16px;
+  box-shadow: none;
+}
+.spec400-task-title {
+  min-height: 32px;
+  font-weight: 600;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.spec400-schedule-dialog[data-kova-dialog-surface] {
+  width: min(560px, calc(100vw - 32px));
+  max-width: 560px;
+  padding: 24px;
+  border-radius: var(--kova-radius-panel);
+}
+.spec400-schedule-editor {
+  min-width: 0;
+}
+.spec400-schedule-editor > div:first-of-type {
+  padding-right: 40px;
+}
+.spec400-schedule-editor h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.spec400-schedule-editor label > :is(input:not([type="checkbox"]), select, textarea) {
+  margin-top: 8px;
+}
+.spec400-schedule-editor input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.spec400-schedule-editor summary {
+  min-height: 44px;
+  padding-block: var(--space-2);
+  cursor: pointer;
+}
+.spec400-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.spec400-schedule-preview {
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  padding: 16px;
+}
+.spec400-schedule-footer {
+  position: sticky;
+  bottom: -24px;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  background: var(--background);
+}
+.spec400-library-metadata-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.spec400-library-metadata-filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+}
+.spec400-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.spec400-filter-chips button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+  font-size: 0.8125rem;
+}
+.spec400-library-availability {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  line-height: 1.375rem;
+}
+.spec400-library-availability summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: var(--space-2);
+}
+.spec400-library-availability p {
+  margin-bottom: 8px;
+  max-width: 76ch;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-row {
+  min-height: 56px;
+  border-radius: var(--kova-radius-card);
+  padding: 5px 12px;
+  box-shadow: none;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-type-icon {
+  flex-basis: 24px;
+  width: 24px;
+  height: 24px;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-type-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-grid .kova-file-card {
+  border-radius: var(--kova-radius-card);
+}
+.spec400-library-inspector[data-kova-dialog-surface] {
+  inset: 0 0 0 auto;
+  transform: none;
+  translate: none;
+  width: 420px;
+  max-width: 100%;
+  max-height: 100dvh;
+  height: 100dvh;
+  margin: 0;
+  border-radius: var(--kova-radius-panel);
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.spec400-library-inspector > header {
+  min-height: 56px;
+}
+.spec400-inspector-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 24px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+.spec400-file-details {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 8px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  margin-block: 16px 24px;
+}
+.spec400-file-details dt {
+  color: var(--muted-foreground);
+}
+.spec400-file-details dd {
+  overflow-wrap: anywhere;
+}
+.spec400-inspector-tabs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.spec400-inspector-tabs button {
+  min-height: 44px;
+  border-bottom: 2px solid transparent;
+}
+.spec400-inspector-tabs button[aria-pressed="true"] {
+  border-color: var(--foreground);
+  font-weight: 600;
+}
+.spec400-upload-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.spec400-upload-label input {
+  max-width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-input);
+  padding: 8px;
+}
+@media (max-width: 1023px) {
+  .spec400-management,
+  .kova-core-page.kova-file-directory.spec400-management {
+    padding: 24px;
+  }
+}
+@media (max-width: 639px) {
+  .spec400-management,
+  .kova-core-page.kova-file-directory.spec400-management {
+    padding: 16px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+  .spec400-management h1,
+  .kova-core-page.kova-file-directory.spec400-management .kova-page-title {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  .spec400-page-header {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .kova-core-page.kova-file-directory.spec400-projects .kova-grid.kova-file-grid {
+    gap: 16px;
+  }
+  /* This phone-only editor intentionally overrides shared dialog size caps and corners. */
+  body .spec400-schedule-dialog[data-kova-dialog-surface] {
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: var(--kova-radius-panel);
+    margin: 0;
+    translate: none;
+    transform: none;
+    padding: 16px;
+    padding-top: max(20px, env(safe-area-inset-top));
+  }
+  .spec400-schedule-dialog > div[aria-hidden="true"] {
+    display: none;
+  }
+  .spec400-schedule-footer {
+    bottom: -16px;
+    flex-direction: column;
+    align-items: stretch;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .spec400-schedule-footer button {
+    flex: none;
+    width: 100%;
+  }
+  .spec400-schedule-editor :is(input, select, textarea) {
+    font-size: 16px;
+    min-width: 0;
+  }
+  .spec400-schedule-editor .my-2.flex.gap-2 {
+    flex-wrap: wrap;
+  }
+  .spec400-schedules .kova-row {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .spec400-project-tools {
+    width: 100%;
+  }
+  .spec400-library-inspector[data-kova-dialog-surface] {
+    width: 100%;
+  }
+  .spec400-library-inspector > div[aria-hidden="true"] {
+    display: none;
+  }
+  .spec400-inspector-body {
+    padding: 16px;
+  }
+  .spec400-form-actions {
+    flex-wrap: wrap;
+  }
+  .spec400-form-actions button {
+    flex: 1;
+  }
+  .spec400-library-metadata-filters label {
+    flex: 1;
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .kova-core-page.kova-file-directory.spec400-library .kova-file-row {
+    gap: 4px;
+  }
+  .kova-core-page.kova-file-directory.spec400-library .kova-file-row-type {
+    font-size: 0.8125rem;
+  }
+}
+
+.spec400-created-receipt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding-inline: 12px;
+  border-radius: 8px;
+  background: var(--accent);
+  font-size: 0.875rem;
+}
+.spec400-created-receipt svg {
+  width: 16px;
+  height: 16px;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-row-name button {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0;
+  line-height: 22px;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-row-name {
+  padding-block: 0;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-row-type {
+  padding-bottom: 0;
+  line-height: 18px;
+}
+
+/* Content-first Library: utilities stay quiet and metadata filters are on demand. */
+.kova-core-page.kova-file-directory.spec400-library {
+  gap: 12px;
+}
+.kova-core-page.kova-file-directory.spec400-library > .kova-page-header {
+  margin-bottom: 0;
+}
+.kova-core-page.kova-file-directory.spec400-library .spec400-library-secondary {
+  align-items: center;
+  gap: 0 12px;
+  margin-block: 0;
+}
+.kova-core-page.kova-file-directory.spec400-library .spec400-library-secondary summary {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 24px;
+  white-space: nowrap;
+}
+.kova-core-page.kova-file-directory.spec400-library
+  .spec400-library-secondary
+  .kova-directory-refresh {
+  margin-left: auto;
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  border: 0;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+.kova-core-page.kova-file-directory.spec400-library
+  .spec400-library-secondary
+  .kova-directory-refresh
+  > svg {
+  margin: 0;
+}
+.kova-core-page.kova-file-directory.spec400-library
+  .spec400-library-secondary
+  .kova-directory-refresh
+  > span {
+  display: none;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-toolbar .kova-directory-search {
+  width: 100%;
+  min-width: 0;
+}
+.spec400-library-filter-trigger {
+  min-height: 44px;
+}
+.spec400-library-display-controls {
+  display: flex;
+  align-items: center;
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+}
+.kova-core-page.kova-file-directory.spec400-library .spec400-library-display-controls select {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+}
+@media (max-width: 360px) {
+  .spec400-library-display-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .kova-core-page.kova-file-directory.spec400-library .spec400-library-display-controls select {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+  }
+}
+.spec400-library-filter-panel {
+  width: min(320px, calc(100vw - 32px));
+  border-radius: var(--kova-radius-card);
+}
+.spec400-library-filter-panel .spec400-library-metadata-filters {
+  display: grid;
+  gap: 12px;
+  margin-block: 16px;
+}
+.spec400-library-filter-panel .spec400-library-metadata-filters label {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.spec400-library-filter-panel :is(button, select):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-section-heading {
+  margin-bottom: 4px;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-list {
+  gap: 4px;
+}
+.spec400-library-row-title {
+  width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.kova-core-page.kova-file-directory.spec400-library .kova-file-row-type {
+  font-weight: 400;
+}
+html[data-kova-density="compact"]
+  .kova-core-page.kova-file-directory.spec400-library
+  .kova-file-row {
+  min-height: 48px;
+  padding-block: 1px;
+}
+@container (min-width: 720px) {
+  .kova-core-page.kova-file-directory.spec400-library .kova-file-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .spec400-library-display-controls {
+    grid-column: auto;
+  }
+  .kova-core-page.kova-file-directory.spec400-library .spec400-library-display-controls select {
+    width: auto;
+  }
+}
+@media (max-width: 639px) {
+  .kova-core-page.kova-file-directory.spec400-library .kova-file-row {
+    padding-inline: 4px;
+  }
+  .kova-core-page.kova-file-directory.spec400-library .spec400-library-secondary {
+    gap: 0 8px;
+  }
+  .spec400-library-upload {
+    padding-inline: var(--space-3);
+  }
+  .spec400-library-upload > svg {
+    display: none;
+  }
+}
+
+/* Inspectors own their viewport geometry rather than the generic centered-dialog caps. */
+body .spec400-library-inspector[data-kova-dialog-surface] {
+  inset: 0 0 0 auto !important;
+  width: 420px !important;
+  max-width: 100% !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  border-radius: var(--kova-radius-panel);
+  transform: none !important;
+  translate: none !important;
+  padding: 0 !important;
+}
+.spec400-library-inspector-title {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 8px 64px 8px 16px;
+}
+.spec400-library-inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+@media (max-width: 767px) {
+  body .spec400-library-inspector[data-kova-dialog-surface] {
+    width: 100% !important;
+  }
+  .spec400-projects #projects-title,
+  .spec400-schedules #scheduled-tasks-title,
+  .spec400-plugins #apps-title {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .kova-core-page.kova-projects-page.spec400-projects > .kova-page-header {
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 12px 8px;
+  }
+  .kova-core-page.kova-projects-page.spec400-projects .kova-page-description {
+    grid-area: 1 / 1 / 2 / -1;
+  }
+  .kova-core-page.kova-projects-page.spec400-projects .kova-project-create {
+    grid-area: 2 / 1;
+  }
+  .kova-core-page.kova-projects-page.spec400-projects .kova-project-templates {
+    grid-area: 2 / 2;
+    justify-self: start;
+  }
+}
+
+/* Loading placeholders keep the same directory rhythm as loaded content. */
+.kova-core-page.kova-file-directory.spec400-management
+  .kova-file-loading-list
+  .kova-file-loading-item {
+  min-height: 56px;
+  height: 56px;
+}
+html[data-kova-density="compact"]
+  .kova-core-page.kova-file-directory.spec400-management
+  .kova-file-loading-list
+  .kova-file-loading-item {
+  min-height: 48px;
+  height: 48px;
+}
+.spec400-project-skeleton-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.kova-core-page.kova-file-directory.spec400-projects
+  .spec400-project-skeleton-row
+  .spec400-project-skeleton-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  padding: 12px 16px;
+}
+.spec400-project-skeleton-row .kova-project-file-date {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 25%;
+}
+
+/* Use explicit neutral disabled colors instead of translucent button compositing. */
+.spec400-pdf-pagination button:disabled {
+  opacity: 1;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+/* Filenames and timestamp/status labels preserve their supplied casing. */
+.kova-core-page.kova-file-directory.spec400-library .kova-file-row-type {
+  text-transform: none;
+}

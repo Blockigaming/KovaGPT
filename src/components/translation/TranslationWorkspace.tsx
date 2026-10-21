@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { ArrowLeftRight, Check, Copy, Loader2, Paperclip, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { SearchablePicker } from "@/components/ui/searchable-picker";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { TRANSLATION_LANGUAGES, type TranslationPair } from "@/lib/translation-catalog";
 
@@ -9,6 +10,10 @@ const MAX_FILE_BYTES = 40_000;
 const MAX_INPUT_CHARACTERS = 40_000;
 const WRITE_MAX_BODY_BYTES = 64 * 1024;
 const WRITE_REQUEST_TIMEOUT_MS = 130_000;
+const languageOptions = TRANSLATION_LANGUAGES.map((language) => ({
+  value: language,
+  label: language,
+}));
 
 function LanguageSelect({
   label,
@@ -22,20 +27,21 @@ function LanguageSelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="min-w-0 flex-1">
-      <span className="sr-only">{label}</span>
-      <select
+    <div className="min-w-0 flex-1">
+      <SearchablePicker
         aria-label={label}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 w-full truncate rounded-xl border border-border bg-background px-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {allowDetect && <option>Detect language</option>}
-        {TRANSLATION_LANGUAGES.map((language) => (
-          <option key={language}>{language}</option>
-        ))}
-      </select>
-    </label>
+        onValueChange={onChange}
+        options={
+          allowDetect
+            ? [{ value: "Detect language", label: "Detect language" }, ...languageOptions]
+            : languageOptions
+        }
+        searchLabel={`Search ${label.toLowerCase()}s`}
+        emptyText="No languages found."
+        className="min-h-11 w-full rounded-lg border border-border bg-background px-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-5 [&>svg]:w-5"
+      />
+    </div>
   );
 }
 
@@ -69,9 +75,10 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const revisionRef = useRef(0);
 
-  const title = pair
-    ? `Translate ${pair.source} To ${pair.target === "Portuguese (Portugal)" ? "Portuguese" : pair.target} In Kova`
-    : "Translate with Kova";
+  const title =
+    sourceLanguage === "Detect language"
+      ? `Translate to ${targetLanguage} with Kova`
+      : `Translate ${sourceLanguage} to ${targetLanguage} with Kova`;
 
   const run = async (refinement: Refinement = "translate") => {
     const input = refinement === "translate" ? source : translation;
@@ -203,7 +210,9 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
             {announcement}
           </p>
           <header className="text-center">
-            <h1 className="text-[30px] font-semibold tracking-[-0.03em] sm:text-[34px]">{title}</h1>
+            <h1 className="text-2xl leading-8 font-semibold tracking-normal sm:text-[28px] sm:leading-9">
+              {title}
+            </h1>
             <p className="mt-2 text-[15px] leading-6 text-muted-foreground sm:text-base">
               Translate text while keeping the original meaning, tone, and intent intact.
             </p>
@@ -227,9 +236,9 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                 aria-label="Swap source and target languages"
                 disabled={sourceLanguage === "Detect language"}
                 onClick={swap}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border hover:bg-muted disabled:opacity-35"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border hover:bg-muted disabled:opacity-35"
               >
-                <ArrowLeftRight aria-hidden="true" className="h-4 w-4" />
+                <ArrowLeftRight aria-hidden="true" className="h-5 w-5" />
               </button>
               <LanguageSelect
                 label="Target language"
@@ -243,7 +252,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
               />
             </div>
 
-            <div className="mt-4 grid overflow-hidden rounded-[24px] border border-border bg-background shadow-[var(--shadow-composer)] md:grid-cols-2">
+            <div className="mt-4 grid overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-composer)] md:grid-cols-2">
               <div className="relative min-h-64 border-b border-border md:border-b-0 md:border-r">
                 <label htmlFor="translation-source" className="sr-only">
                   Source content to translate
@@ -276,20 +285,20 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                     type="button"
                     onClick={() => fileRef.current?.click()}
                     aria-label="Add files and more"
-                    className="grid h-10 w-10 place-items-center rounded-full border border-border hover:bg-muted"
+                    className="grid h-11 w-11 place-items-center rounded-lg border border-border hover:bg-muted"
                   >
-                    <Paperclip aria-hidden="true" className="h-4 w-4" />
+                    <Paperclip aria-hidden="true" className="h-5 w-5" />
                   </button>
                   <button
                     type="button"
                     disabled={!source.trim() || Boolean(busy)}
                     onClick={() => void run()}
-                    className="ml-auto inline-flex min-h-10 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-background disabled:opacity-30"
+                    className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background disabled:opacity-30"
                   >
                     {busy === "translate" ? (
                       <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Sparkles aria-hidden="true" className="h-4 w-4" />
+                      <Sparkles aria-hidden="true" className="h-5 w-5" />
                     )}
                     Translate
                   </button>
@@ -314,12 +323,12 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                   aria-label="Copy translation"
                   disabled={!translation}
                   onClick={() => void copy()}
-                  className="absolute bottom-3 right-3 inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-background px-3 text-sm hover:bg-muted disabled:opacity-35"
+                  className="absolute bottom-3 right-3 inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm hover:bg-muted disabled:opacity-35"
                 >
                   {copied ? (
-                    <Check aria-hidden="true" className="h-4 w-4" />
+                    <Check aria-hidden="true" className="h-5 w-5" />
                   ) : (
-                    <Copy aria-hidden="true" className="h-4 w-4" />
+                    <Copy aria-hidden="true" className="h-5 w-5" />
                   )}
                   {copied ? "Copied" : "Copy"}
                 </button>
@@ -343,7 +352,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                 type="button"
                 disabled={!translation || Boolean(busy)}
                 onClick={() => void run(item.id)}
-                className="min-h-20 rounded-2xl border border-border bg-background px-4 py-3 text-left disabled:opacity-45 enabled:hover:bg-muted"
+                className="min-h-20 rounded-lg border border-border bg-background px-4 py-3 text-left disabled:opacity-45 enabled:hover:bg-muted"
               >
                 <span className="block text-sm font-medium">{item.title}</span>
                 <span className="mt-1 block text-xs leading-5 text-muted-foreground">

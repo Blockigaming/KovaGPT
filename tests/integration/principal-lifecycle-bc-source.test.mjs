@@ -26,7 +26,7 @@ test("mounted AgentWorkspace invalidates stale generations after principal clean
   );
 });
 
-test("cleanup copy names ownerless purging and account deletion surfaces partial cleanup", () => {
+test("cleanup copy names ownerless purging and account scheduling cannot trigger local cleanup", () => {
   assert.match(
     settingsSource,
     /Ownerless\s+private\s+data,[\s\S]{0,100}transitional values from older versions,[\s\S]{0,100}another profile/,
@@ -35,15 +35,8 @@ test("cleanup copy names ownerless purging and account deletion surfaces partial
     settingsSource,
     /Other profiles' scoped data,[\s\S]{0,100}device-wide\s+display\s+preferences,[\s\S]{0,80}cloud data are preserved/,
   );
-  assert.match(
-    settingsSource,
-    /cleanupResult\.chatHistory\.failures\.length \+\s*cleanupResult\.pwa\.failures\.length;\s*localCleanupIncomplete = !cleanupResult\.resolved \|\| cleanupFailureCount > 0/,
-  );
-  assert.match(
-    settingsSource,
-    /Account deletion completed, but some data in this browser could not be removed\./,
-  );
-  assert.match(settingsSource, /Clear KovaGPT site data in your browser settings/);
+  assert.doesNotMatch(settingsSource, /handleDeleteAccount|requestAccountDeletion|deletionUserKey/);
+  assert.match(settingsSource, /<AccountDeletionGraceView[\s\S]*?status="unavailable"/);
   assert.doesNotMatch(
     settingsSource,
     /clearLocalBrowserData\(\);\s*onClearAll\(\);[\s\S]{0,120}toast\.success/,
@@ -199,9 +192,7 @@ test("same-principal cleanup blocks late writes and account-switch UI flashes", 
     home,
     /setConversationState\(\{ principal: storagePrincipal, items: \[\] \}\);[\s\S]{0,100}setSettingsPrincipal\(storagePrincipal\)/,
   );
-  assert.match(settingsSource, /currentAuthUserKeyRef\.current === deletionUserKey/);
-  assert.match(
-    settingsSource,
-    /if \(currentAuthUserKeyRef\.current === deletionUserKey\) await clerk\?\.signOut\(\)/,
-  );
+  assert.match(settingsSource, /deleteAccountReturnRef\.current\?\.ownerId === userKey/);
+  assert.match(settingsSource, /previous\.ownerId !== currentAuthUserKeyRef\.current/);
+  assert.doesNotMatch(settingsSource, /deletionUserKey|handleDeleteAccount/);
 });

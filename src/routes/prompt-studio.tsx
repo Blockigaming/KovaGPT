@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, FlaskConical, Heart, History, Play, Plus, Search, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -46,6 +47,18 @@ function PromptStudio() {
   const principalRef = useRef(principal);
   principalRef.current = principal;
   const generationRef = useRef(0);
+  const dialogTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const inspectionRequestRef = useRef(0);
+  const creatingRef = useRef(false);
+  const testingRequestRef = useRef(0);
+  const launchingRef = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      generationRef.current += 1;
+      inspectionRequestRef.current += 1;
+    },
+    [],
+  );
   const [dataPrincipal, setDataPrincipal] = useState<string | null>(null);
   const [dataGeneration, setDataGeneration] = useState(0);
   const dataReady =
@@ -75,6 +88,7 @@ function PromptStudio() {
     [packId, setPackId] = useState(""),
     [creating, setCreating] = useState(false),
     [testing, setTesting] = useState<PromptTemplate | null>(null),
+    [launching, setLaunching] = useState(false),
     [values, setValues] = useState<Record<string, string>>({}),
     [inspecting, setInspecting] = useState<PromptTemplate | null>(null),
     [versions, setVersions] = useState<PromptVersion[]>([]),
@@ -83,7 +97,13 @@ function PromptStudio() {
     [editBody, setEditBody] = useState(""),
     [rating, setRating] = useState(5),
     [notes, setNotes] = useState("");
+  const editBodyRef = useRef(editBody);
+  editBodyRef.current = editBody;
+  const draftRef = useRef({ name, category, folder, body, projectId, packId });
+  draftRef.current = { name, category, folder, body, projectId, packId };
   useEffect(() => {
+    creatingRef.current = false;
+    setCreating(false);
     const generation = generationRef.current + 1;
     generationRef.current = generation;
     setDataPrincipal(null);
@@ -103,6 +123,7 @@ function PromptStudio() {
     setProjectId("");
     setPackId("");
     setTesting(null);
+    setLaunching(false);
     setValues({});
     setInspecting(null);
     setVersions([]);
@@ -124,13 +145,14 @@ function PromptStudio() {
         projectId?: string;
         packId?: string;
       } | null;
-      if (!saved) return;
-      setName(saved.name ?? "");
-      setFolder(saved.folder ?? "Unfiled");
-      setCategory(saved.category ?? "General");
-      setBody(saved.body ?? "");
-      setProjectId(saved.projectId ?? "");
-      setPackId(saved.packId ?? "");
+      if (saved) {
+        setName(saved.name ?? "");
+        setFolder(saved.folder ?? "Unfiled");
+        setCategory(saved.category ?? "General");
+        setBody(saved.body ?? "");
+        setProjectId(saved.projectId ?? "");
+        setPackId(saved.packId ?? "");
+      }
     } catch {
       safeBrowserStorage("localStorage")?.removeItem(draftKey);
     }
@@ -182,8 +204,10 @@ function PromptStudio() {
       setBody("");
       setProjectId("");
       setPackId("");
+      creatingRef.current = false;
       setCreating(false);
       setTesting(null);
+      setLaunching(false);
       setValues({});
       setInspecting(null);
       setVersions([]);
@@ -229,9 +253,17 @@ function PromptStudio() {
     [items, favorites, folderFilter, query],
   );
   const create = async () => {
-    if (!dataReady || dataGeneration !== generationRef.current || !name.trim() || !body.trim())
+    if (
+      creatingRef.current ||
+      !dataReady ||
+      dataGeneration !== generationRef.current ||
+      !name.trim() ||
+      !body.trim()
+    )
       return;
     const generation = generationRef.current;
+    const submittedDraft = draftRef.current;
+    creatingRef.current = true;
     setCreating(true);
     try {
       const item = await save({
@@ -248,9 +280,11 @@ function PromptStudio() {
       });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
       setItems((all) => [item, ...all]);
-      setName("");
-      setBody("");
-      safeBrowserStorage("localStorage")?.removeItem(draftKey!);
+      if (JSON.stringify(draftRef.current) === JSON.stringify(submittedDraft)) {
+        setName("");
+        setBody("");
+        safeBrowserStorage("localStorage")?.removeItem(draftKey!);
+      }
       toast.success("Prompt saved");
     } catch (e) {
       if (generation === generationRef.current && principalRef.current === principal) {
@@ -258,6 +292,7 @@ function PromptStudio() {
       }
     } finally {
       if (generation === generationRef.current && principalRef.current === principal) {
+        creatingRef.current = false;
         setCreating(false);
       }
     }
@@ -265,12 +300,37 @@ function PromptStudio() {
   const launch = async (item: PromptTemplate) => {
     if (!dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
+    const request = testingRequestRef.current;
+    if (launchingRef.current === request) return;
+    launchingRef.current = request;
+    setLaunching(true);
     let prompt = item.body;
     for (const variable of item.variables)
       prompt = prompt.replaceAll(
         new RegExp(`{{\\s*${variable.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*}}`, "g"),
         values[variable] ?? "",
       );
+    try {
+      await update({
+        data: { id: item.id, last_used_at: new Date().toISOString(), increment_use: true },
+      });
+    } catch {
+      if (
+        request === testingRequestRef.current &&
+        generation === generationRef.current &&
+        principalRef.current === principal
+      ) {
+        toast.warning("Prompt prepared, but usage analytics could not be updated.");
+      }
+    }
+    if (
+      request !== testingRequestRef.current ||
+      generation !== generationRef.current ||
+      principalRef.current !== principal
+    )
+      return;
+    launchingRef.current = null;
+    setLaunching(false);
     const pack = packs.find((value) => value.id === item.context_pack_id);
     const handoff = writePrincipalHandoff(
       safeBrowserStorage("sessionStorage"),
@@ -282,16 +342,6 @@ function PromptStudio() {
       toast.error("Prompt could not be prepared. Reload and try again.");
       return;
     }
-    try {
-      await update({
-        data: { id: item.id, last_used_at: new Date().toISOString(), increment_use: true },
-      });
-    } catch {
-      if (generation === generationRef.current && principalRef.current === principal) {
-        toast.warning("Prompt prepared, but usage analytics could not be updated.");
-      }
-    }
-    if (generation !== generationRef.current || principalRef.current !== principal) return;
     navigate({ to: "/" });
   };
   return (
@@ -543,7 +593,10 @@ function PromptStudio() {
                           </button>
                         </div>
                         <button
-                          onClick={() => {
+                          onClick={(event) => {
+                            dialogTriggerRef.current = event.currentTarget;
+                            testingRequestRef.current += 1;
+                            setLaunching(false);
                             setTesting(item);
                             setValues({});
                           }}
@@ -553,14 +606,20 @@ function PromptStudio() {
                           Test in chat
                         </button>
                         <button
-                          onClick={async () => {
+                          onClick={async (event) => {
+                            dialogTriggerRef.current = event.currentTarget;
+                            const request = ++inspectionRequestRef.current;
                             const generation = generationRef.current;
+                            setVersions([]);
+                            setEvaluations([]);
+                            setNotes("");
                             setInspecting(item);
                             setEditBody(item.body);
                             setHistoryLoading(true);
                             try {
                               const history = await getHistory({ data: { prompt_id: item.id } });
                               if (
+                                request !== inspectionRequestRef.current ||
                                 generation !== generationRef.current ||
                                 principalRef.current !== principal
                               )
@@ -569,6 +628,7 @@ function PromptStudio() {
                               setEvaluations(history.evaluations);
                             } catch (reason) {
                               if (
+                                request !== inspectionRequestRef.current ||
                                 generation !== generationRef.current ||
                                 principalRef.current !== principal
                               )
@@ -580,6 +640,7 @@ function PromptStudio() {
                               );
                             } finally {
                               if (
+                                request === inspectionRequestRef.current &&
                                 generation === generationRef.current &&
                                 principalRef.current === principal
                               ) {
@@ -600,14 +661,24 @@ function PromptStudio() {
           </>
         )}
         {testing && (
-          <div
-            className="fixed inset-0 z-50 grid place-items-end bg-black/40 sm:place-items-center"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Test ${testing.name}`}
+          <Dialog
+            open
+            onOpenChange={(open) => {
+              if (!open) {
+                testingRequestRef.current += 1;
+                setTesting(null);
+              }
+            }}
           >
-            <div className="max-h-[85dvh] w-full overflow-y-auto rounded-t-2xl bg-background p-5 sm:max-w-lg sm:rounded-2xl">
-              <h2 className="font-semibold">Test {testing.name}</h2>
+            <DialogContent
+              className="sm:max-w-lg"
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                dialogTriggerRef.current?.focus();
+              }}
+            >
+              <DialogTitle className="pr-10">Test {testing.name}</DialogTitle>
+              <DialogDescription>Fill in any variables, then launch a new chat.</DialogDescription>
               {testing.variables.length ? (
                 <div className="mt-4 space-y-3">
                   {testing.variables.map((variable) => (
@@ -628,50 +699,71 @@ function PromptStudio() {
               )}
               <div className="mt-5 flex justify-end gap-2">
                 <button
-                  onClick={() => setTesting(null)}
+                  onClick={() => {
+                    testingRequestRef.current += 1;
+                    setTesting(null);
+                  }}
                   className="min-h-11 rounded-xl px-4 hover:bg-accent"
                 >
                   Cancel
                 </button>
                 <button
+                  disabled={launching}
                   onClick={() => launch(testing)}
                   className="min-h-11 rounded-xl bg-foreground px-4 text-background"
                 >
-                  Launch new chat
+                  {launching ? "Preparing…" : "Launch new chat"}
                 </button>
               </div>
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
         )}
         {inspecting ? (
-          <div
-            className="fixed inset-0 z-50 grid place-items-end bg-black/40 sm:place-items-center"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Inspect ${inspecting.name}`}
+          <Dialog
+            open
+            onOpenChange={(open) => {
+              if (!open) {
+                inspectionRequestRef.current += 1;
+                setInspecting(null);
+              }
+            }}
           >
-            <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl bg-background p-5 sm:max-w-3xl sm:rounded-2xl">
-              <div className="flex items-start justify-between gap-3">
+            <DialogContent
+              className="sm:max-w-3xl"
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                dialogTriggerRef.current?.focus();
+              }}
+            >
+              <div className="flex items-start justify-between gap-3 pr-10">
                 <div>
-                  <h2 className="font-semibold">{inspecting.name}</h2>
-                  <p className="text-xs text-muted-foreground">
+                  <DialogTitle>{inspecting.name}</DialogTitle>
+                  <DialogDescription className="text-xs">
                     Edit with automatic revision capture and evaluate actual prompt use.
-                  </p>
+                  </DialogDescription>
                 </div>
                 <button
-                  onClick={() => setInspecting(null)}
+                  onClick={() => {
+                    inspectionRequestRef.current += 1;
+                    setInspecting(null);
+                  }}
                   className="min-h-10 rounded-lg px-3 hover:bg-accent"
                 >
                   Close
                 </button>
               </div>
               {historyLoading ? (
-                <div className="mt-4 h-32 animate-pulse rounded-xl bg-muted" />
+                <div
+                  role="status"
+                  aria-label="Loading prompt history"
+                  className="mt-4 h-32 animate-pulse rounded-xl bg-muted"
+                />
               ) : (
                 <div className="mt-5 grid gap-5 md:grid-cols-2">
                   <section>
                     <h3 className="text-sm font-semibold">Current prompt</h3>
                     <textarea
+                      aria-label="Current prompt"
                       value={editBody}
                       onChange={(e) => setEditBody(e.target.value)}
                       className="mt-2 min-h-56 w-full rounded-xl border bg-background p-3"
@@ -680,6 +772,7 @@ function PromptStudio() {
                       disabled={!editBody.trim() || editBody === inspecting.body}
                       onClick={async () => {
                         const generation = generationRef.current;
+                        const request = inspectionRequestRef.current;
                         try {
                           await update({
                             data: {
@@ -706,7 +799,13 @@ function PromptStudio() {
                             ),
                           );
                           toast.success("Prompt revision saved");
-                          setInspecting(null);
+                          if (request === inspectionRequestRef.current) {
+                            if (editBodyRef.current === editBody) setInspecting(null);
+                            else
+                              setInspecting((current) =>
+                                current ? { ...current, body: editBody } : current,
+                              );
+                          }
                         } catch (reason) {
                           if (
                             generation !== generationRef.current ||
@@ -767,6 +866,7 @@ function PromptStudio() {
                       ))}
                     </div>
                     <textarea
+                      aria-label="Evaluation notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       maxLength={2000}
@@ -776,20 +876,23 @@ function PromptStudio() {
                     <button
                       onClick={async () => {
                         const generation = generationRef.current;
+                        const request = inspectionRequestRef.current;
                         try {
                           const result = await evaluate({
                             data: { prompt_id: inspecting.id, rating, notes },
                           });
                           if (
+                            request !== inspectionRequestRef.current ||
                             generation !== generationRef.current ||
                             principalRef.current !== principal
                           )
                             return;
                           setEvaluations((all) => [result, ...all]);
-                          setNotes("");
+                          setNotes((current) => (current === notes ? "" : current));
                           toast.success("Evaluation saved");
                         } catch (reason) {
                           if (
+                            request !== inspectionRequestRef.current ||
                             generation !== generationRef.current ||
                             principalRef.current !== principal
                           )
@@ -824,8 +927,8 @@ function PromptStudio() {
                   </section>
                 </div>
               )}
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
         ) : null}
       </main>
     </AppShell>

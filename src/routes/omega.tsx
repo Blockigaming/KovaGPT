@@ -269,7 +269,7 @@ function EnterprisePanel({ scope }: { scope: string }) {
       </h2>
       <a
         href="/organization"
-        className="mt-3 inline-flex min-h-10 items-center rounded-lg border px-4 text-sm hover:bg-accent"
+        className="kova-button mt-3 inline-flex min-h-10 items-center rounded-lg border px-4 text-sm hover:bg-accent"
       >
         Open organization administration
       </a>
@@ -571,7 +571,14 @@ function AgentPanel() {
           onClick={() => void add()}
           className="min-h-10 rounded-lg border px-4 text-sm disabled:opacity-40"
         >
-          {saving ? "Saving…" : "Save agent"}
+          {saving ? (
+            <span className="spec400-loading-label">
+              <span className="spec400-loading-spinner" aria-hidden="true" />
+              Saving…
+            </span>
+          ) : (
+            "Save agent"
+          )}
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { imageApiRequest } from "@/lib/image-api-client";
 import ImageEditControls, { type ImageEditSelection } from "@/components/ImageEditControls";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,7 +24,7 @@ import {
   Loader2,
   Download,
   Trash2,
-  Sparkles,
+  Image as ImageIcon,
   Bookmark,
   RefreshCw,
   Copy,
@@ -38,7 +38,7 @@ import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { getUsage } from "@/lib/limits";
 import { useNovaSettings } from "@/lib/use-nova-settings";
-import { SignInButton, SignUpButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
+import { SignInButton, SignUpButton, useUser } from "@/components/auth/ClerkSafe";
 import { cn } from "@/lib/utils";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { toast } from "sonner";
@@ -97,7 +97,21 @@ import ghibliImg from "@/assets/image-presets/ghibli.jpg";
 import popArtImg from "@/assets/image-presets/pop-art.jpg";
 import blueprintImg from "@/assets/image-presets/blueprint.jpg";
 
+const IMAGE_GENERATION_UNAVAILABLE =
+  "Image generation is temporarily unavailable. Your prompt is kept here so you can try again later.";
+
 type Preset = { label: string; prompt: string; seed: string; image: string };
+type ImageResultReveal = {
+  generation: number;
+  ownerId: string;
+  href: string;
+  sourceFocus: Element | null;
+  returnFocus: HTMLElement | null;
+  pendingFocus: HTMLElement | null;
+  imageUrl: string | null;
+  error: string | null;
+  cleanup: () => void;
+};
 
 const PRESETS: Preset[] = [
   {
@@ -349,6 +363,7 @@ async function imageUrlForLibrary(imageUrl: string): Promise<string> {
 
 function ImagesPage() {
   const navigate = useNavigate();
+  const router = useRouter();
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = (user as { id?: string } | null)?.id ?? null;
   const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
@@ -383,10 +398,167 @@ function ImagesPage() {
   const [lightbox, setLightbox] = useState<ImageHistoryItem | null>(null);
   const [savingImage, setSavingImage] = useState(false);
   const saveImage = useServerFn(saveImageToLibrary);
+  const saveGenerationRef = useRef(0);
+  const savePendingRef = useRef(false);
   const submittingRef = useRef(false);
   const generationRef = useRef(0);
   const generationControllerRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null);
+  const generationStatusRef = useRef<HTMLDivElement>(null);
+  const resultRevealRef = useRef<ImageResultReveal | null>(null);
+  const resultOwnerRef = useRef<string | null>(null);
+  resultOwnerRef.current = isLoaded && isSignedIn ? userKey : null;
+  const clearResultReveal = useCallback(() => {
+    resultRevealRef.current?.cleanup();
+    resultRevealRef.current = null;
+  }, []);
+
+  function captureResultReveal(generation: number, returnFocus: HTMLElement | null) {
+    clearResultReveal();
+    if (!userKey || resultOwnerRef.current !== userKey) return;
+    const sourceFocus = document.activeElement;
+    const focusMoved = (event: FocusEvent) => {
+      if (
+        event.target !== sourceFocus &&
+        event.target !== returnFocus &&
+        event.target !== resultRevealRef.current?.pendingFocus &&
+        event.target !== document.body &&
+        event.target !== document.documentElement
+      )
+        clearResultReveal();
+    };
+    const visibilityChanged = () => {
+      if (document.hidden) clearResultReveal();
+    };
+    // Capture starts after the initiating event. Any later interaction owns focus,
+    // even if it eventually returns to the prompt or document body.
+    const interactions = ["pointerdown", "keydown", "input", "wheel", "touchmove"] as const;
+    const departures = ["popstate", "hashchange", "pagehide", "blur"] as const;
+    document.addEventListener("focusin", focusMoved);
+    document.addEventListener("visibilitychange", visibilityChanged);
+    for (const event of interactions) document.addEventListener(event, clearResultReveal, true);
+    for (const event of departures) window.addEventListener(event, clearResultReveal);
+    resultRevealRef.current = {
+      generation,
+      ownerId: userKey,
+      href: window.location.href,
+      sourceFocus,
+      returnFocus,
+      pendingFocus: null,
+      imageUrl: null,
+      error: null,
+      cleanup: () => {
+        document.removeEventListener("focusin", focusMoved);
+        document.removeEventListener("visibilitychange", visibilityChanged);
+        for (const event of interactions)
+          document.removeEventListener(event, clearResultReveal, true);
+        for (const event of departures) window.removeEventListener(event, clearResultReveal);
+      },
+    };
+  }
+
+  useEffect(() => {
+    const unsubscribe = router.subscribe("onBeforeNavigate", clearResultReveal);
+    return () => {
+      unsubscribe();
+      clearResultReveal();
+    };
+  }, [router, clearResultReveal]);
+
+  useEffect(() => {
+    const pendingIntent = resultRevealRef.current;
+    if (!loading || !pendingIntent || pendingIntent.pendingFocus) return;
+    const active = document.activeElement;
+    const target = generationStatusRef.current;
+    if (
+      pendingIntent.generation !== generationRef.current ||
+      pendingIntent.ownerId !== resultOwnerRef.current ||
+      pendingIntent.imageUrl ||
+      pendingIntent.error ||
+      window.location.href !== pendingIntent.href ||
+      router.state.status !== "idle" ||
+      router.state.location.pathname !== "/images" ||
+      document.hidden ||
+      limitOpen ||
+      loginOpen ||
+      settingsOpen ||
+      lightbox ||
+      (active !== pendingIntent.sourceFocus &&
+        active !== pendingIntent.returnFocus &&
+        active !== document.body &&
+        active !== document.documentElement) ||
+      !target?.isConnected ||
+      !target.getClientRects().length ||
+      target.closest('[inert], [hidden], [aria-hidden="true"]') ||
+      document.querySelector('[aria-modal="true"], dialog[open]')
+    )
+      return;
+    // The explicit request owns this one handoff. Its expected focusin must not
+    // cancel the existing terminal result/error reveal; later interactions still do.
+    pendingIntent.pendingFocus = target;
+    target.focus({ preventScroll: true });
+    if (document.activeElement === target)
+      target.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }, [
+    loading,
+    isLoaded,
+    isSignedIn,
+    userKey,
+    router,
+    limitOpen,
+    loginOpen,
+    settingsOpen,
+    lightbox,
+  ]);
+
+  useEffect(() => {
+    const intent = resultRevealRef.current;
+    if (loading || !intent || (!intent.imageUrl && !intent.error)) return;
+    clearResultReveal();
+    const active = document.activeElement;
+    const target = intent.error ? inputRef.current : resultHeadingRef.current;
+    if (
+      intent.generation !== generationRef.current ||
+      intent.ownerId !== resultOwnerRef.current ||
+      (intent.error ? intent.error !== error : intent.imageUrl !== result) ||
+      window.location.href !== intent.href ||
+      router.state.status !== "idle" ||
+      router.state.location.pathname !== "/images" ||
+      document.hidden ||
+      limitOpen ||
+      loginOpen ||
+      settingsOpen ||
+      lightbox ||
+      (active !== intent.sourceFocus &&
+        active !== intent.returnFocus &&
+        active !== intent.pendingFocus &&
+        active !== document.body &&
+        active !== document.documentElement) ||
+      !target?.isConnected ||
+      !target.getClientRects().length ||
+      target.closest('[inert], [hidden], [aria-hidden="true"]') ||
+      document.querySelector('[aria-modal="true"], dialog[open]')
+    )
+      return;
+    // Failed requests return to the preserved prompt; success reveals a non-action heading.
+    target.focus({ preventScroll: true });
+    if (document.activeElement === target)
+      target.scrollIntoView({ block: intent.error ? "nearest" : "start", behavior: "instant" });
+  }, [
+    loading,
+    result,
+    error,
+    isLoaded,
+    isSignedIn,
+    userKey,
+    router,
+    clearResultReveal,
+    limitOpen,
+    loginOpen,
+    settingsOpen,
+    lightbox,
+  ]);
   const presetsRef = useRef<HTMLDivElement>(null);
   const scrollPresets = (direction: 1 | -1) => {
     const el = presetsRef.current;
@@ -401,6 +573,7 @@ function ImagesPage() {
 
   const resetVisibleImageData = useCallback(() => {
     historyLoadGuardRef.current.invalidate();
+    clearResultReveal();
     generationRef.current += 1;
     generationControllerRef.current?.abort();
     generationControllerRef.current = null;
@@ -409,6 +582,8 @@ function ImagesPage() {
     historyObjectUrlsRef.current.clear();
     setLoading(false);
     setSavingImage(false);
+    saveGenerationRef.current += 1;
+    savePendingRef.current = false;
     setPrompt("");
     setEditSelection(null);
     setError(null);
@@ -416,7 +591,7 @@ function ImagesPage() {
     setResultPrompt("");
     setHistory([]);
     setLightbox(null);
-  }, []);
+  }, [clearResultReveal]);
 
   useEffect(() => {
     const onReset = (event: Event) => {
@@ -429,6 +604,7 @@ function ImagesPage() {
 
   useEffect(() => {
     const historyLoadGuard = historyLoadGuardRef.current;
+    clearResultReveal();
     historyLoadGuard.invalidate();
     const historyObjectUrls = historyObjectUrlsRef.current;
     for (const objectUrl of historyObjectUrls) URL.revokeObjectURL(objectUrl);
@@ -439,13 +615,14 @@ function ImagesPage() {
     submittingRef.current = false;
     setLoading(false);
     setSavingImage(false);
+    saveGenerationRef.current += 1;
+    savePendingRef.current = false;
     setPrompt("");
     setEditSelection(null);
     setError(null);
     setResult(null);
     setResultPrompt("");
     setLightbox(null);
-    setSavingImage(false);
     setLoginOpen(false);
     setLimitOpen(false);
     setLimitMessage(undefined);
@@ -461,12 +638,16 @@ function ImagesPage() {
       );
     }
     return () => {
+      generationRef.current += 1;
+      saveGenerationRef.current += 1;
+      savePendingRef.current = false;
       historyLoadGuard.invalidate();
+      clearResultReveal();
       generationControllerRef.current?.abort();
       for (const objectUrl of historyObjectUrls) URL.revokeObjectURL(objectUrl);
       historyObjectUrls.clear();
     };
-  }, [isLoaded, isSignedIn, userKey]);
+  }, [isLoaded, isSignedIn, userKey, clearResultReveal]);
 
   function addToHistory(p: string, imageUrl: string) {
     if (!isSignedIn || !userKey) return;
@@ -484,7 +665,9 @@ function ImagesPage() {
     setHistory((prev) => {
       return [item, ...prev].slice(0, HISTORY_LIMIT);
     });
+    const generation = generationRef.current;
     void persistImageHistoryItem(userKey, item, HISTORY_LIMIT).catch(() => {
+      if (generation !== generationRef.current) return;
       toast.error("This image is available for this session only. Save it to Library to keep it.");
     });
   }
@@ -496,7 +679,9 @@ function ImagesPage() {
       historyObjectUrlsRef.current.delete(removed.imageUrl);
     }
     if (userKey) {
+      const generation = generationRef.current;
       void deleteImageHistoryItem(userKey, id).catch(() => {
+        if (generation !== generationRef.current) return;
         toast.error("This image could not be removed from browser history.");
       });
     }
@@ -507,12 +692,14 @@ function ImagesPage() {
       setLoginOpen(true);
       return;
     }
+    if (savePendingRef.current) return;
+    savePendingRef.current = true;
     const ownerId = userKey;
-    const generation = generationRef.current;
+    const generation = saveGenerationRef.current;
     setSavingImage(true);
     try {
       const imageUrl = await imageUrlForLibrary(item.imageUrl);
-      if (generation !== generationRef.current) return;
+      if (generation !== saveGenerationRef.current) return;
       await saveImage({
         data: {
           expectedOwnerId: ownerId,
@@ -521,16 +708,20 @@ function ImagesPage() {
           imageUrl,
         },
       });
-      if (generation === generationRef.current) toast.success("Saved to Library");
+      if (generation === saveGenerationRef.current) toast.success("Saved to Library");
     } catch (error) {
-      if (generation === generationRef.current)
+      if (generation === saveGenerationRef.current)
         toast.error(error instanceof Error ? error.message : "Could not save image");
     } finally {
-      if (generation === generationRef.current) setSavingImage(false);
+      if (generation === saveGenerationRef.current) {
+        savePendingRef.current = false;
+        setSavingImage(false);
+      }
     }
   }
 
   async function copyGeneratedImage(imageUrl: string) {
+    const generation = generationRef.current;
     try {
       if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) {
         throw new Error("Image copying is not supported by this browser");
@@ -538,6 +729,7 @@ function ImagesPage() {
       const response = await fetch(imageUrl);
       if (!response.ok) throw new Error("Could not read the generated image");
       const source = await response.blob();
+      if (generation !== generationRef.current) return;
       const blob =
         source.type === "image/png"
           ? source
@@ -562,22 +754,27 @@ function ImagesPage() {
               };
               image.src = objectUrl;
             });
+      if (generation !== generationRef.current) return;
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      toast.success("Image copied");
+      if (generation === generationRef.current) toast.success("Image copied");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not copy image");
+      if (generation === generationRef.current)
+        toast.error(error instanceof Error ? error.message : "Could not copy image");
     }
   }
 
-  async function generate(p: string) {
+  async function generate(p: string, returnFocus: HTMLElement | null = null) {
     const trimmed = p.trim();
     if (!trimmed || submittingRef.current) return;
     if (!isSignedIn || !userKey) {
       setLoginOpen(true);
       return;
     }
+    // Also preserve prompts submitted through Regenerate or image history.
+    setPrompt(p);
     submittingRef.current = true;
     const generation = ++generationRef.current;
+    captureResultReveal(generation, returnFocus);
     const controller = new AbortController();
     generationControllerRef.current?.abort();
     generationControllerRef.current = controller;
@@ -607,19 +804,24 @@ function ImagesPage() {
           setLimitMessage(msg);
           setLimitOpen(true);
         }
-        throw new Error(msg);
+        throw new Error(res.status === 503 ? IMAGE_GENERATION_UNAVAILABLE : msg);
       }
       const imageUrl = safeImageUrl(data.imageUrl);
       if (!imageUrl) {
         throw new Error("Image service returned an invalid image");
       }
+      const reveal = resultRevealRef.current;
+      if (reveal?.generation === generation) reveal.imageUrl = imageUrl;
       setResult(imageUrl);
       setResultPrompt(trimmed);
       addToHistory(trimmed, imageUrl);
-      setPrompt("");
+      setPrompt((current) => (current.trim() === trimmed ? "" : current));
     } catch (e) {
       if (controller.signal.aborted || generation !== generationRef.current) return;
-      setError(e instanceof Error ? e.message : "Failed to generate image");
+      const message = e instanceof Error ? e.message : "Failed to generate image";
+      const reveal = resultRevealRef.current;
+      if (reveal?.generation === generation) reveal.error = message;
+      setError(message);
     } finally {
       if (generation === generationRef.current) {
         setLoading(false);
@@ -653,7 +855,7 @@ function ImagesPage() {
         id="main-content"
         tabIndex={-1}
         aria-labelledby="images-title"
-        className="flex min-w-0 flex-1 flex-col"
+        className="spec400-images flex min-w-0 flex-1 flex-col"
       >
         <header className="h-14 flex items-center px-3 shrink-0">
           {!sidebarOpen && (
@@ -669,19 +871,17 @@ function ImagesPage() {
             {!isLoaded ? (
               <div
                 aria-hidden="true"
-                className="h-11 w-36 animate-pulse rounded-full bg-muted motion-reduce:animate-none"
+                className="h-11 w-36 animate-pulse rounded-lg bg-muted motion-reduce:animate-none"
               />
-            ) : isSignedIn ? (
-              <UserButton />
-            ) : (
+            ) : isSignedIn ? null : (
               <>
                 <SignInButton mode="modal">
-                  <button className="min-h-11 rounded-full bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90">
+                  <button className="min-h-11 rounded-lg bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90">
                     Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="min-h-11 whitespace-nowrap rounded-full bg-muted px-3 text-sm font-medium text-foreground transition hover:bg-accent sm:px-4">
+                  <button className="min-h-11 whitespace-nowrap rounded-lg bg-muted px-3 text-sm font-medium text-foreground transition hover:bg-accent sm:px-4">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -694,7 +894,7 @@ function ImagesPage() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
             <h1
               id="images-title"
-              className="text-[34px] font-semibold tracking-tight sm:text-[40px]"
+              className="text-2xl leading-8 font-semibold tracking-normal sm:text-[28px] sm:leading-9"
             >
               Images
             </h1>
@@ -707,13 +907,14 @@ function ImagesPage() {
               }}
               className="mt-5"
             >
-              <div className="kova-composer flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2">
+              <div className="kova-composer spec400-image-prompt flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
                 <input
                   ref={inputRef}
                   value={prompt}
                   aria-label={
                     editSelection ? "Describe the image edit" : "Describe the image to generate"
                   }
+                  aria-describedby={error ? "image-generation-error" : undefined}
                   maxLength={2000}
                   onChange={(e) => setPrompt(e.target.value)}
                   onKeyDown={(event) => {
@@ -731,7 +932,7 @@ function ImagesPage() {
                 <button
                   type="submit"
                   disabled={!prompt.trim() || loading}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
                   aria-label={editSelection ? "Create edited image" : "Generate"}
                 >
                   {loading ? (
@@ -742,14 +943,25 @@ function ImagesPage() {
                 </button>
               </div>
             </form>
-            <label className="mt-3 flex items-center gap-2 text-sm">
+            {error && (
+              <div
+                id="image-generation-error"
+                role="alert"
+                className="mt-3 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm leading-relaxed text-destructive"
+              >
+                {error === IMAGE_GENERATION_UNAVAILABLE
+                  ? IMAGE_GENERATION_UNAVAILABLE
+                  : "The image could not be generated. Your prompt is kept here. Please try again."}
+              </div>
+            )}
+            <label className="mt-3 flex flex-wrap items-center gap-2 text-sm">
               Output shape
               <select
                 aria-label="Output image shape"
                 value={aspectRatio}
                 onChange={(event) => setAspectRatio(event.target.value as typeof aspectRatio)}
                 disabled={loading}
-                className="rounded border bg-background p-2"
+                className="min-h-11 max-w-full rounded-lg border border-border bg-background px-3 py-2"
               >
                 <option value="1:1">Square 1:1</option>
                 <option value="2:3">Portrait 2:3</option>
@@ -769,12 +981,12 @@ function ImagesPage() {
             {/* Create an image */}
             <section className="mt-10">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="text-[22px] font-semibold tracking-tight">Create an image</h2>
+                <h2 className="text-xl leading-7 font-semibold tracking-normal">Create an image</h2>
                 <div className="hidden items-center gap-2 sm:flex">
                   <button
                     type="button"
                     onClick={() => scrollPresets(-1)}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
                     aria-label="Scroll styles left"
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -782,7 +994,7 @@ function ImagesPage() {
                   <button
                     type="button"
                     onClick={() => scrollPresets(1)}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
                     aria-label="Scroll styles right"
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -796,13 +1008,14 @@ function ImagesPage() {
                 <div className="flex gap-3 pb-2 min-w-max">
                   {PRESETS.map((p) => (
                     <button
+                      data-kova-button-shape="preserve"
                       key={p.label}
                       type="button"
                       onClick={() => applyPreset(p)}
                       aria-label={`Use ${p.label} style`}
                       className="group flex flex-col items-start w-[160px] shrink-0 focus:outline-none"
                     >
-                      <div className="relative w-[160px] h-[160px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted">
+                      <div className="relative w-[160px] h-[160px] rounded-xl overflow-hidden ring-1 ring-border/60 bg-muted">
                         <img
                           src={p.image}
                           alt=""
@@ -822,58 +1035,43 @@ function ImagesPage() {
             </section>
 
             {/* Current result */}
-            {(loading || result || error) && (
+            {(loading || result) && (
               <section className="mt-8">
-                {loading && !result && (
+                {loading && (
                   <div
+                    ref={generationStatusRef}
+                    tabIndex={-1}
                     role="status"
                     aria-labelledby="image-generating-label"
-                    className="relative mx-auto aspect-square max-w-md overflow-hidden rounded-2xl bg-gradient-to-br from-fuchsia-500/20 via-violet-500/20 to-cyan-500/20 ring-1 ring-border"
+                    className={cn(
+                      "mx-auto flex max-w-md items-center justify-center gap-3 rounded-xl border border-border bg-muted text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4",
+                      result ? "mb-4 min-h-16 p-4" : "aspect-square",
+                    )}
                   >
-                    <span id="image-generating-label" className="sr-only">
-                      Generating image
-                    </span>
-                    <div className="absolute inset-0 animate-[imgAura_6s_ease-in-out_infinite] bg-[radial-gradient(circle_at_30%_20%,hsl(280_90%_60%/0.35),transparent_55%),radial-gradient(circle_at_70%_80%,hsl(190_90%_55%/0.35),transparent_55%),radial-gradient(circle_at_50%_50%,hsl(320_90%_60%/0.25),transparent_60%)] motion-reduce:animate-none" />
-                    <div
-                      className="absolute inset-0 animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/25 to-transparent motion-reduce:animate-none"
-                      style={{ backgroundSize: "200% 100%" }}
+                    <Loader2
+                      className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                      aria-hidden="true"
                     />
-                    <div className="absolute inset-0 backdrop-blur-2xl" />
-                    <div className="pointer-events-none absolute inset-0">
-                      {Array.from({ length: 14 }).map((_, i) => (
-                        <span
-                          key={i}
-                          className="absolute animate-[floatUp_5s_linear_infinite] rounded-full bg-white/70 shadow-[0_0_12px_rgba(255,255,255,0.9)] motion-reduce:animate-none"
-                          style={{
-                            left: `${(i * 37) % 100}%`,
-                            bottom: `-${(i * 13) % 40}px`,
-                            width: `${4 + (i % 4) * 2}px`,
-                            height: `${4 + (i % 4) * 2}px`,
-                            animationDelay: `${(i * 0.3).toFixed(2)}s`,
-                            opacity: 0.6,
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-white drop-shadow-lg">
-                      <div className="relative w-14 h-14">
-                        <div className="absolute inset-0 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" />
-                        <Sparkles
-                          className="absolute inset-0 m-auto h-6 w-6 animate-pulse text-white motion-reduce:animate-none"
-                          aria-hidden="true"
-                        />
-                      </div>
-                      <div className="text-sm font-medium tracking-wide">Generating image…</div>
-                    </div>
+                    <span id="image-generating-label" className="text-sm">
+                      Generating image…
+                    </span>
                   </div>
                 )}
                 {result && (
-                  <div className="max-w-md mx-auto">
+                  <div className="max-w-md mx-auto" aria-labelledby="image-result-title">
+                    <h2
+                      id="image-result-title"
+                      ref={resultHeadingRef}
+                      tabIndex={-1}
+                      className="mb-3 scroll-mt-4 rounded-lg text-xl leading-7 font-semibold tracking-normal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+                    >
+                      Generated image
+                    </h2>
                     <img
                       src={result}
                       alt={resultPrompt || "Generated image"}
                       decoding="async"
-                      className="w-full rounded-2xl ring-1 ring-border"
+                      className="w-full rounded-xl ring-1 ring-border"
                     />
                     <div className="flex justify-center mt-3 gap-2 flex-wrap">
                       <button
@@ -882,7 +1080,7 @@ function ImagesPage() {
                           saveGeneratedImage({ prompt: resultPrompt, imageUrl: result })
                         }
                         disabled={savingImage}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
                         <Bookmark className="h-4 w-4" />{" "}
                         {savingImage ? "Saving…" : "Save to Library"}
@@ -891,30 +1089,25 @@ function ImagesPage() {
                         type="button"
                         onClick={() => generate(resultPrompt)}
                         disabled={loading}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
                         <RefreshCw className="h-4 w-4" /> Generate again
                       </button>
                       <button
                         type="button"
                         onClick={() => copyGeneratedImage(result)}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm transition hover:bg-accent"
                       >
                         <Copy className="h-4 w-4" /> Copy image
                       </button>
                       <a
                         href={result}
                         download="kovagpt-image.png"
-                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm transition hover:bg-accent"
+                        className="kova-button inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm transition hover:bg-accent"
                       >
                         <Download className="w-4 h-4" /> Download
                       </a>
                     </div>
-                  </div>
-                )}
-                {error && (
-                  <div role="alert" className="mt-3 text-center text-sm text-destructive">
-                    The image could not be generated. Please try again.
                   </div>
                 )}
               </section>
@@ -924,7 +1117,7 @@ function ImagesPage() {
             <section className="mt-10" aria-labelledby="image-history-title">
               <h2
                 id="image-history-title"
-                className="mb-3 text-[22px] font-semibold tracking-tight"
+                className="mb-3 text-xl leading-7 font-semibold tracking-normal"
               >
                 Image history
               </h2>
@@ -937,13 +1130,13 @@ function ImagesPage() {
               {!isLoaded ? (
                 <div
                   role="status"
-                  className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground"
+                  className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground"
                 >
                   Loading image history…
                 </div>
               ) : !isSignedIn ? (
-                <div className="rounded-2xl border border-dashed border-border p-8 text-center sm:p-10">
-                  <Sparkles className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
+                <div className="rounded-xl border border-dashed border-border p-8 text-center sm:p-10">
+                  <ImageIcon className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
                   <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
                     Sign in to generate images and keep your image history in this browser across
                     sessions. Save images to Library to use them on other devices.
@@ -953,9 +1146,9 @@ function ImagesPage() {
                   </SignInButton>
                 </div>
               ) : history.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-                  <div className="mx-auto w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center mb-3">
-                    <Sparkles className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+                <div className="rounded-xl border border-dashed border-border p-10 text-center">
+                  <div className="mx-auto w-10 h-10 rounded-lg bg-foreground/5 flex items-center justify-center mb-3">
+                    <ImageIcon className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Your generated images will appear here. Pick a style or describe an image above.
@@ -966,7 +1159,7 @@ function ImagesPage() {
                   {history.map((h) => (
                     <article
                       key={h.id}
-                      className="group relative aspect-square overflow-hidden rounded-2xl bg-muted ring-1 ring-border"
+                      className="group relative aspect-square overflow-hidden rounded-xl bg-muted ring-1 ring-border"
                     >
                       <button
                         type="button"
@@ -996,7 +1189,7 @@ function ImagesPage() {
                               setPrompt(h.prompt);
                               inputRef.current?.focus();
                             }}
-                            className="min-h-11 flex-1 rounded-full bg-white px-2 text-[11px] font-medium text-black hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            className="min-h-11 flex-1 rounded-lg bg-white px-2 text-[11px] font-medium text-black hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             aria-label={`Reuse prompt: ${h.prompt}`}
                           >
                             Reuse
@@ -1004,7 +1197,7 @@ function ImagesPage() {
                           <a
                             href={h.imageUrl}
                             download={`kovagpt-${h.id}.png`}
-                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            className="kova-button flex h-11 w-11 items-center justify-center rounded-lg bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             aria-label={`Download image: ${h.prompt}`}
                           >
                             <Download className="h-3.5 w-3.5" />
@@ -1012,7 +1205,7 @@ function ImagesPage() {
                           <button
                             type="button"
                             onClick={() => removeFromHistory(h.id)}
-                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/15 text-white hover:bg-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             aria-label={`Remove image: ${h.prompt}`}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1083,7 +1276,7 @@ function ImagesPage() {
                 src={lightbox.imageUrl}
                 alt={lightbox.prompt}
                 decoding="async"
-                className="max-h-[75dvh] w-auto max-w-full rounded-2xl shadow-lg object-contain"
+                className="max-h-[75dvh] w-auto max-w-full rounded-xl shadow-lg object-contain"
               />
               <DialogDescription className="max-w-2xl px-4 text-center text-sm text-white/85 line-clamp-3">
                 {lightbox.prompt}
@@ -1096,31 +1289,31 @@ function ImagesPage() {
                     setPrompt(lightbox.prompt);
                     setLightbox(null);
                   }}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-medium text-black transition hover:opacity-90"
+                  className="kova-image-lightbox-primary inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-black transition hover:opacity-90"
                 >
-                  <Sparkles className="w-4 h-4" /> Reuse prompt
+                  <ImageIcon className="w-4 h-4" /> Reuse prompt
                 </button>
                 <button
                   onClick={() => {
                     const item = lightbox;
                     setLightbox(null);
-                    void generate(item.prompt);
+                    void generate(item.prompt, lightboxReturnFocusRef.current ?? inputRef.current);
                   }}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm text-white transition hover:bg-white/20"
                 >
                   <RefreshCw className="h-4 w-4" /> Generate again
                 </button>
                 <button
                   onClick={() => saveGeneratedImage(lightbox)}
                   disabled={savingImage}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
                 >
                   <Bookmark className="h-4 w-4" /> Save
                 </button>
                 <a
                   href={lightbox.imageUrl}
                   download={`kovagpt-${lightbox.id}.png`}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-white/20"
+                  className="kova-button inline-flex min-h-11 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm text-white transition hover:bg-white/20"
                 >
                   <Download className="w-4 h-4" /> Download
                 </a>
@@ -1129,7 +1322,7 @@ function ImagesPage() {
                     removeFromHistory(lightbox.id);
                     setLightbox(null);
                   }}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/10 px-4 text-sm text-white transition hover:bg-destructive"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm text-white transition hover:bg-destructive"
                 >
                   <Trash2 className="w-4 h-4" /> Remove
                 </button>

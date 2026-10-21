@@ -43,7 +43,11 @@ test("durable admission stays in the existing serialized memory POST and deletio
     memory.indexOf("memoryEpoch = await beginChatMemoryWrite") <
       memory.indexOf("raw = await readUtf8BodyBounded"),
   );
-  assert.match(memory, /persistChatMemory\(authorized\.auth\.supabaseAdmin, memoryEpoch, row\)/);
+  assert.doesNotMatch(
+    memory.slice(memory.indexOf("// Old clients")),
+    /persistChatMemory|persistMemorySafely|chatCompletions/,
+  );
+  assert.ok(memory.indexOf("body.contextOnly !== true") < memory.indexOf("await queueChatSummary"));
   assert.match(
     memory,
     /deleteChatMemory\(caller\.auth\.supabaseAdmin, caller\.auth\.userId, chatId\)/,

@@ -1,0 +1,883 @@
+/* Owner's 400-item interaction specification; all colors retain the 9cc tokens. */
+.spec400-chat-input {
+  width: 100%;
+  max-width: var(--kova-reading-width);
+  margin-inline: auto;
+  padding: 0 0 max(12px, env(safe-area-inset-bottom));
+}
+.spec400-composer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 128px;
+  padding: 12px;
+  gap: 8px;
+  border: 1px solid var(--muted-foreground);
+  border-radius: var(--kova-radius-composer);
+  background: var(--surface-input, var(--background));
+  color: var(--foreground);
+}
+.spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
+  min-height: 160px;
+}
+.spec400-composer[data-focus-origin="keyboard"]:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.spec400-input-region {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding-right: 44px;
+}
+.spec400-composer-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  max-height: 240px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  resize: none;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.625;
+  outline: none;
+}
+.spec400-composer-input::placeholder,
+.spec400-expanded-textarea::placeholder {
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+.spec400-composer-toolbar,
+.spec400-composer-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.spec400-composer-toolbar {
+  justify-content: space-between;
+  flex: none;
+  margin-top: auto;
+}
+.spec400-toolbar-button,
+.spec400-send-button,
+.spec400-icon-button,
+.spec400-expand-input {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--kova-radius-button);
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.spec400-toolbar-button:hover,
+.spec400-icon-button:hover,
+.spec400-expand-input:hover {
+  background: var(--accent);
+}
+.spec400-toolbar-button:active,
+.spec400-icon-button:active,
+.spec400-expand-input:active {
+  background: var(--muted);
+}
+.spec400-toolbar-button:disabled,
+.spec400-icon-button:disabled,
+.spec400-expand-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.spec400-toolbar-button:focus-visible,
+.spec400-icon-button:focus-visible,
+.spec400-expand-input:focus-visible,
+.spec400-send-button:focus-visible,
+.spec400-context-inspect:focus-visible,
+.spec400-attachment-inspect:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.spec400-toolbar-button svg,
+.spec400-icon-button svg,
+.spec400-expand-input svg,
+.spec400-send-button svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.spec400-icon-button,
+.spec400-expand-input {
+  width: 44px;
+  padding: 0;
+}
+.spec400-expand-input {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: var(--muted-foreground);
+}
+.spec400-send-button {
+  min-width: 44px;
+  width: 44px;
+  height: 44px;
+  background: var(--foreground);
+  color: var(--background);
+  padding: 0;
+}
+.spec400-send-button > span {
+  display: none;
+}
+.spec400-send-button:hover {
+  opacity: 0.86;
+}
+.spec400-send-button:disabled {
+  cursor: not-allowed;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+.spec400-connection-status,
+.spec400-composer-hint {
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  color: var(--muted-foreground);
+  margin-block: 8px;
+}
+.spec400-connection-status {
+  color: var(--destructive);
+}
+.spec400-context-count {
+  min-width: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.spec400-selected-tool {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+}
+.spec400-selected-tool svg {
+  width: 16px;
+  height: 16px;
+}
+.spec400-attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.spec400-attachment-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+}
+.spec400-attachment-inspect {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 4px 8px;
+  text-align: left;
+  border-radius: var(--kova-radius-compact);
+}
+.spec400-attachment-inspect > svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.spec400-attachment-inspect > img {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+.spec400-attachment-inspect > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.spec400-attachment-inspect strong {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.spec400-attachment-inspect small {
+  display: block;
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  color: var(--muted-foreground);
+}
+.spec400-attachment-limits {
+  margin: 4px 8px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+}
+.spec400-attach-menu {
+  max-height: min(70dvh, var(--radix-popover-content-available-height, 70dvh));
+  overflow-y: auto;
+  border-radius: var(--kova-radius-menu);
+}
+.spec400-options-panel {
+  width: min(320px, calc(100vw - 32px));
+  max-height: min(75dvh, var(--radix-popover-content-available-height, 75dvh));
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-menu);
+  padding: 16px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+}
+.spec400-options-panel h2 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.spec400-options-panel h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.spec400-options-panel p {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+}
+.spec400-options-panel label {
+  display: block;
+  margin-top: 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.spec400-options-panel select {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 8px 12px;
+  border: 1px solid var(--muted-foreground);
+  border-radius: var(--kova-radius-input);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+.spec400-effort-options {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.spec400-expanded-input[data-kova-dialog-surface] {
+  width: min(880px, calc(100vw - 48px));
+  max-width: 880px;
+  height: min(720px, 88dvh);
+}
+.spec400-field-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.spec400-expanded-textarea {
+  flex: 1;
+  min-height: 160px;
+  width: 100%;
+  resize: none;
+  border: 1px solid var(--muted-foreground);
+  border-radius: var(--kova-radius-input);
+  padding: 12px;
+  font-size: 1rem;
+  line-height: 1.625;
+  background: var(--background);
+  color: var(--foreground);
+}
+.spec400-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.spec400-attachment-preview img {
+  display: block;
+  width: 100%;
+  max-height: 60dvh;
+  object-fit: contain;
+}
+.spec400-attachment-preview pre {
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 60dvh;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-output);
+}
+.spec400-context-drawer[data-kova-dialog-surface] {
+  inset: 0 0 0 auto;
+  width: 300px;
+  max-width: 300px;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  transform: none;
+  border-radius: var(--kova-radius-panel);
+  padding: 16px;
+  overflow-y: auto;
+}
+.spec400-context-drawer > [aria-hidden="true"]:first-child {
+  display: none;
+}
+.spec400-context-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.spec400-context-sections h3 {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+.spec400-context-sections p,
+.spec400-context-inspect span {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  color: var(--muted-foreground);
+}
+.spec400-context-files {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.spec400-context-files > li {
+  border: 1px solid var(--border);
+  padding: 8px;
+  border-radius: 8px;
+}
+.spec400-context-inspect {
+  display: block;
+  width: 100%;
+  padding: 4px;
+  text-align: left;
+  border-radius: var(--kova-radius-compact);
+  overflow-wrap: anywhere;
+}
+.spec400-context-inspect strong {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.spec400-context-close {
+  border: 1px solid var(--border);
+  margin-top: auto;
+  width: 100%;
+}
+.spec400-starter-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  max-width: var(--kova-reading-width);
+  margin: 4px auto 0;
+}
+.spec400-starter-actions .spec400-toolbar-button {
+  border-color: var(--border);
+  padding-inline: 12px;
+}
+.kova-assistant .kova-empty-chat {
+  padding: 24px 32px;
+}
+.kova-assistant .kova-empty-chat-content {
+  flex: none;
+  width: 100%;
+  max-width: var(--kova-reading-width);
+  margin: auto;
+  padding-block: 32px;
+  justify-content: flex-start;
+}
+.kova-assistant .kova-greeting {
+  width: 100%;
+  margin-bottom: 24px;
+  animation: none;
+}
+.kova-assistant .kova-greeting h1 {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  padding: 0;
+}
+.kova-assistant .kova-empty-composer {
+  width: 100%;
+  max-width: none;
+}
+.kova-assistant .kova-desktop-topbar {
+  height: 64px;
+  min-height: 64px;
+  border-bottom: 1px solid var(--border);
+  padding-inline: 24px;
+}
+.spec400-chat-title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.spec400-recent-work {
+  width: 100%;
+  margin-top: 32px;
+}
+.spec400-recent-work h2 {
+  margin-bottom: 12px;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+.spec400-recent-work ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.spec400-recent-work a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+  text-decoration: none;
+}
+.spec400-recent-work a:hover {
+  background: var(--accent);
+}
+.spec400-recent-work strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.spec400-recent-work time {
+  flex: none;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+.spec400-capability-note {
+  width: 100%;
+  margin-top: 24px;
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+  color: var(--muted-foreground);
+}
+@media (max-width: 1023px) {
+  .kova-assistant .kova-empty-chat {
+    padding-inline: 24px;
+  }
+  .spec400-composer {
+    min-height: 120px;
+  }
+  .spec400-composer-input {
+    min-height: 40px;
+    max-height: 144px;
+  }
+  .spec400-send-button {
+    min-width: 44px;
+    width: 44px;
+    padding: 0;
+  }
+  .spec400-send-button > span {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .kova-assistant .kova-empty-chat {
+    padding: 16px;
+  }
+  .kova-assistant .kova-empty-chat-content {
+    margin-block: 0;
+    padding-block: 24px;
+  }
+  .kova-assistant .kova-greeting h1 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  .spec400-chat-input {
+    padding-inline: 0;
+  }
+  .spec400-composer-tools {
+    gap: 0;
+  }
+  .spec400-composer-tools > .spec400-toolbar-button {
+    padding-inline: 6px;
+    gap: 4px;
+    font-size: 0.8125rem;
+  }
+  .spec400-composer-tools > .spec400-toolbar-button > svg {
+    width: 16px;
+    height: 16px;
+  }
+  .spec400-starter-actions {
+    flex-wrap: wrap;
+  }
+  .spec400-starter-actions .spec400-toolbar-button {
+    flex: 1 1 auto;
+  }
+  .spec400-context-drawer[data-kova-dialog-surface] {
+    width: 100vw;
+    max-width: 100vw;
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .spec400-context-drawer > div:first-of-type:not([aria-hidden]) {
+    min-height: 56px;
+  }
+  .spec400-expanded-input[data-kova-dialog-surface] {
+    inset: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: var(--kova-radius-panel);
+    margin: 0;
+    transform: none;
+  }
+  .spec400-expanded-input > [aria-hidden="true"]:first-child {
+    display: none;
+  }
+  .spec400-dialog-footer > button {
+    width: 100%;
+  }
+  .spec400-recent-work a {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .spec400-recent-work strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+@media (max-width: 359px) {
+  .spec400-composer-tools > .spec400-toolbar-button {
+    width: 44px;
+    padding: 0;
+  }
+  .spec400-composer-tools > .spec400-toolbar-button > span {
+    display: none;
+  }
+  .spec400-composer-tools > .spec400-toolbar-button > svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spec400-chat-input *,
+  .spec400-context-drawer {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+.spec400-chat-workspace {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+.spec400-conversation-pane {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  flex-direction: column;
+}
+.spec400-conversation-pane[hidden],
+.spec400-result-pane[hidden] {
+  display: none;
+}
+.spec400-chat-workspace[data-split="true"] {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+}
+.spec400-pane-divider {
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+  border-inline: 1px solid var(--border);
+}
+.spec400-pane-divider:hover,
+.spec400-pane-divider:focus-visible {
+  background: var(--accent);
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.spec400-result-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--border);
+}
+.spec400-layout-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 44px;
+  flex-wrap: wrap;
+  padding-inline: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.spec400-result-tabs {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-inline: 16px;
+}
+.spec400-result-tabs > button {
+  min-height: 44px;
+  padding: 8px 16px;
+  border-bottom: 2px solid transparent;
+  font-size: 0.875rem;
+}
+.spec400-result-tabs > button[aria-selected="true"] {
+  font-weight: 600;
+  border-bottom-color: var(--foreground);
+}
+.spec400-composer-dock {
+  padding-inline: calc(max(var(--chat-gutter), var(--safe-left)) - 4px)
+    calc(max(var(--chat-gutter), var(--safe-right)) - 4px);
+}
+.spec400-composer-dock > .spec400-chat-input {
+  max-width: none;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-inline: 4px;
+  padding-top: 4px;
+}
+.spec400-composer-dock > .spec400-chat-input > * {
+  width: min(100%, var(--kova-reading-width));
+  margin-inline: auto;
+}
+.spec400-recent-work button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+  text-align: left;
+  border-radius: var(--kova-radius-compact);
+}
+.spec400-recent-work button:hover {
+  background: var(--accent);
+}
+@media (max-width: 1023px) {
+  .spec400-header-context > span {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .spec400-recent-work button {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+.spec400-chat-input {
+  container-type: inline-size;
+}
+@media (min-width: 1024px) {
+  @container (max-width: 480px) {
+    .spec400-composer-tools > .spec400-toolbar-button {
+      width: 44px;
+      padding: 0;
+    }
+    .spec400-composer-tools > .spec400-toolbar-button > span {
+      display: none;
+    }
+    .spec400-send-button {
+      width: 44px;
+      min-width: 44px;
+      padding: 0;
+    }
+    .spec400-send-button > span {
+      display: none;
+    }
+  }
+}
+/* Scoped overrides beat earlier high-specificity prototype geometry. */
+.kova-assistant section.kova-empty-chat > div.kova-empty-chat-content {
+  flex: none;
+  justify-content: flex-start;
+  padding-block: 32px !important;
+}
+.kova-assistant section.kova-empty-chat .kova-greeting {
+  margin-bottom: 24px;
+}
+.kova-assistant section.kova-empty-chat .kova-greeting h1 {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+body .spec400-context-drawer[data-kova-dialog-surface] {
+  border-radius: var(--kova-radius-panel);
+  max-width: 300px !important;
+  max-height: 100dvh !important;
+  translate: none;
+  animation: none;
+}
+@media (max-width: 767px) {
+  .kova-assistant section.kova-empty-chat > div.kova-empty-chat-content {
+    padding-block: 24px !important;
+  }
+  .kova-assistant section.kova-empty-chat .kova-greeting h1 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  body .spec400-context-drawer[data-kova-dialog-surface],
+  body .spec400-expanded-input[data-kova-dialog-surface] {
+    border-radius: var(--kova-radius-panel);
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+    translate: none;
+    animation: none;
+  }
+}
+/* Compact file-style chips: metadata only, with no eager image/text preview. */
+.spec400-attachment-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 4px;
+  min-width: 0;
+}
+.spec400-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: min(100%, 320px);
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  overflow: hidden;
+}
+.spec400-chip-inspect {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 4px 8px 12px;
+  border-radius: var(--kova-radius-compact);
+  text-align: left;
+  font-size: 0.875rem;
+}
+.spec400-chip-inspect > svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--muted-foreground);
+}
+.spec400-chip-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spec400-chip-inspect small {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.spec400-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  min-height: 44px;
+  border-radius: var(--kova-radius-button);
+}
+.spec400-chip-remove > svg {
+  width: 16px;
+  height: 16px;
+}
+.spec400-chip-inspect:hover,
+.spec400-chip-remove:hover {
+  background: var(--accent);
+}
+.spec400-chip-inspect:focus-visible,
+.spec400-chip-remove:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.spec400-attachment-chip[data-status="failed"] {
+  border-color: var(--destructive);
+}
+.spec400-preview-range {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+}
+.spec400-preview-pages {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+.spec400-paste-back {
+  min-height: 44px;
+  padding-inline: 8px;
+  text-decoration: underline;
+  font-weight: 500;
+}
+.spec400-bounded-preview {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+  tab-size: 4;
+}
+@media (max-width: 767px) {
+  .spec400-attachment-chip {
+    max-width: 100%;
+  }
+}

@@ -23,6 +23,7 @@ import {
   rehashKovaPassword,
   signKovaCompatibilityJwt,
   verifyGoogleIdToken,
+  verifyKovaCompatibilityJwt,
   verifyKovaPassword,
   verifyKovaTotp,
 } from "../../src/lib/kova-auth-crypto.server.mjs";
@@ -256,6 +257,49 @@ test("compatibility JWTs are ES256, short-lived, and stable-UUID bound", () => {
     ),
     true,
   );
+});
+
+test("compatibility JWTs reject issuer credentials, query and fragment", () => {
+  const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+  const env = {
+    KOVA_AUTH_JWT_PRIVATE_KEY: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+    KOVA_AUTH_JWT_KEY_ID: "issuer-validation-fixture",
+    KOVA_AUTH_JWT_PUBLIC_KEY_SHA256: createHash("sha256")
+      .update(publicKey.export({ type: "spki", format: "der" }))
+      .digest("hex"),
+    KOVA_AUTH_ISSUER: "https://auth.example.com/tenant/",
+  };
+  const principal = {
+    accountId: "10000000-0000-4000-8000-000000000001",
+    sessionId: "20000000-0000-4000-8000-000000000002",
+    email: "owner@example.com",
+    emailVerified: true,
+    assuranceLevel: "aal1",
+  };
+  const now = Date.parse("2026-09-20T20:00:00Z");
+  const validToken = signKovaCompatibilityJwt(principal, env, now);
+  assert.equal(verifyKovaCompatibilityJwt(validToken, env, now).accountId, principal.accountId);
+  assert.equal(
+    JSON.parse(Buffer.from(validToken.split(".")[1], "base64url")).iss,
+    env.KOVA_AUTH_ISSUER,
+  );
+
+  for (const issuer of [
+    "https://user@auth.example.com/tenant/",
+    "https://user:password@auth.example.com/tenant/",
+    "https://auth.example.com/tenant/?mode=owned",
+    "https://auth.example.com/tenant/#owned",
+  ]) {
+    const invalidEnv = { ...env, KOVA_AUTH_ISSUER: issuer };
+    assert.throws(
+      () => signKovaCompatibilityJwt(principal, invalidEnv, now),
+      /issuer must be an exact HTTPS URL/u,
+    );
+    assert.throws(
+      () => verifyKovaCompatibilityJwt(validToken, invalidEnv, now),
+      /issuer must be an exact HTTPS URL/u,
+    );
+  }
 });
 
 test("Google ID tokens require a valid RS256 signature, audience, nonce, and verified email", async () => {

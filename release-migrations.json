@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 191,
-  "latest": "20261020195253_account_email_all_enabled_defaults.sql",
+  "count": 193,
+  "latest": "20261021130544_production_owned_email_worker.sql",
   "migrations": [
     {
       "order": 1,
@@ -3894,6 +3894,20 @@
     },
     {
       "order": 186,
+      "filename": "20261018163000_daily_upload_identity.sql",
+      "timestamp": "20261018163000",
+      "sha256": "de8ee5f0fce40a75d792b82713eabe3f2f45be5eb1967bca01ad86c0d90cf3b4",
+      "tables": ["daily_upload_fingerprints"],
+      "functions": ["try_reserve_daily_uploads"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["daily_upload_fingerprints"],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 187,
       "filename": "20261019222427_kova_owned_session_guard_coverage.sql",
       "timestamp": "20261019222427",
       "sha256": "82083c8765f0aa20a1a68772d094b7216c076d7b2482aa2e0b37a623d887322f",
@@ -3907,7 +3921,7 @@
       "indexes": []
     },
     {
-      "order": 187,
+      "order": 188,
       "filename": "20261019222616_kova_owned_argon2id_password_hashes.sql",
       "timestamp": "20261019222616",
       "sha256": "7d78987e4353bd3df87511f04581af3b31089c8c47083f4af575ba4fafae5ce6",
@@ -3928,7 +3942,7 @@
       "indexes": []
     },
     {
-      "order": 188,
+      "order": 189,
       "filename": "20261019223039_kova_owned_email_dispatch.sql",
       "timestamp": "20261019223039",
       "sha256": "12028d895d030c01b19a700c3b0969a1dd69a4f3cb8d452a45260ca2efafd792",
@@ -3948,7 +3962,7 @@
       "indexes": []
     },
     {
-      "order": 189,
+      "order": 190,
       "filename": "20261019225033_kova_owned_email_proof_reliability.sql",
       "timestamp": "20261019225033",
       "sha256": "4c10986a763977e7fa832b560d9913c3c0b0f3a3a65662d7b07bc75755f45a0a",
@@ -3967,7 +3981,7 @@
       "indexes": []
     },
     {
-      "order": 190,
+      "order": 191,
       "filename": "20261020183948_account_email_notifications.sql",
       "timestamp": "20261020183948",
       "sha256": "120c75ba546c7f4ffff7483c77a7147f7364b89b1f15adb45283601b0b0323ba",
@@ -3997,7 +4011,7 @@
       "indexes": ["account_email_pending_expiry_idx"]
     },
     {
-      "order": 191,
+      "order": 192,
       "filename": "20261020195253_account_email_all_enabled_defaults.sql",
       "timestamp": "20261020195253",
       "sha256": "c84e09664a69fb7542b0d06a8d1af76ad4585f1b409da8b3f25f83a217bcaf24",
@@ -4009,6 +4023,25 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 193,
+      "filename": "20261021130544_production_owned_email_worker.sql",
+      "timestamp": "20261021130544",
+      "sha256": "049732b03bb42692eac4f7490c742b71b46f85f7205863b8d2f4d1d07649a0ac",
+      "tables": ["kova_private", "kova_private"],
+      "functions": [
+        "kova_email_claim_worker_run",
+        "kova_email_worker_scope",
+        "kova_email_claim_account_dispatch",
+        "kova_email_finish_worker_run"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["email_worker_runs_expiry"]
     }
   ]
 }

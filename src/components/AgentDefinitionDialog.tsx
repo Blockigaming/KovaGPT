@@ -233,7 +233,14 @@ export function AgentDefinitionDialog({
                 onClick={() => void save()}
                 className="min-h-10 rounded-lg bg-foreground px-4 text-background disabled:opacity-40"
               >
-                {busy ? "Saving…" : "Save changes"}
+                {busy ? (
+                  <span className="spec400-loading-label">
+                    <span className="spec400-loading-spinner" aria-hidden="true" />
+                    Saving…
+                  </span>
+                ) : (
+                  "Save changes"
+                )}
               </button>
             </DialogFooter>
           ) : null}

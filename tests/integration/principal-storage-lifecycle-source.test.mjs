@@ -100,17 +100,15 @@ test("first resolution and guest-to-user transitions purge only ownerless privat
 
 test("Settings uses the same current-principal registry and truthful copy", () => {
   assert.match(settingsSource, /await resetPrincipalDeviceData\(targetUserKey\)/);
-  assert.match(
-    settingsSource,
-    /const cleanupResult = await clearLocalBrowserData\(deletionUserKey\);[\s\S]*?currentAuthUserKeyRef\.current === deletionUserKey[\s\S]*?onClearAll\(\)/,
-  );
+  assert.doesNotMatch(settingsSource, /handleDeleteAccount|requestAccountDeletion|deletionUserKey/);
+  assert.match(settingsSource, /<AccountDeletionGraceView[\s\S]*?status="unavailable"/);
   assert.match(
     settingsSource,
     /Ownerless\s+private\s+data,[\s\S]*?transitional values from older versions,[\s\S]*?Other profiles' scoped data,[\s\S]*?cloud data are preserved/,
   );
   assert.match(settingsSource, /Reset this profile's local data/);
   assert.match(settingsSource, /currentAuthUserKeyRef\.current === resetUserKey/);
-  assert.match(settingsSource, /cleanupFailureCount > 0/);
+  assert.match(settingsSource, /failureCount > 0/);
   assert.doesNotMatch(
     settingsSource,
     /Clears cached chats, drafts, and preferences stored on this device/,

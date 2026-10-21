@@ -6,7 +6,19 @@ export type SpeechInput = {
   chatId: string;
   messageId: string;
   contentSha256: string;
+  voiceId?: string;
 };
+export type SpeechConfiguration = {
+  enabled: boolean;
+  apiKey?: string;
+  voiceId?: string;
+  modelId?: string;
+};
+export function speechConfiguration(
+  env: (name: string) => string | undefined,
+  tier: string,
+  requestedVoiceId?: string,
+): SpeechConfiguration;
 export function loadOwnedSpeechMessage(
   auth: HttpAuthedCaller,
   input: SpeechInput,
@@ -22,7 +34,10 @@ export function createSpeechHandler(deps: {
     windowSeconds: number;
   }): Promise<DistributedRateLimitResult>;
   revalidate(auth: HttpAuthedCaller, signal: AbortSignal): Promise<void>;
-  config(): { enabled: boolean; apiKey?: string; voiceId?: string };
+  config(
+    auth: HttpAuthedCaller,
+    input: SpeechInput,
+  ): SpeechConfiguration | Promise<SpeechConfiguration>;
   fetchImpl?: typeof fetch;
   admit?(input: {
     request: Request;

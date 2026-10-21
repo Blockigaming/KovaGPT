@@ -58,7 +58,7 @@ export default function ImageEditControls({
           <button
             type="button"
             disabled={disabled}
-            className="underline"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 underline-offset-4 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             onClick={() => {
               setChoosing(!choosing);
               if (choosing) onChange(null);
@@ -72,12 +72,12 @@ export default function ImageEditControls({
                 Select an original image and describe the change above. The result is a new image;
                 your Library original stays available.
               </p>
-              <label>
+              <label className="grid min-w-0 gap-2">
                 Original image{" "}
                 <select
                   disabled={disabled}
                   aria-label="Original image"
-                  className="ml-2 max-w-full rounded border bg-background p-2"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2"
                   value={value?.source.id ?? ""}
                   onChange={(event) => {
                     const source = images.find((item) => item.id === event.target.value);
@@ -96,12 +96,12 @@ export default function ImageEditControls({
                 </select>
               </label>
               {value && (
-                <label>
+                <label className="grid min-w-0 gap-2">
                   Optional PNG mask{" "}
                   <select
                     disabled={disabled}
                     aria-label="Optional PNG mask"
-                    className="ml-2 max-w-full rounded border bg-background p-2"
+                    className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2"
                     value={value.mask?.id ?? ""}
                     onChange={(event) =>
                       onChange({
@@ -132,13 +132,13 @@ export default function ImageEditControls({
                 and match the original dimensions. A mask guides edits; it does not guarantee
                 pixel-perfect preservation.
               </p>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-2">
                 {pageCursor && (
                   <button
                     type="button"
                     disabled={disabled}
                     onClick={() => setPageCursor("")}
-                    className="underline"
+                    className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 underline-offset-4 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                   >
                     First page
                   </button>
@@ -148,7 +148,7 @@ export default function ImageEditControls({
                     type="button"
                     disabled={disabled}
                     onClick={() => setPageCursor(cursor)}
-                    className="underline"
+                    className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 underline-offset-4 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                   >
                     Next images
                   </button>

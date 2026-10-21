@@ -1,5 +1,8 @@
+import { moveChatToTrash } from "@/lib/chat-trash";
+import { toast } from "sonner";
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { settingsSectionForTab } from "@/components/SettingsDialog";
 import { Sidebar } from "@/components/Sidebar";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
@@ -7,6 +10,7 @@ const SettingsDialog = lazy(() =>
 const OnboardingDialog = lazy(() =>
   import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
 );
+import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileTopBar } from "@/components/MobileTopBar";
@@ -19,7 +23,6 @@ import {
   clearPendingActive,
   loadConversations,
   subscribeToConversationChanges,
-  saveConversations,
   savePendingActive,
 } from "@/lib/chat-store";
 import { useNovaSettings } from "@/lib/use-nova-settings";
@@ -35,11 +38,45 @@ import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
  * Shared shell that renders the chat Sidebar alongside any page (e.g. /apps,
  * /library). Conversation actions navigate back to the home chat route.
  */
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  utilitiesInHeader = false,
+  hideUtilities = false,
+}: {
+  children: ReactNode;
+  utilitiesInHeader?: boolean;
+  hideUtilities?: boolean;
+}) {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const pageTitle =
+    (
+      {
+        library: "Library",
+        projects: "Projects",
+        "scheduled-tasks": "Scheduled tasks",
+        apps: "Plugins",
+        settings: "Settings",
+        images: "Images",
+        profile: "Profile",
+        billing: "Billing",
+        help: "Help",
+      } as Record<string, string>
+    )[pathname.split("/")[1]] ?? "KovaGPT";
   const { isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
   const storagePrincipal = chatStoragePrincipal(userKey);
+  const trashPrincipalRef = useRef({ principal: storagePrincipal, ready: isLoaded, generation: 0 });
+  if (
+    trashPrincipalRef.current.principal !== storagePrincipal ||
+    trashPrincipalRef.current.ready !== isLoaded
+  ) {
+    trashPrincipalRef.current = {
+      principal: storagePrincipal,
+      ready: isLoaded,
+      generation: trashPrincipalRef.current.generation + 1,
+    };
+  }
   const [conversationState, setConversationState] = useState<{
     principal: string | null;
     items: Conversation[];
@@ -99,6 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!isLoaded) return;
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      trashPrincipalRef.current.generation += 1;
       setConversationState({ principal: null, items: [] });
       setSettingsOpen(false);
     };
@@ -127,10 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           navigate({ to: "/library" });
         },
         "open-settings": () => {
-          settingsReturnFocusRef.current =
-            document.activeElement instanceof HTMLElement ? document.activeElement : null;
-          setSettingsTab(undefined);
-          setSettingsOpen(true);
+          void navigate({ to: "/settings/$section", params: { section: "profile" } });
         },
         "generate-image": () => {
           navigate({ to: "/images" });
@@ -149,12 +184,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }, [isLoaded, navigate, userKey]);
 
-  const openSettings = useCallback((tab?: string) => {
-    settingsReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setSettingsTab(tab);
-    setSettingsOpen(true);
-  }, []);
+  const openSettings = useCallback(
+    (tab?: string) => {
+      void navigate({
+        to: "/settings/$section" as never,
+        params: { section: settingsSectionForTab(tab) } as never,
+      });
+    },
+    [navigate],
+  );
 
   useEffect(() => {
     const handleOpenSettings = (event: Event) => {
@@ -187,9 +225,29 @@ export function AppShell({ children }: { children: ReactNode }) {
   const handleDelete = async (id: string) => {
     if (!principalReady) return;
     const next = conversations.filter((c) => c.id !== id);
-    if (!(await saveConversations(userKey, next))) return;
-    setConversationState({ principal: storagePrincipal, items: next });
+    const chat = conversations.find((item) => item.id === id);
+    if (!chat) return;
+    const generation = trashPrincipalRef.current.generation;
+    const current = () =>
+      trashPrincipalRef.current.generation === generation && trashPrincipalRef.current.ready;
+    try {
+      if (!(await moveChatToTrash(userKey, chat, conversations, current)) || !current()) return;
+      setConversationState({ principal: storagePrincipal, items: next });
+      toast.success("Chat removed. Recoverable chats are in Settings → Data controls → Trash.");
+    } catch {
+      if (current()) toast.error("Could not save Trash. Your chat was kept.");
+    }
   };
+
+  const utilities = hideUtilities ? null : (
+    <div className="kova-core-utilities">
+      <TimersWidget
+        userKey={userKey}
+        principalResolved={isLoaded}
+        mobileSidebarOpen={sidebarOpen}
+      />
+    </div>
+  );
 
   return (
     <div
@@ -230,32 +288,47 @@ export function AppShell({ children }: { children: ReactNode }) {
         onDelete={handleDelete}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
+        onOpenWorkspaceSearch={() => window.dispatchEvent(new CustomEvent("kova-open-search"))}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
       />
 
-      <div className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div
+        className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]"
+        data-sidebar={sidebarOpen ? "open" : "closed"}
+      >
         <OfflineBanner />
-        <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
-        {!sidebarOpen && (
+        <MobileTopBar
+          title={pageTitle}
+          onOpenSidebar={() => setSidebarOpen(true)}
+          onNewChat={handleNew}
+        />
+        {!utilitiesInHeader && !hideUtilities ? (
+          <div className="flex shrink-0 justify-end px-4 py-2 lg:px-8">{utilities}</div>
+        ) : null}
+        {!sidebarOpen && !user && (
           <button
             type="button"
-            onClick={() => {
+            onClick={(event) => {
+              const keyboardActivated = event.detail === 0;
               setSidebarOpen(true);
+              if (!keyboardActivated) return;
               window.requestAnimationFrame(() => {
                 document
                   .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
                   ?.focus({ preventScroll: true });
               });
             }}
-            className="kova-floating-sidebar-trigger hidden lg:flex fixed top-3 left-3 z-30 h-11 w-11 items-center justify-center rounded-xl border border-border/80 bg-background/95 shadow-sm backdrop-blur-sm transition-colors hover:bg-accent active:bg-accent"
+            className="kova-floating-sidebar-trigger kova-sidebar-toggle hidden lg:flex fixed top-3 left-3 z-30 h-10 w-10 rounded-xl transition items-center justify-center"
             aria-label="Open sidebar"
           >
             <PanelLeft className="h-4 w-4" strokeWidth={1.75} />
           </button>
         )}
-        <AppErrorBoundary>{children}</AppErrorBoundary>
+        <WorkspacePageUtilities.Provider value={utilitiesInHeader ? utilities : null}>
+          <AppErrorBoundary>{children}</AppErrorBoundary>
+        </WorkspacePageUtilities.Provider>
       </div>
 
       <Suspense fallback={null}>
@@ -287,11 +360,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           }}
         />
       </Suspense>
-      <TimersWidget
-        userKey={userKey}
-        principalResolved={isLoaded}
-        mobileSidebarOpen={sidebarOpen}
-      />
     </div>
   );
 }

@@ -1,0 +1,36 @@
+{
+  "compiled_app": "1b583398f352ff2d347d414ced1b6270bf33ae31",
+  "packaged_source": "972311cb3c848adcc57794699708cd20b9b25848",
+  "reviewed_requirements": {
+    "46": "Verified local account loading/resolution on app1b583398/source972311cb at1024 Dark: neutral Loading account, then actual synthetic name/email; a separate unknown plan hold did not invent Free. Exact native receipt and images retained. No live identity-provider acceptance implied.",
+    "132": "Verified actual shared toast on app1b583398/source972311cb:1024 Light desktop region360px near bottom-right;390 Light mobile toast above a multiline composer with draft preserved. Mobile16px offsets are source-bound; the captured desktop entrance frame does not establish its exact final bottom offset.",
+    "393": "Verified exact local390 Light cross-route sequence on app1b583398/source972311cb: unsaved Project Context draft, independent Chat A and B drafts, return to unchanged Context, Tasks read failure, Retry recovery, and all three drafts unchanged. No saves/sends; no universal route-boundary or live-network recovery claim."
+  },
+  "evidence": [
+    {
+      "file": "progress.md",
+      "sha256": "9e5409533df988270b0ada9e09c3e51869b05c02f5ee25aad86041ce89f12c86"
+    },
+    {
+      "file": "SHA256SUMS.txt",
+      "sha256": "ac3fe349bd824a00b4df74223d1adae12af9b3f7e2d4154461b66b88cb428e5c"
+    },
+    {
+      "file": "account-loading1024-dark.jpg",
+      "sha256": "e94fb5824e5a32793cd0440c7c80ab28d43e8b2b2fa12104dafc29aeaa1af29e"
+    },
+    {
+      "file": "plan-loading1024-dark.jpg",
+      "sha256": "f859794c41ef40d8044cc35891716717e0ea7d87af768032b81e75471804574a"
+    },
+    {
+      "file": "toast1024-light.jpg",
+      "sha256": "22aa33e88031edc724494313dc307667fdf159fa657825154362367540550ed6"
+    },
+    {
+      "file": "toast390-light.jpg",
+      "sha256": "b5cf8e3aa1f278395ec562843a457aa6b035a61a9be6aa759920930a1423ae70"
+    }
+  ],
+  "scope": "Only these three local UI/test contracts; whole-spec acceptance remains open."
+}

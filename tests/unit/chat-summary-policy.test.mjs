@@ -195,7 +195,7 @@ test("delayed browser snapshots never move to another account's access token", a
     calls.push([url, init]);
     return init.method === "POST"
       ? new Response(null, { status: 204 })
-      : Response.json({ enabled: false });
+      : Response.json({ enabled: true, descriptor: null });
   };
   await writeMemoryForPrincipal(active, id, {
     getSession: async () => ({

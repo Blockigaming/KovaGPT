@@ -1,0 +1,600 @@
+/* Voice is one conversational canvas. All activity comes from real controller
+   state; the abstract voice mark is intentionally static in every state. */
+[role="dialog"].kova-voice-dialog {
+  --voice-ink: #25272c;
+  --voice-soft: #f4f5f7;
+  --voice-muted: #6b6e76;
+  gap: 0;
+  width: min(480px, calc(100vw - 32px));
+  max-width: min(480px, calc(100vw - 32px));
+  height: 610px;
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  border-radius: var(--kova-radius-panel);
+  background: var(--background);
+  box-shadow:
+    0 24px 100px #00000026,
+    0 2px 8px #00000008;
+  color: var(--voice-ink);
+  overflow: hidden;
+}
+[role="dialog"].kova-voice-dialog:not([data-voice-availability="ready"]) {
+  height: 500px;
+}
+.dark [role="dialog"].kova-voice-dialog {
+  --voice-ink: #f0f0f2;
+  --voice-soft: #303136;
+  --voice-muted: #a5a6ae;
+}
+.kova-voice-dialog > [data-kova-dialog-close],
+.kova-voice-dialog > [aria-hidden="true"] {
+  display: none;
+}
+.kova-voice-topbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 82px;
+  padding: 22px 26px 12px;
+}
+.kova-voice-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+.kova-voice-title svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 1.7;
+}
+.kova-voice-picker {
+  min-width: 0;
+  max-width: 65%;
+}
+.kova-voice-picker-trigger {
+  gap: 8px;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--kova-radius-button);
+  background: var(--voice-soft);
+  box-shadow: none;
+  font-size: 13px;
+}
+.kova-voice-picker-trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kova-voice-preference-notice {
+  max-width: 190px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--voice-muted);
+}
+.kova-voice-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 32px 12px;
+}
+.kova-voice-canvas {
+  display: flex;
+  flex: 1 0 auto;
+  min-height: 265px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0 20px;
+  text-align: center;
+}
+.kova-voice-mark {
+  width: 215px;
+  height: 180px;
+  margin: -12px 0 14px;
+  flex-shrink: 0;
+}
+.kova-voice-mark path {
+  stroke-width: 15;
+  stroke-linecap: round;
+}
+.kova-voice-mark path:nth-child(1) {
+  stroke: #a2b6ca;
+}
+.kova-voice-mark path:nth-child(2) {
+  stroke: #8da9c7;
+}
+.kova-voice-mark path:nth-child(3) {
+  stroke: #6f93b9;
+}
+.kova-voice-mark path:nth-child(4) {
+  stroke: #8b9fbe;
+}
+.kova-voice-mark path:nth-child(5) {
+  stroke: #a8b2ca;
+}
+.kova-voice-mark path:nth-child(6) {
+  stroke: #c2c6d6;
+}
+.kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-mark {
+  width: 174px;
+  height: 145px;
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+.kova-voice-heading {
+  max-width: 320px;
+  font-size: 25px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+.kova-voice-description {
+  max-width: 298px;
+  margin: 12px 0 0;
+  color: var(--voice-muted);
+  font-size: 13px;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+.kova-voice-status {
+  display: flex;
+  min-height: 20px;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  margin-top: 15px;
+  color: var(--voice-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.kova-voice-status svg {
+  width: 13px;
+  height: 13px;
+}
+.kova-voice-recording-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #b04a4a;
+}
+.kova-voice-dialog[data-voice-content-first="true"] .kova-voice-canvas {
+  min-height: 0;
+  flex: 0 0 auto;
+  padding: 8px 0 18px;
+}
+.kova-voice-dialog[data-voice-content-first="true"] .kova-voice-heading {
+  font-size: 22px;
+}
+.kova-voice-status.sr-only {
+  position: absolute;
+  width: 1px;
+  min-height: 0;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.kova-voice-transcript,
+.kova-voice-player,
+.kova-voice-reply,
+.kova-voice-retry {
+  flex: 0 0 auto;
+}
+.kova-voice-transcript label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--voice-muted);
+  font-size: 12px;
+}
+.kova-voice-transcript textarea {
+  min-height: 112px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: var(--kova-radius-input);
+  background: var(--voice-soft);
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  box-shadow: none;
+}
+.kova-voice-transcript p {
+  margin-top: 8px;
+  color: var(--voice-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.kova-voice-error {
+  margin: 8px 0;
+  color: var(--destructive);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+}
+.kova-voice-retry {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 12px;
+}
+.kova-voice-reply {
+  margin-top: 8px;
+  text-align: center;
+}
+.kova-voice-reply button {
+  min-height: 40px;
+  height: auto;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--kova-radius-button);
+  box-shadow: none;
+  color: var(--voice-muted);
+  background: transparent;
+  font-size: 12px;
+}
+.kova-voice-reply button:hover:not(:disabled) {
+  background: var(--voice-soft);
+  color: var(--voice-ink);
+}
+.kova-voice-reply p {
+  margin: 4px 0;
+  color: var(--voice-muted);
+  font-size: 11px;
+}
+.kova-voice-player {
+  margin: 10px 0 4px;
+}
+.kova-voice-player audio {
+  width: 100%;
+  height: 40px;
+}
+.kova-voice-bottom {
+  flex: 0 0 auto;
+  padding: 4px 24px 17px;
+}
+.kova-voice-dock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  min-height: 80px;
+}
+.kova-voice-record-control button,
+.kova-voice-close {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 62px;
+  height: 62px;
+  min-height: 62px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kova-radius-button);
+  box-shadow: none;
+  cursor: pointer;
+}
+.kova-voice-record-control button {
+  background: var(--voice-ink);
+  color: var(--background);
+}
+.kova-voice-record-control button:hover:not(:disabled) {
+  opacity: 0.85;
+}
+.kova-voice-record-control button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.kova-voice-record-control button svg {
+  width: 25px;
+  height: 25px;
+  stroke-width: 1.6;
+}
+.kova-voice-close {
+  width: 50px;
+  height: 50px;
+  min-height: 50px;
+  background: var(--voice-soft);
+  color: var(--voice-ink);
+}
+.kova-voice-close svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.6;
+}
+.kova-voice-close:hover {
+  background: color-mix(in srgb, var(--voice-ink) 12%, var(--background));
+}
+.kova-voice-footnote {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin-top: 3px;
+}
+.kova-voice-limit {
+  margin: 8px 0 0;
+  color: var(--voice-muted);
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+.kova-voice-secondary-control {
+  display: flex;
+  justify-content: center;
+}
+.kova-voice-detail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--kova-radius-button);
+  color: var(--voice-muted);
+  cursor: pointer;
+}
+.kova-voice-detail-button:hover {
+  background: var(--voice-soft);
+  color: var(--voice-ink);
+}
+.kova-voice-detail-button svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.6;
+}
+.kova-voice-dialog button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+.kova-voice-popover {
+  width: 304px;
+  padding: 18px;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.kova-voice-popover p {
+  color: var(--muted-foreground);
+}
+.kova-voice-popover p + p {
+  margin-top: 8px;
+}
+.kova-voice-popover .kova-voice-popover-title {
+  color: var(--foreground);
+  font-weight: 600;
+  font-size: 13px;
+}
+.kova-voice-model-control {
+  min-width: 0;
+  max-width: calc(100% - 56px);
+  color: var(--voice-muted);
+}
+.kova-voice-model-control > button,
+.kova-voice-model-control .kova-model-trigger {
+  min-height: 44px;
+  height: auto;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 400;
+}
+.kova-voice-model-control .kova-model-menu {
+  max-height: min(300px, 48dvh);
+  overflow-y: auto;
+}
+.kova-voice-model-control > button svg,
+.kova-voice-model-control .kova-model-trigger svg {
+  width: 13px;
+  height: 13px;
+}
+.kova-voice-recovery {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kova-voice-recovery button {
+  height: auto;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 12px;
+  color: var(--voice-muted);
+}
+.kova-voice-use-transcript {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.kova-voice-use-transcript button {
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--kova-radius-button);
+}
+@media (max-width: 639px) {
+  [role="dialog"].kova-voice-dialog,
+  [role="dialog"].kova-voice-dialog:not([data-voice-availability="ready"]) {
+    bottom: 0;
+    width: 100%;
+    max-width: 100% !important;
+    height: calc(100dvh - max(16px, env(safe-area-inset-top)));
+    max-height: calc(100dvh - max(16px, env(safe-area-inset-top))) !important;
+    border-radius: var(--kova-radius-panel);
+    border-bottom: 0;
+  }
+  .kova-voice-topbar {
+    min-height: 86px;
+    padding: 24px 24px 12px;
+  }
+  .kova-voice-body {
+    padding-right: 26px;
+    padding-left: 26px;
+  }
+  .kova-voice-canvas {
+    padding-bottom: 30px;
+  }
+  .kova-voice-mark {
+    width: 220px;
+    height: 184px;
+    margin-bottom: 25px;
+  }
+  .kova-voice-heading {
+    font-size: 25px;
+  }
+  .kova-voice-bottom {
+    padding: 10px 22px max(16px, env(safe-area-inset-bottom));
+  }
+  .kova-voice-dock {
+    min-height: 90px;
+    gap: 20px;
+  }
+  .kova-voice-record-control button {
+    width: 68px;
+    height: 68px;
+    min-height: 68px;
+  }
+  .kova-voice-close {
+    width: 54px;
+    height: 54px;
+    min-height: 54px;
+  }
+  .kova-voice-limit {
+    margin-top: 14px;
+  }
+}
+@media (max-height: 570px) {
+  [role="dialog"].kova-voice-dialog {
+    height: calc(100dvh - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+  .kova-voice-topbar {
+    min-height: 62px;
+    padding-top: 10px;
+    padding-bottom: 8px;
+  }
+  .kova-voice-canvas {
+    min-height: 170px;
+    padding-bottom: 14px;
+  }
+  .kova-voice-mark {
+    width: 108px;
+    height: 90px;
+    margin: 0 0 8px;
+  }
+  .kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-mark {
+    width: 100px;
+    height: 84px;
+  }
+  .kova-voice-heading {
+    font-size: 21px;
+  }
+  .kova-voice-bottom {
+    padding-top: 0;
+    padding-bottom: 6px;
+  }
+  .kova-voice-dock {
+    min-height: 64px;
+  }
+  .kova-voice-record-control button {
+    width: 52px;
+    height: 52px;
+    min-height: 52px;
+  }
+  .kova-voice-footnote {
+    min-height: 36px;
+    margin-top: 0;
+  }
+}
+
+/* Inactive voice should occupy only the space its explanation needs. Keep these
+   rules after viewport variants so a phone cannot turn it into an empty canvas. */
+[role="dialog"].kova-voice-dialog[data-voice-compact="true"] {
+  height: auto;
+  max-height: calc(100dvh - max(24px, env(safe-area-inset-top))) !important;
+}
+.kova-voice-dialog[data-voice-compact="true"] .kova-voice-body {
+  flex: 0 1 auto;
+  padding-bottom: 0;
+}
+.kova-voice-dialog[data-voice-compact="true"] .kova-voice-canvas {
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 8px 0 18px;
+}
+.kova-voice-dialog[data-voice-compact="true"] .kova-voice-mark {
+  width: 100px;
+  height: 84px;
+  margin: 0 0 18px;
+}
+.kova-voice-dialog[data-voice-compact="true"] .kova-voice-heading {
+  font-size: 22px;
+}
+.kova-voice-dialog[data-voice-compact="true"] .kova-voice-dock {
+  min-height: 72px;
+}
+.kova-voice-dialog[data-voice-compact="true"] .kova-voice-bottom {
+  padding-top: 0;
+}
+.kova-voice-dialog[data-voice-error="true"] .kova-voice-description {
+  color: var(--destructive);
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+/* Recovery is the primary action after a failed transcription. */
+.kova-voice-dialog[data-voice-error="true"] .kova-voice-retry-control button {
+  min-height: 44px;
+  padding: 10px 22px;
+  border-radius: var(--kova-radius-button);
+  background: var(--foreground);
+  color: var(--background);
+  font-weight: 500;
+}
+.kova-voice-dialog[data-voice-error="true"] .kova-voice-record-control button {
+  background: var(--voice-soft);
+  color: var(--voice-ink);
+}
+
+/* Unavailable voice is a concise status sheet, not an inactive session canvas. */
+.kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-topbar {
+  min-height: 68px;
+  padding: 18px 24px 12px;
+}
+.kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-body {
+  padding: 8px 24px 0;
+}
+.kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-canvas {
+  align-items: flex-start;
+  text-align: left;
+  padding: 4px 0 16px;
+}
+.kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-heading {
+  font-size: 20px;
+}
+.kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-bottom {
+  padding: 0 24px 22px;
+}
+.kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-dock {
+  min-height: 44px;
+  justify-content: flex-end;
+}
+.kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-close {
+  width: auto;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 22px;
+  font-size: 14px;
+}

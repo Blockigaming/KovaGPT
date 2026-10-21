@@ -9,6 +9,7 @@ import * as security from "../../src/lib/auth-security.mjs";
 import * as validation from "../../src/lib/auth-validation-policy.mjs";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
 import * as email from "../../src/lib/kova-auth-email.server.mjs";
+import * as reviewedMemory from "../../src/lib/reviewed-memory-policy.mjs";
 
 const compile = (path) =>
   ts.transpileModule(readFileSync(path, "utf8"), {
@@ -37,6 +38,7 @@ export function authHttp(options = {}) {
     "@/lib/chat-ingress.server.mjs": { resolveAnonymousClientKey: () => "fixture-client" },
     "@/lib/endpoint-reliability.mjs": reliability,
     "@/lib/kova-auth-email.server.mjs": email,
+    "@/lib/reviewed-memory-policy.mjs": reviewedMemory,
     "@/lib/distributed-rate-limit.server": {
       async consumeApplicationRateLimit(input) {
         limits.push(plain(input));

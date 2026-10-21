@@ -1,0 +1,50 @@
+{
+  "requirement_id": 188,
+  "requirement": "Allow editing the next prompt while generation continues. Use Send next to submit it deliberately rather than automatically queuing incidental typing.",
+  "recommendation": "verified_local_ui",
+  "scope": "Existing local chat Send next behavior and keyboard continuation, using isolated synthetic response streams. This does not certify provider delivery or durable cross-device queues.",
+  "before_app": "1b583398f352ff2d347d414ced1b6270bf33ae31",
+  "before_packaged_source": "972311cb3c848adcc57794699708cd20b9b25848",
+  "successor_app": "53e9eecb0dfcc005ea0c6dcb1b05b41c421dbc14",
+  "evidence": [
+    {
+      "file": "kova-spec400-review-1b58339/progress.md",
+      "sha256": "9e5409533df988270b0ada9e09c3e51869b05c02f5ee25aad86041ce89f12c86",
+      "scope": "Line 8: incidental typing unqueued; explicit multiline snapshot; later editing independent; once-only next dispatch; Stop/cancel/failure hold unsent text."
+    },
+    {
+      "file": "kova-spec400-review-1b58339/queued390-light.jpg",
+      "sha256": "994facff0dbe6b54162eb60e26687a602f65e27060962803aae765213ba0d6cf",
+      "scope": "Previously independently inspected visible held-message state, not a second current capture."
+    },
+    {
+      "file": "kova-spec400-review-53e9eec/progress.md",
+      "sha256": "44d326a5e09430ed3c5ea7bcea0eae1515f1e87866ed29071a68c0a0d3dbd55f",
+      "scope": "Settled result 2: Send next focuses Cancel next; Cancel restores textarea and exact draft."
+    }
+  ],
+  "source_file_hashes": {
+    "1b583398f352ff2d347d414ced1b6270bf33ae31": {
+      "src/lib/chat-send-next.ts": "5cd7a840c5ae4afe4b2db89d206485ddb381bb8731f29c0b7287af44897564ac",
+      "src/components/ChatInput.tsx": "fd413334fc53622601a2f1e314f942bba027ced0a144a426f049cbf8d520399a",
+      "src/routes/index.tsx": "c337d06e0ee9a6f626d0b65229f392c52f0e5e1a9286724cbd21f8c77f8ebfd7"
+    },
+    "53e9eecb0dfcc005ea0c6dcb1b05b41c421dbc14": {
+      "src/lib/chat-send-next.ts": "5cd7a840c5ae4afe4b2db89d206485ddb381bb8731f29c0b7287af44897564ac",
+      "src/components/ChatInput.tsx": "4513308ebaca1f4f9d118c4a20be37a349e25ca26eab2982115698d4f43543c4",
+      "src/routes/index.tsx": "e0f952eb0f972028a12bbcfae528a323deb4b3e5a528b218864c3afc2fdc3513"
+    }
+  },
+  "source_mapping": [
+    "53e ChatInput.tsx:484-518 explicit guarded trigger; 1723-1744 labelled Send next action and explanatory text.",
+    "53e index.tsx:2341-2374 cancellation and guarded draft restoration/focus handoff.",
+    "chat-send-next.ts is byte-identical between the two application commits; snapshot/scope/settle policy unchanged."
+  ],
+  "limitations": [
+    "No live service or task mutation.",
+    "The focus defect in 1b is closed only by the 53e receipt, not retroactively relabelled.",
+    "No all-route draft/recovery or whole-spec claim."
+  ],
+  "whole_spec_acceptance": false,
+  "current_source_mapping": "Send-next helper and relevant handlers preserved; subsequent composer PDF controls do not alter queue snapshot or dispatch logic."
+}

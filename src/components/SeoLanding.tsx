@@ -33,8 +33,8 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
               to={c.to}
               className={
                 i === 0
-                  ? "inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full text-center outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
-                  : "inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full text-center outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background border border-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+                  ? "kova-button inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full text-center outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
+                  : "kova-button inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full text-center outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background border border-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
               }
             >
               {c.label}

@@ -1,0 +1,363 @@
+{
+  "reviewUTC": "2026-10-19T01:51:00Z",
+  "sourceContext": "e1f5073 successor native pass is active; this note audit uses only already sealed older evidence.",
+  "acceptanceFile": "/workspace/scratch/07d9f01d53f6/kova-spec400/docs/spec400/acceptance.json",
+  "acceptanceSHA256AtRead": "1b728a205c7d011c7580179d3df638f6a7adf3ca73ecba864e820ff1208647de",
+  "purpose": "Suggested stale acceptance-note updates for lead integration; no implementation or acceptance-ledger edits by reviewer.",
+  "itemNoteUpdates": [
+    {
+      "key": "replace-obsolete-228-retest-queue",
+      "itemIds": [1, 399, 400],
+      "previousNotes": {
+        "1": "Core and added review surfaces are implemented to differing depths; complete interface acceptance is still open. Remaining: Finish inventory/state matrix, affected228 retests and real contract gates; no all 400/perfection statement. Evidence is scoped to the audit source and cited prior reviews, not complete acceptance.",
+        "399": "Separate reviewable candidate plus400 ledger and bounded review records exist. Remaining: Full package is not accepted; current 228 affected rendering, inventory reconciliation, privacy/package audit and genuine contract blockers must remain disclosed. Evidence is scoped to the audit source and cited prior reviews, not complete acceptance.",
+        "400": "Core and added review surfaces are implemented to differing depths; complete interface acceptance is still open. Remaining: Finish inventory/state matrix, affected228 retests and real contract gates; no all 400/perfection statement. Evidence is scoped to the audit source and cited prior reviews, not complete acceptance."
+      },
+      "recommendedNote": "The assigned 9c/228 correction queue has bounded successor evidence through 990, f35 and 1fc. The current finite e1 changed-state pass, complete inventory/state reconciliation, packaging checks and real service gates remain separate. No full-spec or all-route acceptance is established.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-990b2c8.json",
+          "sha256": "aab30684cbc8c5f9792c2edbbd0f490a5e9326adda2ccd4434e4abd9d21b003a"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-f35f129.json",
+          "sha256": "f62db19a43f70e65889348331539e2b57184a5ddade32d7bf980309aa7b9d66c"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1fc515e.json",
+          "sha256": "6bbdb4327fcb69753eb9faae5131ba72a20745c77e9c0d6508a17e7f94b89d9a"
+        }
+      ],
+      "remainingBoundary": "Do not imply every 228 requirement was implemented or that all remaining work is only rendering.",
+      "changeWholeRequirementClosed": false,
+      "scope": "Evidence-note attribution correction only; historical captures retain their actual source identity."
+    },
+    {
+      "key": "sidebar-historical-attribution",
+      "itemIds": [7],
+      "previousNotes": {
+        "7": "Single persistent sidebar/selected Chat/recent row is recorded in the complete 1024 Dark core image. Remaining: This is prior 638 core-cell evidence, not every route/width or current 228 pixels. Evidence is scoped to the audit source and cited prior reviews, not complete acceptance."
+      },
+      "recommendedNote": "Single persistent sidebar and selected Chat/recent row were inspected in the complete 638 1024 Dark core image. Keep that historical source attribution; every route/width and later recent-list/account-menu changes are separate.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+          "sha256": "e39daa38ed9d85ce2d327ab0e57d7c16ad5153a8105b7a5fb9711e63ee45ba2f"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/desktop1024-dark.jpg",
+          "sha256": "446e671a1b852abbb71c25b4d78af120f132d1a24e73f1c424dee35218e51e4e"
+        }
+      ],
+      "remainingBoundary": "Do not relabel 638 as latest-tree pixels or close later menu behavior.",
+      "changeWholeRequirementClosed": false,
+      "scope": "Evidence-note attribution correction only; historical captures retain their actual source identity."
+    },
+    {
+      "key": "result-dom-evidence",
+      "itemIds": [52, 53],
+      "previousNotes": {
+        "52": "760px ordinary chat column; result split only for an actual editable result, with 45/55 default when main area>=1000px,420px minimum panes, Conversation/Result tabs below threshold, pointer/keyboard/button resizing and Reset layout. Context is300px desktop/fullscreen phones. CSS source cascade assertions pass; browser geometry pending.",
+        "53": "760px ordinary chat column; result split only for an actual editable result, with 45/55 default when main area>=1000px,420px minimum panes, Conversation/Result tabs below threshold, pointer/keyboard/button resizing and Reset layout. Context is300px desktop/fullscreen phones. CSS source cascade assertions pass; browser geometry pending."
+      },
+      "recommendedNote": "At 1c, native browser DOM measured a 531/649px 45/55 split at the 1440 CSS fixture and opening focused Result. The physical 1180px browser clipped the full-width image; this is geometry/focus evidence only. Full two-pane pixels and every responsive threshold/state remain unverified.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/receipt.md",
+          "sha256": "ed71fb84bab9ea498586885911aa45d8adefa70c2e31585cfa6c4a7d59430d6a"
+        }
+      ],
+      "remainingBoundary": "No complete 1440 image credit; no resizer persistence claim for item54.",
+      "changeWholeRequirementClosed": false,
+      "scope": "Evidence-note attribution correction only; historical captures retain their actual source identity."
+    },
+    {
+      "key": "library-detail-entry",
+      "itemIds": [284],
+      "previousNotes": {
+        "284": "Authenticated generation-scoped Library detail URLs and direct lookup are implemented independently of loaded rows. Current revision only; no access grant or public link. Rendered deep-link acceptance pending."
+      },
+      "recommendedNote": "The 9c browser pass loaded the owned synthetic Release notes detail, copied its exact generation-scoped URL, reopened the fresh route and returned Close to its row. The 228 phone/desktop inspector pixels then verified the corrected title/actions and 420px desktop surface.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/receipt.md",
+          "sha256": "b78af3452ab93f28d295af132ceebb2f657f6efca9602ea703a27cbd15956305"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-22850d3/receipt.md",
+          "sha256": "0f5706167e99974f0538201dde96b0d2ead1d33543d9a8e69269ba0bc0cac6e5"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-22850d3.json",
+          "sha256": "9f2bf19f49365bcaa17e6a19187665cc80f87fa57a951819ebb8f6981623596a"
+        }
+      ],
+      "remainingBoundary": "Access isolation across real accounts, stale generations and every source item type are not established by this route example.",
+      "changeWholeRequirementClosed": false,
+      "scope": "Evidence-note attribution correction only; historical captures retain their actual source identity."
+    },
+    {
+      "key": "storage-unknown-presentation",
+      "itemIds": [291],
+      "previousNotes": {
+        "291": "Existing StorageDashboard/getMyStorage provides measured account cloud storage separately from loaded-file totals. Unknown service limits remain unknown. Rendered acceptance pending."
+      },
+      "recommendedNote": "The 9c rendered detail distinguishes loaded-file sizes from unavailable cloud usage. This is evidence of truthful unknown-state presentation; no measured live cloud allowance or storage totals were accepted.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/receipt.md",
+          "sha256": "b78af3452ab93f28d295af132ceebb2f657f6efca9602ea703a27cbd15956305"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/library-detail390-dark.jpg",
+          "sha256": "c0923661826403b105ce7ebf5cc9c4ab37d070bdc54b7ab9ac23848dbe2a5842"
+        }
+      ],
+      "remainingBoundary": "Actual measured account storage service remains unverified.",
+      "changeWholeRequirementClosed": false,
+      "scope": "Evidence-note attribution correction only; historical captures retain their actual source identity."
+    },
+    {
+      "key": "appearance-scoped-render",
+      "itemIds": [314, 317, 318, 319, 320, 323, 324],
+      "previousNotes": {
+        "314": "Appearance preview/reset and separated Responses implemented with principal-scoped local persistence; rendered successor review pending.",
+        "317": "Appearance preview/reset and separated Responses implemented with principal-scoped local persistence; rendered successor review pending.",
+        "318": "Appearance preview/reset and separated Responses implemented with principal-scoped local persistence; rendered successor review pending.",
+        "319": "Appearance preview/reset and separated Responses implemented with principal-scoped local persistence; rendered successor review pending.",
+        "320": "Appearance preview/reset and separated Responses implemented with principal-scoped local persistence; rendered successor review pending.",
+        "323": "Appearance preview/reset and separated Responses implemented with principal-scoped local persistence; rendered successor review pending.",
+        "324": "Appearance preview/reset and separated Responses implemented with principal-scoped local persistence; rendered successor review pending."
+      },
+      "recommendedNote": "The 638 pass inspected Section-only Appearance and its live 20px preview after changes; Reset restored Dark/Comfortable/16px/760px/Full and kept focus. Profile identity/local locale fields and the separate Responses controls were exercised/read. This replaces the blanket successor-render-pending note only for those observed states.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/receipt.md",
+          "sha256": "efcd8c83203550a6fb72f04d50f1417d26ba9fd6f4d5de8f232e2cf43f64d3f4"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+          "sha256": "e39daa38ed9d85ce2d327ab0e57d7c16ad5153a8105b7a5fb9711e63ee45ba2f"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/appearance-preview390-dark.jpg",
+          "sha256": "b9641340c7d73f0ec89887c99529d63f12ae6310b5158b5060359642984eae9c"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/settings390-light.jpg",
+          "sha256": "0e19b17c50bc1ac4c5bb8524e23be4ff19328c4535dd12512d0d8391b22e12fc"
+        }
+      ],
+      "remainingBoundary": "No all-size/body propagation, OS reduced-motion matrix, cross-device persistence or account-wide custom-instruction service certification. Compact loading remains unrendered.",
+      "changeWholeRequirementClosed": false,
+      "scope": "Evidence-note attribution correction only; historical captures retain their actual source identity."
+    },
+    {
+      "key": "billing-scoped-render",
+      "itemIds": [338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348],
+      "previousNotes": {
+        "338": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated.",
+        "339": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated.",
+        "340": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated.",
+        "341": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated.",
+        "342": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated.",
+        "343": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated.",
+        "344": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated.",
+        "345": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated.",
+        "346": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated.",
+        "347": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated.",
+        "348": "New Billing workspace uses existing authoritative contracts. Source/fixture checks passed; exact rendered review pending. Missing service fields/actions remain unavailable rather than fabricated."
+      },
+      "recommendedNote": "Billing Overview/Plans/Invoices were rendered and the selected-tab focus checked at 638. Plans prices/features and unavailable invoice/portal controls were read; the 9c successor corrected Free next charge to Not applicable and plan-card radius to12px. Thus the workspace is not wholly render-pending. Payment, entitlement, cancellation, invoice/download and checkout outcomes remain unverified or service-bound.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/receipt.md",
+          "sha256": "efcd8c83203550a6fb72f04d50f1417d26ba9fd6f4d5de8f232e2cf43f64d3f4"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+          "sha256": "e39daa38ed9d85ce2d327ab0e57d7c16ad5153a8105b7a5fb9711e63ee45ba2f"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/receipt.md",
+          "sha256": "b78af3452ab93f28d295af132ceebb2f657f6efca9602ea703a27cbd15956305"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/billing390-dark.jpg",
+          "sha256": "16f867eb214dfa852445a72967477523964be8c2a85d99b3dd1f7f77413a354b"
+        }
+      ],
+      "remainingBoundary": "Do not infer live subscription amounts, proration, cancellation timing, payment failure or invoice records from disabled/unknown controls.",
+      "changeWholeRequirementClosed": false,
+      "scope": "Evidence-note attribution correction only; historical captures retain their actual source identity."
+    },
+    {
+      "key": "share-review-render",
+      "itemIds": [386],
+      "previousNotes": {
+        "386": "Existing server stores a frozen snapshot; preview now freezes the exact reviewed payload. Later private replies do not mutate it. Current-candidate rendered check pending."
+      },
+      "recommendedNote": "At 9c, the exact two-message private-share review matched the conversation; Back retained its synthetic recipient and Cancel returned to Share chat. This is the reviewed preview state. No final share was submitted, and persistence/immutability of a published server snapshot was not tested.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/receipt.md",
+          "sha256": "b78af3452ab93f28d295af132ceebb2f657f6efca9602ea703a27cbd15956305"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-9c59085/share1024-light.jpg",
+          "sha256": "46a3cda5f4dd4dafb84e3cb6c28ba3d3cffac0ddf431816c1bac6b80422e0f77"
+        }
+      ],
+      "remainingBoundary": "Keep actual share creation and post-publication snapshot invariance open.",
+      "changeWholeRequirementClosed": false,
+      "scope": "Evidence-note attribution correction only; historical captures retain their actual source identity."
+    },
+    {
+      "key": "named-mobile-navigation",
+      "itemIds": [362],
+      "previousNotes": {
+        "362": "Mobile navigation uses actual committed-route events and one-use principal-scoped intents to focus visible destination heading/main without input autofocus. Ordinary dismissal restores the opener. Browser acceptance pending."
+      },
+      "recommendedNote": "At 228, the exact Library drawer\u2192Projects native navigation no longer crashed and focused the visible Projects heading. This is a bounded committed-route/focus proof, not every destination or dismissal path.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-22850d3/receipt.md",
+          "sha256": "0f5706167e99974f0538201dde96b0d2ead1d33543d9a8e69269ba0bc0cac6e5"
+        }
+      ],
+      "remainingBoundary": "No blanket all-drawer/all-route closure.",
+      "changeWholeRequirementClosed": false,
+      "scope": "Evidence-note attribution correction only; historical captures retain their actual source identity."
+    },
+    {
+      "key": "receipt-synthetic-render",
+      "itemIds": [257, 258],
+      "previousNotes": {
+        "257": "Focused SSR/pure checks pass; native browser review pending. Missing provenance, live providers and share-link contracts remain explicit.",
+        "258": "Focused SSR/pure checks pass; native browser review pending. Missing provenance, live providers and share-link contracts remain explicit."
+      },
+      "recommendedNote": "The 1c original shows the gray Scheduled task created bubble and green check above the answer for validated synthetic ID88888888-8888-4888-8888-888888888888. Browser receipt records the matching link. This replaces a wholly native-render-pending statement for that state.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/receipt.md",
+          "sha256": "ed71fb84bab9ea498586885911aa45d8adefa70c2e31585cfa6c4a7d59430d6a"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/receipt390-dark.jpg",
+          "sha256": "9ce504f040c2617502d90fc62d0e70fcc671d3c3b08197e9ae0ae71dd5457c61"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1c3ac7c.json",
+          "sha256": "bac746d489ee7f9d10a1efb7eba3b30fba79abe509dec46f4b2445e71678d4b5"
+        }
+      ],
+      "remainingBoundary": "No real chat-to-scheduler producer or end-to-end creation; expanded detail geometry was not established by this screenshot.",
+      "changeWholeRequirementClosed": false,
+      "scope": "Evidence-note attribution correction only; historical captures retain their actual source identity."
+    }
+  ],
+  "ownerAdditionNoteUpdates": [
+    {
+      "id": "response-emphasis-20261018",
+      "recommendedStatus": "Scoped native presentation verified: 1c blue inline tokens/semantic table, 638 readable Light/Dark code and simple320 table, 990 wide-table right edge.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-1c3ac7c.json",
+          "sha256": "bac746d489ee7f9d10a1efb7eba3b30fba79abe509dec46f4b2445e71678d4b5"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-638a162.json",
+          "sha256": "e39daa38ed9d85ce2d327ab0e57d7c16ad5153a8105b7a5fb9711e63ee45ba2f"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-990b2c8.json",
+          "sha256": "aab30684cbc8c5f9792c2edbbd0f490a5e9326adda2ccd4434e4abd9d21b003a"
+        }
+      ],
+      "remainingBoundary": "No all-message/template/contrast matrix; wide-table last interval is not a complete table text union.",
+      "changeWholeRequirementClosed": false
+    },
+    {
+      "id": "chat-trash-20261018",
+      "recommendedStatus": "Local synthetic restore/retention-confirmation behavior verified at1c; restore-focus correction verified at638. Server retention contract remains unavailable.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/receipt.md",
+          "sha256": "ed71fb84bab9ea498586885911aa45d8adefa70c2e31585cfa6c4a7d59430d6a"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/receipt.md",
+          "sha256": "efcd8c83203550a6fb72f04d50f1417d26ba9fd6f4d5de8f232e2cf43f64d3f4"
+        }
+      ],
+      "remainingBoundary": "No production purge/migration, real server expiry or exhaustive account-switch matrix.",
+      "changeWholeRequirementClosed": false
+    },
+    {
+      "id": "long-paste-20261018",
+      "recommendedStatus": "Local 11270-character sample exact preview/Back to text/per-chat isolation and guest auth-cancel preservation verified at1c; Remove/Undo focus verified at638.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/receipt.md",
+          "sha256": "ed71fb84bab9ea498586885911aa45d8adefa70c2e31585cfa6c4a7d59430d6a"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-638a162/receipt.md",
+          "sha256": "efcd8c83203550a6fb72f04d50f1417d26ba9fd6f4d5de8f232e2cf43f64d3f4"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/paste320-light.jpg",
+          "sha256": "fbdc34a82c4ece94347d1c52da155d9f378e5b3a6864adecfe3dd58f247193ed"
+        }
+      ],
+      "remainingBoundary": "No cloud upload/RAM guarantee or arbitrary-size performance claim.",
+      "changeWholeRequirementClosed": false
+    },
+    {
+      "id": "response-followups-20261018",
+      "recommendedStatus": "Three supplied follow-ups rendered at1c; first appended to existing draft and focused without sending.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/receipt.md",
+          "sha256": "ed71fb84bab9ea498586885911aa45d8adefa70c2e31585cfa6c4a7d59430d6a"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1c3ac7c/table-followups390-dark.jpg",
+          "sha256": "5d62ae09d6f9de8ec805072b57b2b31ccc055d95ca1d828f306c465951b5ba8a"
+        }
+      ],
+      "remainingBoundary": "Live suggestion producer and every alternative/context/account case remain unverified.",
+      "changeWholeRequirementClosed": false
+    },
+    {
+      "id": "account-deletion-grace-20261019",
+      "recommendedStatus": "Review implementation and bounded native acceptance recorded atf35; production entry is unavailable-only. Exact720-hour policy, isolated lifecycle interactions and inspected confirmation/scheduled pixels have separate evidence.",
+      "evidence": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-f35f129/receipt.md",
+          "sha256": "993d93a295a8c6bdd6ca0f2738d929de1e70639eaf32b87b670c9e9bf3ef507f"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-f35f129.json",
+          "sha256": "f62db19a43f70e65889348331539e2b57184a5ddade32d7bf980309aa7b9d66c"
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/account-recovery-source-check.json",
+          "sha256": "6a3d38f4cadca4ec981c36b901c0a3c2e924424ae1035fb1d4a426187702b1fd"
+        }
+      ],
+      "remainingBoundary": "No live backend; deadline-minus1ms remains source-only. Independent full panels are320Light confirmation pair and1024Dark scheduled;390native bottoms clipped.",
+      "changeWholeRequirementClosed": false
+    }
+  ],
+  "verificationNoteUpdates": [
+    "Replace the earliest global legacy-cascade-queued note with the actual e38\u21921c\u2192638/9c corrections and bounded ledgers; do not imply all shared consumers checked.",
+    "Replace exact-successor-rendering-pending for Light code, narrow action row, paste/Trash focus, sidebar8px and Settings alignment with their638/9c evidence.",
+    "Mark the finite1fc Project/Library retest as terminal with corrected-core-1fc515e.json and receipt; keep e1 changed controls separate."
+  ],
+  "deliberatelyUnchanged": [
+    "Whole requirement closure flags; no new completion percentage.",
+    "Unobserved Context300px behavior, divider ratio persistence, all-header geometry, every menu/route state, source provenance completeness, actual service gates and full1440 pixels.",
+    "No new visual audit or source re-audit; no extrapolation from source tests to native behavior."
+  ]
+}

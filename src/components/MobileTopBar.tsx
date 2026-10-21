@@ -1,23 +1,23 @@
-import { Menu, MessageSquareDashed, Sliders, SquarePen } from "lucide-react";
-import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
-import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
+import type { ReactNode } from "react";
+import { PanelLeft, MessageCircleOff, Sliders, SquarePen } from "lucide-react";
+import { useUser, SignInButton, SignUpButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import type { ModeId, Tier } from "@/lib/modes";
 
 /**
  * Compact sticky top bar shown on phones and tablets (any viewport below the
  * desktop breakpoint). Provides a menu trigger to open the off-canvas sidebar,
- * brand identity / model selector, and a quick "new chat" action.
- * Signed-out users see a compact login action. Honors safe-area-inset-top
- * and uses a translucent surface so content eases through as it scrolls.
+ * brand identity, and a quick "new chat" action. Signed-out users see a
+ * compact login and signup actions instead of the new-chat icon so they can always
+ * reach auth from the top bar. Honors safe-area-inset-top and uses
+ * translucent blur so content underneath eases through as it scrolls.
  */
 export function MobileTopBar({
   onOpenSidebar,
   onNewChat,
   title,
-  mode,
-  onModeChange,
-  userTier = "free",
   temporaryChat = false,
+  chatStarted = false,
+  conversationActions,
   onTemporaryChatChange,
   onOpenChatSettings,
   chatRulesActive = false,
@@ -30,9 +30,11 @@ export function MobileTopBar({
   onModeChange?: (mode: ModeId) => void;
   userTier?: Tier;
   temporaryChat?: boolean;
-  onTemporaryChatChange?: (enabled: boolean) => void;
+  chatStarted?: boolean;
+  conversationActions?: ReactNode;
+  onTemporaryChatChange?: (enabled: boolean, trigger: HTMLButtonElement) => void;
   /** Opens per-chat rules and pinned files; omitted when there is no chat yet. */
-  onOpenChatSettings?: () => void;
+  onOpenChatSettings?: (trigger: HTMLButtonElement) => void;
   chatRulesActive?: boolean;
   skill?: { name: string; clear: () => void; disabled: boolean };
 }) {
@@ -46,27 +48,19 @@ export function MobileTopBar({
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
-          className="kova-action flex h-11 w-11 items-center justify-center rounded-xl text-foreground hover:bg-accent/70 active:bg-accent"
+          className="kova-action kova-sidebar-toggle w-11 h-11 text-foreground"
         >
-          <Menu className="h-5 w-5" strokeWidth={1.75} />
+          <PanelLeft className="w-5 h-5" aria-hidden="true" />
         </button>
-
-        <div className="flex min-w-0 items-center justify-start gap-1.5 pl-0.5">
-          {mode && onModeChange ? (
-            <ResponsiveModelSelector
-              mode={mode}
-              onChange={onModeChange}
-              userTier={userTier}
-              placement="topbar"
-              compact
-            />
-          ) : (
-            <div className="flex min-w-0 items-center justify-start">
-              <span className="font-display truncate text-[15px] font-semibold tracking-tight">
-                {title || "KovaGPT"}
-              </span>
-            </div>
-          )}
+        <div className="flex min-w-0 items-center justify-start gap-1 pl-1">
+          <span
+            role="heading"
+            aria-level={1}
+            data-kova-navigation-heading=""
+            className="spec400-mobile-page-title min-w-0 truncate text-sm font-medium"
+          >
+            {title || "Chat"}
+          </span>
           {skill ? (
             <button
               type="button"
@@ -80,22 +74,32 @@ export function MobileTopBar({
             </button>
           ) : null}
         </div>
-
-        {showAuth ? (
-          <SignInButton mode="modal">
-            <button
-              type="button"
-              className="mr-0.5 min-h-11 justify-self-end whitespace-nowrap rounded-full bg-foreground px-4 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 active:opacity-80"
-            >
-              Log in
-            </button>
-          </SignInButton>
-        ) : (
-          <div className="flex items-center justify-end gap-0.5">
-            {onOpenChatSettings ? (
+        {showAuth && !chatStarted ? (
+          <div className="flex items-center justify-end gap-1">
+            <SignInButton mode="modal">
               <button
                 type="button"
-                onClick={onOpenChatSettings}
+                className="kova-auth-primary min-h-11 whitespace-nowrap rounded-full bg-foreground px-3 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 active:opacity-80"
+              >
+                Log in
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button
+                type="button"
+                className="kova-auth-sign-up min-h-11 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold transition-opacity hover:opacity-90 active:opacity-80"
+              >
+                Sign up
+              </button>
+            </SignUpButton>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end gap-0.5">
+            {conversationActions}
+            {!conversationActions && onOpenChatSettings ? (
+              <button
+                type="button"
+                onClick={(event) => onOpenChatSettings(event.currentTarget)}
                 aria-label={chatRulesActive ? "Chat settings, rules active" : "Chat settings"}
                 title="Chat settings"
                 className={`kova-action flex h-11 w-11 items-center justify-center rounded-xl ${
@@ -107,11 +111,10 @@ export function MobileTopBar({
                 <Sliders className="h-5 w-5" strokeWidth={1.75} />
               </button>
             ) : null}
-
-            {isSignedIn && onTemporaryChatChange ? (
+            {isSignedIn && !chatStarted && onTemporaryChatChange ? (
               <button
                 type="button"
-                onClick={() => onTemporaryChatChange(!temporaryChat)}
+                onClick={(event) => onTemporaryChatChange(!temporaryChat, event.currentTarget)}
                 aria-label={temporaryChat ? "Turn off temporary chat" : "Start temporary chat"}
                 aria-pressed={temporaryChat}
                 title={temporaryChat ? "Temporary chat on" : "Start temporary chat"}
@@ -122,7 +125,7 @@ export function MobileTopBar({
                     : "text-foreground hover:bg-accent/70 active:bg-accent"
                 }`}
               >
-                <MessageSquareDashed className="h-5 w-5" strokeWidth={1.75} />
+                <MessageCircleOff className="h-5 w-5" aria-hidden="true" />
               </button>
             ) : null}
 

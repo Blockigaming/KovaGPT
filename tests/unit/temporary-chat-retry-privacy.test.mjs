@@ -41,7 +41,7 @@ function fixture() {
   const calls = [];
   const timers = [];
   const context = {
-    isCurrentRequest: () => generation === issuedGeneration,
+    isCurrentRetryScope: () => generation === issuedGeneration,
     activeIdRef: { current: "chat" },
     nextConvId: "chat",
     inFlightRef: { current: false },
@@ -55,7 +55,11 @@ function fixture() {
         return 1;
       },
     },
-    send: () => calls.push("sent"),
+    send: (...args) => {
+      calls.push("sent");
+      assert.equal(args[6], "original-request-id");
+    },
+    userMsg: { id: "original-request-id" },
     retryTool: null,
     text: "temporary prompt",
     atts: [],
@@ -83,17 +87,17 @@ test("an old Retry toast cannot edit a converted temporary chat", () => {
 test("conversion also invalidates a retry that was queued immediately before it", () => {
   const f = fixture();
   f.context.retry();
-  assert.deepEqual(f.calls, ["edited"]);
+  assert.deepEqual(f.calls, []);
   f.convert();
   f.timers[0]();
-  assert.deepEqual(f.calls, ["edited"]);
+  assert.deepEqual(f.calls, []);
 });
 
 test("a current Retry action still executes and conversion advances its generation", () => {
   const f = fixture();
   f.context.retry();
   f.timers[0]();
-  assert.deepEqual(f.calls, ["edited", "sent"]);
+  assert.deepEqual(f.calls, ["sent"]);
   const conversion = source.slice(
     source.indexOf("const saveTemporaryChat"),
     source.indexOf("const openCommandPalette"),
@@ -112,4 +116,8 @@ test("temporary conversion stays unavailable during automatic retry backoff", ()
   );
   assert.match(conversion, /retryTimerRef\.current !== null/);
   assert.match(source, /canSave=\{Boolean\([\s\S]*?retryTimerRef\.current === null/);
+});
+
+test("manual failure retry reuses the original request identity, while regeneration stays distinct", () => {
+  assert.match(source, /m\.generationStatus === "failed" \? priorUser\.id : undefined/);
 });

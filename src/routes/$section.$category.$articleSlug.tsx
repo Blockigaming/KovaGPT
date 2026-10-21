@@ -1,10 +1,13 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { PublicDetailPageView } from "@/components/public/PublicSite";
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
 
+import { findReviewPage } from "@/lib/review-page-content";
 export const Route = createFileRoute("/$section/$category/$articleSlug")({
   loader: async ({ params }) => {
     const key = `${params.section}/${params.category}/${params.articleSlug}`;
+    const reviewPage = findReviewPage(key);
+    if (reviewPage) throw redirect({ to: `/review/${reviewPage.slug}` as never, replace: true });
     if (params.section === "form") {
       const { PUBLIC_FORM_PAGE_BY_KEY } = await import("@/lib/public-form-content");
       const form = PUBLIC_FORM_PAGE_BY_KEY.get(key);

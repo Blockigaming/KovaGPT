@@ -108,7 +108,7 @@ test("library workspace supports filters, sorting, view preference, safe actions
 
 test("composer can reuse recent authorized Library files without duplicate upload", () => {
   assert.match(chatInput, /RecentLibraryFile/);
-  assert.match(chatInput, /Recent Library files/);
+  assert.match(chatInput, /Saved Library files/);
   assert.match(chatInput, /attachLibraryFile/);
   assert.match(chatInput, /libraryItemId/);
   assert.match(chatInput, /is already attached/);

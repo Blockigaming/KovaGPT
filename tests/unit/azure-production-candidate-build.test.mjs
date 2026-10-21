@@ -72,6 +72,9 @@ test("only the explicit production browser argument allowlist reaches a commit-p
       "KOVA_VERIFY_BROWSER_CONFIG",
       "VITE_SUPABASE_URL",
       "VITE_SUPABASE_PUBLISHABLE_KEY",
+      "VITE_KOVA_AUTH_MODE",
+      "VITE_KOVA_GOOGLE_AUTH_ENABLED",
+      "VITE_KOVA_AUTH_ORIGIN",
       "VITE_PAYMENTS_CLIENT_TOKEN",
     ],
   );
@@ -172,7 +175,10 @@ function harness(t, options = {}) {
   const root = `${directory}/repo`;
   const output = options.internalOutput ? `${root}/evidence` : `${directory}/evidence`;
   mkdirSync(root);
-  const env = environment({ KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR: output });
+  const env = environment({
+    KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR: output,
+    ...options.browserAuthInputs,
+  });
   const config = productionCandidateConfig(env);
   const calls = [];
   const run = (program, args, { input } = {}) => {
@@ -236,7 +242,7 @@ function harness(t, options = {}) {
           mkdirSync(bundle);
           writeFileSync(
             `${bundle}/index.js`,
-            `window.config=["https://${projectRef}.supabase.co","${browserKey}","${stripeKey}"];const authMode="kova-browser-auth-mode:supabase";`,
+            `window.config=["https://${projectRef}.supabase.co","${browserKey}","${stripeKey}"];const authMode="kova-browser-auth-mode:${options.builtAuthMode ?? config.browserAuthMode}";`,
           );
           writeFileSync(
             `${parent}/expected-source.json`,
@@ -247,6 +253,7 @@ function harness(t, options = {}) {
             supabaseUrl: params.supabaseUrl.value,
             publishableKey: browserKey,
             stripePublishableKey: stripeKey,
+            expectedAuthMode: options.builtAuthMode ?? config.browserAuthMode,
             sourceSha,
             sourceTree,
             expectedProjectRef: projectRef,
@@ -498,6 +505,111 @@ test("browser mode: default and explicit PLAN inputs retain the original behavio
   );
 });
 
+test("browser Auth defaults stay Supabase, Google-off and same-origin regardless of server bindings", () => {
+  const config = productionCandidateConfig(
+    environment({
+      KOVA_AUTH_MODE: "kova",
+      KOVA_AUTH_ORIGIN: "https://server-auth.example.invalid",
+      KOVA_GOOGLE_AUTH_ENABLED: "true",
+    }),
+  );
+  assert.equal(config.browserAuthMode, "supabase");
+  assert.equal(config.browserGoogleAuthEnabled, "false");
+  assert.equal(config.browserAuthOrigin, "");
+});
+
+test("explicit browser Auth inputs reach the pinned build in both protected input modes", () => {
+  for (const inputMode of ["plan", "narrow-openai"]) {
+    for (const mode of ["supabase", "dual", "kova"]) {
+      const inputs = {
+        VITE_KOVA_AUTH_MODE: mode,
+        VITE_KOVA_GOOGLE_AUTH_ENABLED: "true",
+        VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid",
+      };
+      const env = inputMode === "plan" ? environment(inputs) : narrowEnvironment(inputs);
+      const config = productionCandidateConfig(env);
+      const request = productionCandidateBuildRequest(config, sourceTree, false);
+      const forwarded = Object.fromEntries(
+        request.arguments.map(({ name, value }) => [name, value]),
+      );
+      for (const [name, value] of Object.entries(inputs)) assert.equal(forwarded[name], value);
+      assert.equal(
+        request.sourceLocation,
+        `https://github.com/Blockigaming/KovaGPT.git#${sourceSha}`,
+      );
+      assert.ok(request.arguments.every(({ isSecret }) => isSecret === false));
+    }
+  }
+});
+
+test("invalid browser Auth inputs fail before any external command", () => {
+  for (const inputs of [
+    { VITE_KOVA_AUTH_MODE: "" },
+    { VITE_KOVA_AUTH_MODE: "KOVA" },
+    { VITE_KOVA_AUTH_MODE: "dual " },
+    { VITE_KOVA_AUTH_MODE: null },
+    { VITE_KOVA_GOOGLE_AUTH_ENABLED: true },
+    { VITE_KOVA_GOOGLE_AUTH_ENABLED: "1" },
+    { VITE_KOVA_GOOGLE_AUTH_ENABLED: "true\n" },
+    { VITE_KOVA_AUTH_ORIGIN: null },
+    { VITE_KOVA_AUTH_ORIGIN: "http://auth.example.invalid" },
+    { VITE_KOVA_AUTH_ORIGIN: "https://user:password@auth.example.invalid" },
+    { VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid/" },
+    { VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid/path" },
+    { VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid?mode=kova" },
+    { VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid#token" },
+    { VITE_KOVA_AUTH_ORIGIN: " https://auth.example.invalid" },
+  ]) {
+    assert.throws(
+      () => buildProductionCandidate(environment(inputs), () => assert.fail("No command may run")),
+      /production_candidate_browser_(?:auth_mode|google_auth|auth_origin)_invalid/u,
+    );
+  }
+  const config = productionCandidateConfig(environment());
+  assert.throws(
+    () =>
+      productionCandidateBuildRequest({ ...config, browserAuthMode: "auto" }, sourceTree, false),
+    /production_candidate_browser_auth_mode_invalid/u,
+  );
+});
+
+test("pulled browser bytes are verified against the explicitly selected owned Auth mode", (t) => {
+  const { env, run, output } = harness(t, {
+    browserAuthInputs: {
+      VITE_KOVA_AUTH_MODE: "kova",
+      VITE_KOVA_GOOGLE_AUTH_ENABLED: "true",
+      VITE_KOVA_AUTH_ORIGIN: "https://auth.example.invalid",
+    },
+  });
+  const report = buildProductionCandidate(env, run);
+  assert.equal(report.browserAuthMode, "kova");
+  assert.equal(report.requestedBrowserGoogleAuthEnabled, "true");
+  assert.equal(report.requestedBrowserAuthOrigin, "https://auth.example.invalid");
+  assert.equal(
+    JSON.parse(readFileSync(`${output}/browser-config-provenance.json`, "utf8")).authMode,
+    "kova",
+  );
+});
+
+test("a pulled image with another Auth mode is not certified", (t) => {
+  const { env, run, output } = harness(t, {
+    browserAuthInputs: { VITE_KOVA_AUTH_MODE: "kova" },
+    builtAuthMode: "supabase",
+  });
+  assert.throws(
+    () => buildProductionCandidate(env, run),
+    /intended Kova authentication mode|Unexpected or mixed Kova authentication modes/u,
+  );
+  assert.equal(existsSync(`${output}/candidate.json`), false);
+});
+
+test("Docker accepts each forwarded public Auth input with unchanged defaults", () => {
+  const docker = readFileSync(new URL("../../Dockerfile", import.meta.url), "utf8");
+  assert.match(docker, /^ARG VITE_KOVA_AUTH_MODE=supabase$/mu);
+  assert.match(docker, /^ARG VITE_KOVA_GOOGLE_AUTH_ENABLED=false$/mu);
+  assert.match(docker, /^ARG VITE_KOVA_AUTH_ORIGIN=$/mu);
+});
+
 test("browser mode: explicit narrow input never accesses the full PLAN secret", () => {
   const env = narrowEnvironment();
   Object.defineProperty(env, "KOVA_PRODUCTION_BICEP_PARAMETERS_JSON", {
@@ -515,6 +627,9 @@ test("browser mode: explicit narrow input never accesses the full PLAN secret", 
     [
       ["VITE_SUPABASE_URL", params.supabaseUrl.value],
       ["VITE_SUPABASE_PUBLISHABLE_KEY", browserKey],
+      ["VITE_KOVA_AUTH_MODE", "supabase"],
+      ["VITE_KOVA_GOOGLE_AUTH_ENABLED", "false"],
+      ["VITE_KOVA_AUTH_ORIGIN", ""],
       ["VITE_PAYMENTS_CLIENT_TOKEN", stripeKey],
     ],
   );

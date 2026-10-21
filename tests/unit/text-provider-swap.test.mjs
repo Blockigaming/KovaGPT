@@ -180,3 +180,92 @@ test("provider rejection does not trigger fallback or retry", async () => {
   assert.equal(calls, 1);
   await response.body.cancel();
 });
+
+test("HTTP-200 failed or incomplete Responses cannot become successful tool-hop replies", async () => {
+  for (const result of [
+    {},
+    { output: [{ type: "message", content: [{ text: "partial" }] }] },
+    { status: "", output: [] },
+    { status: "failed", output: [] },
+    { status: "cancelled", output: [] },
+    { status: "incomplete", output: [{ type: "message", content: [{ text: "partial" }] }] },
+    { error: { message: "private-provider-error" }, output: [] },
+    null,
+    [],
+  ]) {
+    const api = loadProvider(
+      { KOVA_TEXT_PROVIDER: "openai", OPENAI_API_KEY: "fixture" },
+      async () => Response.json(result),
+    );
+    await assert.rejects(
+      api.chatCompletions({
+        model: "gpt-5.6-luna",
+        stream: false,
+        messages: [{ role: "user", content: "fixture" }],
+      }),
+      (error) => {
+        assert.equal(error.code, "provider_bad_response");
+        assert.equal(error.status, 502);
+        assert.doesNotMatch(error.message, /private-provider-error|partial/u);
+        return true;
+      },
+    );
+  }
+});
+
+test("completed Responses preserve actual reply and usage without a model retry", async () => {
+  let calls = 0;
+  const api = loadProvider(
+    { KOVA_TEXT_PROVIDER: "openai", OPENAI_API_KEY: "fixture" },
+    async () => {
+      calls++;
+      return Response.json({
+        status: "completed",
+        model: "gpt-5.6-luna",
+        output: [{ type: "message", content: [{ type: "output_text", text: "fixture reply" }] }],
+        usage: { input_tokens: 4, output_tokens: 2, total_tokens: 6 },
+      });
+    },
+  );
+  const response = await api.chatCompletions({
+    model: "gpt-5.6-luna",
+    stream: false,
+    messages: [{ role: "user", content: "fixture" }],
+  });
+  const body = await response.json();
+  assert.equal(body.choices[0].message.content, "fixture reply");
+  assert.equal(body.choices[0].finish_reason, "stop");
+  assert.equal(body.usage.total_tokens, 6);
+  assert.equal(calls, 1);
+});
+
+test("native nonstream Responses metadata is bounded before chat conversion", async () => {
+  let cancelled = false;
+  const api = loadProvider(
+    { KOVA_TEXT_PROVIDER: "openai", OPENAI_API_KEY: "fixture" },
+    async () =>
+      new Response(
+        new ReadableStream({
+          pull(controller) {
+            controller.enqueue(new Uint8Array(2 * 1024 * 1024 + 1));
+          },
+          cancel() {
+            cancelled = true;
+          },
+        }),
+        { headers: { "Content-Type": "application/json" } },
+      ),
+  );
+  await assert.rejects(
+    api.chatCompletions({
+      model: "gpt-5.6-luna",
+      stream: false,
+      messages: [{ role: "user", content: "fixture" }],
+    }),
+    (error) => {
+      assert.equal(error.status, 502);
+      return true;
+    },
+  );
+  assert.equal(cancelled, true);
+});

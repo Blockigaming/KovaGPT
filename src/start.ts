@@ -9,9 +9,9 @@ const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "SAMEORIGIN",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // Location is an explicit, user-triggered feature in Settings and Summary.
-  // Voice and dictation are intentionally absent, so microphone access is denied.
+  // Same-origin microphone use still requires explicit browser permission.
   "Permissions-Policy":
-    'camera=(self), geolocation=(self), microphone=(), payment=(self "https://checkout.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://link.com" "https://*.link.com")',
+    'camera=(self), geolocation=(self), microphone=(self), payment=(self "https://checkout.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://link.com" "https://*.link.com")',
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
   "Content-Security-Policy": [
     "default-src 'self'",

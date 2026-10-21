@@ -135,12 +135,11 @@ test("converted Temporary history stays excluded after the transport window adva
   assert.equal(normalizeChatPayload(payload).memoryStartIndex, 1000);
 });
 
-test("catch-up writes are context-only and unchanged terminal failures do not restart forever", async () => {
+test("first and catch-up writes are context-only and unchanged terminal failures do not restart forever", async () => {
   const active = { id: chatId, messages: history, temporary: false, memoryStartIndex: 0 };
   const calls = [];
   const deps = {
     getSession: async () => ({ data: { session } }),
-    contextOnly: true,
     fetchImpl: async (url, init) => {
       calls.push([url, init]);
       return init.method === "POST"
@@ -170,4 +169,51 @@ test("catch-up writes are context-only and unchanged terminal failures do not re
   });
   assert.equal(terminal.continue, false);
   assert.equal(calls.length, 1);
+});
+
+for (const state of [
+  { enabled: false, descriptor: null },
+  { enabled: true, descriptor: null, short: true },
+]) {
+  test(`automatic memory does not POST without an enabled valid same-chat snapshot: ${JSON.stringify(state)}`, async () => {
+    const calls = [];
+    const result = await writeMemoryForPrincipal(
+      { id: chatId, messages: state.short ? history.slice(0, 4) : history, temporary: false },
+      id,
+      {
+        getSession: async () => ({ data: { session } }),
+        fetchImpl: async (url, init) => {
+          calls.push(init.method ?? "GET");
+          return Response.json(state);
+        },
+      },
+    );
+    assert.equal(result.continue, false);
+    assert.deepEqual(calls, ["GET"]);
+  });
+}
+
+test("unchanged pending summaries retry without POSTing a cross-chat fallback", async () => {
+  const snapshot = await createChatSummarySnapshot(history);
+  const calls = [];
+  const result = await writeMemoryForPrincipal(
+    { id: chatId, messages: history, temporary: false },
+    id,
+    {
+      getSession: async () => ({ data: { session } }),
+      fetchImpl: async (url, init) => {
+        calls.push(init.method ?? "GET");
+        return Response.json({
+          enabled: true,
+          descriptor: {
+            requested_start: snapshot.start,
+            requested_digest: snapshot.digest,
+            status: "pending",
+          },
+        });
+      },
+    },
+  );
+  assert.equal(result.continue, true);
+  assert.deepEqual(calls, ["GET"]);
 });

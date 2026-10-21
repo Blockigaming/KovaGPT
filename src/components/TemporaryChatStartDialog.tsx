@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Check, MessageSquareDashed, ShieldCheck, Sparkles } from "lucide-react";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
+import { useEffect, useRef, useState } from "react";
+import { Check, MessageCircleOff, ShieldCheck, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -9,23 +10,37 @@ export function TemporaryChatStartDialog({
   open,
   onOpenChange,
   onStart,
+  returnFocusTarget,
+  returnFocusUrl,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStart: (context: TemporaryChatContext) => void;
+  returnFocusTarget?: HTMLElement | null;
+  returnFocusUrl?: string;
 }) {
+  const startedRef = useRef(false);
   const [context, setContext] = useState<TemporaryChatContext>("clean");
 
   useEffect(() => {
-    if (open) setContext("clean");
+    if (open) {
+      setContext("clean");
+      startedRef.current = false;
+    }
   }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          restoreDialogFocus(returnFocusTarget, returnFocusUrl, startedRef.current);
+        }}
+      >
         <div className="flex items-start gap-3">
           <div className="rounded-xl bg-muted p-2.5">
-            <MessageSquareDashed className="h-5 w-5" aria-hidden="true" />
+            <MessageCircleOff className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
             <DialogTitle>Start a temporary chat</DialogTitle>
@@ -49,7 +64,7 @@ export function TemporaryChatStartDialog({
             <RadioGroupItem id="temporary-context-clean" value="clean" className="mt-0.5" />
             <span className="min-w-0">
               <span className="flex items-center gap-2 text-sm font-medium">
-                <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                 Start fresh
               </span>
               <span className="mt-1 block text-xs leading-5 text-muted-foreground">
@@ -70,7 +85,7 @@ export function TemporaryChatStartDialog({
             />
             <span className="min-w-0">
               <span className="flex items-center gap-2 text-sm font-medium">
-                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                <BookOpen className="h-5 w-5" aria-hidden="true" />
                 Use my existing context
               </span>
               <span className="mt-1 block text-xs leading-5 text-muted-foreground">
@@ -82,15 +97,27 @@ export function TemporaryChatStartDialog({
         </RadioGroup>
 
         <p className="text-xs text-muted-foreground">
-          You cannot change this choice after the chat starts. You can save the chat to history
-          later and continue it as a regular chat.
+          Temporary mode and context stay fixed after your first message. Start a new chat to change
+          them.
         </p>
 
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            className="kova-workspace-action"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
-          <Button onClick={() => onStart(context)}>Start temporary chat</Button>
+          <Button
+            className="kova-workspace-action"
+            onClick={() => {
+              startedRef.current = true;
+              onStart(context);
+            }}
+          >
+            Start temporary chat
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -111,15 +138,19 @@ export function TemporaryChatBanner({
   onTurnOff: () => void;
 }) {
   return (
-    <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
-      <div className="flex min-w-0 items-center gap-2">
-        <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span>
+    <div className="kova-temporary-banner mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
+      <details>
+        <summary>Temporary chat · not saved to history</summary>
+        <p>
           {tempChatContext === "personalized"
             ? "Temporary chat is on with existing context. It is not saved to history and will not create new saved memories."
             : "Temporary chat is on. It is not saved to history and does not use or update saved memory, profile details, custom instructions, personality settings, or connected apps."}
-        </span>
-      </div>
+        </p>
+        <p>
+          You can change this setting before your first message. After that, start a new chat to
+          change it.
+        </p>
+      </details>
       <div className="flex shrink-0 items-center gap-1">
         {canSave ? (
           <button
@@ -150,20 +181,20 @@ export function TemporaryChatToggle({
 }: {
   enabled: boolean;
   confirmed: boolean;
-  onToggle: () => void;
+  onToggle: (trigger: HTMLButtonElement) => void;
 }) {
   return (
     <button
       type="button"
-      onClick={onToggle}
+      onClick={(event) => onToggle(event.currentTarget)}
       aria-label={enabled ? "Turn off temporary chat" : "Start temporary chat"}
       aria-pressed={enabled}
       title={enabled ? "Temporary chat on" : "Start temporary chat"}
-      className={`relative shrink-0 p-2 rounded-lg transition ${
+      className={`relative min-h-11 min-w-11 shrink-0 p-2 rounded-lg transition ${
         enabled ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
       }`}
     >
-      <MessageSquareDashed className="w-5 h-5" />
+      <MessageCircleOff className="w-5 h-5" aria-hidden="true" />
       {confirmed && (
         <span className="absolute inset-0 flex items-center justify-center">
           <Check className="w-4 h-4 text-primary drop-shadow" />

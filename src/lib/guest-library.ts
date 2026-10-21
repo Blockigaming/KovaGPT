@@ -62,6 +62,25 @@ export function saveGuestItem(input: GuestSaveInput): LibraryItem {
   return item;
 }
 
-export function deleteGuestItem(id: string) {
-  writeGuestLibrary(loadGuestLibrary().filter((i) => i.id !== id));
+export function deleteGuestItem(id: string): void {
+  if (typeof localStorage === "undefined") {
+    throw new Error("Guest Library storage is unavailable.");
+  }
+  // Deletion must fail visibly when storage cannot be read or written. The
+  // forgiving load/save helpers can replace unreadable data or trim unrelated
+  // records on quota failure, so they are deliberately not used here.
+  const stored = localStorage.getItem(GUEST_LIBRARY_KEY);
+  if (stored === null) return;
+  const items: unknown = JSON.parse(stored);
+  if (
+    !Array.isArray(items) ||
+    items.some((item) => !item || typeof item !== "object" || typeof item.id !== "string")
+  ) {
+    throw new Error("Guest Library data could not be read safely.");
+  }
+  const next = items.filter((item) => item.id !== id);
+  if (next.length === items.length) return;
+  // A failed localStorage write leaves the original value intact. Do not retry
+  // with a smaller collection: only the requested item may be removed.
+  localStorage.setItem(GUEST_LIBRARY_KEY, JSON.stringify(next));
 }

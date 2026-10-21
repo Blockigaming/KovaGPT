@@ -7,6 +7,8 @@ import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { EmptyState, ErrorState } from "@/components/states";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { useTimeFormatPreference } from "@/hooks/use-time-format-preference";
+import { formatDisplayDateTime } from "@/lib/time-format";
 import {
   deleteNotifications,
   listNotifications,
@@ -24,6 +26,7 @@ type Filter = "all" | "unread" | "agent" | "connector" | "scheduled";
 
 function NotificationsRoute() {
   const { isLoaded, isSignedIn, user } = useUser();
+  const timeFormat = useTimeFormatPreference(user?.id ?? null, isLoaded);
   const principalId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   const list = useServerFn(listNotifications);
   const markRead = useServerFn(markNotificationsRead);
@@ -230,13 +233,16 @@ function NotificationsRoute() {
                     <div className="flex flex-wrap justify-between gap-2">
                       <p className="font-medium">{item.title}</p>
                       <time className="text-xs text-muted-foreground" dateTime={item.createdAt}>
-                        {new Date(item.createdAt).toLocaleString()}
+                        {formatDisplayDateTime(item.createdAt, timeFormat)}
                       </time>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{item.preview}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {item.actionUrl && (
-                        <Link to={item.actionUrl} className="rounded-full border px-3 py-2 text-sm">
+                        <Link
+                          to={item.actionUrl}
+                          className="kova-button rounded-full border px-3 py-2 text-sm"
+                        >
                           Open
                         </Link>
                       )}

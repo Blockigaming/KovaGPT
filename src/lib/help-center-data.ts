@@ -539,12 +539,12 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "How do I upgrade or downgrade?",
-    "Open Settings → Subscription. Choose an available plan change and review its price and effective date in checkout or the billing portal before confirming.",
+    "Open Settings → Billing. Choose an available plan change and review its price and effective date in checkout or the billing portal before confirming.",
   ],
   [
     "Billing & plans",
     "Where do I manage my subscription?",
-    "Open Settings → Subscription and choose Manage subscription. If the Stripe portal is not configured, use the displayed support option.",
+    "Open Settings → Billing and choose Manage subscription. If the Stripe portal is not configured, use the displayed support option.",
   ],
   [
     "Billing & plans",
@@ -559,7 +559,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "Where are invoices and receipts?",
-    "Open Settings → Subscription → Manage subscription to view billing records available in Stripe. If the portal is unavailable, contact support from your account email.",
+    "Open Settings → Billing → Manage subscription to view billing records available in Stripe. If the portal is unavailable, contact support from your account email.",
   ],
   [
     "Billing & plans",
@@ -569,7 +569,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "How do I update my payment method?",
-    "Open Settings → Subscription → Manage subscription and use the Stripe portal. If that control is unavailable, contact support.",
+    "Open Settings → Billing → Manage subscription and use the Stripe portal. If that control is unavailable, contact support.",
   ],
   [
     "Billing & plans",
@@ -579,7 +579,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "How do I cancel?",
-    "Open Settings → Subscription → Manage subscription and cancel in the Stripe portal. If self-service cancellation is unavailable, contact support from your account email.",
+    "Open Settings → Billing → Manage subscription and cancel in the Stripe portal. If self-service cancellation is unavailable, contact support from your account email.",
     "cancel stop charged subscription",
   ],
   [
@@ -697,7 +697,7 @@ const rows: Row[] = [
   [
     "Troubleshooting",
     "My subscription is not showing.",
-    "Refresh Settings → Subscription, verify you are in the purchasing account, then sign out and in. Do not purchase twice; contact support with the receipt if it remains missing.",
+    "Refresh Settings → Billing, verify you are in the purchasing account, then sign out and in. Do not purchase twice; contact support with the receipt if it remains missing.",
   ],
   [
     "Troubleshooting",

@@ -4,6 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 import { z } from "zod";
+import { PROJECT_CHAT_DELETE_UNAVAILABLE } from "../../src/lib/project-chat-deletion.ts";
 
 const source = ts.transpileModule(readFileSync("src/lib/projects.functions.ts", "utf8"), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
@@ -15,6 +16,7 @@ function fixture({ failure = false } = {}) {
   const exports = {};
   const modules = {
     zod: { z },
+    "./project-chat-deletion": { PROJECT_CHAT_DELETE_UNAVAILABLE },
     "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: "verified-middleware" },
     "@/lib/supabase-loose": { loose: (client) => client },
     "./response-sources.ts": { normalizeResponseSources: () => [] },

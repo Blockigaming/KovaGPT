@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Boxes, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -76,6 +76,15 @@ function ContextPacksPage() {
   const userKey = user?.id ?? null;
   const workRevision = useWorkStoreRevision(userKey);
   const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const generationRef = useRef(0);
+  useEffect(
+    () => () => {
+      generationRef.current += 1;
+    },
+    [],
+  );
   const navigate = useNavigate();
   const listPacks = useServerFn(listContextPacks),
     create = useServerFn(createContextPack),
@@ -99,9 +108,18 @@ function ContextPacksPage() {
     [description, setDescription] = useState(""),
     [query, setQuery] = useState(""),
     [selected, setSelected] = useState<string[]>([]);
+  const draftRef = useRef({ name, description, selected });
+  draftRef.current = { name, description, selected };
+  const creatingRef = useRef(false);
   const [dataPrincipal, setDataPrincipal] = useState<string | null>(null);
   const dataReady = principal !== null && dataPrincipal === principal;
   useEffect(() => {
+    generationRef.current += 1;
+    creatingRef.current = false;
+    setCreating(false);
+    setName("");
+    setDescription("");
+    setQuery("");
     if (!isLoaded || principal === null) {
       setDataPrincipal(null);
       setLoading(true);
@@ -248,36 +266,43 @@ function ContextPacksPage() {
             12000,
           ),
       })),
-    ].filter((item) => `${item.title} ${item.content}`.toLowerCase().includes(query.toLowerCase()));
-  }, [
-    dataReady,
-    library,
-    memories,
-    pending,
-    projects,
-    prompts,
-    query,
-    research,
-    userKey,
-    workRevision,
-  ]);
+    ].filter(
+      (item, index, all) => all.findIndex((candidate) => candidate.key === item.key) === index,
+    );
+  }, [dataReady, library, memories, pending, projects, prompts, research, userKey, workRevision]);
+  const visibleCandidates = candidates.filter((item) =>
+    `${item.title} ${item.content}`.toLowerCase().includes(query.toLowerCase()),
+  );
   const submit = async () => {
+    if (creatingRef.current || !dataReady || !isSignedIn) return;
+    const generation = generationRef.current;
+    const submittedDraft = draftRef.current;
+    const isCurrent = () =>
+      generation === generationRef.current && principalRef.current === principal;
     const items = candidates
       .filter((item) => selected.includes(item.key))
       .map(({ type, id, title, content }) => ({ type, id, title, content }));
     if (!name.trim() || !items.length) return;
+    creatingRef.current = true;
     setCreating(true);
     try {
       const pack = await create({ data: { name, description, items } });
+      if (!isCurrent()) return;
       setPacks((all) => [pack, ...all]);
-      setName("");
-      setDescription("");
-      setSelected([]);
+      if (JSON.stringify(draftRef.current) === JSON.stringify(submittedDraft)) {
+        setName("");
+        setDescription("");
+        setSelected([]);
+      }
       toast.success("Context pack saved");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Context pack could not be saved");
+      if (isCurrent())
+        toast.error(e instanceof Error ? e.message : "Context pack could not be saved");
     } finally {
-      setCreating(false);
+      if (isCurrent()) {
+        creatingRef.current = false;
+        setCreating(false);
+      }
     }
   };
   const attachPack = (pack: ContextPack) => {
@@ -296,7 +321,7 @@ function ContextPacksPage() {
   };
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6">
+      <main className="mx-auto min-w-0 w-full max-w-5xl px-4 py-7 sm:px-6">
         <header>
           <div className="flex items-center gap-2">
             <Boxes className="h-5 w-5" />
@@ -318,14 +343,14 @@ function ContextPacksPage() {
           </div>
         ) : (
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
-            <section className="rounded-2xl border p-4">
+            <section className="min-w-0 rounded-2xl border p-4">
               <h2 className="font-semibold">Build a pack</h2>
               <div className="mt-3 grid gap-3">
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   maxLength={120}
-                  className="h-11 rounded-xl border bg-background px-3"
+                  className="min-w-0 w-full h-11 rounded-xl border bg-background px-3"
                   placeholder="Pack name"
                   aria-label="Pack name"
                 />
@@ -333,11 +358,11 @@ function ContextPacksPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   maxLength={500}
-                  className="min-h-20 rounded-xl border bg-background p-3"
+                  className="min-w-0 w-full min-h-20 rounded-xl border bg-background p-3"
                   placeholder="What is this context for?"
                   aria-label="Pack description"
                 />
-                <label className="relative">
+                <label className="relative min-w-0">
                   <span className="sr-only">Search available context</span>
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <input
@@ -350,8 +375,8 @@ function ContextPacksPage() {
               </div>
               <div className="mt-3 max-h-80 overflow-y-auto rounded-xl border">
                 <ul className="divide-y">
-                  {candidates.length ? (
-                    candidates.map((item) => (
+                  {visibleCandidates.length ? (
+                    visibleCandidates.map((item) => (
                       <li key={item.key}>
                         <label className="flex min-h-12 cursor-pointer items-center gap-3 p-3 hover:bg-accent">
                           <input
@@ -381,6 +406,9 @@ function ContextPacksPage() {
                   )}
                 </ul>
               </div>
+              <p className="mt-3 text-sm text-muted-foreground" role="status">
+                {selected.length} context items selected
+              </p>
               <button
                 disabled={creating || !name.trim() || !selected.length}
                 onClick={submit}
@@ -390,7 +418,7 @@ function ContextPacksPage() {
                 {creating ? "Saving…" : "Save context pack"}
               </button>
             </section>
-            <section>
+            <section className="min-w-0 [overflow-wrap:anywhere]">
               <h2 className="font-semibold">Saved packs</h2>
               {packs.length === 0 ? (
                 <div className="mt-3 rounded-2xl border p-8 text-center text-sm text-muted-foreground">
@@ -465,10 +493,21 @@ function ContextPacksPage() {
                           aria-label={`Delete ${pack.name}`}
                           onClick={async () => {
                             if (!confirm("Delete this context pack?")) return;
+                            const generation = generationRef.current;
                             try {
                               await remove({ data: { id: pack.id } });
+                              if (
+                                generation !== generationRef.current ||
+                                principalRef.current !== principal
+                              )
+                                return;
                               setPacks((all) => all.filter((p) => p.id !== pack.id));
                             } catch (e) {
+                              if (
+                                generation !== generationRef.current ||
+                                principalRef.current !== principal
+                              )
+                                return;
                               toast.error(e instanceof Error ? e.message : "Could not delete");
                             }
                           }}

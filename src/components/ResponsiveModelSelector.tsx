@@ -1,9 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { MODES, versionGroupsForTier, type ModeId, type Tier } from "@/lib/modes";
+import { modeDisplayLabel } from "@/lib/mode-display-label";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { NovaLogo } from "@/components/NovaLogo";
 
 /**
  * Adaptive model selector with a stable trigger element.
@@ -98,7 +100,7 @@ export function ResponsiveModelSelector({
                 (selected ? "bg-accent" : "hover:bg-accent/60")
           }
         >
-          <span className="flex-1 text-[15px] font-medium">{availableMode.label}</span>
+          <span className="flex-1 text-[15px] font-medium">{modeDisplayLabel(availableMode)}</span>
           {selected && (
             <Check
               className={useSheet ? "h-5 w-5" : "h-4 w-4 text-foreground"}
@@ -120,8 +122,9 @@ export function ResponsiveModelSelector({
   // Guests and Free users see the brand label in the same position, but no switchable menu.
   if (locked)
     return (
-      <span className="kova-model-static inline-flex h-10 select-none items-center px-2.5 text-[15px] font-semibold tracking-[-0.015em] text-foreground">
-        <span className="leading-none">KovaGPT</span>
+      <span className="kova-model-static inline-flex h-10 min-w-0 select-none items-center gap-2 px-2.5 text-[15px] font-semibold tracking-[-0.015em] text-foreground">
+        <NovaLogo decorative className="h-6 w-6" />
+        <span className="truncate leading-none">KovaGPT</span>
       </span>
     );
 
@@ -140,18 +143,19 @@ export function ResponsiveModelSelector({
         type="button"
         onClick={() => setOpen((value) => (useSheet ? true : !value))}
         aria-haspopup="dialog"
-        aria-label={"Choose model: KovaGPT " + current.label}
+        aria-label={"Choose model: KovaGPT " + modeDisplayLabel(current)}
         aria-expanded={open}
         aria-controls={!useSheet && open ? menuId : undefined}
         data-testid="model-selector-trigger"
         className={triggerClass}
       >
+        {topbar ? <NovaLogo decorative className="h-6 w-6" /> : null}
         <span className={(useSheet ? "truncate " : "") + "leading-none text-muted-foreground"}>
           {compact ? (
-            current.label
+            modeDisplayLabel(current)
           ) : (
             <>
-              KovaGPT<span className="ml-1 font-normal">· {current.label}</span>
+              KovaGPT<span className="ml-1 font-normal">· {modeDisplayLabel(current)}</span>
             </>
           )}
         </span>

@@ -27,7 +27,11 @@ test("current Chat packaging stays consistent across server, picker, composer an
   assert.match(selector, /isSignedIn && userTier !== "free"/);
 
   assert.match(composer, /data-testid="thinking-upgrade-button"/);
-  assert.match(composer, /to="\/pricing"/);
+  assert.match(
+    composer,
+    /new CustomEvent\("kova-open-settings", \{ detail: \{ tab: "billing" \} \}\)/,
+  );
+  assert.match(composer, /<span>Thinking<\/span>\s*<Lock/);
   assert.match(composer, /userTier === "free" && !isStreaming/);
   assert.doesNotMatch(composer, /onModeChange\("thinking"\)/);
 

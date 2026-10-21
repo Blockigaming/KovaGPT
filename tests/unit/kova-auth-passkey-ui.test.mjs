@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { authRetryDelay } from "../../src/lib/auth-retry-delay.mjs";
 import test from "node:test";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
 
@@ -264,6 +265,7 @@ function loginSurface(dialog, options = {}) {
       getSafePostAuthRedirect: () => "/library",
       rememberPostAuthRedirect: () => {},
     },
+    "@/lib/auth-retry-delay.mjs": { authRetryDelay },
     "@/lib/utils": { cn: (...args) => args.filter(Boolean).join(" ") },
     "@/components/NovaLogo": { NovaLogo: "logo" },
     "@/components/auth/ForgotPasswordDialog": { ForgotPasswordDialog: "forgot" },

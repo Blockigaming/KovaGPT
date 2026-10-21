@@ -11,8 +11,17 @@ Configure these on the server only, using existing private secret custody:
 
 - `ELEVENLABS_API_KEY`: existing key with text-to-speech permission and available
   account credits/entitlement. Never use a `VITE_` prefix or commit a value.
-- `ELEVENLABS_VOICE_ID`: an existing voice the account may use. It is required;
-  no arbitrary client-selected voice or automatic discovery/generation occurs.
+- `ELEVENLABS_VOICE_ID`: an existing voice the account may use. When the optional
+  voice catalog is absent, this preserves the legacy default voice with
+  `eleven_multilingual_v2`.
+- `KOVA_VOICE_CATALOG` and optional `KOVA_VOICE_DEFAULT_ID`: reuse the existing
+  [server-owned catalog](voice/elevenlabs-integration.md#multiple-voices-and-account-plans)
+  for saved-response speech, including voice-conversation replies. The server
+  resolves the selected opaque catalog ID against the caller's authoritative
+  effective plan. The entry supplies the provider voice and model. A configured
+  catalog needs no legacy `ELEVENLABS_VOICE_ID`; malformed catalogs and invalid or
+  plan-locked explicit choices fail before quota/provider work without falling
+  back to a different voice or model. No automatic discovery or generation occurs.
 - `KOVA_SPEECH_ENABLED=true`: explicit release activation. It defaults off and
   the existing `KOVA_GENERATION_DISABLED=true` emergency switch also disables it.
 - Existing authenticated chat-history and distributed-rate-limit dependencies
@@ -24,7 +33,8 @@ key, voice availability, balance, or live account entitlement was inspected.
 
 ## Admission, limits and privacy
 
-The browser sends only owner/chat/message IDs and a SHA-256 content fingerprint.
+The browser sends owner/chat/message IDs, a SHA-256 content fingerprint and an
+optional opaque catalog `voiceId`. It cannot supply provider IDs, models or text.
 The route reuses `requireVerifiedUser`, reads `chat_history_records` with the
 verified user client under RLS and an explicit owner filter, and uses the existing
 live-principal/deletion-fence check before contacting ElevenLabs and again before
@@ -62,7 +72,13 @@ return an explicit save/sync error, rather than synthesizing caller-supplied tex
 
 Protocol reference: https://elevenlabs.io/docs/api-reference/text-to-speech/stream
 uses `/v1/text-to-speech/{voice_id}/stream`, `xi-api-key`, the explicit
-`eleven_multilingual_v2` model and `mp3_44100_128` output.
+server-selected catalog model (legacy `eleven_multilingual_v2`) and
+`mp3_44100_128` output. Catalog models retain the existing allowlist:
+`eleven_flash_v2_5`, `eleven_multilingual_v2`, and `eleven_v4`. This source
+allowlist does not establish that the current provider account has access to
+any model or voice; that still requires private operator evidence and live
+acceptance. Model and voice selection are included in the existing bounded
+generation-admission check, so a different catalog choice cannot bypass it.
 
 Focused mocked tests:
 

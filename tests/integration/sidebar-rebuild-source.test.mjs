@@ -4,20 +4,23 @@ import test from "node:test";
 
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const styles = await readFile("src/styles.css", "utf8");
+const sidebarStyles = await readFile("src/styles/sidebar-core.css", "utf8");
 const scheduled = await readFile("src/lib/scheduled-tasks.functions.ts", "utf8");
 
 test("sidebar preserves the reference navigation hierarchy and canonical routes", () => {
   const ordered = [
-    'navLink("/images", "Images", Images)',
-    'navLink("/library", "Library", LibraryBig)',
-    'navLink("/projects", "Projects", Folder)',
-    'navLink("/scheduled-tasks", "Scheduled tasks status", Clock3)',
-    'navLink("/apps", "Plugins", PlugZap)',
-    'navLink("/maps", "Maps", Map)',
-    'navLink("/discovery", "Discover", Globe)',
+    'navLink("/", "Chat", MessageSquare)',
+    'navLink("/projects", "Projects", ProjectsGlyph)',
+    'navLink("/scheduled-tasks", "Scheduled tasks", TasksGlyph)',
+    'navLink("/library", "Library", LibraryGlyph)',
+    'navLink("/apps", "Plugins", PluginsGlyph)',
+    'navLink("/images", "Images", ImagesGlyph)',
     ">More</span>",
-    ">Pinned</h2>",
-    ">Recents</h2>",
+    'navLink("/work", "Work", BriefcaseBusiness)',
+    'navLink("/discovery", "Discover", Compass)',
+    'navLink("/maps", "Maps", Map)',
+    'id="sidebar-pinned-heading"',
+    'id="sidebar-chats-heading"',
   ];
   let cursor = -1;
   for (const marker of ordered) {
@@ -26,9 +29,9 @@ test("sidebar preserves the reference navigation hierarchy and canonical routes"
     cursor = next;
   }
   assert.match(sidebar, /KovaGPT/);
-  assert.match(sidebar, /Health is coming soon/);
-  assert.match(sidebar, /Finances is coming soon/);
-  assert.match(sidebar, /<Link to="\/maps" className="kova-rail-button" aria-label="Maps"/);
+  assert.match(sidebar, /<NovaLogo decorative/);
+  assert.match(sidebar, /id="sidebar-pinned-heading"[^>]*>\s*Pinned\s*<\/h2>/);
+  assert.match(sidebar, /mapsReleaseApproved \? navLink\("\/maps"/);
   assert.doesNotMatch(sidebar, /research-planner|Deep research|Telescope/);
   assert.doesNotMatch(sidebar, /🖼️|📁|⏰|🧩|❤️|💰/u);
 });
@@ -37,20 +40,26 @@ test("sidebar interaction and layout contracts are accessible and responsive", (
   assert.match(sidebar, /aria-label="Search chats"/);
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
   assert.match(sidebar, /aria-label="Expand sidebar"/);
-  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
+  assert.match(sidebar, /<details open=\{isOn\("\/work"\)/);
+  assert.match(sidebar, /<summary className="kova-nav-row cursor-pointer">/);
   assert.match(sidebar, /event\.key === "Escape"/);
-  assert.match(styles, /--sidebar-row-height: 3\.5rem/);
-  assert.match(styles, /--sidebar-icon-slot: 1\.75rem/);
+  assert.match(sidebar, /const EXPANDED_WIDTH = 248/);
+  assert.match(sidebarStyles, /--sidebar-row-height: 44px/);
+  assert.match(sidebarStyles, /--sidebar-icon-slot: 20px/);
   assert.match(styles, /max\(0\.8rem, var\(--safe-bottom\)\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("Scheduled visibility and data access both use server-authoritative eligibility", () => {
-  assert.match(sidebar, /useServerFn\(isScheduledTasksEligible\)/);
-  assert.match(sidebar, /scheduledVisible[\s\S]{0,80}navLink\("\/scheduled-tasks"/);
-  assert.match(scheduled, /function scheduledPlanEligible\(tier: unknown\)/);
-  assert.match(scheduled, /tier !== "free"/);
-  assert.match(scheduled, /if \(requireEligiblePlan\)/);
-  assert.match(scheduled, /throw safeTaskError\(plan\.error\?\.code, "task_plan_required"\)/);
+test("Scheduled tasks are visible to every signed-in account while data access stays verified", () => {
+  assert.match(sidebar, /const canSchedule = signedIn;/);
+  assert.match(sidebar, /canSchedule \? navLink\("\/scheduled-tasks"/);
+  assert.doesNotMatch(sidebar, /useServerFn\(isScheduledTasksEligible\)/);
+  assert.match(scheduled, /await requireVerifiedUser\(request\)/);
+  assert.match(scheduled, /scheduled_task_account_available/);
+  assert.match(scheduled, /eligible: true/);
+  assert.doesNotMatch(
+    scheduled,
+    /scheduledPlanEligible|requireEligiblePlan|effective_user_plan_tier/,
+  );
+  assert.match(scheduled, /activeScheduledExecutionReadiness\(\)/);
 });

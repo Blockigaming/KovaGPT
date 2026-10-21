@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { createSpeechHandler, SPEECH_LIMITS } from "../../src/lib/speech.server.mjs";
+import {
+  createSpeechHandler,
+  speechConfiguration,
+  SPEECH_LIMITS,
+} from "../../src/lib/speech.server.mjs";
 import { createSpeechPlayback } from "../../src/lib/speech-playback.mjs";
 
 const owner = "11111111-1111-4111-8111-111111111111";
@@ -96,6 +100,117 @@ test("owned stored assistant text streams once with server-only key and fail-clo
   assert.equal(init.redirect, "error");
   assert.equal(response.headers.get("Cache-Control"), "private, no-store");
   assert.doesNotMatch(JSON.stringify([...response.headers]), /mock-key/);
+});
+
+const catalog = [
+  {
+    id: "standard",
+    label: "Fixture Standard",
+    providerVoiceId: "fixtureStandardProvider",
+    modelId: "eleven_flash_v2_5",
+    allowedPlans: ["free", "plus", "pro"],
+  },
+  {
+    id: "expressive",
+    label: "Fixture Expressive",
+    providerVoiceId: "fixtureExpressiveProvider",
+    modelId: "eleven_v4",
+    allowedPlans: ["plus", "pro"],
+  },
+];
+function configuredSpeech(tier, overrides = {}) {
+  const vars = {
+    KOVA_SPEECH_ENABLED: "true",
+    ELEVENLABS_API_KEY: "catalog-fixture-only",
+    KOVA_VOICE_CATALOG: JSON.stringify(catalog),
+    ...overrides,
+  };
+  return (_auth, requestInput) =>
+    speechConfiguration((key) => vars[key], tier, requestInput.voiceId);
+}
+
+test("saved-response speech resolves the opaque selected voice and model from the catalog", async () => {
+  let admission;
+  const f = fixture({
+    config: configuredSpeech("plus"),
+    admit: async (value) => {
+      admission = value;
+      return null;
+    },
+  });
+  const response = await f.handler(request({ ...input, voiceId: "expressive" }));
+  assert.equal(response.status, 200);
+  await response.arrayBuffer();
+  const [url, init] = f.calls.provider[0];
+  assert.match(url, /\/fixtureExpressiveProvider\/stream\?/);
+  assert.deepEqual(JSON.parse(init.body), { text, model_id: "eleven_v4" });
+  assert.equal(admission.voiceId, "fixtureExpressiveProvider");
+  assert.equal(admission.modelId, "eleven_v4");
+});
+
+test("catalog-only default voice works without a legacy provider voice binding", async () => {
+  const f = fixture({
+    config: configuredSpeech("plus", { KOVA_VOICE_DEFAULT_ID: "expressive" }),
+  });
+  const response = await f.handler(request());
+  assert.equal(response.status, 200);
+  await response.arrayBuffer();
+  assert.match(f.calls.provider[0][0], /\/fixtureExpressiveProvider\/stream\?/);
+  assert.equal(JSON.parse(f.calls.provider[0][1].body).model_id, "eleven_v4");
+});
+
+test("legacy saved-response speech keeps its configured voice and multilingual model", async () => {
+  const f = fixture({
+    config: configuredSpeech("free", {
+      KOVA_VOICE_CATALOG: undefined,
+      ELEVENLABS_VOICE_ID: "legacyFixtureProvider",
+    }),
+  });
+  const response = await f.handler(request());
+  assert.equal(response.status, 200);
+  await response.arrayBuffer();
+  assert.match(f.calls.provider[0][0], /\/legacyFixtureProvider\/stream\?/);
+  assert.equal(JSON.parse(f.calls.provider[0][1].body).model_id, "eleven_multilingual_v2");
+});
+
+for (const [name, selected, overrides, code, status] of [
+  ["locked", "expressive", {}, "speech_voice_plan_required", 403],
+  ["unknown", "missing", {}, "speech_invalid_voice", 400],
+  ["provider ID", "fixtureStandardProvider", {}, "speech_invalid_voice", 400],
+  ["malformed", "../escape", {}, "speech_invalid_voice", 400],
+  ["null", null, {}, "speech_invalid_voice", 400],
+  [
+    "invalid catalog",
+    "standard",
+    { KOVA_VOICE_CATALOG: "broken", ELEVENLABS_VOICE_ID: "noFallback" },
+    "speech_not_configured",
+    503,
+  ],
+  [
+    "unsupported catalog model",
+    "standard",
+    { KOVA_VOICE_CATALOG: JSON.stringify([{ ...catalog[0], modelId: "unknown" }]) },
+    "speech_not_configured",
+    503,
+  ],
+])
+  test(`${name} speech voice fails before quota and provider without fallback`, async () => {
+    const f = fixture({ config: configuredSpeech("free", overrides) });
+    const response = await f.handler(request({ ...input, voiceId: selected }));
+    assert.equal(response.status, status);
+    assert.deepEqual(await response.json(), { error: code });
+    assert.equal(f.calls.limits.length, 0);
+    assert.equal(f.calls.provider.length, 0);
+  });
+
+test("caller cannot override the catalog provider/model on saved-response speech", async () => {
+  const f = fixture({ config: configuredSpeech("plus") });
+  const response = await f.handler(
+    request({ ...input, voiceId: "expressive", modelId: "eleven_flash_v2_5" }),
+  );
+  assert.equal(response.status, 400);
+  assert.equal(f.calls.limits.length, 0);
+  assert.equal(f.calls.provider.length, 0);
 });
 for (const [name, overrides, data, status] of [
   ["anonymous", { authenticate: async () => new Response(null, { status: 401 }) }, input, 401],
@@ -202,6 +317,20 @@ test("empty audio is a clear failure before 200", async () => {
   const r = await f.handler(request());
   assert.equal(r.status, 502);
   assert.match(await r.text(), /speech_empty_audio/);
+});
+test("speech accepts case-insensitive MP3 MIME with parameters without relabeling codecs", async () => {
+  for (const [contentType, status] of [
+    ["Audio/MPEG; charset=binary", 200],
+    ["audio/ogg", 502],
+  ]) {
+    const f = fixture({
+      fetchImpl: async () =>
+        new Response(new Uint8Array([1]), { headers: { "Content-Type": contentType } }),
+    });
+    const response = await f.handler(request());
+    assert.equal(response.status, status);
+    await response.arrayBuffer();
+  }
 });
 test("audio is streamed before upstream completion and cancellation aborts provider", async () => {
   let signal,
@@ -413,4 +542,27 @@ test("request disconnect after headers aborts provider stream", async () => {
   controller.abort();
   await assert.rejects(response.arrayBuffer());
   assert.equal(signal.aborted, true);
+});
+
+test("Stop discards queued audio before the next downstream read", async () => {
+  const controller = new AbortController();
+  let canceled = false;
+  const f = fixture({
+    fetchImpl: async () =>
+      new Response(
+        new ReadableStream({
+          start(c) {
+            c.enqueue(new Uint8Array([1]));
+          },
+          cancel() {
+            canceled = true;
+          },
+        }),
+        { headers: { "Content-Type": "audio/mpeg" } },
+      ),
+  });
+  const response = await f.handler(request(input, { signal: controller.signal }));
+  controller.abort();
+  await assert.rejects(response.body.getReader().read(), /speech_stream_interrupted/);
+  assert.equal(canceled, true);
 });

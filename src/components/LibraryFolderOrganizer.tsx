@@ -13,7 +13,10 @@ import { toast } from "sonner";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { SearchablePicker } from "@/components/ui/searchable-picker";
 import { Input } from "@/components/ui/input";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
+import { createWorkViewLifetime } from "@/lib/work-view-lifetime.mjs";
 import {
   createLibraryFolder,
   deleteLibraryFolder,
@@ -78,6 +81,7 @@ function errorMessage(error: unknown): string {
 export function LibraryFolderOrganizer({
   enabled,
   principalKey,
+  ownerId,
   refreshKey,
   itemStateUnavailable,
   scope,
@@ -90,6 +94,7 @@ export function LibraryFolderOrganizer({
 }: {
   enabled: boolean;
   principalKey: string;
+  ownerId: string;
   refreshKey: number;
   itemStateUnavailable: boolean;
   scope: LibraryFolderScope;
@@ -101,6 +106,34 @@ export function LibraryFolderOrganizer({
   onFoldersDeleted: (folderIds: string[]) => void;
 }) {
   const generationRef = useRef(0);
+  const requestControllerRef = useRef<AbortController | null>(null);
+  const deleteReturnRef = useRef<{
+    trigger: HTMLButtonElement;
+    url: string;
+    principal: string;
+    refresh: number;
+  } | null>(null);
+  const deleteConfirmedRef = useRef(false);
+  const allItemsButtonRef = useRef<HTMLButtonElement>(null);
+  const editorReturnRef = useRef<{
+    trigger: HTMLButtonElement;
+    url: string;
+    principal: string;
+    refresh: number;
+    folderId?: string;
+  } | null>(null);
+  const editorContextRef = useRef({ enabled, principalKey, ownerId, refreshKey });
+  editorContextRef.current = { enabled, principalKey, ownerId, refreshKey };
+  const editorContentRef = useRef<HTMLDivElement>(null);
+  const folderButtonsRef = useRef(new Map<string, HTMLButtonElement>());
+  const unfiledButtonRef = useRef<HTMLButtonElement>(null);
+  const moveReturnRef = useRef<{
+    trigger: HTMLButtonElement;
+    url: string;
+    principal: string;
+    refresh: number;
+    folderId: string | null;
+  } | null>(null);
   const [folders, setFolders] = useState<LibraryFolder[]>([]);
   const [foldersLoaded, setFoldersLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -109,7 +142,7 @@ export function LibraryFolderOrganizer({
   const [editor, setEditor] = useState<"create" | "rename" | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [folderName, setFolderName] = useState("");
-  const [deletePending, setDeletePending] = useState(false);
+  const [deletePending, setDeletePending] = useState<LibraryFolder | null>(null);
   const [moveTarget, setMoveTarget] = useState("root");
 
   useEffect(() => {
@@ -118,12 +151,13 @@ export function LibraryFolderOrganizer({
   }, [busy, onBusyChange]);
 
   const load = useCallback(async () => {
-    if (!enabled) return;
+    const controller = requestControllerRef.current;
+    if (!enabled || !controller || controller.signal.aborted) return;
     const generation = ++generationRef.current;
     setLoading(true);
     setError(null);
     try {
-      const next = await listLibraryFolders();
+      const next = await listLibraryFolders(ownerId, controller.signal);
       if (generationRef.current !== generation) return;
       setFolders(next);
       setFoldersLoaded(true);
@@ -134,22 +168,39 @@ export function LibraryFolderOrganizer({
     } finally {
       if (generationRef.current === generation) setLoading(false);
     }
-  }, [enabled]);
+  }, [enabled, ownerId]);
 
   useEffect(() => {
-    generationRef.current += 1;
-    setFolders([]);
-    setFoldersLoaded(false);
-    setError(null);
-    setEditor(null);
-    setEditorError(null);
-    setDeletePending(false);
-    setMoveTarget("root");
+    const resetState = () => {
+      generationRef.current += 1;
+      deleteReturnRef.current = null;
+      deleteConfirmedRef.current = false;
+      editorReturnRef.current = null;
+      moveReturnRef.current = null;
+      setFolders([]);
+      setFoldersLoaded(false);
+      setLoading(false);
+      setError(null);
+      setEditor(null);
+      setEditorError(null);
+      setDeletePending(null);
+      setBusy(null);
+      setMoveTarget("root");
+    };
+    resetState();
+    const lifetime = createWorkViewLifetime(ownerId, resetState);
+    requestControllerRef.current = lifetime.controller;
     if (enabled) void load();
     return () => {
+      lifetime.dispose();
+      if (requestControllerRef.current === lifetime.controller) requestControllerRef.current = null;
+      deleteReturnRef.current = null;
+      deleteConfirmedRef.current = false;
+      editorReturnRef.current = null;
+      moveReturnRef.current = null;
       generationRef.current += 1;
     };
-  }, [enabled, load, principalKey, refreshKey]);
+  }, [enabled, load, ownerId, principalKey, refreshKey]);
 
   useEffect(() => {
     if (
@@ -192,7 +243,8 @@ export function LibraryFolderOrganizer({
 
   const submitEditor = async () => {
     const name = folderName.trim();
-    if (!name || busy || folderStateUnavailable) return;
+    const controller = requestControllerRef.current;
+    if (!name || busy || folderStateUnavailable || !controller || controller.signal.aborted) return;
     const generation = ++generationRef.current;
     const isCurrent = () => generationRef.current === generation;
     setLoading(false);
@@ -201,16 +253,22 @@ export function LibraryFolderOrganizer({
     setEditorError(null);
     try {
       if (editor === "create") {
-        const created = await createLibraryFolder({
-          name,
-          parentId: activeFolder?.id ?? null,
-        });
+        const created = await createLibraryFolder(
+          ownerId,
+          { name, parentId: activeFolder?.id ?? null },
+          controller.signal,
+        );
         if (!isCurrent()) return;
+        if (editorReturnRef.current) editorReturnRef.current.folderId = created.id;
         setFolders((current) => [...current, created]);
         onScopeChange(created.id);
         toast.success("Folder created.");
       } else if (editor === "rename" && activeFolder) {
-        const renamed = await renameLibraryFolder({ id: activeFolder.id, name });
+        const renamed = await renameLibraryFolder(
+          ownerId,
+          { id: activeFolder.id, name },
+          controller.signal,
+        );
         if (!isCurrent()) return;
         setFolders((current) =>
           current.map((folder) => (folder.id === renamed.id ? renamed : folder)),
@@ -227,15 +285,25 @@ export function LibraryFolderOrganizer({
   };
 
   const removeFolder = async () => {
-    if (!activeFolder || busy || folderStateUnavailable || itemStateUnavailable) return;
-    const removedIds = descendantIds(activeFolder.id, folders);
+    const target = deletePending;
+    const controller = requestControllerRef.current;
+    if (
+      !target ||
+      busy ||
+      folderStateUnavailable ||
+      itemStateUnavailable ||
+      !controller ||
+      controller.signal.aborted
+    )
+      return;
+    const removedIds = descendantIds(target.id, folders);
     const generation = ++generationRef.current;
     const isCurrent = () => generationRef.current === generation;
     setLoading(false);
     setBusy("delete");
     setError(null);
     try {
-      const result = await deleteLibraryFolder(activeFolder.id);
+      const result = await deleteLibraryFolder(ownerId, target.id, controller.signal);
       if (!isCurrent()) return;
       setFolders((current) => current.filter((folder) => !removedIds.includes(folder.id)));
       onFoldersDeleted(removedIds);
@@ -252,30 +320,71 @@ export function LibraryFolderOrganizer({
     } finally {
       if (isCurrent()) {
         setBusy(null);
-        setDeletePending(false);
+        setDeletePending(null);
       }
     }
   };
 
-  const moveSelected = async () => {
+  useEffect(() => {
+    const origin = moveReturnRef.current;
+    if (busy || !origin) return;
+    moveReturnRef.current = null;
+    const context = editorContextRef.current;
+    const active = document.activeElement;
+    restoreDialogFocus(
+      origin.folderId ? folderButtonsRef.current.get(origin.folderId) : unfiledButtonRef.current,
+      origin.url,
+      (active !== null && active !== document.body && active !== origin.trigger) ||
+        !context.enabled ||
+        origin.principal !== context.principalKey ||
+        origin.refresh !== context.refreshKey,
+    );
+  }, [busy, selectedItemIds]);
+
+  const moveContextIsCurrent = () => {
+    const context = editorContextRef.current;
+    return (
+      context.enabled &&
+      context.principalKey === principalKey &&
+      context.ownerId === ownerId &&
+      context.refreshKey === refreshKey
+    );
+  };
+
+  const moveSelected = async (trigger: HTMLButtonElement) => {
+    const controller = requestControllerRef.current;
     if (
+      !controller ||
+      controller.signal.aborted ||
       busy ||
       folderStateUnavailable ||
       itemStateUnavailable ||
+      !moveContextIsCurrent() ||
+      (moveTarget !== "root" && !folders.some((folder) => folder.id === moveTarget)) ||
       selectedItemIds.length === 0 ||
       selectedItemIds.length > MAX_BULK_MOVE_ITEMS
     ) {
       return;
     }
     const folderId = moveTarget === "root" ? null : moveTarget;
+    const origin = {
+      trigger,
+      url: window.location.href,
+      principal: principalKey,
+      refresh: refreshKey,
+      folderId,
+    };
     const generation = ++generationRef.current;
     const isCurrent = () => generationRef.current === generation;
     setLoading(false);
     setBusy("move");
     setError(null);
     try {
-      await moveLibraryItems({ itemIds: selectedItemIds, folderId });
+      await moveLibraryItems(ownerId, { itemIds: selectedItemIds, folderId }, controller.signal);
       if (!isCurrent()) return;
+      // Only restore when this request still owns focus at completion.
+      if (document.activeElement === trigger || document.activeElement === document.body)
+        moveReturnRef.current = origin;
       onMoved(selectedItemIds, folderId);
       toast.success(
         `${selectedItemIds.length} item${selectedItemIds.length === 1 ? "" : "s"} moved.`,
@@ -294,6 +403,10 @@ export function LibraryFolderOrganizer({
         <div key={folder.id}>
           <button
             type="button"
+            ref={(node) => {
+              if (node) folderButtonsRef.current.set(folder.id, node);
+              else folderButtonsRef.current.delete(folder.id);
+            }}
             aria-current={scope === folder.id ? "page" : undefined}
             onClick={() => onScopeChange(folder.id)}
             className={`flex min-h-11 w-full items-center gap-2 rounded-lg pr-3 text-left text-sm hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring ${
@@ -329,7 +442,13 @@ export function LibraryFolderOrganizer({
             variant="outline"
             className="min-h-11"
             disabled={Boolean(busy) || folderStateUnavailable || !canCreateChild}
-            onClick={() => {
+            onClick={(event) => {
+              editorReturnRef.current = {
+                trigger: event.currentTarget,
+                url: window.location.href,
+                principal: principalKey,
+                refresh: refreshKey,
+              };
               setFolderName("");
               setEditorError(null);
               setEditor("create");
@@ -345,7 +464,13 @@ export function LibraryFolderOrganizer({
                 variant="outline"
                 className="min-h-11"
                 disabled={Boolean(busy) || folderStateUnavailable}
-                onClick={() => {
+                onClick={(event) => {
+                  editorReturnRef.current = {
+                    trigger: event.currentTarget,
+                    url: window.location.href,
+                    principal: principalKey,
+                    refresh: refreshKey,
+                  };
                   setFolderName(activeFolder.name);
                   setEditorError(null);
                   setEditor("rename");
@@ -359,7 +484,16 @@ export function LibraryFolderOrganizer({
                 variant="outline"
                 className="min-h-11 text-destructive"
                 disabled={Boolean(busy) || folderStateUnavailable || itemStateUnavailable}
-                onClick={() => setDeletePending(true)}
+                onClick={(event) => {
+                  deleteReturnRef.current = {
+                    trigger: event.currentTarget,
+                    url: window.location.href,
+                    principal: principalKey,
+                    refresh: refreshKey,
+                  };
+                  deleteConfirmedRef.current = false;
+                  setDeletePending(activeFolder);
+                }}
               >
                 <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
                 Delete
@@ -385,6 +519,7 @@ export function LibraryFolderOrganizer({
       <nav aria-label="Library folders" className="max-h-64 overflow-y-auto rounded-xl border p-1">
         <button
           type="button"
+          ref={allItemsButtonRef}
           aria-current={scope === "all" ? "page" : undefined}
           onClick={() => onScopeChange("all")}
           className={`flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring ${
@@ -396,6 +531,7 @@ export function LibraryFolderOrganizer({
         </button>
         <button
           type="button"
+          ref={unfiledButtonRef}
           aria-current={scope === "unfiled" ? "page" : undefined}
           onClick={() => onScopeChange("unfiled")}
           className={`flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring ${
@@ -426,19 +562,33 @@ export function LibraryFolderOrganizer({
           <label className="min-w-52 flex-1 text-xs font-medium">
             Move {selectedItemIds.length} selected item
             {selectedItemIds.length === 1 ? "" : "s"} to
-            <select
+            <SearchablePicker
               className="kova-select mt-1 min-h-11 w-full"
-              value={moveTarget}
-              onChange={(event) => setMoveTarget(event.target.value)}
+              aria-label="Move selected Library items to folder"
+              value={moveTarget === "root" ? "" : moveTarget}
+              placeholder="Unfiled"
+              searchLabel="Search folders"
+              emptyText="No folders match your search."
+              options={sortedFolders.map((folder) => ({
+                value: folder.id,
+                label: folderPath(folder, folders),
+              }))}
+              onValueChange={(value) => {
+                const controller = requestControllerRef.current;
+                if (
+                  !moveContextIsCurrent() ||
+                  !controller ||
+                  controller.signal.aborted ||
+                  busy ||
+                  folderStateUnavailable ||
+                  itemStateUnavailable ||
+                  (value !== "" && !folders.some((folder) => folder.id === value))
+                )
+                  return;
+                setMoveTarget(value || "root");
+              }}
               disabled={Boolean(busy) || folderStateUnavailable || itemStateUnavailable}
-            >
-              <option value="root">Unfiled</option>
-              {sortedFolders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folderPath(folder, folders)}
-                </option>
-              ))}
-            </select>
+            />
           </label>
           <Button
             className="min-h-11"
@@ -449,7 +599,7 @@ export function LibraryFolderOrganizer({
               itemStateUnavailable ||
               selectedItemIds.length > MAX_BULK_MOVE_ITEMS
             }
-            onClick={() => void moveSelected()}
+            onClick={(event) => void moveSelected(event.currentTarget)}
           >
             {busy === "move" ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />
@@ -473,7 +623,29 @@ export function LibraryFolderOrganizer({
         }}
       >
         {editor ? (
-          <DialogContent>
+          <DialogContent
+            ref={editorContentRef}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              const origin = editorReturnRef.current;
+              editorReturnRef.current = null;
+              const context = editorContextRef.current;
+              const active = document.activeElement;
+              // A later interaction or navigation owns focus, including account resets.
+              const focusMoved =
+                active !== null &&
+                active !== document.body &&
+                !editorContentRef.current?.contains(active);
+              restoreDialogFocus(
+                origin?.folderId ? folderButtonsRef.current.get(origin.folderId) : origin?.trigger,
+                origin?.url,
+                focusMoved ||
+                  !context.enabled ||
+                  origin?.principal !== context.principalKey ||
+                  origin?.refresh !== context.refreshKey,
+              );
+            }}
+          >
             <DialogTitle>
               {editor === "create" ? "Create Library folder" : "Rename folder"}
             </DialogTitle>
@@ -519,7 +691,16 @@ export function LibraryFolderOrganizer({
                   className="min-h-11"
                   disabled={!folderName.trim() || Boolean(busy)}
                 >
-                  {busy ? "Saving…" : editor === "create" ? "Create" : "Save"}
+                  {busy ? (
+                    <span className="spec400-loading-label">
+                      <span className="spec400-loading-spinner" aria-hidden="true" />
+                      Saving…
+                    </span>
+                  ) : editor === "create" ? (
+                    "Create"
+                  ) : (
+                    "Save"
+                  )}
                 </Button>
               </div>
             </form>
@@ -528,13 +709,46 @@ export function LibraryFolderOrganizer({
       </Dialog>
 
       <ConfirmActionDialog
-        open={deletePending}
-        onOpenChange={(open) => !open && !busy && setDeletePending(false)}
-        title="Delete this Library folder?"
+        open={deletePending !== null}
+        onOpenChange={(open) => !open && setDeletePending(null)}
+        title={deletePending ? `Delete “${deletePending.name}” folder?` : "Delete Library folder?"}
         description="The folder and its subfolders will be removed. Their Library items will be kept and moved to Unfiled."
         confirmLabel="Delete folder"
         destructive
-        onConfirm={() => void removeFolder()}
+        disabled={Boolean(busy) || folderStateUnavailable || itemStateUnavailable || !deletePending}
+        onConfirm={() => {
+          if (busy || folderStateUnavailable || itemStateUnavailable || !deletePending) return;
+          deleteConfirmedRef.current = true;
+          void removeFolder();
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const origin = deleteReturnRef.current;
+          const confirmed = deleteConfirmedRef.current;
+          deleteReturnRef.current = null;
+          deleteConfirmedRef.current = false;
+          const context = editorContextRef.current;
+          const active = document.activeElement;
+          const focusMoved =
+            active !== null &&
+            active !== document.body &&
+            active !== origin?.trigger &&
+            !(event.target instanceof HTMLElement && event.target.contains(active));
+          const trigger = origin?.trigger;
+          const canReturn =
+            trigger?.isConnected &&
+            trigger.getClientRects().length > 0 &&
+            !trigger.closest('[inert], [aria-hidden="true"]') &&
+            !trigger.matches(":disabled");
+          restoreDialogFocus(
+            !confirmed && canReturn ? trigger : allItemsButtonRef.current,
+            origin?.url,
+            focusMoved ||
+              !context.enabled ||
+              origin?.principal !== context.principalKey ||
+              origin?.refresh !== context.refreshKey,
+          );
+        }}
       />
     </section>
   );

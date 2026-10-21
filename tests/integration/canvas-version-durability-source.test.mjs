@@ -3,9 +3,17 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import ts from "typescript";
+import {
+  applySelectionEdit,
+  buildRewriteInstruction,
+  MAX_SELECTION_CHARS,
+  validateSelectionRange,
+} from "../../src/lib/selection-edit.mjs";
 
 const editor = readFileSync("src/components/ArtifactEditor.tsx", "utf8");
 const message = readFileSync("src/components/ChatMessage.tsx", "utf8");
+const selectionDialog = readFileSync("src/components/SelectionEditDialog.tsx", "utf8");
 
 test("durable versions require a signed-in user plus chat and message ids", () => {
   assert.match(editor, /const canPersistVersions = Boolean\(isSignedIn && chatId && messageId\)/);
@@ -15,9 +23,14 @@ test("an entry is labelled saved only after the server write resolves", () => {
   assert.match(editor, /await autosaveQueueRef\.current\s*\.enqueue/u);
   assert.match(editor, /saveVersionFn\(snapshot\)/u);
   assert.match(editor, /durable = true;/);
-  assert.match(editor, /label: durable \? "Saved to this chat" : "Session only"/);
+  assert.match(
+    editor,
+    /label: `\$\{snapshotOrigin\} · \$\{durable \? "saved to this result" : "session only"\}`/,
+  );
+  assert.ok(editor.indexOf("saveVersionFn(snapshot)") < editor.indexOf("durable = true;"));
+  assert.ok(editor.indexOf("durable = true;") < editor.indexOf("label: `${snapshotOrigin}"));
   // Unsaved entries carry an explicit badge.
-  assert.match(editor, /not saved/);
+  assert.match(editor, /version\.durable \? null : \([\s\S]{0,250}not saved/);
 });
 
 test("save failures surface an error instead of a false success", () => {
@@ -26,8 +39,10 @@ test("save failures surface an error instead of a false success", () => {
 });
 
 test("history copy reflects whether persistence is available", () => {
-  assert.match(editor, /Edits are saved to this chat and stay available after you close Canvas\./);
-  assert.match(editor, /Versions are kept only while this Canvas is open\./);
+  assert.match(
+    editor,
+    /canPersistVersions\s*\? "Confirmed edits stay with this result\. Preview an earlier revision before restoring it as a new revision\."\s*: "Versions are kept only while this result is open\. Save to Library or export to keep your work\."/,
+  );
 });
 
 test("ChatMessage forwards the ids Canvas needs", () => {
@@ -41,8 +56,28 @@ test("Canvas never edits, exports, or saves a silently truncated document", () =
   assert.match(editor, /const blob = new Blob\(\[value\]/);
   assert.match(editor, /if \(value\.length > 200_000\)/);
   assert.match(editor, /too large for Library[\s\S]{0,100}complete file/);
-  assert.match(editor, /if \(trimmed\.length > 8000\)/);
   assert.doesNotMatch(editor, /value\.trim\(\)\.slice\(0, 8000\)/);
+  // Selection editing moved to its dedicated dialog. Oversized passages are
+  // rejected by the shared range validator, never silently truncated.
+  assert.match(
+    selectionDialog,
+    /validateSelectionRange\(target\.source, target\.start, target\.end\)/,
+  );
+  assert.match(selectionDialog, /if \(!target \|\| invalid\) return/);
+  assert.match(selectionDialog, /text: selected/);
+  assert.equal(MAX_SELECTION_CHARS, 8_000);
+  const selected = " " + "x".repeat(MAX_SELECTION_CHARS - 2) + "\n";
+  const source = `prefix\n${selected}\nsuffix`;
+  const start = "prefix\n".length;
+  assert.equal(validateSelectionRange(source, start, start + selected.length).selected, selected);
+  assert.throws(
+    () => validateSelectionRange(source, start, start + MAX_SELECTION_CHARS + 1),
+    /characters or fewer/,
+  );
+  assert.equal(
+    applySelectionEdit(source, start, start + selected.length, "replacement"),
+    "prefix\nreplacement\nsuffix",
+  );
 });
 
 test("reopening Canvas applies the accepted durable edit without racing a new local edit", () => {
@@ -109,10 +144,47 @@ test("Canvas queues a revert behind an in-flight edit", () => {
 });
 
 test("Canvas Improve uses a real text selection and refuses an empty request", () => {
-  assert.match(editor, /textareaRef\.current\?\.selectionStart/);
-  assert.match(editor, /textareaRef\.current\?\.selectionEnd/);
-  assert.match(editor, /end > start \? value\.slice\(start, end\) : value/);
-  assert.match(editor, /if \(!trimmed\)/);
+  const source = ts.createSourceFile(
+    "ArtifactEditor.tsx",
+    editor,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  let improve;
+  const visit = (node) => {
+    if (ts.isVariableDeclaration(node) && node.name.getText(source) === "improve")
+      improve = node.initializer.getText(source);
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  assert.ok(improve, "execute the actual Result Improve callback");
+  const invoke = (area, canEdit = true) => {
+    const targets = [],
+      errors = [];
+    const bindings = {
+      canPersistVersions: true,
+      remoteSnapshot: { canEdit },
+      textareaRef: { current: area },
+      toast: { error: (message) => errors.push(message) },
+      setRewriteTarget: (target) => targets.push(target),
+      value: "Before\n  exact selected text  \nAfter",
+    };
+    new Function(...Object.keys(bindings), `return (${improve})();`)(...Object.values(bindings));
+    return { targets, errors, value: bindings.value };
+  };
+  for (const area of [null, { selectionStart: 9, selectionEnd: 9 }]) {
+    const result = invoke(area);
+    assert.deepEqual(result.targets, []);
+    assert.deepEqual(result.errors, ["Select the passage you want to revise first."]);
+  }
+  const selected = invoke({ selectionStart: 7, selectionEnd: 30 });
+  assert.deepEqual(selected.targets, [{ source: selected.value, start: 7, end: 30 }]);
+  assert.deepEqual(selected.errors, []);
+  assert.deepEqual(invoke({ selectionStart: 7, selectionEnd: 30 }, false).targets, []);
+  assert.match(editor, /<SelectionEditDialog[\s\S]{0,180}target=\{rewriteTarget\}/);
+  assert.match(selectionDialog, /if \(!instruction\.trim\(\)\)/);
+  assert.throws(() => buildRewriteInstruction(" \n ", "selected text"), /Describe how/);
 });
 
 test("Canvas session identity and generation fence late history responses", () => {

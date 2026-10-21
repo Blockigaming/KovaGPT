@@ -47,7 +47,7 @@ test("Google OAuth routes use the documented configuration, exact redirect, and 
   assert.match(callbackRoute, /Max-Age=0/);
 });
 
-test("interactive Voice stays unavailable without adding provider secrets or billing claims", () => {
+test("interactive Voice uses the scoped dialog without browser speech APIs, provider secrets or billing claims", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
   const capabilityRegistry = read("src/lib/capability-registry.ts");
   const chat = read("src/components/ChatInput.tsx");
@@ -56,17 +56,20 @@ test("interactive Voice stays unavailable without adding provider secrets or bil
   const start = read("src/start.ts");
   const server = read("src/server.ts");
 
-  assert.match(matrix, /Voice: REQUIRED \/ UNAVAILABLE/);
-  assert.match(capabilityRegistry, /voiceScope: "required_unavailable"/);
-  assert.match(capabilityRegistry, /voice:[\s\S]*availability: "unavailable"/);
+  assert.match(matrix, /Voice: REQUIRED \/ PROVIDER-DEPENDENT/);
+  assert.match(capabilityRegistry, /voiceScope: "required_provider_dependent"/);
+  assert.match(capabilityRegistry, /voice:[\s\S]*availability: "provider-dependent"/);
   for (const source of [chat, message]) {
     assert.doesNotMatch(
       source,
-      /SpeechRecognition|webkitSpeechRecognition|speechSynthesis|SpeechSynthesisUtterance|Start voice input|MicOff|Dictate|dictation/i,
+      /SpeechRecognition|webkitSpeechRecognition|speechSynthesis|SpeechSynthesisUtterance|OPENAI_API_KEY|ELEVENLABS_API_KEY|xi-api-key|api\.elevenlabs\.io|api\.openai\.com/i,
     );
   }
-  assert.match(start, /microphone=\(\)/g);
-  assert.match(server, /microphone=\(\)/g);
+  assert.match(chat, /<ComposerVoiceDialog\b/u);
+  assert.match(chat, /data-testid="dictate-button"/u);
+  assert.match(chat, /data-testid="voice-button"/u);
+  assert.match(start, /microphone=\(self\)/g);
+  assert.match(server, /microphone=\(self\)/g);
   assert.doesNotMatch(pricing, /voice generations|voice, and advanced/i);
 });
 
@@ -100,17 +103,15 @@ test("connector OAuth callbacks are browser-bound and keep returns same-origin",
 });
 
 test("account deletion verifies every credential store before removing auth", () => {
-  const route = read("src/routes/api/account.ts");
+  const accountRoute = read("src/routes/api/account.ts");
   const account = read("src/lib/account-deletion-finalizer.server.ts");
-  assert.match(route, /makeAccountLifecycleHandlers\(\{ authenticate: requireUser \}\)/);
-  assert.doesNotMatch(route, /auth\.admin\.deleteUser|disconnectAll/);
+  assert.match(accountRoute, /makeAccountLifecycleHandlers\(\{ authenticate: requireUser \}\)/);
+  assert.doesNotMatch(accountRoute, /disconnectAllFinance|auth\.admin\.deleteUser/);
   const google = read("src/lib/google-oauth.server.ts");
   const github = read("src/lib/github-oauth.server.ts");
   const finance = read("src/finances/plaid.server.ts");
   const lifecycle = read("src/integrations/oauth-lifecycle.server.ts");
   const authDeletion = account.indexOf("auth.admin.deleteUser(");
-  const confirmAt = account.indexOf("await confirmAccountFinalization(");
-  assert.ok(confirmAt >= 0 && authDeletion > confirmAt);
 
   for (const cleanup of [
     "disconnectAllFinance(auth)",

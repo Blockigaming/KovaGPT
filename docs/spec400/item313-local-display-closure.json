@@ -1,0 +1,281 @@
+{
+  "title": "Item 313: local time-format display closure recommendation",
+  "created_utc": "2026-10-19T07:43:00Z",
+  "requirement_id": 313,
+  "verbatim_requirement": "Offer 12-hour and 24-hour time formats. Apply the preference consistently to schedules, activity, billing dates, and file metadata.",
+  "recommended_status": "verified_local",
+  "whole_local_requirement_eligible": true,
+  "acceptance_ledger_modified": false,
+  "basis": "Both explicit options exercised within retained scenarios. Same-record pairs cover every named consumer: schedules, Activity, Billing and real file Saved/Modified metadata. Existing source mappings connect the principal-scoped preference to these display paths. No named consumer remains source-only.",
+  "current_source_head_at_review": "8341eb5f207e28632601d03e8b2a7baaf102b562",
+  "current_native_source": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+  "current_native_app": "95fc0bbad0d4e28bcedd31f6ed3e3a36f5259062",
+  "consumer_evidence": [
+    {
+      "consumer": "schedules",
+      "evidence_generation": "762df97",
+      "outcome": "Same task, no reset: Next 1:14:46 AM to 01:14:46; Last run follows the same preference. UTC schedule zone retained.",
+      "images": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-762df97/task-time12-390-dark-native.jpg",
+          "sha256": "64fef25afbb2c3bb9e3ac3a4220b46d560a763774f877867e8210e2d06411eb1",
+          "independently_viewed": true
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-762df97/task-time24-desktop-dark-native.jpg",
+          "sha256": "f702e9ce6e54c041385782bfff18174fadc87406bcd3430a04e27f7ae346f419",
+          "independently_viewed": true
+        }
+      ]
+    },
+    {
+      "consumer": "billing dates",
+      "evidence_generation": "5e1d59e",
+      "outcome": "Same subscription instant, trial summary and row: 2:28 AM to 02:28.",
+      "images": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-5e1d59e/billing12-native.jpg",
+          "sha256": "07f079b2fa8d1450d7309332116bf7446d699f2bbe09b6745b678c9c3cc591e7",
+          "independently_viewed": true
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-5e1d59e/billing24-native.jpg",
+          "sha256": "ef865ad6cfeb523c64f381f63c17d9af44e9a6c9aafb81a6d0aa9ec5423a1ff0",
+          "independently_viewed": true
+        }
+      ]
+    },
+    {
+      "consumer": "activity",
+      "evidence_generation": "e23235c",
+      "outcome": "Same Oct17 activity record: 3:05:00 PM to 15:05:00.",
+      "images": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-e23235c/activity12-390-dark-native.jpg",
+          "sha256": "82fc6ea0e445e0fda2b5dbb22fc7a2fb05d63553fce304b76b49e05f7278a412",
+          "independently_viewed": true
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-e23235c/activity24-390-dark-native.jpg",
+          "sha256": "824f3066fc426f5727f364369b2b87b779bb6e2c6aa540bb2b617e65dfe43866",
+          "independently_viewed": true
+        }
+      ]
+    },
+    {
+      "consumer": "notifications supplemental consumer",
+      "evidence_generation": "e23235c",
+      "outcome": "Same Oct17 notification record: 3:05:00 PM to 15:05:00.",
+      "images": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-e23235c/notifications12-390-dark-native.jpg",
+          "sha256": "41d868e3c864fb6cb4131be21f2d848966001326ffb8a842ea52598b96288204",
+          "independently_viewed": true
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-e23235c/notifications24-390-dark-native.jpg",
+          "sha256": "3619c08ced8e99755a4c39bbf037cb18832009d8c85162dc29772d4b2925f60d",
+          "independently_viewed": true
+        }
+      ]
+    },
+    {
+      "consumer": "file Saved metadata",
+      "evidence_generation": "e23235c",
+      "outcome": "Same Notes.txt Saved instant: 6:00:00 AM to 06:00:00. Its missing Modified value was not inferred.",
+      "images": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-e23235c/library12-390-dark-native.jpg",
+          "sha256": "f8ec91dc68f916ad7a7416e7193e6829cf3c79a1f582faeb78ec189d8b802c1f",
+          "independently_viewed": true
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-e23235c/library24-390-dark-native.jpg",
+          "sha256": "6ebce7270a30fd700a4e0dcfc635c0eb7c692c4c8a3bce27958574c4707b2e10",
+          "independently_viewed": true
+        }
+      ]
+    },
+    {
+      "consumer": "file Saved and Modified metadata",
+      "evidence_generation": "1b5e7c4",
+      "outcome": "Same two-page-sample.pdf/1016 B: Saved 6:00:00 AM to 06:00:00 and real Modified 7:00:00 AM to 07:00:00.",
+      "images": [
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1b5e7c4/library-modified12-390-light-native.jpg",
+          "sha256": "40046082162a6c8042e5ada0fda83ea120070c8e6b4d8f8d600ba78234c69757",
+          "independently_viewed": true
+        },
+        {
+          "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1b5e7c4/library-modified24-390-light-native.jpg",
+          "sha256": "6149f306827b35f42d1131c3461b4e6221c1e1719fe625728b317106dd6d073b",
+          "independently_viewed": true
+        }
+      ]
+    }
+  ],
+  "supplemental_usage_evidence": {
+    "receipt": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-762df97/progress.md",
+      "sha256_at_review": "616a2e4227e874f5c43d0b6f83064f9641867fa72e49a50289c4cd0ca2a668f7",
+      "sealed": true,
+      "scope": "Native browser owner interaction evidence, separate from independent image inspection."
+    },
+    "image": {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-762df97/usage-time12-390-dark-native.jpg",
+      "sha256": "96b6723327af8ee655cbbfb05111fa7684ce17c5c93a744bcb74a478fbf59030"
+    },
+    "outcome": "Native receipt records same reset 20:00 versus 8:00 PM while UTC accounting remains explicit."
+  },
+  "source_mapping": [
+    {
+      "file": "src/lib/time-format.ts",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "eacffebdb565102ec72e34d28092bde1e36b3dd8bf858a102189c7914a614488",
+      "current_sha256": "eacffebdb565102ec72e34d28092bde1e36b3dd8bf858a102189c7914a614488",
+      "whole_file_unchanged_from_current_capture": true,
+      "anchor": "Lines 1\u201323: validated system/12-hour/24-hour setting; h12/h23; preserves instant, locale options and caller timezone.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    },
+    {
+      "file": "src/hooks/use-time-format-preference.ts",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "5460f39700c8f972ada2f4e70f783a92b6a50fcb8c7dd84a3c85456c8ed7d41d",
+      "current_sha256": "5460f39700c8f972ada2f4e70f783a92b6a50fcb8c7dd84a3c85456c8ed7d41d",
+      "whole_file_unchanged_from_current_capture": true,
+      "anchor": "Lines 16\u201348: current resolved principal reads existing settings; owner-filtered saved/storage/clear subscriptions.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    },
+    {
+      "file": "src/components/ProfileSettings.tsx",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "2c5d04f86f098e8bc7fb45181adf174064edad56740472e816de18a799aa3981",
+      "current_sha256": "2c5d04f86f098e8bc7fb45181adf174064edad56740472e816de18a799aa3981",
+      "whole_file_unchanged_from_current_capture": true,
+      "anchor": "Lines 118\u2013140: actual selectable time formats, automatic browser/account-local disclosure, unchanged task timezone/UTC accounting.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    },
+    {
+      "file": "src/routes/scheduled-tasks.tsx",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "d52591e04dee11679622240236acb08e9815ce789cf4c9bd565486cdb23a0b17",
+      "current_sha256": "47ab3f9a31eb3701cc63ee83ab05ce01215b3a059297c129eab368cded1b5d77",
+      "whole_file_unchanged_from_current_capture": false,
+      "anchor": "Preference at127; next/original times at1155\u20131156; passes preference to editor/history.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    },
+    {
+      "file": "src/components/ScheduledTaskEditor.tsx",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "6bfceb8b074f5397b69d0540636b37338932d131d5e415cc515b0d886d11ee6b",
+      "current_sha256": "e2ec12fb628a49bfd14af46d6ac31c3d8d557e08b4febc45c2b3c57d1d2487d2",
+      "whole_file_unchanged_from_current_capture": false,
+      "anchor": "Next occurrence at791 and run scheduled/started at1176\u20131182 use shared formatter.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    },
+    {
+      "file": "src/components/ScheduledTaskLastRun.tsx",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "1517ad9619a41096155805188b5a7f347a5229f52e809208a972e7ee6534946f",
+      "current_sha256": "1517ad9619a41096155805188b5a7f347a5229f52e809208a972e7ee6534946f",
+      "whole_file_unchanged_from_current_capture": true,
+      "anchor": "Known run, retry time and saved-history timestamp use shared formatter.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    },
+    {
+      "file": "src/routes/audit-log.tsx",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "4e41a6d9c406b250a7473194a09e2c4c48152b705eb6686d5e7d3f4f8e247b83",
+      "current_sha256": "4e41a6d9c406b250a7473194a09e2c4c48152b705eb6686d5e7d3f4f8e247b83",
+      "whole_file_unchanged_from_current_capture": true,
+      "anchor": "Preference at14; actual Activity timestamp at97.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    },
+    {
+      "file": "src/routes/notifications.tsx",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "dd7e0afa784d9fe401b9e80f3398f193dd164e9602cce8b986ca4c326748b712",
+      "current_sha256": "dd7e0afa784d9fe401b9e80f3398f193dd164e9602cce8b986ca4c326748b712",
+      "whole_file_unchanged_from_current_capture": true,
+      "anchor": "Preference at29; notification timestamp at236.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    },
+    {
+      "file": "src/components/BillingWorkspace.tsx",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "95ec6519c7cfe130530b26d1c54ac9454e01303407d1d4483a590f7b14a35d85",
+      "current_sha256": "95ec6519c7cfe130530b26d1c54ac9454e01303407d1d4483a590f7b14a35d85",
+      "whole_file_unchanged_from_current_capture": true,
+      "anchor": "billingDate61\u201366 and period-end76 use actual time-format property.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    },
+    {
+      "file": "src/components/SettingsDialog.tsx",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "f51ff263880d1f53422c77d480f86cea3600cf067456a40f749e34441c9b9357",
+      "current_sha256": "f51ff263880d1f53422c77d480f86cea3600cf067456a40f749e34441c9b9357",
+      "whole_file_unchanged_from_current_capture": true,
+      "anchor": "Billing summary1526\u20131529 and child props1449/1548; Usage actual reset1372/1569.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    },
+    {
+      "file": "src/routes/library.tsx",
+      "captured_source_commit": "1b5e7c422c99679fbfb3c1d3859409c3bd2187c1",
+      "captured_sha256": "5a8aab88e010890bf1f51f5ca192fcc1cc5b9bd90fa3c512c2a4da27800c471a",
+      "current_sha256": "5a8aab88e010890bf1f51f5ca192fcc1cc5b9bd90fa3c512c2a4da27800c471a",
+      "whole_file_unchanged_from_current_capture": true,
+      "anchor": "Preference359; list Modified1639, inspector Saved2729, Modified2734.",
+      "mapping_limit": "Only the identified date-format calls are mapped; changed scheduling handlers are separately awaiting their own native guards."
+    }
+  ],
+  "functional_receipts": [
+    {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-762df97/progress.md",
+      "sha256_at_review": "616a2e4227e874f5c43d0b6f83064f9641867fa72e49a50289c4cd0ca2a668f7",
+      "sealed": true,
+      "scope": "Native browser owner interaction evidence, separate from independent image inspection."
+    },
+    {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-5e1d59e/progress.md",
+      "sha256_at_review": "eeda0716235ef1af51647a6d35824114a48a4d9b12de8489f679a8255b35ed9b",
+      "sealed": true,
+      "scope": "Native browser owner interaction evidence, separate from independent image inspection."
+    },
+    {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-e23235c/progress.md",
+      "sha256_at_review": "128ef427efa2c4d7f12fa317553d03c2cea1045f5bf6c2fa158e9592091f9348",
+      "sealed": true,
+      "scope": "Native browser owner interaction evidence, separate from independent image inspection."
+    },
+    {
+      "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1b5e7c4/receipt.md",
+      "sha256_at_review": "1bf9421f64310de584c7aad1f48f1cc5391cd87915a93019cacb4e97f49c9ad2",
+      "sealed": true,
+      "scope": "Native browser owner interaction evidence, separate from independent image inspection."
+    }
+  ],
+  "independent_prior_ledgers": [
+    "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/corrected-core-762df97.json",
+    "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/finite-coverage-review-5e1d59e.json",
+    "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/finite-coverage-review-e23235c.json",
+    "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/finite-coverage-review-1b5e7c4.json"
+  ],
+  "scope_limits": [
+    "Local browser/account-scoped display preference only. Cross-device sync and account-timezone mutation are separate item 308/312 or service concerns, not required by item 313 wording.",
+    "Date-only labels and browser-native time inputs are not assigned fabricated time components. Existing task IANA zones, UTC quota resets and stored instants remain unchanged.",
+    "Native physical intervals only; no full viewport or pixel-grid claim. The 1b5 terminal receipt and all 22 screenshot hashes are verified.",
+    "No live billing, task execution, external provider action, or whole400 acceptance."
+  ],
+  "stale_note_replacement": "Both 12-hour and 24-hour preferences are locally verified on the same-record schedules, Activity, Billing and Library Saved/Modified timestamps, with unchanged schedule zones and UTC accounting. Settings remain principal-scoped to this browser; cross-device synchronization is unavailable and outside this display-only requirement.",
+  "terminal_receipt": {
+    "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1b5e7c4/receipt.md",
+    "sha256": "1bf9421f64310de584c7aad1f48f1cc5391cd87915a93019cacb4e97f49c9ad2",
+    "verified": true
+  },
+  "current_native_screenshot_manifest": {
+    "file": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-1b5e7c4/SHA256SUMS",
+    "sha256": "57fcdc099344c62a6905bce6e85ccfbff81836b9ccefbb17587259728d0bb39f",
+    "all_22_matched": true
+  },
+  "terminal_linkage_updated_utc": "2026-10-19T08:05:00Z"
+}

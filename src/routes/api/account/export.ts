@@ -17,7 +17,7 @@ import {
 
 const BUCKET = "account-exports";
 const JOB_COLUMNS =
-  "id,status,requested_at,completed_at,expires_at,size_bytes,failure_code,storage_path";
+  "id,status,requested_at,completed_at,expires_at,size_bytes,failure_code,storage_path,content_sha256";
 
 type QueryError = { code?: string | null; message: string };
 type QueryResult = { data: Record<string, unknown> | null; error: QueryError | null };

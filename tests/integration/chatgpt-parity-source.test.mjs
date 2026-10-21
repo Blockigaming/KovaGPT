@@ -36,40 +36,44 @@ const [
   readFile("tests/e2e/chatgpt-shell-parity.spec.ts", "utf8"),
 ]);
 
-test("signed-in users can move clearly between Chat and Work", () => {
+test("Chat and Work remain reachable without a phone topbar mode switch", () => {
   assert.match(workspaceModeSwitch, /aria-label="Primary workspace"/);
   assert.match(workspaceModeSwitch, /aria-current=\{active === "chat" \? "page" : undefined\}/);
   assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
-  assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
+  // The owner removed phone Chat/Work switching; navigation lives in the sidebar.
+  assert.doesNotMatch(mobileTopBar, /WorkspaceModeSwitch/);
   assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
   assert.match(sidebar, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
-  assert.match(
-    sidebar,
-    /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
-  );
-});
-test("signed-in sidebar keeps core destinations visible and groups coming-soon items", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
-  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /navLink\("\/maps", "Maps", Map\)/);
-  assert.ok(
-    sidebar.indexOf('navLink("/library", "Library"') < sidebar.indexOf("sidebar-more-items"),
-  );
-  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < sidebar.indexOf("sidebar-more-items"));
-  assert.match(sidebar, /title="Health is coming soon"/);
-  assert.match(sidebar, /title="Finances is coming soon"/);
+  assert.match(sidebar, /onNew\(\);[\s\S]{0,180}aria-label="New chat"/);
 });
 
-test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
-  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /<span className="kova-sidebar-label">More<\/span>/);
-  const moreControl = sidebar.indexOf('aria-controls="sidebar-more-items"');
-  assert.ok(sidebar.indexOf('navLink("/work", "Work"') < moreControl);
-  assert.ok(sidebar.indexOf('navLink("/library", "Library"') < moreControl);
-  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < moreControl);
-  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Health<\/span>/);
-  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Finances<\/span>/);
+test("sidebar keeps core destinations before its native More disclosure", () => {
+  // Native details/summary replaces the old aria-controls/sidebar-more-items button.
+  const disclosure = sidebar.match(/<details[^>]*>[\s\S]*?<\/details>/)?.[0];
+  assert.ok(disclosure, "More must remain a real disclosure");
+  assert.match(disclosure, /<summary[^>]*>[\s\S]*?<span>More<\/span>[\s\S]*?<\/summary>/);
+  assert.match(disclosure, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
+  assert.match(disclosure, /navLink\("\/discovery", "Discover", Compass\)/);
+  assert.match(disclosure, /mapsReleaseApproved \? navLink\("\/maps", "Maps", Map\) : null/);
+  const moreStart = sidebar.indexOf(disclosure);
+  for (const destination of [
+    'navLink("/library", "Library"',
+    'navLink("/projects", "Projects"',
+    'navLink("/apps", "Plugins"',
+  ]) {
+    const index = sidebar.indexOf(destination);
+    assert.ok(index >= 0 && index < moreStart, `${destination} must precede More`);
+  }
+});
+
+test("secondary navigation remains discoverable without active unavailable destinations", () => {
+  assert.match(
+    sidebar,
+    /<details open=\{isOn\("\/work"\) \|\| isOn\("\/discovery"\) \|\| undefined\}>/,
+  );
+  assert.match(sidebar, /aria-label="Expand sidebar"/);
+  // Coming-soon placeholders were removed, rather than turned into working destinations.
+  assert.doesNotMatch(sidebar, /navLink\("\/(?:health|finances)"|to="\/(?:health|finances)"/);
 });
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
@@ -91,10 +95,8 @@ test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
 
 test("signed-in empty chat removes guest-only onboarding clutter", () => {
   assert.match(route, /\{isLoaded && !isSignedIn \? \(\s*<div className="kova-greeting-mark"/);
-  assert.match(
-    route,
-    /\{isLoaded && !isSignedIn \? \(\s*<p className="max-w-md[\s\S]*?Think through a question/,
-  );
+  // The compact empty state omits this explanatory paragraph for guests too.
+  assert.doesNotMatch(route, /Think through a question, shape an idea/);
   assert.match(
     route,
     /\{isLoaded && !isSignedIn \? \(\s*<Suspense[\s\S]*?<HomeChatStarters setInput=\{setInput\}/,
@@ -146,19 +148,30 @@ test("active desktop chat keeps one primary action and groups secondary controls
   assert.match(route, /<DropdownMenuContent align="end" className="w-56">/);
   assert.match(
     route,
-    /<DropdownMenuItem onSelect=\{\(\) => setWorkspaceOpen\(true\)\}>[\s\S]*?Chat settings/,
+    /<DropdownMenuItem\s+onSelect=\{\(\) => openChatWorkspace\(workspaceMenuTriggerRef\.current\)\}[\s\S]*?Chat settings/,
   );
+  // Opening is extracted so the originating menu control can regain focus.
+  assert.match(route, /const openChatWorkspace = [\s\S]{0,420}setWorkspaceOpen\(true\)/);
   assert.match(route, /<Download className="mr-2 h-4 w-4" \/>[\s\S]*?Export chat/);
   assert.ok(route.indexOf('aria-label="Share chat"') < route.indexOf("More chat actions"));
 });
 
-test("composer actions, message editing, and markdown stay reachable and lossless", () => {
+test("compact composer groups actions and preserves message editing and markdown", () => {
   assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask anything"\}/);
   assert.match(
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
-  assert.match(chatInput, /COMPOSER_TOOLS\.map\(toolRow\)/);
+  // Compact actions are grouped instead of rendering every tool as a flat row.
+  assert.match(chatInput, /\(\["files", "plugins"\] as const\)\.map/);
+  assert.match(chatInput, /aria-label=\{menu === "files" \? "Add files" : "Choose plugins"\}/);
+  assert.match(chatInput, /renderComposerActions\(false, menu, triggerRef\.current\)/);
+  assert.match(chatInput, /section !== "plugins" && \(\s*<div[^>]*aria-label="Attachment options"/);
+  assert.match(chatInput, /!mobile && section !== "files" && \(\s*<ComposerPluginList/);
+  assert.match(chatInput, /Choose project/);
+  assert.match(chatInput, /setProjectPickerOpen\(true\)/);
+  assert.match(chatInput, /chooseTool\(imageTool\)/);
+  assert.doesNotMatch(chatInput, />\s*Context\s*</);
   assert.doesNotMatch(chatInput, /deep_research/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
@@ -172,9 +185,10 @@ test("composer actions, message editing, and markdown stay reachable and lossles
   );
   assert.doesNotMatch(chatMessage, /<DropdownMenuItem onClick=\{onRetry\}/);
   assert.match(route, /setInput\(m\.content\);/);
+  // The extracted edit helper also retains the unsent draft and its attachments.
   assert.match(
     route,
-    /setEditingMessage\(\{\s*conversationId: active\.id,\s*messageId: m\.id,\s*\}\);/,
+    /setEditingMessage\(\(previous\) =>\s*beginChatEdit\(\s*previous,\s*storagePrincipal,\s*active\.id,\s*m\.id,\s*input,\s*attachments,/,
   );
 });
 

@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.json",
+  "include": [
+    "IntegratedConversationHeader.tsx",
+    "IntegratedBrowserPreview.tsx",
+    "vite-integrated-review.config.ts"
+  ]
+}

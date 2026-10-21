@@ -154,9 +154,10 @@ export async function writeMemoryForPrincipal(active, principal, dependencies = 
   const session = await sessionFor(principal, dependencies);
   if (!session) return { continue: false };
   const state = await descriptorFor(active.id, session, dependencies);
-  const payload = await createMemoryWritePayload(active, state.enabled ? state.descriptor : null);
+  // Automatic work may summarize this chat only; it never creates account memory.
+  if (!state.enabled) return { continue: false };
+  const payload = await createMemoryWritePayload(active, state.descriptor);
   if (!payload || dependencies.signal?.aborted) return { continue: false };
-  if (!state.enabled) payload.contextSummary = null;
   const snapshot = payload.contextSummary;
   const unchanged =
     state.descriptor?.requested_digest === snapshot?.digest &&
@@ -164,7 +165,7 @@ export async function writeMemoryForPrincipal(active, principal, dependencies = 
   const failed = unchanged && state.descriptor?.status === "failed";
   const needsMore = state.enabled && Boolean(snapshot) && !failed;
   if (unchanged) payload.contextSummary = null;
-  if (dependencies.contextOnly && !payload.contextSummary) return { continue: needsMore };
+  if (!payload.contextSummary) return { continue: needsMore };
   const response = await fetchForPrincipal(
     principal,
     "/api/memory",
@@ -173,7 +174,7 @@ export async function writeMemoryForPrincipal(active, principal, dependencies = 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...payload,
-        ...(dependencies.contextOnly ? { contextOnly: true } : {}),
+        contextOnly: true,
       }),
       signal: dependencies.signal,
     },
@@ -192,7 +193,6 @@ export function startMemoryWrites(active, principal) {
   const controller = new AbortController();
   let timer;
   let stopped = false;
-  let first = true;
   let failures = 0;
   const step = async () => {
     let more = false;
@@ -200,10 +200,7 @@ export function startMemoryWrites(active, principal) {
       const outcome = await enqueueMemoryWrite({
         principal,
         run: async () => {
-          const contextOnly = !first;
-          first = false;
           const result = await writeMemoryForPrincipal(active, principal, {
-            contextOnly,
             signal: controller.signal,
           });
           more = result.continue;

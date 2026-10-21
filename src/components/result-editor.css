@@ -1,0 +1,131 @@
+.kova-result-dialog[data-kova-dialog-surface] {
+  width: min(1100px, 96vw);
+  max-width: 96vw;
+  height: 90dvh;
+  max-height: 90dvh;
+  padding: 0;
+  overflow: hidden;
+}
+.kova-result-dialog > [data-kova-dialog-close],
+.kova-result-dialog > div[aria-hidden] {
+  display: none;
+}
+.kova-result-editor,
+.kova-result-surface {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--background);
+}
+.kova-result-surface {
+  position: relative;
+  overflow: hidden;
+}
+.kova-result-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.kova-result-toolbar,
+.kova-result-secondary-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+.kova-result-toolbar {
+  flex: none;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: 8px;
+  scrollbar-width: thin;
+}
+.kova-result-toolbar > button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.kova-result-toolbar svg {
+  flex-shrink: 0;
+}
+.kova-result-toolbar button,
+.kova-result-secondary-toolbar button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  min-height: 44px;
+  min-width: 44px;
+  font-size: 13px;
+  border-radius: var(--kova-radius-button);
+}
+.kova-result-toolbar button:hover,
+.kova-result-secondary-toolbar button:hover {
+  background: var(--accent);
+}
+.kova-result-toolbar button[aria-pressed="true"] {
+  font-weight: 600;
+  box-shadow: inset 0 -2px var(--primary);
+}
+.kova-result-toolbar svg,
+.kova-result-secondary-toolbar svg {
+  width: 16px;
+  height: 16px;
+}
+.kova-result-secondary-toolbar button:disabled {
+  opacity: 0.4;
+}
+.kova-result-textarea {
+  font-size: var(--kova-reading-size, 16px);
+  line-height: 1.625;
+}
+.kova-result-textarea.font-mono {
+  font-size: 14px;
+  line-height: 22px;
+}
+.kova-result-textarea:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.kova-result-inspector {
+  position: absolute;
+  z-index: 10;
+  inset: 108px 0 0 auto;
+  width: min(420px, 100%);
+  overflow-y: auto;
+  background: var(--background);
+  border-left: 1px solid var(--border);
+  padding: 16px;
+}
+.kova-result-inspector button {
+  min-height: 44px;
+}
+@media (max-width: 767px) {
+  .kova-result-dialog[data-kova-dialog-surface] {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: var(--kova-radius-panel);
+  }
+  .kova-result-heading {
+    min-height: 56px;
+  }
+  .kova-result-inspector {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    z-index: 60;
+  }
+}

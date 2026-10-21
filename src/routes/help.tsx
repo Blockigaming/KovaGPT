@@ -1,22 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  ChevronDown,
-  LifeBuoy,
-  Loader2,
-  Mail,
-  Search,
-  X,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowLeft, ChevronDown, LifeBuoy, Mail, Search, X } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
-import { useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { HelpSupportForm as SupportForm } from "@/components/HelpSupportForm";
 import { HELP_CATEGORIES, HELP_FAQS, type HelpFaq } from "@/lib/help-center-data";
 
 export const Route = createFileRoute("/help")({
@@ -38,18 +26,6 @@ export const Route = createFileRoute("/help")({
 });
 
 const PRIMARY_CATEGORIES = HELP_CATEGORIES.slice(0, 8);
-const TOPICS = [
-  "Account & sign-in",
-  "Billing & subscription",
-  "Chat or responses",
-  "Projects",
-  "Apps & integrations",
-  "Images",
-  "Bug report",
-  "Feature request",
-  "Privacy & security",
-  "Other",
-];
 
 function normalizeHelpSearch(value: string) {
   return value
@@ -177,6 +153,7 @@ function FaqRow({
     >
       <h3>
         <button
+          data-kova-button-shape="preserve"
           type="button"
           id={`question-${faq.id}`}
           onClick={onToggle}
@@ -274,14 +251,14 @@ function HelpPage() {
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search help…"
               aria-label="Search help"
-              className="h-14 rounded-2xl border-border bg-card pl-12 pr-12 text-base shadow-sm focus-visible:ring-2"
+              className="h-14 rounded-2xl border-border bg-card pl-12 pr-14 text-base shadow-sm focus-visible:ring-2"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery("")}
                 aria-label="Clear search"
-                className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="absolute right-1.5 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <X className="size-4" />
               </button>
@@ -299,10 +276,10 @@ function HelpPage() {
         />
         <section aria-labelledby="answers-heading" aria-live="polite" className="mt-8">
           <div className="mb-4 flex items-end justify-between gap-4">
-            <h2 id="answers-heading" className="text-xl font-semibold">
+            <h2 id="answers-heading" className="min-w-0 text-xl font-semibold">
               {query ? "Search results" : (activeCategory ?? "Browse answers")}
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="shrink-0 whitespace-nowrap text-sm text-muted-foreground">
               {results.length} {results.length === 1 ? "answer" : "answers"}
             </p>
           </div>
@@ -321,7 +298,9 @@ function HelpPage() {
           ) : (
             <div className="rounded-2xl border border-dashed border-border px-5 py-12 text-center">
               <Search className="mx-auto size-6 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">No answers found for “{query}”</h3>
+              <h3 className="mt-4 text-lg font-semibold [overflow-wrap:anywhere]">
+                No answers found for “{query}”
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 Try a different search or send us a message below.
               </p>
@@ -341,269 +320,5 @@ function HelpPage() {
         <SupportForm />
       </main>
     </PublicShell>
-  );
-}
-
-function SupportForm() {
-  const { user } = useUser();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [topic, setTopic] = useState("");
-  const [message, setMessage] = useState("");
-  const [website, setWebsite] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [submissionError, setSubmissionError] = useState("");
-  const [submittedEmail, setSubmittedEmail] = useState("");
-  const [touched, setTouched] = useState(false);
-  const initializedFor = useRef<string | null | undefined>(undefined);
-  useEffect(() => {
-    const userKey = user?.id ?? null;
-    if (initializedFor.current === userKey) return;
-    initializedFor.current = userKey;
-    setName(user?.fullName ?? user?.firstName ?? "");
-    setEmail(user?.primaryEmailAddress?.emailAddress ?? "");
-  }, [user]);
-  const cleanEmail = email.trim();
-  const emailError = !cleanEmail
-    ? "Enter your email address."
-    : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)
-      ? "Enter a valid email address."
-      : "";
-  const messageError = !message.trim()
-    ? "Write a message before sending."
-    : message.length > 4000
-      ? "Messages can be up to 4,000 characters."
-      : "";
-  const invalid = Boolean(emailError || messageError);
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setTouched(true);
-    setStatus("idle");
-    setSubmissionError("");
-    if (invalid) return;
-    setStatus("sending");
-    try {
-      const response = await fetchWithTimeout(
-        "/api/public/help-submit",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: name.trim(),
-            email: cleanEmail,
-            topic,
-            message: message.trim(),
-            variant: "help",
-            website,
-            url: window.location.href,
-            userAgent: navigator.userAgent,
-          }),
-        },
-        20_000,
-      );
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: unknown } | null;
-        const serverMessage =
-          typeof payload?.error === "string" && payload.error.trim() ? payload.error.trim() : null;
-        const retryAfter = response.headers.get("Retry-After");
-        const fallback =
-          response.status === 429
-            ? `Too many requests. Please wait${retryAfter ? ` ${retryAfter} seconds` : " a while"} before trying again.`
-            : "KovaGPT Support could not accept this request. Please review the form and try again.";
-        throw new Error(serverMessage ?? fallback);
-      }
-      setSubmittedEmail(cleanEmail);
-      setStatus("sent");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      setSubmissionError(
-        message && message !== "request_failed"
-          ? message
-          : "We couldn’t send your message. Please check your connection and try again.",
-      );
-      setStatus("error");
-    }
-  };
-  if (status === "sent")
-    return (
-      <section id="support-form" className="mt-20 border-t border-border pt-12 sm:mt-24 sm:pt-16">
-        <div
-          role="status"
-          aria-live="polite"
-          className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-6 text-center sm:p-10"
-        >
-          <CheckCircle2 className="mx-auto size-10 text-primary" />
-          <h2 className="mt-4 text-2xl font-semibold">Message sent</h2>
-          <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-            Thanks - your request has been sent to KovaGPT Support. We’ll reply at {submittedEmail}.
-          </p>
-          <Button
-            variant="outline"
-            className="mt-6"
-            onClick={() => {
-              setStatus("idle");
-              setMessage("");
-              setTopic("");
-              setTouched(false);
-            }}
-          >
-            Send another message
-          </Button>
-        </div>
-      </section>
-    );
-  return (
-    <section
-      id="support-form"
-      className="mt-20 border-t border-border pt-12 sm:mt-24 sm:pt-16"
-      aria-labelledby="support-heading"
-    >
-      <div className="mb-7 text-center">
-        <h2 id="support-heading" className="text-2xl font-semibold sm:text-3xl">
-          Still need help?
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-          Can’t find the answer you’re looking for? Send a message to KovaGPT Support and we’ll
-          reply by email.
-        </p>
-      </div>
-      <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-card/70 p-5 sm:p-8">
-        <form onSubmit={submit} noValidate className="space-y-5">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <div className="mb-2 flex items-baseline justify-between">
-                <Label htmlFor="support-name">Name</Label>
-                <span className="text-xs text-muted-foreground">Optional</span>
-              </div>
-              <Input
-                id="support-name"
-                autoComplete="name"
-                maxLength={120}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-12"
-              />
-            </div>
-            <div>
-              <Label htmlFor="support-email">
-                Email{" "}
-                <span aria-hidden="true" className="text-destructive">
-                  *
-                </span>
-              </Label>
-              <Input
-                id="support-email"
-                className="mt-2 h-12"
-                type="email"
-                autoComplete="email"
-                maxLength={254}
-                value={email}
-                onBlur={() => setTouched(true)}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                aria-invalid={touched && Boolean(emailError)}
-                aria-describedby={touched && emailError ? "support-email-error" : undefined}
-              />
-              {touched && emailError && (
-                <p
-                  id="support-email-error"
-                  role="alert"
-                  className="mt-1.5 text-sm text-destructive"
-                >
-                  {emailError}
-                </p>
-              )}
-            </div>
-          </div>
-          <div>
-            <div className="mb-2 flex items-baseline justify-between">
-              <Label htmlFor="support-topic">Topic</Label>
-              <span className="text-xs text-muted-foreground">Optional</span>
-            </div>
-            <select
-              id="support-topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              className="flex h-12 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">Choose a topic</option>
-              {TOPICS.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="support-message">
-              Message{" "}
-              <span aria-hidden="true" className="text-destructive">
-                *
-              </span>
-            </Label>
-            <Textarea
-              id="support-message"
-              className="mt-2 min-h-40 resize-y"
-              maxLength={4000}
-              value={message}
-              onBlur={() => setTouched(true)}
-              onChange={(e) => setMessage(e.target.value)}
-              required
-              aria-invalid={touched && Boolean(messageError)}
-              aria-describedby={`support-message-count${touched && messageError ? " support-message-error" : ""}`}
-              placeholder="Tell us what happened, what you expected, and any error message you saw."
-            />
-            {touched && messageError && (
-              <p
-                id="support-message-error"
-                role="alert"
-                className="mt-1.5 text-sm text-destructive"
-              >
-                {messageError}
-              </p>
-            )}
-            <p
-              id="support-message-count"
-              className={`mt-2 text-right text-xs ${message.length >= 3600 ? "font-medium text-foreground" : "text-muted-foreground"}`}
-            >
-              {message.length.toLocaleString()} / 4,000
-            </p>
-          </div>
-          <input
-            type="text"
-            tabIndex={-1}
-            autoComplete="off"
-            value={website}
-            onChange={(e) => setWebsite(e.target.value)}
-            className="absolute -left-[9999px] size-px"
-            aria-hidden="true"
-          />
-          {status === "error" && (
-            <div
-              role="alert"
-              className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
-            >
-              {submissionError} Your message is still here.
-            </div>
-          )}
-          <div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">
-              We’ll use your email only to respond to this support request.
-            </p>
-            <Button
-              type="submit"
-              className="h-12 w-full px-6 sm:w-auto"
-              disabled={status === "sending"}
-            >
-              {status === "sending" ? (
-                <>
-                  <Loader2 className="size-4 animate-spin motion-reduce:animate-none" /> Sending…
-                </>
-              ) : (
-                "Send message"
-              )}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </section>
   );
 }

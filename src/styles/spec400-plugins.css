@@ -1,0 +1,499 @@
+/* Plugins only. Inherit the approved baseline palette and shared controls. */
+.spec400-plugins {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  container-type: inline-size;
+}
+.spec400-plugins .kova-page-header {
+  margin: 0;
+  padding-bottom: 0;
+  border: 0;
+}
+.spec400-plugin-tabs[role="tablist"] {
+  display: flex;
+  width: 100%;
+  height: auto;
+  min-height: 48px;
+  justify-content: flex-start;
+  gap: 24px;
+  padding: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+.spec400-plugin-tabs [role="tab"] {
+  position: relative;
+  min-height: 48px;
+  padding: 0 2px;
+  gap: 8px;
+  border-radius: 0;
+  color: var(--muted-foreground);
+  background: transparent;
+  box-shadow: none;
+  font-size: 15px;
+}
+.spec400-plugin-tabs [role="tab"][data-state="active"] {
+  color: var(--foreground);
+  background: transparent;
+  box-shadow: none;
+}
+.spec400-plugin-tabs [role="tab"][data-state="active"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  background: var(--ring);
+}
+.spec400-plugin-tabs [role="tab"] span {
+  min-width: 22px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 18px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+.spec400-plugin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 0 16px;
+}
+.spec400-plugin-search {
+  position: relative;
+  display: block;
+  flex: 1 1 220px;
+  max-width: 420px;
+}
+.spec400-plugin-search > svg {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 12px;
+  top: 13px;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+.spec400-plugin-search input {
+  min-height: 44px;
+  padding-left: 40px;
+  border-radius: var(--kova-radius-input);
+}
+.spec400-plugin-category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+.spec400-plugin-category-filter select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 32px 0 12px;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--input);
+  border-radius: var(--kova-radius-input);
+}
+.spec400-plugin-category-filter select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.spec400-plugin-results {
+  margin-top: 0;
+}
+.spec400-plugin-result-count {
+  margin: 0 0 16px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+}
+.spec400-plugin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  padding: 0;
+  list-style: none;
+}
+.spec400-plugin-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  background: var(--card);
+}
+.spec400-plugin-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.spec400-plugin-card-heading > div {
+  min-width: 0;
+}
+.spec400-plugin-card h2 {
+  color: var(--foreground);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.spec400-plugin-logo {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+.spec400-plugin-logo img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.spec400-plugin-logo svg {
+  width: 24px;
+  height: 24px;
+  color: var(--muted-foreground);
+}
+.spec400-plugin-category {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+}
+.spec400-plugin-purpose {
+  flex: 1;
+  margin: 0;
+  min-height: 44px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 22px;
+}
+.spec400-plugin-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.spec400-plugin-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+}
+.spec400-plugin-status svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: var(--kova-icon-stroke, 2);
+  flex-shrink: 0;
+}
+.spec400-plugin-status[data-state="connected"] {
+  color: var(--text-success);
+}
+.spec400-plugin-status:is(
+  [data-state="failed"],
+  [data-state="expired"],
+  [data-state="reauthorize"],
+  [data-state="permission_incomplete"]
+) {
+  color: var(--text-warning);
+}
+.spec400-plugin-card-action {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--kova-radius-button);
+  font-size: 14px;
+  box-shadow: none;
+  background: transparent;
+}
+.spec400-plugins button:active,
+.spec400-plugin-detail button:active {
+  transform: none;
+}
+.spec400-plugin-empty {
+  display: flex;
+  min-height: 260px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 20px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+}
+.spec400-plugin-empty > svg {
+  width: 24px;
+  height: 24px;
+  color: var(--muted-foreground);
+}
+.spec400-plugin-empty h2 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+.spec400-plugin-empty p {
+  max-width: 440px;
+  color: var(--muted-foreground);
+  font-size: 15px;
+  line-height: 22px;
+}
+.spec400-plugin-skeleton {
+  height: 216px;
+  border-radius: var(--kova-radius-card);
+  background: var(--muted);
+}
+.spec400-plugin-signin {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+}
+.spec400-plugin-signin > svg {
+  width: 20px;
+  height: 20px;
+  color: var(--muted-foreground);
+}
+.spec400-plugin-signin > div {
+  flex: 1;
+  min-width: 200px;
+}
+.spec400-plugin-signin h2 {
+  font-size: 16px;
+  font-weight: 500;
+}
+.spec400-plugin-signin p,
+.spec400-plugin-notice {
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--muted-foreground);
+}
+.spec400-plugin-notice {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  background: var(--muted);
+}
+.spec400-plugin-skills {
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.spec400-plugin-skills > summary {
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+}
+.spec400-plugin-skills > section {
+  margin-top: 12px;
+}
+.spec400-plugin-skills > section > p {
+  margin: 12px 0;
+  color: var(--muted-foreground);
+}
+.spec400-plugin-detail[data-kova-dialog-surface] {
+  inset: 0 0 0 auto;
+  width: min(100%, 420px);
+  max-width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 24px;
+  border-radius: var(--kova-radius-panel);
+  transform: none;
+  border-bottom: 0;
+  animation: none;
+}
+.spec400-plugin-detail > [aria-hidden="true"]:first-child {
+  display: none;
+}
+.spec400-plugin-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.spec400-plugin-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+.spec400-plugin-detail-section h3 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.spec400-plugin-detail-section p {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 22px;
+}
+.spec400-plugin-permissions {
+  display: grid;
+  gap: var(--space-3);
+  padding-left: 20px;
+  list-style: disc;
+  font-size: 14px;
+  line-height: 22px;
+}
+.spec400-plugin-account-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+}
+.spec400-plugin-account-list > li {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+}
+.spec400-plugin-account-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-wrap: anywhere;
+}
+.spec400-plugin-account-heading strong {
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 500;
+}
+.spec400-plugin-account-heading span {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+}
+.spec400-plugin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.spec400-plugin-actions button {
+  min-height: 44px;
+  height: auto;
+  white-space: normal;
+  border-radius: var(--kova-radius-button);
+}
+.spec400-plugin-scope-list {
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+.spec400-plugin-scope-list summary {
+  cursor: pointer;
+  min-height: 32px;
+  display: list-item;
+  align-content: center;
+}
+.spec400-plugin-scope-list ul {
+  padding: 8px 0 8px 16px;
+  color: var(--muted-foreground);
+  list-style: disc;
+  overflow-wrap: anywhere;
+}
+.spec400-plugin-activity {
+  display: grid;
+  gap: var(--space-3);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+}
+.spec400-plugin-management {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+.spec400-plugin-management button {
+  border-radius: var(--kova-radius-button);
+}
+@container (min-width: 620px) {
+  .spec400-plugin-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (min-width: 960px) {
+  .spec400-plugin-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 639px) {
+  .spec400-plugins {
+    gap: 20px;
+  }
+  .spec400-plugin-grid {
+    gap: 16px;
+  }
+  .spec400-plugin-card {
+    padding: 16px;
+  }
+  .spec400-plugin-filters {
+    padding-top: 16px;
+  }
+  .spec400-plugin-search {
+    max-width: none;
+    flex-basis: 100%;
+  }
+  .spec400-plugin-category-filter {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .spec400-plugin-category-filter select {
+    flex: 1;
+  }
+  .spec400-plugin-detail[data-kova-dialog-surface] {
+    width: 100%;
+    padding: 16px;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+  .spec400-plugin-detail [data-kova-dialog-close] {
+    top: calc(12px + env(safe-area-inset-top));
+  }
+}
+
+body .spec400-plugin-detail[data-kova-dialog-surface] {
+  inset: 0 0 0 auto !important;
+  width: min(100%, 420px) !important;
+  max-width: 100% !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  border-radius: var(--kova-radius-panel);
+  transform: none !important;
+  translate: none !important;
+}
+@media (max-width: 767px) {
+  body .spec400-plugin-detail[data-kova-dialog-surface] {
+    width: 100% !important;
+  }
+}
+
+/* Keep the selected, disabled account action neutral without translucent compositing. */
+.spec400-plugin-actions button.spec400-plugin-use-account:disabled {
+  opacity: 1;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  border-color: var(--border);
+  box-shadow: none;
+}

@@ -33,7 +33,7 @@ test("nested assistant URLs keep their leaf not-found state after hydration", as
 
   await expect(page).toHaveURL(path);
   await expect(
-    page.getByRole("heading", { name: "We couldn't find that page", exact: true }),
+    page.getByRole("heading", { name: "This page isn’t available", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "KovaGPT Assistants", exact: true })).toHaveCount(
     0,

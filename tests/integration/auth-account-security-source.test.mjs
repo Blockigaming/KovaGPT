@@ -208,10 +208,38 @@ test("auth UI does not enumerate duplicate signups or expose raw provider errors
   assert.doesNotMatch(mfa, /toast\.error\(\(e as Error\)\.message/);
   assert.doesNotMatch(settings, /onClick=\{\(\) => clerk\?\.openUserProfile\(\)\}/);
   assert.match(settings, /Email-address\s+changes are not\s+currently available in the app/);
+});
+
+test("account deletion disclosures preserve the recovery window and retention exceptions", async () => {
+  const settings = await read("src/components/SettingsDialog.tsx");
+  const sections = settings.match(
+    /<section\b[^>]*>\s*<h3>Account and data deletion<\/h3>[\s\S]*?<\/section>/g,
+  );
+  assert.equal(
+    sections?.length,
+    1,
+    "The account-deletion notice remains in its named Settings section",
+  );
+  const notice = sections[0].replace(/\s+/g, " ");
+  assert.match(
+    notice,
+    /Some billing, security, and backup records may be retained when required by law or operational policy\./,
+  );
+  assert.match(notice, /schedule deletion after a 30-day recovery window\./);
+  assert.match(notice, /href="mailto:support@kovagpt\.com"/);
+  assert.match(notice, /from the email connected to your account\./);
+
   assert.match(
     settings,
-    /Legally required billing, security,\s+and backup records may be retained/,
+    /Legally required billing, security,\s+and backup records may be retained\./,
   );
+  assert.match(settings, /requestAccountDeletion\(deletionUserKey, "DELETE"\)/);
+  assert.match(settings, /requestAccountDeletion\(deletionUserKey, "PATCH"\)/);
+  assert.match(
+    settings,
+    /Your account and data stay recoverable for 30 days before final deletion\./,
+  );
+  assert.match(settings, /Scheduling does not cancel billing or change your discount/);
 });
 
 test("RLS-facing library and project functions retain explicit ownership boundaries", async (context) => {

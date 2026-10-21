@@ -1,22 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
+import { GOOGLE_CONNECT_IDS, type ConnectorItem } from "@/lib/connectors-catalog";
 import {
-  CONNECTOR_CATALOG,
-  GOOGLE_CONNECT_IDS,
-  type ConnectorItem,
-} from "@/lib/connectors-catalog";
+  LAUNCH_PLUGIN_REVIEW_CATALOG,
+  getPluginReview,
+  getPluginPreviewProvider,
+} from "@/lib/plugin-review-catalog";
 import {
   Search,
   Check,
   Loader2,
-  Sparkles,
   ShieldAlert,
   PanelsTopLeft,
   AlertCircle,
-  X,
   LogIn,
-  Github,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -27,6 +25,7 @@ import {
   type GitHubManagement,
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,9 +36,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AppShell } from "@/components/AppShell";
+import { usePrincipalSessionPreferences } from "@/hooks/use-principal-session-preferences";
+import {
+  MAX_MANAGEMENT_QUERY_LENGTH,
+  parsePluginListPreferences,
+  PLUGIN_LIST_STORAGE_BASE,
+} from "@/lib/management-list-preferences.mjs";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { toast } from "sonner";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import "@/styles/spec400-plugins.css";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { listScheduledTasks, listScheduledTaskConnections } from "@/lib/scheduled-tasks.functions";
+import {
+  findKnownGoogleScheduleDependencies,
+  type GoogleScheduleDependencies,
+} from "@/lib/google-schedule-dependencies";
 import { Button } from "@/components/ui/button";
 import { WorkflowSkillsPanel } from "@/components/WorkflowSkillsPanel";
 import { DialogFooter } from "@/components/ui/dialog";
@@ -62,8 +74,8 @@ import {
 // The catalog owns which ids the Google grant actually covers.
 const GOOGLE_IDS = GOOGLE_CONNECT_IDS;
 
-// Apps that are actually wired up end-to-end today. Non-working connectors are
-// intentionally hidden so navigation never exposes fake or decorative controls.
+// Only these existing adapters can expose connection actions. Planned launch
+// providers have readable details, never a pretend live connection button.
 const WORKING_IDS = new Set<string>([
   "google",
   "gmail",
@@ -73,26 +85,20 @@ const WORKING_IDS = new Set<string>([
 ]);
 
 const CONFIGURED_CONNECTORS = WORKING_IDS;
-
-const RECOMMENDED_IDS = new Set([
-  "google",
-  "gmail",
-  "google-drive",
-  "google-calendar",
-  "icloud-mail",
-  "ms-word",
-  "youtube",
-  "apple",
-]);
+const PLUGIN_CATEGORIES = [
+  ...new Set(LAUNCH_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector.category)),
+].sort();
+const parsePluginFilters = (raw: string | null) =>
+  parsePluginListPreferences(raw, PLUGIN_CATEGORIES);
 
 export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
     meta: [
-      { title: "KovaGPT Apps & Plugins" },
+      { title: "Plugins | Kova" },
       {
         name: "description",
-        content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",
+        content: "Browse plugins and manage supported connections in KovaGPT.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -164,268 +170,148 @@ function parseGitHubAuthorizationUrl(value: unknown): string | null {
   }
 }
 
-function AppLogo({ domain, label }: { domain: string; label: string }) {
-  // Locally rendered brand mark using the domain's own favicon as a fallback.
-  // Avoids Logo.dev entirely.
-  const [failed, setFailed] = useState(false);
-  const src = `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(domain)}`;
-  if (!failed) {
-    return (
-      <img
-        src={src}
-        alt=""
-        loading="lazy"
-        onError={() => setFailed(true)}
-        className="w-10 h-10 rounded-lg object-contain bg-white border border-border shrink-0 p-1.5"
-      />
-    );
-  }
+function AppLogo({ id }: { id: string }) {
+  const asset = getPluginReview(id)?.brandAsset.src;
   return (
-    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-xs font-semibold text-muted-foreground border border-border">
-      {label.slice(0, 2).toUpperCase()}
-    </div>
+    <span className="spec400-plugin-logo" aria-hidden="true">
+      {asset ? <img src={asset} alt="" /> : <PanelsTopLeft />}
+    </span>
   );
 }
 
 function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
-  if (!configured) {
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-        <ShieldAlert className="w-3 h-3" /> Setup needed
-      </span>
-    );
-  }
-  if (state === "connected") {
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-        <Check className="w-3 h-3" /> Connected
-      </span>
-    );
-  }
-  if (state === "connecting") {
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
-        <Loader2 className="w-3 h-3 animate-spin" /> Connecting
-      </span>
-    );
-  }
-
-  if (state === "expired" || state === "reauthorize") {
-    return (
-      <span
-        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20"
-        aria-label="Reauthorization required"
-      >
-        <ShieldAlert className="w-3 h-3" /> Reconnect
-      </span>
-    );
-  }
-  if (state === "permission_incomplete") {
-    return (
-      <span
-        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20"
-        aria-label="Permission incomplete"
-      >
-        <ShieldAlert className="w-3 h-3" /> More access needed
-      </span>
-    );
-  }
-  if (state === "syncing") {
-    return (
-      <span
-        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20"
-        aria-live="polite"
-      >
-        <Loader2 className="w-3 h-3 animate-spin" /> Syncing
-      </span>
-    );
-  }
-  if (state === "temporarily_unavailable") {
-    return (
-      <span
-        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border"
-        aria-label="Temporarily unavailable"
-      >
-        <AlertCircle className="w-3 h-3" /> Temporarily unavailable
-      </span>
-    );
-  }
-  if (state === "failed") {
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
-        <AlertCircle className="w-3 h-3" /> Failed
-      </span>
-    );
-  }
-  return null;
+  const labels: Record<ConnState, string> = {
+    idle: "Not connected",
+    connecting: "Connecting…",
+    connected: "Connected",
+    failed: "Connection failed",
+    expired: "Connection expired",
+    reauthorize: "Reconnect required",
+    permission_incomplete: "More access needed",
+    syncing: "Checking connection…",
+    temporarily_unavailable: "Status unavailable",
+  };
+  const Icon =
+    state === "connected"
+      ? Check
+      : state === "syncing" || state === "connecting"
+        ? Loader2
+        : ["failed", "temporarily_unavailable"].includes(state)
+          ? AlertCircle
+          : ["expired", "reauthorize", "permission_incomplete"].includes(state)
+            ? ShieldAlert
+            : null;
+  return (
+    <span className="spec400-plugin-status" data-state={configured ? state : "unavailable"}>
+      {Icon && (
+        <Icon
+          className={
+            state === "syncing" || state === "connecting"
+              ? "animate-spin motion-reduce:animate-none"
+              : undefined
+          }
+          aria-hidden="true"
+        />
+      )}
+      {configured ? labels[state] : "Unavailable"}
+    </span>
+  );
 }
 
 function AppCard({
   item,
   state,
   configured,
-  isSignedIn,
-  onConnect,
-  onDisconnect,
-  onRetry,
   onDetails,
-  onUseInChat,
 }: {
   item: ConnectorItem;
   state: ConnState;
   configured: boolean;
-  isSignedIn: boolean;
-  onConnect: () => void;
-  onDisconnect: () => void;
-  onRetry: () => void;
-  onDetails: () => void;
-  onUseInChat: () => void;
+  onDetails: (trigger: HTMLButtonElement) => void;
 }) {
-  const baseBtn =
-    "inline-flex min-h-11 items-center justify-center rounded-full px-3 text-xs font-medium transition-colors shrink-0";
-
-  let action: React.ReactNode;
-  if (!configured) {
-    action = (
-      <button
-        disabled
-        title="This connector needs provider credentials before it can be linked."
-        className={`${baseBtn} border border-border text-muted-foreground cursor-not-allowed opacity-70`}
-      >
-        Setup required
-      </button>
-    );
-  } else if (!isSignedIn) {
-    action = (
-      <SignInButton mode="modal">
-        <button className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}>Connect</button>
-      </SignInButton>
-    );
-  } else if (state === "connecting" || state === "syncing") {
-    action = (
-      <button
-        disabled
-        className={`${baseBtn} bg-muted text-muted-foreground inline-flex items-center gap-1.5`}
-      >
-        <Loader2 className="w-3 h-3 animate-spin" /> Connecting
-      </button>
-    );
-  } else if (state === "failed") {
-    action = (
-      <button
-        onClick={onRetry}
-        className={`${baseBtn} border border-rose-500/30 text-rose-300 hover:bg-rose-500/10`}
-      >
-        Try again
-      </button>
-    );
-  } else if (state === "connected") {
-    action = (
-      <button
-        onClick={onDisconnect}
-        className={`${baseBtn} border border-border text-foreground/80 hover:bg-accent inline-flex items-center gap-1`}
-        title="Manage connection"
-      >
-        <X className="w-3 h-3" /> Disconnect
-      </button>
-    );
-  } else {
-    action = (
-      <button
-        onClick={onConnect}
-        className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}
-      >
-        Connect
-      </button>
-    );
-  }
-
+  const pending = state === "connecting" || state === "syncing";
+  const action =
+    !configured || state === "temporarily_unavailable"
+      ? "Unavailable"
+      : state === "connected"
+        ? "Manage"
+        : ["expired", "reauthorize", "permission_incomplete", "failed"].includes(state)
+          ? "Reconnect"
+          : pending
+            ? "Checking…"
+            : "Connect";
   return (
-    <li className="kova-card kova-connector-card flex h-full flex-col items-start gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-foreground/20 sm:flex-row">
-      <AppLogo domain={item.domain} label={item.label} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="text-sm font-semibold truncate">{item.label}</div>
-          <StatusBadge state={state} configured={configured} />
+    <li className="spec400-plugin-card" data-plugin-id={item.id}>
+      <div className="spec400-plugin-card-heading">
+        <AppLogo id={item.id} />
+        <div>
+          <h2>{item.label}</h2>
+          <span className="spec400-plugin-category">{item.category}</span>
         </div>
-        <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description}</div>
       </div>
-      <div className="flex w-full shrink-0 flex-wrap items-center gap-1 sm:w-auto sm:flex-col sm:items-end">
-        {action}
-        <button
-          onClick={onDetails}
-          className="inline-flex min-h-11 items-center px-2 text-xs text-muted-foreground hover:text-foreground"
+      <p className="spec400-plugin-purpose">{item.description}</p>
+      <div className="spec400-plugin-card-footer">
+        <StatusBadge state={state} configured={configured} />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={(event) => onDetails(event.currentTarget)}
+          aria-haspopup="dialog"
+          aria-label={`${action} ${item.label}`}
+          className="spec400-plugin-card-action"
         >
-          Details
-        </button>
-        {state === "connected" && (
-          <button
-            onClick={onUseInChat}
-            className="inline-flex min-h-11 items-center px-2 text-xs font-medium hover:underline"
-          >
-            Use in chat
-          </button>
-        )}
+          {action}
+        </Button>
       </div>
     </li>
   );
 }
 
-function GitHubManager() {
-  const load = useServerFn(getGitHubManagement),
-    refresh = useServerFn(refreshGitHubInstallations),
+function GitHubManager({
+  data,
+  loadError,
+  reload,
+}: {
+  data: GitHubManagement | null;
+  loadError: boolean;
+  reload: (showError?: boolean) => Promise<boolean>;
+}) {
+  const refresh = useServerFn(refreshGitHubInstallations),
     grants = useServerFn(updateGitHubRepositoryGrants),
     disconnect = useServerFn(disconnectGitHub);
-  const [data, setData] = useState<GitHubManagement | null>(null);
   const [busyAction, setBusyAction] = useState<
     "connect" | "refresh" | "grant" | "disconnect" | null
   >(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
-  const [loadError, setLoadError] = useState(false);
-  const busy = busyAction !== null;
-  const reload = useCallback(
-    async (showError = true): Promise<boolean> => {
-      setLoadError(false);
-      try {
-        const next = await load();
-        const activeAccountIds = new Set(
-          next.accounts
-            .filter((account) => ["connected", "degraded"].includes(account.status))
-            .map((account) => account.id),
-        );
-        const activeInstallationIds = new Set(
-          next.installations
-            .filter(
-              (installation) =>
-                activeAccountIds.has(installation.account_id) && !installation.suspended_at,
-            )
-            .map((installation) => String(installation.id)),
-        );
-        const activeRepositoryIds = new Set(
-          next.repositories
-            .filter((repository) => activeInstallationIds.has(String(repository.installation_id)))
-            .map((repository) => repository.id),
-        );
-        setSelected((current) => current.filter((id) => activeRepositoryIds.has(id)));
-        setData(next);
-        return true;
-      } catch {
-        setLoadError(true);
-        if (showError) toast.error("GitHub status unavailable");
-        return false;
-      }
-    },
-    [load],
-  );
+  const busy = busyAction !== null || loadError;
+  useEffect(() => {
+    if (!data) return;
+    const activeAccountIds = new Set(
+      data.accounts
+        .filter((account) => ["connected", "degraded"].includes(account.status))
+        .map((account) => account.id),
+    );
+    const activeInstallationIds = new Set(
+      data.installations
+        .filter(
+          (installation) =>
+            activeAccountIds.has(installation.account_id) && !installation.suspended_at,
+        )
+        .map((installation) => String(installation.id)),
+    );
+    const activeRepositoryIds = new Set(
+      data.repositories
+        .filter((repository) => activeInstallationIds.has(String(repository.installation_id)))
+        .map((repository) => repository.id),
+    );
+    setSelected((current) => current.filter((id) => activeRepositoryIds.has(id)));
+  }, [data]);
   const [revokeOpen, setRevokeOpen] = useState(false);
   const [disconnectAccount, setDisconnectAccount] = useState<{
     id: string;
     login: string;
   } | null>(null);
-  useEffect(() => {
-    void reload();
-  }, [reload]);
   if (!data && loadError)
     return (
       <section role="alert" className="rounded-xl border border-destructive/40 p-5">
@@ -553,30 +439,34 @@ function GitHubManager() {
   }
 
   return (
-    <section className="kova-card p-5" aria-labelledby="github-manager" aria-busy={busy}>
+    <section
+      className="spec400-plugin-management"
+      aria-labelledby="github-manager"
+      aria-busy={busy}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex gap-3">
-          <Github className="h-9 w-9" />
+          <AppLogo id="github" />
           <div>
             <h2 id="github-manager" className="font-semibold">
-              GitHub
+              GitHub accounts
             </h2>
             <p className="text-sm text-muted-foreground">
-              {data.configured ? data.health.replaceAll("_", " ") : "Credentials not configured"}
+              {data.configured
+                ? "Manage connected accounts and repository access."
+                : "Connection is unavailable in this deployment."}
             </p>
           </div>
         </div>
         {!data.configured ? (
-          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs">
-            Operator setup required
-          </span>
+          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs">Unavailable</span>
         ) : !activeAccounts.length ? (
           <button
             disabled={busy}
             className="min-h-11 rounded-full bg-foreground px-4 text-sm text-background disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => void connect()}
           >
-            {busyAction === "connect" ? "Connecting…" : "Connect GitHub"}
+            {busyAction === "connect" ? "Connecting…" : "Connect"}
           </button>
         ) : (
           <button
@@ -588,6 +478,17 @@ function GitHubManager() {
           </button>
         )}
       </div>
+      {loadError && (
+        <div role="alert" className="spec400-plugin-notice">
+          <p>
+            GitHub status could not be refreshed. These are the last known accounts; refresh status
+            before changing access.
+          </p>
+          <Button variant="outline" onClick={() => void reload()}>
+            Refresh status
+          </Button>
+        </div>
+      )}
       {data.accounts.map((account) => {
         const isActive = activeAccountIds.has(account.id);
         return (
@@ -601,8 +502,21 @@ function GitHubManager() {
             <div>
               <p className="font-medium">@{account.login}</p>
               <p className="text-xs text-muted-foreground">
-                {account.auth_type} · {account.status} · ID {account.github_user_id}
+                {account.auth_type} · {account.status.replaceAll("_", " ")}
               </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Current permissions:{" "}
+                {Array.isArray(account.scopes)
+                  ? account.scopes.join(", ") || "No scopes reported"
+                  : typeof account.scopes === "string" && account.scopes
+                    ? account.scopes
+                    : "No scopes reported"}
+              </p>
+              {!isActive && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  This connection record is retained. Reconnect to restore access.
+                </p>
+              )}
             </div>
             <div className="ml-auto text-right text-xs text-muted-foreground">
               <p>
@@ -616,15 +530,26 @@ function GitHubManager() {
               </p>
             </div>
             {isActive ? (
-              <button
-                type="button"
-                disabled={busy}
-                className="min-h-11 rounded-full border px-3 text-sm text-destructive"
-                onClick={() => setDisconnectAccount({ id: account.id, login: account.login })}
-                aria-label={`Disconnect GitHub account @${account.login}`}
-              >
-                Disconnect
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={busy || !data.configured}
+                  className="min-h-11 rounded-lg border px-3 text-sm"
+                  onClick={() => void connect()}
+                  aria-label={`Reconnect GitHub account @${account.login}`}
+                >
+                  Reconnect
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="min-h-11 rounded-full border px-3 text-sm text-destructive"
+                  onClick={() => setDisconnectAccount({ id: account.id, login: account.login })}
+                  aria-label={`Disconnect GitHub account @${account.login}`}
+                >
+                  Disconnect
+                </button>
+              </>
             ) : (
               <button
                 type="button"
@@ -633,7 +558,7 @@ function GitHubManager() {
                 onClick={() => void connect()}
                 aria-label={`Reconnect GitHub account @${account.login}`}
               >
-                Connect again
+                Reconnect
               </button>
             )}
           </div>
@@ -662,7 +587,9 @@ function GitHubManager() {
             <DialogTitle>Disconnect @{disconnectAccount?.login ?? "GitHub account"}?</DialogTitle>
             <DialogDescription>
               This disconnects only the selected account. Existing synchronized metadata is kept
-              because account-scoped data removal is not available yet.
+              because account-scoped data removal is not available yet. Coding tasks and any
+              scheduled tasks or projects using this account will lose access to its repositories. A
+              list of dependent workflows is not available here.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-end">
@@ -703,6 +630,7 @@ function GitHubManager() {
             <input
               className="min-h-11 flex-1 rounded-xl border px-3"
               placeholder="Search GitHub repositories"
+              aria-label="Search GitHub repositories"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -761,6 +689,104 @@ function GitHubManager() {
   );
 }
 
+function GoogleDisconnectSchedules({
+  userId,
+  connectionId,
+}: {
+  userId: string;
+  connectionId: string;
+}) {
+  const listTasks = useServerFn(listScheduledTasks);
+  const listConnections = useServerFn(listScheduledTaskConnections);
+  const [attempt, setAttempt] = useState(0);
+  const [review, setReview] = useState<
+    { kind: "loading" } | { kind: "unavailable" } | ({ kind: "ready" } & GoogleScheduleDependencies)
+  >({ kind: "loading" });
+
+  useEffect(() => {
+    let current = true;
+    setReview({ kind: "loading" });
+    // Two bounded owner reads, never a per-task/provider request fan-out.
+    const timer = window.setTimeout(() => {
+      if (!current) return;
+      current = false;
+      setReview({ kind: "unavailable" });
+    }, 15_000);
+    void Promise.all([
+      listTasks({ data: { expectedUserId: userId } }),
+      listConnections({ data: { expectedUserId: userId } }),
+    ])
+      .then(([tasks, connections]) => {
+        if (!current) return;
+        const result = findKnownGoogleScheduleDependencies(connectionId, tasks, connections.grants);
+        setReview({ kind: "ready", ...result });
+      })
+      .catch(() => {
+        if (current) setReview({ kind: "unavailable" });
+      })
+      .finally(() => window.clearTimeout(timer));
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [userId, connectionId, attempt, listTasks, listConnections]);
+
+  return (
+    <section aria-label="Known schedule dependencies" className="space-y-3 text-sm">
+      <h3 className="font-medium">Known schedules using this account</h3>
+      <p className="text-muted-foreground">
+        Partial coverage: this check only identifies schedules linked through active, unexpired
+        Gmail task grants. Expired or revoked grants and project dependencies are not included.
+      </p>
+      <div aria-live="polite" aria-busy={review.kind === "loading"}>
+        {review.kind === "loading" ? (
+          <p role="status">Checking known scheduled tasks…</p>
+        ) : review.kind === "unavailable" ? (
+          <div className="space-y-2">
+            <p role="status">
+              Known schedule dependencies could not be checked. Review your schedules before
+              disconnecting; other dependencies may exist.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAttempt((value) => value + 1)}
+            >
+              Retry schedule check
+            </Button>
+          </div>
+        ) : review.schedules.length ? (
+          <>
+            <ul className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
+              {review.schedules.map((task) => (
+                <li key={task.id}>
+                  <a href={task.href} className="break-words underline underline-offset-2">
+                    {task.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            {review.knownCount > review.schedules.length && (
+              <p className="mt-2 text-muted-foreground">
+                Showing {review.schedules.length} of {review.knownCount} known matching schedules.
+                Open Tasks to review the rest.
+              </p>
+            )}
+          </>
+        ) : (
+          <p>
+            No known matching schedules were found in this limited check. Other dependencies may
+            still exist.
+          </p>
+        )}
+      </div>
+      <a href="/scheduled-tasks" className="inline-block underline underline-offset-2">
+        Review all saved schedules
+      </a>
+    </section>
+  );
+}
+
 function AppsPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
@@ -771,7 +797,31 @@ function AppsPage() {
   principalRef.current = principal;
   const generationRef = useRef(0);
   const [lifecycleVersion, setLifecycleVersion] = useState(0);
-  const [query, setQuery] = useState("");
+  const [{ query, category, connectionFilter }, setListPreferences] =
+    usePrincipalSessionPreferences(
+      PLUGIN_LIST_STORAGE_BASE,
+      isLoaded ? userKey : undefined,
+      parsePluginFilters,
+    );
+  const setQuery = (query: string) => setListPreferences({ query });
+  const setCategory = (category: string) => setListPreferences({ category });
+  const setConnectionFilter = (value: string) =>
+    setListPreferences({ connectionFilter: value === "connected" ? "connected" : "all" });
+  const loadGitHub = useServerFn(getGitHubManagement);
+  const [githubData, setGithubData] = useState<GitHubManagement | null>(null);
+  const [githubLoading, setGithubLoading] = useState(true);
+  const [githubLoadError, setGithubLoadError] = useState(false);
+  const githubRequestRef = useRef(0);
+  const googleDisconnectReturnRef = useRef<{
+    trigger: HTMLButtonElement;
+    url: string;
+    principal: string | null;
+    generation: number;
+  } | null>(null);
+  const [pendingGoogleDisconnect, setPendingGoogleDisconnect] = useState<{
+    id: string;
+    email: string;
+  } | null>(null);
   const [connecting, setConnecting] = useState<Record<string, true>>({});
   const [failed, setFailed] = useState<Record<string, true>>({});
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
@@ -781,6 +831,12 @@ function AppsPage() {
   const googleBusyRef = useRef(false);
   const googleRequestRef = useRef(0);
   const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
+  const detailsReturnRef = useRef<{
+    trigger: HTMLButtonElement;
+    url: string;
+    principal: string | null;
+  } | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [activity, setActivity] = useState<AppActivity[]>([]);
   const activityRef = useRef<AppActivity[]>([]);
   const [activityPrincipal, setActivityPrincipal] = useState<string | null>(null);
@@ -790,6 +846,21 @@ function AppsPage() {
   const visibleGoogleStatus = activityReady ? googleStatus : null;
   const visibleGoogleLoading = activityReady ? googleLoading : true;
   const visibleSelectedApp = activityReady ? selectedApp : null;
+  const googleStatusRef = useRef<HTMLElement>(null);
+  const googleRefreshContext = `${principal}:${visibleSelectedApp?.id ?? "closed"}:${lifecycleVersion}`;
+  const googleRefreshScopeRef = useRef({ context: googleRefreshContext, epoch: 0 });
+  if (googleRefreshScopeRef.current.context !== googleRefreshContext) {
+    googleRefreshScopeRef.current = {
+      context: googleRefreshContext,
+      epoch: googleRefreshScopeRef.current.epoch + 1,
+    };
+  }
+  useEffect(
+    () => () => {
+      googleRefreshScopeRef.current.epoch += 1;
+    },
+    [],
+  );
 
   const resendWorkflowVerification = async () => {
     const email = user?.primaryEmailAddress?.emailAddress;
@@ -814,7 +885,10 @@ function AppsPage() {
     googleRequestRef.current += 1;
     googleBusyRef.current = false;
     setGoogleBusy(false);
-    setQuery("");
+    setGithubData(null);
+    setGithubLoading(true);
+    setGithubLoadError(false);
+    setPendingGoogleDisconnect(null);
     activityRef.current = [];
     setActivity([]);
     setActivityPrincipal(null);
@@ -858,7 +932,10 @@ function AppsPage() {
       setSelectedApp(null);
       setConnecting({});
       setFailed({});
-      setQuery("");
+      setGithubData(null);
+      setGithubLoading(true);
+      setGithubLoadError(false);
+      setPendingGoogleDisconnect(null);
       setLifecycleVersion((value) => value + 1);
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
@@ -898,7 +975,10 @@ function AppsPage() {
     setGoogleLoading(true);
     try {
       const status = await getGoogleStatus(userKey);
-      if (isCurrent()) setGoogleStatus(status);
+      if (isCurrent()) {
+        setGoogleStatus(status);
+        return status;
+      }
     } catch {
       if (isCurrent()) setGoogleStatus({ connected: false, state: "temporarily_unavailable" });
     } finally {
@@ -922,9 +1002,18 @@ function AppsPage() {
     const ok = params.get("google_connected");
     const err = params.get("google_error");
     if (ok) {
-      toast.success("Google account connected");
-      recordActivity("Google", "Connected");
-      refreshGoogle();
+      toast.info("Checking Google connection…");
+      void refreshGoogle().then((status) => {
+        if (!status) return;
+        if (status.connected && status.state === "connected") {
+          toast.success("Google connection verified");
+          recordActivity("Google", "Connection verified");
+        } else {
+          toast.warning(
+            "Google authorization returned. Review the account status before using this connection.",
+          );
+        }
+      });
     } else if (err) {
       const msg =
         err === "access_denied"
@@ -946,6 +1035,42 @@ function AppsPage() {
 
   const isGoogleId = (id: string) => GOOGLE_IDS.has(id);
 
+  const googleRefreshEpoch = googleRefreshScopeRef.current.epoch;
+  const googleRefreshGeneration = generationRef.current;
+  const googleRefreshRequest = googleRequestRef.current;
+  const googleRefreshUrl = typeof window === "undefined" ? null : window.location.href;
+  const refreshGoogleStatus = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const trigger = event.currentTarget;
+    if (
+      !isLoaded ||
+      !isSignedIn ||
+      !activityReady ||
+      !visibleSelectedApp ||
+      !isGoogleId(visibleSelectedApp.id) ||
+      visibleGoogleLoading ||
+      googleBusyRef.current ||
+      googleRefreshScopeRef.current.epoch !== googleRefreshEpoch ||
+      generationRef.current !== googleRefreshGeneration ||
+      googleRequestRef.current !== googleRefreshRequest ||
+      principalRef.current !== principal ||
+      window.location.href !== googleRefreshUrl ||
+      !trigger.isConnected ||
+      trigger.disabled
+    )
+      return;
+    const target = googleStatusRef.current;
+    // Move focus before Refresh becomes disabled; completion never takes it back.
+    if (
+      target?.isConnected &&
+      target.getClientRects().length &&
+      !target.closest('[inert], [aria-hidden="true"]') &&
+      (document.activeElement === trigger || document.activeElement === document.body)
+    ) {
+      target.focus({ preventScroll: true });
+    }
+    void refreshGoogle();
+  };
+
   const connectGoogle = async (connectionId?: string, itemId = "google") => {
     if (!activityReady || !principal || !userKey || googleBusyRef.current || googleLoading) return;
     const generation = generationRef.current;
@@ -955,6 +1080,11 @@ function AppsPage() {
     googleBusyRef.current = true;
     setGoogleBusy(true);
     setConnecting((current) => ({ ...current, [itemId]: true }));
+    setFailed((current) => {
+      const next = { ...current };
+      delete next[itemId];
+      return next;
+    });
     try {
       await startGoogleConnect(connectionId, userKey);
     } catch (error) {
@@ -1040,16 +1170,6 @@ function AppsPage() {
     toast.error(`${item.label} is not available in this deployment.`);
   };
 
-  const handleDisconnect = async (item: ConnectorItem) => {
-    if (isGoogleId(item.id)) {
-      const id = visibleGoogleStatus?.selectedConnectionId;
-      if (id) await changeGoogleAccount("disconnect", id);
-      else toast.error("Select a Google account to disconnect.");
-      return;
-    }
-    toast.error(`${item.label} is not available in this deployment.`);
-  };
-
   const isGoogleConnected = (id: string): boolean => {
     if (!visibleGoogleStatus?.connected) return false;
     if (id === "google") return true;
@@ -1059,23 +1179,49 @@ function AppsPage() {
     return false;
   };
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return CONNECTOR_CATALOG.filter((c) => WORKING_IDS.has(c.id) && c.id !== "github").filter(
-      (c) => {
-        if (!q) return true;
-        return (
-          c.label.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q) ||
-          c.category.toLowerCase().includes(q)
-        );
-      },
-    );
-  }, [query]);
+  const refreshGitHub = useCallback(
+    async (showError = true): Promise<boolean> => {
+      if (!isLoaded || !principal || !userKey) return false;
+      const generation = generationRef.current;
+      const requestPrincipal = principal;
+      const requestId = ++githubRequestRef.current;
+      const isCurrent = () =>
+        generation === generationRef.current &&
+        principalRef.current === requestPrincipal &&
+        requestId === githubRequestRef.current;
+      setGithubLoading(true);
+      setGithubLoadError(false);
+      try {
+        const next = await loadGitHub();
+        if (!isCurrent()) return false;
+        setGithubData(next);
+        return true;
+      } catch {
+        if (isCurrent()) {
+          setGithubLoadError(true);
+          if (showError) toast.error("GitHub status unavailable");
+        }
+        return false;
+      } finally {
+        if (isCurrent()) setGithubLoading(false);
+      }
+    },
+    [isLoaded, principal, userKey, loadGitHub],
+  );
 
-  const isConnected = (id: string) => isGoogleId(id) && isGoogleConnected(id);
-  const connectedList = filtered.filter((c) => isConnected(c.id));
-  const recommendedList = filtered.filter((c) => !isConnected(c.id) && RECOMMENDED_IDS.has(c.id));
+  useEffect(() => {
+    if (!isSignedIn) {
+      setGithubData(null);
+      setGithubLoading(false);
+      return;
+    }
+    void refreshGitHub(false);
+  }, [isSignedIn, lifecycleVersion, refreshGitHub]);
+
+  const visibleGithubData = activityReady ? githubData : null;
+  const selectedReview = visibleSelectedApp
+    ? getPluginPreviewProvider(visibleSelectedApp.id)
+    : undefined;
 
   const stateOf = (id: string): ConnState => {
     if (!isSignedIn) return "idle";
@@ -1086,347 +1232,551 @@ function AppsPage() {
       if (visibleGoogleStatus?.state === "temporarily_unavailable")
         return "temporarily_unavailable";
       if (visibleGoogleStatus?.state === "reauthorization_required") return "reauthorize";
+      if (visibleGoogleStatus?.state === "permission_incomplete") return "permission_incomplete";
       if (isGoogleConnected(id)) return "connected";
       if (visibleGoogleStatus?.connected) return "permission_incomplete";
+      return "idle";
+    }
+    if (id === "github") {
+      if (!activityReady || githubLoading) return "syncing";
+      if (githubLoadError || !visibleGithubData?.configured) return "temporarily_unavailable";
+      if (visibleGithubData.health === "reconnect_required") return "reauthorize";
+      if (visibleGithubData.health === "degraded") return "permission_incomplete";
+      if (visibleGithubData.accounts.some((account) => account.status === "connected"))
+        return "connected";
       return "idle";
     }
     return "temporarily_unavailable";
   };
 
+  // Connection records requiring attention stay reachable from Connected.
+  const hasConnection = (id: string) => {
+    if (isGoogleId(id))
+      return (
+        isGoogleConnected(id) ||
+        !!visibleGoogleStatus?.accounts?.some((account) => account.state !== "disconnected")
+      );
+    if (id === "github")
+      return !!visibleGithubData?.accounts.some((account) => account.status !== "disconnected");
+    return false;
+  };
+  const catalog = LAUNCH_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector);
+  const connectedCount = catalog.filter((item) => hasConnection(item.id)).length;
+  const connectionCountState = !isLoaded
+    ? "unknown"
+    : !isSignedIn
+      ? "ready"
+      : !activityReady || visibleGoogleLoading || googleBusy || githubLoading
+        ? "checking"
+        : githubLoadError ||
+            [...WORKING_IDS].some((id) => stateOf(id) === "temporarily_unavailable")
+          ? "unavailable"
+          : !visibleGoogleStatus || !visibleGithubData
+            ? "unknown"
+            : "ready";
+  const connectedCountLabel =
+    connectionCountState === "ready"
+      ? connectedCount
+      : connectionCountState === "checking"
+        ? "Checking…"
+        : connectionCountState === "unavailable"
+          ? "Unavailable"
+          : "Unknown";
+  const connectedStatusMessage =
+    connectionCountState === "checking"
+      ? "Checking connected plugins…"
+      : connectionCountState === "unavailable"
+        ? "Connected plugin count is unavailable. Refresh a provider’s status to try again."
+        : "Connected plugin count is not known yet.";
+  const connectedStatusUnverified =
+    connectionFilter === "connected" && connectionCountState !== "ready";
+  const filtered = catalog.filter((c) => {
+    if (connectionFilter === "connected" && !hasConnection(c.id)) return false;
+    if (category !== "all" && c.category !== category) return false;
+    const q = query.trim().toLowerCase();
+    return (
+      !q || [c.label, c.description, c.category].some((value) => value.toLowerCase().includes(q))
+    );
+  });
+
+  const handleUseInChat = (item: ConnectorItem) => {
+    const handoff = writePrincipalHandoff(
+      safeBrowserStorage("sessionStorage"),
+      "kova-app-chat-context",
+      isLoaded ? userKey : undefined,
+      `Use my connected ${item.label} account for this request when relevant: `,
+    );
+    if (!handoff.ok) {
+      toast.error("Plugin context could not be prepared. Reload and try again.");
+      return;
+    }
+    window.location.href = "/";
+  };
+
   const renderGrid = (items: ConnectorItem[]) => (
-    <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
+    <ul className="spec400-plugin-grid" aria-label="Plugin directory">
       {items.map((item) => (
         <AppCard
           key={item.id}
           item={item}
           state={stateOf(item.id)}
-          configured={CONFIGURED_CONNECTORS.has(item.id)}
-          isSignedIn={!!isSignedIn}
-          onConnect={() => handleConnect(item)}
-          onDisconnect={() => handleDisconnect(item)}
-          onRetry={() => handleConnect(item)}
-          onDetails={() => setSelectedApp(item)}
-          onUseInChat={() => {
-            const handoff = writePrincipalHandoff(
-              safeBrowserStorage("sessionStorage"),
-              "kova-app-chat-context",
-              isLoaded ? userKey : undefined,
-              `Use my connected ${item.label} account for this request when relevant: `,
-            );
-            if (!handoff.ok) {
-              toast.error("App context could not be prepared. Reload and try again.");
-              return;
-            }
-            window.location.href = "/";
+          configured={
+            item.id === "github"
+              ? visibleGithubData?.configured !== false
+              : CONFIGURED_CONNECTORS.has(item.id)
+          }
+          onDetails={(trigger) => {
+            detailsReturnRef.current = {
+              trigger,
+              url: window.location.href,
+              principal: principalRef.current,
+            };
+            setSelectedApp(item);
           }}
         />
       ))}
     </ul>
   );
 
-  const Section = ({
-    title,
-    subtitle,
-    icon,
-    items,
-  }: {
-    title: string;
-    subtitle?: string;
-    icon?: React.ReactNode;
-    items: ConnectorItem[];
-  }) => {
-    if (items.length === 0) return null;
-    return (
-      <section>
-        <div className="flex items-baseline justify-between mb-3">
-          <div>
-            <h2 className="text-sm font-semibold tracking-wide inline-flex items-center gap-1.5">
-              {icon}
-              {title}
-            </h2>
-            {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
-          </div>
-        </div>
-        {renderGrid(items)}
-      </section>
-    );
-  };
-
   return (
-    <AppShell>
+    <AppShell hideUtilities>
       <main
         id="main-content"
         tabIndex={-1}
         aria-labelledby="apps-title"
-        className="kova-page kova-secondary-page max-w-5xl space-y-8"
+        className="kova-page kova-secondary-page spec400-plugins"
       >
         <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent
+            className="spec400-plugin-detail"
+            closeLabel="Close plugin details"
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              const origin = detailsReturnRef.current;
+              restoreDialogFocus(
+                origin?.trigger.isConnected ? origin.trigger : searchRef.current,
+                origin?.url,
+                origin?.principal !== principalRef.current,
+              );
+            }}
+          >
             <DialogHeader>
+              {visibleSelectedApp && <AppLogo id={visibleSelectedApp.id} />}
               <DialogTitle>{visibleSelectedApp?.label}</DialogTitle>
               <DialogDescription>{visibleSelectedApp?.description}</DialogDescription>
             </DialogHeader>
             {visibleSelectedApp && (
-              <div className="space-y-4 text-sm">
-                <section className="rounded-xl border p-3">
-                  <h3 className="font-medium">Capabilities and permissions</h3>
-                  <p className="mt-1 text-muted-foreground">
-                    {visibleSelectedApp.id === "gmail"
-                      ? "Read message context. Sending email always requires explicit confirmation."
-                      : visibleSelectedApp.id === "google-calendar"
-                        ? "Read calendars and propose events. Creating an event requires explicit confirmation."
-                        : visibleSelectedApp.id === "google-drive"
-                          ? "Search and read files covered by the Drive scopes you granted."
-                          : "Manage the Google connection shared by supported Google apps."}
-                  </p>
-                  {isGoogleId(visibleSelectedApp.id) && visibleGoogleStatus?.email ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Connected as {visibleGoogleStatus.email}. Only permissions granted by Google
-                      are available in chat.
+              <div className="spec400-plugin-detail-body">
+                <StatusBadge
+                  state={stateOf(visibleSelectedApp.id)}
+                  configured={
+                    visibleSelectedApp.id === "github"
+                      ? visibleGithubData?.configured !== false
+                      : CONFIGURED_CONNECTORS.has(visibleSelectedApp.id)
+                  }
+                />
+                <section className="spec400-plugin-detail-section">
+                  <h3>Capabilities and permissions</h3>
+                  {selectedReview && (
+                    <>
+                      <ul className="spec400-plugin-permissions">
+                        {selectedReview.permissions.map((permission) => (
+                          <li key={permission}>{permission}</li>
+                        ))}
+                      </ul>
+                      {!CONFIGURED_CONNECTORS.has(visibleSelectedApp.id) && (
+                        <p className="spec400-plugin-notice">
+                          This plugin is unavailable. Its listed capabilities are proposals. No
+                          account is connected and no permissions have been requested.
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {isGoogleId(visibleSelectedApp.id) && (
+                    <p>
+                      The shared Google connection requests your profile and email, Gmail read and
+                      draft/send access, calendar read/edit access, and Drive read access. Review
+                      the permissions on Google’s consent screen before approving.
                     </p>
-                  ) : null}
-                  {isGoogleId(visibleSelectedApp.id) &&
-                  visibleGoogleStatus?.state === "reauthorization_required" ? (
-                    <button
-                      type="button"
-                      className="mt-3 min-h-11 rounded-lg bg-foreground px-4 text-sm font-medium text-background"
-                      onClick={() => void handleConnect(visibleSelectedApp)}
-                    >
-                      Reconnect Google
-                    </button>
-                  ) : null}
+                  )}
+                  {visibleSelectedApp.id === "github" && (
+                    <p>
+                      GitHub will ask you to choose an account and approve access. Only authorized
+                      installations and explicitly granted repositories are available to Kova.
+                    </p>
+                  )}
                 </section>
-                <section>
-                  <h3 className="font-medium">Recent activity</h3>
+                {!isSignedIn ? (
+                  <section className="spec400-plugin-detail-section">
+                    <h3>Account</h3>
+                    <p>
+                      Sign in to Kova before connecting an account. You’ll choose the provider
+                      account after selecting Connect.
+                    </p>
+                    {CONFIGURED_CONNECTORS.has(visibleSelectedApp.id) && (
+                      <SignInButton mode="modal">
+                        <Button>Sign in to connect</Button>
+                      </SignInButton>
+                    )}
+                  </section>
+                ) : isGoogleId(visibleSelectedApp.id) ? (
+                  <section
+                    ref={googleStatusRef}
+                    className="spec400-plugin-detail-section"
+                    role="region"
+                    aria-label="Google connection status"
+                    aria-busy={visibleGoogleLoading || googleBusy}
+                    tabIndex={-1}
+                  >
+                    <h3 id="google-accounts-title">Google accounts</h3>
+                    <p>
+                      Choose the account for new Gmail, Calendar and Drive requests. Existing
+                      confirmed actions remain bound to their original account.
+                    </p>
+                    {visibleGoogleLoading || googleBusy ? (
+                      <p role="status">Updating Google accounts…</p>
+                    ) : null}
+                    {visibleGoogleStatus?.state === "temporarily_unavailable" && (
+                      <p role="status">
+                        Google account status is unavailable. Refresh to try again.
+                      </p>
+                    )}
+                    {visibleGoogleStatus?.state === "reauthorization_required" && (
+                      <p role="status">
+                        Your connection record is retained, but Google authorization has expired or
+                        was revoked. Reconnect to restore access.
+                      </p>
+                    )}
+                    {visibleGoogleStatus?.state === "permission_incomplete" && (
+                      <p role="status">
+                        Some requested permissions are missing. Reconnect and review the required
+                        access.
+                      </p>
+                    )}
+                    {(visibleGoogleStatus?.accounts?.length ?? 0) > 0 ? (
+                      <ul className="spec400-plugin-account-list">
+                        {visibleGoogleStatus!.accounts!.map((account) => (
+                          <li key={account.id}>
+                            <div className="spec400-plugin-account-heading">
+                              <strong>{account.email || "Google account"}</strong>
+                              <span>
+                                {account.id === visibleGoogleStatus?.selectedConnectionId
+                                  ? "Selected for new requests · "
+                                  : ""}
+                                {account.state.replaceAll("_", " ")}
+                              </span>
+                            </div>
+                            <details className="spec400-plugin-scope-list">
+                              <summary>Current permission scope</summary>
+                              {account.scopes?.length ? (
+                                <ul>
+                                  {account.scopes.map((scope) => (
+                                    <li key={scope}>{scope}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p>
+                                  No scopes reported. Refresh the account status before relying on
+                                  access.
+                                </p>
+                              )}
+                            </details>
+                            <div className="spec400-plugin-actions">
+                              <Button
+                                variant="outline"
+                                className="spec400-plugin-use-account"
+                                disabled={
+                                  googleBusy ||
+                                  visibleGoogleLoading ||
+                                  !account.connected ||
+                                  account.id === visibleGoogleStatus?.selectedConnectionId
+                                }
+                                onClick={() => void changeGoogleAccount("select", account.id)}
+                                aria-label={`Use ${account.email || "Google account"} for new requests`}
+                              >
+                                Use account
+                              </Button>
+                              <Button
+                                variant="outline"
+                                disabled={googleBusy || visibleGoogleLoading}
+                                onClick={() => void connectGoogle(account.id)}
+                                aria-label={`Reconnect ${account.email || "Google account"}`}
+                              >
+                                Reconnect
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                disabled={googleBusy || visibleGoogleLoading}
+                                onClick={(event) => {
+                                  googleDisconnectReturnRef.current = {
+                                    trigger: event.currentTarget,
+                                    url: window.location.href,
+                                    principal: principalRef.current,
+                                    generation: generationRef.current,
+                                  };
+                                  setPendingGoogleDisconnect({
+                                    id: account.id,
+                                    email: account.email || "Google account",
+                                  });
+                                }}
+                                aria-label={`Disconnect ${account.email || "Google account"}`}
+                              >
+                                Disconnect
+                              </Button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : !visibleGoogleLoading &&
+                      visibleGoogleStatus?.state !== "temporarily_unavailable" ? (
+                      <p>
+                        No Google accounts are connected. You’ll choose the account on Google’s
+                        sign-in screen.
+                      </p>
+                    ) : null}
+                    <div className="spec400-plugin-actions">
+                      <Button
+                        disabled={
+                          googleBusy ||
+                          visibleGoogleLoading ||
+                          visibleGoogleStatus?.state === "temporarily_unavailable"
+                        }
+                        onClick={() => void handleConnect(visibleSelectedApp)}
+                      >
+                        {visibleGoogleStatus?.state === "reauthorization_required" ||
+                        visibleGoogleStatus?.state === "permission_incomplete"
+                          ? "Reconnect"
+                          : (visibleGoogleStatus?.accounts?.length ?? 0) > 0
+                            ? "Connect another account"
+                            : "Connect"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={googleBusy || visibleGoogleLoading}
+                        onClick={refreshGoogleStatus}
+                      >
+                        Refresh status
+                      </Button>
+                      {stateOf(visibleSelectedApp.id) === "connected" && (
+                        <Button variant="ghost" onClick={() => handleUseInChat(visibleSelectedApp)}>
+                          Use in chat
+                        </Button>
+                      )}
+                    </div>
+                  </section>
+                ) : visibleSelectedApp.id === "github" ? (
+                  <GitHubManager
+                    key={principal ?? "unresolved"}
+                    data={visibleGithubData}
+                    loadError={githubLoadError}
+                    reload={refreshGitHub}
+                  />
+                ) : null}
+                <section className="spec400-plugin-detail-section">
+                  <h3>Recent activity</h3>
                   {visibleActivity.filter((entry) =>
-                    [visibleSelectedApp.label, "Google"].includes(entry.app),
+                    [
+                      visibleSelectedApp.label,
+                      ...(isGoogleId(visibleSelectedApp.id) ? ["Google"] : []),
+                    ].includes(entry.app),
                   ).length ? (
-                    <ul className="mt-2 space-y-2">
+                    <ul className="spec400-plugin-activity">
                       {visibleActivity
-                        .filter((entry) => [visibleSelectedApp.label, "Google"].includes(entry.app))
+                        .filter((entry) =>
+                          [
+                            visibleSelectedApp.label,
+                            ...(isGoogleId(visibleSelectedApp.id) ? ["Google"] : []),
+                          ].includes(entry.app),
+                        )
                         .slice(0, 5)
                         .map((entry, index) => (
-                          <li key={`${entry.at}:${index}`} className="rounded-lg bg-muted/60 p-2">
+                          <li key={`${entry.at}:${index}`}>
                             {entry.action} · {new Date(entry.at).toLocaleString()}
                           </li>
                         ))}
                     </ul>
                   ) : (
-                    <p className="mt-1 text-muted-foreground">No recorded connection activity.</p>
+                    <p>No recorded connection activity.</p>
                   )}
                 </section>
               </div>
             )}
           </DialogContent>
         </Dialog>
+        <ConfirmActionDialog
+          open={activityReady && isSignedIn && pendingGoogleDisconnect !== null}
+          onOpenChange={(open) => !open && setPendingGoogleDisconnect(null)}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            const origin = googleDisconnectReturnRef.current;
+            googleDisconnectReturnRef.current = null;
+            restoreDialogFocus(
+              origin?.trigger,
+              origin?.url,
+              origin?.principal !== principalRef.current ||
+                origin?.generation !== generationRef.current,
+            );
+          }}
+          title={`Disconnect ${pendingGoogleDisconnect?.email ?? "Google account"}?`}
+          description="Gmail, Calendar and Drive access for this account will stop. Scheduled tasks or projects that depend on this account may fail until it is reconnected. Other connected accounts are unchanged."
+          confirmLabel="Disconnect account"
+          destructive
+          disabled={googleBusy || visibleGoogleLoading}
+          onConfirm={() => {
+            const account = pendingGoogleDisconnect;
+            setPendingGoogleDisconnect(null);
+            if (account) void changeGoogleAccount("disconnect", account.id);
+          }}
+        >
+          {activityReady && isSignedIn && userKey && pendingGoogleDisconnect && (
+            <GoogleDisconnectSchedules
+              key={`${principal}:${lifecycleVersion}:${pendingGoogleDisconnect.id}:${visibleGoogleStatus?.accounts?.find((account) => account.id === pendingGoogleDisconnect.id)?.connectionRevision}`}
+              userId={userKey}
+              connectionId={pendingGoogleDisconnect.id}
+            />
+          )}
+        </ConfirmActionDialog>
         <WorkspacePageHeader
-          icon={PanelsTopLeft}
-          title="Apps & plugins"
+          title="Plugins"
           titleId="apps-title"
-          description="Connect the services you want KovaGPT to use. You control permissions, and write actions still require confirmation."
+          description="Connect tools and sources to Kova"
         />
         {activityPersistenceError && (
-          <p role="status" className="rounded-lg border border-amber-500/30 p-3 text-sm">
+          <p role="status" className="spec400-plugin-notice">
             Recent connection activity could not be saved in this browser and will be lost when you
             leave or reload this page.
           </p>
         )}
         {!isLoaded ? (
-          <section role="status" aria-labelledby="apps-loading-title" className="space-y-3">
-            <h2 id="apps-loading-title" className="sr-only">
-              Loading apps and plugins
-            </h2>
-            <div
-              aria-hidden="true"
-              className="h-28 animate-pulse rounded-xl bg-muted motion-reduce:animate-none"
-            />
-          </section>
-        ) : !isSignedIn ? (
-          <section
-            className="kova-empty-state mx-auto max-w-2xl"
-            aria-labelledby="apps-sign-in-title"
-          >
-            <LogIn className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <h2 id="apps-sign-in-title" className="mt-3 text-xl font-semibold">
-              Sign in to connect services
-            </h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-              Connect Google, Gmail, Drive, Calendar, and GitHub to use authorized context across
-              your workspace.
-            </p>
-            <SignInButton mode="modal">
-              <Button className="mt-5 min-h-11">Sign in</Button>
-            </SignInButton>
+          <section role="status" aria-label="Loading plugins" className="spec400-plugin-grid">
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div
+                key={item}
+                aria-hidden="true"
+                className="spec400-plugin-skeleton animate-pulse motion-reduce:animate-none"
+              />
+            ))}
           </section>
         ) : (
           <>
-            <label className="relative block max-w-md">
-              <span className="sr-only">Search apps and plugins</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search apps and plugins"
-                className="h-11 pl-9"
-              />
-            </label>
-
-            <section
-              aria-labelledby="google-accounts-title"
-              className="space-y-3 rounded-xl border p-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            {!isSignedIn && (
+              <section className="spec400-plugin-signin" aria-labelledby="apps-sign-in-title">
+                <LogIn aria-hidden="true" />
                 <div>
-                  <h2 id="google-accounts-title" className="font-semibold">
-                    Google accounts
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Choose the account for new Gmail, Calendar and Drive requests. Existing
-                    confirmed actions remain bound to their original account.
+                  <h2 id="apps-sign-in-title">Sign in to connect plugins</h2>
+                  <p>
+                    Browse available tools, then sign in to manage your accounts and permissions.
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  disabled={
-                    googleBusy || visibleGoogleLoading || !CONFIGURED_CONNECTORS.has("google")
-                  }
-                  onClick={() => void connectGoogle()}
-                >
-                  Add Google account
-                </Button>
-                <Button
-                  variant="ghost"
-                  disabled={googleBusy || visibleGoogleLoading}
-                  onClick={() => void refreshGoogle()}
-                >
-                  Refresh Google accounts
-                </Button>
-              </div>
-              {visibleGoogleLoading || googleBusy ? (
-                <p role="status" className="text-sm text-muted-foreground">
-                  Updating Google accounts…
-                </p>
-              ) : null}
-              {visibleGoogleStatus?.state === "temporarily_unavailable" ? (
-                <p role="status" className="text-sm">
-                  Google account status is unavailable. Refresh to try again.
-                </p>
-              ) : null}
-              {(visibleGoogleStatus?.accounts?.length ?? 0) > 0 ? (
-                <ul className="space-y-3">
-                  {visibleGoogleStatus!.accounts!.map((account) => (
-                    <li
-                      key={account.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="break-all text-sm font-medium">
-                          {account.email || "Google account"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {account.id === visibleGoogleStatus?.selectedConnectionId
-                            ? "Selected for new requests · "
-                            : ""}
-                          {account.state.replaceAll("_", " ")}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          disabled={
-                            googleBusy ||
-                            visibleGoogleLoading ||
-                            !account.connected ||
-                            account.id === visibleGoogleStatus?.selectedConnectionId
-                          }
-                          onClick={() => void changeGoogleAccount("select", account.id)}
-                          aria-label={`Use ${account.email || "Google account"} for new requests`}
-                        >
-                          Use account
-                        </Button>
-                        {account.state !== "connected" ? (
-                          <Button
-                            variant="outline"
-                            disabled={googleBusy || visibleGoogleLoading}
-                            onClick={() => void connectGoogle(account.id)}
-                            aria-label={`Reconnect ${account.email || "Google account"}`}
-                          >
-                            Reconnect
-                          </Button>
-                        ) : null}
-                        <Button
-                          variant="ghost"
-                          disabled={googleBusy || visibleGoogleLoading}
-                          onClick={() => void changeGoogleAccount("disconnect", account.id)}
-                          aria-label={`Disconnect ${account.email || "Google account"}`}
-                        >
-                          Disconnect
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : !visibleGoogleLoading &&
-                visibleGoogleStatus?.state !== "temporarily_unavailable" ? (
-                <p className="text-sm text-muted-foreground">No Google accounts are connected.</p>
-              ) : null}
-            </section>
-
-            <GitHubManager key={principal ?? "unresolved"} />
-
-            {workflowSkillsAvailable ? (
-              <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
-            ) : (
-              <section className="rounded-2xl border bg-card p-5" aria-labelledby="skills-title">
-                <h2 id="skills-title" className="text-base font-semibold">
-                  Workflow skills
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Verify your primary email, then refresh this page to create or use workflow
-                  skills.
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-4 min-h-11"
-                  disabled={verificationBusy || !user?.primaryEmailAddress?.emailAddress}
-                  onClick={() => void resendWorkflowVerification()}
-                >
-                  {verificationBusy ? "Sending…" : "Resend verification email"}
-                </Button>
+                <SignInButton mode="modal">
+                  <Button variant="outline">Sign in</Button>
+                </SignInButton>
               </section>
             )}
-
-            {filtered.length === 0 ? (
-              <section className="kova-empty-state" aria-labelledby="apps-empty-title">
-                <Search className="mx-auto h-5 w-5 text-muted-foreground" aria-hidden="true" />
-                <h2 id="apps-empty-title" className="mt-3 text-sm font-medium">
-                  No matching apps or plugins
-                </h2>
-                <p className="mt-1 text-xs text-muted-foreground">Try another service name.</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-4 min-h-11"
-                  onClick={() => setQuery("")}
-                >
-                  Clear search
-                </Button>
-              </section>
-            ) : (
-              <>
-                <Section
-                  title="Connected"
-                  subtitle="Ready to use in chat."
-                  icon={<Check className="h-3.5 w-3.5 text-emerald-400/90" aria-hidden="true" />}
-                  items={connectedList}
-                />
-                <Section
-                  title="Available connections"
-                  subtitle="Connect only the access you want to use."
-                  icon={<Sparkles className="h-3.5 w-3.5 text-foreground/70" aria-hidden="true" />}
-                  items={recommendedList}
-                />
-              </>
+            <Tabs
+              value={connectionFilter}
+              onValueChange={setConnectionFilter}
+              className="spec400-plugin-directory"
+            >
+              <TabsList className="spec400-plugin-tabs" aria-label="Plugin connections">
+                <TabsTrigger value="all">
+                  All <span>{catalog.length}</span>
+                </TabsTrigger>
+                <TabsTrigger value="connected">
+                  Connected <span>{connectedCountLabel}</span>
+                </TabsTrigger>
+              </TabsList>
+              <div className="spec400-plugin-filters">
+                <label className="spec400-plugin-search">
+                  <span className="sr-only">Search plugins</span>
+                  <Search aria-hidden="true" />
+                  <Input
+                    ref={searchRef}
+                    value={query}
+                    maxLength={MAX_MANAGEMENT_QUERY_LENGTH}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search plugins"
+                  />
+                </label>
+                <label className="spec400-plugin-category-filter">
+                  <span>Category</span>
+                  <select value={category} onChange={(event) => setCategory(event.target.value)}>
+                    <option value="all">All categories</option>
+                    {PLUGIN_CATEGORIES.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <TabsContent value={connectionFilter} className="spec400-plugin-results">
+                <p className="spec400-plugin-result-count" role="status">
+                  {connectedStatusUnverified
+                    ? connectedStatusMessage
+                    : `${filtered.length} ${filtered.length === 1 ? "plugin" : "plugins"}${query ? ` matching “${query}”` : ""}`}
+                </p>
+                {filtered.length ? (
+                  renderGrid(filtered)
+                ) : (
+                  <section className="spec400-plugin-empty" aria-labelledby="apps-empty-title">
+                    <Search aria-hidden="true" />
+                    <h2 id="apps-empty-title">
+                      {connectedStatusUnverified
+                        ? connectionCountState === "checking"
+                          ? "Checking connections"
+                          : connectionCountState === "unavailable"
+                            ? "Connection status unavailable"
+                            : "Connection status unknown"
+                        : connectionFilter === "connected" && !query && category === "all"
+                          ? "No connected plugins"
+                          : "No matching plugins"}
+                    </h2>
+                    <p>
+                      {connectedStatusUnverified
+                        ? connectionCountState === "checking"
+                          ? "Wait for the current status check to finish."
+                          : "Choose a plugin from All to review and refresh its connection status."
+                        : connectionFilter === "connected" && !query && category === "all"
+                          ? "Choose a plugin from All to review its permissions and connect an account."
+                          : "Try another name or category."}
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setQuery("");
+                        setCategory("all");
+                        setConnectionFilter("all");
+                      }}
+                    >
+                      {connectionFilter === "connected" ? "Browse all plugins" : "Clear filters"}
+                    </Button>
+                  </section>
+                )}
+              </TabsContent>
+            </Tabs>
+            {isSignedIn && (
+              <details className="spec400-plugin-skills">
+                <summary>Workflow skills</summary>
+                {workflowSkillsAvailable ? (
+                  <WorkflowSkillsPanel key={userKey!} userKey={userKey!} />
+                ) : (
+                  <section aria-labelledby="skills-title">
+                    <h2 id="skills-title">Verify your email to use workflow skills</h2>
+                    <p>
+                      Verify your primary email, then refresh this page to create or use workflow
+                      skills.
+                    </p>
+                    <Button
+                      variant="outline"
+                      disabled={verificationBusy || !user?.primaryEmailAddress?.emailAddress}
+                      onClick={() => void resendWorkflowVerification()}
+                    >
+                      {verificationBusy ? "Sending…" : "Resend verification email"}
+                    </Button>
+                  </section>
+                )}
+              </details>
             )}
           </>
         )}

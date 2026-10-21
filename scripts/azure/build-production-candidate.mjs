@@ -42,6 +42,38 @@ function parseJson(value) {
   }
 }
 
+function browserAuthInputs(env) {
+  // Browser Auth is an explicit build choice. Server bindings never select it.
+  const browserAuthMode =
+    env.VITE_KOVA_AUTH_MODE === undefined ? "supabase" : env.VITE_KOVA_AUTH_MODE;
+  const browserGoogleAuthEnabled =
+    env.VITE_KOVA_GOOGLE_AUTH_ENABLED === undefined ? "false" : env.VITE_KOVA_GOOGLE_AUTH_ENABLED;
+  const browserAuthOrigin =
+    env.VITE_KOVA_AUTH_ORIGIN === undefined ? "" : env.VITE_KOVA_AUTH_ORIGIN;
+  requireCondition(
+    ["supabase", "dual", "kova"].includes(browserAuthMode),
+    "browser_auth_mode_invalid",
+  );
+  requireCondition(
+    ["true", "false"].includes(browserGoogleAuthEnabled),
+    "browser_google_auth_invalid",
+  );
+  requireCondition(typeof browserAuthOrigin === "string", "browser_auth_origin_invalid");
+  if (browserAuthOrigin !== "") {
+    let parsed;
+    try {
+      parsed = new URL(browserAuthOrigin);
+    } catch {
+      requireCondition(false, "browser_auth_origin_invalid");
+    }
+    requireCondition(
+      parsed.protocol === "https:" && parsed.origin === browserAuthOrigin,
+      "browser_auth_origin_invalid",
+    );
+  }
+  return { browserAuthMode, browserGoogleAuthEnabled, browserAuthOrigin };
+}
+
 // Only browser-safe values from protected PLAN parameters or explicit narrow inputs.
 // Never pass the parameters document, a server credential, or a vault URI to ACR.
 export function productionCandidateConfig(env) {
@@ -71,6 +103,7 @@ export function productionCandidateConfig(env) {
   }
   const inputMode = env.KOVA_PRODUCTION_BROWSER_INPUT_MODE ?? "plan";
   requireCondition(["plan", "narrow-openai"].includes(inputMode), "browser_input_mode_invalid");
+  const authInputs = browserAuthInputs(env);
   let browserInputs;
   if (inputMode === "narrow-openai") {
     browserInputs = narrowOpenAiBrowserInputs(env, APPROVED);
@@ -98,12 +131,17 @@ export function productionCandidateConfig(env) {
     browserInputs = { supabaseUrl, publishableKey, stripeKey };
   }
   const tag = `production-candidate-${env.GITHUB_SHA}-${env.GITHUB_RUN_ID}-${env.GITHUB_RUN_ATTEMPT}`;
-  return { ...APPROVED, sourceSha: env.GITHUB_SHA, ...browserInputs, tag };
+  return { ...APPROVED, sourceSha: env.GITHUB_SHA, ...browserInputs, ...authInputs, tag };
 }
 
 // Explicit argument allowlist, exact remote Git commit, no local/stale build context.
 export function productionCandidateBuildRequest(config, sourceTree, abac) {
   requireCondition(SHA.test(sourceTree), "source_tree_invalid");
+  const authInputs = browserAuthInputs({
+    VITE_KOVA_AUTH_MODE: config.browserAuthMode,
+    VITE_KOVA_GOOGLE_AUTH_ENABLED: config.browserGoogleAuthEnabled,
+    VITE_KOVA_AUTH_ORIGIN: config.browserAuthOrigin,
+  });
   const values = {
     KOVA_SOURCE_SHA: config.sourceSha,
     KOVA_SOURCE_TREE: sourceTree,
@@ -111,6 +149,9 @@ export function productionCandidateBuildRequest(config, sourceTree, abac) {
     KOVA_VERIFY_BROWSER_CONFIG: "true",
     VITE_SUPABASE_URL: config.supabaseUrl,
     VITE_SUPABASE_PUBLISHABLE_KEY: config.publishableKey,
+    VITE_KOVA_AUTH_MODE: authInputs.browserAuthMode,
+    VITE_KOVA_GOOGLE_AUTH_ENABLED: authInputs.browserGoogleAuthEnabled,
+    VITE_KOVA_AUTH_ORIGIN: authInputs.browserAuthOrigin,
     VITE_PAYMENTS_CLIENT_TOKEN: config.stripeKey,
   };
   return {
@@ -372,6 +413,7 @@ export function buildProductionCandidate(env, run) {
       supabaseUrl: config.supabaseUrl,
       publishableKey: config.publishableKey,
       stripePublishableKey: config.stripeKey,
+      expectedAuthMode: config.browserAuthMode,
       sourceSha: config.sourceSha,
       sourceTree,
       expectedProjectRef: config.projectRef,
@@ -403,6 +445,9 @@ export function buildProductionCandidate(env, run) {
       githubRunId: env.GITHUB_RUN_ID,
       githubRunAttempt: env.GITHUB_RUN_ATTEMPT,
       browserBundleSha256: provenance.browserBundleSha256,
+      browserAuthMode: provenance.authMode,
+      requestedBrowserGoogleAuthEnabled: config.browserGoogleAuthEnabled,
+      requestedBrowserAuthOrigin: config.browserAuthOrigin,
       browserProvenanceSha256: sha256(`${JSON.stringify(provenance, null, 2)}\n`),
       containerAppUpdated: false,
       databaseMutated: false,

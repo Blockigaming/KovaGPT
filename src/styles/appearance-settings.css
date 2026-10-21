@@ -1,0 +1,77 @@
+/* Settings-local structure only. The existing light/dark color tokens remain unchanged. */
+.kova-appearance-theme-choice {
+  display: flex;
+  min-width: 0;
+  min-height: 64px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  padding: 12px;
+  cursor: pointer;
+}
+.kova-appearance-theme-choice[data-selected="true"] {
+  background: var(--accent);
+  border-color: var(--foreground);
+}
+.kova-appearance-theme-choice:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-appearance-preview {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  padding: 16px;
+  background: var(--background);
+  color: var(--foreground);
+}
+.kova-appearance-preview-reading {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  gap: 16px;
+  margin-inline: auto;
+}
+.kova-appearance-preview-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-inline: 12px;
+  border-radius: var(--kova-radius-sidebar);
+  background: var(--accent);
+  font-size: 14px;
+}
+.kova-appearance-preview-prose {
+  margin: 0;
+  line-height: 1.625;
+  overflow-wrap: anywhere;
+}
+.kova-appearance-preview-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  padding: 12px;
+  background: var(--card);
+  transition: transform 120ms ease;
+}
+.kova-appearance-preview[data-selected="true"] .kova-appearance-preview-box {
+  transform: translateY(-2px);
+}
+.kova-appearance-preview-reading > button {
+  justify-self: start;
+  min-height: 44px;
+}
+.kova-appearance-preview[data-motion="reduced"] .kova-appearance-preview-box {
+  transition: none;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-appearance-preview .kova-appearance-preview-box {
+    transition: none;
+    transform: none;
+  }
+}

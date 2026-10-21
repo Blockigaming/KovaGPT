@@ -22,9 +22,11 @@ const PAGE_SIZE = 10;
 export function MemorySourcesDialog({
   sources,
   onClose,
+  onCloseAutoFocus,
 }: {
   sources: MemorySources;
   onClose: () => void;
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   const { user, isLoaded, isSignedIn } = useUser();
   const ownerId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
@@ -96,7 +98,10 @@ export function MemorySourcesDialog({
         }
       }}
     >
-      <DialogContent className="max-h-[85dvh] overflow-y-auto">
+      <DialogContent
+        onCloseAutoFocus={onCloseAutoFocus}
+        className="min-w-0 max-h-[85dvh] overflow-y-auto [&>*]:shrink-0"
+      >
         <DialogHeader>
           <DialogTitle>Memory provided</DialogTitle>
           <DialogDescription>
@@ -110,9 +115,12 @@ export function MemorySourcesDialog({
         ) : current.error ? (
           <p role="alert">{current.error}</p>
         ) : (
-          <ul className="space-y-4">
+          <ul className="min-w-0 space-y-4">
             {current.entries.map((entry) => (
-              <li key={`${entry.kind}:${entry.id}`} className="rounded-lg border p-3">
+              <li
+                key={`${entry.kind}:${entry.id}`}
+                className="min-w-0 rounded-lg border p-3 [overflow-wrap:anywhere]"
+              >
                 {entry.available ? (
                   <>
                     <h3 className="text-sm font-medium">{entry.title}</h3>
@@ -132,7 +140,7 @@ export function MemorySourcesDialog({
             ))}
           </ul>
         )}
-        <div className="flex items-center justify-between gap-3 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm [&>button]:min-h-11 [&>button]:px-2">
           <button
             type="button"
             disabled={page === 0}

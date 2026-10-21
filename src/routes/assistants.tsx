@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useMatch } from "@tanstack/react-router";
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { requestKovas, type KovaCard } from "@/lib/custom-kovas-client";
 import { PublicPageView } from "@/components/public/PublicSite";
 export const Route = createFileRoute("/assistants")({
@@ -29,11 +29,14 @@ function AssistantsRoute() {
 
 function DirectoryPage() {
   const [query, setQuery] = useState("");
+  const directoryRef = useRef<HTMLDivElement>(null);
   const [cards, setCards] = useState<KovaCard[]>([]),
     [after, setAfter] = useState<string | null>(null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(true);
   const [page, setPage] = useState<string | null>(null);
+  const [requestVersion, setRequestVersion] = useState(0);
+  const [hasLoaded, setHasLoaded] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     setBusy(true);
@@ -48,6 +51,7 @@ function DirectoryPage() {
         const rows = result.rows.slice(0, 20);
         setCards((old) => (page ? [...old, ...rows] : rows));
         setAfter(result.rows.length > 20 ? (rows.at(-1)?.id ?? null) : null);
+        setHasLoaded(true);
       })
       .catch(() => {
         if (!controller.signal.aborted) setError("The directory is unavailable. Try again.");
@@ -56,7 +60,7 @@ function DirectoryPage() {
         if (!controller.signal.aborted) setBusy(false);
       });
     return () => controller.abort();
-  }, [page]);
+  }, [page, requestVersion]);
   const items = cards.filter((item) =>
     `${item.config.name} ${item.config.description}`.toLowerCase().includes(query.toLowerCase()),
   );
@@ -66,7 +70,13 @@ function DirectoryPage() {
       title="KovaGPT Assistants"
       summary="Explore conversational Kovas shared by their creators. Each Kova uses your account’s permissions and plan; creator accounts are never shared."
     >
-      <div className="col-span-full">
+      <div
+        ref={directoryRef}
+        tabIndex={-1}
+        role="region"
+        aria-label="Assistant directory"
+        className="col-span-full"
+      >
         <label className="relative block">
           <span className="sr-only">Search loaded Kovas</span>
           <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-muted-foreground" />
@@ -92,7 +102,7 @@ function DirectoryPage() {
             <p className="mt-4 text-xs">Community publication · {item.config.mode}</p>
           </Link>
         ))
-      ) : (
+      ) : hasLoaded && !busy && !error ? (
         <section
           className="col-span-full rounded-2xl border border-dashed bg-background p-10 text-center"
           role="status"
@@ -104,11 +114,21 @@ function DirectoryPage() {
             Only currently public Kovas appear here.
           </p>
         </section>
-      )}
+      ) : null}
       {error && (
-        <p role="alert" className="col-span-full">
-          {error}
-        </p>
+        <div role="alert" className="col-span-full">
+          <p>{error}</p>
+          <button
+            disabled={busy}
+            className="mt-2 min-h-11 rounded-lg border px-4"
+            onClick={() => {
+              directoryRef.current?.focus({ preventScroll: true });
+              setRequestVersion((current) => current + 1);
+            }}
+          >
+            Retry directory
+          </button>
+        </div>
       )}
       {busy && (
         <p role="status" className="col-span-full">
@@ -116,7 +136,15 @@ function DirectoryPage() {
         </p>
       )}
       {after && (
-        <button disabled={busy} className="col-span-full underline" onClick={() => setPage(after)}>
+        <button
+          disabled={busy}
+          className="col-span-full min-h-11 rounded-lg border px-4"
+          onClick={() => {
+            directoryRef.current?.focus({ preventScroll: true });
+            setPage(after);
+            setRequestVersion((current) => current + 1);
+          }}
+        >
           Load more Kovas
         </button>
       )}

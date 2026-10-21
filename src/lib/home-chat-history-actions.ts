@@ -1,3 +1,4 @@
+import { moveChatToTrash, readChatTrash, restoreChatTrash } from "./chat-trash";
 import { toast } from "sonner";
 import {
   archiveConversation,
@@ -62,23 +63,58 @@ export async function removeHomeChat(context: Context, id: string, archive = fal
   if (!context.current()) return;
   const chat = context.items.find((item) => item.id === id);
   if (!chat) return;
-  const saved = archive
-    ? await archiveConversation(context.ownerId, chat)
-    : chat.temporary ||
-      (await saveConversations(
-        context.ownerId,
-        context.items.filter((item) => item.id !== id),
-      ));
-  if (!context.current()) return;
-  if (!saved) {
-    toast.error(
-      archive ? "Could not save the archived chat." : "Chat deletion could not be saved.",
-    );
+  let instant: boolean;
+  let saved: boolean;
+  try {
+    instant = !archive && (chat.temporary || readChatTrash(context.ownerId).retentionMs === 0);
+    saved = archive
+      ? await archiveConversation(context.ownerId, chat)
+      : await moveChatToTrash(context.ownerId, chat, context.items, context.current);
+  } catch {
+    toast.error("Could not save Trash. Your chat was kept.");
     return;
   }
+  if (!context.current()) return;
+  if (!saved) {
+    if (archive) toast.error("Could not save the archived chat.");
+    return;
+  }
+  if (!archive && !chat.temporary)
+    instant = !readChatTrash(context.ownerId).entries.some((entry) => entry.conversation.id === id);
   context.setItems((current) => current.filter((item) => item.id !== id));
   if (context.activeId === id) context.setActive(null);
-  toast.success(archive ? "Chat archived" : "Chat deleted", {
-    action: { label: "Undo", onClick: () => restoreHomeChat(context, chat, archive) },
-  });
+  toast.success(
+    archive
+      ? "Chat archived"
+      : instant
+        ? "Chat permanently deleted"
+        : "Chat moved to this browser’s Trash",
+    {
+      ...(!instant
+        ? {
+            action: {
+              label: "Undo",
+              onClick: async () => {
+                if (!context.current()) return;
+                if (archive) await restoreHomeChat(context, chat, true);
+                else
+                  try {
+                    if (await restoreChatTrash(context.ownerId, chat.id, context.current)) {
+                      if (!context.current()) return;
+                      context.setItems((items) => [
+                        chat,
+                        ...items.filter((item) => item.id !== chat.id),
+                      ]);
+                      context.setActive(chat.id);
+                    }
+                  } catch {
+                    if (context.current())
+                      toast.error("Could not restore chat. Check Trash in Settings.");
+                  }
+              },
+            },
+          }
+        : {}),
+    },
+  );
 }

@@ -143,6 +143,13 @@ export function OnboardingDialog({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [rotateKey, setRotateKey] = useState(0);
+  const saveErrorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (open && saveError && !saving && document.activeElement === document.body) {
+      saveErrorRef.current?.focus({ preventScroll: true });
+    }
+  }, [open, saveError, saving]);
 
   const fetchOnboarding = useServerFn(getOnboarding);
   const doSave = useServerFn(saveOnboarding);
@@ -266,7 +273,17 @@ export function OnboardingDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && skip()}>
-      <DialogContent className="gap-0 overflow-y-auto p-0 sm:max-w-[30rem] [&>div[aria-hidden]]:mt-2">
+      <DialogContent
+        className="gap-0 overflow-y-auto p-0 sm:max-w-[30rem] [&>div[aria-hidden]]:mt-2"
+        onCloseAutoFocus={(event) => {
+          const composer = document.querySelector<HTMLTextAreaElement>(
+            'textarea[aria-label="Message KovaGPT"]',
+          );
+          if (!composer) return;
+          event.preventDefault();
+          composer.focus({ preventScroll: true });
+        }}
+      >
         <div className="border-b border-border/60 pb-4 pl-5 pr-16 pt-5 sm:pl-6 sm:pr-16">
           <div className="mb-4 flex items-center justify-between gap-4">
             <span className="text-xs font-medium text-muted-foreground">Step {step} of 3</span>
@@ -295,6 +312,7 @@ export function OnboardingDialog({
             <div className="grid grid-cols-2 gap-2">
               {USES.map((u) => (
                 <button
+                  data-kova-button-shape="preserve"
                   type="button"
                   key={u.id}
                   aria-pressed={primaryUse === u.id}
@@ -319,6 +337,7 @@ export function OnboardingDialog({
             <div className="flex flex-col gap-2">
               {STYLES.map((s) => (
                 <button
+                  data-kova-button-shape="preserve"
                   type="button"
                   key={s.id}
                   aria-pressed={style === s.id}
@@ -346,6 +365,7 @@ export function OnboardingDialog({
             <div className="flex flex-col gap-2 py-2">
               {starters.map((s) => (
                 <button
+                  data-kova-button-shape="preserve"
                   type="button"
                   key={s}
                   onClick={() => finish(s)}
@@ -372,9 +392,14 @@ export function OnboardingDialog({
           )}
 
           {saveError ? (
-            <p role="alert" className="mt-3 text-sm text-destructive">
-              {saveError}
-            </p>
+            <div className="mt-3 space-y-2">
+              <p ref={saveErrorRef} role="alert" tabIndex={-1} className="text-sm text-destructive">
+                {saveError}
+              </p>
+              <Button type="button" variant="ghost" onClick={() => void skip()} disabled={saving}>
+                Skip for now
+              </Button>
+            </div>
           ) : null}
         </div>
 
@@ -413,7 +438,14 @@ export function OnboardingDialog({
             </Button>
           ) : (
             <Button onClick={() => finish()} disabled={saving}>
-              {saving ? "Saving…" : "Start chatting"}
+              {saving ? (
+                <span className="spec400-loading-label">
+                  <span className="spec400-loading-spinner" aria-hidden="true" />
+                  Saving…
+                </span>
+              ) : (
+                "Start chatting"
+              )}
             </Button>
           )}
         </DialogFooter>

@@ -1,5 +1,9 @@
-import { useRef, useState } from "react";
-import { toast } from "sonner";
+import { useId, useRef, useState } from "react";
+import { useScopedActionFeedback } from "@/lib/use-scoped-action-feedback";
+import {
+  ResultCommentDeleteDialog,
+  type ResultCommentDeleteTarget,
+} from "@/components/ResultCommentDeleteDialog";
 import { resolveCommentAnchor } from "@/lib/collaboration-client.mjs";
 import type { CanvasSnapshot } from "@/lib/collaboration";
 export function CanvasComments({
@@ -23,23 +27,44 @@ export function CanvasComments({
   onSelect: (start: number, end: number) => void;
   selection: () => { start: number; end: number } | null;
 }) {
+  const scope = JSON.stringify([actorId, snapshot.document.id]);
+  const feedback = useScopedActionFeedback(scope);
+  const commentFieldId = useId();
+  const commentsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ResultCommentDeleteTarget | null>(null);
   const [draft, setDraft] = useState("");
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const [pending, setPending] = useState(false);
   const attempt = useRef<{ key: string; id: string; commentEpoch: number } | null>(null);
-  const run = async (action: () => Promise<void>) => {
-    if (pending) return;
+  const run = async (
+    action: (isCurrent: () => boolean) => Promise<void>,
+    operation = "comment",
+  ) => {
+    const ticket = feedback.begin(operation);
+    if (!ticket) return;
     setPending(true);
     try {
-      await action();
+      await action(() => feedback.current(ticket));
+      feedback.finish(ticket);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Comment could not be saved.");
+      feedback.finish(
+        ticket,
+        operation === "older"
+          ? `Older comments could not be loaded. ${error instanceof Error ? error.message : "Try Load older comments again."} Your current comments and draft remain visible.`
+          : `${error instanceof Error ? error.message : "The comment request could not be confirmed."} Your draft is preserved. If a save was already accepted, retrying the same comment keeps its existing request identity.`,
+      );
     } finally {
-      setPending(false);
+      // A different actor/document is never updated by this request.
+      if (feedback.scopeCurrent(ticket)) setPending(false);
     }
   };
   return (
     <>
-      <h2 className="text-sm font-semibold">Comments</h2>
+      <h2 ref={commentsHeadingRef} tabIndex={-1} className="text-sm font-semibold">
+        Comments
+      </h2>
       <p className="mt-1 text-xs text-muted-foreground">
         {snapshot.document.project_id
           ? "Saved for Project members."
@@ -47,7 +72,12 @@ export function CanvasComments({
       </p>
       {snapshot.canEdit && (
         <>
+          <label htmlFor={commentFieldId} className="mt-3 block text-sm font-medium">
+            Comment
+          </label>
           <textarea
+            ref={commentInputRef}
+            id={commentFieldId}
             value={draft}
             maxLength={4000}
             onChange={(event) => setDraft(event.target.value)}
@@ -62,8 +92,10 @@ export function CanvasComments({
           )}
           <button
             disabled={pending || dirty || !draft.trim()}
-            onClick={() =>
-              void run(async () => {
+            onClick={() => {
+              // Focus a retained input before Add becomes disabled or its draft clears.
+              commentInputRef.current?.focus({ preventScroll: true });
+              void run(async (isCurrent) => {
                 const range = selection();
                 const key = JSON.stringify([draft.trim(), range, snapshot.document.revision]);
                 if (attempt.current?.key !== key)
@@ -78,13 +110,21 @@ export function CanvasComments({
                   body: draft.trim(),
                   ...(range ?? {}),
                 });
-                setDraft("");
+                if (!isCurrent()) return;
+                if (draftRef.current === draft) setDraft("");
                 attempt.current = null;
-              })
-            }
-            className="mt-2 min-h-9 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
+              });
+            }}
+            className="mt-2 min-h-11 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
           >
-            {pending ? "Saving…" : "Add comment"}
+            {pending ? (
+              <span className="spec400-loading-label">
+                <span className="spec400-loading-spinner" aria-hidden="true" />
+                Saving…
+              </span>
+            ) : (
+              "Add comment"
+            )}
           </button>
         </>
       )}
@@ -122,10 +162,18 @@ export function CanvasComments({
                 {(comment.author_id === actorId || snapshot.canManageComments) && (
                   <button
                     disabled={pending}
-                    onClick={() => void run(() => onDelete(comment.id))}
-                    className="mt-2 min-h-9 text-destructive"
+                    onClick={(event) =>
+                      setDeleteTarget({
+                        id: comment.id,
+                        body: comment.body,
+                        scope,
+                        trigger: event.currentTarget,
+                        url: window.location.href,
+                      })
+                    }
+                    className="mt-2 min-h-11 text-destructive"
                   >
-                    Delete
+                    Delete comment
                   </button>
                 )}
               </li>
@@ -133,11 +181,33 @@ export function CanvasComments({
           })}
         </ul>
       )}
+      {Object.entries(feedback.errors).map(([operation, message]) => (
+        <p key={operation} role="alert" className="mt-3 text-sm text-destructive">
+          {message}
+        </p>
+      ))}
+      <ResultCommentDeleteDialog
+        target={deleteTarget}
+        scope={scope}
+        durable
+        fallbackRef={commentsHeadingRef}
+        onClose={() => setDeleteTarget(null)}
+        onDelete={async (id) => {
+          const comment = snapshot.comments.find((item) => item.id === id);
+          if (!comment || !(comment.author_id === actorId || snapshot.canManageComments))
+            throw new Error("The selected comment is no longer available to delete.");
+          await onDelete(String(id));
+        }}
+      />
       {snapshot.comments.length >= 100 && snapshot.comments.length % 100 === 0 && (
         <button
           disabled={pending}
-          onClick={() => void run(onOlder)}
-          className="mt-3 min-h-9 text-xs underline"
+          onClick={() => {
+            // A page read can remove this button when the final page arrives.
+            commentsHeadingRef.current?.focus({ preventScroll: true });
+            void run(onOlder, "older");
+          }}
+          className="mt-3 min-h-11 text-xs underline"
         >
           Load older comments
         </button>

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,34 +13,36 @@ export function ChatStudyControl({
   ownerId,
   temporary,
   source,
+  open,
+  onOpenChange,
+  onRestoreFocus,
 }: {
   ownerId: string | null;
   temporary: boolean;
   source: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onRestoreFocus: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   return (
-    <>
-      <button
-        type="button"
-        className="min-h-11 rounded-lg border px-3 py-2 text-sm"
-        onClick={() => setOpen(true)}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-h-[85dvh] max-w-3xl overflow-y-auto"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          onRestoreFocus();
+        }}
       >
-        Practice this explanation
-      </button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[85dvh] max-w-3xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Study from this chat</DialogTitle>
-            <DialogDescription>Review the explanation and set a learning goal.</DialogDescription>
-          </DialogHeader>
-          {open && (
-            <Suspense fallback={<p role="status">Loading practice…</p>}>
-              <StudyPanel ownerId={ownerId} temporary={temporary} source={source} />
-            </Suspense>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+        <DialogHeader>
+          <DialogTitle>Study from this chat</DialogTitle>
+          <DialogDescription>Practice this response and set a learning goal.</DialogDescription>
+        </DialogHeader>
+        {open && (
+          <Suspense fallback={<p role="status">Loading practice…</p>}>
+            <StudyPanel ownerId={ownerId} temporary={temporary} source={source} />
+          </Suspense>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

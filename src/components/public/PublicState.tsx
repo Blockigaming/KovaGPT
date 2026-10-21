@@ -28,7 +28,7 @@ export function PublicState({
       {action && kind !== "loading" ? (
         <Link
           to={action.to as never}
-          className="mt-6 inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border px-5 py-2.5 text-center text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+          className="kova-button mt-6 inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border px-5 py-2.5 text-center text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
         >
           {action.label}
         </Link>

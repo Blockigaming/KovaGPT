@@ -245,8 +245,24 @@ function ResetPassword() {
     }
   };
 
+  const leaveRecovery = async () => {
+    if (submitting.current) return;
+    clearPasswordRecoveryFlow();
+    recoveryLanding.current = null;
+    legacyContext.current = null;
+    setRecoveryToken(null);
+    setPassword("");
+    setConfirm("");
+    await navigate({ to: "/" });
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')
+        ?.focus({ preventScroll: true });
+    });
+  };
+
   return (
-    <div className="kova-auth-page min-h-screen flex items-center justify-center px-4 bg-background">
+    <div className="kova-auth-page min-h-screen flex items-center justify-center px-4 py-8 bg-background">
       <div className="kova-auth-surface w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center mb-3">
@@ -267,7 +283,7 @@ function ResetPassword() {
             <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
               {error}
             </p>
-            <Button className="w-full" onClick={() => navigate({ to: "/" })}>
+            <Button className="w-full" onClick={() => void leaveRecovery()}>
               Back to KovaGPT
             </Button>
           </div>
@@ -312,6 +328,15 @@ function ResetPassword() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Update password
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              disabled={loading}
+              onClick={() => void leaveRecovery()}
+            >
+              Cancel
             </Button>
           </form>
         )}

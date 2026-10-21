@@ -1,0 +1,76 @@
+.kova-account-deletion-dialog[data-kova-dialog-surface] {
+  border-radius: var(--kova-radius-panel);
+  width: min(560px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  margin-bottom: max(12px, env(safe-area-inset-bottom));
+  padding: 24px;
+  gap: 20px;
+}
+.kova-account-deletion-dialog button {
+  min-height: 44px;
+  border-radius: var(--kova-radius-button);
+  white-space: normal;
+}
+.kova-account-deletion-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: var(--muted);
+}
+.kova-account-deletion-review {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.kova-account-deletion-panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  background: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.kova-account-deletion-panel p,
+.kova-account-deletion-detail {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.kova-account-deletion-dates {
+  display: grid;
+  gap: 12px;
+}
+.kova-account-deletion-dates div {
+  display: grid;
+  gap: 4px;
+}
+.kova-account-deletion-dates dt {
+  color: var(--muted-foreground);
+}
+.kova-account-deletion-dates dd {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.kova-account-deletion-error {
+  display: flex;
+  gap: 8px;
+  color: var(--destructive);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.kova-account-deletion-error svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+@media (min-width: 640px) {
+  .kova-account-deletion-dialog[data-kova-dialog-surface] {
+    margin-bottom: 0;
+  }
+}

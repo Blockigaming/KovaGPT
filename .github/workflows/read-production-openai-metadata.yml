@@ -1,0 +1,70 @@
+name: Read existing production OpenAI metadata only
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type READ_OPENAI_METADATA_ONLY; no generation or deployment
+        required: true
+        type: string
+      source_sha:
+        description: Exact reviewed current main SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-openai-metadata-only
+  cancel-in-progress: false
+
+jobs:
+  metadata-only:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirmation == 'READ_OPENAI_METADATA_ONLY' && inputs.source_sha == github.sha
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      KOVA_METADATA_CONFIRMATION: ${{ inputs.confirmation }}
+      KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
+      KOVA_METADATA_SUBSCRIPTION_ID: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+      KOVA_METADATA_RESOURCE_GROUP: ${{ vars.KOVA_PRODUCTION_RESOURCE_GROUP }}
+      KOVA_METADATA_CONTAINER_APP: ${{ vars.KOVA_PRODUCTION_CONTAINER_APP_NAME }}
+    steps:
+      - name: Check out exact approved source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Require existing encryption custody before Azure login
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          KOVA_PRODUCTION_BACKUP_PASSPHRASE: ${{ secrets.KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926 }}
+        run: timeout --signal=TERM --kill-after=3s 20s python3 scripts/azure/production-openai-metadata-job.py --check
+      - name: Sign in using the existing protected production OIDC identity
+        uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
+        with:
+          client-id: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.KOVAGPTPROD_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+      - name: Read one existing OpenAI key and encrypt metadata without public results
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          KOVA_PRODUCTION_BACKUP_PASSPHRASE: ${{ secrets.KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926 }}
+        run: timeout --signal=TERM --kill-after=3s 45s python3 scripts/azure/production-openai-metadata-job.py --execute
+      - name: Retain ciphertext only
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: production-metadata-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/production-openai-private/receipt.json.gpg
+          if-no-files-found: error
+          retention-days: 7

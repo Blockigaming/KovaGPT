@@ -7,7 +7,6 @@ import { z } from "zod";
 import * as download from "../../src/lib/kova-auth-private-download.mjs";
 import * as contract from "../../src/lib/kova-auth-contract.mjs";
 import * as security from "../../src/lib/auth-security.mjs";
-import * as validation from "../../src/lib/auth-validation-policy.mjs";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as policy from "../../src/lib/project-files-policy.mjs";
@@ -185,7 +184,6 @@ async function fixture(kind = "project", options = {}) {
   const api = load("src/lib/api-auth.server.ts", {
     "@supabase/supabase-js": { createClient: (_url, key) => (key === "admin" ? admin : user) },
     "@/lib/billing-entitlement.server": {},
-    "@/lib/auth-validation-policy.mjs": validation,
     "@/lib/auth-security.mjs": security,
     "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => "kova" },
     "@/lib/kova-auth-crypto.server.mjs": {

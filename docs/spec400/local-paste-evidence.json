@@ -1,0 +1,60 @@
+{
+  "scope": "Compact selected-file and local long-paste attachment chips; current spec400 geometry and colors",
+  "status": "Source complete, uncommitted for the parent consolidated checkpoint; no build or browser run in this batch",
+  "reference": "Owner screenshot inspected: Screenshot 2026-10-18 at 6.46.21 PM.png; compact icon, truncated filename, and remove control",
+  "files": [
+    "src/components/ChatInput.tsx",
+    "src/lib/composer-local-attachments.mjs",
+    "src/lib/composer-local-attachments.d.mts",
+    "src/styles/spec400-chat.css",
+    "tests/unit/composer-local-attachments.test.mjs",
+    "tests/unit/spec400-local-attachments-runtime.test.mjs",
+    "tests/unit/spec400-composer-rendering.test.mjs"
+  ],
+  "inventory": [
+    {
+      "id": 153,
+      "outcome": "Pending unattached pasted text disables Send and triggerSubmit, so no text is silently omitted."
+    },
+    {
+      "id": 157,
+      "outcome": "Expanded draft shares paste handling; attachment count tells users to collapse for inspection/removal."
+    },
+    {
+      "id": 162,
+      "outcome": "Compact file and pasted-text chips have inspect, readiness, removal, and bounded exact-text preview."
+    }
+  ],
+  "behavior": {
+    "conversion": "Plain text over 10000 UTF-16 code units becomes a local pasted-text.txt attachment for signed-in accounts after the existing attachment-slot and per-tier quota gates. Guests and blocked attachments retain a pending local chip with Back to text.",
+    "exactness": "No trimming or normalization. Tabs, CRLF, Unicode, leading and trailing whitespace survive local conversion, preview pagination, and Back to text. Limits are 80000 UTF-16 code units and 200000 UTF-8 bytes; oversized input is rejected explicitly without truncation and remains on the clipboard.",
+    "recovery": "Back to text restores the original selection if the draft is unchanged, otherwise appends without overwriting newer input. Undo removal restores the same local attachment without a second quota charge.",
+    "persistence": "Automatic pasted-text conversion never calls attachmentAutoSave, creates a File/Blob/data URL, or uploads content. UI explicitly says reload discards local pasted text. No new persistent storage was introduced.",
+    "fileSelection": "Both existing explicitly selected-file attachmentAutoSave calls remain unchanged. Existing file/auth validation and final Send payload contract remain in place.",
+    "quota": "Uses actual tryUseUpload and DAILY_UPLOAD_LIMIT_BY_TIER. Local Free selection limit is two per day. Existing server validation remains authoritative at Send; this batch does not change server policy.",
+    "urls": "The new local-paste path creates no object URL, so it retains none needing revocation. Existing selected-image data URL payload is retained for compatibility; chips never mount full-image thumbnails."
+  },
+  "efficiencyEvidence": {
+    "method": "Node component callback/render-tree fixture running actual transpiled ChatInput plus actual pure helper and isolated real limits.ts. This is not a browser memory benchmark.",
+    "closedTextPreview": "Zero pre elements when the attachment inspector is closed; exact attachment string remains in state.",
+    "openTextPreview": "One selectable pre containing at most 4000 UTF-16 code units; pagination reconstructs the entire exact text without splitting surrogate pairs.",
+    "imageChips": "Zero img elements in the chip list; one lazily loaded image only after explicit inspection.",
+    "byteCounting": "Single UTF-16 scan matches TextEncoder byte counts, including surrogate edge cases, without allocating a second full-content byte buffer.",
+    "noClaim": "No measured heap, CPU, decode-time or browser memory reduction is claimed. Rendering bounds and absent read/save calls are directly tested."
+  },
+  "checks": {
+    "focusedTests": "25 passed: helper 4, local attachment runtime 9, existing spec400 composer rendering 12.",
+    "command": "node --test tests/unit/composer-local-attachments.test.mjs tests/unit/spec400-local-attachments-runtime.test.mjs tests/unit/spec400-composer-rendering.test.mjs",
+    "eslint": "Final focused ChatInput and helper ESLint passed.",
+    "typecheck": "Final full combined tsc --noEmit passed with no diagnostics.",
+    "format": "Final focused Prettier check passed; git diff --check passed.",
+    "browser": "Not run in this batch per parent scope."
+  },
+  "limitations": [
+    "Local pasted attachments are session-only and are discarded on reload; no silent server upload or reload persistence was added.",
+    "Explicit Back to text intentionally places the full text into the draft textarea; ordinary persisted-draft/privacy rules then apply.",
+    "Selection quota is consumed on attachment selection, like existing files, and not refunded by removal or Back to text.",
+    "Selected image files retain the pre-existing data URL send contract; no speculative image preprocessing or object-URL migration was introduced.",
+    "No service keys, OpenAI calls, ElevenLabs calls, deployment, or full build were used."
+  ]
+}

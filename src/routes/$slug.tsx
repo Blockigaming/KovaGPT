@@ -11,14 +11,20 @@ import {
   translations,
   type SupportedLocale,
 } from "@/lib/locales";
+import { ReviewDirectory, ReviewWorkspace } from "@/components/public/ReviewWorkspace";
+import { findReviewPage } from "@/lib/review-page-content";
 import { ArrowRight } from "lucide-react";
 
 const PAGE_ACTIONS = new Map([
+  ["voice", { primaryAction: { label: "Review text-only voice preview", to: "/review/voice" } }],
+  [
+    "contact-sales",
+    { primaryAction: { label: "Prepare a local inquiry", to: "/review/sales-request" } },
+  ],
   ["overview", { primaryAction: { label: "Open KovaGPT", to: "/" } }],
   ["college-students", { primaryAction: { label: "Open Study", to: "/study" } }],
   ["parent-resources", { primaryAction: { label: "Explore family guidance", to: "/families" } }],
   ["health", { primaryAction: { label: "Open KovaGPT", to: "/" } }],
-  ["contact-sales", { primaryAction: { label: "Contact support", to: "/contact-support" } }],
   ["shopping", { primaryAction: { label: "Start shopping research", to: "/" } }],
   ["business-data", { primaryAction: { label: "Review data controls", to: "/data-controls" } }],
   ["careers", { primaryAction: { label: "Contact KovaGPT", to: "/contact-support" } }],
@@ -245,6 +251,20 @@ const label = (value: string) =>
     .join(" ");
 export const Route = createFileRoute("/$slug")({
   loader: async ({ params }) => {
+    if (["review", "bot", "legal"].includes(params.slug))
+      return {
+        kind: "review-directory" as const,
+        family: params.slug === "bot" ? "assistant" : params.slug === "legal" ? "legal" : undefined,
+      };
+    const aliases: Record<string, string> = {
+      company: "/about",
+      build: "/code-helper",
+      contact: "/contact-support",
+      imagine: "/images",
+    };
+    if (aliases[params.slug]) throw redirect({ to: aliases[params.slug] as never, replace: true });
+    const reviewPage = findReviewPage(params.slug);
+    if (reviewPage) return { kind: "review" as const, item: reviewPage };
     if (params.slug === "scheduled") throw redirect({ to: "/scheduled-tasks", replace: true });
     if (isReservedPublicPath(`/${params.slug}`)) throw notFound();
     const locale = resolveSourceLocale(params.slug);
@@ -273,6 +293,15 @@ export const Route = createFileRoute("/$slug")({
   },
   head: ({ loaderData: data }) => {
     if (!data) return {};
+    if (data.kind === "review" || data.kind === "review-directory")
+      return {
+        meta: [
+          {
+            title: `${data.kind === "review" ? data.item.title : "Local interface review"} | KovaGPT`,
+          },
+          { name: "robots", content: "noindex, nofollow" },
+        ],
+      };
     if (data.kind === "locale")
       return {
         meta: [
@@ -324,6 +353,9 @@ export const Route = createFileRoute("/$slug")({
 });
 function Page() {
   const data = Route.useLoaderData();
+  if (data.kind === "review") return <ReviewWorkspace key={data.item.slug} page={data.item} />;
+  if (data.kind === "review-directory")
+    return <ReviewDirectory key={data.family ?? "all"} family={data.family} />;
   if (data.kind === "locale")
     return (
       <SourceLocaleHome routeLocale={data.routeLocale} locale={data.locale} copy={data.copy} />
@@ -336,7 +368,7 @@ function Page() {
         summary={`Original KovaGPT ${label(data.section).toLowerCase()}, maintained as structured content.`}
       >
         {data.items.length ? (
-          data.items.map((item) => (
+          data.items.map((item: import("@/lib/publications").Publication) => (
             <Link
               key={item.slug}
               to={`/${item.section}/${item.slug}` as never}
@@ -369,13 +401,13 @@ function Page() {
       review={item.review}
       {...actions}
     >
-      {item.sections.map((section) => (
+      {item.sections.map((section: { title: string; body: string }) => (
         <article key={section.title} className="rounded-2xl border border-border bg-background p-6">
           <h2 className="text-xl font-semibold">{section.title}</h2>
           <p className="mt-3 leading-7 text-muted-foreground">{section.body}</p>
         </article>
       ))}
-      {related.map((page) => (
+      {related.map((page: { title: string; summary: string; to: string }) => (
         <Link
           key={page.to}
           to={page.to as never}
@@ -422,7 +454,7 @@ function SourceLocaleHome({
         <Link
           to="/"
           data-public-primary
-          className="mt-8 inline-flex min-h-11 w-fit items-center rounded-full bg-foreground px-5 text-background"
+          className="kova-button mt-8 inline-flex min-h-11 w-fit items-center rounded-full bg-foreground px-5 text-background"
         >
           {copy.open}
         </Link>

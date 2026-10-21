@@ -1,0 +1,52 @@
+{
+  "scope": "Settings Profile, Appearance, Responses, and page-only header alignment",
+  "source_date": "2026-10-18",
+  "render_status": "Source changed after the 1c3 rendered review. Exact successor browser verification is pending; no build or browser pass is claimed here.",
+  "requirements": [
+    {
+      "ids": [308, 309, 310, 311, 312, 313],
+      "status": "partial_contract_bound",
+      "details": "Profile shows actual account avatar, read-only account display name and email, interface language, detected device IANA timezone and detected device 12/24-hour format. Avatar editing, account rename, email-change verification, account locale/timezone/time-format preferences are explicitly unavailable because no supported mutation contract exists. Change photo and Remove photo are disabled with an explanation. A separate preferred-name response preference uses principal-scoped device storage with Save changes and Cancel, validates locally, preserves the previous saved name on failure, and refuses stale-account writes. It does not rename the account. UTC schedule/usage semantics and date formatting are unchanged."
+    },
+    {
+      "ids": [314, 317, 318, 319, 320, 321, 322],
+      "status": "implemented_source_pending_render",
+      "details": "Appearance has visible Theme choices, preserved Accent palette explanation, Density, Reading size, Reading width and Motion. Live preview includes an example navigation row, answer paragraph, content box and interactive button. Preview density is 56/48px; size and width follow current values and width is capped to the container. Device reduced motion overrides the preview. Reset appearance restores only Dark, Comfortable, 16px, 760px and Full motion without changing response preferences, profile, legacy palette or data. Both the existing document width token and the spec400 chat width token are applied for 680/760/900."
+    },
+    {
+      "ids": [315],
+      "status": "partial_contract_bound",
+      "details": "Dark is the declared default; Light and Match device settings are available. Saves remain scoped to this account on this device. Cross-device synchronization is explicitly unavailable."
+    },
+    {
+      "ids": [316],
+      "status": "owner_override_preserved",
+      "details": "Original 9cc light/dark palette is unchanged. Accent is shown as Original palette; no Blue, Teal or Slate presets are invented. No color values are added by the new styles."
+    },
+    {
+      "ids": [323, 324],
+      "status": "implemented_source_pending_render",
+      "details": "Response Length, Tone, Format, custom instructions, user context and personality controls live in Responses rather than Profile. Scope explicitly identifies this account in this browser, separate project instructions, Temporary Chat exclusion, and current-chat instruction precedence. Existing request contracts and personality storage are unchanged."
+    }
+  ],
+  "page_layout": "Settings route opts into the existing AppShell utilitiesInHeader context. Timers is rendered beside the Settings title, with no shared AppShell edits. Settings-only CSS aligns the page header and narrow section headers with the outer page/field grid. The modal header is unchanged.",
+  "verification": {
+    "focused_tests": "node --test tests/unit/spec400-profile-appearance.test.mjs tests/unit/principal-settings-storage.test.mjs tests/unit/spec400-response-preferences.test.mjs: 22 passed, 0 failed",
+    "typecheck": "node_modules/.bin/tsc --noEmit: passed",
+    "lint": "Focused ESLint: 0 errors; one existing SettingsDialog react-refresh export warning",
+    "format": "Prettier applied to all owned source/test files; final focused check passed",
+    "not_run": [
+      "production build (lead batches)",
+      "exact-successor rendered browser review",
+      "account/provider writes",
+      "deployment"
+    ]
+  },
+  "next_render_checks": [
+    "390px and desktop in both themes: Timers shares the Settings title row; Settings title, Section selector, section heading and fields align without horizontal overflow.",
+    "Appearance: select each density/reading size/reading width, test preview button, Full and Reduced motion including device-reduced override; verify original colors.",
+    "Reset appearance: inspect principal-scoped settings, retaining custom instructions, response defaults, preferred name, other principal data and saved conversations.",
+    "Profile: exactly one Profile section heading; actual readonly name/email; honest device locale descriptions; draft preferred name then Cancel, Save, simulated storage failure and account switch.",
+    "Responses: custom instructions, context and personality appear here and not in Profile; scope and current-chat precedence are visible."
+  ]
+}

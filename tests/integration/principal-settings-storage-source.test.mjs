@@ -23,7 +23,7 @@ test("settings wait for an authenticated principal and never render stale accoun
   assert.match(root, /applyThemeMode\(loadThemeMode\(\)\)/);
   assert.match(
     root,
-    /if \(!isLoaded\) return;\s*const loaded = loadSettings\(userKey, \{\s*migrateLegacyGuest: userKey === null/,
+    /if \(!isLoaded\) return;\s*\/\/ Account notices and actions must not survive a principal transition\.\s*toast\.dismiss\(\);\s*const loaded = loadSettings\(userKey, \{\s*migrateLegacyGuest: userKey === null/,
   );
   assert.doesNotMatch(root, /loadSettings\(null\)/);
 

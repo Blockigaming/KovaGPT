@@ -133,7 +133,7 @@ function BrainPage() {
 
           <Link
             to="/goals"
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-medium hover:bg-accent"
+            className="kova-button inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-medium hover:bg-accent"
           >
             <Target className="h-4 w-4" />
             Manage goals

@@ -42,7 +42,7 @@ test("anonymous server functions fail closed before reading Supabase configurati
 });
 
 test("root route has a safe branded error boundary with retry and home actions", () => {
-  assert.match(rootRoute, /KovaGPT couldn't load this page/);
+  assert.match(rootRoute, /This page couldn’t load/);
   assert.match(rootRoute, /Retry/);
   assert.match(rootRoute, /Return home/);
   assert.match(rootRoute, /contact support and describe what you were doing/);

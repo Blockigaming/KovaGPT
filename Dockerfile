@@ -21,6 +21,7 @@ ARG VITE_SUPABASE_URL=
 ARG VITE_SUPABASE_PUBLISHABLE_KEY=
 ARG VITE_KOVA_AUTH_MODE=supabase
 ARG VITE_KOVA_GOOGLE_AUTH_ENABLED=false
+ARG VITE_KOVA_AUTH_ORIGIN=
 ARG VITE_PAYMENTS_CLIENT_TOKEN=
 WORKDIR /app
 ENV NODE_ENV=production \
@@ -39,7 +40,7 @@ RUN case "$VITE_KOVA_AUTH_MODE" in \
     esac
 
 RUN SHA="$KOVA_SOURCE_SHA" TREE="$KOVA_SOURCE_TREE" node -e "require('fs').writeFileSync('/app/.kova-source-attestation.json', JSON.stringify({schemaVersion:1,context:'acr-git',sourceSha:process.env.SHA,sourceTree:process.env.TREE}))"
-RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" NODE_OPTIONS=--max-old-space-size=3072 KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
+RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" NODE_OPTIONS=--max-old-space-size=5120 KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
     && find dist -name '*.map' -type f -delete \
     && if [ "$KOVA_VERIFY_BROWSER_CONFIG" = "true" ]; then \
       env \
@@ -81,6 +82,8 @@ COPY --from=build --chown=kova:kova /app/dist ./dist
 COPY --from=build --chown=kova:kova /app/package.json ./package.json
 COPY --from=build --chown=kova:kova /app/scripts/auth-email/dispatch.mjs ./scripts/auth-email/dispatch.mjs
 COPY --from=build --chown=kova:kova /app/scripts/auth-email/notification-dispatch.mjs ./scripts/auth-email/notification-dispatch.mjs
+COPY --from=build --chown=kova:kova /app/scripts/auth-email/production-worker.mjs ./scripts/auth-email/production-worker.mjs
+COPY --from=build --chown=kova:kova /app/src/lib/kova-email-worker-auth.server.mjs ./src/lib/kova-email-worker-auth.server.mjs
 COPY --from=build --chown=kova:kova /app/src/lib/kova-auth-email.server.mjs ./src/lib/kova-auth-email.server.mjs
 COPY --from=build --chown=kova:kova /app/src/lib/kova-account-email.server.mjs ./src/lib/kova-account-email.server.mjs
 COPY --from=build --chown=kova:kova /app/src/lib/account-email-preferences.mjs ./src/lib/account-email-preferences.mjs

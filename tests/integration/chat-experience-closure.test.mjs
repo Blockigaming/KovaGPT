@@ -13,7 +13,11 @@ test("Apps navigation and composer connector entry are truthful and reachable", 
   const composer = await read("src/components/ChatInput.tsx");
   const palette = await read("src/components/CommandPalette.tsx");
   assert.match(sidebar, /navLink\("\/apps", "Plugins", PlugZap\)/);
-  assert.match(composer, /window\.location\.href = "\/apps"/);
+  assert.match(composer, /<ComposerPluginList/);
+  const plugins = await read("src/components/ComposerPluginList.tsx");
+  assert.match(plugins, /to="\/apps"/);
+  assert.match(plugins, /preload=\{false\}/);
+  assert.match(plugins, /navigationBlocked/);
   assert.doesNotMatch(palette, /Open Apps|href: "\/apps"/);
 });
 test("chat interaction primitives remain complete and animated", async () => {
