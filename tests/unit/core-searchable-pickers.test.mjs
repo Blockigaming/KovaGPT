@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { createHookHarness } from "../helpers/ui-state-harness.mjs";
 
 const source = (path) => readFileSync(path, "utf8");
 const compile = (text) =>
@@ -30,27 +31,12 @@ const primitives = new Proxy({}, { get: (_target, name) => name });
 // Exercise actual component callbacks with isolated hooks and primitive tokens.
 // This proves data/operation contracts without mounting an app or calling providers.
 function harness(path, component, dependencies = {}) {
-  const hooks = [];
-  let cursor = 0;
+  const hooks = createHookHarness();
   const module = { exports: {} };
   vm.runInNewContext(compile(source(path)), {
     exports: module.exports,
     require(id) {
-      if (id === "react")
-        return {
-          useState(initial) {
-            const index = cursor++;
-            if (!(index in hooks)) hooks[index] = initial;
-            return [
-              hooks[index],
-              (next) => (hooks[index] = typeof next === "function" ? next(hooks[index]) : next),
-            ];
-          },
-          useRef(initial) {
-            const index = cursor++;
-            return (hooks[index] ??= { current: initial });
-          },
-        };
+      if (id === "react") return hooks.react;
       if (id === "react/jsx-runtime") return { jsx, jsxs: jsx };
       if (id === "@/lib/utils") return { cn: (...values) => values.filter(Boolean).join(" ") };
       if (dependencies[id]) return dependencies[id];
@@ -59,10 +45,7 @@ function harness(path, component, dependencies = {}) {
       throw new Error(`Unexpected dependency: ${id}`);
     },
   });
-  return (props) => {
-    cursor = 0;
-    return module.exports[component](props);
-  };
+  return (props) => hooks.render(module.exports[component], props);
 }
 const pickerPath = "src/components/ui/searchable-picker.tsx";
 const options = (count) =>
@@ -449,7 +432,7 @@ test("branch selection cannot activate a missing or active id or start a second 
   tree = render(props);
   assert.equal(find(tree, "SearchablePickerList")[0].props.disabled, true);
   assert.equal(find(tree, "MobileBottomSheet")[0].props.open, true);
-  finish();
+  finish(true);
   await new Promise((resolve) => setImmediate(resolve));
   tree = render(props);
   assert.equal(find(tree, "SearchablePickerList")[0].props.disabled, false);
@@ -466,6 +449,7 @@ test("branch failure keeps the sheet available, clears busy and permits an expli
     activeBranch: null,
     onActivate: async () => {
       if (++attempts === 1) throw "unavailable";
+      return true;
     },
   };
   let tree = render(props);
