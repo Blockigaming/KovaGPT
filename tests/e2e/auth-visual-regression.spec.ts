@@ -119,7 +119,12 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   expect(authNetwork.settingsPreflights).toBe(0);
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
 
-  await page.evaluate(() => document.fonts.ready);
+  const usesInter = await page.evaluate(async () => {
+    await document.fonts.ready;
+    return Array.from(document.fonts).some(
+      (face) => face.family.replaceAll('"', "") === "Inter" && face.status === "loaded",
+    );
+  });
   await dialog.evaluate(async (element) => {
     await Promise.all(
       element
@@ -130,7 +135,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
 
   expect(authNetwork.writes).toEqual([]);
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
-  await expect(page).toHaveScreenshot("guest-auth-dialog.png", {
+  await expect(page).toHaveScreenshot(`guest-auth-dialog-${usesInter ? "inter" : "fallback"}.png`, {
     animations: "disabled",
     caret: "hide",
     maxDiffPixelRatio: 0.005,
