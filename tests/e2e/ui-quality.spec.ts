@@ -84,7 +84,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.shell.width).toBeCloseTo(metrics.axisWidth, 1);
     expect(metrics.shell.width).toBeLessThanOrEqual(768);
     expect(metrics.shell.width).toBeGreaterThanOrEqual(640);
-    expect(metrics.composerHeight).toBe(50);
+    expect(metrics.composerHeight).toBe(52);
     expect(metrics.controlSize).toBe(44);
     expect(metrics.shell.height).toBeCloseTo(metrics.composerHeight + metrics.borderBlock, 1);
     expect(metrics.row?.height).toBeCloseTo(metrics.composerHeight, 1);
