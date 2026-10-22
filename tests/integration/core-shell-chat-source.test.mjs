@@ -13,9 +13,20 @@ const chatStore = await readFile("src/lib/chat-store.ts", "utf8");
 const feedback = await readFile("src/lib/feedback.functions.ts", "utf8");
 const feedbackBatch = await readFile("src/lib/feedback-batch.ts", "utf8");
 const confirmDialog = await readFile("src/components/ConfirmActionDialog.tsx", "utf8");
+const tokens = await readFile("src/styles/visual-tokens.css", "utf8");
+const sidebarStyles = await readFile("src/styles/sidebar-core.css", "utf8");
 test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focus trap", () => {
-  assert.match(sidebar, /const EXPANDED_WIDTH = 272/);
-  assert.match(sidebar, /kova-sidebar-rail[\s\S]*?w-\[64px\]/);
+  assert.match(sidebar, /data-kova-core-sidebar=""/);
+  assert.match(tokens, /--kova-sidebar-width: 256px;/);
+  assert.match(
+    sidebarStyles,
+    /\.kova-sidebar\[data-kova-core-sidebar\]\s*\{\s*width: var\(--kova-sidebar-width\);/,
+  );
+  assert.match(tokens, /--kova-sidebar-rail-width: 72px;/);
+  assert.match(
+    sidebarStyles,
+    /\.kova-sidebar-rail\[data-kova-core-rail\]\s*\{\s*width: var\(--kova-sidebar-rail-width\);/,
+  );
   assert.match(sidebar, /collapsed \? "lg:!w-0"/);
   assert.match(sidebar, /min\(88vw,320px\)/);
   assert.match(sidebar, /document\.body\.style\.overflow = "hidden"/);
@@ -28,13 +39,15 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);
   const order = [
     'aria-label="New chat"',
-    'navLink("/work"',
-    'navLink("/images"',
-    'navLink("/library"',
+    "<span>Search</span>",
+    'navLink("/", "Chat"',
     'navLink("/projects"',
     'navLink("/scheduled-tasks"',
+    'navLink("/library"',
     'navLink("/apps"',
-    'aria-controls="sidebar-more-items"',
+    'navLink("/images"',
+    "<span>More</span>",
+    'navLink("/work"',
   ];
   let cursor = -1;
   for (const marker of order) {
@@ -43,7 +56,7 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
     cursor = next;
   }
 
-  assert.match(sidebar, /navLink\("\/apps", "Plugins", PlugZap\)/);
+  assert.match(sidebar, /navLink\("\/apps", "Plugins", PluginsGlyph\)/);
 });
 
 test("mobile header and sidebar controls meet touch and accessible-name contracts", () => {
@@ -66,11 +79,20 @@ test("shared composer protects input, attachments, IME submission, and upload an
   assert.match(input, /MAX_IMAGE_FILE_BYTES/);
   assert.match(input, /handlePaste/);
   assert.match(input, /handleDrop/);
-  assert.match(input, /Drop files to attach/);
+  assert.match(input, /onDrop=\{handleDrop\}/);
+  assert.match(input, /onDragOver=\{handleDragOver\}/);
+  assert.match(
+    input,
+    /const handleDrop = async[\s\S]*?if \(disabled \|\| !showAddMenu\) return;\s*await addFiles\(files\)/,
+  );
   assert.match(input, /dropEffect = "copy"/);
   assert.match(input, /aria-live="polite"/);
   assert.match(input, /status\?: "selected" \| "uploading" \| "complete" \| "failed"/);
-  assert.match(input, /Retry \$\{a\.name\}/);
+  assert.match(input, /aria-label=\{`Inspect \$\{attachment\.name\}`\}/);
+  assert.match(
+    input,
+    /previewAttachment\?\.status === "failed"[\s\S]*?removeAttachment\(index\)[\s\S]*?fileRef\.current\?\.click\(\)[\s\S]*?Choose file again/,
+  );
   assert.match(input, /sendOnEnter/);
   assert.match(input, /Reconnect to send/);
   assert.match(input, /useSyncExternalStore/);
@@ -173,10 +195,16 @@ test("temporary chat changes create a clean privacy boundary", () => {
     toggle.indexOf("newChat()") < toggle.indexOf("setTempChat(enabled)"),
     "the clean conversation boundary should be created before the privacy mode changes",
   );
-  assert.match(index, /onTemporaryChatChange=\{setTemporaryChatEnabled\}/);
+  assert.match(
+    index,
+    /onTemporaryChatChange=\{\(enabled, trigger\) => \{\s*temporaryTriggerRef\.current = trigger;\s*temporaryReturnUrlRef\.current = window\.location\.href;\s*setTemporaryChatEnabled\(enabled\);/,
+  );
   assert.match(index, /<TemporaryChatToggle[\s\S]*?enabled=\{tempChat\}/);
-  assert.match(index, /onToggle=\{\(\) => setTemporaryChatEnabled\(!tempChat\)\}/);
-  assert.match(temporaryControls, /onClick=\{onToggle\}/);
+  assert.match(
+    index,
+    /onToggle=\{\(trigger\) => \{\s*temporaryTriggerRef\.current = trigger;\s*temporaryReturnUrlRef\.current = window\.location\.href;\s*setTemporaryChatEnabled\(!tempChat\);/,
+  );
+  assert.match(temporaryControls, /onClick=\{\(event\) => onToggle\(event\.currentTarget\)\}/);
   assert.match(temporaryControls, /aria-pressed=\{enabled\}/);
   assert.match(index, /temporary: tempChat/);
   assert.match(

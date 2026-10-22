@@ -2911,11 +2911,9 @@ function MemoryTab({ projectId, canEdit }: { projectId: string; canEdit: boolean
       setItems(rows);
       setHasLoaded(true);
       setLoadError(null);
-    } catch (error) {
+    } catch {
       if (!isCurrent() || listRequestRef.current !== operation) return;
-      setLoadError(
-        error instanceof Error ? error.message : "Try again when the service is available.",
-      );
+      setLoadError("Please try loading project memories again.");
     } finally {
       if (isCurrent() && listRequestRef.current === operation) {
         listRequestRef.current = null;
@@ -2952,11 +2950,9 @@ function MemoryTab({ projectId, canEdit }: { projectId: string; canEdit: boolean
       setItems((previous) => [row, ...previous.filter((item) => item.id !== row.id)]);
       setContent((previous) => (previous === submittedDraft ? "" : previous));
       setAddError(null);
-    } catch (error) {
+    } catch {
       if (!isCurrent() || mutationRef.current !== operation) return;
-      setAddError(
-        error instanceof Error ? error.message : "Try again when the service is available.",
-      );
+      setAddError("Refresh project memories before trying again.");
     } finally {
       if (isCurrent() && mutationRef.current === operation) {
         mutationRef.current = null;
@@ -2978,11 +2974,9 @@ function MemoryTab({ projectId, canEdit }: { projectId: string; canEdit: boolean
       setItems((previous) => previous.filter((item) => item.id !== id));
       setDeleteError(null);
       setConfirmId(null);
-    } catch (error) {
+    } catch {
       if (!isCurrent() || mutationRef.current !== operation) return;
-      setDeleteError(
-        error instanceof Error ? error.message : "Try again when the service is available.",
-      );
+      setDeleteError("Please retry removal or cancel to keep reviewing project memories.");
     } finally {
       if (isCurrent() && mutationRef.current === operation) {
         mutationRef.current = null;

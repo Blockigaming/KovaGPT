@@ -44,18 +44,40 @@ test("the same GitHub repository can be granted independently by multiple owners
   );
 });
 test("Apps GitHub experience has truthful credential account installation and repository states", () => {
+  assert.match(
+    server,
+    /getGitHubManagement = createServerFn\(\{ method: "GET" \}\)\s*\.middleware\(\[requireSupabaseAuth\]\)/,
+  );
   for (const value of [
     "GitHubManager",
-    "Credentials not configured",
-    "Connect GitHub",
+    "Connection is unavailable in this deployment.",
     "Refresh installations",
     "Search GitHub repositories",
     "Grant selected",
     "Remove selected",
     "Rate limit",
-    "Operator setup required",
   ])
     assert.ok(ui.includes(value), value);
+  assert.match(
+    server,
+    /if \(!configured\)\s+return \{\s+configured: false,\s+accounts: \[\],\s+installations: \[\],\s+repositories: \[\],\s+health: "credentials_not_configured"/,
+  );
+  assert.match(
+    server,
+    /const configured = Boolean\(\s+process\.env\.GITHUB_OAUTH_CLIENT_ID &&\s+process\.env\.GITHUB_OAUTH_CLIENT_SECRET &&\s+process\.env\.CONNECTOR_ENCRYPTION_KEY/,
+  );
+  assert.match(
+    ui,
+    /!data\.configured \? \([\s\S]*?>Unavailable<\/span>[\s\S]*?\) : !activeAccounts\.length \? \([\s\S]*?onClick=\{\(\) => void connect\(\)\}[\s\S]*?"Connect"/,
+  );
+  assert.match(
+    ui,
+    /githubLoadError \|\| !visibleGithubData\?\.configured\) return "temporarily_unavailable"/,
+  );
+  assert.match(
+    ui,
+    /visibleGithubData\.accounts\.some\(\(account\) => account\.status === "connected"\)\)\s+return "connected"/,
+  );
 });
 test("Apps GitHub selections cannot survive disconnecting their account", () => {
   assert.match(

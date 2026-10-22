@@ -254,18 +254,26 @@ async function loaded(kind = "memory") {
 test("memory initial failure is persistent and retryable without claiming the project is empty", async () => {
   const f = fixture();
   assert.equal(f.empty(), undefined);
-  await f.finish("list", 0, new Error("memory offline"), true);
-  assert.match(f.text(), /Memories could not be loaded.*memory offline/s);
+  await f.finish("list", 0, new Error("PRIVATE_MEMORY_LIST_SQL select secret_token"), true);
+  assert.doesNotMatch(f.text(), /PRIVATE_MEMORY_LIST_SQL|select secret_token/);
+  assert.match(
+    f.text(),
+    /Memories could not be loaded.*Please try loading project memories again/s,
+  );
   assert.equal(f.empty(), undefined);
   f.button("Retry loading memories").props.onClick();
   f.button("Retry loading memories").props.onClick();
   assert.equal(f.requests.list.length, 2);
   f.render();
-  assert.match(f.text(), /memory offline/);
+  assert.match(f.text(), /Please try loading project memories again/);
+  assert.doesNotMatch(f.text(), /PRIVATE_MEMORY_LIST_SQL|select secret_token/);
   assert.ok(f.button("Retrying…").props.disabled);
   await f.finish("list", 1, []);
   assert.ok(f.empty());
-  assert.doesNotMatch(f.text(), /memory offline/);
+  assert.doesNotMatch(
+    f.text(),
+    /Please try loading project memories again|PRIVATE_MEMORY_LIST_SQL/,
+  );
 });
 
 test("memory add is single-flight even for two Enter events before rerender and applies only a confirmed row", async () => {
@@ -292,25 +300,33 @@ test("memory add failure keeps the draft and list, stays visible while typing an
   const f = await loaded();
   f.change("Keep this draft");
   f.enter();
-  await f.finish("add", 0, new Error("write interrupted"), true);
+  await f.finish("add", 0, new Error("PRIVATE_MEMORY_ADD_SQL insert secret_token"), true);
   assert.equal(f.input().props.value, "Keep this draft");
-  assert.match(f.text(), /Could not confirm.*write interrupted.*Keep the agreed style/s);
+  assert.doesNotMatch(f.text(), /PRIVATE_MEMORY_ADD_SQL|insert secret_token/);
+  assert.match(
+    f.text(),
+    /Could not confirm.*Refresh project memories before trying again.*Keep the agreed style/s,
+  );
   f.change("Edited draft");
-  assert.match(f.text(), /write interrupted/);
+  assert.match(f.text(), /Refresh project memories before trying again/);
   f.button("Refresh memories").props.onClick();
   f.render();
   f.enter();
   assert.equal(f.requests.add.length, 1);
-  await f.finish("list", 1, new Error("refresh offline"), true);
+  await f.finish("list", 1, new Error("PRIVATE_MEMORY_REFRESH_SQL select secret_token"), true);
   assert.match(f.text(), /Previously loaded memories are still shown.*Keep the agreed style/s);
   assert.equal(f.empty(), undefined);
   assert.equal(f.input().props.value, "Edited draft");
+  assert.doesNotMatch(f.text(), /PRIVATE_MEMORY_(?:ADD|REFRESH)_SQL|secret_token/);
   f.button("Retry loading memories").props.onClick();
   await f.finish("list", 2, [row()]);
-  assert.match(f.text(), /write interrupted/);
+  assert.match(f.text(), /Refresh project memories before trying again/);
   f.enter();
   await f.finish("add", 1, row("memory-b", "Edited draft"));
-  assert.doesNotMatch(f.text(), /write interrupted|refresh offline/);
+  assert.doesNotMatch(
+    f.text(),
+    /Refresh project memories before trying again|Please try loading project memories again|PRIVATE_MEMORY_/,
+  );
   assert.equal(f.input().props.value, "");
 });
 
@@ -326,20 +342,25 @@ test("memory deletion retains confirmation, target and error on failure; retry i
   f.render();
   assert.equal(f.dialog().props.open, true);
   assert.match(f.text(), /Keep the agreed style/);
-  await f.finish("delete", 0, new Error("delete interrupted"), true);
+  await f.finish("delete", 0, new Error("PRIVATE_MEMORY_DELETE_SQL delete secret_token"), true);
   assert.equal(f.dialog().props.open, true);
-  assert.match(f.text(), /delete interrupted/);
+  assert.doesNotMatch(f.text(), /PRIVATE_MEMORY_DELETE_SQL|delete secret_token/);
+  assert.match(f.text(), /Please retry removal or cancel to keep reviewing project memories/);
   assert.equal(f.focused.at(-1), "delete-error");
   assert.equal(f.button("Cancel").props.disabled, false);
   f.button("Retry removal").props.onClick();
   f.render();
-  assert.match(f.text(), /delete interrupted/);
+  assert.match(f.text(), /Please retry removal or cancel to keep reviewing project memories/);
+  assert.doesNotMatch(f.text(), /PRIVATE_MEMORY_DELETE_SQL|delete secret_token/);
   assert.equal(f.requests.delete.length, 2);
   f.element("memory-delete-trigger").isConnected = false;
   const closeFocus = f.find((node) => node.type === "DialogContent").props.onCloseAutoFocus;
   await f.finish("delete", 1, { ok: true });
   assert.equal(f.dialog().props.open, false);
-  assert.doesNotMatch(f.text(), /Keep the agreed style|delete interrupted/);
+  assert.doesNotMatch(
+    f.text(),
+    /Keep the agreed style|Please retry removal|PRIVATE_MEMORY_DELETE_SQL/,
+  );
   assert.ok(f.empty());
   closeFocus({ preventDefault() {} });
   assert.equal(f.focused.at(-1), "memory-summary");

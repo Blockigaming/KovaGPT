@@ -106,7 +106,7 @@ test("workflow skills remain usable across durable chat, image requests, and ava
     chat.indexOf("if (isImageRequest && auth)"),
     chat.indexOf("// Anonymous chat is allowed"),
   );
-  assert.match(chat, /handleImageRequest\(imagePrompt, logContext\)/u);
+  assert.match(imageBranch, /handleImageRequest\(imagePrompt, logContext, request\.signal\)/u);
   assert.ok(
     imageBranch.indexOf("boundedImageProviderPrompt") < imageBranch.indexOf("enforceQuota"),
   );

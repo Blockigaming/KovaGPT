@@ -15,7 +15,6 @@ const directMainRoutes = [
   "src/routes/help.tsx",
   "src/routes/modes.tsx",
   "src/routes/pricing.tsx",
-  "src/routes/refund.tsx",
   "src/routes/status.tsx",
   "src/routes/terms.tsx",
 ];
@@ -46,9 +45,9 @@ test("public navigation exposes mobile and current-page semantics", async () => 
   assert.match(logo, /alt = "KovaGPT"/);
   assert.match(logo, /aria-hidden=\{decorative \|\| undefined\}/);
   assert.match(logo, /aria-label=\{decorative \? undefined : alt\}/);
-  assert.match(logo, /role=\{decorative \? undefined : "img"\}/);
+  assert.match(logo, /<img\s+src="\/kova-logo\.png"/);
+  assert.match(logo, /alt=\{decorative \? "" : alt\}/);
   assert.match(logo, /data-logo-variant=\{mark \? "mark" : "standard"\}/);
-  assert.doesNotMatch(logo, /<img|kova-logo\.png/);
 });
 
 test("public layouts provide a single skip-link destination", async () => {
@@ -77,10 +76,16 @@ test("public layouts provide a single skip-link destination", async () => {
     );
   }
 
-  for (const path of ["src/routes/privacy.tsx", "src/routes/contact-support.tsx"]) {
+  for (const path of [
+    "src/routes/privacy.tsx",
+    "src/routes/contact-support.tsx",
+    "src/routes/refund.tsx",
+  ]) {
     const source = await read(path);
     assert.match(source, /<PublicShell>/);
     assert.match(source, /<LegalArticle>/);
+    assert.equal(source.match(/<LegalArticle>/g)?.length, 1, `${path} needs one legal wrapper`);
+    assert.doesNotMatch(source, /<main\b|id="main-content"/, `${path} must delegate its target`);
   }
 });
 

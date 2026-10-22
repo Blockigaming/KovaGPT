@@ -23,7 +23,8 @@ test("project detail carries archived state into the restore control", () => {
   assert.match(route, /archived: !archived/);
   assert.match(route, /archived \? "Project restored" : "Project archived"/);
   assert.match(route, /<ArchiveRestore/);
-  assert.match(route, /archiveBusy \? "Restoring…" : "Restore"/);
+  assert.match(route, /archiveBusy \? "Restoring…" : "Restore project"/);
+  assert.match(route, /archived && isOwner && \([\s\S]{0,100}toggleArchive\(\)/);
 });
 
 test("project archive writes require an owner row and the control cannot report false success", () => {
@@ -36,7 +37,13 @@ test("project archive writes require an owner row and the control cannot report 
   assert.match(archive, /if \(!updated\)/);
   assert.match(route, /const \[archiveBusy, setArchiveBusy\] = useState\(false\)/);
   assert.match(route, /disabled=\{archiveBusy\}/);
-  assert.match(route, /aria-busy=\{archiveBusy\}/);
+  assert.match(
+    route,
+    /<DropdownMenuItem disabled=\{archiveBusy\} onSelect=\{\(\) => void toggleArchive\(\)\}/,
+  );
+  assert.match(route, /archiveBusy\s*\? archived\s*\? "Restoring…"\s*: "Archiving…"/);
+  assert.match(route, /if \(archiveBusy\) return/);
+  assert.match(route, /currentRequestKeyRef\.current !== operationRequestKey/);
   assert.match(route, /catch \(error\)[\s\S]{0,240}toast\.error/);
   assert.match(route, /finally[\s\S]{0,160}setArchiveBusy\(false\)/);
   assert.doesNotMatch(route, /setProject\(p as never\)/);

@@ -575,10 +575,10 @@ for (const [name, method, body] of [
 
 const speechMocks = {
   "@tanstack/react-router": ["createFileRoute"],
-  "@/lib/api-auth.server": ["requireVerifiedUser"],
+  "@/lib/api-auth.server": ["requireVerifiedUser", "getCallerTier"],
   "@/lib/distributed-rate-limit.server": ["consumeApplicationRateLimit"],
   "@/lib/runtime-env.server": ["runtimeEnv"],
-  "@/lib/speech.server.mjs": ["createSpeechHandler"],
+  "@/lib/speech.server.mjs": ["createSpeechHandler", "speechConfiguration"],
   "@/lib/multimodal/image-source.server.mjs": ["assertImagePrincipal"],
   "@/lib/generation-acceptance-runtime.server": ["generationAcceptance"],
 };
@@ -618,7 +618,10 @@ for (const captureMode of ["true", "invalid-nonfalse-value"]) {
     };
     const fixture = {
       "@tanstack/react-router": { createFileRoute: () => (value) => value },
-      "@/lib/api-auth.server": { requireVerifiedUser: denied("speech-authenticate") },
+      "@/lib/api-auth.server": {
+        requireVerifiedUser: denied("speech-authenticate"),
+        getCallerTier: denied("speech-tier-read"),
+      },
       "@/lib/distributed-rate-limit.server": {
         consumeApplicationRateLimit: denied("speech-rate-limit"),
       },
@@ -629,7 +632,10 @@ for (const captureMode of ["true", "invalid-nonfalse-value"]) {
           throw new Error("Unexpected speech configuration/credential read");
         },
       },
-      "@/lib/speech.server.mjs": { createSpeechHandler: denied("speech-handler-construction") },
+      "@/lib/speech.server.mjs": {
+        createSpeechHandler: denied("speech-handler-construction"),
+        speechConfiguration: denied("speech-configuration"),
+      },
       "@/lib/multimodal/image-source.server.mjs": {
         assertImagePrincipal: denied("speech-principal"),
       },

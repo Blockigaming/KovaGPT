@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { inspectMemorySources } from "../../src/lib/memory-sources.server.mjs";
 import { consumeChatSse } from "../../src/lib/chat-sse-client.mjs";
+import { prepareShareSnapshot } from "../../src/lib/share-chat-preview.ts";
 import {
   attachMemorySources,
   createMemorySourceReceiver,
@@ -213,6 +214,28 @@ test("actual route and UI bind attribution to prompt assembly, current generatio
   assert.match(read("src/components/ChatMessage.tsx"), /Memory provided/);
   assert.match(
     read("src/components/ShareChatDialog.tsx"),
-    /\.map\(\(m\) => \(\{ role: m\.role, content: m\.content/,
+    /prepareShareSnapshot\(conversation, email, myEmail\)/,
   );
+  const shared = prepareShareSnapshot(
+    {
+      id: "conversation",
+      title: "Title",
+      messages: [
+        { role: "system", content: "Private instructions" },
+        {
+          id: "response",
+          role: "assistant",
+          content: "Answer",
+          attachments: [{ kind: "text", name: "private.txt", content: "private attachment" }],
+          memorySources: { ownerId: owner, sources: [source] },
+          toolActivity: [{ label: "Private tool metadata" }],
+        },
+      ],
+    },
+    "recipient@example.com",
+    "owner@example.com",
+  );
+  assert.deepEqual(shared.payload.snapshot, {
+    messages: [{ role: "assistant", content: "Answer" }],
+  });
 });

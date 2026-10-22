@@ -18,6 +18,9 @@ const [
   workRoute,
   onboarding,
   shellSpec,
+  headerActions,
+  starters,
+  modelStatus,
 ] = await Promise.all([
   readFile("src/routes/index.tsx", "utf8"),
   readFile("src/styles.css", "utf8"),
@@ -34,6 +37,9 @@ const [
   readFile("src/routes/work.tsx", "utf8"),
   readFile("src/components/OnboardingDialog.tsx", "utf8"),
   readFile("tests/e2e/chatgpt-shell-parity.spec.ts", "utf8"),
+  readFile("src/components/ConversationHeaderActions.tsx", "utf8"),
+  readFile("src/components/HomeChatStarters.tsx", "utf8"),
+  readFile("src/components/ComposerModelStatus.tsx", "utf8"),
 ]);
 
 test("Chat and Work remain reachable without a phone topbar mode switch", () => {
@@ -76,14 +82,21 @@ test("secondary navigation remains discoverable without active unavailable desti
   assert.doesNotMatch(sidebar, /navLink\("\/(?:health|finances)"|to="\/(?:health|finances)"/);
 });
 
-test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
-  assert.match(route, /const greeting = "What can I help with\?";/);
+test("Chat uses the current greeting and reports model availability truthfully", () => {
+  assert.match(route, /const greeting = "What are you working on\?";/);
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /KovaGPT can make mistakes\. Check important info\./);
   assert.doesNotMatch(route, /ConversationOutline/);
   assert.equal((route.match(/canChangeAgent=\{false\}/g) ?? []).length, 2);
-  assert.match(route, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
-  assert.match(mobileTopBar, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
+  assert.doesNotMatch(route, /<ResponsiveModelSelector/);
+  assert.doesNotMatch(mobileTopBar, /<ResponsiveModelSelector/);
+  assert.match(
+    chatInput,
+    /<ComposerModelStatus visible=\{showModelStatus && isLoaded && Boolean\(user\)\}/,
+  );
+  assert.match(modelStatus, /aria-label="Model availability"/);
+  assert.match(modelStatus, /Model selection isn’t available in this session/);
+  assert.match(modelStatus, /The current serving model isn’t\s*confirmed/);
   assert.match(modelSelector, /ResponsiveModelSelector/);
   assert.match(responsiveSelector, /placement\?: "composer" \| "topbar"/);
   assert.equal((responsiveSelector.match(/data-testid="model-selector-trigger"/g) ?? []).length, 1);
@@ -93,14 +106,18 @@ test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
 });
 
-test("signed-in empty chat removes guest-only onboarding clutter", () => {
-  assert.match(route, /\{isLoaded && !isSignedIn \? \(\s*<div className="kova-greeting-mark"/);
-  // The compact empty state omits this explanatory paragraph for guests too.
+test("empty chat offers draft starters and scopes recent work to signed-in history", () => {
+  assert.doesNotMatch(route, /kova-greeting-mark/);
   assert.doesNotMatch(route, /Think through a question, shape an idea/);
-  assert.match(
-    route,
-    /\{isLoaded && !isSignedIn \? \(\s*<Suspense[\s\S]*?<HomeChatStarters setInput=\{setInput\}/,
-  );
+  assert.match(route, /<HomeChatStarters setInput=\{setInput\}/);
+  for (const label of ["Write something", "Summarize a file", "Compare options"])
+    assert.ok(starters.includes(`label: "${label}"`));
+  assert.match(starters, /setInput\(\(current\) => \(current\.trim\(\) \? current : prompt\)\)/);
+  assert.match(starters, /\.focus\(\{ preventScroll: true \}\)/);
+  assert.doesNotMatch(starters, /onSubmit|\.submit\(/);
+  assert.match(route, /\{isLoaded && isSignedIn && historyConversations\.length > 0 \? \(/);
+  assert.match(route, /Continue working/);
+  assert.match(route, /Sign in to attach files and keep your work together/);
 });
 
 test("signed-in onboarding hands real choices to the authenticated composer", () => {
@@ -139,56 +156,73 @@ test("signed-in onboarding hands real choices to the authenticated composer", ()
   );
 });
 
-test("active desktop chat keeps one primary action and groups secondary controls", () => {
+test("active chat shares scoped header actions and keeps secondary controls reachable", () => {
   assert.doesNotMatch(shellSpec, /removeLocatorHandler\(onboarding\)/);
   assert.doesNotMatch(shellSpec, /onboarding\.waitFor\(\{ state: "visible", timeout: 10_000 \}\)/);
-  assert.match(route, /aria-label="Share chat"/);
-  assert.match(route, /\{active \? \(\s*<>\s*\{isSignedIn \? \(\s*<button/);
-  assert.match(route, /aria-label=\{[\s\S]*?"More chat actions, chat rules active"/);
-  assert.match(route, /<DropdownMenuContent align="end" className="w-56">/);
+  assert.match(route, /active && chatStarted \? \(\s*<Suspense[\s\S]*?<ConversationHeaderActions/);
+  assert.match(route, /key=\{`\$\{storagePrincipal\}:\$\{active\.id\}:\$\{compact\}`\}/);
+  assert.match(route, /conversation=\{active\}/);
+  assert.match(headerActions, /aria-label="Share chat"/);
+  assert.match(headerActions, /if \(restrictedTemporary \|\| !signedIn\)/);
+  assert.match(headerActions, /aria-label="More chat actions"/);
+  assert.match(headerActions, /<DropdownMenuContent\s+align="end"/);
   assert.match(
     route,
-    /<DropdownMenuItem\s+onSelect=\{\(\) => openChatWorkspace\(workspaceMenuTriggerRef\.current\)\}[\s\S]*?Chat settings/,
+    /onOpenContext=\{\(trigger\) =>[\s\S]*?new CustomEvent\("kova-open-message-context", \{ detail: \{ trigger \} \}\)/,
   );
-  // Opening is extracted so the originating menu control can regain focus.
+  assert.match(chatInput, /addEventListener\("kova-open-message-context", openFromHeader\)/);
+  assert.match(chatInput, /onOpenChatContext\(contextTriggerRef\.current\)/);
   assert.match(route, /const openChatWorkspace = [\s\S]{0,420}setWorkspaceOpen\(true\)/);
-  assert.match(route, /<Download className="mr-2 h-4 w-4" \/>[\s\S]*?Export chat/);
-  assert.ok(route.indexOf('aria-label="Share chat"') < route.indexOf("More chat actions"));
+  assert.match(headerActions, /Export chat/);
+  assert.match(
+    headerActions,
+    /new TextEncoder\(\)\.encode\(exportConversationMarkdown\(conversation\)\)/,
+  );
+  assert.match(headerActions, /safeDocumentFilename\(conversation\.title, "md"\)/);
+  assert.match(
+    route,
+    /const conversations = principalReady \? conversationState\.items : EMPTY_CONVERSATIONS/,
+  );
+  assert.ok(
+    headerActions.indexOf('aria-label="Share chat"') < headerActions.indexOf("More chat actions"),
+  );
 });
 
 test("compact composer groups actions and preserves message editing and markdown", () => {
-  assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask anything"\}/);
+  assert.match(chatInput, /placeholder=\{placeholder \?\? "Describe what you need…"\}/);
   assert.match(
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
-  // Compact actions are grouped instead of rendering every tool as a flat row.
-  assert.match(chatInput, /\(\["files", "plugins"\] as const\)\.map/);
-  assert.match(chatInput, /aria-label=\{menu === "files" \? "Add files" : "Choose plugins"\}/);
-  assert.match(chatInput, /renderComposerActions\(false, menu, triggerRef\.current\)/);
+  assert.match(chatInput, /role="group" aria-label="Message tools"/);
+  for (const label of ["Attach", "Context", "Options"])
+    assert.ok(chatInput.includes(`aria-label="${label}"`));
+  assert.match(chatInput, /renderComposerActions\(false\)/);
   assert.match(chatInput, /section !== "plugins" && \(\s*<div[^>]*aria-label="Attachment options"/);
   assert.match(chatInput, /!mobile && section !== "files" && \(\s*<ComposerPluginList/);
-  assert.match(chatInput, /Choose project/);
+  assert.match(chatInput, /Open a project/);
   assert.match(chatInput, /setProjectPickerOpen\(true\)/);
   assert.match(chatInput, /chooseTool\(imageTool\)/);
-  assert.doesNotMatch(chatInput, />\s*Context\s*</);
+  assert.match(chatInput, /aria-label="Response options"/);
   assert.doesNotMatch(chatInput, /deep_research/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
-  assert.match(chatInput, /kova-send-button is-enabled/);
+  assert.match(chatInput, /disabled=\{!canSubmit\}\s+onClick=\{triggerSubmit\}/);
+  assert.match(chatInput, /aria-label="Send message"/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
   assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);
   assert.match(chatMessage, /"Retry response" : "Regenerate response"/);
-  assert.ok(
-    chatMessage.indexOf("title={retryActionLabel}") <
-      chatMessage.indexOf('aria-label="More actions"'),
+  assert.match(
+    chatMessage,
+    /<DropdownMenuItem onSelect=\{onRetry\}>[\s\S]*?Retry\s*<\/DropdownMenuItem>/,
   );
-  assert.doesNotMatch(chatMessage, /<DropdownMenuItem onClick=\{onRetry\}/);
+  assert.match(chatMessage, /aria-label="Retry stopped response"/);
+  assert.match(chatMessage, /label: retryActionLabel,[\s\S]*?onRetry\(\)/);
   assert.match(route, /setInput\(m\.content\);/);
   // The extracted edit helper also retains the unsent draft and its attachments.
   assert.match(
     route,
-    /setEditingMessage\(\(previous\) =>\s*beginChatEdit\(\s*previous,\s*storagePrincipal,\s*active\.id,\s*m\.id,\s*input,\s*attachments,/,
+    /setEditingMessage\(\(previous\) =>\s*beginChatEdit\(\s*previous,\s*storagePrincipal,\s*active\.id,\s*m\.id,\s*input,\s*attachments\),/,
   );
 });
 

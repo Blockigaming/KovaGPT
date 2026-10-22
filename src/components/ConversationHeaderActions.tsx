@@ -17,8 +17,9 @@ import {
   Files,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import type { Conversation } from "@/lib/chat-store";
+import { exportConversationMarkdown, type Conversation } from "@/lib/chat-store";
 import { conversationOutputs, type ConversationOutput } from "@/lib/conversation-outputs";
+import { downloadBytes, safeDocumentFilename } from "@/lib/writing-export/common";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import {
   DropdownMenu,
@@ -473,6 +474,19 @@ export function ConversationHeaderActions({
                     {compact ? "Uploaded files" : "View files in chat"}
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem
+                  disabled={isStreaming}
+                  onSelect={() =>
+                    downloadBytes(
+                      new TextEncoder().encode(exportConversationMarkdown(conversation)),
+                      "text/markdown;charset=utf-8",
+                      safeDocumentFilename(conversation.title, "md"),
+                    )
+                  }
+                >
+                  <Download aria-hidden="true" />
+                  Export chat
+                </DropdownMenuItem>
                 {compact && (
                   <DropdownMenuItem
                     onSelect={() => {

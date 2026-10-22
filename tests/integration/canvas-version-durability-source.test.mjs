@@ -53,7 +53,13 @@ test("ChatMessage forwards the ids Canvas needs", () => {
 test("Canvas never edits, exports, or saves a silently truncated document", () => {
   assert.doesNotMatch(editor, /initialContent\.slice\(0,\s*LONG_THRESHOLD\)/);
   assert.doesNotMatch(editor, /content_text: value\.slice/);
-  assert.match(editor, /const blob = new Blob\(\[value\]/);
+  assert.match(
+    editor,
+    /downloadBytes\(\s*new TextEncoder\(\)\.encode\(value\),\s*"text\/plain;charset=utf-8"/,
+  );
+  const download = readFileSync("src/lib/writing-export/common.ts", "utf8");
+  assert.match(download, /new Blob\(\[bytes as BlobPart\], \{ type \}\)/);
+  assert.doesNotMatch(download, /bytes\.slice\(/);
   assert.match(editor, /if \(value\.length > 200_000\)/);
   assert.match(editor, /too large for Library[\s\S]{0,100}complete file/);
   assert.doesNotMatch(editor, /value\.trim\(\)\.slice\(0, 8000\)/);

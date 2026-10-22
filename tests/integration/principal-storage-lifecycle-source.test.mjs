@@ -100,8 +100,36 @@ test("first resolution and guest-to-user transitions purge only ownerless privat
 
 test("Settings uses the same current-principal registry and truthful copy", () => {
   assert.match(settingsSource, /await resetPrincipalDeviceData\(targetUserKey\)/);
-  assert.doesNotMatch(settingsSource, /handleDeleteAccount|requestAccountDeletion|deletionUserKey/);
-  assert.match(settingsSource, /<AccountDeletionGraceView[\s\S]*?status="unavailable"/);
+  const localReset = settingsSource.slice(
+    settingsSource.indexOf("const confirmLocalReset ="),
+    settingsSource.indexOf("const handleCheckDeletion ="),
+  );
+  assert.match(localReset, /request\.ownerId !== currentAuthUserKeyRef\.current/);
+  assert.match(localReset, /const resetUserKey = request\.ownerId/);
+  assert.doesNotMatch(localReset, /requestAccountDeletion|signOut/);
+  const accountDeletion = settingsSource.slice(
+    settingsSource.indexOf("const handleDeleteAccount ="),
+    settingsSource.indexOf("const handleClearSavedMemory ="),
+  );
+  assert.match(
+    accountDeletion,
+    /if \(deleteConfirmation !== "DELETE" \|\| deleteAccountBusy \|\| !isLoaded \|\| !userKey\) return/,
+  );
+  assert.match(accountDeletion, /const deletionUserKey = userKey/);
+  assert.match(accountDeletion, /currentAuthUserKeyRef\.current === deletionUserKey/);
+  assert.match(accountDeletion, /requestAccountDeletion\(deletionUserKey, "DELETE"\)/);
+  const pendingDeletion = accountDeletion.slice(
+    accountDeletion.indexOf("if (response.status !== 204)"),
+    accountDeletion.indexOf("// Only a verified final 204"),
+  );
+  assert.match(pendingDeletion, /response\.status === 202 && result\?\.state === "scheduled"/);
+  assert.match(pendingDeletion, /return;\s*\}/);
+  assert.doesNotMatch(pendingDeletion, /clearLocalBrowserData|signOut/);
+  assert.match(accountDeletion, /await clearLocalBrowserData\(deletionUserKey\)/);
+  assert.match(
+    accountDeletion,
+    /if \(currentAuthUserKeyRef\.current === deletionUserKey\) await clerk\?\.signOut\(\)/,
+  );
   assert.match(
     settingsSource,
     /Ownerless\s+private\s+data,[\s\S]*?transitional values from older versions,[\s\S]*?Other profiles' scoped data,[\s\S]*?cloud data are preserved/,

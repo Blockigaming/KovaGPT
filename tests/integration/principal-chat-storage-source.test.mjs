@@ -5,9 +5,10 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("home chat and shared shell hide stale account state before loading the next principal", async () => {
-  const [home, shell] = await Promise.all([
+  const [home, shell, trash] = await Promise.all([
     read("src/routes/index.tsx"),
     read("src/components/AppShell.tsx"),
+    read("src/lib/chat-trash.ts"),
   ]);
 
   assert.match(home, /const storagePrincipal = chatStoragePrincipal\(userKey\)/);
@@ -25,7 +26,20 @@ test("home chat and shared shell hide stale account state before loading the nex
   assert.match(shell, /const storagePrincipal = chatStoragePrincipal\(userKey\)/);
   assert.match(shell, /const conversations = principalReady \? conversationState\.items : \[\]/);
   assert.match(shell, /loadConversations\(userKey\)/);
-  assert.match(shell, /saveConversations\(userKey, next\)/);
+  assert.match(shell, /moveChatToTrash\(userKey, chat, conversations, current\)/);
+  assert.match(
+    shell,
+    /trashPrincipalRef\.current\.principal !== storagePrincipal[\s\S]*?generation: trashPrincipalRef\.current\.generation \+ 1/,
+  );
+  assert.match(
+    shell,
+    /if \(!\(await moveChatToTrash\(userKey, chat, conversations, current\)\) \|\| !current\(\)\) return;\s*setConversationState\(\{ principal: storagePrincipal, items: next \}\)/,
+  );
+  assert.match(trash, /if \(!current\(\) \|\| !canWriteChatHistory\(owner\)\) return false/);
+  assert.match(
+    trash,
+    /saveConversations\(\s*owner,\s*items\.filter\(\(item\) => item\.id !== chat\.id\)/,
+  );
 });
 
 test("draft, pending-selection, archive, import, and export paths carry the current principal", async () => {

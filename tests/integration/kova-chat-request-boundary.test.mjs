@@ -5,8 +5,11 @@ import test from "node:test";
 test("explicit Kova model requests cannot fall through to the legacy provider route", () => {
   const route = readFileSync("src/routes/api/chat.ts", "utf8");
   const boundary = route.indexOf("if (ingress.kovaModel) {");
-  const providerCheck = route.indexOf("const missingProvider = missingAiProviderResponse();");
+  const providerCheck = route.indexOf(
+    "const missingProvider = capture ? null : missingAiProviderResponse();",
+  );
   const providerRouting = route.indexOf("const routeDecision = routeAiModel(");
+  assert.ok(boundary > -1 && providerCheck > -1 && providerRouting > -1);
   assert.ok(boundary > route.indexOf('preflight.run("plan_entitlement"'));
   assert.ok(boundary < providerCheck);
   assert.ok(providerCheck < providerRouting);

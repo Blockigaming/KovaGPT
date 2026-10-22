@@ -31,13 +31,15 @@ test("current Chat packaging stays consistent across server, picker, composer an
     composer,
     /new CustomEvent\("kova-open-settings", \{ detail: \{ tab: "billing" \} \}\)/,
   );
-  assert.match(composer, /<span>Thinking<\/span>\s*<Lock/);
-  assert.match(composer, /userTier === "free" && !isStreaming/);
+  assert.match(composer, /<Brain aria-hidden="true" \/>\s*Thinking\s*<Lock aria-hidden="true" \/>/);
+  assert.match(composer, /\{userTier === "free" \? \(\s*<>/);
+  assert.match(composer, /aria-label="Thinking is locked\. Open Subscriptions"/);
+  assert.match(composer, /if \(!user\) \{\s*void navigate\(\{ to: "\/pricing" \}\);\s*return;/);
   assert.doesNotMatch(composer, /onModeChange\("thinking"\)/);
 
   assert.match(
     chat,
-    /if \(callerTier === "free"\) \{[\s\S]*enforceQuota\(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER\.free/,
+    /if \(callerTier === "free" && !capture\) \{\s*const quota = await preflight\.run\("chat_quota", \(signal\) =>\s*enforceQuota\(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER\.free, 1, signal\)/,
   );
   assert.doesNotMatch(chat, /enforceQuota\(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER\[callerTier\]/);
 

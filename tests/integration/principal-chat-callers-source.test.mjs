@@ -41,15 +41,26 @@ test("all remaining local chat callers carry the resolved principal", async () =
   assert.match(graph, /graphState\.principal === principal/);
 
   assert.match(library, /loadConversations\(userKey\)/);
-  assert.match(library, /saveConversations\(\s*userKey,/);
+  assert.match(library, /moveChatToTrash\(userKey, chat, chats, isCurrent\)/);
   assert.match(library, /saveDraft\(userKey, null, context\)/);
   assert.match(library, /clearPendingActive\(userKey\)/);
   assert.match(library, /itemState\.principal === principal/);
   assert.match(library, /principalRef\.current !== principal/);
-  assert.match(library, /const visiblePreviewItem = principalReady \? previewItem : null/);
   assert.match(
     library,
-    /setPreviewItem\(null\);\s*setSelected\(\[\]\);\s*setLoadError\(null\);[\s\S]*\}, \[favoritesKey, principal\]\)/,
+    /const visiblePreviewItem = detailKey \? detail\.item : principalReady \? previewItem : null/,
+  );
+  assert.match(
+    library,
+    /useLibraryDetail\(\{\s*search: detailSearch,\s*ownerId: isSignedIn \? userKey : null,\s*accountLoaded: isLoaded,\s*cleared: libraryCleared,/,
+  );
+  const detail = await read("src/hooks/use-library-detail.ts");
+  assert.match(detail, /identity\.current\.ownerId === ownerId/);
+  assert.match(detail, /state\?\.owner === ownerId && state\.key === key/);
+  assert.match(detail, /item: status === "ready" \? state!\.item : null/);
+  assert.match(
+    library,
+    /setPreviewItem\(null\);\s*setStorageDetailsOpen\(false\);\s*previewReturnFocusRef\.current = null;\s*previewOriginRef\.current = null;\s*detailHistoryRef\.current = null;\s*setSelected\(\[\]\);\s*setLoadError\(null\);[\s\S]*\}, \[favoritesKey, principal\]\)/,
   );
 
   assert.match(summary, /loadConversations\(userKey\)/);

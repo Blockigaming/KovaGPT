@@ -23,7 +23,19 @@ test("device chat portability is versioned, bounded, validated and includes arch
 test("temporary chat never persists an unsent draft", () => {
   assert.match(
     chat,
-    /if \(tempChat\) \{\s*lastLoadedDraftRef\.current = null;\s*setInput\(""\);\s*return;\s*\}/,
+    /if \(tempChat\) \{\s*lastLoadedDraftRef\.current = null;\s*pendingDraftLoadRef\.current = null;\s*setInput\(""\);\s*setAttachments\(\[\]\);\s*return;\s*\}/,
+  );
+  assert.match(
+    chat,
+    /temporaryDraftTransitionRef\.current = \{\s*principal: storagePrincipal,\s*text: input,\s*attachments,/,
+  );
+  assert.match(
+    chat,
+    /temporaryDraft && principalReady && temporaryDraft\.principal === storagePrincipal/,
+  );
+  assert.match(
+    chat,
+    /setInput\(temporaryDraft\.text\);\s*setAttachments\(temporaryDraft\.attachments\);/,
   );
   assert.match(chat, /if \(tempChat \|\| !principalReady\) return;/);
   assert.match(chat, /clearDraft\(userKey, activeId\)/);

@@ -99,9 +99,18 @@ test("only the latest user turn can carry provider-bound attachments", () => {
   assert.match(store, /attachments: latest\.attachments/);
   assert.doesNotMatch(mainChat, /\[\.\.\.priorMessages, userMsg\]\.map/);
 
+  const projectRequest = projectChat.slice(
+    projectChat.indexOf("body: JSON.stringify({"),
+    projectChat.indexOf("if (!response.ok || !response.body)"),
+  );
   assert.match(
-    projectChat,
+    projectRequest,
     /\.filter\(\(message\) => message\.role === "user" \|\| message\.role === "assistant"\)/,
   );
-  assert.doesNotMatch(projectChat, /priorSystem|project\.system_prompt/);
+  assert.match(
+    projectRequest,
+    /\.map\(\(message\) => \(\{\s*role: message\.role,\s*content: message\.content,\s*\}\)\)/,
+  );
+  assert.match(projectRequest, /\bprojectId,/);
+  assert.doesNotMatch(projectRequest, /priorSystem|project\.system_prompt|attachments/);
 });

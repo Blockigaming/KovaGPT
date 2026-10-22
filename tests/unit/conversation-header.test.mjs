@@ -25,6 +25,14 @@ const { conversationOutputs } = load("src/lib/conversation-outputs.ts", {
   "../components/artifact-utils": artifacts,
   "./safe-image-url": imageUrls,
 });
+const { exportConversationMarkdown } = load("src/lib/chat-store.ts", {
+  "./response-followups.mjs": {},
+  "./task-created-receipt.mjs": {},
+  "./memory-sources.mjs": {},
+  "./chat-history-bridge.ts": {},
+  "./response-sources.ts": {},
+});
+const { safeDocumentFilename } = load("src/lib/writing-export/common.ts");
 const chat = {
   id: "chat-a",
   title: "Release review",
@@ -152,7 +160,12 @@ function fixture(overrides = {}) {
       "Paperclip",
     ]),
     "@tanstack/react-router": { Link: "Link" },
+    "@/lib/chat-store": { exportConversationMarkdown },
     "@/lib/conversation-outputs": { conversationOutputs },
+    "@/lib/writing-export/common": {
+      safeDocumentFilename,
+      downloadBytes: (...args) => calls.push(["download", ...args]),
+    },
     "@/components/auth/ClerkSafe": {
       useUser: () => ({ user: { id: "owner" }, isLoaded: true, isSignedIn: true }),
     },
@@ -237,10 +250,130 @@ test("desktop header has exactly Share, Outputs and More, and the requested menu
           ? text(nodes(node).find((child) => child.type === "DropdownMenuSubTrigger"))
           : text(node),
       ),
-    ["Rename", "Pin", "Plugins", "View files in chat", "Archive", "Delete", "Move to project"],
+    [
+      "Rename",
+      "Pin",
+      "Plugins",
+      "View files in chat",
+      "Export chat",
+      "Archive",
+      "Delete",
+      "Move to project",
+    ],
   );
   assert.match(text(menu), /Moving chats isn’t supported/);
   assert.match(text(menu), /Add copy to project/);
+});
+
+test("desktop and compact Export chat download every scoped message as safe Markdown", () => {
+  const conversation = {
+    ...chat,
+    title: '../Release: review? "draft"',
+    messages: [
+      { id: "user-first", role: "user", content: "Review **this** change." },
+      { id: "assistant-first", role: "assistant", content: "First answer — keep Unicode." },
+      { id: "user-last", role: "user", content: "And the next step?" },
+      { id: "assistant-last", role: "assistant", content: "```js\nconst ready = true;\n```" },
+    ],
+  };
+  for (const compact of [false, true]) {
+    const f = fixture({ compact, conversation });
+    const action = nodes(f.render()).find(
+      (node) => node.type === "DropdownMenuItem" && text(node) === "Export chat",
+    );
+    assert.ok(action, `Export chat must be reachable with compact=${compact}`);
+    assert.equal(action.props.disabled, false);
+    action.props.onSelect();
+    assert.equal(f.calls.length, 1);
+    const [kind, bytes, mime, filename] = f.calls[0];
+    assert.equal(kind, "download");
+    assert.ok(bytes instanceof Uint8Array);
+    assert.equal(new TextDecoder().decode(bytes), exportConversationMarkdown(conversation));
+    for (const message of conversation.messages)
+      assert.ok(new TextDecoder().decode(bytes).includes(message.content), message.id);
+    assert.equal(mime, "text/markdown;charset=utf-8");
+    assert.equal(filename, "..Release review draft.md");
+    assert.doesNotMatch(filename, /[\\/:*?"<>|]/);
+  }
+
+  const other = fixture({
+    conversation: {
+      ...chat,
+      id: "other-owner-chat",
+      title: "Other active conversation",
+      messages: [{ id: "other", role: "user", content: "Only this conversation" }],
+    },
+  });
+  nodes(other.render())
+    .find((node) => node.type === "DropdownMenuItem" && text(node) === "Export chat")
+    .props.onSelect();
+  const otherMarkdown = new TextDecoder().decode(other.calls[0][1]);
+  assert.ok(otherMarkdown.includes("Only this conversation"));
+  assert.ok(!otherMarkdown.includes(conversation.messages[0].content));
+  const streaming = fixture({ isStreaming: true });
+  assert.equal(
+    nodes(streaming.render()).find(
+      (node) => node.type === "DropdownMenuItem" && text(node) === "Export chat",
+    ).props.disabled,
+    true,
+  );
+});
+
+test("per-output downloads still use only the selected attachment", async () => {
+  const f = fixture({
+    conversation: {
+      ...chat,
+      messages: [
+        {
+          id: "file-message",
+          role: "user",
+          content: "This message is not the attachment.",
+          attachments: [{ kind: "text_file", name: "notes.txt", content: "Exact file bytes" }],
+        },
+      ],
+    },
+  });
+  nodes(f.render())
+    .find((node) => node.type === "ConversationSourcesPanel")
+    .props.onOpenAttachment("file-message:attachment:0");
+  const originalDocument = globalThis.document;
+  const originalCreate = URL.createObjectURL;
+  const originalRevoke = URL.revokeObjectURL;
+  const originalTimeout = window.setTimeout;
+  const downloaded = [];
+  let blob;
+  URL.createObjectURL = (value) => {
+    blob = value;
+    return "blob:scoped-output";
+  };
+  URL.revokeObjectURL = (value) => downloaded.push(["revoke", value]);
+  window.setTimeout = (callback) => callback();
+  globalThis.document = {
+    createElement: () => ({
+      click() {
+        downloaded.push(["click", this.href, this.download]);
+      },
+      remove() {},
+    }),
+    body: { append() {} },
+  };
+  try {
+    nodes(f.render())
+      .find((node) => node.type === "Button" && text(node) === "Download")
+      .props.onClick();
+    assert.equal(await blob.text(), "Exact file bytes");
+    assert.equal(blob.type, "text/plain;charset=utf-8");
+    assert.deepEqual(downloaded, [
+      ["click", "blob:scoped-output", "notes.txt"],
+      ["revoke", "blob:scoped-output"],
+    ]);
+    assert.deepEqual(f.calls, []);
+  } finally {
+    globalThis.document = originalDocument;
+    URL.createObjectURL = originalCreate;
+    URL.revokeObjectURL = originalRevoke;
+    window.setTimeout = originalTimeout;
+  }
 });
 
 test("rename, pin and plugin controls invoke real handlers without touching the composer", () => {
