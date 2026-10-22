@@ -1,0 +1,91 @@
+name: Production API secret operator
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/production-api-operator.yml
+      - scripts/azure/production-api-operator.mjs
+      - scripts/azure/provision-owned-auth.mjs
+      - tests/unit/production-api-operator.test.mjs
+      - tests/unit/provision-owned-auth.test.mjs
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: CHECK reads metadata; other choices change only the stated secrets/references
+        required: true
+        type: choice
+        options: [CHECK, CREATE_AUTH, BIND_PROVIDER_REFERENCES, IMPORT_RESEND]
+        default: CHECK
+      source_sha:
+        description: Exact reviewed main commit, equal to the selected workflow revision
+        required: true
+        type: string
+      confirmation:
+        description: Repeat the chosen operation exactly
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kovagpt-production-api-secret-operator
+  cancel-in-progress: false
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: node --test tests/unit/production-api-operator.test.mjs tests/unit/provision-owned-auth.test.mjs
+
+  operator:
+    needs: source-tests
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/main' && inputs.source_sha == github.sha && inputs.confirmation == inputs.operation
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Use existing protected Azure federation
+        uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
+        with:
+          client-id: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.KOVAGPTPROD_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+      - name: Read permissions and execute only the selected operation
+        env:
+          KOVA_OPERATOR_OPERATION: ${{ inputs.operation }}
+          KOVA_OPERATOR_CONFIRMATION: ${{ inputs.confirmation }}
+          KOVA_OPERATOR_SOURCE_SHA: ${{ inputs.source_sha }}
+          KOVA_OPERATOR_AZURE_CLIENT_ID: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
+          KOVA_OPERATOR_DATABASE_URL: ${{ inputs.operation == 'CREATE_AUTH' && secrets.KOVA_PRODUCTION_DATABASE_URL || '' }}
+          KOVA_OPERATOR_RESEND_KEY: ${{ inputs.operation == 'IMPORT_RESEND' && secrets.KOVA_RESEND_PRODUCTION_API_KEY || '' }}
+          KOVA_OPERATOR_RECEIPT: ${{ runner.temp }}/production-api-operator/receipt.json
+        run: node scripts/azure/production-api-operator.mjs --execute
+      - name: Upload only the sanitized receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: production-api-operator-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/production-api-operator/receipt.json
+          if-no-files-found: warn
+          retention-days: 7

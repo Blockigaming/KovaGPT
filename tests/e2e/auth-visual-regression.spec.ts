@@ -105,7 +105,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   expect(new URL(page.url()).origin).toBe(authFixtureOrigin);
   await waitForKovaHydration(page);
 
-  const dialog = page.getByRole("dialog", { name: "Log in or sign up" });
+  const dialog = page.getByRole("dialog", { name: "Log in to Kova", exact: true });
   const email = dialog.getByLabel("Email address");
   const googleButton = dialog.getByRole("button", {
     name: "Continue with Google",

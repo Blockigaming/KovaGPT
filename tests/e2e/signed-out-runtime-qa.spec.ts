@@ -18,7 +18,7 @@ async function openGuestHome(page: Page, theme: ThemeMode) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(
-    page.getByRole("heading", { level: 1, name: "What can I help with?" }),
+    page.getByRole("heading", { level: 1, name: "What are you working on?", exact: true }),
   ).toBeVisible();
 }
 
@@ -50,41 +50,33 @@ for (const theme of themes) {
       await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
     }
     await expect(page.getByRole("main")).toHaveCount(1);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    await expect(page.getByRole("region", { name: "What can I help with?" })).toBeVisible();
+    await expect(page.locator("h1")).toHaveCount(1);
+    await expect(
+      page.getByRole("region", { name: "What are you working on?", exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Add files, tools, or prompts" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
     const logInButton = page
       .getByRole("button", { name: "Log in", exact: true })
       .filter({ visible: true })
       .first();
     await expect(logInButton).toBeVisible();
-    await expect(page.getByRole("link", { name: "Terms", exact: true })).toHaveAttribute(
-      "href",
-      "/terms",
-    );
-    await expect(page.getByRole("link", { name: "Privacy Policy", exact: true })).toHaveAttribute(
-      "href",
-      "/privacy",
-    );
-
-    const guestModel = page.locator(".kova-model-static:visible");
-    await expect(guestModel).toHaveCount(1);
-    expect(await guestModel.evaluate((element) => element.tagName.toLowerCase())).toBe("span");
-    await expect(guestModel).not.toHaveAttribute("role");
-    await expect(guestModel).not.toHaveAttribute("aria-hidden");
-    await expect(guestModel).not.toHaveAttribute("aria-haspopup");
-    expect(await guestModel.evaluate((element: HTMLElement) => element.tabIndex)).toBe(-1);
-    await expect(guestModel.locator("svg")).toHaveCount(0);
+    // The current interface exposes effort in Options, not a static topbar model label.
+    // Guests still cannot access a switchable model picker.
+    await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
 
     if (testInfo.project.name.startsWith("phone-")) {
       const menuButton = page.getByRole("button", { name: "Open menu" });
       const addButton = page.getByRole("button", {
-        name: "Add files, tools, or prompts",
+        name: "Attach",
+        exact: true,
       });
-      const sendButton = page.getByRole("button", { name: "Send" });
+      const sendButton = page.getByRole("button", { name: "Send message", exact: true });
       await expect(menuButton).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Chat", exact: true }),
+      ).toBeVisible();
       await expectMinimumTouchTarget(menuButton);
       await expectMinimumTouchTarget(addButton);
       await expectMinimumTouchTarget(sendButton);
@@ -110,5 +102,40 @@ for (const theme of themes) {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/#main-content$/u);
     await expect(page.locator("#main-content")).toBeFocused();
+
+    const options = page.getByRole("button", { name: "Options", exact: true });
+    await options.focus();
+    await page.keyboard.press("Enter");
+    const responseOptions = page.getByRole("dialog", { name: "Response options", exact: true });
+    await expect(responseOptions).toBeVisible();
+    const effort = responseOptions.getByRole("region", { name: "Effort", exact: true });
+    await expect(
+      effort.getByText("Your Free plan uses its included setting. Thinking requires a paid plan.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      effort.getByRole("button", { name: "Thinking is locked. Open Subscriptions", exact: true }),
+    ).toBeEnabled();
+    await expect(effort.getByRole("combobox")).toHaveCount(0);
+    await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(responseOptions).toBeHidden();
+    await expect(options).toBeFocused();
+
+    // Account policy links live on the full account form. This synthetic local
+    // address is never submitted and no password or live account is used.
+    await page.goto("/auth?email=accessibility%40example.test&mode=sign-in", {
+      waitUntil: "domcontentloaded",
+    });
+    await waitForKovaHydration(page);
+    const policies = page.getByRole("navigation", { name: "Account policies", exact: true });
+    await expect(policies).toBeVisible();
+    await expect(
+      policies.getByRole("link", { name: "Terms of Service (opens in a new tab)", exact: true }),
+    ).toHaveAttribute("href", "/terms");
+    await expect(
+      policies.getByRole("link", { name: "Privacy Policy (opens in a new tab)", exact: true }),
+    ).toHaveAttribute("href", "/privacy");
   });
 }
