@@ -9,6 +9,7 @@ import { AlertTriangle, ArrowLeft, KeyRound, Loader2 } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
   getEmailAuthRedirectUri,
+  traceHostedAuth,
   getOAuthRedirectUri,
   rememberPostAuthRedirect,
 } from "@/lib/oauth-session";
@@ -187,10 +188,12 @@ export function AuthDialog({
       if (!guard("email")) return;
       try {
         rememberPostAuthRedirect();
-        const { error } = await supabase.auth.signInWithOtp({
-          email: email.trim().toLowerCase(),
-          options: { emailRedirectTo: getEmailAuthRedirectUri() },
-        });
+        const { error } = await traceHostedAuth("email_request", () =>
+          supabase.auth.signInWithOtp({
+            email: email.trim().toLowerCase(),
+            options: { emailRedirectTo: getEmailAuthRedirectUri() },
+          }),
+        );
         if (error) throw error;
         setStep("magic-sent");
         setCooldown(RESEND_COOLDOWN_SECONDS);
