@@ -243,7 +243,9 @@ jobs:
     if: needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     needs: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # The desktop shard traverses the complete public detail catalog in both
+    # themes. Keep its full coverage when browser dependency downloads are slow.
+    timeout-minutes: 45
     env:
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "public"
