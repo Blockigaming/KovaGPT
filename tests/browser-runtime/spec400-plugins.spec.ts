@@ -21,6 +21,7 @@ const mocks: Record<string, string> = {
   "@/lib/auth-fetch": `export const authFetch=async(...args)=>{window.operations.push(["github-auth",...args]);return {ok:false,json:async()=>({})}};`,
   "@/lib/google-client": `export const getGoogleStatus=async()=>window.googleStatus;export const startGoogleConnect=async(...args)=>{window.operations.push(["google-connect",...args])};export const disconnectGoogleAccount=async(...args)=>{window.operations.push(["google-disconnect",...args]);window.googleStatus={connected:false,state:"disconnected",accounts:[],selectedConnectionId:null,selectionRevision:2}};export const selectGoogleAccount=async(...args)=>window.operations.push(["google-select",...args]);`,
   "@/lib/github.functions": `export const getGitHubManagement=async()=>window.githubData;export const refreshGitHubInstallations=async()=>window.operations.push(["github-refresh"]);export const updateGitHubRepositoryGrants=async(...args)=>window.operations.push(["github-grants",...args]);export const disconnectGitHub=async(...args)=>window.operations.push(["github-disconnect",...args]);`,
+  "@/lib/scheduled-tasks.functions": `export const listScheduledTasks=async()=>[];export const listScheduledTaskConnections=async()=>({connections:[],grants:[]});`,
   sonner: `export const toast=Object.fromEntries(["success","error","warning","info"].map(kind=>[kind,(message)=>window.toasts.push([kind,message])]));`,
 };
 const result = await build({
@@ -134,7 +135,7 @@ test("approved 13-plugin directory supports primary and category filters", async
   await expect(page.getByRole("heading", { name: "Plugins", exact: true })).toBeVisible();
   await expect(page.getByText("Connect tools and sources to Kova", { exact: true })).toBeVisible();
   await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(13);
-  await page.getByLabel("Category", { exact: true }).selectOption("Email");
+  await page.getByRole("combobox", { name: "Category", exact: true }).selectOption("Email");
   await expect(page.locator("[data-plugin-id]")).toHaveCount(2);
   await page.getByRole("textbox", { name: "Search plugins" }).fill("Gmail");
   await expect(page.locator("[data-plugin-id]")).toHaveCount(1);
