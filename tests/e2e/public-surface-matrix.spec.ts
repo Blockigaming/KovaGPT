@@ -81,9 +81,10 @@ async function verifyRoute(
   expect(response?.status(), `${route} ${colorScheme} status`).toBe(200);
   await waitForKovaHydration(page);
 
-  await expect(page.locator("main#main-content"), `${route} ${colorScheme} main`).toHaveCount(1);
+  const main = page.locator("main#main-content");
+  await expect(main, `${route} ${colorScheme} main`).toHaveCount(1);
   await expect(
-    page.getByRole("heading", { level: 1 }),
+    main.getByRole("heading", { level: 1 }),
     `${route} ${colorScheme} heading`,
   ).toBeVisible();
   const publicNavigation = page.getByRole("navigation", { name: "Public navigation" });
@@ -106,7 +107,7 @@ async function verifyRoute(
   const layout = await page.evaluate(() => {
     const root = document.documentElement;
     const main = document.querySelector<HTMLElement>("main#main-content");
-    const heading = document.querySelector<HTMLElement>("h1");
+    const heading = main?.querySelector<HTMLElement>("h1");
     const primary = document.querySelector<HTMLElement>("[data-public-primary]");
     const mainRect = main?.getBoundingClientRect();
     const headingStyle = heading ? getComputedStyle(heading) : null;
