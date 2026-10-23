@@ -193,27 +193,42 @@ test("spec400 uses labeled schedule fields and does not fabricate a run preview"
 }) => {
   await mount(page);
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByLabel("Frequency", { exact: true })).toHaveValue("daily");
+  await expect(page.getByRole("combobox", { name: "Frequency", exact: true })).toHaveValue("daily");
   await expect(page.getByLabel("Time", { exact: true })).toHaveValue("09:00");
-  await expect(page.getByLabel("Timezone", { exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Timezone", exact: true })).toBeVisible();
   await expect(
     page.getByText("A three-run preview is not available", { exact: false }),
   ).toBeVisible();
-  await page.getByLabel("Frequency", { exact: true }).selectOption("weekly");
-  await expect(page.getByLabel("Weekday", { exact: true })).toBeVisible();
-  await page.getByLabel("Weekday", { exact: true }).selectOption("1");
+  await page.getByRole("combobox", { name: "Frequency", exact: true }).selectOption("weekly");
+  await expect(page.getByRole("combobox", { name: "Weekday", exact: true })).toBeVisible();
+  await page.getByRole("combobox", { name: "Weekday", exact: true }).selectOption("1");
   await expect(page.getByLabel("Start date", { exact: true })).toHaveValue("2027-01-04");
-  await expect(page.getByRole("button", { name: "Save schedule", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Save schedule", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Select the confirmation checkbox before saving.",
+  );
+  expect(
+    await page.evaluate(() =>
+      (window as unknown as TaskBrowserWindow).fixture.calls.some(
+        (call) => call.name === "createScheduledTask",
+      ),
+    ),
+  ).toBe(false);
 });
 
 test("spec400 schedule dialog preserves edited prompt when discard is canceled", async ({
   page,
 }) => {
   await mount(page);
-  await page.getByLabel("Prompt", { exact: true }).fill("Preserve this edited prompt");
-  page.once("dialog", (dialog) => dialog.dismiss());
+  await page
+    .getByRole("textbox", { name: "Prompt", exact: true })
+    .fill("Preserve this edited prompt");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(page.getByLabel("Prompt", { exact: true })).toHaveValue(
+  const discard = page.getByRole("alertdialog", { name: "Discard unsaved schedule changes?" });
+  await expect(discard).toBeVisible();
+  await discard.getByRole("button", { name: "Keep editing", exact: true }).click();
+  await expect(discard).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "Prompt", exact: true })).toHaveValue(
     "Preserve this edited prompt",
   );
 });

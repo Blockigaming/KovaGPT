@@ -229,6 +229,8 @@ test("cards stay within the phone viewport and detail is full-screen", async ({ 
   expect(frame?.height).toBe(40);
   await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
   const panel = await page.getByRole("dialog").boundingBox();
-  expect(panel?.width).toBe(390);
-  expect(panel?.height).toBe(844);
+  // Compare rendered CSS pixels, matching the schedule editor's viewport checks.
+  // WebKit can return a 1/64px fractional value for 100dvh.
+  expect(Math.round(panel!.width)).toBe(390);
+  expect(Math.round(panel!.height)).toBe(844);
 });
