@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 const styles = await readFile("src/styles.css", "utf8");
 const reference = await readFile("docs/kova-observable-reference.md", "utf8");
-const projects = await readFile("src/routes/projects.tsx", "utf8");
+const projects = await readFile("src/routes/projects.index.tsx", "utf8");
 const projectDetail = await readFile("src/routes/projects.$projectId.tsx", "utf8");
 const projectFns = await readFile("src/lib/projects.functions.ts", "utf8");
 const rag = await readFile("src/lib/project-rag.server.ts", "utf8");

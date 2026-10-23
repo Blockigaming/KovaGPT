@@ -110,7 +110,7 @@ test("Project deletion is durable, owner-only, lease-fenced, and Storage-first",
 test("Project and account routes keep incomplete cleanup visible and retryable", () => {
   const projectsFunctions = read("src/lib/projects.functions.ts");
   const account = read("src/routes/api/account.ts");
-  const projectsRoute = read("src/routes/projects.tsx");
+  const projectsRoute = read("src/routes/projects.index.tsx");
   const detailRoute = read("src/routes/projects.$projectId.tsx");
   const projectFilesRoute = read("src/routes/api/project-files.ts");
 
