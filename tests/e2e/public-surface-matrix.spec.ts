@@ -83,10 +83,9 @@ async function verifyRoute(
 
   const main = page.locator("main#main-content");
   await expect(main, `${route} ${colorScheme} main`).toHaveCount(1);
-  await expect(
-    main.getByRole("heading", { level: 1 }),
-    `${route} ${colorScheme} heading`,
-  ).toBeVisible();
+  const pageHeading = main.locator("h1");
+  await expect(pageHeading, `${route} ${colorScheme} unique page heading`).toHaveCount(1);
+  await expect(pageHeading, `${route} ${colorScheme} heading`).toBeVisible();
   const publicNavigation = page.getByRole("navigation", { name: "Public navigation" });
   if ((await publicNavigation.count()) === 1) {
     await expect(publicNavigation, `${route} ${colorScheme} navigation`).toBeVisible();
