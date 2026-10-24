@@ -55,7 +55,7 @@ test("image discovery contacts no image host until the explicit private-load act
   await page.goto("/discovery");
   await page.getByRole("button", { name: "Images", exact: true }).click();
   await fillQuery(page.getByLabel("Describe the image or product you want to find"), "red coat");
-  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("main").getByRole("button", { name: "Search", exact: true }).click();
   await expect(page.getByRole("heading", { name: "A red coat" })).toBeVisible();
   expect(images).toBe(0);
   await page.getByRole("button", { name: "Load image from images.example.com" }).click();
@@ -131,7 +131,7 @@ test("shopping compares exact source variants and keeps missing merchant currenc
   await page.goto("/discovery");
   await page.getByRole("button", { name: "Shopping", exact: true }).click();
   await fillQuery(page.getByLabel("Describe the image or product you want to find"), "coat");
-  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("main").getByRole("button", { name: "Search", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Coat merchant" })).toBeVisible();
   expect(checks).toBe(0);
   await page.getByRole("button", { name: "Check merchant details" }).click();
@@ -170,7 +170,9 @@ test("local search shares only manually entered location and a disabled deployme
   ).toBeVisible();
   await fillQuery(page.getByLabel("What are you looking for?"), "quiet cafes");
   await page.getByLabel("City, neighborhood, or place (entered manually)").fill("Oslo");
-  await expect(page.getByRole("button", { name: "Search", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("main").getByRole("button", { name: "Search", exact: true }),
+  ).toBeDisabled();
   const handoff = page.getByRole("link", {
     name: "Open this search in Google Maps (shares the entered place)",
   });
@@ -215,7 +217,7 @@ test("late discovery response after sign-out cannot restore prior queries or sou
   await expect(page.getByLabel("What are you looking for?")).toBeVisible();
   await expect(page.getByText("Checking search availability…", { exact: true })).toHaveCount(0);
   await fillQuery(page.getByLabel("What are you looking for?"), "private search");
-  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("main").getByRole("button", { name: "Search", exact: true }).click();
   await expect.poll(() => Boolean(release)).toBe(true);
   const origin = [...origins][0];
   expect(origin).toBeTruthy();
@@ -267,7 +269,7 @@ test("device privacy reset clears queries and aborts a late request for the capt
   await expect(page.getByText("Checking search availability…", { exact: true })).toHaveCount(0);
   await fillQuery(page.getByLabel("What are you looking for?"), "private cafe");
   await page.getByLabel("City, neighborhood, or place (entered manually)").fill("Private place");
-  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("main").getByRole("button", { name: "Search", exact: true }).click();
   await expect.poll(() => Boolean(release)).toBe(true);
   await page.evaluate(() =>
     window.dispatchEvent(

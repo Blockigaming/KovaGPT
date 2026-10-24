@@ -82,13 +82,15 @@ for (const theme of ["light", "dark"] as const) {
     await expect(dialog).toBeHidden();
     await expect(trigger).toBeFocused();
     await trigger.click();
-    await expect(email).toHaveValue("");
+    // Reopening restores the login address, not the cancelled recovery draft.
+    // The earlier request must not replace that new dialog state when it settles.
+    await expect(email).toHaveValue("review@example.invalid");
     const finished = page.waitForResponse(
       /\/(?:auth\/v1\/recover|api\/auth\/recovery\/request)(?:\?|$)/,
     );
     release();
     await finished;
-    await expect(email).toHaveValue("");
+    await expect(email).toHaveValue("review@example.invalid");
     await expect(dialog.getByRole("button", { name: "Done", exact: true })).toHaveCount(0);
     await email.fill("synthetic@example.invalid");
     await dialog.getByRole("button", { name: "Send reset link", exact: true }).click();
@@ -98,7 +100,7 @@ for (const theme of ["light", "dark"] as const) {
     await dialog.getByRole("button", { name: "Done", exact: true }).click();
     await expect(trigger).toBeFocused();
     await trigger.click();
-    await expect(email).toHaveValue("");
+    await expect(email).toHaveValue("review@example.invalid");
     await expect(email).toBeFocused();
     await capture(page, info, `recovery-reopened-${theme}`);
   });

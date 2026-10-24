@@ -12,13 +12,17 @@ test.beforeEach(({ page }, testInfo) => {
 test("connected apps and scheduled tasks expose truthful signed-out states", async ({ page }) => {
   await page.goto("/apps", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("heading", { name: "Apps & plugins", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sign in to connect services" })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Plugins", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to connect plugins" })).toBeVisible();
 
   await page.goto("/scheduled-tasks", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("heading", { name: "Tasks", exact: true })).toBeVisible();
-  await expect(page.getByText("Sign in to review task history")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Scheduled tasks", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Sign in to use Scheduled tasks", { exact: true })).toBeVisible();
   await expect(
     page.getByText("Sign in to review your saved tasks and background execution availability."),
   ).toBeVisible();

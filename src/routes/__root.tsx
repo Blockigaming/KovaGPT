@@ -33,7 +33,7 @@ const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
   let mode = "dark";
   try {
     const stored = localStorage.getItem("kova-theme-mode");
-    if (stored === "light" || stored === "dark") mode = stored;
+    if (stored === "light" || stored === "dark" || stored === "system") mode = stored;
   } catch {}
   if (!(mode === "dark" || (mode === "system" &&
     window.matchMedia?.("(prefers-color-scheme: dark)").matches))) return;
