@@ -22,6 +22,21 @@ function evaluateGeneralConfig(source, suite) {
   return exports.default;
 }
 
+test("general browser checks share the origin allowed by private application fixtures", async () => {
+  const [generalSource, fixtureSource, roundedSource] = await Promise.all([
+    readRootFile("playwright.config.ts"),
+    readRootFile("tests/e2e/actual-app-fixture.ts"),
+    readRootFile("playwright.rounded.config.ts"),
+  ]);
+  const config = evaluateGeneralConfig(generalSource);
+  const fixtureOrigin = fixtureSource.match(/export const origin = "([^"]+)"/u)?.[1];
+  assert.ok(fixtureOrigin);
+  assert.equal(config.use.baseURL, fixtureOrigin);
+  assert.equal(new URL(config.webServer.url).origin, fixtureOrigin);
+  assert.equal(evaluateGeneralConfig(roundedSource).use.baseURL, fixtureOrigin);
+  assert.ok(config.webServer.command.includes(`--port ${new URL(fixtureOrigin).port}`));
+});
+
 test("the general Playwright matrix excludes dedicated QA specs", async () => {
   const [generalConfig, authVisualConfig, deployedAuditConfig, azureConfig, azureWorkflow] =
     await Promise.all([

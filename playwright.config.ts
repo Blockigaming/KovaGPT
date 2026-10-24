@@ -34,14 +34,14 @@ export default defineConfig({
   webServer: {
     command: [
       ...(usePrebuiltPreview ? [] : ["npm run build"]),
-      "npm run preview -- --host 127.0.0.1 --port 8080",
+      "npm run preview -- --host 127.0.0.1 --port 4189",
     ].join(" && "),
-    url: "http://127.0.0.1:8080",
+    url: "http://127.0.0.1:4189",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:8080",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:4189",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",

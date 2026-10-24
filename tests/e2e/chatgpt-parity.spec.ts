@@ -8,7 +8,7 @@ test.describe("KovaGPT parity invariants", () => {
       await page.goto("/");
       await stablePage(page);
       await assertNoHorizontalOverflow(page);
-      const composer = page.locator(".kova-composer").first();
+      const composer = page.locator(".spec400-composer").first();
       await expect(composer).toBeVisible();
       const box = await composer.boundingBox();
       expect(box).not.toBeNull();
@@ -19,9 +19,9 @@ test.describe("KovaGPT parity invariants", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     await stablePage(page);
-    const input = page.locator(".kova-composer textarea");
+    const input = page.locator(".spec400-composer textarea");
     await input.focus();
-    await expect(page.locator(".kova-composer")).toHaveCSS("outline-style", "solid");
+    await expect(page.locator(".spec400-composer")).toHaveCSS("outline-style", "solid");
     await expect(input).toHaveCSS("font-size", "16px");
   });
 });
