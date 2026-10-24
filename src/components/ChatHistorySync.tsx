@@ -169,6 +169,9 @@ export function ChatHistorySyncRuntime() {
             await controller.initialize();
             if (!lifetime.signal.aborted) {
               view.writable = true;
+              // Publish the writable boundary after the device snapshot. A lazy
+              // controller must be ready before the composer accepts a first send.
+              notifyChatHistoryChanged(ownerId, "cloud");
               void tick();
             }
           } catch {

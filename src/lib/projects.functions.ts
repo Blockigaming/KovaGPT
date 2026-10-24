@@ -2,7 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { loose } from "@/lib/supabase-loose";
 import { normalizeResponseSources, type ResponseSource } from "./response-sources.ts";
+import { normalizeSourceRetrievedAt } from "./response-source-time.mjs";
 import { z } from "zod";
+import { PROJECT_CHAT_DELETE_UNAVAILABLE } from "./project-chat-deletion";
 
 export type ProjectRole = "owner" | "editor" | "viewer";
 
@@ -110,6 +112,7 @@ const ResponseSourceSchema = z
     domain: z.string().max(120),
     snippet: z.string().max(500).optional(),
     publishedAt: z.string().max(80).optional(),
+    retrievedAt: z.preprocess(normalizeSourceRetrievedAt, z.string().max(80).optional()),
   })
   .strict()
   .transform((source, context): ResponseSource => {
@@ -369,10 +372,18 @@ export const updateProject = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { id, ...rest } = data;
-    const { error } = await context.supabase.from("projects").update(rest).eq("id", id);
-    if (error) {
-      console.error("[updateProject]", error.message);
-      throw new Error("Failed to update project");
+    const { data: updated, error } = await context.supabase
+      .from("projects")
+      .update(rest)
+      .eq("id", id)
+      .eq("owner_id", context.userId)
+      .select("id")
+      .maybeSingle();
+    if (error || !updated || updated.id !== id) {
+      if (error) console.error("[updateProject]", error.message);
+      throw new Error(
+        "Project changes could not be confirmed. Only the project owner can update these details.",
+      );
     }
     return { ok: true };
   });
@@ -763,11 +774,7 @@ export const saveProjectChat = createServerFn({ method: "POST" })
 export const deleteProjectChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
-  .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const { error } = await context.supabase.from("project_chats").delete().eq("id", data.id);
-    if (error) {
-      console.error("[deleteProjectChat]", error.message);
-      throw new Error("Failed to delete");
-    }
-    return { ok: true };
+  .handler(async (): Promise<{ ok: true }> => {
+    // Auth and input checks remain, but no server record can be removed without recovery.
+    throw new Error(PROJECT_CHAT_DELETE_UNAVAILABLE);
   });

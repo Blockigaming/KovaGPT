@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import type { ReactNode } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +20,8 @@ export function ConfirmActionDialog({
   onConfirm,
   destructive = false,
   disabled = false,
+  onCloseAutoFocus,
+  children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -28,10 +31,15 @@ export function ConfirmActionDialog({
   onConfirm: () => void;
   destructive?: boolean;
   disabled?: boolean;
+  onCloseAutoFocus?: (event: Event) => void;
+  children?: ReactNode;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md bg-popover text-popover-foreground">
+      <AlertDialogContent
+        className="max-w-md bg-popover text-popover-foreground"
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             {destructive ? (
@@ -41,6 +49,7 @@ export function ConfirmActionDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction

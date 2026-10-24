@@ -1,3 +1,4 @@
+import { reserveUploads } from "@/lib/upload-quota.server.mjs";
 import { memorySourcesDelta, type MemorySourceRef } from "@/lib/memory-sources.mjs";
 import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
 import { createFileRoute } from "@tanstack/react-router";
@@ -10,6 +11,7 @@ import {
   DAILY_CHAT_LIMIT_BY_TIER,
   DAILY_UPLOAD_LIMIT_BY_TIER,
 } from "@/lib/modes";
+import { GENERATIVE_UI_INSTRUCTIONS } from "@/lib/generative-ui.mjs";
 import {
   assertFeatureEnabled,
   assertNotBanned,
@@ -30,6 +32,7 @@ import {
   imageGenerations,
   imageModel,
   missingAiProviderResponse,
+  prepareChatResponsesRequest,
   providerErrorFromResponse,
   providerUnavailableResponse,
 } from "@/lib/ai/provider.server";
@@ -43,6 +46,7 @@ import {
 import { boundedImageProviderPrompt } from "@/lib/ai/image-prompt-policy.mjs";
 import { createToolActivityEvent } from "@/lib/ai/activity.server";
 import type { KovaSource } from "@/lib/ai/sources.server";
+import { normalizeSourceRetrievedAt } from "@/lib/response-source-time.mjs";
 
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
 import { acquireGeneration, finalizeGeneration, hashGuestIp } from "@/lib/ai/accounting.server";
@@ -55,6 +59,7 @@ import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 
 import { routeAiModel } from "@/lib/ai/model-router.server";
+import { freeModeUpgradeRequired } from "@/lib/ai/model-router.mjs";
 import { buildKovaModelIdentityInstructions } from "@/lib/kova-model-identity.mjs";
 
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
@@ -84,6 +89,14 @@ import {
   normalizeChatPreflightFailure,
 } from "@/lib/chat-preflight.server.mjs";
 import { kovaChatOptionsForTier, parseKovaChatSelection } from "@/lib/kova-chat-policy.mjs";
+import { runtimeEnv } from "@/lib/runtime-env.server";
+import {
+  RequestCaptureError,
+  readRequestCapturePlan,
+  authorizeRequestCapture,
+  captureConstructedRequest,
+  type RequestCapture,
+} from "@/lib/request-qualification.server.mjs";
 
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -196,14 +209,19 @@ function sseEvent(obj: Record<string, unknown>) {
 function responseSourcesDelta(sources: KovaSource[]) {
   return {
     kind: "web_sources",
-    sources: sources.slice(0, 12).map(({ id, title, url, domain, snippet, publishedAt }) => ({
-      id,
-      title,
-      url,
-      domain,
-      ...(snippet ? { snippet } : {}),
-      ...(publishedAt ? { publishedAt } : {}),
-    })),
+    sources: sources.slice(0, 12).map((source) => {
+      const { id, title, url, domain, snippet, publishedAt } = source;
+      const retrievedAt = normalizeSourceRetrievedAt(source.retrievedAt);
+      return {
+        id,
+        title,
+        url,
+        domain,
+        ...(snippet ? { snippet } : {}),
+        ...(publishedAt ? { publishedAt } : {}),
+        ...(retrievedAt ? { retrievedAt } : {}),
+      };
+    }),
   };
 }
 
@@ -313,81 +331,109 @@ function parseToolHopResponse(
   };
 }
 
-async function handleImageRequest(prompt: string, logContext: SafeLogContext): Promise<Response> {
-  const stream = new ReadableStream({
-    async start(controller) {
+async function handleImageRequest(
+  prompt: string,
+  logContext: SafeLogContext,
+  signal: AbortSignal,
+): Promise<Response> {
+  const cancellation = new AbortController();
+  let closed = false;
+  let streamController: ReadableStreamDefaultController<Uint8Array> | undefined;
+  const cleanup = () => signal.removeEventListener("abort", abort);
+  const finish = () => {
+    cleanup();
+    if (closed) return;
+    closed = true;
+    streamController?.close();
+  };
+  const abort = () => {
+    cancellation.abort(signal.reason);
+    finish();
+  };
+  if (signal.aborted) cancellation.abort(signal.reason);
+  else signal.addEventListener("abort", abort, { once: true });
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      streamController = controller;
+      if (cancellation.signal.aborted) {
+        finish();
+        return;
+      }
       const enc = new TextEncoder();
-      // Tell client immediately: we're generating an image, not text
-      controller.enqueue(enc.encode(sseEvent({ kind: "image_pending" })));
-
-      try {
-        const upstream = await imageGenerations({
-          model: imageModel(),
-          prompt,
-          size: "1024x1024",
-          quality: "low",
-          n: 1,
-        });
-
-        if (!upstream.ok) {
-          const status = upstream.status;
-          void upstream.body?.cancel().catch(() => undefined);
-          logSafeFailure("error", "[chat] image provider rejected request", logContext, {
-            status,
-            category: "provider",
-            code: "image_provider_http_error",
-          });
-          const err =
-            status === 429
-              ? "Rate limit exceeded. Please wait a moment."
-              : status === 402
-                ? "Image provider quota exhausted."
-                : "Image generation failed. Please try a different prompt or try again later.";
-          controller.enqueue(enc.encode(sseChunk(`Sorry - ${err}`)));
-          controller.enqueue(enc.encode(sseDone()));
-          controller.close();
-          return;
-        }
-        // INTENTIONAL-DEFERRED(storage-cleanup): If uploaded files move to storage,
-        // bucket (currently attachments live inline in message records), the file
-        // delete flow must also remove the stored object via supabaseAdmin.storage
-        // .from(<bucket>).remove([path]) with a server-side ownership check.
-
-        const data = await readProviderJsonObject(upstream, MAX_IMAGE_PROVIDER_RESPONSE_BYTES);
-        const item = (data as { data?: Array<{ b64_json?: string; url?: string }> }).data?.[0];
-        const imageUrl = item?.b64_json
-          ? `data:image/png;base64,${item.b64_json}`
-          : (item?.url ?? null);
-
-        if (imageUrl) {
-          controller.enqueue(enc.encode(sseChunk(`![generated image](${imageUrl})`)));
-        } else {
-          controller.enqueue(
-            enc.encode(
-              sseChunk("Sorry  -  I couldn't generate that image. Try rephrasing the prompt."),
+      const send = (frame: string) => {
+        if (!closed && !cancellation.signal.aborted) controller.enqueue(enc.encode(frame));
+      };
+      // Do not return this promise from start: stream cancellation must remain
+      // available while the provider is still producing the image.
+      const generate = async () => {
+        send(sseEvent({ kind: "image_pending" }));
+        try {
+          const upstream = await imageGenerations(
+            { model: imageModel(), prompt, size: "1024x1024", quality: "low", n: 1 },
+            { signal: cancellation.signal },
+          );
+          if (cancellation.signal.aborted) {
+            void upstream.body?.cancel().catch(() => undefined);
+            return;
+          }
+          if (!upstream.ok) {
+            const status = upstream.status;
+            void upstream.body?.cancel().catch(() => undefined);
+            logSafeFailure("error", "[chat] image provider rejected request", logContext, {
+              status,
+              category: "provider",
+              code: "image_provider_http_error",
+            });
+            const err =
+              status === 429
+                ? "Rate limit exceeded. Please wait a moment."
+                : status === 402
+                  ? "Image provider quota exhausted."
+                  : "Image generation failed. Please try a different prompt or try again later.";
+            send(sseChunk("Sorry - " + err));
+            return;
+          }
+          // INTENTIONAL-DEFERRED(storage-cleanup): If uploaded files move to storage,
+          // bucket (currently attachments live inline in message records), the file
+          // delete flow must also remove the stored object via supabaseAdmin.storage
+          // .from(<bucket>).remove([path]) with a server-side ownership check.
+          const data = await readProviderJsonObject(upstream, MAX_IMAGE_PROVIDER_RESPONSE_BYTES);
+          const item = (data as { data?: Array<{ b64_json?: string; url?: string }> }).data?.[0];
+          const imageUrl = item?.b64_json
+            ? "data:image/png;base64," + item.b64_json
+            : (item?.url ?? null);
+          send(
+            sseChunk(
+              imageUrl
+                ? "![generated image](" + imageUrl + ")"
+                : "Sorry  -  I couldn't generate that image. Try rephrasing the prompt.",
             ),
           );
+        } catch {
+          if (!cancellation.signal.aborted) {
+            logSafeFailure("error", "[chat] image provider request failed", logContext, {
+              status: 502,
+              category: "provider",
+              code: "image_provider_network_error",
+            });
+            send(sseChunk("Sorry  -  image generation failed. Please try again."));
+          }
+        } finally {
+          send(sseDone());
+          finish();
         }
-      } catch {
-        logSafeFailure("error", "[chat] image provider request failed", logContext, {
-          status: 502,
-          category: "provider",
-          code: "image_provider_network_error",
-        });
-        controller.enqueue(
-          enc.encode(sseChunk("Sorry  -  image generation failed. Please try again.")),
-        );
-      }
-      controller.enqueue(enc.encode(sseDone()));
-      controller.close();
+      };
+      void generate();
+    },
+    cancel(reason) {
+      closed = true;
+      cleanup();
+      cancellation.abort(reason);
     },
   });
-
   return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-    },
+    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
   });
 }
 
@@ -453,6 +499,19 @@ export const Route = createFileRoute("/api/chat")({
             },
           });
           try {
+            let capture: RequestCapture | null = null;
+            const captureFlag = runtimeEnv("KOVA_REQUEST_CAPTURE_ENABLED");
+            if (
+              request.headers.has("x-kova-request-capture") ||
+              (captureFlag && captureFlag !== "false")
+            ) {
+              const { BUILD_IDENTITY } = await import("@/lib/build-identity");
+              capture = readRequestCapturePlan({
+                request,
+                getEnv: runtimeEnv,
+                buildSha: BUILD_IDENTITY.sha,
+              });
+            }
             let ingress;
             try {
               ingress = await preflight.run("request_body", (signal) =>
@@ -470,6 +529,9 @@ export const Route = createFileRoute("/api/chat")({
 
             const auth = await preflight.run("session", () => optionalUser(request));
             if (auth instanceof Response) return auth;
+            if (capture) {
+              await authorizeRequestCapture({ capture, auth, ingress, signal: request.signal });
+            }
 
             const clientKey = !auth ? resolveAnonymousClientKey(request.headers) : "";
             if (!auth) {
@@ -660,6 +722,33 @@ export const Route = createFileRoute("/api/chat")({
               );
             }
 
+            // Uploads require sign-in even when a custom client skips the UI guard.
+            if (!auth && currentAttachments.length > 0) {
+              return Response.json(
+                {
+                  error: "Sign in to upload files and images.",
+                  code: "authentication_required",
+                  retryable: false,
+                },
+                { status: 401, headers: { "Cache-Control": "no-store" } },
+              );
+            }
+
+            // Reject an explicitly locked Free mode before any provider work or
+            // quota reservation, including requests that also ask for images or Study.
+            if (auth && freeModeUpgradeRequired(callerTier, getMode(mode).id)) {
+              return Response.json(
+                {
+                  error:
+                    "This mode requires a paid plan. Upgrade to use Thinking and higher modes.",
+                  code: "mode_not_entitled",
+                  upgradeUrl: "/pricing",
+                  retryable: false,
+                },
+                { status: 403, headers: { "Cache-Control": "no-store" } },
+              );
+            }
+
             // A custom Kova supplies creator instructions and immutable knowledge,
             // never the creator's credentials or an entitlement override.
             let customKova: Awaited<
@@ -728,9 +817,6 @@ export const Route = createFileRoute("/api/chat")({
               }
             };
 
-            const missingProvider = missingAiProviderResponse();
-            if (missingProvider) return missingProvider;
-
             // Image generation requires an account. For signed-out users,
             // silently fall through to normal chat so the model can respond
             // in text (esp. important when the user *explicitly declined* an
@@ -779,8 +865,11 @@ export const Route = createFileRoute("/api/chat")({
               // Recheck after quota authorization too, so a concurrent uninstall or
               // version change cannot reach the provider after the quota boundary.
               await assertSelectedContextsCurrent(request.signal);
-              return handleImageRequest(imagePrompt, logContext);
+              return handleImageRequest(imagePrompt, logContext, request.signal);
             }
+
+            const missingProvider = capture ? null : missingAiProviderResponse();
+            if (missingProvider) return missingProvider;
 
             // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
             if (auth && !isOwner) {
@@ -792,7 +881,7 @@ export const Route = createFileRoute("/api/chat")({
               // after it and before quota so a revoked skill cannot consume a
               // chat request without reaching a provider.
               await assertSelectedContextsCurrent(request.signal);
-              if (callerTier === "free") {
+              if (callerTier === "free" && !capture) {
                 const quota = await preflight.run("chat_quota", (signal) =>
                   enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER.free, 1, signal),
                 );
@@ -802,7 +891,8 @@ export const Route = createFileRoute("/api/chat")({
 
             // SECURITY: Server-side tier enforcement. Client-supplied `mode` is
             // only honored if the user's resolved tier permits it; anything
-            // above their tier is silently downgraded to "auto". Owner bypasses.
+            // above a paid tier is downgraded to "auto". Free requests were rejected
+            // above before quota/provider work. Owner resolves to the Pro tier.
             // Study needs enough structured-output capacity for its six-card JSON.
             // Select it from the server-authoritative tier so paid users do not
             // silently fall back when the client sends the Free Study mode.
@@ -820,8 +910,8 @@ export const Route = createFileRoute("/api/chat")({
             // older conversation history. This also keeps edit/regenerate from
             // being charged for unrelated files in prior turns.
             const totalAttachments = currentAttachments.length;
-            // Photo / file uploads are available without an account, matching
-            // the reference product. Per-request and per-day caps still apply.
+            // Guest uploads were rejected before provider work above.
+            // Signed-in uploads also retain per-request and per-day caps.
             if (!isOwner && totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
               return new Response(
                 JSON.stringify({
@@ -852,16 +942,19 @@ export const Route = createFileRoute("/api/chat")({
                 assertFeatureEnabled(auth, "uploads"),
               );
               if (maint) return maint;
-              const quota = await preflight.run("upload_quota", (signal) =>
-                enforceQuota(
+              const uploadAllowed = await preflight.run("upload_quota", (signal) =>
+                reserveUploads(
                   auth,
-                  "uploads",
+                  currentAttachments,
                   DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
-                  totalAttachments,
                   signal,
                 ),
               );
-              if (quota) return quota;
+              if (!uploadAllowed)
+                return Response.json(
+                  { error: "Daily file upload limit reached. Resets at midnight UTC." },
+                  { status: 429 },
+                );
             }
             const hasAttachments = totalAttachments > 0;
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
@@ -976,17 +1069,31 @@ export const Route = createFileRoute("/api/chat")({
                 clientTool === "web_search" ||
                 shouldRunWebSearch(lastText, personalContext?.webSearch)
               ) {
-                const result = await preflight.run(
-                  "web_search",
-                  async (signal) => {
-                    await assertSelectedContextsCurrent(signal);
-                    return searchWeb(lastText, {
-                      wantsNews: NEWS_TRIGGER.test(lastText),
-                      signal,
-                    });
-                  },
-                  { required: false, timeoutMs: 8_000 },
-                );
+                const search = async (signal: AbortSignal) => {
+                  await assertSelectedContextsCurrent(signal);
+                  return searchWeb(lastText, {
+                    wantsNews: NEWS_TRIGGER.test(lastText),
+                    signal,
+                  });
+                };
+                const result =
+                  clientTool === "web_search"
+                    ? await preflight.run("web_search", search, {
+                        required: true,
+                        timeoutMs: 20_000,
+                      })
+                    : await preflight.run("web_search", search, {
+                        required: false,
+                        timeoutMs: 8_000,
+                      });
+                if (clientTool === "web_search" && result?.status !== "ok")
+                  return Response.json(
+                    {
+                      error: "Web search could not be completed. Please try again.",
+                      code: "web_search_unavailable",
+                    },
+                    { status: 503, headers: { "Cache-Control": "no-store" } },
+                  );
                 if (result) {
                   webBlock = formatSearchResultsForPrompt(result) ?? "";
                   webSources = result.kovaSources;
@@ -1277,6 +1384,7 @@ export const Route = createFileRoute("/api/chat")({
                     UNRESTRICTED_INSTRUCTION +
                     ACCURACY_INSTRUCTION +
                     CHART_INSTRUCTION +
+                    GENERATIVE_UI_INSTRUCTIONS +
                     CREATOR_INSTRUCTION +
                     buildUserContextBlock(personalContext ?? {}) +
                     personalityBlock +
@@ -1308,6 +1416,26 @@ export const Route = createFileRoute("/api/chat")({
               body.reasoning = { effort: m.reasoning };
             }
 
+            // The actual authenticated/context-assembled instant request stops
+            // here: before connector planning, quota/usage reservation, acceptance
+            // claims, provider credentials, developer billing and provider HTTP.
+            if (capture) {
+              await assertSelectedContextsCurrent(request.signal);
+              const receipt = await captureConstructedRequest({
+                capture,
+                body: prepareChatResponsesRequest(body),
+                authMode: auth!.authProvider,
+                signal: request.signal,
+              });
+              return Response.json(receipt, {
+                status: 201,
+                headers: {
+                  "Cache-Control": "private, no-store",
+                  "X-Content-Type-Options": "nosniff",
+                },
+              });
+            }
+
             // === TOOL-CALLING PRE-LOOP ============================================
             // Only for signed-in users who've connected Google, on a real text
             // turn (no attachments, not instant mode). We run up to
@@ -1320,7 +1448,15 @@ export const Route = createFileRoute("/api/chat")({
             //
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
+            const selectedHostedTool =
+              auth &&
+              runtimeEnv("KOVA_OPENAI_SERVICES_ENABLED") === "true" &&
+              getAiProviderConfig().provider === "openai" &&
+              (clientTool === "data_analysis" || (clientTool === "file_analysis" && hasAttachments))
+                ? clientTool
+                : null;
             const googleContext =
+              !selectedHostedTool &&
               auth &&
               usesExistingContext &&
               (!customKova || customKova.config.apps.length > 0) &&
@@ -1354,7 +1490,12 @@ export const Route = createFileRoute("/api/chat")({
             const maximumProviderCalls = enableTools ? 9 : 1;
             const estimatedCost =
               estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) *
-              maximumProviderCalls;
+                maximumProviderCalls +
+              (selectedHostedTool === "data_analysis"
+                ? 0.03
+                : selectedHostedTool === "file_analysis"
+                  ? 0.01
+                  : 0);
             let runtimeConfig;
             try {
               runtimeConfig = getAiRuntimeConfig();
@@ -1528,6 +1669,11 @@ export const Route = createFileRoute("/api/chat")({
                       stream: false,
                     },
                     { signal: hopCtl.signal },
+                    {
+                      ownerId: auth?.userId ?? "",
+                      operationId: request.headers.get("x-kova-acceptance-operation") ?? "",
+                      chatId: chatId ?? "",
+                    },
                   );
                 } catch {
                   clearTimeout(hopTimer);
@@ -1836,9 +1982,34 @@ export const Route = createFileRoute("/api/chat")({
             try {
               await assertSelectedContextsCurrent(request.signal);
               providerCalls += 1;
-              upstream = await chatCompletions(finalBody, {
-                signal: request.signal,
-              });
+              const hostedTool = selectedHostedTool;
+              if (hostedTool) {
+                const { hostedChatCompletion } = await import("@/lib/ai/hosted-chat.server");
+                upstream = await hostedChatCompletion(
+                  finalBody,
+                  hostedTool,
+                  lastText,
+                  auth!.userId,
+                  request.signal,
+                );
+                await assertSelectedContextsCurrent(request.signal);
+                activityEvents.push({
+                  tool: hostedTool === "data_analysis" ? "data_analysis" : "project_files",
+                  label:
+                    hostedTool === "data_analysis" ? "Analyzed data" : "Searched attached files",
+                });
+              } else
+                upstream = await chatCompletions(
+                  finalBody,
+                  {
+                    signal: request.signal,
+                  },
+                  {
+                    ownerId: auth?.userId ?? "",
+                    operationId: request.headers.get("x-kova-acceptance-operation") ?? "",
+                    chatId: chatId ?? "",
+                  },
+                );
             } catch (error) {
               const contextFailure = error instanceof ChatPreflightError;
               await finalizeGeneration({
@@ -2122,9 +2293,16 @@ export const Route = createFileRoute("/api/chat")({
                   const providerFailureCode = providerTimedOut
                     ? "provider_timeout"
                     : "stream_terminated";
+                  const providerExceededLimit =
+                    error &&
+                    typeof error === "object" &&
+                    "code" in error &&
+                    error.code === "provider_response_too_large";
                   const providerFailureMessage = providerTimedOut
                     ? "\n\n_KovaGPT took too long to respond. Please try again._"
-                    : "\n\n_The response stopped because the AI provider exceeded KovaGPT's safe response limit. Please retry with a narrower request._";
+                    : providerExceededLimit
+                      ? "\n\n_The response exceeded KovaGPT's safe response limit. Please retry with a narrower request._"
+                      : "\n\n_The AI provider could not finish this response. Please try again._";
                   await finalizeUsage(
                     request.signal.aborted ? "client_disconnected" : "provider_failed",
                     request.signal.aborted ? "client_disconnected" : providerFailureCode,
@@ -2133,7 +2311,11 @@ export const Route = createFileRoute("/api/chat")({
                     logSafeFailure("error", "[chat] final provider stream stopped", logContext, {
                       status: providerTimedOut ? 504 : 502,
                       category: "provider",
-                      code: providerTimedOut ? "provider_timeout" : "final_provider_stream_limit",
+                      code: providerTimedOut
+                        ? "provider_timeout"
+                        : providerExceededLimit
+                          ? "final_provider_stream_limit"
+                          : "final_provider_stream_interrupted",
                     });
                     controller.enqueue(
                       enc.encode(
@@ -2171,6 +2353,12 @@ export const Route = createFileRoute("/api/chat")({
               },
             });
           } catch (e) {
+            if (e instanceof RequestCaptureError) {
+              return Response.json(
+                { error: "Request capture was denied.", code: "request_capture_denied" },
+                { status: e.status, headers: { "Cache-Control": "private, no-store" } },
+              );
+            }
             if (e instanceof ChatPreflightError) {
               logSafeFailure("error", "[chat] preflight failed", logContext, {
                 status: e.status,

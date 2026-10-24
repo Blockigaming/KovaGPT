@@ -1,8 +1,15 @@
+import {
+  PdfTextUnavailableError,
+  validateDocumentExtractionResult,
+  validatePdfMetadata,
+  type DocumentExtractionResult,
+} from "./pdf-metadata.mjs";
+
 const INPUT_BYTES = 10 * 1024 * 1024;
 export async function extractDocumentFile(
   file: File,
   signal?: AbortSignal,
-): Promise<{ text: string; note: string }> {
+): Promise<DocumentExtractionResult> {
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   if (!/^(pdf|docx|xlsx|pptx)$/u.test(extension))
     throw new Error("This document format is unsupported.");
@@ -36,20 +43,24 @@ export async function extractDocumentFile(
       // Only our result envelope can settle this extraction.
       if (result?.kind !== "document-extraction-result") return;
       cleanup();
-      if (
-        result?.ok === true &&
-        typeof result.text === "string" &&
-        result.text.length <= 80_000 &&
-        new TextEncoder().encode(result.text).length <= 200_000 &&
-        typeof result.note === "string"
-      )
-        resolve({ text: result.text, note: result.note });
-      else
+      const validated =
+        result?.ok === true
+          ? validateDocumentExtractionResult(result, extension === "pdf")
+          : undefined;
+      if (validated) resolve(validated);
+      else {
+        const message =
+          typeof result?.error === "string" && result.error.length <= 2_000
+            ? result.error
+            : "Document extraction failed.";
+        const pdf =
+          result?.ok === false && extension === "pdf" ? validatePdfMetadata(result.pdf) : undefined;
         reject(
-          new Error(
-            typeof result?.error === "string" ? result.error : "Document extraction failed.",
-          ),
+          pdf && !pdf.pages.some((page) => page.status === "extracted")
+            ? new PdfTextUnavailableError(message, pdf)
+            : new Error(message),
         );
+      }
     };
     worker.postMessage({ bytes, extension }, [bytes]);
   });

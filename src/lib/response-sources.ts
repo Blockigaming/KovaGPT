@@ -1,3 +1,5 @@
+import { normalizeSourceRetrievedAt } from "./response-source-time.mjs";
+
 export type ResponseSource = {
   id: string;
   title: string;
@@ -5,6 +7,7 @@ export type ResponseSource = {
   domain: string;
   snippet?: string;
   publishedAt?: string;
+  retrievedAt?: string;
 };
 
 const responseSourceText = (value: unknown, max: number) =>
@@ -45,6 +48,7 @@ export function normalizeResponseSources(value: unknown): ResponseSource[] | und
     const domain = url.hostname.replace(/^www\./, "").slice(0, 120);
     const snippet = responseSourceText(item.snippet, 500);
     const publishedAt = responseSourceText(item.publishedAt, 80);
+    const retrievedAt = normalizeSourceRetrievedAt(item.retrievedAt);
     sources.push({
       id: responseSourceText(item.id, 80) || `src-${sources.length + 1}`,
       title,
@@ -52,6 +56,7 @@ export function normalizeResponseSources(value: unknown): ResponseSource[] | und
       domain,
       ...(snippet ? { snippet } : {}),
       ...(publishedAt ? { publishedAt } : {}),
+      ...(retrievedAt ? { retrievedAt } : {}),
     });
     if (sources.length >= 12) break;
   }

@@ -1,4 +1,10 @@
+import { normalizeResponseFollowups } from "./response-followups.mjs";
+import {
+  normalizeTaskCreatedReceipt,
+  normalizeTaskCreationFailureReceipt,
+} from "./task-created-receipt.mjs";
 import { normalizeMemorySources } from "./memory-sources.mjs";
+import { normalizeSourceRetrievedAt } from "./response-source-time.mjs";
 
 export const CHAT_HISTORY_LIMITS = Object.freeze({
   snapshotBytes: 4 * 1024 * 1024,
@@ -118,6 +124,7 @@ function responseSource(value, index) {
   const id = clean(value.id, 80);
   const snippet = clean(value.snippet, 500);
   const publishedAt = clean(value.publishedAt, 80);
+  const retrievedAt = normalizeSourceRetrievedAt(value.retrievedAt);
   return {
     id: id || `src-${index + 1}`,
     title,
@@ -125,6 +132,7 @@ function responseSource(value, index) {
     domain,
     ...(snippet ? { snippet } : {}),
     ...(publishedAt ? { publishedAt } : {}),
+    ...(retrievedAt ? { retrievedAt } : {}),
   };
 }
 
@@ -159,6 +167,9 @@ export function normalizeChatHistory(value, ownerId) {
       if (seen.has(id)) throw new Error("chat_history_invalid");
       seen.add(id);
       const item = { id, role: message.role, content: message.content };
+      const followups =
+        message.role === "assistant" ? normalizeResponseFollowups(message.followups) : [];
+      if (followups.length) item.followups = followups;
       if (message.attachments !== undefined) {
         if (!Array.isArray(message.attachments) || message.attachments.length > 20)
           throw new Error("chat_history_invalid");
@@ -204,7 +215,23 @@ export function normalizeChatHistory(value, ownerId) {
               text(v.label, 200),
           )
           .slice(0, 30)
-          .map(({ tool, label, status }) => ({ tool, label, status }));
+          .map(({ tool, label, status, taskReceipt, taskFailure }) => {
+            const receipt =
+              tool === "scheduled_task" && status === "done"
+                ? normalizeTaskCreatedReceipt(taskReceipt)
+                : null;
+            const failure =
+              tool === "scheduled_task" && status === "failed"
+                ? normalizeTaskCreationFailureReceipt(taskFailure)
+                : null;
+            return {
+              tool,
+              label,
+              status,
+              ...(receipt ? { taskReceipt: receipt } : {}),
+              ...(failure ? { taskFailure: failure } : {}),
+            };
+          });
       if (Array.isArray(message.pendingConfirms))
         item.pendingConfirms = message.pendingConfirms
           .filter(

@@ -178,12 +178,12 @@ function MemoryPage() {
         id="main-content"
         tabIndex={-1}
         aria-busy={isLoading || undefined}
-        className="mx-auto w-full max-w-4xl px-4 py-7 sm:px-6"
+        className="mx-auto w-full min-w-0 max-w-4xl px-4 py-7 sm:px-6 [overflow-wrap:anywhere]"
       >
         <WorkspacePageHeader
           icon={Brain}
           title="Memory Center"
-          description="Review durable conversation summaries and project context. Temporary chats are never stored here."
+          description="Review saved account memories and project context. Temporary chats are never stored here."
         />
         {isSignedIn && !isLoading && !error ? (
           <div className="my-6 grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -197,7 +197,11 @@ function MemoryPage() {
                 placeholder="Search memories"
               />
             </label>
-            <div role="toolbar" aria-label="Filter memories by source" className="flex gap-1">
+            <div
+              role="toolbar"
+              aria-label="Filter memories by source"
+              className="flex flex-wrap gap-1"
+            >
               {(["all", "conversation", "project"] as const).map((value) => (
                 <button
                   key={value}
@@ -213,7 +217,7 @@ function MemoryPage() {
           </div>
         ) : null}
         {isSignedIn && !isLoading && !error && selected.length > 0 ? (
-          <div className="mb-3 flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/60 p-3 text-sm">
             <span>{selected.length} selected</span>
             <button
               type="button"
@@ -279,7 +283,7 @@ function MemoryPage() {
             <p className="text-sm text-muted-foreground">
               {query || source !== "all"
                 ? "Try a different search or show all memory sources."
-                : "Memory is created only from eligible non-temporary conversations and project context."}
+                : "Account memories are not saved automatically. Use Save a reviewed memory from a response in an eligible already-synced chat, or add project context in a project."}
             </p>
             {query || source !== "all" ? (
               <Button
@@ -298,7 +302,7 @@ function MemoryPage() {
           <ul className="space-y-3">
             {visible.map((item) => (
               <li key={`${item.source}:${item.id}`} className="rounded-2xl border bg-card/40 p-4">
-                <div className="flex items-start gap-3">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
                   <input
                     type="checkbox"
                     className="mt-1 h-4 w-4"
@@ -317,7 +321,7 @@ function MemoryPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-medium">{item.title}</h2>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                        {item.category}
+                        {item.source === "conversation" ? "Saved account memory" : item.category}
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -335,7 +339,7 @@ function MemoryPage() {
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{item.content}</p>
                     )}
                   </div>
-                  <div className="flex flex-wrap justify-end">
+                  <div className="col-start-2 flex min-w-0 flex-wrap gap-1 sm:col-start-auto sm:max-w-64 sm:justify-end">
                     <button
                       onClick={() =>
                         openInWork(

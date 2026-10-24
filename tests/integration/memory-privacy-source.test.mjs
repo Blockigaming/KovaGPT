@@ -13,7 +13,9 @@ test("saved-memory reads and POSTs require explicit browser consent and paid ent
   const chatApi = read("src/routes/api/chat.ts");
   const parser = read("src/lib/endpoint-reliability.mjs");
 
-  assert.match(settings, /rememberAcross: false/);
+  const settingsModel = read("src/lib/settings-types.ts");
+  assert.match(settingsModel, /rememberAcross: false/);
+  assert.match(settings, /from "@\/lib\/settings-types"/);
   assert.match(page, /setSettingsPrincipal\(storagePrincipal\)/);
   assert.match(page, /if \(!settingsReady\) return;[\s\S]{0,120}blockMemoryWrites/);
   assert.match(
@@ -134,7 +136,7 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   assert.match(chatStore, /export function saveConversations\([\s\S]*?\): boolean/);
   assert.match(dialog, /Save to history/);
   assert.match(page, /onSave=\{saveTemporaryChat\}/);
-  assert.match(dialog, /You cannot change this choice after the chat starts/);
+  assert.match(dialog, /Temporary mode and context stay fixed after your first message/);
   assert.match(dialog, /Nothing from this temporary chat will be added to memory/);
 });
 
@@ -160,13 +162,22 @@ test("saved-memory deletion is authenticated, serialized after writes, and truth
   );
 });
 
-test("family-plan entitlement is resolved by the server and picks the highest active tier", () => {
+test("family-plan entitlement uses the bounded authoritative effective-tier resolver", () => {
   const auth = read("src/lib/api-auth.server.ts");
   const chatApi = read("src/routes/api/chat.ts");
 
   const resolver = read("src/lib/billing-entitlement.server.ts");
   assert.match(auth, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, userId\)/);
-  assert.match(resolver, /rpc\("effective_user_plan_tier"/);
+  assert.match(resolver, /return resolveTier\(supabaseAdmin, userId, "effective_user_plan_tier"\)/);
+  assert.match(resolver, /\.rpc\(routine, \{ _user_id: userId \}\)/);
+  assert.match(resolver, /\.abortSignal\(AbortSignal\.timeout\(10_000\)\)/);
+  assert.match(resolver, /readonly status = 503/);
+  assert.match(resolver, /throw new BillingEntitlementUnavailableError\(\)/);
+  assert.match(
+    resolver,
+    /result\.error !== null[\s\S]*result\.data !== "free"[\s\S]*result\.data !== "plus"[\s\S]*result\.data !== "pro"/,
+  );
+  assert.doesNotMatch(resolver, /return "free"/);
   assert.match(
     chatApi,
     /callerTier = isOwner[\s\S]{0,80}\? "pro"[\s\S]{0,160}preflight\.run\("plan_entitlement"[\s\S]{0,100}getCallerTier\(auth\)/,

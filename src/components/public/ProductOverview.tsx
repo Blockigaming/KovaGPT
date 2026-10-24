@@ -1,3 +1,4 @@
+import { NovaLogo } from "@/components/NovaLogo";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { PublicAction, PublicHero } from "@/components/public/PublicSections";
@@ -33,19 +34,7 @@ export function ProductOverview() {
   return (
     <PublicShell>
       <main id="main-content" tabIndex={-1} className="public-overview">
-        <PublicHero
-          eyebrow=""
-          title={
-            <>
-              Now you can
-              <br />
-              chat, learn &amp; create
-              <br />
-              all in one place.
-            </>
-          }
-          description=""
-        >
+        <PublicHero eyebrow="" title={<>Chat, learn and create in KovaGPT.</>} description="">
           <PublicAction to="/">Open KovaGPT</PublicAction>
           <PublicAction to="/download" secondary>
             Use KovaGPT on the web
@@ -54,7 +43,9 @@ export function ProductOverview() {
 
         <section className="public-workflow-example" aria-labelledby="workflow-example-title">
           <aside className="public-example-sidebar" aria-hidden="true">
-            <span className="public-example-sidebar-brand">✧ KovaGPT</span>
+            <span className="public-example-sidebar-brand">
+              <NovaLogo decorative className="h-7 w-7" /> KovaGPT
+            </span>
             <span>
               <Plus size={15} /> New chat
             </span>
@@ -95,12 +86,7 @@ export function ProductOverview() {
             >
               <p className="public-example-prompt">{example.prompt}</p>
               <div className="public-example-answer">
-                <p className="public-eyebrow">
-                  <span className="public-example-mark" aria-hidden="true">
-                    ✧
-                  </span>
-                  KovaGPT · Example response
-                </p>
+                <p className="public-eyebrow">KovaGPT · Example response</p>
                 <h3>{example.title}</h3>
                 <p>{example.body}</p>
                 <ol>

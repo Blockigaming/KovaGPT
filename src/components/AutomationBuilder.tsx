@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { formatDisplayDateTime, type TimeFormatPreference } from "@/lib/time-format";
 import { ArrowLeft, ArrowRight, Check, WandSparkles } from "lucide-react";
 import {
   Dialog,
@@ -18,10 +19,12 @@ export function AutomationBuilder({
   open,
   onOpenChange,
   onCreate,
+  timeFormat = "system",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (draft: AutomationDraft) => Promise<void>;
+  timeFormat?: TimeFormatPreference;
 }) {
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState("");
@@ -38,7 +41,7 @@ export function AutomationBuilder({
   );
   const valid =
     step === 0 ? Boolean(title.trim() && instruction.trim()) : step === 1 ? Boolean(runAt) : true;
-  const summary = `${repeat === "none" ? "Once" : repeat[0].toUpperCase() + repeat.slice(1)}, starting ${runAt ? new Date(runAt).toLocaleString() : "when selected"}. KovaGPT will ${instruction.trim() || "perform the task"} and save the truthful result or failure in Task history.`;
+  const summary = `${repeat === "none" ? "Once" : repeat[0].toUpperCase() + repeat.slice(1)}, starting ${runAt ? formatDisplayDateTime(runAt, timeFormat) : "when selected"}. KovaGPT will ${instruction.trim() || "perform the task"} and save the truthful result or failure in Task history.`;
   const reset = () => {
     setStep(0);
     setTitle("");

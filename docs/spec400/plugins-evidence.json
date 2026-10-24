@@ -1,0 +1,77 @@
+{
+  "area": "Plugins",
+  "specificationItems": [292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303],
+  "files": [
+    "src/routes/apps.tsx",
+    "src/styles/spec400-plugins.css",
+    "tests/unit/spec400-plugins.test.mjs",
+    "tests/browser-runtime/spec400-plugins.spec.ts"
+  ],
+  "implemented": [
+    "Exact Plugins title and subtitle; search plus All and Connected primary filters and category filter",
+    "Approved 13-provider catalog only, official local logos in 40px neutral frames",
+    "State-specific Connect, Manage, Reconnect and Unavailable actions open provider details before any authorization",
+    "Google account selection, current scopes, reconnect, explicit disconnect confirmation, and chat handoff retained",
+    "GitHub accounts, scopes, installations, repository grants and disconnect retained",
+    "Expired connection records remain accessible; disconnect warning describes workflow impact and discloses unavailable dependency list",
+    "Google authorization redirect does not claim success until status verifies connected",
+    "No custom MCP input added because no supported mechanism existed on this page",
+    "Responsive 1/2/3-column directory and 420px detail drawer, full-screen on phones",
+    "Baseline palette inherited; no provider operations, deploys or spending performed"
+  ],
+  "verification": {
+    "focusedUnitTests": "16 passed: spec400 plugins, approved catalog/provenance, Google multi-account client safety and GitHub failure handling",
+    "legacyFocusedTests": "Six updated directory integration/focus tests pass, reconfirmed during the Library density refinement on 2026-10-18. Old three-section layout assertions were replaced with owner-approved All/Connected checks; exact focus and security behavior assertions retained.",
+    "typecheck": "Final combined TypeScript check passed.",
+    "browser": "Six isolated offline browser cases added and bundle compilation verified. Execution blocked: bundled Chromium missing; installed Chromium cannot create sandbox sockets; escalated launcher fails with a read-only filesystem setup error. No browser pass claimed.",
+    "liveProviderTests": "Not run or authorized. Provider operations are mocked in browser fixtures."
+  },
+  "gaps": [
+    "No backend dependency list is available, so specific affected schedules/projects cannot be named",
+    "Browser visual/interaction validation remains blocked by execution environment"
+  ],
+  "interactionInventory": [
+    {
+      "control": "All/Connected tabs, category, search, clear/browse filters",
+      "event": "Select or type",
+      "result": "Filters the approved catalog; exposes empty state",
+      "error": "No external operation"
+    },
+    {
+      "control": "Plugin card action",
+      "event": "Click",
+      "result": "Opens provider detail dialog and restores invoker focus on dismissal",
+      "error": "Unavailable providers explain limitations without connecting"
+    },
+    {
+      "control": "Connect/Reconnect",
+      "event": "Explicit click inside details",
+      "result": "Uses existing provider authorization adapter",
+      "error": "Existing error toast and retryable state; no optimistic connected status"
+    },
+    {
+      "control": "Use Google account",
+      "event": "Click",
+      "result": "Revision-guarded existing account selection",
+      "error": "Refreshes stale selection; actor checks preserved"
+    },
+    {
+      "control": "Disconnect account",
+      "event": "Click and confirm",
+      "result": "Shows impact warning then calls existing account-scoped disconnect",
+      "error": "No success on failed or uncertain provider request"
+    },
+    {
+      "control": "Google refresh / GitHub refresh, search, grant, remove",
+      "event": "Explicit click or type",
+      "result": "Existing status/installation/repository management",
+      "error": "Stale GitHub management is marked and disabled after reload failure"
+    },
+    {
+      "control": "Use in chat / Workflow skills",
+      "event": "Click / expand",
+      "result": "Preserves existing principal-scoped chat handoff and workflow controls",
+      "error": "Existing storage and verification error handling"
+    }
+  ]
+}

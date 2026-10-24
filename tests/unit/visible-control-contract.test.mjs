@@ -17,12 +17,14 @@ test("visible-control audit tolerates a tracked file deleted before staging", ()
   );
 });
 
-test("Voice remains required scope without advertising an unavailable implementation", async () => {
+test("Voice remains required and provider dependent without claiming live operation", async () => {
   const registry = await readFile(
     new URL("../../src/lib/capability-registry.ts", import.meta.url),
     "utf8",
   );
-  assert.match(registry, /voiceScope: "required_unavailable"/u);
-  assert.match(registry, /voice:[\s\S]*availability: "unavailable"/u);
+  assert.match(registry, /voiceScope: "required_provider_dependent"/u);
+  assert.match(registry, /voice:[\s\S]*availability: "provider-dependent"/u);
+  assert.match(registry, /Microphone conversations require explicit Start and Finish turn/u);
+  assert.match(registry, /commercial entitlement/u);
   assert.doesNotMatch(registry, /Voice is intentionally outside/u);
 });

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Lock, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -157,6 +158,7 @@ export function PersonalitySliders({
   userKey: string | null;
   principalResolved: boolean;
 }) {
+  const sliderId = useId();
   const { tier } = useTier();
   const unlocked = tierRank(tier) >= tierRank("plus");
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
@@ -278,12 +280,11 @@ export function PersonalitySliders({
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-          <input
-            type="checkbox"
+        <label className="flex min-h-11 items-center gap-3 text-sm text-muted-foreground cursor-pointer select-none">
+          <Switch
+            aria-label="Auto-adapt to me"
             checked={visibleAutoAdapt}
-            onChange={toggleAuto}
-            className="h-3.5 w-3.5 rounded border-border accent-primary"
+            onCheckedChange={toggleAuto}
           />
           <span>
             <span className="font-medium text-foreground">Auto-adapt to me.</span> Kova learns your
@@ -300,14 +301,23 @@ export function PersonalitySliders({
           <div key={t.key} className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <div>
-                <div className="font-medium text-foreground">{t.label}</div>
-                <div className="text-muted-foreground">{t.hint}</div>
+                <div id={`${sliderId}-${t.key}-label`} className="font-medium text-foreground">
+                  {t.label}
+                </div>
+                <div id={`${sliderId}-${t.key}-hint`} className="text-muted-foreground">
+                  {t.hint}
+                </div>
               </div>
               <span className="tabular-nums text-muted-foreground w-8 text-right">
                 {visibleValues[t.key]}
               </span>
             </div>
             <Slider
+              thumbProps={{
+                "aria-labelledby": `${sliderId}-${t.key}-label`,
+                "aria-describedby": `${sliderId}-${t.key}-hint`,
+                "aria-valuetext": `${visibleValues[t.key]} out of 10`,
+              }}
               value={[visibleValues[t.key]]}
               min={1}
               max={10}
@@ -328,7 +338,7 @@ export function PersonalitySliders({
             </p>
             <Link
               to="/pricing"
-              className="inline-block text-xs font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition"
+              className="kova-button inline-block text-xs font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition"
             >
               Upgrade to Plus
             </Link>

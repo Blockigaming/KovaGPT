@@ -1,12 +1,20 @@
+import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
+import "./response-action-refinement.css";
 import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { ResponseMarkdown } from "./ResponseMarkdown";
+import { TaskCreatedBubble } from "./TaskCreatedBubble";
+import { HistoricalLibraryAttachment } from "./HistoricalLibraryAttachment";
+import type { ResultDescriptor } from "./ArtifactEditor";
+import { splitGenerativeContent, type GenerativeWidget } from "@/lib/generative-ui.mjs";
+import { GenerativeCanvas } from "./generative-ui/GenerativeCanvas";
 import {
   Copy,
+  CornerDownRight,
   Check,
   ImageIcon,
   Loader2,
   Bookmark,
+  Brain,
   FileEdit,
   Code2,
   MoreHorizontal,
@@ -21,10 +29,15 @@ import {
   ThumbsDown,
   History,
   TextSelect,
+  GraduationCap,
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
+import { ResponseSpeechButton } from "./ResponseSpeechButton";
 import { useLayout } from "@/hooks/use-mobile";
+import { useTimeFormatPreference } from "@/hooks/use-time-format-preference";
+import { formatDisplayDateTime } from "@/lib/time-format";
+import { normalizeSourceRetrievedAt } from "@/lib/response-source-time.mjs";
 import type { Message } from "@/lib/chat-store";
 import { extractCharts } from "./chat-chart-utils";
 import { extractEmailFromMessage, openEmailCompose } from "./message-action-utils";
@@ -35,8 +48,18 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
+import { saveImageToLibrary } from "@/lib/library-images.functions";
 import { saveToLibrary } from "@/lib/library.functions";
 import { getResponseFeedbackBatch, submitResponseFeedback } from "@/lib/feedback.functions";
 import { loadResponseFeedbackBatched } from "@/lib/feedback-batch";
@@ -70,64 +93,14 @@ const SelectionEditDialog = lazy(() =>
     default: SelectionEditDialog,
   })),
 );
+const ChatStudyControl = lazy(() =>
+  import("./ChatStudyControl").then(({ ChatStudyControl }) => ({ default: ChatStudyControl })),
+);
 const MessageVersionHistoryDialog = lazy(() =>
   import("./MessageVersionHistoryDialog").then(({ MessageVersionHistoryDialog }) => ({
     default: MessageVersionHistoryDialog,
   })),
 );
-
-function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
-  const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
-  const text = String(children).replace(/\n$/, "");
-  const [copied, setCopied] = useState(false);
-  if (!language && !text.includes("\n")) return <code className={className}>{children}</code>;
-  return (
-    <div className="kova-code-block group/code" data-language={language ?? "text"}>
-      <div className="kova-code-toolbar">
-        <span>{language ?? "text"}</span>
-        <button
-          type="button"
-          onClick={async () => {
-            await navigator.clipboard.writeText(text);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1600);
-          }}
-          aria-label={copied ? "Code copied" : "Copy code"}
-        >
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-      <pre tabIndex={0} aria-label={`${language ?? "Text"} code block`}>
-        <code className={className}>{text}</code>
-      </pre>
-    </div>
-  );
-}
-
-const markdownComponents = {
-  pre: ({ children }: React.ComponentProps<"pre">) => <>{children}</>,
-  code: MarkdownCode,
-  table: ({ children }: React.ComponentProps<"table">) => (
-    <div className="kova-table-scroll" role="region" aria-label="Scrollable table" tabIndex={0}>
-      <table>{children}</table>
-    </div>
-  ),
-  a: ({ children, ...props }: React.ComponentProps<"a">) => (
-    <a {...props} target="_blank" rel="noreferrer noopener">
-      {children}
-      <span className="sr-only"> (opens in a new tab)</span>
-    </a>
-  ),
-};
-
-const MarkdownContent = memo(function MarkdownContent({ children }: { children: string }) {
-  return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-      {children}
-    </ReactMarkdown>
-  );
-});
 
 // Preserve the model's markdown exactly enough for source links, citation
 // markers, lists, and typography to survive rendering. ReactMarkdown handles
@@ -157,6 +130,16 @@ function StreamingStatus({
   startedAt: number;
 }) {
   const [waitStage, setWaitStage] = useState<WaitStage>(() => waitStageAt(startedAt));
+  const [elapsedSeconds, setElapsedSeconds] = useState(() =>
+    Math.max(0, Math.floor((Date.now() - startedAt) / 1000)),
+  );
+  useEffect(() => {
+    const timer = window.setInterval(
+      () => setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000))),
+      1000,
+    );
+    return () => window.clearInterval(timer);
+  }, [startedAt]);
   useEffect(() => {
     const elapsed = Math.max(0, Date.now() - startedAt);
     setWaitStage(waitStageAt(startedAt));
@@ -184,8 +167,8 @@ function StreamingStatus({
     waitStage === "extended"
       ? "Taking a little longer"
       : waitStage === "continued"
-        ? "Still thinking"
-        : "Thinking";
+        ? "Still waiting for the response"
+        : "Preparing reply";
   if (tool) {
     if (tool.includes("image")) label = "Creating Image";
     else if (tool.includes("gmail") || tool.includes("mail")) label = "Checking Gmail";
@@ -200,20 +183,30 @@ function StreamingStatus({
   }
   return (
     <div
-      className="kova-thinking-indicator flex min-h-8 items-center gap-2 py-1"
+      className="kova-thinking-indicator flex min-h-8 flex-wrap items-center gap-2 py-1"
       role="status"
       aria-live="polite"
       aria-atomic="true"
       data-wait-stage={waitStage}
     >
-      <span className="kova-thinking-signal" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </span>
+      <ol
+        className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+        aria-label="Response progress"
+      >
+        <li className="inline-flex items-center gap-1">
+          <Check className="h-3.5 w-3.5" aria-hidden="true" /> Request started
+        </li>
+        <li aria-hidden="true">/</li>
+        <li aria-current="step">{active ? "Tool in progress" : "Waiting for reply"}</li>
+      </ol>
       <span key={label} className="text-sm font-medium text-muted-foreground">
         {label}…
       </span>
+      {elapsedSeconds >= 8 && (
+        <span role="timer" aria-live="off" className="text-xs text-muted-foreground">
+          {elapsedSeconds}s elapsed
+        </span>
+      )}
     </div>
   );
 }
@@ -223,8 +216,10 @@ function ChatMessageInner({
   streaming,
   streamingStartedAt,
   onFollowUp,
+  onDraftPrompt,
   onRetry,
   onBranch,
+  onSaveMemory,
   onEdit,
   onUpdatePendingConfirm,
   userKey,
@@ -233,14 +228,21 @@ function ChatMessageInner({
   temporary = false,
   projectId,
   onReplaceContent,
+  onOpenResult,
+  onOpenCanvas,
+  onSelectSuggestion,
 }: {
   message: Message;
   streaming?: boolean;
   /** Request start time survives chat navigation while the response remains active. */
   streamingStartedAt?: number;
+  /** Executes an explicit editor improvement request. */
   onFollowUp?: (prompt: string) => void;
+  /** Preserves the composer draft; invoke the returned focus handoff after dismissing a popup. */
+  onDraftPrompt?: (prompt: string) => (() => void) | undefined;
   onRetry?: () => void;
   onBranch?: () => void;
+  onSaveMemory?: (trigger: HTMLElement | null) => void;
   onEdit?: () => void;
   onUpdatePendingConfirm?: (messageId: string, next: PendingConfirm) => void;
   userKey: string | null;
@@ -252,12 +254,19 @@ function ChatMessageInner({
   projectId?: string | null;
   /** Applies an accepted selection edit / restored version to this message. */
   onReplaceContent?: (messageId: string, nextContent: string) => void;
+  onOpenResult?: (
+    result: ResultDescriptor & { canvasSourceKey?: string },
+    trigger?: HTMLElement,
+  ) => void;
+  onOpenCanvas?: (widget: GenerativeWidget, trigger?: HTMLElement, sourceKey?: string) => void;
+  onSelectSuggestion?: (prompt: string) => void;
 }) {
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const principalRef = useRef(principal);
   principalRef.current = principal;
   const lifecycleGenerationRef = useRef(0);
   const { isSignedIn } = useUser();
+  const timeFormat = useTimeFormatPreference(userKey, principalResolved);
   const getFeedbackBatchFn = useServerFn(getResponseFeedbackBatch);
   const feedbackFn = useServerFn(submitResponseFeedback);
   useEffect(() => {
@@ -266,6 +275,18 @@ function ChatMessageInner({
   const isUser = message.role === "user";
   const retryActionLabel = message.generationStatus ? "Retry response" : "Regenerate response";
   const [copied, setCopied] = useState(false);
+  const [copyFallbackOpen, setCopyFallbackOpen] = useState(false);
+  const copyFallbackRef = useRef<HTMLTextAreaElement>(null);
+  const copyFallbackReturnRef = useRef<HTMLElement | null>(null);
+  const rememberCopyTrigger = () => {
+    copyFallbackReturnUrlRef.current = window.location.href;
+    copyFallbackReturnRef.current =
+      typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  };
+  const copyFallbackReturnUrlRef = useRef<string | undefined>(undefined);
+  useEffect(() => setCopyFallbackOpen(false), [principal, message.id]);
   const feedbackBaseKey = principalResolved
     ? principalScopedStorageKey("kova-message-feedback", userKey)
     : null;
@@ -467,47 +488,185 @@ function ChatMessageInner({
     end: number;
   } | null>(null);
   const [selectionOpen, setSelectionOpen] = useState(false);
+  const [selectedText, setSelectedText] = useState("");
+  const [selectionInstruction, setSelectionInstruction] = useState("");
+  const [selectionQuestion, setSelectionQuestion] = useState("");
+  const [selectionAskOpen, setSelectionAskOpen] = useState(false);
+  const [selectionAskPassage, setSelectionAskPassage] = useState("");
   const [versionsOpen, setVersionsOpen] = useState(false);
-  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [compareVersions, setCompareVersions] = useState(false);
+  const [studySession, setStudySession] = useState<{ key: string; source: string } | null>(null);
+  const responseMoreRef = useRef<HTMLButtonElement | null>(null);
+  const memoryReviewOpeningRef = useRef(false);
+  const responseDraftFocusRef = useRef<(() => void) | null>(null);
+  const studyReturnFocusRef = useRef<HTMLElement | null>(null);
+  const studyReturnUrlRef = useRef<string | undefined>(undefined);
+  const studyOpeningRef = useRef(false);
+  const studyContextKey = JSON.stringify([principal, chatId, message.id, temporary]);
+  const studyContextRef = useRef(studyContextKey);
+  studyContextRef.current = studyContextKey;
+  useEffect(() => {
+    responseDraftFocusRef.current = null;
+    setSelectionAskOpen(false);
+    setSelectionQuestion("");
+    setStudySession(null);
+    studyReturnFocusRef.current = null;
+    studyOpeningRef.current = false;
+  }, [studyContextKey]);
+  const openStudy = () => {
+    if (!principalResolved || isUser || streaming || !message.content.trim()) return;
+    studyReturnFocusRef.current = responseMoreRef.current;
+    studyReturnUrlRef.current = window.location.href;
+    studyOpeningRef.current = true;
+    setStudySession({ key: studyContextKey, source: message.content });
+  };
+  const sourcesContextKey = JSON.stringify([principal, chatId, message.id, temporary]);
+  const sourcesContextRef = useRef(sourcesContextKey);
+  sourcesContextRef.current = sourcesContextKey;
+  const [sourcesSession, setSourcesSession] = useState<{
+    key: string;
+    trigger: HTMLElement | null;
+    openedUrl: string;
+  } | null>(null);
+  const sourcesReturnFocusRef = useRef<typeof sourcesSession>(null);
+  const sourcesPillRef = useRef<HTMLButtonElement | null>(null);
+  const sourcesOpen = sourcesSession?.key === sourcesContextKey;
+  const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
+  const closeSources = useCallback(() => setSourcesSession(null), []);
+  useEffect(() => {
+    closeSources();
+    sourcesReturnFocusRef.current = null;
+    return () => {
+      sourcesReturnFocusRef.current = null;
+    };
+  }, [closeSources, sourcesContextKey]);
+  const openSources = useCallback(
+    (trigger: HTMLElement | null, id: string | null = null) => {
+      if (!principalResolved || !message.sources?.length) return;
+      const session = { key: sourcesContextKey, trigger, openedUrl: window.location.href };
+      sourcesReturnFocusRef.current = session;
+      setSourcesSession(session);
+      setActiveSourceId(id);
+    },
+    [principalResolved, sourcesContextKey, message.sources?.length],
+  );
+  const openSource = useCallback(
+    (id: string, trigger: HTMLButtonElement) => openSources(trigger, id),
+    [openSources],
+  );
   const [memoryOpenFor, setMemoryOpenFor] = useState<string | null>(null);
   const memorySources =
     principalResolved && !isUser
       ? normalizeMemorySources(message.memorySources, userKey, temporary)
       : undefined;
   const memoryKey = `${principal}:${message.id}`;
+  const memoryReturnFocusRef = useRef<HTMLElement | null>(null);
+  const memoryReturnUrlRef = useRef<string | undefined>(undefined);
+  const memoryContextRef = useRef(memoryKey);
+  memoryContextRef.current = memoryKey;
   const closeMemory = useCallback(() => setMemoryOpenFor(null), []);
-  useEffect(closeMemory, [closeMemory, principal, message.id]);
+  useEffect(() => {
+    closeMemory();
+    memoryReturnFocusRef.current = null;
+  }, [closeMemory, principal, message.id]);
   const bodyRef = useRef<HTMLDivElement>(null);
   const lastSelectionRef = useRef<string>("");
-
-  // Remember the rendered selection while the user still has it: opening a menu
-  // clears the DOM selection in most browsers.
-  const rememberSelection = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) return;
-    const container = bodyRef.current;
-    if (container && selection.anchorNode && !container.contains(selection.anchorNode)) return;
-    lastSelectionRef.current = selection.toString();
+  const selectionActionsRef = useRef<HTMLDivElement>(null);
+  const selectionMountedRef = useRef(false);
+  useEffect(() => {
+    selectionMountedRef.current = true;
+    return () => {
+      selectionMountedRef.current = false;
+    };
   }, []);
+  const selectionSourceRef = useRef({ key: studyContextKey, content: message.content });
+  selectionSourceRef.current = { key: studyContextKey, content: message.content };
+  useEffect(() => {
+    lastSelectionRef.current = "";
+    setSelectedText("");
+    setSelectionOpen(false);
+    setSelectionTarget(null);
+    setSelectionAskOpen(false);
+    setSelectionAskPassage("");
+  }, [studyContextKey, message.content]);
 
-  const openSelectionEdit = useCallback(async () => {
-    const { locateSelection } = await import("@/lib/selection-edit.mjs");
-    const picked =
-      (typeof window !== "undefined" ? (window.getSelection()?.toString() ?? "") : "") ||
-      lastSelectionRef.current;
-    try {
-      const range = locateSelection(message.content, picked);
-      setSelectionTarget({ source: message.content, start: range.start, end: range.end });
-      setSelectionOpen(true);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Select some text in the response first.",
-      );
+  // Keep native selection and mobile handles intact. The toolbar sits below the response.
+  const rememberSelection = useCallback(() => {
+    const selection = window.getSelection();
+    const container = bodyRef.current;
+    if (
+      !selection ||
+      selection.isCollapsed ||
+      !container ||
+      !selection.anchorNode ||
+      !selection.focusNode ||
+      !container.contains(selection.anchorNode) ||
+      !container.contains(selection.focusNode)
+    ) {
+      // Keyboard focus on an action may collapse the native range before click.
+      if (selection?.isCollapsed && selectionActionsRef.current?.contains(document.activeElement))
+        return;
+      lastSelectionRef.current = "";
+      setSelectedText("");
+      return;
     }
-  }, [message.content]);
+    const text = selection.toString();
+    lastSelectionRef.current = text;
+    setSelectedText(text);
+  }, []);
+  useEffect(() => {
+    document.addEventListener("selectionchange", rememberSelection);
+    return () => document.removeEventListener("selectionchange", rememberSelection);
+  }, [rememberSelection]);
+  const openSelectionEdit = useCallback(
+    async (instruction = "") => {
+      // Snapshot the intended passage before focus or the lazy load can change selection.
+      const picked = lastSelectionRef.current;
+      const generation = lifecycleGenerationRef.current;
+      const { locateSelection } = await import("@/lib/selection-edit.mjs");
+      if (
+        !selectionMountedRef.current ||
+        generation !== lifecycleGenerationRef.current ||
+        selectionSourceRef.current.key !== studyContextKey ||
+        selectionSourceRef.current.content !== message.content
+      )
+        return;
+      try {
+        const range = locateSelection(message.content, picked);
+        setSelectionTarget({ source: message.content, start: range.start, end: range.end });
+        setSelectionInstruction(instruction);
+        setSelectionOpen(true);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Select some text in the response first.",
+        );
+      }
+    },
+    [message.content, studyContextKey],
+  );
 
   const saveFn = useServerFn(saveToLibrary);
+  const saveImageFn = useServerFn(saveImageToLibrary);
+  const imageSaveIds = useRef(new Map<string, string>());
+  const saveResponseImage = async (src: string, title: string) => {
+    if (!isSignedIn || !userKey)
+      throw new Error(
+        "Sign in to save generated images to Library. You can download this image now.",
+      );
+    let key = imageSaveIds.current.get(src);
+    if (!key) {
+      key = crypto.randomUUID();
+      imageSaveIds.current.set(src, key);
+    }
+    await saveImageFn({
+      data: {
+        expectedOwnerId: userKey,
+        idempotencyKey: key,
+        imageUrl: src,
+        title: title.slice(0, 200) || "Generated image",
+      },
+    });
+  };
 
   useEffect(() => {
     if (!principalResolved || !principal) return;
@@ -517,22 +676,47 @@ function ChatMessageInner({
       setSaving(false);
       setSaved(false);
       setCopied(false);
+      setCopyFallbackOpen(false);
       setFeedbackSaving(Boolean(isSignedIn && !isUser));
       setFeedbackLoadFailed(false);
       setFeedbackState({ key: feedbackKey, value: null });
       setFeedbackReload((current) => current + 1);
       setEditorOpen(false);
-      setSourcesOpen(false);
+      responseDraftFocusRef.current = null;
+      setSelectionAskOpen(false);
+      setSelectionQuestion("");
+      setSelectionAskPassage("");
+      lastSelectionRef.current = "";
+      setSelectedText("");
+      setSelectionOpen(false);
+      setSelectionTarget(null);
+      setStudySession(null);
+      studyReturnFocusRef.current = null;
+      closeSources();
+      sourcesReturnFocusRef.current = null;
       setMemoryOpenFor(null);
+      memoryReturnFocusRef.current = null;
       setMobileSheetOpen(false);
       cancelLongPress();
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
-  }, [cancelLongPress, feedbackKey, isSignedIn, isUser, principal, principalResolved, userKey]);
+  }, [
+    cancelLongPress,
+    closeSources,
+    feedbackKey,
+    isSignedIn,
+    isUser,
+    principal,
+    principalResolved,
+    userKey,
+  ]);
 
   const artifactKind = useMemo(
-    () => (isUser ? null : detectArtifactKind(message.content || "")),
+    () =>
+      isUser || splitGenerativeContent(message.content || "").some((part) => part.kind === "widget")
+        ? null
+        : detectArtifactKind(message.content || ""),
     [isUser, message.content],
   );
   const editorContent = useMemo(() => {
@@ -544,18 +728,55 @@ function ChatMessageInner({
       : (blocks[0] ?? message.content);
   }, [artifactKind, message.content]);
 
+  const openResult = (mode: "edit" | "preview" = "edit", trigger?: HTMLElement) => {
+    if (isUser || streaming || !message.content.trim()) return;
+    if (onOpenResult) {
+      onOpenResult(
+        {
+          title:
+            message.content.match(/^#{1,3}\s+(.+)$/m)?.[1]?.slice(0, 120) ||
+            (!artifactKind || artifactKind === "writing"
+              ? "Writing result"
+              : artifactKind === "website"
+                ? "Website result"
+                : "Code result"),
+          initialContent: editorContent,
+          kind: artifactKind ?? "writing",
+          initialMode: mode,
+          chatId: temporary ? null : chatId,
+          messageId: temporary ? null : message.id,
+          projectId: temporary ? null : projectId,
+        },
+        trigger,
+      );
+    } else {
+      setEditorMode(mode);
+      setEditorOpen(true);
+    }
+  };
+
   const email = useMemo(
     () => (isUser ? null : extractEmailFromMessage(message.content || "")),
     [isUser, message.content],
   );
 
   const copy = async () => {
+    rememberCopyTrigger();
+    const generation = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+
     try {
       await navigator.clipboard.writeText(message.content);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Couldn't copy this response");
+      if (
+        generation !== lifecycleGenerationRef.current ||
+        requestPrincipal !== principalRef.current
+      )
+        return;
+      setCopied(false);
+      setCopyFallbackOpen(true);
     }
   };
 
@@ -578,6 +799,7 @@ function ChatMessageInner({
   };
 
   const saveItem = async () => {
+    if (saving) return;
     // Guests can save to a local-only library while signed-in users persist through Supabase.
     const dedupKey = principalResolved
       ? principalScopedStorageKey("kovagpt-saved-message-ids", userKey)
@@ -606,6 +828,10 @@ function ChatMessageInner({
     setSaving(true);
     try {
       const content = message.content.trim();
+      if (content.length > (isSignedIn ? 300_000 : 100_000))
+        throw new Error(
+          "This response is too large for Library. Open the result and export the complete text instead.",
+        );
       const codeRatio = (content.match(/```/g)?.length ?? 0) >= 2;
       let title: string;
       if (codeRatio) title = "Saved code response";
@@ -619,13 +845,17 @@ function ChatMessageInner({
         title,
         item_type: (codeRatio ? "code" : "chat_artifact") as "code" | "chat_artifact",
         source: "chat" as const,
-        content_text: message.content.slice(0, 100_000),
+        content_text: message.content,
       };
       if (isSignedIn) await saveFn({ data: payload });
       else {
-        const { saveGuestItem } = await import("@/lib/guest-library");
+        const { saveGuestItem, loadGuestLibrary } = await import("@/lib/guest-library");
         if (!isCurrent()) return;
-        saveGuestItem(payload);
+        const item = saveGuestItem(payload);
+        if (!loadGuestLibrary().some((savedItem) => savedItem.id === item.id))
+          throw new Error(
+            "Library could not save on this device. Your response is preserved; copy or export it instead.",
+          );
       }
       if (!isCurrent()) return;
       if (message.id) {
@@ -641,6 +871,7 @@ function ChatMessageInner({
       }
       setSaved(true);
       toast.success("Saved to Library");
+      if (artifactKind === "writing") openResult();
       setTimeout(() => {
         if (isCurrent()) setSaved(false);
       }, 2000);
@@ -656,12 +887,12 @@ function ChatMessageInner({
       id={`message-${message.id}`}
       data-message-id={message.id}
       data-message-role={message.role}
-      className="kova-message group w-full px-3 py-3 text-[15px] leading-7 sm:px-5 lg:px-10 lg:py-4 lg:text-base"
+      className="kova-message group w-full px-4 py-3 text-base leading-[26px] sm:px-6 lg:px-8"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
-        <div className="mx-auto flex max-w-[48rem] justify-end">
-          <div className="flex min-w-0 max-w-[85%] flex-col items-end sm:max-w-[75%]">
+        <div className="mx-auto flex w-full kova-message-reading-column justify-start">
+          <div className="kova-user-message-group flex w-full min-w-0 flex-col items-start">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
@@ -683,27 +914,31 @@ function ChatMessageInner({
                   ))}
                 {message.attachments
                   .filter((attachment) => attachment.kind !== "image")
-                  .map((attachment) => (
-                    <span
-                      key={
-                        attachment.kind === "library_file"
-                          ? attachment.libraryItemId
-                          : `${attachment.name}:${attachment.size ?? 0}`
-                      }
-                      className="inline-flex min-h-10 max-w-full items-center gap-2 rounded-lg border border-border/70 bg-muted/55 px-3 py-2 text-xs text-foreground"
-                      title={attachment.name}
-                    >
-                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <span className="max-w-48 truncate">{attachment.name}</span>
-                      <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
-                        {attachment.kind === "library_file" ? "Library" : "Attached"}
+                  .map((attachment) =>
+                    attachment.kind === "library_file" ? (
+                      <HistoricalLibraryAttachment
+                        key={attachment.libraryItemId}
+                        attachment={attachment}
+                        ownerId={principalResolved && isSignedIn ? userKey : null}
+                      />
+                    ) : (
+                      <span
+                        key={`${attachment.name}:${attachment.size ?? 0}`}
+                        className="inline-flex min-h-10 max-w-full items-center gap-2 rounded-lg border border-border/70 bg-muted/55 px-3 py-2 text-xs text-foreground"
+                        title={attachment.name}
+                      >
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="max-w-48 truncate">{attachment.name}</span>
+                        <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
+                          Attached
+                        </span>
                       </span>
-                    </span>
-                  ))}
+                    ),
+                  )}
               </div>
             )}
             {message.content && (
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-[1.75rem] bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
+              <div className="kova-user-message prose-chat w-full whitespace-pre-wrap break-words rounded-xl border border-border bg-[var(--surface-secondary)] p-4 text-foreground">
                 {message.content}
               </div>
             )}
@@ -737,85 +972,73 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="kova-assistant-message mx-auto flex max-w-[48rem] items-start justify-start">
-          <div
-            ref={bodyRef}
-            className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
-            onMouseUp={rememberSelection}
-            onKeyUp={rememberSelection}
-            onTouchStart={startLongPress}
-            onTouchEnd={cancelLongPress}
-            onTouchMove={cancelLongPress}
-            onTouchCancel={cancelLongPress}
-            onContextMenu={(event) => {
-              if (isMobile) {
-                event.preventDefault();
-                setMobileSheetOpen(true);
-              }
-            }}
-          >
-            {visibleActivities && visibleActivities.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {visibleActivities.map((activity, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/40 px-2.5 py-1 text-xs text-muted-foreground"
-                  >
-                    {activity.status === "running" ? (
-                      <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                    ) : activity.status === "failed" ? (
-                      <span className="font-semibold text-destructive" aria-hidden="true">
-                        !
-                      </span>
-                    ) : activity.status === "canceled" ? (
-                      <span className="font-semibold text-muted-foreground" aria-hidden="true">
-                        ×
-                      </span>
-                    ) : (
-                      <Check className="h-3 w-3 text-primary" />
-                    )}
-                    {activity.label}
-                  </span>
-                ))}
-              </div>
-            )}
-            <div className="prose-chat">
-              {message.pendingConfirms?.map((confirm) => (
-                <ToolConfirmCard
-                  key={confirm.actionId}
-                  confirm={confirm}
-                  onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
-                />
+        <div className="kova-assistant-message mx-auto flex kova-message-reading-column items-start justify-start">
+          <div className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text">
+            <div className="mb-3 text-[13px] font-medium leading-[18px] text-muted-foreground">
+              Kova
+            </div>
+            {message.activities
+              ?.filter((activity) => activity.tool === "scheduled_task")
+              .map((activity, index) => (
+                <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-              {message.pendingImage && !message.content ? (
-                <div className="relative w-full max-w-sm aspect-square rounded-2xl border border-border overflow-hidden bg-gradient-to-br from-accent/60 via-muted to-accent/60">
-                  <div
-                    aria-hidden
-                    className="absolute inset-0 opacity-70"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%)",
-                      backgroundSize: "200% 100%",
-                      animation: "shimmer 1.8s linear infinite",
-                    }}
-                  />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                    <div className="relative">
-                      <ImageIcon className="w-10 h-10 text-foreground/70" />
-                      <Loader2 className="w-5 h-5 absolute -bottom-1 -right-1 animate-spin text-primary" />
-                    </div>
-                    <div
-                      className="text-sm font-medium bg-clip-text text-transparent"
-                      style={{
-                        backgroundImage:
-                          "linear-gradient(90deg, var(--color-muted-foreground) 0%, var(--color-foreground) 50%, var(--color-muted-foreground) 100%)",
-                        backgroundSize: "200% 100%",
-                        animation: "shimmer 1.8s linear infinite",
-                      }}
-                    >
-                      Creating image
-                    </div>
+            {visibleActivities &&
+              visibleActivities.some((activity) => activity.tool !== "scheduled_task") && (
+                <details className="mb-3 text-sm">
+                  <summary className="min-h-11 cursor-pointer py-3 text-muted-foreground">
+                    Activity
+                  </summary>
+                  <div className="flex flex-wrap gap-2">
+                    {visibleActivities
+                      .filter((activity) => activity.tool !== "scheduled_task")
+                      .map((activity, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/40 px-2.5 py-1 text-xs text-muted-foreground"
+                        >
+                          {activity.status === "running" ? (
+                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                          ) : activity.status === "failed" ? (
+                            <span className="font-semibold text-destructive" aria-hidden="true">
+                              !
+                            </span>
+                          ) : activity.status === "canceled" ? (
+                            <span
+                              className="font-semibold text-muted-foreground"
+                              aria-hidden="true"
+                            >
+                              ×
+                            </span>
+                          ) : (
+                            <Check className="h-3 w-3 text-primary" />
+                          )}
+                          {activity.label}
+                        </span>
+                      ))}
                   </div>
+                </details>
+              )}
+            {message.pendingConfirms?.map((confirm) => (
+              <ToolConfirmCard
+                key={confirm.actionId}
+                confirm={confirm}
+                onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
+              />
+            ))}
+            <div
+              ref={bodyRef}
+              className="prose-chat"
+              onMouseUp={rememberSelection}
+              onKeyUp={rememberSelection}
+            >
+              {message.pendingImage && !message.content ? (
+                <div
+                  role="status"
+                  className="flex min-h-24 items-center gap-3 rounded-xl border border-border bg-muted p-4"
+                >
+                  <ImageIcon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  <span>Generating image…</span>
                 </div>
               ) : waitingForFirstToken ? (
                 <StreamingStatus
@@ -827,7 +1050,56 @@ function ChatMessageInner({
                   const cleaned = cleanAssistantText(message.content);
                   const parts = extractCharts(cleaned);
                   const hasChart = parts.some((part) => part.kind === "chart");
-                  const markdown = hasChart ? (
+                  const canvasParts = streaming ? [] : splitGenerativeContent(cleaned);
+                  const hasWidget = canvasParts.some((part) => part.kind === "widget");
+                  const markdown = hasWidget ? (
+                    <div className="space-y-3">
+                      {canvasParts.map((part, index) =>
+                        part.kind === "widget" ? (
+                          <GenerativeCanvas
+                            key={`${principal}:${message.id}:${index}:${part.source}`}
+                            widget={part.widget}
+                            onOpenCanvas={
+                              onOpenCanvas
+                                ? (widget, trigger) =>
+                                    onOpenCanvas(
+                                      widget,
+                                      trigger,
+                                      `${message.id}:${index}:${part.source}`,
+                                    )
+                                : undefined
+                            }
+                            onOpenEditor={
+                              onOpenResult
+                                ? (content, kind, title) =>
+                                    onOpenResult({
+                                      title,
+                                      initialContent: content,
+                                      canvasSourceKey: `${message.id}:${index}:${part.source}:editor`,
+                                      kind,
+                                      initialMode: "edit",
+                                      // A widget is a fragment of a response: never replace
+                                      // the whole saved response with a fragment on autosave.
+                                      chatId: null,
+                                      messageId: null,
+                                      projectId: null,
+                                    })
+                                : undefined
+                            }
+                          />
+                        ) : part.text.trim() ? (
+                          <ResponseMarkdown
+                            key={index}
+                            sources={message.sources}
+                            onSourceClick={openSource}
+                            onSaveImage={saveResponseImage}
+                          >
+                            {part.text}
+                          </ResponseMarkdown>
+                        ) : null,
+                      )}
+                    </div>
+                  ) : hasChart ? (
                     <div className="space-y-2">
                       {parts.map((part, index) =>
                         part.kind === "chart" ? (
@@ -835,12 +1107,25 @@ function ChatMessageInner({
                             <ChatChart spec={part.spec} />
                           </Suspense>
                         ) : part.value.trim() ? (
-                          <MarkdownContent key={index}>{part.value}</MarkdownContent>
+                          <ResponseMarkdown
+                            key={index}
+                            sources={message.sources}
+                            onSourceClick={openSource}
+                            onSaveImage={saveResponseImage}
+                          >
+                            {part.value}
+                          </ResponseMarkdown>
                         ) : null,
                       )}
                     </div>
                   ) : (
-                    <MarkdownContent>{cleaned}</MarkdownContent>
+                    <ResponseMarkdown
+                      sources={message.sources}
+                      onSourceClick={openSource}
+                      onSaveImage={saveResponseImage}
+                    >
+                      {cleaned}
+                    </ResponseMarkdown>
                   );
                   if (artifactKind || streaming) return markdown;
                   const chip = detectInfoChip(cleaned);
@@ -878,64 +1163,103 @@ function ChatMessageInner({
                 )}
               </div>
             )}
-            {!streaming && sourcesOpen && message.sources?.length ? (
-              <section
-                id={`message-sources-${message.id}`}
-                className="mt-3 rounded-xl border border-border/70 bg-muted/25 p-3"
-                aria-label={`Sources for this response (${message.sources.length})`}
+            {!streaming && selectedText && (
+              <div
+                ref={selectionActionsRef}
+                className="kova-selection-actions mt-3 flex flex-wrap gap-2"
+                role="toolbar"
+                aria-label="Selected text actions"
+                onPointerDown={(event) => {
+                  // Only an intentional primary action keeps the native prose selection.
+                  // Text dragging, secondary clicks, and the browser menu remain native.
+                  if (
+                    event.isPrimary &&
+                    event.button === 0 &&
+                    event.target instanceof Element &&
+                    event.target.closest("button")
+                  )
+                    event.preventDefault();
+                }}
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) rememberSelection();
+                }}
               >
-                <ol className="grid gap-2 sm:grid-cols-2">
-                  {message.sources.map((source, index) => (
-                    <li key={`${source.id}:${source.url}`} className="min-w-0">
-                      <a
-                        href={source.url}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="block rounded-lg p-2 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <span className="flex items-start gap-2">
-                          <span
-                            className="mt-0.5 inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-semibold text-muted-foreground"
-                            aria-hidden="true"
-                          >
-                            {index + 1}
-                          </span>
-                          <span className="min-w-0">
-                            <span className="line-clamp-2 block text-sm font-medium leading-5 text-foreground">
-                              {source.title}
-                            </span>
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {source.domain}
-                            </span>
-                          </span>
-                        </span>
-                        {source.snippet ? (
-                          <span className="mt-1.5 line-clamp-2 block text-xs leading-5 text-muted-foreground">
-                            {source.snippet}
-                          </span>
-                        ) : null}
-                        <span className="sr-only"> (opens in a new tab)</span>
-                      </a>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            ) : null}
+                {onDraftPrompt && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      responseDraftFocusRef.current = null;
+                      setSelectionAskPassage(lastSelectionRef.current);
+                      setSelectionQuestion("");
+                      setSelectionAskOpen(true);
+                    }}
+                  >
+                    Ask
+                  </button>
+                )}
+                {onReplaceContent && (
+                  <>
+                    <button type="button" onClick={() => void openSelectionEdit()}>
+                      Rewrite
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void openSelectionEdit("Shorten this passage while preserving its meaning.")
+                      }
+                    >
+                      Shorten
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(lastSelectionRef.current);
+                      toast.success("Selection copied");
+                    } catch {
+                      toast.error("Couldn’t copy. Select the text and copy it manually.");
+                    }
+                  }}
+                >
+                  Copy selection
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-[48rem]">
+      <div className="mx-auto kova-message-reading-column">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div
-              className="kova-message-actions mt-1 max-w-full overflow-x-auto"
+              className="kova-message-actions kova-response-action-bar mt-1 max-w-full overflow-x-auto"
               role="toolbar"
               aria-label="Response actions"
             >
+              {isSignedIn &&
+                principalResolved &&
+                userKey &&
+                chatId &&
+                !temporary &&
+                !message.generationStatus &&
+                !message.pendingImage && (
+                  <ResponseSpeechButton
+                    ownerId={userKey}
+                    chatId={chatId}
+                    messageId={message.id}
+                    content={message.content}
+                  />
+                )}
               {memorySources && (
                 <button
                   type="button"
-                  onClick={() => setMemoryOpenFor(memoryKey)}
+                  onClick={(event) => {
+                    memoryReturnFocusRef.current = event.currentTarget;
+                    memoryReturnUrlRef.current = window.location.href;
+                    setMemoryOpenFor(memoryKey);
+                  }}
                   className="shrink-0 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
                   Memory provided ({memorySources.sources.length})
@@ -944,7 +1268,11 @@ function ChatMessageInner({
               {message.sources?.length ? (
                 <button
                   type="button"
-                  onClick={() => setSourcesOpen((open) => !open)}
+                  ref={sourcesPillRef}
+                  onClick={(event) => {
+                    if (sourcesOpen) closeSources();
+                    else openSources(event.currentTarget);
+                  }}
                   className="kova-message-source-toggle inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   aria-expanded={sourcesOpen}
                   aria-controls={`message-sources-${message.id}`}
@@ -953,88 +1281,106 @@ function ChatMessageInner({
                   {message.sources.length} {message.sources.length === 1 ? "source" : "sources"}
                 </button>
               ) : null}
-              <button
-                type="button"
-                onClick={copy}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
-                title={copied ? "Copied" : "Copy"}
-                aria-label={copied ? "Copied" : "Copy"}
-              >
-                {copied ? (
-                  <Check className="w-4 h-4 text-[color:var(--kova-blue)] animate-check-pop" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
-              </button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={copy}
+                      className="kova-message-icon-action inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
+                      aria-label={copied ? "Copied" : "Copy response"}
+                    >
+                      {copied ? (
+                        <Check className="w-4 h-4 text-[color:var(--kova-blue)] animate-check-pop" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{copied ? "Copied" : "Copy response"}</TooltipContent>
+                </Tooltip>
 
-              <button
-                type="button"
-                onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
-                disabled={feedbackSaving || feedbackLoadFailed}
-                className={`inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
-                  feedback === "up" ? "bg-accent text-foreground" : ""
-                }`}
-                title="Good response"
-                aria-label="Good response"
-                aria-pressed={feedback === "up"}
-              >
-                <ThumbsUp className="h-4 w-4" />
-              </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
+                      disabled={feedbackSaving || feedbackLoadFailed}
+                      className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
+                        feedback === "up" ? "bg-accent text-foreground" : ""
+                      }`}
+                      aria-label="Good response"
+                      aria-pressed={feedback === "up"}
+                    >
+                      <ThumbsUp className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Good response</TooltipContent>
+                </Tooltip>
 
-              <button
-                type="button"
-                onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
-                disabled={feedbackSaving || feedbackLoadFailed}
-                className={`inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
-                  feedback === "down" ? "bg-accent text-foreground" : ""
-                }`}
-                title="Bad response"
-                aria-label="Bad response"
-                aria-pressed={feedback === "down"}
-              >
-                <ThumbsDown className="h-4 w-4" />
-              </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
+                      disabled={feedbackSaving || feedbackLoadFailed}
+                      className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
+                        feedback === "down" ? "bg-accent text-foreground" : ""
+                      }`}
+                      aria-label="Bad response"
+                      aria-pressed={feedback === "down"}
+                    >
+                      <ThumbsDown className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Bad response</TooltipContent>
+                </Tooltip>
 
-              {onRetry && message.generationStatus !== "stopped" && (
-                <button
-                  type="button"
-                  onClick={onRetry}
-                  className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
-                  title={retryActionLabel}
-                  aria-label={retryActionLabel}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
-              )}
-
-              {feedbackLoadFailed && (
-                <button
-                  type="button"
-                  onClick={() => setFeedbackReload((current) => current + 1)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  title="Retry loading response feedback"
-                  aria-label="Retry loading response feedback"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Retry rating
-                </button>
-              )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => void saveItem()}
+                      disabled={saving}
+                      className="kova-message-icon-action"
+                      aria-label={
+                        saved
+                          ? "Saved to Library"
+                          : saving
+                            ? "Saving to Library"
+                            : "Save to Library"
+                      }
+                    >
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : saved ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Bookmark className="h-4 w-4" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {saved ? "Saved to Library" : saving ? "Saving to Library" : "Save to Library"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               {email && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground bg-accent hover:bg-accent/80 px-2.5 py-1.5 rounded-full transition-all hover:scale-[1.03] active:scale-95"
-                      title="Send this email"
-                      aria-label="Send this email"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground bg-accent hover:bg-accent/80 px-2.5 py-1.5 rounded-full transition-colors"
+                      title="Open email draft"
+                      aria-label="Open email draft"
                     >
                       <Mail className="w-3.5 h-3.5" />
-                      <span>Send email</span>
+                      <span>Open email draft</span>
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56">
                     <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
-                      Body copied to clipboard. Add recipients in the compose window.
+                      Choose where to open a draft. Add recipients before sending.
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -1057,41 +1403,122 @@ function ChatMessageInner({
                 </DropdownMenu>
               )}
 
-              {artifactKind && (
+              {message.content.trim() && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setEditorMode(artifactKind === "code" ? "preview" : "edit");
-                    setEditorOpen(true);
+                  onClick={(event) => {
+                    openResult("edit", event.currentTarget);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-accent/80"
-                  aria-label={
-                    artifactKind === "code" ? "Open code full screen" : "Open writing full screen"
-                  }
-                  title={
-                    artifactKind === "code" ? "Open code full screen" : "Open writing full screen"
-                  }
+                  className="kova-open-result-action inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-accent/80"
+                  aria-label={artifactKind === "code" ? "Open code result" : "Open writing result"}
+                  title={artifactKind === "code" ? "Open code result" : "Open writing result"}
                 >
                   {artifactKind === "code" ? (
                     <Code2 className="h-3.5 w-3.5" />
                   ) : (
                     <FileEdit className="h-3.5 w-3.5" />
                   )}
-                  {artifactKind === "code" ? "Open code" : "Open writing"}
+                  <span>Edit in Canvas</span>
+                </button>
+              )}
+              {chatId && onReplaceContent && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCompareVersions(true);
+                    setVersionsOpen(true);
+                  }}
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                  aria-label="Compare response versions"
+                >
+                  <History className="h-3.5 w-3.5" aria-hidden="true" /> Compare versions
                 </button>
               )}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                    ref={responseMoreRef}
+                    className="kova-message-icon-action inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent"
                     title="More actions"
                     aria-label="More actions"
                   >
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-52">
+                <DropdownMenuContent
+                  align="start"
+                  className="kova-response-menu w-60"
+                  onCloseAutoFocus={(event) => {
+                    const focusDraft = responseDraftFocusRef.current;
+                    if (focusDraft) {
+                      responseDraftFocusRef.current = null;
+                      event.preventDefault();
+                      focusDraft();
+                      return;
+                    }
+                    if (memoryReviewOpeningRef.current) {
+                      memoryReviewOpeningRef.current = false;
+                      event.preventDefault();
+                      return;
+                    }
+                    if (!studyOpeningRef.current) return;
+                    studyOpeningRef.current = false;
+                    event.preventDefault();
+                  }}
+                >
+                  {onRetry && (
+                    <DropdownMenuItem onSelect={onRetry}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Retry
+                    </DropdownMenuItem>
+                  )}
+                  {onDraftPrompt && (
+                    <DropdownMenuItem
+                      aria-label="Continue from here"
+                      aria-describedby={`continue-draft-${message.id}`}
+                      onSelect={() => {
+                        responseDraftFocusRef.current =
+                          onDraftPrompt(
+                            "Continue from here without repeating what you have already written.",
+                          ) ?? null;
+                      }}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>
+                        Continue from here
+                        <span
+                          id={`continue-draft-${message.id}`}
+                          className="block text-xs text-muted-foreground"
+                        >
+                          Adds to your draft. Send when ready.
+                        </span>
+                      </span>
+                    </DropdownMenuItem>
+                  )}
+                  {chatId && !temporary && (
+                    <DropdownMenuItem
+                      onSelect={async () => {
+                        try {
+                          const link = new URL(window.location.href);
+                          link.hash = `message-${message.id}`;
+                          await navigator.clipboard.writeText(link.toString());
+                          toast.success("Link copied. Access is unchanged.");
+                        } catch {
+                          toast.error("Couldn’t copy the link.");
+                        }
+                      }}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy link
+                    </DropdownMenuItem>
+                  )}
+                  {feedbackLoadFailed ? (
+                    <DropdownMenuItem onSelect={() => setFeedbackReload((current) => current + 1)}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Retry loading response feedback
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem onSelect={() => void share()}>
                     <Share2 className="mr-2 h-4 w-4" /> Share
                   </DropdownMenuItem>
@@ -1103,7 +1530,33 @@ function ChatMessageInner({
                     ) : (
                       <Bookmark className="mr-2 h-4 w-4" />
                     )}
-                    {saving ? "Saving…" : saved ? "Saved to Library" : "Save to Library"}
+                    {saving ? (
+                      <span className="spec400-loading-label">
+                        <span className="spec400-loading-spinner" aria-hidden="true" />
+                        Saving…
+                      </span>
+                    ) : saved ? (
+                      "Saved to Library"
+                    ) : (
+                      "Save to Library"
+                    )}
+                  </DropdownMenuItem>
+                  {onSaveMemory ? (
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        memoryReviewOpeningRef.current = true;
+                        onSaveMemory(responseMoreRef.current);
+                      }}
+                    >
+                      <Brain className="mr-2 h-4 w-4" /> Save a reviewed memory
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem
+                    className="min-h-11"
+                    onSelect={openStudy}
+                    disabled={!principalResolved || !message.content.trim()}
+                  >
+                    <GraduationCap className="mr-2 h-4 w-4" /> Practice this explanation
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -1116,7 +1569,10 @@ function ChatMessageInner({
                     <TextSelect className="mr-2 h-4 w-4" /> Edit selection
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onSelect={() => setVersionsOpen(true)}
+                    onSelect={() => {
+                      setCompareVersions(false);
+                      setVersionsOpen(true);
+                    }}
                     disabled={!chatId || !message.id}
                   >
                     <History className="mr-2 h-4 w-4" /> Version history
@@ -1130,13 +1586,51 @@ function ChatMessageInner({
           )}
         </div>
       </div>
-      {artifactKind && (
+      {!isUser &&
+        !streaming &&
+        !message.generationStatus &&
+        onSelectSuggestion &&
+        normalizeResponseFollowups(message.followups).length > 0 && (
+          <nav className="kova-response-followups" aria-label="Suggested follow-ups">
+            {normalizeResponseFollowups(message.followups).map((suggestion) => (
+              <button type="button" key={suggestion} onClick={() => onSelectSuggestion(suggestion)}>
+                <CornerDownRight aria-hidden="true" />
+                <span>{suggestion}</span>
+              </button>
+            ))}
+          </nav>
+        )}
+      {studySession?.key === studyContextKey && (
+        <Suspense
+          fallback={
+            <p className="sr-only" role="status">
+              Loading practice…
+            </p>
+          }
+        >
+          <ChatStudyControl
+            key={studySession.key}
+            open
+            ownerId={userKey}
+            temporary={temporary}
+            source={studySession.source}
+            onOpenChange={(open) => {
+              if (!open) setStudySession(null);
+            }}
+            onRestoreFocus={() => {
+              if (studySession.key !== studyContextRef.current) return;
+              restoreDialogFocus(studyReturnFocusRef.current, studyReturnUrlRef.current);
+            }}
+          />
+        </Suspense>
+      )}
+      {!isUser && message.content.trim() && (
         <Suspense fallback={null}>
           <ArtifactEditor
             open={editorOpen}
             onClose={() => setEditorOpen(false)}
             initialContent={editorContent}
-            kind={artifactKind}
+            kind={artifactKind ?? "writing"}
             onImprove={onFollowUp}
             initialMode={editorMode}
             chatId={temporary ? null : (chatId ?? null)}
@@ -1145,10 +1639,211 @@ function ChatMessageInner({
           />
         </Suspense>
       )}
+      {sourcesOpen && sourcesSession && message.sources?.length ? (
+        <Dialog
+          open={sourcesOpen}
+          onOpenChange={(open) => {
+            if (!open) closeSources();
+          }}
+        >
+          <DialogContent
+            id={`message-sources-${message.id}`}
+            className="kova-sources-inspector"
+            aria-describedby="response-sources-description"
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              // A delayed close belongs only to this opening, never a newer inspector.
+              if (sourcesReturnFocusRef.current !== sourcesSession) return;
+              sourcesReturnFocusRef.current = null;
+              if (sourcesSession.key !== sourcesContextRef.current) return;
+              const active = document.activeElement;
+              const closingContent = event.target instanceof HTMLElement ? event.target : null;
+              if (
+                active &&
+                active !== document.body &&
+                active !== sourcesSession.trigger &&
+                !closingContent?.contains(active)
+              )
+                return;
+              restoreDialogFocus(sourcesSession.trigger, sourcesSession.openedUrl);
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Sources</DialogTitle>
+              <DialogDescription id="response-sources-description">
+                Sources returned with this response. Select a citation to inspect its supporting
+                passage.
+              </DialogDescription>
+            </DialogHeader>
+            <ol className="space-y-4 overflow-y-auto">
+              {message.sources.map((source) => {
+                const retrievedAt = normalizeSourceRetrievedAt(source.retrievedAt);
+                return (
+                  <li
+                    key={source.id}
+                    id={`source-${source.id}`}
+                    className={`rounded-xl border p-4 ${source.id === activeSourceId ? "border-ring" : "border-border"}`}
+                  >
+                    <p className="text-xs text-muted-foreground">Web page</p>
+                    <h3 className="mt-1 text-base font-medium">{source.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Publisher: {source.domain}</p>
+                    {source.publishedAt && (
+                      <p className="text-sm text-muted-foreground">
+                        Published: {source.publishedAt}
+                      </p>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {retrievedAt ? (
+                        <>
+                          Retrieved:{" "}
+                          <time dateTime={retrievedAt}>
+                            {formatDisplayDateTime(retrievedAt, timeFormat)}
+                          </time>{" "}
+                          (device time zone)
+                        </>
+                      ) : (
+                        "Retrieval time not provided"
+                      )}
+                    </p>
+                    {source.snippet ? (
+                      <p className="mt-3 text-sm leading-relaxed">{source.snippet}</p>
+                    ) : (
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        No supporting passage was provided.
+                      </p>
+                    )}
+                    <a
+                      className="mt-3 block break-all text-sm underline"
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      {source.url}
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ol>
+            <button
+              type="button"
+              className="min-h-11 rounded-lg border border-border px-4"
+              onClick={closeSources}
+            >
+              Close Sources
+            </button>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+      {selectionAskOpen && (
+        <Dialog open onOpenChange={setSelectionAskOpen}>
+          <DialogContent
+            onCloseAutoFocus={(event) => {
+              const focusDraft = responseDraftFocusRef.current;
+              if (!focusDraft) return;
+              responseDraftFocusRef.current = null;
+              event.preventDefault();
+              focusDraft();
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Ask about this passage</DialogTitle>
+              <DialogDescription>
+                Your question and selected text will be added to your draft. Send when ready.
+              </DialogDescription>
+            </DialogHeader>
+            <p className="max-h-40 overflow-auto whitespace-pre-wrap text-sm">
+              {selectionAskPassage}
+            </p>
+            <label htmlFor={`selection-question-${message.id}`}>Your question</label>
+            <textarea
+              id={`selection-question-${message.id}`}
+              className="min-h-24 rounded-lg border p-3"
+              value={selectionQuestion}
+              onChange={(event) => setSelectionQuestion(event.target.value)}
+            />
+            <button
+              type="button"
+              disabled={!selectionQuestion.trim()}
+              className="min-h-11 rounded-lg bg-foreground px-4 text-background disabled:opacity-50"
+              onClick={() => {
+                responseDraftFocusRef.current =
+                  onDraftPrompt?.(
+                    `${selectionQuestion.trim()}\n\nSelected passage:\n${selectionAskPassage}`,
+                  ) ?? null;
+                setSelectionAskOpen(false);
+              }}
+            >
+              Add to draft
+            </button>
+          </DialogContent>
+        </Dialog>
+      )}
       {memorySources && memoryOpenFor === memoryKey && (
         <Suspense fallback={null}>
-          <MemorySourcesDialog sources={memorySources} onClose={closeMemory} />
+          <MemorySourcesDialog
+            sources={memorySources}
+            onClose={closeMemory}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              restoreDialogFocus(
+                memoryReturnFocusRef.current,
+                memoryReturnUrlRef.current,
+                memoryContextRef.current !== memoryKey,
+              );
+            }}
+          />
         </Suspense>
+      )}
+      {copyFallbackOpen && (
+        <Dialog open={copyFallbackOpen} onOpenChange={setCopyFallbackOpen}>
+          <DialogContent
+            className="sm:max-w-[640px]"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              copyFallbackRef.current?.focus();
+              copyFallbackRef.current?.select();
+            }}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              restoreDialogFocus(copyFallbackReturnRef.current, copyFallbackReturnUrlRef.current);
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Copy response</DialogTitle>
+              <DialogDescription>
+                Copy is unavailable here. Select this text and copy it manually.
+              </DialogDescription>
+            </DialogHeader>
+            <textarea
+              ref={copyFallbackRef}
+              readOnly
+              value={message.content}
+              aria-label="Response text to copy"
+              rows={10}
+              className="max-h-[50vh] w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm"
+            />
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  copyFallbackRef.current?.focus();
+                  copyFallbackRef.current?.select();
+                }}
+                className="min-h-11 rounded-full border border-border px-4 text-sm font-medium hover:bg-accent"
+              >
+                Select text
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopyFallbackOpen(false)}
+                className="min-h-11 rounded-full bg-foreground px-4 text-sm font-medium text-background hover:opacity-90"
+              >
+                Close
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
       {!isUser && (selectionOpen || versionsOpen) && (
         <Suspense fallback={null}>
@@ -1160,6 +1855,7 @@ function ChatMessageInner({
                 if (!open) setSelectionTarget(null);
               }}
               target={selectionTarget}
+              initialInstruction={selectionInstruction}
               chatId={chatId ?? null}
               messageId={message.id ?? null}
               temporary={temporary}
@@ -1170,6 +1866,7 @@ function ChatMessageInner({
             <MessageVersionHistoryDialog
               open={versionsOpen}
               onOpenChange={setVersionsOpen}
+              compareInitially={compareVersions}
               chatId={chatId ?? null}
               messageId={message.id ?? null}
               currentContent={message.content}
@@ -1183,6 +1880,7 @@ function ChatMessageInner({
           open={mobileSheetOpen}
           onOpenChange={setMobileSheetOpen}
           title="Message actions"
+          restoreFocus={!copyFallbackOpen && !selectionOpen && !versionsOpen && !sourcesOpen}
         >
           <div className="flex flex-col py-1">
             {[
@@ -1210,7 +1908,8 @@ function ChatMessageInner({
                         : `View ${message.sources.length} sources`,
                       icon: Globe,
                       onClick: () => {
-                        setSourcesOpen((open) => !open);
+                        if (sourcesOpen) closeSources();
+                        else openSources(sourcesPillRef.current);
                         setMobileSheetOpen(false);
                       },
                     },
@@ -1289,6 +1988,18 @@ function ChatMessageInner({
                   setMobileSheetOpen(false);
                 },
               },
+              ...(onSaveMemory
+                ? [
+                    {
+                      label: "Save a reviewed memory",
+                      icon: Brain,
+                      onClick: () => {
+                        setMobileSheetOpen(false);
+                        onSaveMemory(responseMoreRef.current);
+                      },
+                    },
+                  ]
+                : []),
               {
                 label: saved ? "Saved" : "Save to Library",
                 icon: Bookmark,

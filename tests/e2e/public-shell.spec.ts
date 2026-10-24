@@ -78,9 +78,9 @@ test("public routes share one landmark and a working skip target", async ({ page
   expect(missingDeveloperDoc?.status()).toBe(404);
   await waitForHydration(page);
   await expect(
-    page.getByRole("heading", { name: "We couldn't find that page", exact: true }),
+    page.getByRole("heading", { name: "This page isn’t available", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Return home", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Go to chat", exact: true })).toBeVisible();
 
   await page.goto("/privacy");
   await waitForHydration(page);

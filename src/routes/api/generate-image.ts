@@ -11,7 +11,6 @@ import {
   AiProviderError,
   imageGenerations,
   imageEdits,
-  missingAiProviderResponse,
   providerErrorFromResponse,
   providerErrorResponse,
   providerUnavailableResponse,
@@ -147,8 +146,6 @@ export const Route = createFileRoute("/api/generate-image")({
             throw new ImageInputError("Invalid image request JSON.");
           }
           const settings = normalizeImageSettings(parsed);
-          const unavailable = missingAiProviderResponse();
-          if (unavailable) return unavailable;
           const banned = await waitForPromiseWithSignal(assertNotBanned(auth), deadline.signal);
           if (banned) return banned;
           const disabled = await waitForPromiseWithSignal(

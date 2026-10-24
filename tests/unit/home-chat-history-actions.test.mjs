@@ -11,6 +11,12 @@ async function fixture(save = async () => true) {
       success: (...v) => events.push(["success", ...v]),
       error: (...v) => events.push(["error", ...v]),
     },
+    readChatTrash: () => ({ retentionMs: 30 * 86400000, entries: [{ conversation: chat }] }),
+    moveChatToTrash: async (...args) => {
+      events.push(["save", ...args]);
+      return save();
+    },
+    restoreChatTrash: async () => true,
     archiveConversation: async () => true,
     loadConversations: () => [],
     removeArchivedConversation: async () => true,

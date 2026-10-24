@@ -1,0 +1,4 @@
+# Preserve the exact PDF fixture bytes and upstream license text.
+*.pdf binary
+docs/pdf-preview-font-licenses.txt whitespace=-blank-at-eol
+public/fonts/OFL-IBM-Plex.txt whitespace=-blank-at-eol

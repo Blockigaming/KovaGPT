@@ -30,7 +30,7 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "2. Choose a mode",
-    body: "Free includes Instant and Thinking. Plus includes Instant, Medium, and High. Pro includes Instant, Medium, High, Extra High, Max, and Ultra. Search is a separate tool with provider requirements.",
+    body: "Free includes Instant. Thinking requires an upgrade. Plus includes Instant, Medium, and High. Pro includes Instant, Medium, High, Extra High, Max, and Ultra. Search is a separate tool with provider requirements.",
   },
   {
     title: "3. Sign in to save your work",
@@ -42,7 +42,7 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "5. Check your usage",
-    body: "Signed-in users can view daily usage from Settings → Subscription.",
+    body: "Signed-in users can view daily usage from Settings → Usage.",
   },
   { title: "6. Get help", body: "For support, contact support@kovagpt.com." },
 ];

@@ -1,3 +1,4 @@
+import { SearchablePicker } from "@/components/ui/searchable-picker";
 import type {
   WorkModelMode,
   WorkModelOption,
@@ -161,7 +162,7 @@ export function WorkExecutionPanel({
     });
   if (cleared)
     return (
-      <section className="mb-4 rounded-2xl border bg-card p-4" aria-label="Work execution">
+      <section className="mb-4 rounded-xl border bg-card p-4" aria-label="Work execution">
         <p>Work controls were cleared on this device.</p>
         <button
           type="button"
@@ -176,10 +177,14 @@ export function WorkExecutionPanel({
       </section>
     );
   return (
-    <section className="mb-4 rounded-2xl border bg-card p-4" aria-label="Work execution">
+    <section className="mb-4 rounded-xl border bg-card p-4" aria-label="Work execution">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-semibold">Run prepared work</h2>
-        <button className="text-sm underline" disabled={locked} onClick={() => void load()}>
+        <button
+          className="min-h-11 rounded-lg border border-border px-3 text-sm"
+          disabled={locked}
+          onClick={() => void load()}
+        >
           Refresh execution status
         </button>
       </div>
@@ -200,25 +205,21 @@ export function WorkExecutionPanel({
       </label>
       <label className="mt-2 block text-sm">
         Save output files in Project
-        <select
-          className="ml-2 rounded border bg-background p-1"
+        <SearchablePicker
+          className="mt-1 flex min-h-11 w-full max-w-full rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
           value={projectId}
           disabled={locked}
-          onChange={(event) => setProjectId(event.target.value)}
-        >
-          <option value="">Choose a Project</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
+          onValueChange={setProjectId}
+          placeholder="Choose a Project"
+          searchLabel="Search projects"
+          options={projects.map((project) => ({ value: project.id, label: project.name }))}
+        />
       </label>
-      <div className="mt-3 flex flex-wrap gap-3">
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="text-sm">
           Work model mode
           <select
-            className="ml-2 rounded border bg-background p-1"
+            className="mt-1 block min-h-11 w-full max-w-full rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
             value={mode}
             disabled={locked || !modelOptions.length}
             onChange={(event) => {
@@ -240,7 +241,7 @@ export function WorkExecutionPanel({
         <label className="text-sm">
           Reasoning effort
           <select
-            className="ml-2 rounded border bg-background p-1"
+            className="mt-1 block min-h-11 w-full max-w-full rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
             value={reasoningEffort ?? "default"}
             disabled={locked || !selectedModel?.available || !selectedModel.reasoningEfforts.length}
             onChange={(event) =>
@@ -301,21 +302,20 @@ export function WorkExecutionPanel({
       {Boolean(snapshot?.runs.length) && (
         <label className="mt-4 block text-sm">
           Execution history
-          <select
-            className="ml-2 rounded border bg-background p-1"
+          <SearchablePicker
+            className="mt-1 flex min-h-11 w-full max-w-full rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
             value={selected ?? ""}
-            onChange={(event) => {
-              setSelected(event.target.value);
+            onValueChange={(value) => {
+              setSelected(value);
               setText("");
             }}
-          >
-            <option value="">Choose a run</option>
-            {snapshot!.runs.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.request.objective.slice(0, 70)} · {item.status.replaceAll("_", " ")}
-              </option>
-            ))}
-          </select>
+            placeholder="Choose a run"
+            searchLabel="Search executions"
+            options={snapshot!.runs.map((item) => ({
+              value: item.id,
+              label: `${item.request.objective.slice(0, 70)} · ${item.status.replaceAll("_", " ")}`,
+            }))}
+          />
         </label>
       )}
       {snapshot?.nextCursor && (

@@ -12,7 +12,11 @@ test.describe("Signed-out gating", () => {
     await page.goto("/projects");
     await waitForKovaHydration(page);
     // Whichever branch resolves, one of these strings must appear somewhere.
-    const anyMatch = page.getByText(/sign in to use projects|^projects$/i).first();
+    const anyMatch = page
+      .getByRole("main")
+      .getByText(/sign in to use projects|^projects$/i)
+      .filter({ visible: true })
+      .first();
     await expect(anyMatch).toBeVisible({ timeout: 8000 });
   });
 

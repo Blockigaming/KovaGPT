@@ -384,27 +384,32 @@ export function RelatedWorkspaceItems({
   const userKey = user?.id ?? null;
   const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const list = useServerFn(listWorkspaceIntelligence);
-  const [itemState, setItemState] = useState<{
-    principal: string | null;
-    items: WorkspaceSignal[];
-  }>({ principal: null, items: [] });
-  const items = principal !== null && itemState.principal === principal ? itemState.items : [];
-  const [loading, setLoading] = useState(true);
   const kindsKey = kinds?.join(",") ?? "";
+  const scope = JSON.stringify([principal, projectId, kindsKey]);
+  const [itemState, setItemState] = useState<{
+    scope: string | null;
+    status: "loading" | "ready" | "error";
+    items: WorkspaceSignal[];
+  }>({ scope: null, status: "loading", items: [] });
+  const [retryVersion, setRetryVersion] = useState(0);
+  const current = principal !== null && itemState.scope === scope;
+  const items = current ? itemState.items : [];
+  const loading = !current || itemState.status === "loading";
+  const unavailable = current && itemState.status === "error";
   useEffect(() => {
     if (!isLoaded || principal === null || !isSignedIn) {
-      setItemState({ principal: null, items: [] });
-      setLoading(false);
+      setItemState({ scope: null, status: "loading", items: [] });
       return;
     }
     let cancelled = false;
-    setLoading(true);
+    setItemState({ scope, status: "loading", items: [] });
     const allowedKinds = kindsKey ? kindsKey.split(",") : null;
     list({})
       .then((signals) => {
         if (cancelled) return;
         setItemState({
-          principal,
+          scope,
+          status: "ready",
           items: signals
             .filter(
               (item) =>
@@ -415,21 +420,31 @@ export function RelatedWorkspaceItems({
         });
       })
       .catch(() => {
-        if (!cancelled) setItemState({ principal, items: [] });
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setItemState({ scope, status: "error", items: [] });
       });
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, isSignedIn, kindsKey, list, principal, projectId]);
+  }, [isLoaded, isSignedIn, kindsKey, list, principal, projectId, retryVersion, scope]);
   if (!isLoaded || !isSignedIn) return null;
   return (
     <aside className="mt-6 rounded-2xl border bg-card/30 p-2" aria-label={title}>
       <h2 className="px-3 pb-1 pt-2 text-sm font-semibold">{title}</h2>
       {loading ? (
-        <div className="m-3 h-14 animate-pulse rounded-xl bg-muted" />
+        <div className="m-3 h-14 animate-pulse rounded-xl bg-muted" role="status">
+          <span className="sr-only">Loading related workspace items</span>
+        </div>
+      ) : unavailable ? (
+        <div className="px-3 py-3 text-sm text-muted-foreground" role="alert">
+          <p>Related workspace items are unavailable. Try again.</p>
+          <button
+            type="button"
+            className="mt-2 min-h-11 rounded-lg border border-border px-3 text-foreground"
+            onClick={() => setRetryVersion((value) => value + 1)}
+          >
+            Retry related workspace
+          </button>
+        </div>
       ) : items.length ? (
         items.map((item) => (
           <IntelligenceRow key={`${item.kind}:${item.id}`} item={item} userKey={userKey} />

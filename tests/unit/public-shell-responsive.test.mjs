@@ -15,6 +15,7 @@ function fixture(initialPath = "/features") {
     },
     "lucide-react": { Menu: "Menu", X: "X" },
     "@/components/NovaLogo": { NovaLogo: "NovaLogo" },
+    "@/lib/drawer-navigation-focus": { requestDrawerNavigationFocus: () => true },
   };
   const { PublicFooter } = loadUiModule("src/components/PublicFooter.tsx", dependencies);
   const { PublicHeader } = loadUiModule(
@@ -23,6 +24,7 @@ function fixture(initialPath = "/features") {
       ...dependencies,
       "@/components/PublicFooter": { PublicFooter },
       "./public-foundation.css": {},
+      "./spec400-public.css": {},
     },
     {
       document: {
@@ -88,7 +90,7 @@ test("public header wraps without losing navigation destinations or bounded cont
   const links = elements(desktop, (node) => node.type === "Link");
   assert.deepEqual(
     links.map((node) => node.props.to),
-    ["/overview", "/features", "/use-cases", "/business", "/pricing", "/download"],
+    ["/overview", "/features", "/use-cases", "/business", "/pricing", "/download", "/review"],
   );
   for (const link of links) {
     assert.ok(text(link).trim());
@@ -109,7 +111,7 @@ test("mobile public navigation is scrollable and Escape closes it and restores t
   assert.ok(panel);
   assert.equal(panel.props["aria-label"], "Mobile public navigation");
   includesClasses(panel, ["min-h-0", "overflow-y-auto", "overscroll-contain"]);
-  assert.equal(elements(panel, (node) => node.type === "Link").length, 7);
+  assert.equal(elements(panel, (node) => node.type === "Link").length, 8);
   let prevented = false;
   f.listeners.get("keydown")({
     key: "Escape",

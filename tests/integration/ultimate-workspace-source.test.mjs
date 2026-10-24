@@ -40,7 +40,8 @@ test("GitHub disconnect targets the selected account and withholds unsafe bulk r
   assert.match(source, /activeAccountIds\.has\(installation\.account_id\)/);
   assert.match(source, /activeInstallationIds\.has\(String\(repo\.installation_id\)\)/);
   assert.match(source, /!activeAccounts\.length/);
-  assert.match(source, /Connect again/);
+  assert.match(source, /This connection record is retained\. Reconnect to restore access\./);
+  assert.match(source, /aria-label=\{`Reconnect GitHub account @\$\{account\.login\}`\}/);
 });
 
 test("dialog positioning is not overwritten by the shared menu transform animation", () => {

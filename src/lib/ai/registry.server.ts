@@ -220,7 +220,12 @@ export function selectModelForCapabilities(
   requiredCapabilities: ProviderCapability[],
   intendedUse?: ModelUse,
 ): ProviderSelection {
-  const cfg = getAiProviderConfig();
+  const capability = requiredCapabilities.includes("image_generation")
+    ? "image_generation"
+    : requiredCapabilities.includes("embeddings")
+      ? "embeddings"
+      : undefined;
+  const cfg = getAiProviderConfig(capability);
   if (!cfg.configured) {
     throw new KovaProviderError(
       "PROVIDER_NOT_CONFIGURED",
@@ -263,7 +268,11 @@ export function selectModelForMode(
   options: { hasImages?: boolean; needsTools?: boolean; needsSearch?: boolean } = {},
 ): ProviderSelection {
   if (mode === "image")
-    return selectModelForCapabilities(undefined, ["image_generation"], "image_generation");
+    return selectModelForCapabilities(
+      getAiProviderConfig("image_generation").imageModel,
+      ["image_generation"],
+      "image_generation",
+    );
   const required: ProviderCapability[] = ["chat", "stream"];
   if (options.needsTools) required.push("tools");
   if (options.hasImages) required.push("vision");

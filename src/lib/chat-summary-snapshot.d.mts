@@ -17,7 +17,6 @@ type Dependencies = {
   }>;
   fetchImpl?: typeof fetch;
   signal?: AbortSignal;
-  contextOnly?: boolean;
 };
 export function createChatSummarySnapshot(
   messages: Conversation["messages"],
@@ -70,3 +69,5 @@ export function createChatHistoryPayload(
 export function chatRequestProfile(
   settings: import("../components/SettingsDialog").Settings,
 ): Record<string, unknown>;
+
+export { withResponsePresentation } from "./spec400-response-preferences.mjs";

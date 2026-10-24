@@ -77,19 +77,22 @@ export const Route = createFileRoute("/api/project-suggest")({
           const tier = await getCallerTier(auth);
           const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[tier]);
           if (quota) return quota;
-          const upstream = await chatCompletions({
-            model: modelForRole("UTILITY"),
-            max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
+          const upstream = await chatCompletions(
+            {
+              model: modelForRole("UTILITY"),
+              max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
 
-            messages: [
-              {
-                role: "system",
-                content:
-                  'You suggest a name and short description for a collaborative work project. Reply with ONLY compact JSON in the shape {"name": string (2-5 words, Title Case, no quotes), "description": string (one sentence, <=140 chars)}. No markdown, no code fences.',
-              },
-              { role: "user", content: hint || "Suggest a creative, useful project idea." },
-            ],
-          });
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    'You suggest a name and short description for a collaborative work project. Reply with ONLY compact JSON in the shape {"name": string (2-5 words, Title Case, no quotes), "description": string (one sentence, <=140 chars)}. No markdown, no code fences.',
+                },
+                { role: "user", content: hint || "Suggest a creative, useful project idea." },
+              ],
+            },
+            { signal: request.signal },
+          );
           if (!upstream.ok) {
             return providerErrorResponse(await providerErrorFromResponse(upstream));
           }

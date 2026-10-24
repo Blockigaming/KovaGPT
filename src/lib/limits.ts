@@ -1,5 +1,4 @@
-// 24-hour rolling usage window. The first action of the day starts the
-// window; everything resets exactly 24 hours later.
+// Local display hint only. Authoritative quota is the server UTC-day counter.
 const KEY = "nova-gpt-usage-v2";
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -7,32 +6,32 @@ type Usage = { windowStart: number; images: number; uploads: number };
 
 // Free plan limits.
 export const DAILY_IMAGE_LIMIT = 3;
-export const DAILY_UPLOAD_LIMIT = 3;
+export const DAILY_UPLOAD_LIMIT = 2;
 
 function fresh(): Usage {
-  return { windowStart: Date.now(), images: 0, uploads: 0 };
+  return { windowStart: Math.floor(Date.now() / WINDOW_MS) * WINDOW_MS, images: 0, uploads: 0 };
 }
 
-function load(): Usage {
+function load(owner = "guest"): Usage {
   if (typeof window === "undefined") return fresh();
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(`${KEY}:${owner}`);
     if (!raw) return fresh();
     const u = JSON.parse(raw) as Usage;
-    if (!u.windowStart || Date.now() - u.windowStart >= WINDOW_MS) return fresh();
+    if (u.windowStart !== Math.floor(Date.now() / WINDOW_MS) * WINDOW_MS) return fresh();
     return u;
   } catch {
     return fresh();
   }
 }
 
-function save(u: Usage) {
+function save(u: Usage, owner = "guest") {
   if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(u));
+  localStorage.setItem(`${KEY}:${owner}`, JSON.stringify(u));
 }
 
-export function getUsage() {
-  const u = load();
+export function getUsage(owner = "guest") {
+  const u = load(owner);
   return {
     images: u.images,
     uploads: u.uploads,
@@ -56,11 +55,11 @@ export function tryUseImage(): boolean {
   return true;
 }
 
-export function tryUseUpload(limit = DAILY_UPLOAD_LIMIT): boolean {
+export function tryUseUpload(limit = DAILY_UPLOAD_LIMIT, owner = "guest"): boolean {
   const normalizedLimit = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 0;
-  const u = load();
+  const u = load(owner);
   if (u.uploads >= normalizedLimit) return false;
   u.uploads += 1;
-  save(u);
+  save(u, owner);
   return true;
 }

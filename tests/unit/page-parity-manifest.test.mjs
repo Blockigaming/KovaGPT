@@ -121,7 +121,7 @@ test("localized content scopes its language and direction without relabeling the
       source,
       /<main\s+[\s\S]*?lang=\{(?:routeLocale|locale)\}[\s\S]*?dir=\{direction\}/u,
     );
-    assert.match(source, /<span lang="en" className="sr-only">\s*Language/u);
+    assert.match(source, /<span lang="en" className="sr-only"[^>]*>\s*Language/u);
     assert.doesNotMatch(source, /document\.documentElement\.(?:lang|dir)/u);
   }
 });

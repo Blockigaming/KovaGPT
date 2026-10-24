@@ -127,6 +127,30 @@
     },
     "stripeSandboxWebhookSecretUri": {
       "value": ""
+    },
+    "elevenLabsApiKeySecretUri": {
+      "value": ""
+    },
+    "elevenLabsVoiceId": {
+      "value": ""
+    },
+    "speechEnabled": {
+      "value": false
+    },
+    "voiceEnabled": {
+      "value": false
+    },
+    "voiceAudioEnabled": {
+      "value": false
+    },
+    "voiceDailyRequestLimit": {
+      "value": 0
+    },
+    "voiceCatalog": {
+      "value": []
+    },
+    "voiceDefaultId": {
+      "value": ""
     }
   }
 }

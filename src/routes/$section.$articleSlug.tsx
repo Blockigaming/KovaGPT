@@ -1,10 +1,30 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { PUBLICATION_BY_KEY, publicationKey } from "@/lib/publications";
 import { PublicDetailPageView, PublicPageView } from "@/components/public/PublicSite";
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
+import { ReviewWorkspace } from "@/components/public/ReviewWorkspace";
+import { findReviewPage } from "@/lib/review-page-content";
 export const Route = createFileRoute("/$section/$articleSlug")({
   loader: async ({ params }) => {
     const key = publicationKey(params.section, params.articleSlug);
+    const reviewPage = findReviewPage(key);
+    if (reviewPage) return { kind: "review" as const, item: reviewPage };
+    const aliases: Record<string, string> = {
+      "legal/terms-of-service": "/terms",
+      "legal/privacy-policy": "/privacy",
+      "legal/acceptable-use-policy": "/acceptable-use",
+      "legal/cookie-policy": "/cookie-policy",
+      "legal/brand-guidelines": "/brand",
+      "bot/marketplace": "/assistants",
+      "bot/guides": "/guides",
+      "bot/use-cases": "/use-cases",
+      "legal/faq": "/help",
+      "legal/faq-enterprise": "/business/enterprise",
+      "changelog/bot": "/changelog",
+      "api/imagine": "/review/api-imagine",
+      "api/changelog": "/changelog",
+    };
+    if (aliases[key]) throw redirect({ to: aliases[key] as never, replace: true });
     const publication = PUBLICATION_BY_KEY.get(key);
     if (publication) return { kind: "publication" as const, item: publication };
     if (params.section === "form") {
@@ -48,34 +68,42 @@ export const Route = createFileRoute("/$section/$articleSlug")({
     throw notFound();
   },
   head: ({ loaderData: data }) =>
-    data
+    data?.kind === "review"
       ? {
           meta: [
             { title: `${data.item.title} | KovaGPT` },
-            { name: "description", content: data.item.description },
-            {
-              name: "robots",
-              content: isPublicIndexableRoute(`/${data.item.section}/${data.item.slug}`)
-                ? "index, follow"
-                : "noindex, follow",
-            },
-            { property: "og:title", content: data.item.title },
-            { property: "og:description", content: data.item.description },
-            { property: "og:type", content: data.kind === "publication" ? "article" : "website" },
-            { property: "og:image", content: "https://kovagpt.com/og/home.jpg" },
-          ],
-          links: [
-            {
-              rel: "canonical",
-              href: `https://kovagpt.com/${data.item.section}/${data.item.slug}`,
-            },
+            { name: "robots", content: "noindex, nofollow" },
           ],
         }
-      : {},
+      : data
+        ? {
+            meta: [
+              { title: `${data.item.title} | KovaGPT` },
+              { name: "description", content: data.item.description },
+              {
+                name: "robots",
+                content: isPublicIndexableRoute(`/${data.item.section}/${data.item.slug}`)
+                  ? "index, follow"
+                  : "noindex, follow",
+              },
+              { property: "og:title", content: data.item.title },
+              { property: "og:description", content: data.item.description },
+              { property: "og:type", content: data.kind === "publication" ? "article" : "website" },
+              { property: "og:image", content: "https://kovagpt.com/og/home.jpg" },
+            ],
+            links: [
+              {
+                rel: "canonical",
+                href: `https://kovagpt.com/${data.item.section}/${data.item.slug}`,
+              },
+            ],
+          }
+        : {},
   component: Article,
 });
 function Article() {
   const data = Route.useLoaderData();
+  if (data.kind === "review") return <ReviewWorkspace key={data.item.slug} page={data.item} />;
   if (data.kind === "detail") return <PublicDetailPageView item={data.item} />;
   const item = data.item;
   return (
@@ -84,7 +112,7 @@ function Article() {
       title={item.title}
       summary={item.description}
     >
-      {item.body.map((body, index) => (
+      {item.body.map((body: string, index: number) => (
         <section key={body} className="rounded-2xl border bg-background p-6">
           <h2 className="font-semibold">{index ? "What this means" : "Overview"}</h2>
           <p className="mt-3 leading-7 text-muted-foreground">{body}</p>

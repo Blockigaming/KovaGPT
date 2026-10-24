@@ -7,7 +7,8 @@ export const BILLING_PLANS = Object.freeze({
     lookupKey: "plus_monthly",
     livePriceId: "price_1UAzhHAEZlsb6DBYWw2oUCeO",
     tier: "plus",
-    trialPeriodDays: 30,
+    // Existing Stripe trials remain untouched. New Checkout never issues one.
+    trialPeriodDays: 0,
   },
   pro_monthly: {
     lookupKey: "pro_monthly",

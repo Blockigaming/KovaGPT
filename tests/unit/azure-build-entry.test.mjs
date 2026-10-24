@@ -10,7 +10,7 @@ test("Azure build explicitly selects Node and retains the normal build gates", (
   for (const name of ["build", "build:dev"]) {
     assert.match(
       pkg.scripts[name],
-      /node --max-old-space-size=3072 node_modules\/vite\/bin\/vite\.js build/u,
+      /node --max-old-space-size=5120 node_modules\/vite\/bin\/vite\.js build/u,
     );
     assert.match(
       pkg.scripts[name],

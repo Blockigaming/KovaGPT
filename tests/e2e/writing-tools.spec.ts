@@ -172,7 +172,7 @@ test("unknown writing tool uses the real not-found screen without horizontal ove
   page,
 }) => {
   await page.goto("/writing/not-a-real-tool");
-  await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This page isn’t available" })).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );

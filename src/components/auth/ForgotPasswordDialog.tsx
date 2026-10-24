@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,21 +17,50 @@ import { browserKovaAuthEnabled, kovaPublicAuthJson } from "@/lib/kova-auth-brow
 export function ForgotPasswordDialog({
   open,
   onOpenChange,
+  initialEmail = "",
 }: {
   open: boolean;
+  initialEmail?: string;
   onOpenChange: (v: boolean) => void;
 }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const operationRef = useRef(0);
+  const submittingRef = useRef(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  const reset = useCallback(() => {
+    operationRef.current += 1;
+    submittingRef.current = false;
+    setEmail(initialEmail);
+    setSent(false);
+    setLoading(false);
+  }, [initialEmail]);
+
+  useEffect(() => {
+    reset();
+    return () => {
+      operationRef.current += 1;
+    };
+  }, [open, reset]);
+
+  const close = () => {
+    reset();
+    onOpenChange(false);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     const normalizedEmail = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       toast.error("Please enter a valid email address.");
       return;
     }
+    const operation = ++operationRef.current;
+    submittingRef.current = true;
     setLoading(true);
     try {
       if (browserKovaAuthEnabled()) {
@@ -45,30 +74,45 @@ export function ForgotPasswordDialog({
         });
         if (error) throw error;
       }
+      if (operationRef.current !== operation) return;
       setSent(true);
-      toast.success("Reset link sent. Check your inbox & spam folder.");
+      toast.success("If an account exists for this email, you’ll receive recovery instructions.");
     } catch (err) {
+      if (operationRef.current !== operation) return;
       console.error("[KovaAuth] Password reset request failed", {
         error: err instanceof Error ? err.name : "unknown_error",
       });
       toast.error("A reset link could not be requested. Please try again.");
     } finally {
-      setLoading(false);
+      if (operationRef.current === operation) {
+        submittingRef.current = false;
+        setLoading(false);
+      }
     }
   };
 
   return (
     <Dialog
       open={open}
-      onOpenChange={(v) => {
-        onOpenChange(v);
-        if (!v) {
-          setSent(false);
-          setEmail("");
-        }
+      onOpenChange={(value) => {
+        if (value) onOpenChange(true);
+        else close();
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onOpenAutoFocus={(event) => {
+          returnFocusRef.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          event.preventDefault();
+          emailRef.current?.focus();
+        }}
+        onCloseAutoFocus={(event) => {
+          if (!returnFocusRef.current?.isConnected) return;
+          event.preventDefault();
+          returnFocusRef.current.focus({ preventScroll: true });
+        }}
+      >
         <DialogHeader className="text-center">
           <div className="flex justify-center mb-3">
             <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center">
@@ -78,8 +122,8 @@ export function ForgotPasswordDialog({
           <DialogTitle className="text-center text-xl">Reset your password</DialogTitle>
           <DialogDescription className="text-center">
             {sent
-              ? "We sent a secure reset link to your email. Open it on this device to set a new password."
-              : "Enter the email you used to sign up and we'll send you a reset link."}
+              ? "If an account exists for this email, you’ll receive recovery instructions. Open any received link on this device."
+              : "Enter your account email to request recovery instructions."}
           </DialogDescription>
         </DialogHeader>
 
@@ -94,13 +138,16 @@ export function ForgotPasswordDialog({
                 </p>
               </div>
             </div>
-            <Button className="w-full" onClick={() => onOpenChange(false)}>
+            <Button className="w-full" onClick={close}>
               Done
             </Button>
             <button
               type="button"
               className="w-full text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => setSent(false)}
+              onClick={() => {
+                reset();
+                window.requestAnimationFrame(() => emailRef.current?.focus());
+              }}
             >
               Use a different email
             </button>
@@ -110,6 +157,7 @@ export function ForgotPasswordDialog({
             <div className="space-y-1.5">
               <Label htmlFor="fp-email">Email</Label>
               <Input
+                ref={emailRef}
                 id="fp-email"
                 type="email"
                 autoComplete="email"
@@ -124,8 +172,11 @@ export function ForgotPasswordDialog({
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Send reset link
             </Button>
+            <Button type="button" variant="ghost" className="w-full" onClick={close}>
+              Cancel
+            </Button>
             <p className="text-[11px] text-center text-muted-foreground">
-              If an account exists for that email, you'll get the link in a minute.
+              If an account exists for this email, you’ll receive recovery instructions.
             </p>
           </form>
         )}

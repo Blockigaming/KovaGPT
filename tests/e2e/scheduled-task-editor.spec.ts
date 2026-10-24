@@ -37,6 +37,7 @@ test.beforeAll(async () => {
       loader: "tsx",
     },
     bundle: true,
+    loader: { ".css": "empty" },
     write: false,
     format: "iife",
     platform: "browser",
@@ -89,7 +90,7 @@ test("Tasks retries the exact captured mutation and pins the rendered account", 
 }) => {
   await mount(page);
   await page.getByLabel("Run this prompt in the background", { exact: false }).check();
-  await page.getByRole("button", { name: "Schedule task", exact: true }).click();
+  await page.getByRole("button", { name: "Save schedule", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Response interrupted");
   await expect(page.getByLabel("Title", { exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Retry the same request" }).click();

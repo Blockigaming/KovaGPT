@@ -204,7 +204,7 @@ export const DAILY_CHAT_LIMIT_BY_TIER: Record<Tier, number> = {
 };
 
 export const DAILY_UPLOAD_LIMIT_BY_TIER: Record<Tier, number> = {
-  free: 3,
+  free: 2,
   plus: 50,
   pro: 200,
 };

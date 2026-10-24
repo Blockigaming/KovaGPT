@@ -110,6 +110,7 @@ test("Project deletion is durable, owner-only, lease-fenced, and Storage-first",
 test("Project and account routes keep incomplete cleanup visible and retryable", () => {
   const projectsFunctions = read("src/lib/projects.functions.ts");
   const account = read("src/routes/api/account.ts");
+  const finalizer = read("src/lib/account-deletion-finalizer.server.ts");
   const projectsRoute = read("src/routes/projects.tsx");
   const detailRoute = read("src/routes/projects.$projectId.tsx");
   const projectFilesRoute = read("src/routes/api/project-files.ts");
@@ -122,12 +123,17 @@ test("Project and account routes keep incomplete cleanup visible and retryable",
   assert.match(deleteFunction, /projectDeletionPublicMessage/);
   assert.doesNotMatch(deleteFunction, /\.from\("projects"\)\.delete/);
 
-  const cleanupIndex = account.indexOf("deleteOwnedProjectsBeforeAccountDeletion");
-  const authDeleteIndex = account.indexOf("auth.admin.deleteUser");
+  assert.match(account, /makeAccountLifecycleHandlers\(\{ authenticate: requireUser \}\)/);
+  assert.doesNotMatch(
+    account,
+    /deleteOwnedProjectsBeforeAccountDeletion|deleteUser|cleanupOwnedStorage/,
+  );
+  const cleanupIndex = finalizer.indexOf("deleteOwnedProjectsBeforeAccountDeletion");
+  const authDeleteIndex = finalizer.indexOf("auth.admin.deleteUser");
   assert.ok(cleanupIndex >= 0 && authDeleteIndex > cleanupIndex);
   assert.ok(
     cleanupIndex <
-      account.indexOf("storageCleanup = await cleanupOwnedStorageBeforeAccountDeletion"),
+      finalizer.indexOf("storageCleanup = await cleanupOwnedStorageBeforeAccountDeletion"),
   );
 
   const uiDeleteIndex = projectsRoute.indexOf("await fnDelete({ data: { id: p.id } })");

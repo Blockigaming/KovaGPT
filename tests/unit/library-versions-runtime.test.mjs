@@ -5,6 +5,8 @@ import ts from "typescript";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as bounded from "../../src/lib/bounded-json.server.mjs";
+import { loadUiModule } from "../helpers/ui-state-harness.mjs";
+const detail = loadUiModule("src/lib/library-detail.ts", {});
 const owner = "11111111-1111-4111-8111-111111111111",
   id = "22222222-2222-4222-8222-222222222222",
   generation = "33333333-3333-4333-8333-333333333333";
@@ -169,6 +171,7 @@ test("browser listing keeps full bodies out of cached page items and rejects sta
         },
       },
       "./endpoint-reliability.mjs": reliability,
+      "./library-detail": detail,
     },
     async (url, init) => {
       calls.push({ url, init });

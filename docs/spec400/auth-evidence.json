@@ -1,0 +1,29 @@
+{
+  "items": [349, 350, 352, 353, 354, 355, 356, 357],
+  "checks": "7 focused tests passed; scoped ESLint passed",
+  "changes": [
+    "Exact login/signup headings and 400px full-page panel",
+    "Password visibility preserves field focus and exposes state",
+    "Recovery receives entered email and uses account-safe confirmation without promised delivery time"
+  ],
+  "preserved": [
+    "Configured identity providers and existing two-stage route",
+    "Backend verification, MFA, reset and redirect contracts",
+    "Existing terms/privacy destinations"
+  ],
+  "limitations": [
+    "No live login/recovery submission",
+    "Session expiration and full redirect lifecycle still require bounded review",
+    "Verification email cooldown remains existing contract; no invented resend availability"
+  ],
+  "rendered": {
+    "source": "638a162",
+    "passed": [
+      "Correct login heading",
+      "Show/Hide changes password type and returns focus",
+      "Forgot-password email prefill and cancel focus"
+    ],
+    "found": "Legacy CSS rendered440px despite400px utility; authoritative selector correction saved in f7953b2, awaiting successor render",
+    "brand": "Original9cc kova-logo.png retained byte-identically (SHA256566cd64480ac25307146106efc073064f2c2161935babb9625a370469dc24ae2)"
+  }
+}

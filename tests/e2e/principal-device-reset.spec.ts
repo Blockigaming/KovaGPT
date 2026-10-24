@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openCurrentSettings, chooseSettingsSection } from "./current-ui";
+import { coreFixture } from "./core-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 
 const owner = "22222222-2222-4222-8222-222222222222";
@@ -64,22 +66,76 @@ for (const path of ["/", "/apps"]) {
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await installAuthenticatedFixture(page);
+    await coreFixture(page);
     await page.goto(path);
-    await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+    await openCurrentSettings(page);
     await seedImageHistory(page);
-    await page.getByRole("tab", { name: "Storage", exact: true }).click();
+    await chooseSettingsSection(page, "Storage");
     await page
       .getByRole("button", { name: "Reset this profile's local data", exact: true })
       .click();
-    await expect(
-      page.getByText("This profile's local browser data was reset.", { exact: true }),
-    ).toBeVisible();
+    const confirmation = page.getByRole("alertdialog", {
+      name: "Reset this profile's local data?",
+    });
+    await confirmation.getByRole("button", { name: "Reset local data", exact: true }).click();
+    await expect(confirmation).toBeHidden();
+    await expect.poll(() => imageOwners(page)).toEqual([otherOwner]);
     expect(await imageOwners(page)).toEqual([otherOwner]);
   });
 }
 
-test("successful account deletion also removes IndexedDB image history from Chat", async ({
+test("scheduling and recovering account deletion preserve IndexedDB image history", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await installAuthenticatedFixture(page);
+  const active = { state: "active", scheduledAt: null, recoverUntil: null };
+  const scheduled = {
+    state: "scheduled",
+    scheduledAt: "2026-10-20T12:00:00.000Z",
+    recoverUntil: "2026-11-19T12:00:00.000Z",
+  };
+  const mutations: string[] = [];
+  await page.route("**/api/account", async (route) => {
+    const request = route.request();
+    expect(request.headers()["x-kova-expected-user"]).toBe(owner);
+    if (request.method() === "GET") {
+      await route.fulfill({ json: active });
+      return;
+    }
+    mutations.push(request.method());
+    if (request.method() === "DELETE") {
+      expect(request.postDataJSON()).toEqual({ confirmation: "DELETE" });
+      await route.fulfill({ status: 202, json: scheduled });
+      return;
+    }
+    expect(request.method()).toBe("PATCH");
+    expect(request.postDataJSON()).toEqual({ action: "recover" });
+    await route.fulfill({ json: active });
+  });
+  await page.goto("/");
+  await openCurrentSettings(page);
+  await seedImageHistory(page);
+  await chooseSettingsSection(page, "Data control");
+  await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Schedule account deletion?" });
+  await expect(confirmation).toContainText("recoverable for 30 days");
+  await confirmation.getByRole("textbox", { name: "Type DELETE to confirm" }).fill("DELETE");
+  await confirmation.getByRole("button", { name: "Schedule deletion", exact: true }).click();
+  await expect(confirmation).toBeHidden();
+  await expect(page.getByRole("button", { name: "Recover account", exact: true })).toBeVisible();
+  expect(await imageOwners(page)).toEqual([owner, otherOwner]);
+
+  await page.getByRole("button", { name: "Recover account", exact: true }).click();
+  const recovery = page.getByRole("alertdialog", { name: "Recover your account?" });
+  await recovery.getByRole("button", { name: "Recover account", exact: true }).click();
+  await expect(recovery).toBeHidden();
+  await expect(page.getByRole("button", { name: "Schedule deletion", exact: true })).toBeVisible();
+  expect(mutations).toEqual(["DELETE", "PATCH"]);
+  expect(await imageOwners(page)).toEqual([owner, otherOwner]);
+});
+
+test("only verified final account deletion removes IndexedDB image history from Chat", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -87,20 +143,20 @@ test("successful account deletion also removes IndexedDB image history from Chat
   let deletionRequests = 0;
   await page.route("**/api/account", async (route) => {
     if (route.request().method() === "GET") {
-      await route.fulfill({ json: { state: "active" } });
+      await route.fulfill({ json: { state: "active", scheduledAt: null, recoverUntil: null } });
       return;
     }
     expect(route.request().method()).toBe("DELETE");
     expect(route.request().postDataJSON()).toEqual({ confirmation: "DELETE" });
     deletionRequests += 1;
-    await route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' });
+    await route.fulfill({ status: 204 });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+  await openCurrentSettings(page);
   await seedImageHistory(page);
-  await page.getByRole("tab", { name: "Data control", exact: true }).click();
-  await page.getByRole("button", { name: "Delete account", exact: true }).click();
-  const confirmation = page.getByRole("alertdialog", { name: "Delete your account permanently?" });
+  await chooseSettingsSection(page, "Data control");
+  await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Schedule account deletion?" });
   await confirmation.getByRole("textbox", { name: "Type DELETE to confirm" }).fill("DELETE");
   // Observe the same origin's durable database from a page without application
   // navigation. Signing out destroys the deleting page's evaluation context.
@@ -113,7 +169,7 @@ test("successful account deletion also removes IndexedDB image history from Chat
   );
   await storagePage.goto(new URL("/__device-storage-probe", page.url()).href);
   try {
-    await confirmation.getByRole("button", { name: "Delete account", exact: true }).click();
+    await confirmation.getByRole("button", { name: "Schedule deletion", exact: true }).click();
     await expect.poll(() => imageOwners(storagePage)).toEqual([otherOwner]);
     expect(deletionRequests).toBe(1);
     await expect(confirmation).toBeHidden();

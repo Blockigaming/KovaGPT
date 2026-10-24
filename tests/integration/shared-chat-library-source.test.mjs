@@ -38,8 +38,17 @@ test("Share chat labels its email field and points recipients to Library", () =>
 
   assert.match(source, /htmlFor=\{recipientEmailId\}/u);
   assert.match(source, /id=\{recipientEmailId\}/u);
-  assert.match(source, /aria-describedby=\{recipientHelpId\}/u);
-  assert.match(source, /open the snapshot\s+from Library/u);
+  assert.ok(
+    source.includes('aria-describedby={`${recipientHelpId}${error ? ` ${errorId}` : ""}`}'),
+  );
+  assert.match(source, /id=\{recipientHelpId\}/u);
+  assert.match(source, /aria-invalid=\{Boolean\(error\)\}/u);
+  assert.match(source, /id=\{errorId\} role="alert"/u);
+  assert.match(
+    source,
+    /recipient needs a KovaGPT account using this\s+address to open the private snapshot from Library/u,
+  );
+  assert.match(source, /You can manage or revoke this snapshot in Library/u);
 });
 
 test("shared-chat reads validate snapshots and revocation cannot report a zero-row success", () => {

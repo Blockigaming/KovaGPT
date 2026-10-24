@@ -1,0 +1,36 @@
+{
+  "source": "90026c3",
+  "scope": "Bounded existing-data UI seams after the43-row classification; native evidence is attributed to exact prior builds, not universal acceptance.",
+  "requirements": [179, 180, 249, 274, 280, 282, 286, 288, 289, 290, 301, 313],
+  "checks": {
+    "focused_source": {
+      "passed": 530,
+      "failed": 0,
+      "skipped": 1,
+      "skip": "Exact-package dependency fixture check resolved in158 passing package checks",
+      "skipResolvedByExactPackage": true
+    },
+    "pdf_no_eval": {
+      "passed": 23,
+      "note": "Installed PDF.js6 main/worker have no eval or Function-constructor calls; obsolete unsupported option removed."
+    },
+    "typecheck": "Passed with strict shell exit handling at90026c3. Earlier pass claim was incorrect due to a trailing command masking the typecheck error.",
+    "lint": "Scoped PDF files pass; prior Settings fast-refresh warning remains.",
+    "build": "c3c46e6 strict build passed.90026c3 final integration build pending."
+  },
+  "limits": [
+    "Unsupported Office original-format preview",
+    "Unavailable historical extraction/project metadata",
+    "Unknown Google dependencies outside active exact Gmail grants",
+    "Device-local time format only",
+    "No live provider/production mutation acceptance"
+  ],
+  "independent_native_queue": "Help route-draft preservation and exact Library filename casing. Broader unrendered consumers and contract limits remain explicit.",
+  "nativeEvidence": [
+    "corrected-core-762df97.json",
+    "corrected-core-e269c16.json",
+    "corrected-core-db35232.json",
+    "corrected-core-c3c46e6.json"
+  ],
+  "nativeScope": "PDF original canvas, valid/invalid range,restore/remove; task latest-run known/error/empty; selected downloads review; Library rename; Google known/error/partial-empty and dismissal; historical availability; Usage/task time-format. Each retains its exact receipt limitations."
+}

@@ -18,6 +18,7 @@ import {
 } from "@/lib/ai/provider-transport.server.mjs";
 
 export type JsonObject = Record<string, unknown>;
+export type GenerationAcceptanceScope = { ownerId: string; operationId: string; chatId: string };
 
 export type ProviderCapability =
   | "chat"
@@ -159,11 +160,18 @@ function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefi
 }
 
 function providerTarget(capability?: ProviderCapability): ProviderTarget {
-  // Explicit text cutover; image and embedding provider settings stay independent.
+  // Explicit capability cutovers; embedding routing remains independent.
+  const imageCapability = capability === "image_generation";
   const textCapability = capability !== "image_generation" && capability !== "embeddings";
-  const selection = textCapability ? (env("KOVA_TEXT_PROVIDER") ?? "auto") : "auto";
+  const selection = imageCapability
+    ? (env("KOVA_IMAGE_PROVIDER") ?? "auto")
+    : textCapability
+      ? (env("KOVA_TEXT_PROVIDER") ?? "auto")
+      : "auto";
   if (!["auto", "openai", "azure_openai"].includes(selection)) {
-    throw new Error("invalid_text_provider_selection");
+    throw new Error(
+      imageCapability ? "invalid_image_provider_selection" : "invalid_text_provider_selection",
+    );
   }
   if (selection === "openai") {
     return {
@@ -200,7 +208,10 @@ function providerTarget(capability?: ProviderCapability): ProviderTarget {
   }
 
   // An explicit Azure choice must never fall through to paid OpenAI traffic.
-  if (selection === "azure_openai") throw new Error("azure_text_endpoint_required");
+  if (selection === "azure_openai")
+    throw new Error(
+      imageCapability ? "azure_image_endpoint_required" : "azure_text_endpoint_required",
+    );
 
   return {
     provider: "openai",
@@ -287,15 +298,15 @@ function fetchManagedIdentityTokenForTarget(target: ProviderTarget, signal?: Abo
     : fetchCognitiveServicesManagedIdentityToken(signal);
 }
 
-export function getAiProviderConfig(): ProviderConfig {
-  const target = providerTarget();
+export function getAiProviderConfig(capability?: ProviderCapability): ProviderConfig {
+  const target = providerTarget(capability);
   return {
     provider: target.provider,
     baseUrl: target.baseUrl,
     chatModel: modelForPolicy("normal").id,
     fastModel: modelForPolicy("instant").id,
     deepModel: modelForPolicy("deep").id,
-    imageModel: env("KOVA_IMAGE_MODEL") ?? "gpt-image-1",
+    imageModel: env("KOVA_IMAGE_MODEL") ?? "gpt-image-2.5-flare",
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? "text-embedding-3-small",
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
@@ -303,7 +314,9 @@ export function getAiProviderConfig(): ProviderConfig {
   };
 }
 
-export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
+export function validateAiProviderConfig(
+  capability?: ProviderCapability,
+): ProviderErrorEnvelope | null {
   let generationEnabled: boolean;
   try {
     generationEnabled = getAiRuntimeConfig().generationEnabled;
@@ -325,7 +338,7 @@ export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
   }
 
   try {
-    if (providerTarget().auth !== "missing") return null;
+    if (providerTarget(capability).auth !== "missing") return null;
   } catch {
     // Invalid endpoints fail closed without exposing their value.
   }
@@ -339,7 +352,7 @@ export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
 }
 
 export function providerCapabilities(): ProviderCapability[] {
-  return getAiProviderConfig().capabilities;
+  return parseCapabilities(env("KOVA_AI_CAPABILITIES"));
 }
 
 export function supportsProviderCapability(capability: ProviderCapability): boolean {
@@ -348,7 +361,7 @@ export function supportsProviderCapability(capability: ProviderCapability): bool
 
 export function providerCapabilityConfigured(capability: ProviderCapability): boolean {
   try {
-    if (providerTarget().auth === "missing" || !supportsProviderCapability(capability)) {
+    if (!supportsProviderCapability(capability)) {
       return false;
     }
 
@@ -367,7 +380,7 @@ export function providerCapabilityConfigured(capability: ProviderCapability): bo
 export function providerUnavailableEnvelope(
   capability?: ProviderCapability,
 ): ProviderErrorEnvelope | null {
-  const configError = validateAiProviderConfig();
+  const configError = validateAiProviderConfig(capability);
   if (configError) return configError;
   if (capability && !supportsProviderCapability(capability)) {
     return {
@@ -526,16 +539,28 @@ async function providerFetch(
   body: JsonObject,
   init?: RequestInit,
   images?: { image: ProviderImageInput; mask?: ProviderImageInput },
+  acceptanceScope?: GenerationAcceptanceScope,
 ): Promise<Response> {
+  // A qualification host never executes a provider call, even if another
+  // ingress reaches this seam or generation configuration was cached earlier.
+  const captureMode = env("KOVA_REQUEST_CAPTURE_ENABLED");
+  if (captureMode && captureMode !== "false") {
+    throw new AiProviderError({
+      error: "Provider execution is disabled during request capture.",
+      code: "provider_unavailable",
+      status: 503,
+      retryable: false,
+    });
+  }
   const unavailable = providerUnavailableEnvelope(capability);
   if (unavailable) throw new AiProviderError(unavailable);
 
   const target = providerTarget(capability);
-  const config = getAiProviderConfig();
-  const requestBody = withProviderModel(body, capability);
+  const config = getAiProviderConfig(capability);
+  let requestBody = withProviderModel(body, capability);
   const deployment = typeof requestBody.model === "string" ? requestBody.model : undefined;
   const startedAt = Date.now();
-  const deadline = createRequestDeadline(
+  let deadline = createRequestDeadline(
     init?.signal ?? undefined,
     config.timeoutMs,
     "provider_request",
@@ -551,6 +576,28 @@ async function providerFetch(
   });
 
   try {
+    const acceptanceMode = env("KOVA_GENERATION_ACCEPTANCE_ENABLED");
+    if (acceptanceMode && acceptanceMode !== "false") {
+      const { generationAcceptance } = await import("@/lib/generation-acceptance-runtime.server");
+      if (!acceptanceScope) throw new Error("generation_acceptance_denied");
+      const admission = await generationAcceptance.run(acceptanceScope, () =>
+        generationAcceptance.openAI({
+          provider: target.provider,
+          path,
+          body: requestBody,
+          signal: deadline.signal,
+        }),
+      );
+      if (!admission || admission.expiresAt <= Date.now())
+        throw new Error("generation_acceptance_denied");
+      requestBody = admission.body;
+      deadline.cleanup();
+      deadline = createRequestDeadline(
+        init?.signal ?? undefined,
+        Math.min(config.timeoutMs, admission.expiresAt - Date.now()),
+        "provider_request",
+      );
+    }
     const headers = await providerHeaders(target, deadline.signal);
     const requestHeaders = new Headers({
       ...Object.fromEntries(new Headers(init?.headers).entries()),
@@ -654,13 +701,19 @@ export async function developerResponses(body: JsonObject, init?: RequestInit): 
   return providerFetch("/responses", body.stream === true ? "streaming" : "chat", body, init);
 }
 
-export async function chatCompletions(body: JsonObject, init?: RequestInit): Promise<Response> {
+export async function chatCompletions(
+  body: JsonObject,
+  init?: RequestInit,
+  acceptanceScope?: GenerationAcceptanceScope,
+): Promise<Response> {
   const stream = body.stream === true;
   const response = await providerFetch(
     "/responses",
     stream ? "streaming" : "chat",
     toResponsesRequest(body),
     init,
+    undefined,
+    acceptanceScope,
   );
   if (!response.ok) return response;
   return stream ? responsesStreamToChatStream(response) : responsesJsonToChatJson(response);
@@ -671,6 +724,11 @@ export async function streamingChatCompletions(
   init?: RequestInit,
 ): Promise<Response> {
   return chatCompletions({ ...body, stream: true }, init);
+}
+
+/** Pure: the same conversion and final model mapping used by providerFetch. */
+export function prepareChatResponsesRequest(body: JsonObject): JsonObject {
+  return withProviderModel(toResponsesRequest(body), body.stream === true ? "streaming" : "chat");
 }
 
 function toResponsesRequest(body: JsonObject): JsonObject {
@@ -715,20 +773,48 @@ function toResponsesRequest(body: JsonObject): JsonObject {
   };
   const serverOutputCeiling = maximumServerOutputForModel(String(body.model ?? ""));
   if (instructions.length) request.instructions = instructions.join("\n\n");
-  if (Array.isArray(body.tools)) request.tools = body.tools;
-  if (body.tool_choice !== undefined) request.tool_choice = body.tool_choice;
+  if (Array.isArray(body.tools)) request.tools = body.tools.map(normalizeResponsesTool);
+  if (body.tool_choice !== undefined)
+    request.tool_choice = normalizeResponsesToolChoice(body.tool_choice);
   if (typeof body.max_tokens === "number")
     request.max_output_tokens = Math.min(body.max_tokens, serverOutputCeiling);
   if (typeof body.max_completion_tokens === "number")
     request.max_output_tokens = Math.min(body.max_completion_tokens, serverOutputCeiling);
   if (request.max_output_tokens === undefined) request.max_output_tokens = serverOutputCeiling;
-  request.reasoning =
-    body.reasoning && typeof body.reasoning === "object"
-      ? body.reasoning
-      : { effort: "low", summary: "auto" };
+  const configuredModel = (["instant", "normal", "thinking", "deep", "utility"] as const)
+    .map(modelForPolicy)
+    .find((model) => model.id === body.model);
+  if (configuredModel?.reasoning !== false)
+    request.reasoning =
+      body.reasoning && typeof body.reasoning === "object"
+        ? body.reasoning
+        : { effort: "low", summary: "auto" };
   request.store = false;
   if (providerTarget("chat").provider === "openai") request.service_tier = "default";
   return request;
+}
+
+function normalizeResponsesTool(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const tool = value as Record<string, unknown>;
+  if (tool.type !== "function" || !tool.function || typeof tool.function !== "object") return value;
+  const fn = tool.function as Record<string, unknown>;
+  return {
+    type: "function",
+    name: fn.name,
+    ...(fn.description !== undefined ? { description: fn.description } : {}),
+    parameters: fn.parameters ?? null,
+    // Preserve the existing Chat Completions schemas' non-strict default.
+    strict: fn.strict ?? false,
+  };
+}
+
+function normalizeResponsesToolChoice(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const choice = value as Record<string, unknown>;
+  if (choice.type !== "function" || !choice.function || typeof choice.function !== "object")
+    return value;
+  return { type: "function", name: (choice.function as Record<string, unknown>).name };
 }
 
 function normalizeResponsesContent(message: Record<string, unknown>): unknown {
@@ -780,9 +866,27 @@ function responseOutputToMessage(value: JsonObject): JsonObject {
 async function responsesJsonToChatJson(response: Response): Promise<Response> {
   let value: JsonObject;
   try {
-    value = (await response.json()) as JsonObject;
+    // Bound native metadata before conversion; limiting only the translated
+    // chat JSON lets ignored provider fields bypass the tool-hop response cap.
+    value = (await (await bufferSuccessfulProviderResponse(response)).json()) as JsonObject;
   } catch (error) {
     throw normalizeProviderError(error);
+  }
+  // An HTTP-200 Responses body may still be failed, cancelled or incomplete.
+  // Tool hops must never turn that partial result into a successful chat reply.
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    value.error ||
+    value.status !== "completed"
+  ) {
+    throw new AiProviderError({
+      error: "KovaGPT couldn't complete that response. Please try again.",
+      code: "provider_bad_response",
+      retryable: true,
+      status: 502,
+    });
   }
   const message = responseOutputToMessage(value);
   const usage = value.usage as JsonObject | undefined;

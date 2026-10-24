@@ -4,6 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 import { z } from "zod";
+import * as uploadQuota from "../../src/lib/upload-quota.server.mjs";
 import * as idempotency from "../../src/lib/library-save-idempotency.mjs";
 import { readResponseBytesBounded } from "../../src/lib/endpoint-reliability.mjs";
 
@@ -21,6 +22,14 @@ function load(file, artifacts = {}) {
     };
     return builder;
   };
+  const supabaseAdmin = {
+    rpc(name, input) {
+      assert.equal(name, "try_reserve_daily_uploads");
+      assert.equal(input._limit, 2);
+      assert.match(input._fingerprints[0], /^[0-9a-f]{64}$/);
+      return { abortSignal: async () => ({ data: true, error: null }) };
+    },
+  };
   const dependencies = {
     zod: { z },
     "@tanstack/react-start": { createServerFn },
@@ -30,7 +39,10 @@ function load(file, artifacts = {}) {
     "@/lib/safe-image-url": { MAX_SAFE_IMAGE_DATA_URL_CHARS: 12_000_000 },
     "@/lib/library-save-idempotency.mjs": idempotency,
     "@/lib/endpoint-reliability.mjs": { readResponseBytesBounded },
-    "@/integrations/supabase/client.server": { supabaseAdmin: {} },
+    "@/integrations/supabase/client.server": { supabaseAdmin },
+    "@/lib/upload-quota.server.mjs": uploadQuota,
+    "@/lib/billing-entitlement.server": { resolveEffectiveBillingTier: async () => "free" },
+    "@/lib/modes": { DAILY_UPLOAD_LIMIT_BY_TIER: { free: 2 } },
     "@/lib/runtime-env.server": { runtimeEnv: () => "https://fixture.supabase.co" },
     "@/lib/library-image-storage.server.mjs": artifacts,
     "@/lib/account-storage-artifacts.server": {

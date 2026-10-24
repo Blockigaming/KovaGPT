@@ -21,7 +21,7 @@ test("nested project URLs keep their leaf content after hydration", async ({ pag
     await expect(
       page.getByRole("heading", { name: "Sign in required", exact: true }),
     ).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Projects", exact: true })).toHaveCount(0);
+    await expect(page.locator("#projects-title")).toHaveCount(0);
   }
 });
 
@@ -33,9 +33,9 @@ test("nested assistant URLs keep their leaf not-found state after hydration", as
 
   await expect(page).toHaveURL(path);
   await expect(
-    page.getByRole("heading", { name: "We couldn't find that page", exact: true }),
+    page.getByRole("main").getByRole("heading", { name: "This page isn’t available", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "KovaGPT Assistants", exact: true })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "KovaGPT Assistants", exact: true }),
+  ).toHaveCount(0);
 });

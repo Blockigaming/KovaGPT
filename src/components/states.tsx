@@ -45,11 +45,23 @@ export function SkeletonCard() {
   );
 }
 
-export function SkeletonGrid({ count = 6, minWidth = 240 }: { count?: number; minWidth?: number }) {
+export function SkeletonGrid({
+  count = 6,
+  minWidth = 240,
+  className = "",
+}: {
+  count?: number;
+  minWidth?: number | null;
+  className?: string;
+}) {
   return (
     <div
-      className="grid gap-4"
-      style={{ gridTemplateColumns: `repeat(auto-fill,minmax(${minWidth}px,1fr))` }}
+      className={`grid gap-4 ${className}`}
+      style={
+        minWidth === null
+          ? undefined
+          : { gridTemplateColumns: `repeat(auto-fill,minmax(${minWidth}px,1fr))` }
+      }
       aria-hidden
     >
       {Array.from({ length: count }).map((_, i) => (
@@ -59,13 +71,21 @@ export function SkeletonGrid({ count = 6, minWidth = 240 }: { count?: number; mi
   );
 }
 
-export function SkeletonList({ rows = 6 }: { rows?: number }) {
+export function SkeletonList({
+  rows = 6,
+  className = "",
+  rowClassName = "",
+}: {
+  rows?: number;
+  className?: string;
+  rowClassName?: string;
+}) {
   return (
-    <div className="space-y-3" aria-hidden>
+    <div className={`space-y-3 ${className}`} aria-hidden>
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="rounded-lg border border-border bg-card p-3 flex items-center gap-3"
+          className={`rounded-lg border border-border bg-card p-3 flex items-center gap-3 ${rowClassName}`}
         >
           <div className="kova-skeleton h-9 w-9 overflow-hidden rounded-md bg-muted" />
           <div className="flex-1 space-y-2">
@@ -172,7 +192,7 @@ export class AppErrorBoundary extends Component<
               <AlertCircle className="h-5 w-5" />
             </div>
             <p className="kova-state-eyebrow">KovaGPT workspace</p>
-            <h1 id="app-error-title">We couldn't load this workspace</h1>
+            <h1 id="app-error-title">This page couldn’t load</h1>
             <p id="app-error-description">
               KovaGPT encountered an unexpected problem. Reload the workspace or return home, then
               try again.

@@ -140,7 +140,9 @@ test("image lightbox delegates modal lifecycle and restores intentional focus", 
     assert.match(images, new RegExp(token));
   }
   assert.doesNotMatch(images, /window\.addEventListener\("keydown", onKey\)/);
-  assert.doesNotMatch(images, /aria-modal="true"/);
+  // Modal detection for result focus must not be mistaken for hand-written modal JSX.
+  assert.doesNotMatch(images, /<[^>]+\baria-modal="true"/);
+  assert.match(images, /<Dialog\s+open=\{Boolean\(lightbox\)\}/);
   assert.match(images, /<article\s+key=\{h\.id\}/);
   assert.doesNotMatch(images, /<button\s+key=\{h\.id\}/);
   assert.match(images, /group-focus-within:opacity-100/);

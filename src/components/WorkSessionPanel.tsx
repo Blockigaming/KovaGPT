@@ -100,7 +100,7 @@ export function WorkSessionPanel({
       /* Retain local editing. */
     }
   }
-  const button = "min-h-10 rounded-lg border px-3 py-2 text-sm disabled:opacity-40";
+  const button = "min-h-11 rounded-lg border px-3 py-2 text-sm disabled:opacity-40";
   return (
     <section className="my-4 rounded-2xl border bg-card p-4" aria-label="Planning sessions">
       <h2 className="text-lg font-semibold">Planning sessions</h2>
@@ -114,7 +114,7 @@ export function WorkSessionPanel({
         </p>
       )}
       <form
-        className="mt-3 flex flex-wrap gap-2"
+        className="mt-3 flex flex-wrap items-end gap-2"
         onSubmit={(event) => {
           event.preventDefault();
           start({ objective: newObjective, context: "", plan: [] });
@@ -126,7 +126,7 @@ export function WorkSessionPanel({
             value={newObjective}
             onChange={(event) => setNewObjective(event.target.value)}
             maxLength={4000}
-            className="mt-1 block w-full rounded-lg border bg-background p-2"
+            className="mt-1 block min-h-11 w-full rounded-lg border bg-background p-2"
           />
         </label>
         <button className={button} disabled={!newObjective.trim()}>
@@ -217,7 +217,7 @@ export function WorkSessionPanel({
               <label className="block text-sm">
                 Objective
                 <input
-                  className="mt-1 block w-full rounded-lg border bg-background p-2"
+                  className="mt-1 block min-h-11 w-full rounded-lg border bg-background p-2"
                   value={edit.objective}
                   maxLength={4000}
                   onChange={(event) => setEdit({ ...edit, objective: event.target.value })}
@@ -226,7 +226,7 @@ export function WorkSessionPanel({
               <label className="block text-sm">
                 Context
                 <textarea
-                  className="mt-1 block w-full rounded-lg border bg-background p-2"
+                  className="mt-1 block min-h-11 w-full rounded-lg border bg-background p-2"
                   value={edit.context}
                   maxLength={16000}
                   onChange={(event) => setEdit({ ...edit, context: event.target.value })}
@@ -405,13 +405,15 @@ export function WorkSessionPanel({
         </div>
       )}
       {ownerId && !edit && (!selected || revision > 0) && (
-        <WorkExecutionPanel
-          key={`${ownerId}:${generation.current}:${selected?.id ?? "new"}:${revision}`}
-          ownerId={ownerId}
-          initialObjective={selected?.objective ?? ""}
-          source="work"
-          session={selected ? { id: selected.id, revision } : null}
-        />
+        <div className="mt-4">
+          <WorkExecutionPanel
+            key={`${ownerId}:${generation.current}:${selected?.id ?? "new"}:${revision}`}
+            ownerId={ownerId}
+            initialObjective={selected?.objective ?? ""}
+            source="work"
+            session={selected ? { id: selected.id, revision } : null}
+          />
+        </div>
       )}
       {ownerId && selected && !revision && (
         <p className="mt-3 text-sm text-muted-foreground">

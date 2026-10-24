@@ -254,7 +254,7 @@ test("memory rereads the current owner after descriptor collection and cannot wr
       {
         id: other,
         temporary: false,
-        messages: Array.from({ length: 4 }, () => ({
+        messages: Array.from({ length: 16 }, () => ({
           role: "user",
           content: "original private context",
         })),
@@ -269,7 +269,7 @@ test("memory rereads the current owner after descriptor collection and cannot wr
           assert.match(path, /^\/api\/memory\?/u);
           assertOwned(init, "GET");
           changed = true;
-          return Response.json({ enabled: false });
+          return Response.json({ enabled: true, descriptor: null });
         },
       },
     ),
@@ -333,6 +333,7 @@ test("Library suffixes cannot redirect credentials into another route or bypass 
   const library = loadTs(
     "src/lib/library-items-client.ts",
     {
+      "./library-detail": loadTs("src/lib/library-detail.ts", {}, noFetch),
       "./library-original-client": { originalLibraryHeaders: noFetch },
       "./endpoint-reliability.mjs": reliability,
     },

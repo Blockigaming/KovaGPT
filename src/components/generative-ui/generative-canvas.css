@@ -1,0 +1,349 @@
+.kova-generative-canvas {
+  --canvas-radius: var(--kova-radius-panel, 20px);
+  --canvas-control-radius: var(--kova-radius-button, 12px);
+  border: 1px solid var(--border);
+  border-radius: var(--canvas-radius);
+  background: var(--background);
+  color: var(--foreground);
+  margin-block: 16px;
+  min-width: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+.kova-generative-canvas-expanded {
+  margin: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: 0;
+}
+.kova-generative-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.kova-generative-title {
+  min-width: 0;
+}
+.kova-generative-heading h3 {
+  margin: 3px 0 0;
+  font-size: 17px;
+  line-height: 1.4;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.kova-generative-eyebrow {
+  display: block;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.kova-generative-body {
+  padding: 20px;
+  min-height: 0;
+  overflow: auto;
+}
+.kova-generative-canvas-expanded .kova-generative-body {
+  flex: 1;
+}
+.kova-generative-canvas button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--canvas-control-radius);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+}
+.kova-generative-canvas button:hover:not(:disabled) {
+  background: var(--accent);
+}
+.kova-generative-canvas button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.kova-generative-canvas button:focus-visible,
+.kova-generative-canvas input:focus-visible,
+.kova-generative-canvas textarea:focus-visible,
+.kova-generative-canvas select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-generative-canvas label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--muted-foreground);
+}
+.kova-generative-canvas input,
+.kova-generative-canvas textarea,
+.kova-generative-canvas select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--canvas-control-radius);
+  padding: 10px 12px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+}
+.kova-generative-canvas input[type="date"] {
+  color-scheme: light;
+}
+.dark .kova-generative-canvas input[type="date"] {
+  color-scheme: dark;
+}
+.kova-generative-text-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kova-generative-text-editor textarea {
+  min-height: 220px;
+  resize: vertical;
+  font-size: var(--kova-reading-size, 16px);
+  line-height: 1.625;
+}
+.kova-generative-text-editor textarea.kova-generative-code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 14px;
+  line-height: 23px;
+  tab-size: 2;
+  white-space: pre;
+}
+.kova-generative-canvas-expanded .kova-generative-text-editor textarea {
+  min-height: 50dvh;
+}
+.kova-generative-date {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 360px;
+}
+.kova-generative-date p,
+.kova-generative-summary,
+.kova-generative-empty {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 20px;
+}
+.kova-generative-timeline > ol {
+  list-style: none;
+  margin: 16px 0;
+  padding: 0;
+}
+.kova-generative-timeline > ol > li {
+  display: flex;
+  gap: 12px;
+  padding-bottom: 20px;
+  position: relative;
+}
+.kova-generative-timeline > ol > li:not(:last-child)::before {
+  position: absolute;
+  content: "";
+  top: 31px;
+  bottom: 0;
+  left: 15px;
+  border-left: 1px solid var(--border);
+}
+.kova-generative-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  background: var(--background);
+}
+.kova-generative-milestone {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.kova-generative-milestone > button {
+  justify-self: start;
+}
+.kova-generative-dates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: 8px;
+}
+.kova-generative-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.kova-generative-board > section {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--canvas-radius);
+  padding: 12px;
+  background: var(--muted);
+}
+.kova-generative-board h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 22px;
+}
+.kova-generative-board h4 > span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+.kova-generative-board ol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.kova-generative-board li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--canvas-control-radius);
+  padding: 12px;
+  background: var(--background);
+}
+.kova-generative-board textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+.kova-generative-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.kova-generative-card-actions button {
+  padding-inline: 8px;
+  font-size: 12px;
+}
+.kova-generative-empty {
+  padding: 8px 0 14px;
+}
+.kova-generative-comparison {
+  border-top: 1px solid var(--border);
+  margin-top: 20px;
+  padding-top: 16px;
+}
+.kova-generative-comparison h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+.kova-generative-comparison pre {
+  margin: 0;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 20px;
+}
+.kova-generative-change {
+  border: 1px solid var(--border);
+  border-radius: var(--canvas-control-radius);
+  margin-block: 6px;
+  overflow: hidden;
+}
+.kova-generative-change > div {
+  background: var(--muted);
+}
+.kova-generative-change > div + div {
+  border-top: 1px solid var(--border);
+  background: var(--background);
+}
+.kova-generative-change > div > span {
+  display: block;
+  padding: 6px 10px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.kova-generative-change ins {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kova-generative-footer {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+}
+.kova-generative-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kova-generative-canvas button.kova-generative-apply {
+  background: var(--foreground);
+  color: var(--background);
+  border-color: var(--foreground);
+}
+.kova-generative-canvas button.kova-generative-apply:hover:not(:disabled) {
+  background: var(--foreground);
+  opacity: 0.9;
+}
+.kova-generative-footer p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+}
+@media (max-width: 600px) {
+  .kova-generative-heading {
+    padding: 14px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .kova-generative-body {
+    padding: 14px;
+  }
+  .kova-generative-footer {
+    padding: 12px 14px;
+  }
+  .kova-generative-dates {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-generative-canvas *,
+  .kova-generative-canvas *::before {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

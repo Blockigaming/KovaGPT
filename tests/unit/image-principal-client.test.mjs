@@ -97,17 +97,27 @@ test("image browser transport aborts a pending session lookup and rejects an ove
 });
 test("saving an image rejects a changed account before reading private bytes or performing storage work", async () => {
   const chain = { middleware: () => chain, validator: () => chain, handler: (fn) => fn };
+  const forbidden = [];
+  const forbid = (operation) => () => {
+    forbidden.push(operation);
+    assert.fail(`Account mismatch must precede ${operation}`);
+  };
   const api = load("src/lib/library-images.functions.ts", {
     "@tanstack/react-start": { createServerFn: () => chain },
+    "@/lib/upload-quota.server.mjs": { reserveUploads: forbid("upload quota reservation") },
+    "@/lib/billing-entitlement.server": {
+      resolveEffectiveBillingTier: forbid("billing entitlement lookup"),
+    },
+    "@/lib/modes": { DAILY_UPLOAD_LIMIT_BY_TIER: {} },
     "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: {} },
-    "@/lib/lockdown-policy.mjs": {},
-    "@/lib/library-storage-policy": {},
+    "@/lib/lockdown-policy.mjs": { assertLockdownAllows: forbid("remote image access") },
     "@/lib/safe-image-url": { MAX_SAFE_IMAGE_DATA_URL_CHARS: 12000000 },
     zod: { z },
     "@/lib/library-save-idempotency.mjs": {},
     "@/lib/endpoint-reliability.mjs": reliability,
-    "@/lib/account-storage-artifacts.server": {},
-    "@/integrations/supabase/client.server": { supabaseAdmin: {} },
+    "@/integrations/supabase/client.server": {
+      supabaseAdmin: { rpc: forbid("storage RPC"), from: forbid("storage lookup") },
+    },
     "@/lib/runtime-env.server": {
       runtimeEnv: () => {
         throw new Error("Unexpected environment read");
@@ -121,11 +131,17 @@ test("saving an image rejects a changed account before reading private bytes or 
   });
   await assert.rejects(
     api.saveImageToLibrary({
-      data: { expectedOwnerId: owner, imageUrl: "https://private.invalid/image" },
+      data: {
+        expectedOwnerId: owner,
+        imageUrl: "https://private.invalid/image",
+        title: "Private image",
+        source: "images",
+      },
       context: { userId: "another-account" },
     }),
     /account changed/,
   );
+  assert.deepEqual(forbidden, []);
 });
 
 test("image transport cannot attach cookies or a bearer to external or unrelated endpoints", async () => {

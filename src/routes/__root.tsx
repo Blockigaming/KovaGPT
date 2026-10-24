@@ -7,17 +7,21 @@ import {
   HeadContent,
   ScriptOnce,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
+import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
 import { useEffect, useLayoutEffect } from "react";
+import { installInputModality } from "@/lib/input-modality.mjs";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
+import { DrawerNavigationFocus } from "@/components/DrawerNavigationFocus";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
 const HYDRATION_READY_EVENT = "kova:hydrated";
@@ -26,10 +30,10 @@ const HYDRATION_READY_EVENT = "kova:hydrated";
 // markup. Change CSSOM selectors, not React-owned nodes or stylesheet text.
 // applyThemeMode restores them atomically after setting the hydrated root class.
 const EARLY_THEME_BOOTSTRAP = String.raw`(() => {
-  let mode = "system";
+  let mode = "dark";
   try {
     const stored = localStorage.getItem("kova-theme-mode");
-    if (stored === "light" || stored === "dark") mode = stored;
+    if (stored === "light" || stored === "dark" || stored === "system") mode = stored;
   } catch {}
   if (!(mode === "dark" || (mode === "system" &&
     window.matchMedia?.("(prefers-color-scheme: dark)").matches))) return;
@@ -120,11 +124,18 @@ function NotFoundComponent() {
     <main id="main-content" tabIndex={-1} className="kova-state-screen">
       <section className="kova-state-panel" aria-labelledby="not-found-title">
         <p className="kova-state-eyebrow">404 · KovaGPT</p>
-        <h1 id="not-found-title">We couldn't find that page</h1>
+        <h1 id="not-found-title">This page isn’t available</h1>
         <p>The page you're looking for doesn't exist or has been moved.</p>
         <div className="kova-state-actions">
+          <button
+            type="button"
+            className="kova-state-secondary"
+            onClick={() => window.history.back()}
+          >
+            Back
+          </button>
           <Link to="/" className="kova-state-primary">
-            Return home
+            Go to chat
           </Link>
         </div>
       </section>
@@ -132,13 +143,13 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ reset }: { error: unknown; reset: () => void }) {
+function ErrorComponent({ reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
     <main id="main-content" tabIndex={-1} className="kova-state-screen">
       <section className="kova-state-panel" aria-labelledby="route-error-title">
         <p className="kova-state-eyebrow">KovaGPT workspace</p>
-        <h1 id="route-error-title">KovaGPT couldn't load this page</h1>
+        <h1 id="route-error-title">This page couldn’t load</h1>
         <p>
           Something went wrong while loading this page. Retry or return home. If the problem keeps
           happening, contact support and describe what you were doing.
@@ -301,6 +312,11 @@ function HydrationInteractionGuard({ children }: { children: React.ReactNode }) 
   return <>{children}</>;
 }
 
+function RootInputModality() {
+  useEffect(() => installInputModality(document), []);
+  return null;
+}
+
 function RootThemeManager() {
   const { isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
@@ -311,10 +327,12 @@ function RootThemeManager() {
 
   useEffect(() => {
     if (!isLoaded) return;
+    // Account notices and actions must not survive a principal transition.
+    toast.dismiss();
     const loaded = loadSettings(userKey, {
       migrateLegacyGuest: userKey === null,
     });
-    applyThemeMode(userKey === null ? loadThemeMode() : (loaded.mode ?? "system"));
+    applyThemeMode(userKey === null ? loadThemeMode() : (loaded.mode ?? "dark"));
   }, [isLoaded, userKey]);
 
   return null;
@@ -331,6 +349,8 @@ function RootComponent() {
         >
           Skip to content
         </a>
+        <DrawerNavigationFocus />
+        <RootInputModality />
         <RootThemeManager />
         <PlatformRuntime />
         <Outlet />

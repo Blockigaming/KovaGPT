@@ -1,5 +1,18 @@
 # KovaGPT Final Completion Matrix
 
+## Current Voice source qualification — 2026-10-21
+
+**Voice: REQUIRED / PROVIDER-DEPENDENT.** Authenticated transcription, synthesis,
+voice conversion and saved-response Read aloud have source implementations and
+default-off runtime gates. Full microphone conversation UI is mounted: explicit
+Start, transcription, existing chat submission, exact saved-history acknowledgement,
+speech completion and the next listening turn. Ordinary Dictate stays an editable
+draft until Send. Account entitlement, commercial rights and actual device/runtime
+acceptance, including live history reload, audible playback and Stop, remain pending.
+Both runtime entry points now permit microphone access for the same origin only.
+This source update does not certify live operation. The older matrix and its
+unavailable-state evidence below remain an unchanged historical snapshot.
+
 > **Historical and superseded (2026-09-03):** This matrix preserves an earlier workstream snapshot. Its Lovable, repository-access, provider, and completion claims are not current release evidence. Use `docs/release-reconciliation/zero-lovable-classification.md` and the current exact-SHA CI results instead.
 
 Status legend: NOT STARTED, IN PROGRESS, PASS, BLOCKED — EXTERNAL CREDENTIAL, BLOCKED — EXTERNAL SERVICE.

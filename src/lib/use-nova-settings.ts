@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
-import { DEFAULT_SETTINGS, type Settings } from "@/components/SettingsDialog";
+import { toast } from "sonner";
+import { DEFAULT_SETTINGS, type Settings } from "@/lib/settings-types";
 import { loadStoredSettings, saveStoredSettings, settingsKey } from "@/lib/settings-storage";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
+import { applyReadingPreferences } from "@/lib/appearance-preferences.mjs";
 import {
   isPrincipalBrowserStorageClearedEvent,
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
@@ -102,11 +104,18 @@ export function useNovaSettings(userKey: string | null, principalResolved: boole
       state.generation !== generationRef.current
     )
       return;
-    applyThemeMode(state.settings.mode ?? "system");
+    applyThemeMode(state.settings.mode ?? "dark");
+    applyReadingPreferences(document.documentElement, state.settings);
     try {
       saveStoredSettings(userKey, state.settings);
+      window.dispatchEvent(
+        new CustomEvent("kova:settings-saved", { detail: { ownerId: userKey } }),
+      );
     } catch {
-      /* quota - ignore */
+      toast.error(
+        "Preferences could not be saved on this device. Your current choices remain visible; free storage and try again.",
+        { duration: Infinity },
+      );
     }
   }, [principal, state, userKey]);
 

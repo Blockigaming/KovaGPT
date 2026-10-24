@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { revealSidebar } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 const widths = [320, 375, 390, 768, 1024, 1280, 1440, 1728] as const;
@@ -11,7 +12,8 @@ async function verifyConversationShell(page: Page, width: number, theme: (typeof
   await page.emulateMedia({ colorScheme: theme });
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  await expect(page.locator("body")).not.toContainText(/\b(?:Voice|Dictate)\b/u);
+  await waitForKovaHydration(page);
+  await expect(page.getByRole("button", { name: "Dictate", exact: true })).toBeVisible();
   await expect(page.locator("textarea:visible").first()).toBeVisible();
 
   const overflow = await page.evaluate(() => ({
@@ -41,14 +43,21 @@ async function expectAuthenticatedDesktopReady(page: Page) {
   // locator handler. Keeping that handler installed settles the overlay only
   // when it appears, without delaying returning users when it is absent.
   await expect(
-    page.locator("header").getByRole("button", { name: "Account menu", exact: true }),
+    page
+      .getByRole("button", { name: "Account menu", exact: true })
+      .or(
+        page
+          .getByRole("navigation", { name: "Collapsed navigation", exact: true })
+          .getByRole("button", { name: "Settings", exact: true }),
+      )
+      .filter({ visible: true }),
   ).toBeVisible({ timeout: 15_000 });
 }
 
 test.describe("ChatGPT-like Kova conversation shell", () => {
   test.describe.configure({ timeout: 120_000 });
 
-  test("signed-out shell is responsive, accessible, restrained, and voice-free", async ({
+  test("signed-out shell is responsive, accessible, restrained, and exposes labeled voice controls", async ({
     page,
   }) => {
     for (const theme of themes) {
@@ -70,22 +79,28 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     ).toBe(0);
   });
 
-  test("signed-in desktop navigation keeps Chat and Work one step apart", async ({ page }) => {
+  test("signed-in desktop navigation keeps Chat and Work reachable from the sidebar", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await installAuthenticatedFixture(page);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
 
-    const chatNavigation = page.getByRole("navigation", { name: "Primary workspace" });
+    await revealSidebar(page);
+    const chatNavigation = page.getByRole("navigation", { name: "KovaGPT features" });
     await expect(chatNavigation).toBeVisible();
     await expect(chatNavigation.getByRole("link", { name: "Chat" })).toHaveAttribute(
       "aria-current",
       "page",
     );
 
+    await chatNavigation.locator("summary").filter({ hasText: "More" }).click();
     await chatNavigation.getByRole("link", { name: "Work" }).click();
     await expect(page).toHaveURL(/\/work$/);
-    const workNavigation = page.getByRole("navigation", { name: "Primary workspace" });
+    await expectAuthenticatedDesktopReady(page);
+    await revealSidebar(page);
+    const workNavigation = page.getByRole("navigation", { name: "KovaGPT features" });
     await expect(workNavigation).toBeVisible();
     await expect(workNavigation.getByRole("link", { name: "Work" })).toHaveAttribute(
       "aria-current",
@@ -96,13 +111,19 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("collapsed desktop navigation keeps Work one step away", async ({ page }) => {
+  test("collapsed desktop navigation can expand to reach Work", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await installAuthenticatedFixture(page);
     await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
 
+    await revealSidebar(page);
+    await page
+      .getByRole("navigation", { name: "KovaGPT features" })
+      .locator("summary")
+      .filter({ hasText: "More" })
+      .click();
     const workLink = page.getByRole("link", { name: "Work" });
     await expect(workLink).toBeVisible();
     await workLink.click();
@@ -145,11 +166,11 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
 
     await expect(page.getByRole("button", { name: "Share chat" })).toBeVisible();
     await expect(page.getByRole("button", { name: "More chat actions" })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Chat settings" })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: "Rename", exact: true })).toHaveCount(0);
     await expect(page.getByRole("menuitem", { name: "Export chat" })).toHaveCount(0);
 
     await page.getByRole("button", { name: "More chat actions" }).click();
-    await expect(page.getByRole("menuitem", { name: "Chat settings" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Rename", exact: true })).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Export chat" })).toBeVisible();
   });
 
@@ -170,10 +191,13 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await page.getByRole("button", { name: "Send message" }).click();
     await expect(page.getByText("Ready", { exact: true })).toBeVisible({ timeout: 15_000 });
 
-    await expect(page.getByRole("button", { name: "Share chat" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Share chat" }).click();
+    const shareGate = page.getByRole("dialog", { name: "Sharing unavailable", exact: true });
+    await expect(shareGate).toContainText("Sign in to share this conversation.");
+    await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "More chat actions" }).click();
-    await expect(page.getByRole("menuitem", { name: "Chat settings" })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Export chat" })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: "Rename", exact: true })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Export chat" })).toBeVisible();
   });
 
   test("signed-in shell uses the same required viewport and theme matrix", async ({ page }) => {

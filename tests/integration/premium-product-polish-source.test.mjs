@@ -23,11 +23,18 @@ test("conversation persistence reconciles duplicates and exposes factual statist
   assert.match(source, /Estimated reading time/);
 });
 
-test("Markdown rendering is memoized and publication styles remain accessible", async () => {
+test("message rendering is memoized and extracted Markdown preserves stable accessible controls", async () => {
   const component = await read("src/components/ChatMessage.tsx");
+  const markdown = await read("src/components/ResponseMarkdown.tsx");
   const styles = await read("src/styles.css");
-  assert.match(component, /const MarkdownContent = memo/);
-  assert.match(component, /aria-hidden="true"/);
+  assert.match(component, /export const ChatMessage = memo\(ChatMessageInner\)/);
+  assert.match(component, /import \{ ResponseMarkdown \} from "\.\/ResponseMarkdown"/);
+  assert.match(component, /<ResponseMarkdown/);
+  assert.match(markdown, /const markdownComponents: Components = \{/);
+  assert.match(markdown, /const actions = useMemo\(/);
+  assert.match(markdown, /components=\{markdownComponents\}/);
+  assert.match(markdown, /aria-hidden="true"/);
+  assert.match(markdown, /aria-label="Scrollable comparison table"/);
   assert.match(styles, /\.prose-chat :where\(ul, ol\) :where\(ul, ol\)/);
   assert.match(styles, /prefers-reduced-motion: reduce/);
   assert.match(styles, /\.kova-skeleton::after/);

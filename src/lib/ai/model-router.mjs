@@ -36,6 +36,15 @@ const UTILITY_TASK_SET = new Set(UTILITY_TASKS);
 const ADVANCED_MODES = new Set(["thinking", "high", "extra_high", "max", "ultra"]);
 const PREMIUM_MODES = new Set(["max", "ultra"]);
 
+/** The API passes canonical modes; retain only basic legacy aliases for direct callers.
+ * @param {string} tier
+ * @param {string} mode
+ * @param {boolean} [deepMode]
+ */
+export function freeModeUpgradeRequired(tier, mode, deepMode = false) {
+  return tier === "free" && (deepMode || !["instant", "auto", "default", "fast"].includes(mode));
+}
+
 // Signals that extra reasoning will noticeably improve the answer. Length is
 // deliberately NOT one of them.
 const COMPLEXITY_PATTERNS = [
@@ -175,6 +184,12 @@ export function routeModel(input) {
   }
   if (input.task === "embedding") {
     return decide("EMBEDDING", 0, ["embedding"], 0);
+  }
+
+  // Defense in depth: callers must reject locked Free modes before quota or
+  // provider work. Never silently grant a paid mode or downgrade its request.
+  if (freeModeUpgradeRequired(tier, mode, Boolean(input.deepMode))) {
+    throw new Error("mode_not_entitled");
   }
 
   const modeCap = MODE_MAX_OUTPUT_TOKENS[mode] ?? DEFAULT_MAX_OUTPUT_TOKENS;

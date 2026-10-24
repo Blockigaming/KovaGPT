@@ -10,6 +10,14 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
       new URL("../../src/utils/payments.functions.ts", import.meta.url),
       "utf8",
     ),
+    policySource = await readFile(
+      new URL("../../src/lib/billing-policy.mjs", import.meta.url),
+      "utf8",
+    ),
+    paramsSource = await readFile(
+      new URL("../../src/lib/billing-policy-params.ts", import.meta.url),
+      "utf8",
+    ),
     hook = await readFile(
       new URL("../../src/routes/api/public/payments/webhook.ts", import.meta.url),
       "utf8",
@@ -21,20 +29,24 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
   assert.match(stripeSource, /readUtf8BodyBounded\(req, maxBodyBytes\)/);
   assert.match(stripeSource, /age > 300/);
   assert.match(stripeSource, /timingSafeEqualText/);
-  assert.match(checkoutSource, /integration_identifier: "kovagpt_checkout_wshrfyef"/);
+  assert.match(paramsSource, /integration_identifier: "kovagpt_checkout_wshrfyef"/);
+  assert.match(paramsSource, /const sessionParams: Stripe\.Checkout\.SessionCreateParams/);
+  assert.match(checkoutSource, /await createMonthlyIntroCheckout\(\{/);
   assert.match(
-    checkoutSource,
-    /const sessionParams: Parameters<typeof stripe\.checkout\.sessions\.create>\[0\]/,
+    policySource,
+    /stripe\.checkout\.sessions\.create\(\s*buildMonthlyIntroSessionParams\(/,
   );
-  assert.doesNotMatch(checkoutSource, /payment_method_types\s*:/);
-  assert.doesNotMatch(checkoutSource, /automatic_tax\s*:/);
-  assert.doesNotMatch(checkoutSource, /sessionParams\s+as\s+Parameters/);
-  assert.match(checkoutSource, /return_url: CHECKOUT_RETURN_URL/);
+  assert.doesNotMatch(paramsSource, /payment_method_types\s*:/);
+  assert.doesNotMatch(paramsSource, /automatic_tax\s*:/);
+  assert.doesNotMatch(paramsSource, /sessionParams\s+as\s+(?:Parameters|Stripe\.)/);
+  assert.match(checkoutSource, /returnUrl: CHECKOUT_RETURN_URL/);
+  assert.match(policySource, /returnUrl: claim\.returnUrl/);
+  assert.match(paramsSource, /return_url: input\.returnUrl/);
   assert.match(
     checkoutSource,
     /\.validator\(\(data: unknown\) => \{\s*const parsed = parseCheckoutRequest\(data\);\s*if \(!resolveBillingPlan\(parsed\.priceId\)\) throw new Error\("Invalid priceId"\);\s*return parsed;/,
   );
-  assert.doesNotMatch(checkoutSource, /\breturnUrl\b|data\.returnUrl/);
+  assert.doesNotMatch(checkoutSource, /data\.(?:returnUrl|return_url)|returnUrl:\s*data\./);
   assert.match(hook, /processStripeEvent/);
   assert.match(hook, /stripe\.subscriptions\.retrieve/);
   assert.match(hook, /status: retryableFailure \? 503 : 400/);

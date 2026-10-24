@@ -1,4 +1,4 @@
-import type { AuthedCaller } from "@/lib/api-auth.server";
+import { getCallerTier, type AuthedCaller } from "@/lib/api-auth.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createWorkExecutionRepository, getWorkExecution } from "@/lib/work-execution.server";
 import { workRunnerConfiguration } from "@/lib/work-runner.server";
@@ -106,6 +106,7 @@ export async function browserReadiness() {
   return { available: true, origins };
 }
 export async function listWorkBrowsers(caller: AuthedCaller, runId: string) {
+  if ((await getCallerTier(caller)) === "free") throw Error("work_browser_paid_plan_required");
   const run = await getWorkExecution(caller, workUuid(runId));
   const result = await database(caller)
     .from("work_browser_sessions")
@@ -131,6 +132,8 @@ export async function commandWorkBrowser(
 ) {
   const input = parseBrowserOwnerInput(value);
   if (input.expectedUserId !== caller.userId) throw Error("work_browser_owner_conflict");
+  if (input.operation !== "close" && (await getCallerTier(caller)) === "free")
+    throw Error("work_browser_paid_plan_required");
   const run = await getWorkExecution(caller, input.runId);
   if (input.operation !== "close") await createWorkExecutionRepository(caller).authorize(run);
   const config = workRunnerConfiguration();

@@ -44,7 +44,6 @@ test("real sharing remains available without the misleading local-member flow", 
   const badResponse = responseActions.getByRole("button", { name: "Bad response" });
   await expect(goodResponse).toBeVisible();
   await expect(badResponse).toBeVisible();
-  await expect(responseActions.getByRole("button", { name: "Regenerate response" })).toBeVisible();
   await expect(responseActions.getByRole("button", { name: "Share" })).toHaveCount(0);
   await goodResponse.click();
   await expect(goodResponse).toHaveAttribute("aria-pressed", "true");
@@ -52,6 +51,7 @@ test("real sharing remains available without the misleading local-member flow", 
   await expect(goodResponse).toHaveAttribute("aria-pressed", "false");
   await expect(badResponse).toHaveAttribute("aria-pressed", "true");
   await responseActions.getByRole("button", { name: "More actions" }).click();
+  await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Share" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Save to Library" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: /Add members/i })).toHaveCount(0);

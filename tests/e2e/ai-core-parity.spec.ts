@@ -6,6 +6,6 @@ test("AI core controls fit the configured viewport", async ({ page }) => {
   await waitForKovaHydration(page);
   await expect(page.getByRole("main")).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Add files, tools, or prompts" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeVisible();
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
 });

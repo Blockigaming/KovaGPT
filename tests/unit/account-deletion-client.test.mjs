@@ -40,11 +40,12 @@ async function loadClient({
     delete globalThis[key];
   }
 }
-test("actual account status and DELETE transport pin the bearer and expected owner, with no inferred principal", async () => {
+test("actual account status, scheduling and recovery pin the bearer and expected owner", async () => {
   const client = await loadClient();
   await client.requestAccountDeletion(owner, "GET");
   await client.requestAccountDeletion(owner, "DELETE");
-  assert.equal(client.calls.length, 2);
+  await client.requestAccountDeletion(owner, "PATCH");
+  assert.equal(client.calls.length, 3);
   for (const { path, options } of client.calls) {
     assert.equal(path, "/api/account");
     assert.equal(options.headers.Authorization, "Bearer captured-token");
@@ -54,8 +55,11 @@ test("actual account status and DELETE transport pin the bearer and expected own
   }
   assert.equal(client.calls[0].options.body, undefined);
   assert.equal(JSON.parse(client.calls[1].options.body).confirmation, "DELETE");
+  assert.deepEqual(JSON.parse(client.calls[2].options.body), { action: "recover" });
+  assert.equal(client.calls[2].options.headers["Content-Type"], "application/json");
   const switched = await loadClient({ sessionOwner: "another-owner" });
   await assert.rejects(switched.requestAccountDeletion(owner, "DELETE"), /identity_changed/);
+  await assert.rejects(switched.requestAccountDeletion(owner, "PATCH"), /identity_changed/);
   assert.equal(switched.calls.length, 0);
 });
 test("oversized or canceled status bodies never reach the settings state", async () => {
@@ -79,17 +83,20 @@ test("oversized or canceled status bodies never reach the settings state", async
   abort.abort();
   const safe = await loadClient();
   await assert.rejects(safe.requestAccountDeletion(owner, "DELETE", abort.signal));
+  await assert.rejects(safe.requestAccountDeletion(owner, "PATCH", abort.signal));
   assert.equal(safe.calls.length, 0);
 });
-async function settingsHandler(request, initialOwner = owner) {
+async function settingsHandler(request, initialOwner = owner, deletionStatus = null) {
   const calls = [],
     ref = { current: initialOwner },
     operation = { current: 0 };
   const mock = {
+    parseAccountDeletionStatus: (await loadClient()).parseAccountDeletionStatus,
     deleteConfirmation: "DELETE",
     deleteAccountBusy: false,
     isLoaded: true,
     userKey: owner,
+    deletionStatus,
     currentAuthUserKeyRef: ref,
     deletionOperationRef: operation,
     setDeleteAccountBusy: (value) => calls.push(["busy", value]),
@@ -113,13 +120,14 @@ async function settingsHandler(request, initialOwner = owner) {
     },
     onClearAll: () => calls.push(["clear-view"]),
     setDeleteAccountOpen: () => {},
+    setDeleteConfirmation: () => {},
     onOpenChange: () => {},
     clerk: { signOut: async () => calls.push(["signout"]) },
   };
   const settings = await readFile("src/components/SettingsDialog.tsx", "utf8");
   const source = stripTypeScriptTypes(
     settings.slice(
-      settings.indexOf("  const handleDeleteAccount ="),
+      settings.indexOf("  const handleCheckDeletion ="),
       settings.indexOf("  const handleClearSavedMemory ="),
     ),
   );
@@ -129,12 +137,18 @@ async function settingsHandler(request, initialOwner = owner) {
     const module = await import(
       "data:text/javascript;base64," +
         Buffer.from(
-          `const {${Object.keys(mock).join(",")}}=globalThis[${JSON.stringify(key)}];\n${source}\nexport {handleDeleteAccount};`,
+          `const {${Object.keys(mock).join(",")}}=globalThis[${JSON.stringify(key)}];\n${source}\nexport {handleDeleteAccount,handleRecoverAccount,handleCheckDeletion};`,
         ).toString("base64") +
         "#" +
         key
     );
-    return { run: module.handleDeleteAccount, calls, ref };
+    return {
+      run: module.handleDeleteAccount,
+      recover: module.handleRecoverAccount,
+      check: module.handleCheckDeletion,
+      calls,
+      ref,
+    };
   } finally {
     delete globalThis[key];
   }
@@ -177,4 +191,180 @@ test("authoritative completion still clears only the captured owner before signo
   assert.ok(h.calls.some(([kind, value]) => kind === "clear" && value === owner));
   assert.ok(h.calls.some(([kind]) => kind === "signout"));
   assert.ok(h.calls.some(([kind]) => kind === "success"));
+});
+
+function scheduledStatus(state = "scheduled") {
+  const scheduledAt = new Date().toISOString();
+  return {
+    state,
+    scheduledAt,
+    recoverUntil: new Date(Date.parse(scheduledAt) + 30 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+}
+
+test("policy status parser rejects malformed or invented recovery windows", async () => {
+  const client = await loadClient();
+  assert.deepEqual(
+    client.parseAccountDeletionStatus({
+      state: "active",
+      scheduledAt: null,
+      recoverUntil: null,
+    }),
+    { state: "active", scheduledAt: null, recoverUntil: null },
+  );
+  const scheduled = scheduledStatus();
+  assert.deepEqual(client.parseAccountDeletionStatus(scheduled), scheduled);
+  for (const value of [
+    null,
+    { state: "deleting" },
+    { state: "active" },
+    { ...scheduled, recoverUntil: "not-a-date" },
+    { ...scheduled, recoverUntil: scheduled.scheduledAt },
+    {
+      ...scheduled,
+      recoverUntil: new Date(Date.parse(scheduled.scheduledAt) + 31 * 86400000).toISOString(),
+    },
+  ])
+    assert.equal(client.parseAccountDeletionStatus(value), null);
+});
+
+test("202 scheduling preserves account, device data and session and records the server deadline", async () => {
+  const scheduled = scheduledStatus();
+  const h = await settingsHandler(async () => Response.json(scheduled, { status: 202 }));
+  await h.run();
+  assert.equal(
+    h.calls.some(([kind]) => ["clear", "clear-view", "signout"].includes(kind)),
+    false,
+  );
+  assert.deepEqual(h.calls.find(([kind]) => kind === "state")[1], { ownerId: owner, ...scheduled });
+  assert.match(h.calls.find(([kind]) => kind === "success")[1], /Billing is unchanged/);
+  assert.doesNotMatch(JSON.stringify(h.calls), /subscriptions were canceled|deletion completed/);
+});
+
+test("other successful or malformed responses cannot masquerade as final deletion", async () => {
+  for (const response of [
+    () => Response.json({ state: "deleted", scheduledAt: null, recoverUntil: null }),
+    () => Response.json({ state: "scheduled" }, { status: 202 }),
+    () => Response.json(scheduledStatus("finalizing"), { status: 202 }),
+  ]) {
+    const h = await settingsHandler(async () => response());
+    await h.run();
+    assert.equal(
+      h.calls.some(([kind]) => ["clear", "clear-view", "signout"].includes(kind)),
+      false,
+    );
+    assert.equal(
+      h.calls.some(([kind]) => kind === "success"),
+      false,
+    );
+  }
+});
+
+test("recovery uses the owner-bound PATCH and retains local data, session and discount", async () => {
+  const calls = [];
+  const h = await settingsHandler(
+    async (principal, method) => {
+      calls.push({ principal, method });
+      return Response.json({ state: "active", scheduledAt: null, recoverUntil: null });
+    },
+    owner,
+    { ownerId: owner, ...scheduledStatus() },
+  );
+  await h.recover();
+  assert.deepEqual(calls, [{ principal: owner, method: "PATCH" }]);
+  assert.equal(
+    h.calls.some(([kind]) => ["clear", "clear-view", "signout"].includes(kind)),
+    false,
+  );
+  assert.deepEqual(h.calls.find(([kind]) => kind === "state")[1], {
+    ownerId: owner,
+    state: "active",
+    scheduledAt: null,
+    recoverUntil: null,
+  });
+  assert.match(h.calls.find(([kind]) => kind === "success")[1], /discount are unchanged/);
+});
+
+test("late recovery response cannot update a newly signed-in principal", async () => {
+  let release;
+  const waiting = new Promise((resolve) => {
+    release = resolve;
+  });
+  const h = await settingsHandler(() => waiting, owner, { ownerId: owner, ...scheduledStatus() });
+  const running = h.recover();
+  h.ref.current = "next-owner";
+  release(Response.json({ state: "active", scheduledAt: null, recoverUntil: null }));
+  await running;
+  assert.deepEqual(h.calls, [["busy", true]]);
+});
+
+test("failed recovery and status refresh retain an unverified pending state without wiping data", async () => {
+  const h = await settingsHandler(
+    async () => Response.json({ error: "deadline_passed" }, { status: 409 }),
+    owner,
+    {
+      ownerId: owner,
+      ...scheduledStatus(),
+    },
+  );
+  await h.recover();
+  assert.equal(h.calls.find(([kind]) => kind === "state")[1].state, "unknown");
+  assert.equal(
+    h.calls.some(([kind]) => ["clear", "clear-view", "signout", "success"].includes(kind)),
+    false,
+  );
+  const scheduled = scheduledStatus();
+  const methods = [];
+  const refresh = await settingsHandler(async (_principal, method) => {
+    methods.push(method);
+    return Response.json(scheduled);
+  });
+  await refresh.check();
+  assert.deepEqual(methods, ["GET"]);
+  assert.deepEqual(refresh.calls.find(([kind]) => kind === "state")[1], {
+    ownerId: owner,
+    ...scheduled,
+  });
+  assert.equal(
+    refresh.calls.some(([kind]) => ["clear", "clear-view", "signout"].includes(kind)),
+    false,
+  );
+});
+
+test("non-200 recovery cannot claim a recovered account even with an active-shaped body", async () => {
+  for (const status of [202, 409]) {
+    const h = await settingsHandler(
+      async () =>
+        Response.json({ state: "active", scheduledAt: null, recoverUntil: null }, { status }),
+      owner,
+      { ownerId: owner, ...scheduledStatus() },
+    );
+    await h.recover();
+    assert.equal(h.calls.find(([kind]) => kind === "state")[1].state, "unknown");
+    assert.equal(
+      h.calls.some(([kind]) => ["clear", "signout", "success"].includes(kind)),
+      false,
+    );
+  }
+});
+
+test("the browser clock cannot suppress recovery offered by the server's scheduled state", async () => {
+  const source = await readFile("src/components/SettingsDialog.tsx", "utf8");
+  const eligibility = stripTypeScriptTypes(
+    source.slice(
+      source.indexOf("  const deletionPending ="),
+      source.indexOf("  const deletionDeadline ="),
+    ),
+  );
+  const choose = new Function(
+    "deletionStatus",
+    "userKey",
+    "Date",
+    `${eligibility}\nreturn deletionRecoverable;`,
+  );
+  const scheduled = { ownerId: owner, ...scheduledStatus() };
+  const fastClock = { now: () => Date.parse(scheduled.recoverUntil) + 365 * 86400000 };
+  assert.equal(choose(scheduled, owner, fastClock), true);
+  assert.equal(choose({ ...scheduled, state: "finalizing" }, owner, fastClock), false);
+  assert.equal(choose(scheduled, "another-owner", fastClock), false);
 });

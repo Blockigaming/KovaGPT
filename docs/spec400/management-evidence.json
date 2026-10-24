@@ -1,0 +1,413 @@
+{
+  "area": "Projects, Scheduled tasks, Library",
+  "baseline": "9cc baseline; existing color tokens preserved",
+  "files": [
+    "src/routes/projects.tsx",
+    "src/routes/projects.$projectId.tsx",
+    "src/routes/library.tsx",
+    "src/routes/scheduled-tasks.tsx",
+    "src/components/ScheduledTaskEditor.tsx",
+    "src/components/LibraryUploadDialog.tsx",
+    "src/styles/spec400-management.css",
+    "tests/unit/spec400-management.test.mjs",
+    "tests/browser-runtime/spec400-management.spec.ts",
+    "tests/unit/scheduled-task-editor-focus.test.mjs",
+    "tests/unit/scheduled-task-form-accessibility.test.mjs",
+    "tests/unit/scheduled-task-load-recovery.test.mjs",
+    "tests/e2e/scheduled-task-editor.spec.ts",
+    "tests/unit/spec400-library-density.test.mjs"
+  ],
+  "pluginsEvidence": "docs/spec400/plugins-evidence.json",
+  "verification": [
+    {
+      "command": "node --test tests/unit/spec400-management.test.mjs",
+      "result": "12 passed, 0 failed",
+      "scope": "Source contract and TSX parse tests; does not certify runtime interactions."
+    },
+    {
+      "command": "node --test tests/unit/spec400-management.test.mjs tests/unit/spec400-plugins.test.mjs",
+      "result": "14 passed, 0 failed"
+    },
+    {
+      "command": "node --test tests/unit/scheduled-task-editor-focus.test.mjs tests/unit/scheduled-task-form-accessibility.test.mjs tests/unit/scheduled-task-load-recovery.test.mjs tests/unit/scheduled-task-retry.test.mjs tests/unit/task-schedule-zone-label.test.mjs tests/unit/projects-clear-search-focus.test.mjs tests/unit/projects-retry-focus.test.mjs tests/unit/library-retry-focus.test.mjs tests/unit/library-action-menu-layout.test.mjs tests/unit/project-file-upload-focus.test.mjs",
+      "result": "41 passed, 0 failed. Scheduled editor fixtures updated to the specified modal, wrapping labels, new button wording, and menu dependencies. This executes component-state/focus handlers but is not real-browser evidence."
+    },
+    {
+      "command": "tsc --noEmit",
+      "result": "Final completed checkout-wide typecheck passed; log empty. Earlier transient failures belonged to concurrently edited files."
+    },
+    {
+      "command": "eslint scoped management TSX files",
+      "result": "Passed, 0 warnings after dependency correction."
+    },
+    {
+      "command": "prettier --check scoped management files and tests",
+      "result": "Passed"
+    },
+    {
+      "command": "git diff --check scoped management tracked files",
+      "result": "Passed"
+    },
+    {
+      "command": "playwright test --config=playwright.browser.config.ts tests/browser-runtime/spec400-management.spec.ts --project=chromium",
+      "result": "Blocked before assertions: bundled Chromium absent; installed Chromium sandbox cannot open socket; escalated launcher fails setup with read-only runtime filesystem. Six offline fixture tests added, no browser pass claimed."
+    },
+    {
+      "command": "combined production build / live providers",
+      "result": "Not run by this worker. Parent owns build. No live provider calls, database writes, deploys or spending."
+    }
+  ],
+  "requirements": [
+    {
+      "id": 247,
+      "status": "implemented",
+      "evidence": "Exact Scheduled tasks title, subtitle, and New scheduled task button; existing execution-readiness gate retained."
+    },
+    {
+      "id": 248,
+      "status": "implemented",
+      "evidence": "Active is the default; Active, Paused, and All counts derive from authorized loaded task records."
+    },
+    {
+      "id": 249,
+      "status": "partial",
+      "evidence": "List shows title, recurrence, next run, timezone, actual task status, and More. The list contract does not include a separate last-run status; actual run status remains in run history."
+    },
+    {
+      "id": 250,
+      "status": "implemented",
+      "evidence": "Open, Edit, View runs, conditional Pause/Resume, and Delete are available in each object menu. Retry remains only for failed tasks."
+    },
+    {
+      "id": 251,
+      "status": "implemented-unverified-browser",
+      "evidence": "560px editor, full-screen mobile CSS, sticky Save schedule footer, Radix modal focus handling."
+    },
+    {
+      "id": 252,
+      "status": "partial",
+      "evidence": "Title, Prompt (120px minimum), Frequency, Date/Start date, Time and searchable IANA Timezone provided. Per-task notification preference is unsupported and explained."
+    },
+    {
+      "id": 253,
+      "status": "partial",
+      "evidence": "New recurring tasks default Daily at 09:00 and retain explicit background-run confirmation. Account timezone is absent from current contract; device timezone is disclosed and editable."
+    },
+    {
+      "id": 254,
+      "status": "implemented",
+      "evidence": "Weekly weekday selection derives the anchor date. Monthly start-date day and actual shorter-month last-day rule are explained."
+    },
+    {
+      "id": 255,
+      "status": "contract-gap",
+      "evidence": "Database owns DST-aware resolution and no three-run preview endpoint exists. Editor discloses gap, displaying only existing next_run_at for unchanged saved schedules. No simulated next three times."
+    },
+    {
+      "id": 256,
+      "status": "preserved-server-contract",
+      "evidence": "Existing scheduler validates future one-time execution. Failed mutation preserves complete proposed data and stable retry identity. Browser failure-path verification is blocked."
+    },
+    {
+      "id": 257,
+      "status": "implemented",
+      "evidence": "Page receipt comes only from awaited createScheduledTask returned record via onCreated. Response-side bubble is owned by response worker."
+    },
+    {
+      "id": 258,
+      "status": "implemented-unverified-browser",
+      "evidence": "Receipt uses neutral raised surface, 8px corners, 12px horizontal padding, 16px green check; clicking opens exact persisted task."
+    },
+    {
+      "id": 259,
+      "status": "implemented",
+      "evidence": "Scheduled task not created appears for failed create with underlying error and preserved request. No success receipt on thrown creation."
+    },
+    {
+      "id": 260,
+      "status": "partial",
+      "evidence": "History shows scheduled time, actual start, actual status, delivery status, result summary and failure. Returned runs do not include generated-result URL, so no fabricated result link."
+    },
+    {
+      "id": 261,
+      "status": "implemented",
+      "evidence": "Pause/Resume retain duplicate guards, pending row wording, revision/mutation IDs and confirmed server result replacement; failures do not invent a new state."
+    },
+    {
+      "id": 262,
+      "status": "implemented",
+      "evidence": "Deletion confirmation names the task and accurately states removal of run history and copy offers under existing backend behavior."
+    },
+    {
+      "id": 263,
+      "status": "implemented",
+      "evidence": "Projects heading, search, sort and New project; no promotional chart/banner added."
+    },
+    {
+      "id": 264,
+      "status": "partial",
+      "evidence": "Default Last opened (device-local observed visits), Name and Last updated are retained between visits. Device-only history and fallback to activity are disclosed; account-wide last-opened timestamp is unavailable."
+    },
+    {
+      "id": 265,
+      "status": "implemented",
+      "evidence": "Cards show name, description, last activity, pinned state. Decorative counts removed."
+    },
+    {
+      "id": 266,
+      "status": "implemented-unverified-browser",
+      "evidence": "Project cards use 20px padding and 156px minimum height, title emphasis and bottom metadata."
+    },
+    {
+      "id": 267,
+      "status": "implemented",
+      "evidence": "Card link opens project; separate More retains Rename, Pin/Unpin, Archive/Restore, Delete and existing Duplicate."
+    },
+    {
+      "id": 268,
+      "status": "implemented",
+      "evidence": "Short create dialog with required name and optional description. Actual create endpoint and duplicate submission guard retained."
+    },
+    {
+      "id": 269,
+      "status": "implemented",
+      "evidence": "Details default to Chats with Context beside it. Existing extra tools remain accessible from a labeled selector."
+    },
+    {
+      "id": 270,
+      "status": "implemented",
+      "evidence": "Header New chat in project calls existing createProjectChat with project_id, then navigates to returned chat ID; duplicate clicks are guarded."
+    },
+    {
+      "id": 271,
+      "status": "implemented",
+      "evidence": "Instructions have explicit scope, Save changes, Cancel and accurate saved/error state; unsaved drafts survive tab changes within the active session."
+    },
+    {
+      "id": 272,
+      "status": "contract-gap",
+      "evidence": "Existing project storage stores project files separately. Context explains this and links Library; no silent copying or fake reference association was added."
+    },
+    {
+      "id": 273,
+      "status": "preserved",
+      "evidence": "Existing archive/restore endpoints, active/archived lists and owner checks retained."
+    },
+    {
+      "id": 274,
+      "status": "preserved",
+      "evidence": "Existing bounded stored-file cleanup and confirmation explicitly name affected project, file copies, chats, tasks, notes and memberships."
+    },
+    {
+      "id": 275,
+      "status": "implemented",
+      "evidence": "Library has direct document Upload using existing quota-enforced endpoint/extractor, Search, filters, sort and view controls."
+    },
+    {
+      "id": 276,
+      "status": "implemented",
+      "evidence": "Existing List default and remembered Grid preference retained."
+    },
+    {
+      "id": 277,
+      "status": "implemented",
+      "evidence": "All, Uploads, Documents, Images and Code filter the same collection; unsupported server filter names are mapped safely to All before local filtering."
+    },
+    {
+      "id": 278,
+      "status": "partial",
+      "evidence": "Source and Date saved filters, removable chips and Clear filters implemented. Project references absent, so no fake Project selector. Scope is explicitly loaded items."
+    },
+    {
+      "id": 279,
+      "status": "contract-gap",
+      "evidence": "Current pagination sorts created_at only. Display accurately says Date saved, newest first; sort preference retained. Last modified requires backend contract work."
+    },
+    {
+      "id": 280,
+      "status": "partial",
+      "evidence": "List retains filename/type/saved date/size without content previews. Missing modified/project/processing metadata explicitly disclosed."
+    },
+    {
+      "id": 281,
+      "status": "implemented",
+      "evidence": "Separate checkbox selects; filename opens details without toggling selection."
+    },
+    {
+      "id": 282,
+      "status": "partial",
+      "evidence": "Existing selected-count/bulk Delete/Context Pack/favorite bar and actual folder Move preserved. No unsupported bulk download or project move added."
+    },
+    {
+      "id": 283,
+      "status": "implemented",
+      "evidence": "Selection bar explicitly states loaded-item scope and excludes entire Library selection."
+    },
+    {
+      "id": 284,
+      "status": "partial",
+      "evidence": "420px inspector on desktop and full-screen phone detail presentation. Stable full item route is unsupported by current metadata lookup contract."
+    },
+    {
+      "id": 285,
+      "status": "partial",
+      "evidence": "Inspector shows actual filename, format, size, origin and saved time, and explicitly unavailable modified time/project references."
+    },
+    {
+      "id": 286,
+      "status": "partial",
+      "evidence": "Preview/Extracted text views and absent-text explanation use stored content. Upload retains extractor notes/errors; existing records do not expose extraction-state metadata."
+    },
+    {
+      "id": 287,
+      "status": "contract-gap",
+      "evidence": "Library save/read/list contracts omit source-chat identity; no invented Open source chat link."
+    },
+    {
+      "id": 288,
+      "status": "partial",
+      "evidence": "Existing supported preview/reuse/version/download/delete actions retained. Rename, move to project and stable file link lack supported current API."
+    },
+    {
+      "id": 289,
+      "status": "contract-gap",
+      "evidence": "No Trash/retention/restore API exists. Existing permanent deletion remains labeled accurately; gap disclosed."
+    },
+    {
+      "id": 290,
+      "status": "preserved-no-new-guarantee",
+      "evidence": "No deletion/retention backend change. Existing chat/reference behavior remains authoritative; unavailable-file presentation is outside this page contract."
+    },
+    {
+      "id": 291,
+      "status": "preserved",
+      "evidence": "Only measured loaded file-size total displayed, labeled Loaded file sizes. No invented total allowance/storage progress."
+    }
+  ],
+  "additionalCoverage": [
+    {
+      "ids": [23, 24],
+      "status": "partial",
+      "evidence": "Project search/sort/scope/archive filters and Library query/type/source/date/sort persist scoped to account. Project instructions retain per-project in-memory drafts. No universal list scroll restoration or cross-navigation form draft system claimed."
+    },
+    {
+      "ids": [49, 50, 58, 59],
+      "status": "implemented-unverified-browser",
+      "evidence": "1200px management maximum, 32/24/16 padding; project grid container breakpoints 620/960 and gaps 24/16."
+    },
+    {
+      "ids": [107, 124, 129, 130, 135],
+      "status": "implemented",
+      "evidence": "Create/mutation guards, preserved failed schedule/upload requests, dirty schedule discard confirmation, existing Radix modal, actual persisted success."
+    },
+    {
+      "ids": [389, 390, 391, 393, 394],
+      "status": "verification-gap",
+      "evidence": "Offline fixtures cover key states and 320/1440 geometry but browser launcher prevented assertions. Full theme/responsive/destructive coverage not certified."
+    }
+  ],
+  "interactionInventory": [
+    {
+      "screen": "Projects",
+      "control": "Search, sort, scope, grid/list, archived disclosure",
+      "event": "Type/select/click",
+      "result": "Filters or reorders authorized records; persisted preferences",
+      "error": "Storage unavailable falls back; server list errors preserve retry"
+    },
+    {
+      "screen": "Projects",
+      "control": "New project, Rename, Pin, Duplicate, Archive, Delete",
+      "event": "Open dialog or object menu, submit/confirm",
+      "result": "Existing authenticated mutations with current object identity",
+      "error": "Existing error handling retained; create blocks duplicate activation"
+    },
+    {
+      "screen": "Project detail",
+      "control": "Chats/Context and More project tools",
+      "event": "Select",
+      "result": "Same project view changes; existing tools retained",
+      "error": "No external operation"
+    },
+    {
+      "screen": "Project detail",
+      "control": "New chat in project",
+      "event": "Click",
+      "result": "Creates via project_id and navigates to returned ID",
+      "error": "Account-change guard, pending state, error toast"
+    },
+    {
+      "screen": "Project detail",
+      "control": "Instruction Save changes / Cancel",
+      "event": "Click",
+      "result": "Save awaits existing update; Cancel restores saved value",
+      "error": "Draft retained with error and Retry"
+    },
+    {
+      "screen": "Scheduled tasks",
+      "control": "New scheduled task / Open / Edit / View runs",
+      "event": "Click",
+      "result": "560px modal or full-screen phone editor; View runs loads actual history",
+      "error": "Readiness/principal checks and explicit access error"
+    },
+    {
+      "screen": "Scheduled tasks",
+      "control": "Active / Paused / All / Search / Refresh",
+      "event": "Select/type/click",
+      "result": "Authorized list with actual counts and safe refresh",
+      "error": "Existing last-success records and retry path retained"
+    },
+    {
+      "screen": "Scheduled tasks",
+      "control": "Pause / Resume / Retry / Delete",
+      "event": "Menu click and deletion confirmation",
+      "result": "Revision/idempotency-protected existing mutation",
+      "error": "Pending rows disabled; failure never displays false success"
+    },
+    {
+      "screen": "Scheduled tasks editor",
+      "control": "Schedule fields, context pickers, connection approvals, consent, Save schedule",
+      "event": "Type/select/explicit confirm",
+      "result": "Existing scheduling/permission API; receipt only from returned persisted task",
+      "error": "Stable captured request retained for safe retry; dirty close needs discard decision"
+    },
+    {
+      "screen": "Library",
+      "control": "Upload",
+      "event": "Select document then Upload document",
+      "result": "Existing extraction and quota-enforced original-file upload; measured processing/uploading/ready states",
+      "error": "File retained; same upload ID retried; account lifecycle aborts late completions"
+    },
+    {
+      "screen": "Library",
+      "control": "Type/source/date/search/sort/view, removable chips, Clear filters",
+      "event": "Select/type/click",
+      "result": "Same authorized collection; loaded scope disclosed",
+      "error": "Unavailable backend fields explicitly disclosed"
+    },
+    {
+      "screen": "Library",
+      "control": "File title, checkbox, file More, selection bar, Folders",
+      "event": "Open/select/menu",
+      "result": "Metadata inspector or existing supported mutation/download/folder operation",
+      "error": "Existing ownership/generation checks, confirmations and partial-failure handling retained"
+    }
+  ],
+  "libraryDensityRefinement": {
+    "date": "2026-10-18",
+    "trigger": "Owner review of the e38 Library 390px light capture placed first saved item at about y563.",
+    "changes": [
+      "Source and Date saved filters moved into a closed-by-default accessible Filters popover beside Search. Existing loaded-item filtering and visible active-removal chips retained.",
+      "Shared chats, Folders and Details use a single equal-weight quiet utility row with the existing guarded Refresh action. Loaded-size metadata moved from page header into Details.",
+      "Favorite, actual Date saved sort, and Grid/List controls share one compact row on narrow content widths. Wide content puts the toolbar on one row.",
+      "List title and metadata now share one 44px preview button. Comfortable rows have a 56px minimum and compact rows a 48px minimum; long titles can wrap. Selection and menu targets remain 44px.",
+      "No colors, backend contracts, provider actions, Settings, build output or review fixture data changed."
+    ],
+    "requirements": [277, 278, 279, 280, 281, 282, 283, 289, 290, 291],
+    "verification": {
+      "command": "node --test tests/unit/spec400-library-density.test.mjs tests/unit/spec400-management.test.mjs tests/unit/apps-provider-dialog-focus.test.mjs tests/unit/plugin-directory-integration.test.mjs tests/unit/library-retry-focus.test.mjs tests/unit/library-action-menu-layout.test.mjs",
+      "result": "28 passed, 0 failed. Four new AST/CSS contract tests, twelve management source/parse tests, six existing Library action/focus handler tests and six updated Plugins integration/focus tests.",
+      "quality": "Scoped Library ESLint passed with zero warnings; scoped Prettier and git diff --check passed.",
+      "scope": "Source and isolated handler verification only. No build, browser run, new measured first-item y position, or new combined typecheck was performed for this bounded refinement."
+    }
+  }
+}

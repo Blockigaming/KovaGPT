@@ -1,6 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { extname, join } from "node:path";
+import {
+  inspectBrowserVoiceSource,
+  inspectVoiceComposerBoundary,
+} from "./voice-unavailable-contract.mjs";
 
 const root = process.cwd();
 const scannedExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs"]);
@@ -13,14 +17,6 @@ const strongPlaceholderPatterns = [
     label: "placeholder success state",
     pattern: /toast\.(?:success|message)\(["'][^"']*(?:coming soon|not implemented)[^"']*["']\)/iu,
   },
-];
-const voicePatterns = [
-  /\bSpeechRecognition\b/u,
-  /\bwebkitSpeechRecognition\b/u,
-  /\bstartListening\b/u,
-  /\bstopListening\b/u,
-  /\bisListening\b/u,
-  /\bvoiceMode\b/u,
 ];
 
 function trackedProductSource() {
@@ -47,8 +43,17 @@ export function inspectVisibleControlContract({ files = trackedProductSource() }
     for (const rule of strongPlaceholderPatterns) {
       if (rule.pattern.test(source)) errors.push(`${path}:${rule.label}`);
     }
-    for (const pattern of voicePatterns) {
-      if (pattern.test(source)) errors.push(`${path}:exposed voice/dictation implementation`);
+    if (
+      path.startsWith("src/components/") ||
+      (path.startsWith("src/routes/") && !path.startsWith("src/routes/api/"))
+    ) {
+      const result =
+        path === "src/components/ChatInput.tsx"
+          ? inspectVoiceComposerBoundary(source)
+          : inspectBrowserVoiceSource(source, {
+              allowMicrophone: path === "src/components/ComposerVoiceDialog.tsx",
+            });
+      errors.push(...result.errors.map((error) => `${path}:${error}`));
     }
   }
 
@@ -72,11 +77,11 @@ export function inspectVisibleControlContract({ files = trackedProductSource() }
   if (!/scheduledTasks:[\s\S]*availability: "unavailable"/u.test(capabilities)) {
     errors.push("capability-registry:scheduled execution limitation missing");
   }
-  if (!/voiceScope: "required_unavailable"/u.test(capabilities)) {
-    errors.push("capability-registry:required unavailable Voice scope missing");
+  if (!/voiceScope: "required_provider_dependent"/u.test(capabilities)) {
+    errors.push("capability-registry:required provider-dependent Voice scope missing");
   }
-  if (!/voice:[\s\S]*availability: "unavailable"/u.test(capabilities)) {
-    errors.push("capability-registry:Voice availability limitation missing");
+  if (!/voice:[\s\S]*availability: "provider-dependent"/u.test(capabilities)) {
+    errors.push("capability-registry:Voice provider/configuration limitation missing");
   }
 
   return [...new Set(errors)].sort();
@@ -88,5 +93,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error(`Visible-control contract failed:\n${errors.join("\n")}`);
     process.exit(1);
   }
-  console.log("VISIBLE_CONTROL_CONTRACT=PASS fakeControls=0 voice=required_unavailable");
+  console.log("VISIBLE_CONTROL_CONTRACT=PASS fakeControls=0 voice=required_provider_dependent");
 }

@@ -8,8 +8,16 @@ import { z } from "zod";
 import * as policy from "../../src/lib/scheduled-task-policy.mjs";
 const owner = "11111111-1111-4111-8111-111111111111",
   taskId = "22222222-2222-4222-8222-222222222222";
-function load({ available = true, principal = owner, rpcError = null, plan = "plus" } = {}) {
+function load({
+  available = true,
+  principal = owner,
+  rpcError = null,
+  plan = "plus",
+  authenticated = true,
+  accountAvailable = true,
+} = {}) {
   const calls = [],
+    rpcCalls = [],
     exports = {};
   const task = { id: taskId, status: "scheduled" };
   const taskQuery = () => {
@@ -32,8 +40,10 @@ function load({ available = true, principal = owner, rpcError = null, plan = "pl
     from: taskQuery,
     rpc: (name, args) => ({
       abortSignal: async () => {
+        rpcCalls.push(name);
         if (name === "effective_user_plan_tier") return { data: plan, error: null };
-        if (name === "scheduled_task_account_available") return { data: true, error: null };
+        if (name === "scheduled_task_account_available")
+          return { data: accountAvailable, error: null };
         calls.push({ name, args });
         return { data: { taskId }, error: rpcError };
       },
@@ -59,7 +69,10 @@ function load({ available = true, principal = owner, rpcError = null, plan = "pl
     },
     "@/integrations/supabase/auth-middleware": {},
     "@/lib/api-auth.server": {
-      requireVerifiedUser: async () => ({ userId: principal, supabaseAdmin: admin }),
+      requireVerifiedUser: async () =>
+        authenticated
+          ? { userId: principal, supabaseAdmin: admin }
+          : new Response("Sign in required", { status: 401 }),
     },
     "@/lib/auth-security.mjs": { isCrossSiteMutation: () => false },
     "@/lib/distributed-rate-limit.server": {
@@ -77,7 +90,7 @@ function load({ available = true, principal = owner, rpcError = null, plan = "pl
     }).outputText,
     { exports, require: (name) => modules[name], Date, Error, AbortSignal, crypto, Response },
   );
-  return { update: exports.updateScheduledTask, calls, api: exports };
+  return { update: exports.updateScheduledTask, calls, rpcCalls, api: exports };
 }
 const data = () => ({
   id: taskId,
@@ -118,44 +131,102 @@ test("stale revision is definitive and retry cannot be combined with edited sett
   );
 });
 
-test("downgraded accounts can pause and delete tasks but cannot resume them", async () => {
-  const { api, calls } = load({ plan: "free" });
-  const mutation = { ...data(), retry: false };
-
-  await api.updateScheduledTask({
-    data: { ...mutation, status: "paused" },
-    context: { userId: owner },
+for (const plan of ["free", "plus", "pro"]) {
+  test(`${plan} task entitlement is independent of billing and execution readiness`, async () => {
+    for (const available of [false, true]) {
+      const { api, rpcCalls } = load({ plan, available });
+      const result = await api.isScheduledTasksEligible({
+        data: { expectedUserId: owner },
+        context: { userId: owner },
+      });
+      assert.equal(result.eligible, true);
+      assert.equal(result.executionAvailable, available);
+      assert.deepEqual(rpcCalls, ["scheduled_task_account_available"]);
+    }
   });
-  await api.deleteScheduledTask({ data: mutation, context: { userId: owner } });
-  await assert.rejects(
-    api.updateScheduledTask({
-      data: { ...mutation, mutationId: randomUUID(), status: "scheduled" },
-      context: { userId: owner },
-    }),
-    /active Plus or Pro plan/,
-  );
 
-  assert.deepEqual(
-    calls.map(({ args }) => args.p_action),
-    ["pause", "delete"],
-  );
+  test(`${plan} can read, pause, delete and request admitted task actions`, async () => {
+    const { api, calls } = load({ plan });
+    const context = { userId: owner };
+    const tasks = await api.listScheduledTasks({ data: { expectedUserId: owner }, context });
+    assert.equal(tasks.length, 1);
+    const history = await api.listScheduledTaskRuns({
+      data: { expectedUserId: owner, taskId },
+      context,
+    });
+    assert.equal(history.length, 1);
+    await api.createScheduledTask({
+      data: {
+        expectedUserId: owner,
+        id: taskId,
+        mutationId: randomUUID(),
+        title: "Task for any signed-in plan",
+        prompt: "Review the current task context.",
+        run_at: "2027-01-01T09:00:00.000Z",
+      },
+      context,
+    });
+    const { status, retry, ...mutation } = data();
+    await api.updateScheduledTask({ data: { ...mutation, title: "Edited task" }, context });
+    await api.updateScheduledTask({ data: { ...mutation, status: "paused" }, context });
+    await api.updateScheduledTask({ data: { ...mutation, status: "scheduled" }, context });
+    await api.offerScheduledTaskCopy({
+      data: { ...mutation, email: "recipient@example.com" },
+      context,
+    });
+    await api.deleteScheduledTask({ data: mutation, context });
+    assert.deepEqual(
+      calls.map(({ args }) => args.p_action),
+      ["create", "edit", "pause", "resume", "shareCopy", "delete"],
+    );
+  });
+
+  test(`${plan} cannot create, resume or retry without an operational scheduler`, async () => {
+    const { api, calls } = load({ plan, available: false });
+    const context = { userId: owner };
+    await assert.rejects(
+      api.createScheduledTask({
+        data: {
+          expectedUserId: owner,
+          title: "Never dispatched",
+          prompt: "Never executes while the runner is disabled.",
+          run_at: "2027-01-01T09:00:00.000Z",
+        },
+        context,
+      }),
+      /Background execution is not ready/,
+    );
+    for (const retry of [false, true])
+      await assert.rejects(
+        api.updateScheduledTask({ data: { ...data(), retry }, context }),
+        /Background execution is not ready/,
+      );
+    assert.equal(calls.length, 0);
+  });
+}
+
+test("guest and unavailable accounts cannot access task entitlement or dispatch mutations", async () => {
+  for (const options of [{ authenticated: false }, { accountAvailable: false }]) {
+    const { api, calls } = load(options);
+    const context = { userId: owner };
+    await assert.rejects(
+      api.isScheduledTasksEligible({ data: { expectedUserId: owner }, context }),
+    );
+    await assert.rejects(api.listScheduledTasks({ data: { expectedUserId: owner }, context }));
+    await assert.rejects(api.updateScheduledTask({ data: data(), context }));
+    assert.equal(calls.length, 0);
+  }
 });
 
-test("downgraded accounts can load tasks but cannot share copies", async () => {
-  const { api, calls } = load({ plan: "free" });
-  const tasks = await api.listScheduledTasks({
-    data: { expectedUserId: owner },
-    context: { userId: owner },
+test("database admission remains authoritative without advertising a paid-plan requirement", async () => {
+  const { api } = load({
+    plan: "free",
+    rpcError: { code: "42501", message: "task_plan_required" },
   });
-  assert.equal(tasks.length, 1);
   await assert.rejects(
-    api.offerScheduledTaskCopy({
-      data: { ...data(), email: "recipient@example.com" },
-      context: { userId: owner },
-    }),
-    /active Plus or Pro plan/,
+    api.updateScheduledTask({ data: data(), context: { userId: owner } }),
+    /not available for this account in this deployment/,
   );
-  assert.equal(calls.length, 0);
 });
 
 test("every Tasks endpoint rejects an old account draft even when middleware and current credentials now belong to another account", async () => {

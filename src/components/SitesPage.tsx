@@ -295,6 +295,7 @@ function SitesContent({ userId }: { userId: string }) {
           ) : index.sites?.length ? (
             index.sites.map((item) => (
               <button
+                data-kova-button-shape="preserve"
                 key={item.id}
                 type="button"
                 disabled={busy}

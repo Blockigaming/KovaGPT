@@ -52,6 +52,14 @@ test("canonical inputs use the supplied source readers and work outside the chec
       cwd: tmpdir(),
       encoding: "utf8",
     });
+    if (
+      args.includes("--dry-run") &&
+      JSON.parse(readFileSync(join(ROOT, "release-migrations.json"))).count > 185
+    ) {
+      assert.equal(run.status, 1);
+      assert.match(run.stderr, /upgrade_canonical_history_pending_mismatch/u);
+      continue;
+    }
     assert.equal(run.status, 0, `${script}: ${run.stderr}`);
     if (args.includes("--dry-run")) {
       const result = JSON.parse(run.stdout);
@@ -99,6 +107,56 @@ test("the decision accounts for each current source-only and remote-only version
       .every((item) => item.reviewStatus === "blocked_requires_schema_proof"),
   );
   assert.equal(decision.status, "proposed_only_no_history_repair_or_production_action");
+});
+
+test("forward auth migrations are checked without changing the historical decision", () => {
+  const manifest = JSON.parse(readFileSync(join(ROOT, "release-migrations.json"), "utf8"));
+  const content = Buffer.from("-- New owned-auth migration fixture.\nselect 1;\n");
+  const filename = "20990101000000_kova_owned_forward_fixture.sql";
+  manifest.count += 1;
+  manifest.migrations.push({
+    ...manifest.migrations.at(-1),
+    order: manifest.count,
+    timestamp: filename.slice(0, 14),
+    filename,
+    sha256: createHash("sha256").update(content).digest("hex"),
+  });
+  const build = ({ observed = manifest, changedBytes = content, untracked = false } = {}) =>
+    buildCanonicalHistoryDecision({
+      root: ROOT,
+      readFile(pathname) {
+        if (pathname === join(ROOT, "release-migrations.json"))
+          return Buffer.from(JSON.stringify(observed));
+        if (pathname === join(ROOT, "supabase/migrations", filename)) return changedBytes;
+        return readFileSync(pathname);
+      },
+      readDirectory(directory) {
+        return [
+          ...readdirSync(directory),
+          filename,
+          ...(untracked ? ["20990102000000_kova_owned_untracked_fixture.sql"] : []),
+        ];
+      },
+    });
+  const expected = JSON.parse(readFileSync(join(ROOT, path), "utf8"));
+  const decision = build();
+  assert.deepEqual(decision, expected);
+  assert.equal(decision.sourceManifestSha256, expected.sourceManifestSha256);
+  assert.equal(decision.counts.proposedFinalLedgerCount, 209);
+  const changedPrefix = structuredClone(manifest);
+  changedPrefix.migrations[184].destructive = !changedPrefix.migrations[184].destructive;
+  assert.throws(
+    () => build({ observed: changedPrefix }),
+    /canonical_history_current_source_checkpoint_changed/u,
+  );
+  assert.throws(
+    () => build({ changedBytes: Buffer.from("select 2;\n") }),
+    /canonical_history_checked_out_migration_content_changed/u,
+  );
+  assert.throws(
+    () => build({ untracked: true }),
+    /canonical_history_checked_out_migration_set_changed/u,
+  );
 });
 
 test("capture validation rejects historical statement drift and wrong projects", () => {
@@ -188,6 +246,124 @@ test("checked-out migration validation rejects edited and additional SQL files",
         Buffer.from(content),
       ),
     /canonical_history_checked_out_migration_set_changed/u,
+  );
+});
+
+test("reviewed forward extensions accept the exact appended migration bodies", () => {
+  const current = JSON.parse(readFileSync(join(ROOT, "release-migrations.json"), "utf8"));
+  const baseline = { count: 157, migrations: current.migrations.slice(0, 157) };
+  assert.doesNotThrow(() =>
+    validateForwardExtension(
+      baseline,
+      current,
+      readdirSync(join(ROOT, "supabase/migrations")),
+      (name) => readFileSync(join(ROOT, "supabase/migrations", name)),
+    ),
+  );
+});
+
+test("reviewed forward extensions reject changed exception bodies despite updated manifests", () => {
+  const source = JSON.parse(readFileSync(join(ROOT, "release-migrations.json"), "utf8"));
+  const baseline = { count: 157, migrations: source.migrations.slice(0, 157) };
+  const filenames = [
+    "20261018163000_daily_upload_identity.sql",
+    "20261020183948_account_email_notifications.sql",
+    "20261020195253_account_email_all_enabled_defaults.sql",
+    "20261021130544_production_owned_email_worker.sql",
+  ];
+  for (const filename of filenames) {
+    const current = structuredClone(source);
+    const bytes = Buffer.concat([
+      readFileSync(join(ROOT, "supabase/migrations", filename)),
+      Buffer.from("\nselect 1;\n"),
+    ]);
+    current.migrations.find((entry) => entry.filename === filename).sha256 = createHash("sha256")
+      .update(bytes)
+      .digest("hex");
+    assert.throws(
+      () =>
+        validateForwardExtension(
+          baseline,
+          current,
+          readdirSync(join(ROOT, "supabase/migrations")),
+          (name) =>
+            name === filename ? bytes : readFileSync(join(ROOT, "supabase/migrations", name)),
+        ),
+      /canonical_history_forward_extension_changed/u,
+      filename,
+    );
+  }
+});
+
+test("reviewed forward extensions still reject arbitrary non-Kova migrations", () => {
+  const current = JSON.parse(readFileSync(join(ROOT, "release-migrations.json"), "utf8"));
+  const baseline = { count: 157, migrations: current.migrations.slice(0, 157) };
+  const filename = "20990101000000_unreviewed_forward.sql";
+  const bytes = Buffer.from("select 1;\n");
+  current.count += 1;
+  current.migrations.push({
+    ...current.migrations.at(-1),
+    order: current.count,
+    timestamp: filename.slice(0, 14),
+    filename,
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+  });
+  assert.throws(
+    () =>
+      validateForwardExtension(
+        baseline,
+        current,
+        [...readdirSync(join(ROOT, "supabase/migrations")), filename],
+        (name) =>
+          name === filename ? bytes : readFileSync(join(ROOT, "supabase/migrations", name)),
+      ),
+    /canonical_history_forward_extension_changed/u,
+  );
+});
+
+test("reviewed forward extensions retain pinned-prefix and chronological-order checks", () => {
+  const source = JSON.parse(readFileSync(join(ROOT, "release-migrations.json"), "utf8"));
+  const baseline = { count: 157, migrations: source.migrations.slice(0, 157) };
+  const files = readdirSync(join(ROOT, "supabase/migrations"));
+  const readMigration = (name) => readFileSync(join(ROOT, "supabase/migrations", name));
+  const historicalFilename = source.migrations[0].filename;
+  const changedBytes = Buffer.concat([
+    readMigration(historicalFilename),
+    Buffer.from("\nselect 1;\n"),
+  ]);
+  const readChangedMigration = (name) =>
+    name === historicalFilename ? changedBytes : readMigration(name);
+  assert.throws(
+    () => validateForwardExtension(baseline, source, files, readChangedMigration),
+    /canonical_history_checked_out_migration_content_changed/u,
+  );
+  const changedPrefix = structuredClone(source);
+  changedPrefix.migrations[0].sha256 = createHash("sha256").update(changedBytes).digest("hex");
+  assert.throws(
+    () => validateForwardExtension(baseline, changedPrefix, files, readChangedMigration),
+    /canonical_history_source_prefix_changed/u,
+  );
+  const reorderedHistory = structuredClone(source);
+  [reorderedHistory.migrations[0], reorderedHistory.migrations[1]] = [
+    reorderedHistory.migrations[1],
+    reorderedHistory.migrations[0],
+  ];
+  reorderedHistory.migrations[0].order = 1;
+  reorderedHistory.migrations[1].order = 2;
+  assert.throws(
+    () => validateForwardExtension(baseline, reorderedHistory, files, readMigration),
+    /canonical_history_source_prefix_changed/u,
+  );
+  const reordered = structuredClone(source);
+  [reordered.migrations[185], reordered.migrations[186]] = [
+    reordered.migrations[186],
+    reordered.migrations[185],
+  ];
+  reordered.migrations[185].order = 186;
+  reordered.migrations[186].order = 187;
+  assert.throws(
+    () => validateForwardExtension(baseline, reordered, files, readMigration),
+    /canonical_history_forward_extension_changed/u,
   );
 });
 

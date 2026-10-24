@@ -5,7 +5,8 @@ import {
   assertNotBanned,
   assertFeatureEnabled,
 } from "@/lib/api-auth.server";
-import { STORAGE_LIMITS_BYTES } from "@/lib/modes";
+import { reserveUploads } from "@/lib/upload-quota.server.mjs";
+import { DAILY_UPLOAD_LIMIT_BY_TIER, STORAGE_LIMITS_BYTES } from "@/lib/modes";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { BodyReadError, readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 import {
@@ -110,6 +111,14 @@ async function handle(request: Request) {
     if (!(file instanceof File) || typeof text !== "string")
       return json({ error: "Invalid original-file fields." }, 400);
     const tier = await waitForPromiseWithSignal(getCallerTier(auth), deadline.signal);
+    const allowed = await reserveUploads(
+      auth,
+      [{ kind: "text_file", name: file.name, content: text }],
+      DAILY_UPLOAD_LIMIT_BY_TIER[tier],
+      deadline.signal,
+    );
+    if (!allowed)
+      return json({ error: "Daily file upload limit reached. Resets at midnight UTC." }, 429);
     return json(
       await publishOriginalLibraryDocument(
         auth.supabaseAdmin,

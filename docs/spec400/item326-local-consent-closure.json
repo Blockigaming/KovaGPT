@@ -1,0 +1,72 @@
+{
+  "requirement_id": 326,
+  "exact_requirement": "Ask before saving a one-time correction as permanent memory. Do not convert a temporary writing instruction into a lasting account preference.",
+  "recommendation_status": "recommended_verified_local_ui",
+  "suggested_scope": "verified_local_ui for exact no-automatic-promotion plus explicit reviewed-save consent; no other Memory requirement closure",
+  "whole_requirement_flags_changed": false,
+  "native_basis": [
+    {
+      "source": "bb18a1e6b0c63acc00e1b062cd87a5ccfad8f860",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/finite-coverage-review-bb18a1e.json",
+      "receipt": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-bb18a1e/receipt.md",
+      "receipt_sha256": "6482bf963f811e974d74fd8db2babefa49d43acaff4b91ca51f981d0be16b931",
+      "scope": "Blank editable exact text, unchecked consent/disabled Save, future-chat/replacement disclosure, editing/dirty Cancel/Keep/Discard, explicit fictional Save and exact readback, rejected/uncertain retained draft and short-chat ineligibility."
+    },
+    {
+      "source": "db8c923f54c9fbda74af17f6dfe6a1afd30980c1",
+      "scope": "Ordinary Open Memory Center link reaches actual route; default empty sample. Prior exact record unchanged-source proof reused.",
+      "images": [
+        {
+          "path": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-db8c923/memory-heading390-dark-native.jpg",
+          "sha256": "e1928d02703710dee1b611cf5e5f66c142c3de69dda0595fd3a097d2fa51f41c"
+        },
+        {
+          "path": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-db8c923/memory-entry390-dark-native.jpg",
+          "sha256": "5b589e6fde616bc15f26b31d1a3468824453f9daea8e79bc3277fb7ad27f3113"
+        }
+      ],
+      "receipt": "/workspace/scratch/07d9f01d53f6/kova-spec400-review-db8c923/receipt.md",
+      "receipt_sha256": "63e06f61d724ce3e904f9c73a9e3a6c14d7be7748a1131eccbd621895ee75a72",
+      "ledger": "/workspace/scratch/07d9f01d53f6/kova-spec400-independent-review/finite-coverage-review-db8c923.json"
+    }
+  ],
+  "source_mapping": {
+    "method": "Five exact db8 committed blobs hash-verified at terminal reconciliation; git diff bb18a1e db8c923 on those files is empty. Current working source may have advanced and is not attributed to these captures.",
+    "files": [
+      {
+        "path": "/workspace/scratch/07d9f01d53f6/kova-spec400/src/components/ReviewedMemoryDialog.tsx",
+        "sha256": "99344fe8cf517f2154351a18c30c5a7b77bf31841e35998f7c8beab65c35b3f1"
+      },
+      {
+        "path": "/workspace/scratch/07d9f01d53f6/kova-spec400/src/lib/reviewed-memory-client.mjs",
+        "sha256": "5de07a4379f3f2b809f61a4cfe45ecf30b6bcdc5370391edc2b87bf9348535dd"
+      },
+      {
+        "path": "/workspace/scratch/07d9f01d53f6/kova-spec400/src/lib/reviewed-memory-policy.mjs",
+        "sha256": "52fb8993096fe398bc58fcc78c59b35cb0a1fea2652fee7051e1138c056e0c46"
+      },
+      {
+        "path": "/workspace/scratch/07d9f01d53f6/kova-spec400/src/lib/chat-summary-snapshot.mjs",
+        "sha256": "59d6a4b3007e61c4a308455b4e48826c81dbe31ddf410efd95b628fd6999142b"
+      },
+      {
+        "path": "/workspace/scratch/07d9f01d53f6/kova-spec400/src/routes/api/memory.ts",
+        "sha256": "808d3f830c6b217a0d45fb26bfbeaeb4b3b0e0ae05dcad0561408b3835d7bec2"
+      }
+    ],
+    "source_observations": [
+      "Automatic transport submits same-chat contextOnly; non-contextOnly legacy requests fail before automatic cross-chat memory persistence.",
+      "Reviewed save validates explicit confirmed exact text, ownership, synced admitted revision, non-temporary history and real bounded eligible count; only final Save calls persistence.",
+      "The existing Auto-adapt instruction scopes feedback to the rest of the conversation; no new permanent preference write is inferred from that prompt."
+    ]
+  },
+  "tests": "Named API/client/dialog/entry/coordinator tests and build results supplied by source owner; no independent rerun in this review.",
+  "limits": [
+    "Isolated fictional native outcomes and source/test gates do not prove live database persistence, migration, deletion or provider behavior.",
+    "History revision is checked at admission; it is not an atomic history-revision lock. Privacy epoch uses the existing atomic barrier.",
+    "Short/unsynced, Temporary and ineligible account states remain unavailable under existing contracts.",
+    "No standalone Add flow, short-chat storage extension, existing-memory-edit census or cross-device preference synchronization is claimed.",
+    "M26 switch-track geometry is separate from the item326 explicit-consent contract."
+  ],
+  "updated_at": "2026-10-19T10:46:45Z"
+}

@@ -28,22 +28,39 @@ const CONTENT_SECURITY_POLICY = [
   "upgrade-insecure-requests",
 ].join("; ");
 
-function hardenResponse(response: Response): Response {
+function hardenResponse(response: Response, request?: Request): Response {
   const headers = new Headers(response.headers);
   const securityHeaders: Record<string, string> = {
     "Content-Security-Policy": CONTENT_SECURITY_POLICY,
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
-    // Voice and browser dictation are intentionally absent from KovaGPT.
+    // Same-origin microphone use still requires explicit browser permission.
     "Permissions-Policy":
-      'camera=(), geolocation=(self), microphone=(), payment=(self "https://checkout.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://link.com" "https://*.link.com"), usb=()',
+      'camera=(), geolocation=(self), microphone=(self), payment=(self "https://checkout.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://link.com" "https://*.link.com"), usb=()',
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
   };
-  for (const [name, value] of Object.entries(securityHeaders)) headers.set(name, value);
+  const documentExportPost =
+    request?.method === "POST" && new URL(request.url).pathname === "/api/document-export";
+  for (const [name, value] of Object.entries(securityHeaders)) {
+    if (name === "Content-Security-Policy") {
+      // The byte relay has a fixed sandbox policy stricter than the baseline.
+      if (documentExportPost && headers.get(name) === "default-src 'none'; sandbox") continue;
+      // Browsers enforce every CSP policy. Keep a sensitive endpoint's tighter
+      // policy while also applying the application baseline.
+      headers.append(name, value);
+    } else if (
+      (name === "Referrer-Policy" && headers.get(name) === "no-referrer") ||
+      (name === "X-Frame-Options" && headers.get(name) === "DENY")
+    ) {
+      continue;
+    } else {
+      headers.set(name, value);
+    }
+  }
   if (!headers.has("Cache-Control") && response.status >= 400) {
     headers.set("Cache-Control", "no-store");
   }
@@ -132,7 +149,7 @@ export default {
       }
       const handler = await getServerEntry();
       const response = await withRuntimeBindings(env, () => handler.fetch(request, env, ctx));
-      return hardenResponse(await normalizeCatastrophicSsrResponse(response));
+      return hardenResponse(await normalizeCatastrophicSsrResponse(response), request);
     } catch (error) {
       console.error("[server] request failed", {
         name: error instanceof Error ? error.name : "UnknownError",

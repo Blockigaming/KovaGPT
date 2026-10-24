@@ -51,7 +51,7 @@ function safeTaskError(code?: string, message?: string): Error {
   if (message === "task_execution_unavailable")
     return new Error("Background execution is not ready. Your task was not started.");
   if (message === "task_plan_required")
-    return new Error("An active Plus or Pro plan is required to start tasks.");
+    return new Error("Task execution is not available for this account in this deployment.");
   if (message === "task_recipient_unavailable")
     return new Error("That recipient is unavailable. Choose an existing verified account.");
   if (code === "40001")
@@ -68,12 +68,7 @@ function safeTaskError(code?: string, message?: string): Error {
     return new Error("Check the task schedule, context, and trigger settings.");
   return new Error("Tasks are temporarily unavailable. Please retry.");
 }
-function scheduledPlanEligible(tier: unknown): boolean {
-  // The database is authoritative. Unknown future paid tiers are eligible by
-  // default; only an absent/free result is denied.
-  return typeof tier === "string" && tier.length > 0 && tier !== "free";
-}
-async function access(userId: string, mutation = false, requireEligiblePlan = true) {
+async function access(userId: string, mutation = false) {
   const request = getRequest();
   if (mutation && isCrossSiteMutation(request)) throw new Error("Cross-site request blocked.");
   const auth = await requireVerifiedUser(request);
@@ -88,14 +83,8 @@ async function access(userId: string, mutation = false, requireEligiblePlan = tr
   if (!rate.allowed) throw new Error("Tasks are busy. Please try again shortly.");
   const admin = auth.supabaseAdmin as unknown as Admin;
   const signal = AbortSignal.any([request.signal, AbortSignal.timeout(10000)]);
-  if (requireEligiblePlan) {
-    const plan = await admin
-      .rpc("effective_user_plan_tier", { _user_id: userId })
-      .abortSignal(signal);
-    if (plan.error || !scheduledPlanEligible(plan.data)) {
-      throw safeTaskError(plan.error?.code, "task_plan_required");
-    }
-  }
+  // Tasks belong to every verified signed-in account, including Free. Billing
+  // tiers do not determine access; account status and database admission still do.
   const current = await admin
     .rpc("scheduled_task_account_available", { p_user_id: userId })
     .abortSignal(signal);
@@ -115,8 +104,7 @@ async function mutate(
     payload: Record<string, unknown>;
   },
 ) {
-  const paidPlanActions = new Set(["create", "edit", "resume", "retry", "shareCopy", "acceptCopy"]);
-  const { admin, signal } = await access(userId, true, paidPlanActions.has(action));
+  const { admin, signal } = await access(userId, true);
   if (["create", "resume", "retry"].includes(action) && !(await scheduledExecutionAvailable()))
     throw safeTaskError("55000", "task_execution_unavailable");
   const result = await admin
@@ -163,14 +151,10 @@ export const isScheduledTasksEligible = createServerFn({ method: "POST" })
   .validator((value: unknown) => taskReadIdentity.parse(value))
   .handler(async ({ data, context }) => {
     assertTaskPrincipal(data, context.userId);
-    const { admin, signal } = await access(context.userId, false, false);
-    const plan = await admin
-      .rpc("effective_user_plan_tier", { _user_id: context.userId })
-      .abortSignal(signal);
-    if (plan.error) throw safeTaskError(plan.error.code);
+    await access(context.userId);
     const ready = await activeScheduledExecutionReadiness();
     return {
-      eligible: scheduledPlanEligible(plan.data),
+      eligible: true,
       executionAvailable: ready.configured,
       reason: ready.reason,
     };
@@ -180,8 +164,8 @@ export const listScheduledTasks = createServerFn({ method: "POST" })
   .validator((value: unknown) => taskReadIdentity.parse(value))
   .handler(async ({ data, context }): Promise<ScheduledTask[]> => {
     assertTaskPrincipal(data, context.userId);
-    // A downgrade must not hide records that the user can still pause or delete.
-    const { admin, signal } = await access(context.userId, false, false);
+    // Existing records remain available independently of execution readiness.
+    const { admin, signal } = await access(context.userId);
     const rows: ScheduledTask[] = [];
     let cursor: string | null = null;
     for (let page = 0; page < 100; page++) {

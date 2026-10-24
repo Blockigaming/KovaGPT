@@ -1,0 +1,95 @@
+/* Specification controls remain usable on every pointer type. */
+.kova-message {
+  scroll-margin-top: 80px;
+}
+:is(.kova-assistant, .kova-project-chat)
+  .kova-message-actions.kova-response-action-bar
+  button.kova-message-icon-action {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  flex-basis: 44px !important;
+  border-radius: var(--kova-radius-button);
+  padding: 12px !important;
+}
+.kova-selection-actions button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+  font-size: 13px;
+}
+.kova-selection-actions button:hover {
+  background: var(--accent);
+}
+.kova-sources-inspector[data-kova-dialog-surface] {
+  left: auto;
+  right: 0;
+  top: 0;
+  transform: none;
+  width: min(420px, 100vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: var(--kova-radius-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.kova-task-receipt {
+  margin-bottom: 12px;
+}
+.kova-task-success {
+  color: #23683c;
+}
+.dark .kova-task-success {
+  color: #93d4aa;
+}
+@media (max-width: 767px) {
+  .kova-sources-inspector[data-kova-dialog-surface] {
+    width: 100vw;
+  }
+}
+
+.kova-message-reading-column {
+  width: 100%;
+  min-width: 0;
+  max-width: var(--kova-reading-width);
+}
+.kova-message .kova-user-message-group {
+  max-width: 100%;
+  align-items: flex-start;
+}
+.kova-message .kova-user-message {
+  border-radius: var(--kova-radius-message);
+  max-width: 100%;
+}
+.kova-message-actions svg {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 359px) {
+  .kova-message-actions.kova-response-action-bar .kova-open-result-action {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    padding: 12px !important;
+    justify-content: center;
+    flex: 0 0 44px !important;
+  }
+  .kova-open-result-action > span {
+    display: none;
+  }
+}
+
+/* Beat the shared full-viewport menu cap: upward menus only own the space
+   Radix measured above their trigger. Keep every response action scrollable. */
+body .kova-response-menu[role="menu"] {
+  box-sizing: border-box;
+  max-height: min(var(--radix-dropdown-menu-content-available-height, 100dvh), calc(100dvh - 24px));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}

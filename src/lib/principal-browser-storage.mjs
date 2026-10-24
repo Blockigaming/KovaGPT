@@ -12,6 +12,8 @@ export const PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT = "kova:principal-browser-s
  */
 export const PRINCIPAL_LOCAL_STORAGE_BASES = Object.freeze([
   "kova-workspace-defaults-v1",
+  "kova-voice-selection-v1",
+  "kova-sidebar-shortcuts-v1",
   "kova-location",
   "kova-memory-write-block-v1",
   "kova-write-draft",
@@ -43,6 +45,10 @@ export const PRINCIPAL_SESSION_STORAGE_BASES = Object.freeze([
   "kova-automation-draft",
   "kova-research-draft",
   "kova-work-draft",
+  "kova-scheduled-task-list",
+  "kova-plugin-list",
+  "kova-project-list",
+  "kova-account-export-request",
 ]);
 
 /** Device policy/UI state intentionally survives account-local cleanup. */
@@ -339,6 +345,7 @@ function principalKeyPlan(identity, { purgeUnscopedPrivate = true } = {}) {
   const localExact = [
     `nova-gpt-conversations-v3:${principal}`,
     `kovagpt:archived:v2:${principal}`,
+    `kova-chat-trash-v1:${principal}`,
     `nova-gpt-pending-active:v2:${principal}`,
     `nova-gpt-settings-v1:${userKey ?? "guest"}`,
     `kova-work-tasks-v2:${principal}`,
@@ -347,6 +354,8 @@ function principalKeyPlan(identity, { purgeUnscopedPrivate = true } = {}) {
     `kova-agent-workspace-v2:${principal}`,
     `kova-work-sync-v1:${principal}`,
     `kova-composer-send-on-enter-v1:${userKey ?? "guest"}`,
+    // Existing Projects keys used the raw owner id (or the literal null for guests).
+    `kova-project-opened:${userKey}`,
     `kova-workspace-snapshots-v1:${userKey ?? "signed-out"}`,
     `kova-omega:${userKey ?? "signed-out"}:enterprise`,
     `kova-omega:${userKey ?? "signed-out"}:mcp`,
@@ -372,6 +381,9 @@ function principalKeyPlan(identity, { purgeUnscopedPrivate = true } = {}) {
   if (purgeUnscopedPrivate) localPrefixes.push(...UNSCOPED_PRIVATE_LOCAL_PREFIXES);
 
   const sessionExact = PRINCIPAL_SESSION_STORAGE_BASES.map((base) => `${base}:v2:${principal}`);
+  // Legacy list preferences still use feature-specific formats. Match exact owners;
+  // never use a prefix purge that could remove another account's private queries.
+  sessionExact.push(`kova-project-list:${userKey}`, `kova-library-filters:${principal}`);
   if (purgeUnscopedPrivate) sessionExact.push(...UNSCOPED_PRIVATE_SESSION_EXACT_KEYS);
 
   return {

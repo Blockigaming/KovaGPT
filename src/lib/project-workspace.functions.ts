@@ -231,18 +231,28 @@ export const reorderTasks = createServerFn({ method: "POST" })
     z
       .object({
         project_id: z.string().uuid(),
-        order: z.array(z.string().uuid()).max(500),
+        order: z
+          .array(z.string().uuid())
+          .max(500)
+          .refine(
+            (ids) => new Set(ids.map((id) => id.toLowerCase())).size === ids.length,
+            "Task order must not contain duplicate IDs.",
+          ),
       })
       .parse(i),
   )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    // update positions sequentially
+    // These writes are sequential, not atomic. Stop on failure; earlier positions may be saved.
     for (let idx = 0; idx < data.order.length; idx++) {
-      await context.supabase
+      const { data: row, error } = await context.supabase
         .from("project_tasks")
         .update({ position: idx + 1 })
         .eq("id", data.order[idx])
-        .eq("project_id", data.project_id);
+        .eq("project_id", data.project_id)
+        .select("id")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!row) throw new Error("A task could not be updated. Reload tasks before reordering.");
     }
     return { ok: true };
   });

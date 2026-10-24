@@ -10,10 +10,10 @@ const settingsSource = await readFile(
   new URL("../../src/components/SettingsDialog.tsx", import.meta.url),
   "utf8",
 );
-const shortcutPanel = settingsSource.slice(
-  settingsSource.indexOf("function ShortcutsEditor"),
-  settingsSource.indexOf("// ---------- Location panel ----------"),
-);
+const shortcutStart = settingsSource.indexOf("function ShortcutsEditor");
+const shortcutEnd = settingsSource.indexOf("// ---------- Location availability ----------");
+assert.ok(shortcutStart >= 0 && shortcutEnd > shortcutStart, "expected the shortcut editor scope");
+const shortcutPanel = settingsSource.slice(shortcutStart, shortcutEnd);
 
 test("stored shortcuts are validated before reaching the keyboard listener", () => {
   assert.match(shortcutsSource, /const parsed: unknown = JSON\.parse\(raw\);/);
@@ -42,9 +42,12 @@ test("shortcut bindings are executable and collision-free", () => {
   assert.match(shortcutsSource, /return normalizedShortcutKey\(e\.key\)\.toLowerCase\(\) === key;/);
   assert.match(
     shortcutPanel,
-    /const conflict = visibleList\.find\([\s\S]*?shortcut\.combo === combo[\s\S]*?That shortcut is already assigned to/,
+    /const conflict = visibleList\.find\(\s*\(item\) => item\.id !== action\.id && item\.combo === combo,\s*\);\s*if \(conflict\)\s*throw new Error\([\s\S]*?already assigned to “\$\{conflict\.label\}”/,
   );
-  assert.match(shortcutPanel, /That key can't be used for a shortcut\./);
+  assert.match(
+    shortcutPanel,
+    /if \(!combo\)\s*throw new Error\([\s\S]*?That key cannot be used for/,
+  );
 });
 
 test("shortcut persistence reports unavailable or failed browser storage", () => {
@@ -65,19 +68,33 @@ test("shortcut persistence reports unavailable or failed browser storage", () =>
 test("Settings commits shortcut state only after persistence succeeds", () => {
   assert.match(
     shortcutPanel,
-    /if \(!mod\.saveShortcuts\(userKey, next\)\) \{[\s\S]*?Shortcut couldn't be saved in this browser\.[\s\S]*?return;[\s\S]*?setList\(next\);/,
+    /if \(!mod\.saveShortcuts\(userKey, next\)\)\s*throw new Error\([\s\S]*?shortcut could not be saved in this browser\. Your previous shortcut is still shown\.[\s\S]*?\);\s*setList\(next\);/,
   );
   assert.match(
     shortcutPanel,
-    /if \(!mod\.resetShortcuts\(userKey\)\) \{[\s\S]*?Shortcuts couldn't be reset in this browser\.[\s\S]*?return;[\s\S]*?setList\(mod\.DEFAULT_SHORTCUTS\);/,
+    /if \(!mod\.resetShortcuts\(userKey\)\)\s*throw new Error\(\s*"Keyboard shortcuts could not be reset in this browser\. Your current shortcuts are still shown\.",\s*\);\s*setList\(mod\.DEFAULT_SHORTCUTS\);/,
+  );
+  assert.match(shortcutPanel, /if \(!current\(\)\) return;\s*if \(action\.kind === "reset"\)/);
+  assert.match(shortcutPanel, /const ready = principal !== null && listPrincipal === principal/);
+  assert.match(
+    shortcutPanel,
+    /const current = \(\) =>\s*activeRef\.current &&\s*principalRef\.current === principal &&\s*operationRef\.current === operation/,
+  );
+  assert.match(
+    shortcutPanel,
+    /catch \(cause\) \{\s*if \(current\(\)\)\s*setFailure\(\{\s*principal,\s*retry,/,
+  );
+  assert.match(
+    shortcutPanel,
+    /const visibleFailure = failure\?\.principal === principal \? failure : null/,
   );
   assert.match(shortcutPanel, /Shortcuts stay in this browser when storage is available/);
 });
 
 test("shortcut controls expose loading state and 44px touch targets", () => {
-  assert.ok(shortcutPanel.includes("aria-busy={!ready}"));
+  assert.match(shortcutPanel, /aria-busy=\{!ready \|\| pending\}/);
   assert.match(shortcutPanel, /<p role="status"[\s\S]*?Loading shortcuts…/);
-  assert.match(shortcutPanel, /disabled=\{!ready\}/);
+  assert.match(shortcutPanel, /disabled=\{!ready \|\| pending\}/);
   assert.ok((shortcutPanel.match(/min-h-11/g) ?? []).length >= 2);
   assert.match(shortcutPanel, /aria-label=/);
   assert.match(shortcutPanel, /Stop recording/);

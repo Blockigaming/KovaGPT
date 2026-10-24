@@ -133,7 +133,12 @@ test("password change is owner/revision-bound, rotates the current session, and 
     await db.query(
       `insert into kova_private.auth_password_recoveries(account_id,token_digest,expires_at,created_at)
       values($1,$2,$3,$4)`,
-      [owner, Buffer.from(digest("reset"), "hex"), expiry, now],
+      [
+        owner,
+        Buffer.from(digest("reset"), "hex"),
+        new Date(Date.parse(now) + 3600_000).toISOString(),
+        now,
+      ],
     );
     await db.query(`select * from public.kova_auth_begin_mfa_login($1,$2,$3,$4,$5,$6)`, [
       owner,

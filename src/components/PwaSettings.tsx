@@ -32,6 +32,7 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
   const canInstall = useSyncExternalStore(subscribeInstallPrompt, canPromptInstall, noServerPrompt);
   const [status, setStatus] = useState<Status | null>(null),
     [binding, setBinding] = useState<PushDeviceBinding | null>(null),
+    [permission, setPermission] = useState<NotificationPermission | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
   const [quiet, setQuiet] = useState(false),
@@ -45,7 +46,25 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
     "serviceWorker" in navigator &&
     "PushManager" in window &&
     "Notification" in window;
+  const refreshPermission = useCallback(() => {
+    setPermission(supported ? Notification.permission : null);
+  }, [supported]);
+  useEffect(() => {
+    // Returning from browser site settings only reads permission. It must not
+    // request permission, subscribe the device, or change account preferences.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshPermission();
+    };
+    refreshPermission();
+    window.addEventListener("focus", refreshPermission);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", refreshPermission);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [refreshPermission]);
   const load = useCallback(async () => {
+    refreshPermission();
     if (!ownerId || !supported) return;
     const current = ++generation.current;
     controller.current?.abort();
@@ -87,7 +106,7 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
         setBusy(false);
       }
     }
-  }, [ownerId, supported]);
+  }, [ownerId, supported, refreshPermission]);
   const invalidate = useCallback(() => {
     generation.current++;
     controller.current?.abort();
@@ -121,7 +140,7 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
     controller.current = next;
     try {
       if (action === "enable") {
-        if (!status.publicKey) throw Error("Push is not enabled.");
+        if (!status.ready || !status.publicKey) throw Error("Push is not enabled.");
         await enableDevicePush(ownerId, status.publicKey, next.signal);
       } else if (action === "disable") await disableDevicePush(ownerId, next.signal);
       else if (action === "preferences")
@@ -146,6 +165,7 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
         );
     } finally {
       if (current === generation.current) {
+        refreshPermission();
         busyRef.current = false;
         setBusy(false);
       }
@@ -193,6 +213,22 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
           {!status?.ready && (
             <p className="text-sm">Browser notification delivery is not currently enabled.</p>
           )}
+          {permission === "denied" ? (
+            <p className="text-sm" role="status">
+              Browser notifications are blocked. To allow them, open your browser’s site settings
+              for KovaGPT and change Notifications to Allow, if available. Then return here or
+              choose Refresh. KovaGPT cannot change this permission for you.
+            </p>
+          ) : permission === "default" ? (
+            <p className="text-xs text-muted-foreground">
+              Choose Enable browser notifications to ask this browser for permission.
+            </p>
+          ) : permission === "granted" && !binding ? (
+            <p className="text-xs text-muted-foreground">
+              Your browser allows notifications. Choose Enable browser notifications to subscribe
+              this browser.
+            </p>
+          ) : null}
           <p className="text-xs text-muted-foreground">
             Notifications show only that an update is ready. Open KovaGPT to read private content.
             Turning them off affects this browser; other devices have their own subscriptions.
@@ -200,10 +236,16 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
           <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
-              disabled={busy || !status?.ready || Boolean(binding)}
+              disabled={
+                busy ||
+                !status?.ready ||
+                permission === null ||
+                permission === "denied" ||
+                (Boolean(binding) && permission === "granted")
+              }
               onClick={() => void act("enable")}
             >
-              Enable on this browser
+              Enable browser notifications
             </Button>
             <Button
               size="sm"
@@ -219,7 +261,9 @@ function DeviceSettings({ ownerId }: { ownerId: string | null }) {
           </div>
           {binding && (
             <p className="text-sm" role="status">
-              This browser is subscribed.
+              {permission === "granted"
+                ? "This browser is subscribed."
+                : "This browser has a saved subscription, but browser notification permission is not granted."}
             </p>
           )}
           {status && (

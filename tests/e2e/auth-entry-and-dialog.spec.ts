@@ -34,11 +34,11 @@ test("missing and invalid email deep links return to the canonical auth dialog",
   const authWrites = recordAuthWrites(page);
   const tooLongEmail = `${"a".repeat(321)}@example.com`;
   const cases = [
-    { path: "/auth", title: "Log in or sign up" },
-    { path: "/auth?email=not-an-email&mode=sign-in", title: "Log in or sign up" },
+    { path: "/auth", title: "Log in to Kova" },
+    { path: "/auth?email=not-an-email&mode=sign-in", title: "Log in to Kova" },
     {
       path: `/auth?email=${encodeURIComponent(tooLongEmail)}&mode=sign-up`,
-      title: "Create your account",
+      title: "Create your Kova account",
     },
   ];
 
@@ -64,11 +64,11 @@ test("valid email deep links render a named, gated password step", async ({ page
   await waitForKovaHydration(page);
 
   await expect(page).toHaveTitle("KovaGPT Account");
-  await expect(page.getByRole("heading", { name: "Enter your password" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Log in to Kova" })).toBeVisible();
   await expect(page.locator("#main-content")).toHaveAttribute("tabindex", "-1");
   const email = page.getByLabel("Email address");
   const password = page.getByLabel("Password", { exact: true });
-  const continueButton = page.getByRole("button", { name: "Continue", exact: true });
+  const continueButton = page.getByRole("button", { name: "Log in", exact: true });
 
   await expect(email).toHaveValue("Person+test@Example.com");
   expect(await email.evaluate((input: HTMLInputElement) => input.readOnly)).toBe(true);
@@ -112,11 +112,11 @@ test("valid sign-up deep links use account metadata and named fields", async ({ 
   await waitForKovaHydration(page);
 
   await expect(page).toHaveTitle("KovaGPT Account");
-  await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Create your Kova account" })).toBeVisible();
   await expect(page.getByLabel(/^Name/u)).toBeVisible();
   await expect(page.getByLabel("Email address")).toHaveValue("new@example.com");
   await expect(page.getByLabel("Password", { exact: true })).toBeFocused();
-  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Create account", exact: true })).toBeDisabled();
   expect(authWrites).toEqual([]);
 });
 
@@ -130,13 +130,15 @@ test("auth dialog has one semantic title, one contained close target, and Escape
   await login.focus();
   await login.press("Enter");
 
-  const dialog = page.getByRole("dialog", { name: "Log in or sign up" });
+  const dialog = page.getByRole("dialog", { name: "Log in to Kova" });
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAttribute("aria-modal", "true");
-  await expect(dialog.getByRole("heading", { name: "Log in or sign up" })).toHaveCount(1);
+  await expect(dialog.getByRole("heading", { name: "Log in to Kova" })).toHaveCount(1);
   const describedBy = await dialog.getAttribute("aria-describedby");
   expect(describedBy).toBeTruthy();
-  await expect(page.locator(`[id="${describedBy}"]`)).toContainText("save your chats");
+  await expect(page.locator(`[id="${describedBy}"]`)).toContainText(
+    "Continue with your configured sign-in method.",
+  );
 
   const providerFeedback = dialog.getByText(
     /Checking Google availability|Continue with Google|Google sign-in/u,
@@ -179,7 +181,7 @@ test("auth dialog close button dismisses the dialog and restores focus", async (
   await login.focus();
   await login.press("Enter");
 
-  const dialog = page.getByRole("dialog", { name: "Log in or sign up" });
+  const dialog = page.getByRole("dialog", { name: "Log in to Kova" });
   await expect(dialog).toBeVisible();
   const close = dialog.getByRole("button", { name: "Close", exact: true });
   // Keep the pointer down long enough for blur validation to render. The close

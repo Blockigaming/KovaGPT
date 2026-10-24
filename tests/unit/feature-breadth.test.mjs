@@ -61,11 +61,27 @@ test("heavy chart and artifact workspaces are loaded only when a response needs 
   assert.match(message, /<Suspense/);
 });
 
-test("eligible assistant outputs expose the existing full-screen Artifact workspace", () => {
+test("eligible assistant outputs open the Result workspace with their original context", () => {
   const message = read("src/components/ChatMessage.tsx");
-  assert.match(message, /Open code full screen/);
-  assert.match(message, /Open writing full screen/);
+  assert.match(message, /Open code result/);
+  assert.match(message, /Open writing result/);
   assert.match(message, /<ArtifactEditor/);
+  const opener = message.slice(
+    message.indexOf("const openResult ="),
+    message.indexOf("const openResult =") + 1200,
+  );
+  assert.match(opener, /onOpenResult\(/);
+  for (const field of ["chatId", "messageId", "projectId"])
+    assert.match(opener, new RegExp(String.raw`${field}: temporary \? null :`));
+  const route = read("src/routes/index.tsx");
+  const content = read("src/components/WorkspaceResultContent.tsx");
+  assert.match(route, /<WorkspaceResultContent/u);
+  assert.match(content, /<ArtifactEditor[\s\S]*?\{\.\.\.result\}[\s\S]*?embedded/);
+  assert.match(
+    route,
+    /resultPrincipalRef\.current !== storagePrincipal[\s\S]*?resultDraftsRef\.current\.clear\(\)/,
+  );
+  assert.match(route, /const scope = `\$\{storagePrincipal\}:\$\{activeId \?\? "new"\}`/);
 });
 
 test("Automation Builder creates through the real scheduled-task flow", () => {
@@ -75,6 +91,10 @@ test("Automation Builder creates through the real scheduled-task flow", () => {
   assert.match(builder, /Scheduled Task history/);
   assert.match(builder, /never\s+claimed/);
   assert.match(tasks, /createAutomation/);
-  assert.match(tasks, /setEditor\("new"\)/);
+  assert.match(tasks, /const createAutomation[\s\S]*?openTaskEditor\("new", "settings", null\)/);
+  assert.match(
+    tasks,
+    /const openTaskEditor[\s\S]*?dataGeneration !== generationRef\.current[\s\S]*?setEditor\(task\)/,
+  );
   assert.match(read("src/components/ScheduledTaskEditor.tsx"), /await create\(/);
 });

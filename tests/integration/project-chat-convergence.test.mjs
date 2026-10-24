@@ -48,13 +48,14 @@ test("project chat can stop generation and saves only non-empty assistant output
   );
   assert.match(
     projectChat,
-    /if \(activeChatIdRef\.current === requestChatId\) \{\s*toast\.error\("The chat could not be saved"\)/,
+    /if \(isCurrent\(\)\) toast\.error\("The chat could not be saved\. Your draft is preserved\."\)/,
   );
   assert.match(projectChat, /setRenameOpen\(false\)/);
   assert.match(projectChat, /setRenaming\(false\)/);
-  assert.match(projectChat, /setDeleteOpen\(false\)/);
-  assert.match(projectChat, /setDeleting\(false\)/);
-  assert.match(projectChat, /project\?\.role === "owner" \|\| project\?\.role === "editor"/);
+  assert.match(projectChat, /PROJECT_CHAT_DELETE_UNAVAILABLE/);
+  assert.match(projectChat, /aria-describedby="project-chat-delete-unavailable"/);
+  assert.doesNotMatch(projectChat, /deleteProjectChat|setDeleteOpen|setDeleting/);
+  assert.match(projectChat, /project\.role === "owner" \|\| project\.role === "editor"/);
   assert.match(projectChat, /projectId,/);
 });
 
@@ -63,7 +64,10 @@ test("shared composer defaults preserve existing callers while supporting projec
   assert.match(chatInput, /showAddMenu = true/);
   assert.match(chatInput, /disabled\?: boolean/);
   assert.match(chatInput, /showAddMenu\?: boolean/);
-  assert.match(chatInput, /if \(disabled \|\| submittingRef\.current \|\| isStreaming\) return/);
+  assert.match(
+    chatInput,
+    /if \(disabled \|\| sendDisabled \|\| submittingRef\.current \|\| isStreaming \|\| pasteOffer\) return/,
+  );
   assert.match(chatInput, /disabled=\{disabled\}/);
   assert.match(chatInput, /showAddMenu && isMobileLayout/);
   assert.match(

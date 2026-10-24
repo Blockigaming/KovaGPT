@@ -121,6 +121,14 @@ function KnowledgeGraph() {
     [visible],
   );
   const positions = useMemo(() => new Map(positioned.map((node) => [node.id, node])), [positioned]);
+  const prepareResource = (node: KnowledgeNode) => {
+    if (!node.id.startsWith("local-chat:")) return;
+    try {
+      savePendingActive(userKey, node.id.replace("local-chat:", ""));
+    } catch {
+      // Navigation still works when browser storage is unavailable.
+    }
+  };
   return (
     <AppShell>
       <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6">
@@ -218,14 +226,14 @@ function KnowledgeGraph() {
               </button>
               <Link
                 to="/projects"
-                className="min-h-10 rounded-lg bg-foreground px-3 py-2 text-sm text-background"
+                className="kova-button min-h-10 rounded-lg bg-foreground px-3 py-2 text-sm text-background"
               >
                 Open Projects
               </Link>
             </div>
           </div>
         ) : mode === "timeline" ? (
-          <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
             <ol className="divide-y rounded-2xl border bg-card/30" aria-label="Knowledge timeline">
               {[...visible]
                 .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
@@ -240,7 +248,11 @@ function KnowledgeGraph() {
                         style={{ backgroundColor: colors[node.kind] }}
                       />
                       <div className="min-w-0 flex-1">
-                        <Link to={node.href} className="truncate font-medium hover:underline">
+                        <Link
+                          to={node.href}
+                          onClick={() => prepareResource(node)}
+                          className="block truncate font-medium hover:underline"
+                        >
                           {node.label}
                         </Link>
                         <p className="text-xs capitalize text-muted-foreground">
@@ -284,12 +296,12 @@ function KnowledgeGraph() {
             </aside>
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
-            <div className="overflow-x-auto rounded-2xl border bg-card/30">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className="min-w-0 overflow-x-auto rounded-2xl border bg-card/30">
               <svg
                 viewBox="0 0 800 600"
                 className="min-h-[34rem] min-w-[720px] w-full"
-                role="img"
+                role="group"
                 aria-label={`Knowledge graph with ${visible.length} nodes and ${visibleEdges.length} relationships`}
               >
                 {visibleEdges.map((edge, index) => {
@@ -318,11 +330,16 @@ function KnowledgeGraph() {
                     aria-label={`${node.kind}: ${node.label}`}
                     onClick={() => setSelected(node.id)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") setSelected(node.id);
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelected(node.id);
+                      }
                     }}
-                    className="cursor-pointer outline-none"
+                    aria-pressed={selected === node.id}
+                    className="group cursor-pointer outline-none"
                   >
                     <circle
+                      className="group-focus-visible:stroke-foreground group-focus-visible:stroke-[4px]"
                       cx={node.x}
                       cy={node.y}
                       r={selected === node.id ? 13 : 9}
@@ -354,17 +371,8 @@ function KnowledgeGraph() {
                   <h3 className="mt-1 font-medium">{positions.get(selected)?.label}</h3>
                   <Link
                     to={positions.get(selected)!.href}
-                    onClick={() => {
-                      const node = positions.get(selected);
-                      if (node?.id.startsWith("local-chat:")) {
-                        try {
-                          savePendingActive(userKey, node.id.replace("local-chat:", ""));
-                        } catch {
-                          // Navigation still works when browser storage is unavailable.
-                        }
-                      }
-                    }}
-                    className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-foreground px-3 text-sm text-background"
+                    onClick={() => prepareResource(positions.get(selected)!)}
+                    className="kova-button mt-4 inline-flex min-h-10 items-center rounded-lg bg-foreground px-3 text-sm text-background"
                   >
                     Open resource
                   </Link>

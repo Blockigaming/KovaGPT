@@ -8,7 +8,7 @@ const parity = readFileSync("src/styles/chatgpt-final-parity.css", "utf8");
 const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
 const mobileTopBar = readFileSync("src/components/MobileTopBar.tsx", "utf8");
 
-test("the final ChatGPT-first parity layer is loaded in every application route", () => {
+test("shared compatibility styles remain loaded with the owner's authoritative specification", () => {
   assert.match(styles, /@import "\.\/styles\/chatgpt-final-parity\.css"/u);
   assert.doesNotMatch(styles, /@import "\.\/styles\/core-workspace\.css"/u);
   assert.ok(
@@ -16,9 +16,14 @@ test("the final ChatGPT-first parity layer is loaded in every application route"
       styles.indexOf("/* Secondary workspace primitives:"),
     "the authoritative core layer must follow every compatibility rule",
   );
+  assert.ok(
+    styles.indexOf('@import "./styles/spec400-system.css"') >
+      styles.indexOf('@import "./styles/chatgpt-final-parity.css"'),
+  );
+  assert.match(styles, /@import "\.\/styles\/spec400-chat\.css"/u);
   assert.match(
-    styles,
-    /\/\* End core workspace overhaul\. Keep this section last in the stylesheet\. \*\/\s*$/u,
+    readFileSync("src/styles/spec400-system.css", "utf8"),
+    /--font-sans:\s*"IBM Plex Sans"/u,
   );
   assert.doesNotMatch(runtime, /chatgpt-final-parity\.css/u);
   assert.match(parity, /\.kova-composer:focus-within[\s\S]*outline: 2px solid/u);
@@ -28,14 +33,23 @@ test("the final ChatGPT-first parity layer is loaded in every application route"
   assert.match(parity, /max-width: min\(58vw, 18rem\)/u);
 });
 
-test("current signed-out ChatGPT reference surfaces remain represented with Kova branding", () => {
-  for (const label of ["New chat", "Search", "Images", "Plugins", "Maps", "Discover"])
+test("current primary destinations and signed-out controls retain Kova branding", () => {
+  for (const label of [
+    "New chat",
+    "Search",
+    "Chat",
+    "Projects",
+    "Scheduled tasks",
+    "Library",
+    "Plugins",
+  ])
     assert.match(sidebar, new RegExp(label, "u"));
-  assert.match(sidebar, /Get responses tailored to you/u);
+  assert.match(sidebar, /Log in to view saved chats\./u);
+  assert.match(sidebar, /<SignInButton mode="modal">[\s\S]*?Log in to KovaGPT/u);
   assert.doesNotMatch(sidebar, /OpenAI|ChatGPT logo/u);
   assert.match(
     mobileTopBar,
-    /rounded-full bg-foreground px-4[\s\S]*?text-background[\s\S]*?Log in/u,
+    /<SignInButton mode="modal">[\s\S]*?min-h-11[\s\S]*?text-background[\s\S]*?Log in/u,
   );
 });
 

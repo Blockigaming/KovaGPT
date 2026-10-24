@@ -1,0 +1,63 @@
+name: Capture complete production managed Auth database only
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type CAPTURE_ONLY; no restore, migration, deployment or email
+        required: true
+        type: string
+      source_sha:
+        description: Exact reviewed current main SHA
+        required: true
+        type: string
+      approved_database_build:
+        description: Current independently observed production database build
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-managed-auth-capture
+  cancel-in-progress: false
+
+jobs:
+  capture-only:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'CAPTURE_ONLY' && inputs.source_sha == github.sha && inputs.approved_database_build == '17.6.1.155'
+    runs-on: ubuntu-24.04
+    environment:
+      name: production
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Require existing PostgreSQL 17 clients and GPG
+        shell: bash
+        run: |
+          set -euo pipefail
+          for program in psql pg_dump pg_restore; do
+            "$program" --version | rg '^.*\(PostgreSQL\) 17\.' >/dev/null
+          done
+          command -v gpg >/dev/null
+          command -v timeout >/dev/null
+      - name: Capture one consistent complete database snapshot into ciphertext
+        env:
+          KOVA_AUTH_RECOVERY_CONFIRMATION: CAPTURE_ONLY
+          KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
+          KOVA_AUTH_APPROVED_SOURCE_DATABASE_VERSION: ${{ inputs.approved_database_build }}
+          KOVA_PRODUCTION_DATABASE_URL: ${{ secrets.KOVA_PRODUCTION_DATABASE_URL }}
+          KOVA_PRODUCTION_BACKUP_PASSPHRASE: ${{ secrets.KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926 }}
+        run: timeout --signal=TERM --kill-after=10s 26m python3 scripts/release/managed-auth-recovery.py capture --execute --output "$RUNNER_TEMP/managed-auth-capture"
+      - name: Retain ciphertext and fixed sanitized receipt only
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: managed-auth-capture-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/managed-auth-capture/managed-auth-backup.tar.gpg
+            ${{ runner.temp }}/managed-auth-capture/capture-receipt.json
+          if-no-files-found: error
+          retention-days: 7

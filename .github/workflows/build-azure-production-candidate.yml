@@ -10,6 +10,7 @@ on:
       - scripts/azure/narrow-openai-browser-inputs.mjs
       - scripts/azure/verify-browser-config.mjs
       - tests/unit/azure-production-candidate-build.test.mjs
+      - tests/unit/azure-production-browser-workflow-inputs.test.mjs
       - tests/unit/azure-acr-pinned-quick-build.test.mjs
       - tests/unit/azure-narrow-openai-browser-inputs.test.mjs
       - Dockerfile
@@ -52,7 +53,7 @@ jobs:
           node-version: 24
           package-manager-cache: false
       - name: Test candidate build contract without cloud credentials or execution
-        run: node --test tests/unit/azure-production-candidate-build.test.mjs tests/unit/azure-acr-pinned-quick-build.test.mjs tests/unit/azure-narrow-openai-browser-inputs.test.mjs
+        run: node --test tests/unit/azure-production-candidate-build.test.mjs tests/unit/azure-production-browser-workflow-inputs.test.mjs tests/unit/azure-acr-pinned-quick-build.test.mjs tests/unit/azure-narrow-openai-browser-inputs.test.mjs
       - name: Install locked formatter without package lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Check exact formatting and print any required source-only diff
@@ -65,6 +66,7 @@ jobs:
             scripts/azure/acr-pinned-quick-build.mjs
             scripts/azure/narrow-openai-browser-inputs.mjs
             tests/unit/azure-production-candidate-build.test.mjs
+            tests/unit/azure-production-browser-workflow-inputs.test.mjs
             tests/unit/azure-acr-pinned-quick-build.test.mjs
             tests/unit/azure-narrow-openai-browser-inputs.test.mjs
             docs/azure/production-candidate-build-only.md
@@ -82,6 +84,7 @@ jobs:
             scripts/azure/acr-pinned-quick-build.mjs
             scripts/azure/narrow-openai-browser-inputs.mjs
             tests/unit/azure-production-candidate-build.test.mjs
+            tests/unit/azure-production-browser-workflow-inputs.test.mjs
             tests/unit/azure-acr-pinned-quick-build.test.mjs
             tests/unit/azure-narrow-openai-browser-inputs.test.mjs
             docs/azure/production-candidate-build-only.md
@@ -103,6 +106,9 @@ jobs:
       KOVA_BUILD_CONFIRMATION: ${{ inputs.confirmation }}
       KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
       KOVA_PRODUCTION_BROWSER_INPUT_MODE: ${{ inputs.browser_input_mode }}
+      VITE_KOVA_AUTH_MODE: ${{ vars.VITE_KOVA_AUTH_MODE || 'supabase' }}
+      VITE_KOVA_GOOGLE_AUTH_ENABLED: ${{ vars.VITE_KOVA_GOOGLE_AUTH_ENABLED || 'false' }}
+      VITE_KOVA_AUTH_ORIGIN: ${{ vars.VITE_KOVA_AUTH_ORIGIN }}
       KOVA_PRODUCTION_ACR_NAME: ${{ vars.KOVA_PRODUCTION_ACR_NAME }}
       KOVA_PRODUCTION_ACR_LOGIN_SERVER: ${{ vars.KOVA_PRODUCTION_ACR_LOGIN_SERVER }}
       KOVA_PRODUCTION_IMAGE_REPOSITORY: ${{ vars.KOVA_PRODUCTION_IMAGE_REPOSITORY }}

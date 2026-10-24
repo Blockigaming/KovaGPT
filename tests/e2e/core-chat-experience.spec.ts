@@ -10,7 +10,9 @@ test.describe("core shell and chat experience", () => {
     await waitForKovaHydration(page);
     await expect(page.locator("body")).toBeVisible();
     await expect(page.getByRole("textbox").first()).toBeVisible();
-    await expect(page.getByText(/What can I help|Ask, search, analyze/i).first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "What are you working on?", exact: true }),
+    ).toBeVisible();
 
     const textbox = page.getByRole("textbox").first();
     await textbox.fill("Line one");

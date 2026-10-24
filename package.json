@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "node scripts/clean-build.mjs && node --max-old-space-size=3072 node_modules/vite/bin/vite.js build && node work-runner/build.mjs && npm run release:zero-lovable:built",
-    "build:dev": "node scripts/clean-build.mjs && node --max-old-space-size=3072 node_modules/vite/bin/vite.js build --mode development && node work-runner/build.mjs && npm run release:zero-lovable:built",
+    "build": "node scripts/clean-build.mjs && node --max-old-space-size=5120 node_modules/vite/bin/vite.js build && node work-runner/build.mjs && npm run release:zero-lovable:built",
+    "build:dev": "node scripts/clean-build.mjs && node --max-old-space-size=5120 node_modules/vite/bin/vite.js build --mode development && node work-runner/build.mjs && npm run release:zero-lovable:built",
     "build:azure": "KOVA_BROWSER_PREVIEW=node npm run build",
     "test:azure:local": "playwright test --config=playwright.azure.config.ts",
     "preview": "vite preview",
@@ -95,6 +95,7 @@
     "@cloudflare/vite-plugin": "^1.50.0",
     "@hookform/resolvers": "^5.2.2",
     "@pdf-lib/fontkit": "1.1.1",
+    "@phosphor-icons/react": "2.1.10",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",
@@ -135,6 +136,7 @@
     "@tanstack/react-start": "1.168.60",
     "@tanstack/router-core": "1.171.34",
     "@tanstack/router-plugin": "1.168.42",
+    "argon2": "0.45.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -148,6 +150,7 @@
     "lucide-react": "^0.575.0",
     "maplibre-gl": "^6.9.1",
     "nitro": "3.0.260610-beta",
+    "openai": "7.30.0",
     "pdf-lib": "1.17.1",
     "pdfjs-dist": "6.3.289",
     "react": "^19.2.0",
@@ -188,7 +191,7 @@
     "supabase": "2.111.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^7.3.1"
+    "vite": "^7.3.7"
   },
   "pnpm": {
     "overrides": {
@@ -199,8 +202,8 @@
   },
   "overrides": {
     "nanoid": "3.3.18",
-    "undici": "8.10.2",
-    "fast-uri": "3.1.8",
+    "undici": "8.12.2",
+    "fast-uri": "3.1.9",
     "js-yaml": "4.3.2",
     "sharp": "0.35.5"
   }

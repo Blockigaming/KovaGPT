@@ -43,7 +43,7 @@ export function sanitizeImagePrompt(prompt: string): string {
 }
 export function normalizeImageSettings(input: unknown): ImageGenerationSettings {
   return normalizeImageRequest(input, {
-    provider: getAiProviderConfig().provider,
+    provider: getAiProviderConfig("image_generation").provider,
     editEnabled: imageEditingEnabled(),
   });
 }

@@ -14,8 +14,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
+import {
+  INTRODUCTORY_OFFER_CHECKOUT_REVIEW,
+  INTRODUCTORY_OFFER_HISTORY,
+  INTRODUCTORY_OFFER_EXISTING,
+  introductoryOfferForTier,
+} from "@/lib/introductory-offer";
 
 const PRICING_TIERS = ["free", "plus", "pro"] as const;
+const MONTHLY_INTRO_NOTE =
+  "Eligible accounts: 50% off the first paid month, once per account. Regular monthly pricing follows.";
 
 function displayPrice(monthlyPriceUsd: number): string {
   return monthlyPriceUsd === 0 ? "$0" : `$${monthlyPriceUsd}`;
@@ -189,9 +197,7 @@ function PricingPage() {
         className="kova-secondary-page kova-pricing-page mx-auto w-full max-w-6xl flex-1 px-5 py-14 sm:px-6 sm:py-20"
       >
         <section aria-labelledby="pricing-title" className="mx-auto max-w-3xl text-center">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Plans and pricing
-          </p>
+          <p className="mb-4 text-sm font-semibold text-muted-foreground">Plans and pricing</p>
           <h1
             id="pricing-title"
             className="mb-5 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl"
@@ -202,6 +208,17 @@ function PricingPage() {
             Choose the plan that fits how you work. Provider-dependent features require their
             services to be configured and available.
           </p>
+        </section>
+
+        <section
+          aria-label="First-month offer"
+          className="mx-auto mt-8 max-w-3xl space-y-3 rounded-2xl border border-border p-4 text-sm leading-6"
+        >
+          <h2 className="font-semibold">First-month offer</h2>
+          <p>{MONTHLY_INTRO_NOTE}</p>
+          <p>{INTRODUCTORY_OFFER_CHECKOUT_REVIEW}</p>
+          <p className="text-muted-foreground">{INTRODUCTORY_OFFER_HISTORY}</p>
+          <p className="text-muted-foreground">{INTRODUCTORY_OFFER_EXISTING}</p>
         </section>
 
         <section
@@ -228,7 +245,8 @@ function PricingPage() {
             description={CAPABILITY_REGISTRY.plans.plus.description}
             cta="Start Plus"
             highlight
-            note={`${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial for eligible first-time subscribers`}
+            note={MONTHLY_INTRO_NOTE}
+            paymentNote={`If eligible: ${introductoryOfferForTier("plus")!.paymentCopy}`}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!, event.currentTarget)
             }
@@ -243,6 +261,8 @@ function PricingPage() {
             taxNotice
             description={CAPABILITY_REGISTRY.plans.pro.description}
             cta="Upgrade to Pro"
+            note={MONTHLY_INTRO_NOTE}
+            paymentNote={`If eligible: ${introductoryOfferForTier("pro")!.paymentCopy}`}
             onCta={(event) =>
               startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!, event.currentTarget)
             }
@@ -263,8 +283,8 @@ function PricingPage() {
         </section>
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-5 text-muted-foreground">
-          Stripe hosts checkout. Confirm the price, trial eligibility, renewal date, and available
-          payment methods before purchase.
+          Stripe hosts checkout. Confirm the introductory discount eligibility, first-month amount,
+          regular renewal price and date, tax, and available payment methods before purchase.
         </p>
 
         <p className="mx-auto mt-5 max-w-2xl text-center text-xs leading-5 text-muted-foreground">
@@ -356,6 +376,7 @@ type CardProps = {
   period: string;
   description: string;
   note?: string;
+  paymentNote?: string;
   cta: string;
   features: readonly string[];
   highlight?: boolean;
@@ -372,6 +393,7 @@ function PlanCard({
   period,
   description,
   note,
+  paymentNote,
   cta,
   features,
   highlight,
@@ -382,8 +404,9 @@ function PlanCard({
 }: CardProps) {
   return (
     <article
+      id={name.toLowerCase()}
       data-pricing-plan={name.toLowerCase()}
-      className={`kova-plan-card relative row-span-7 grid h-full grid-rows-subgrid rounded-2xl border p-6 transition-colors ${
+      className={`kova-plan-card relative grid rounded-2xl md:row-span-7 md:h-full md:grid-rows-subgrid border p-6 transition-colors ${
         enterprise
           ? "border-foreground/25 bg-card"
           : highlight
@@ -391,14 +414,17 @@ function PlanCard({
             : "border-border bg-card"
       }`}
     >
-      <div className="flex h-6 items-center justify-center" aria-hidden={!highlight}>
+      <div
+        className={`${highlight ? "flex" : "hidden md:flex"} h-6 items-center justify-center`}
+        aria-hidden={!highlight}
+      >
         {highlight ? (
           <span className="rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-background">
             MOST POPULAR
           </span>
         ) : null}
       </div>
-      <div className="mt-3 flex items-center gap-2.5">
+      <div className="flex items-center gap-2.5 md:mt-3">
         {Icon ? (
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted">
             <Icon className="h-4 w-4" aria-hidden="true" />
@@ -406,7 +432,7 @@ function PlanCard({
         ) : null}
         <h2 className="text-xl font-semibold">{name}</h2>
       </div>
-      <div className="flex min-h-[3.25rem] flex-col justify-end">
+      <div className="flex flex-col justify-start md:min-h-[3.25rem]">
         <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
           <span className="text-4xl font-bold leading-none">{price}</span>
           <span className="text-sm leading-5 text-muted-foreground">{period}</span>
@@ -415,9 +441,10 @@ function PlanCard({
           <span className="mt-1 text-xs leading-4 text-muted-foreground">+ applicable tax</span>
         ) : null}
       </div>
-      <p className="pt-2 text-sm leading-6 text-muted-foreground">
+      <p className="text-sm leading-6 text-muted-foreground md:pt-2">
         {description}
         {note ? <span className="mt-1 block text-xs leading-5">{note}</span> : null}
+        {paymentNote ? <span className="mt-1 block text-xs leading-5">{paymentNote}</span> : null}
       </p>
       <button
         type="button"
@@ -434,7 +461,7 @@ function PlanCard({
         {cta}
       </button>
       <div className="my-auto h-px bg-border" aria-hidden="true" />
-      <ul className="flex min-h-0 flex-col justify-around gap-3 pt-4 text-sm">
+      <ul className="flex min-h-0 flex-col gap-3 text-sm md:justify-around md:pt-4">
         {features.map((f) => (
           <li key={f} className="flex items-start gap-2">
             <Check className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />

@@ -6,12 +6,15 @@ import {
   StripeWebhookVerificationError,
   verifyWebhook,
   durableStripeBillingEnabled,
+  monthlyIntroBillingEnabled,
 } from "@/lib/stripe.server";
 import { resolveBillingPlan } from "@/lib/billing-plans";
 import { logOperationalEvent } from "@/lib/structured-log.server";
 import { correlationHeaders, correlationId as resolveCorrelationId } from "@/lib/correlation";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { processStripeEvent, WebhookProcessingError } from "@/lib/webhook-reliability.mjs";
+import { projectLegacyStripeEvent } from "@/lib/stripe-legacy-projection.server";
+import { reconcileMonthlyIntroCheckout } from "@/lib/billing-policy.mjs";
 
 type StripeLineItemLike = {
   price?: {
@@ -66,6 +69,32 @@ export async function handleWebhook(
   correlationId: string = crypto.randomUUID(),
 ) {
   const event = await verifyWebhook(req, env);
+  if (monthlyIntroBillingEnabled()) {
+    const stripe = createStripeClient(env);
+    const object = event.data.object as { id?: string; metadata?: Record<string, string> };
+    if (
+      [
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+        "checkout.session.expired",
+      ].includes(event.type) &&
+      object.metadata?.kovaPolicyVersion === "monthly-intro-v1"
+    ) {
+      if (!object.id || !object.metadata.userId || !object.metadata.kovaPolicyClaim)
+        throw new WebhookProcessingError("billing_policy_checkout_binding_missing", 503);
+      await reconcileMonthlyIntroCheckout({
+        stripe,
+        supabase: supabaseAdmin,
+        environment: env,
+        userId: object.metadata.userId,
+        claimId: object.metadata.kovaPolicyClaim,
+        sessionId: object.id,
+      });
+    }
+    // Existing trials, renewal/cancellation events and entitlement projection
+    // continue through the versioned legacy schema. Coupon redemption is separate.
+    return projectLegacyStripeEvent(event, env, correlationId);
+  }
   if (!durableStripeBillingEnabled())
     throw new WebhookProcessingError("billing_rollout_pending", 503);
   const stripe = createStripeClient(env);

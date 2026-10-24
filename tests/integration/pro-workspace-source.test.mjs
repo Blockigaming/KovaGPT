@@ -12,7 +12,8 @@ test("workspace sources remain authorized while chat history stays searchable in
     assert.match(fn, new RegExp(`\\"${table}\\"`));
   assert.match(home, /loadConversations/);
   assert.match(sidebar, /searchConversations/);
-  assert.match(sidebar, />Recents<\/h2>/);
+  assert.match(sidebar, /aria-labelledby="sidebar-chats-heading"/);
+  assert.match(sidebar, /<h2\s+id="sidebar-chats-heading"[\s\S]*?>\s*Recent chats\s*<\/h2>/);
   assert.match(palette, /searchConversations/);
 });
 test("Memory Center supports real edit delete merge and source explanations", () => {
@@ -48,11 +49,19 @@ test("Work preserves durable history and denial-only controls without background
 });
 test("Files and Apps expose truthful professional workflows", () => {
   const files = read("src/routes/files.tsx"),
-    apps = read("src/routes/apps.tsx");
+    apps = read("src/routes/apps.tsx"),
+    catalog = read("src/lib/plugin-review-catalog.ts"),
+    googleTools = read("src/lib/google-tools.server.ts");
   assert.match(files, /Known storage usage/);
   assert.match(files, /Potential duplicates/);
   assert.match(files, /listMyLibrary/);
   assert.match(apps, /Capabilities and permissions/);
   assert.match(apps, /Use in chat/);
-  assert.match(apps, /explicit confirmation/);
+  assert.match(apps, /permissions on Google’s consent screen before approving/);
+  assert.match(apps, /confirmed actions remain bound to their original account/);
+  assert.match(catalog, /Prepare drafts and review a message before sending/);
+  assert.match(
+    googleTools,
+    /if \(WRITE_TOOL_NAMES\.has\(name\)\) \{\s+return \{\s+error: "requires_confirmation"/,
+  );
 });

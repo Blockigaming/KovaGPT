@@ -66,9 +66,8 @@ test.describe("KovaGPT responsive shell", () => {
       await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
       await expect(
         page
-          .locator("header.kova-topbar span:visible")
-          .filter({ hasText: /^KovaGPT$/u })
-          .first(),
+          .locator("header.kova-topbar:visible")
+          .getByRole("heading", { name: "Chat", exact: true }),
       ).toBeVisible();
     }
 

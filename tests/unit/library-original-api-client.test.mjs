@@ -4,6 +4,7 @@ import fs from "node:fs";
 import ts from "typescript";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
+import * as uploadQuota from "../../src/lib/upload-quota.server.mjs";
 import * as policy from "../../src/lib/library-original-policy.mjs";
 const owner = "11111111-1111-4111-8111-111111111111",
   id = "22222222-2222-4222-8222-222222222222",
@@ -28,16 +29,24 @@ function load(file, modules, fetcher = () => assert.fail("Unexpected fetch")) {
   return exports;
 }
 function routeFixture() {
-  const state = { writes: [], reads: [], fail: false };
+  const state = { writes: [], reads: [], quota: [], quotaAllowed: true, fail: false };
+  const supabaseAdmin = {
+    rpc(name, input) {
+      assert.equal(name, "try_reserve_daily_uploads");
+      state.quota.push(input);
+      return { abortSignal: async () => ({ data: state.quotaAllowed, error: null }) };
+    },
+  };
   const modules = {
     "@tanstack/react-router": { createFileRoute: () => (config) => config },
     "@/lib/api-auth.server": {
-      requireVerifiedUser: async () => ({ userId: owner, supabaseAdmin: {} }),
+      requireVerifiedUser: async () => ({ userId: owner, supabaseAdmin }),
       getCallerTier: async () => "free",
       assertNotBanned: async () => null,
       assertFeatureEnabled: async () => null,
     },
-    "@/lib/modes": { STORAGE_LIMITS_BYTES: { free: 500 } },
+    "@/lib/modes": { STORAGE_LIMITS_BYTES: { free: 500 }, DAILY_UPLOAD_LIMIT_BY_TIER: { free: 2 } },
+    "@/lib/upload-quota.server.mjs": uploadQuota,
     "@/lib/distributed-rate-limit.server": {
       consumeApplicationRateLimit: async () => ({ allowed: true }),
     },
@@ -107,6 +116,10 @@ test("binary original upload preserves bytes and extracted text without allowing
   assert.equal(new TextDecoder().decode(state.writes[0].input.bytes), "%PDF-1.7 private original");
   assert.equal(state.writes[0].options.storageLimit, 500);
   assert.equal(state.writes[0].options.dailyLimit, undefined);
+  assert.equal(state.quota.length, 1);
+  assert.equal(state.quota[0]._user_id, owner);
+  assert.equal(state.quota[0]._limit, 2);
+  assert.match(state.quota[0]._fingerprints[0], /^[0-9a-f]{64}$/);
 });
 test("original download requires its displayed generation and returns a named private attachment", async () => {
   const { state, handle } = routeFixture();
@@ -230,4 +243,26 @@ test("original downloads carry same-origin cookies and a captured owner without 
   const blob = await api.readOriginalLibraryFile(owner, id, gen, new AbortController().signal);
   assert.equal(await blob.text(), "%PDF-1.7 original");
   assert.equal(requests, 1);
+});
+
+test("original-file quota denial keeps the publisher untouched", async () => {
+  const { state, handle } = routeFixture();
+  state.quotaAllowed = false;
+  const form = new FormData();
+  form.set(
+    "file",
+    new Blob(["%PDF-1.7 private original"], { type: "application/pdf" }),
+    "original.pdf",
+  );
+  form.set("text", "Extracted text");
+  const response = await handle(
+    new Request(`https://kova.test/api/library/files?id=${id}`, {
+      method: "POST",
+      headers: { "X-Kova-Owner": owner },
+      body: form,
+    }),
+  );
+  assert.equal(response.status, 429);
+  assert.equal(state.quota.length, 1);
+  assert.equal(state.writes.length, 0);
 });

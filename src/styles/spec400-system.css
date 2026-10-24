@@ -1,0 +1,524 @@
+/* Owner specification 400: structural tokens only; 9cc color values preserved. */
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/IBMPlexSans-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/IBMPlexSans-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/IBMPlexSans-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/fonts/IBMPlexMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/fonts/IBMPlexMono-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/fonts/IBMPlexMono-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --kova-icon-stroke: 2;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --motion-fast: 120ms;
+  --motion-normal: 180ms;
+  --menu-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  --dialog-shadow: 0 16px 48px rgb(0 0 0 / 0.28);
+  --parity-page-max: 1200px;
+}
+html body {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.466667;
+}
+body :is(h1, h2, h3, h4) {
+  font-family: var(--font-sans);
+  letter-spacing: normal !important;
+}
+body .kova-page h1 {
+  font-size: 1.75rem !important;
+  line-height: 2.25rem !important;
+  font-weight: 600 !important;
+}
+body :is(.kova-page h2, .kova-settings-section h3) {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+body .prose-chat {
+  font-size: var(--kova-reading-size, 1rem) !important;
+  line-height: 1.625 !important;
+}
+body :is(code, pre, kbd, samp) {
+  font-family: var(--font-mono) !important;
+}
+body .prose-chat pre {
+  font-size: 0.875rem !important;
+  line-height: 1.571429 !important;
+}
+body :is(.kova-page, .kova-secondary-page) {
+  max-width: 1200px !important;
+  --page-padding: 32px;
+  padding: 32px !important;
+}
+body :is(.kova-header, .kova-app-header, .kova-chat-header) {
+  min-height: 64px;
+  border-bottom: 1px solid var(--border);
+}
+body [role="menu"] {
+  padding: 8px;
+  border-radius: var(--kova-radius-menu);
+  box-shadow: var(--menu-shadow);
+  max-height: calc(100dvh - 24px);
+}
+body [role="menuitem"],
+body [role="menuitemradio"],
+body [role="menuitemcheckbox"],
+body [role="option"] {
+  min-height: 44px !important;
+  border-radius: var(--kova-radius-compact);
+}
+body :is(button, [role="button"]) {
+  transition-duration: 120ms;
+}
+body :is(button, [role="button"]):active {
+  transform: none !important;
+}
+body :is(button, a, input, textarea, [role="button"], [role="tab"]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+body [data-kova-dialog-surface] {
+  border-radius: var(--kova-radius-panel);
+  box-shadow: var(--dialog-shadow);
+}
+body [role="tab"] {
+  min-height: 44px;
+  border-radius: 0;
+}
+body [role="tab"][data-state="active"] {
+  border-bottom: 2px solid currentColor;
+  font-weight: 600;
+}
+body :is(.kova-sidebar, .kova-sidebar-rail) {
+  transition-duration: 180ms !important;
+}
+
+body .kova-sidebar[data-kova-core-sidebar][data-kova-core-sidebar] .kova-sidebar-header {
+  height: 64px;
+  min-height: 64px;
+  padding: 0 16px;
+}
+body .kova-sidebar .kova-sidebar-brand img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+body .kova-sidebar[data-kova-core-sidebar][data-kova-core-sidebar] .kova-sidebar-primary {
+  padding: 16px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+body .kova-sidebar[data-kova-core-sidebar][data-kova-core-sidebar] .kova-nav-row {
+  height: 44px;
+  min-height: 44px !important;
+  flex-basis: 44px;
+  padding: 0 12px !important;
+  gap: 12px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500;
+  position: relative;
+}
+body .kova-sidebar .kova-nav-row.is-active {
+  background: var(--sidebar-active) !important;
+}
+body .kova-sidebar .kova-nav-row.is-active::before,
+body .kova-rail-button[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: var(--foreground);
+  border-radius: 1px;
+}
+body .kova-sidebar .kova-sidebar-history {
+  padding-top: 20px;
+  overflow-y: auto;
+  min-height: 0;
+}
+body .kova-sidebar .kova-sidebar-scroll {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+body .kova-sidebar .kova-account-main {
+  min-height: 56px;
+  border-radius: var(--kova-radius-sidebar);
+}
+body .kova-sidebar .kova-account-avatar {
+  width: 32px;
+  height: 32px;
+}
+body .kova-sidebar .kova-sidebar-footer {
+  flex-shrink: 0;
+}
+@media (max-width: 1023px) {
+  body :is(.kova-page, .kova-secondary-page) {
+    --page-padding: 24px;
+    padding: 24px !important;
+  }
+  body .kova-sidebar[data-kova-core-sidebar][data-kova-core-sidebar] {
+    border-radius: 0;
+  }
+
+  body :is(.kova-header, .kova-app-header, .kova-chat-header) {
+    min-height: 56px;
+  }
+}
+@media (max-width: 1023px) and (min-height: 421px) {
+  /* Keep a usable history viewport when primary navigation fills a short
+     drawer. The navigation scrolls instead of squeezing chats into one row.
+     Below 421px the existing whole-drawer scrolling fallback owns layout. */
+  body .kova-sidebar[data-kova-core-sidebar][data-kova-core-sidebar] .kova-sidebar-primary {
+    min-height: 0;
+    flex-shrink: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: 8px;
+  }
+  body .kova-sidebar[data-kova-core-sidebar][data-kova-core-sidebar] .kova-sidebar-history {
+    flex: 1 1 160px;
+    min-height: min(160px, 50%);
+    scroll-padding-block: 8px;
+    mask-image: none;
+  }
+  body
+    .kova-sidebar[data-kova-core-sidebar][data-kova-core-sidebar]
+    :is(.kova-nav-row, .kova-chat-row > button, .kova-sidebar-history h2) {
+    scroll-margin-block: 4px;
+  }
+}
+@media (max-width: 767px) {
+  body :is(.kova-page, .kova-secondary-page) {
+    --page-padding: 16px;
+    padding: 16px !important;
+  }
+  body .kova-page h1 {
+    font-size: 1.5rem !important;
+    line-height: 2rem !important;
+  }
+  body :is(input, textarea, select) {
+    font-size: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* Settings is a routable page. The original modal remains for legacy callers. */
+body .kova-settings-route {
+  --page-max: 1200px;
+}
+body .kova-settings-page.kova-settings-dialog {
+  position: static !important;
+  transform: none !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 600px;
+  max-height: none !important;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  background: var(--surface-modal) !important;
+  overflow: visible !important;
+}
+body .kova-settings-page > [data-orientation="vertical"] {
+  overflow: visible;
+}
+body .kova-settings-page .kova-settings-sidebar {
+  width: 208px;
+  min-width: 208px;
+  background: transparent;
+  border-right: 1px solid var(--border);
+}
+body .kova-settings-page .kova-settings-sidebar-top {
+  display: none;
+}
+body .kova-settings-page .kova-settings-content {
+  overflow: visible;
+  min-width: 0;
+}
+body .kova-settings-page [role="tabpanel"] {
+  overflow: visible;
+  padding: 24px;
+}
+body .kova-settings-page .kova-settings-nav-item {
+  min-height: 44px;
+  border-radius: var(--kova-radius-sidebar);
+}
+body .kova-native-select {
+  min-height: 44px;
+  min-width: 0;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-input);
+  background: var(--background);
+  color: var(--foreground);
+}
+html[data-kova-density="compact"] .kova-secondary-page tbody td {
+  padding-block: 8px;
+}
+html[data-kova-motion="reduced"] *,
+html[data-kova-motion="reduced"] *::before,
+html[data-kova-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+body .kova-sidebar-footer .kova-account-main {
+  width: 100%;
+  min-height: 56px;
+}
+body .kova-sidebar-help {
+  padding: 8px 16px 0;
+}
+body .kova-sidebar-help .kova-nav-row {
+  width: 100%;
+}
+
+body .kova-settings-route {
+  container-type: inline-size;
+  container-name: settings;
+}
+body .kova-settings-section-select {
+  display: none;
+}
+@container settings (max-width:959px) {
+  body .kova-settings-page > [data-orientation="vertical"] {
+    flex-direction: column;
+  }
+  body .kova-settings-page .kova-settings-sidebar {
+    display: none !important;
+  }
+  body .kova-settings-section-select {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  body .kova-settings-page .kova-settings-content {
+    width: 100%;
+  }
+}
+body .kova-settings-page .kova-settings-sidebar {
+  flex: 0 0 208px !important;
+}
+body .kova-settings-page .kova-settings-content {
+  max-width: 760px;
+}
+@container settings (max-width:959px) {
+  body .kova-settings-page .kova-settings-content {
+    max-width: 760px;
+  }
+}
+
+/* One navigation surface at a time; legacy rail sizing must not reserve space. */
+body .kova-sidebar-rail[data-kova-core-rail][data-state="closed"] {
+  display: none !important;
+  padding-inline: 0 !important;
+}
+
+body :is(.kova-assistant, .kova-app-shell, .kova-sidebar, .kova-sidebar-rail, .kova-composer) {
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-sans);
+  --chat-body-font: "IBM Plex Sans";
+  font-family: var(--font-sans) !important;
+}
+body :is(.kova-sidebar, .kova-sidebar-rail, .kova-composer) :is(button, input, textarea, select) {
+  font-family: var(--font-sans) !important;
+}
+
+body .kova-assistant .kova-user-message {
+  border-radius: var(--kova-radius-message);
+}
+body .kova-assistant .kova-desktop-topbar {
+  height: 64px !important;
+  min-height: 64px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+body :is(.kova-assistant, .kova-app-shell) .kova-topbar:not(.kova-desktop-topbar) {
+  min-height: 56px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+body .kova-page,
+body .kova-page :is(button, input, select, textarea) {
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans) !important;
+}
+body section.kova-settings-page.kova-settings-dialog .kova-settings-content-header {
+  min-height: 56px;
+  padding: 0 24px;
+}
+body section.kova-settings-page.kova-settings-dialog .kova-settings-back {
+  display: none !important;
+}
+@container settings (max-width: 959px) {
+  body section.kova-settings-page.kova-settings-dialog .kova-settings-sidebar {
+    display: none !important;
+  }
+  body section.kova-settings-page.kova-settings-dialog > [data-orientation="vertical"] {
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+  body section.kova-settings-page.kova-settings-dialog .kova-settings-content {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+}
+
+@container settings (max-width: 959px) {
+  body section.kova-settings-page.kova-settings-dialog .kova-settings-content.mobile-hidden {
+    display: flex !important;
+  }
+  body section.kova-settings-page.kova-settings-dialog [role="tabpanel"] {
+    padding: 16px 0 !important;
+  }
+}
+body .kova-page textarea.font-mono,
+body .kova-assistant textarea.font-mono {
+  font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+}
+
+@media (max-width: 767px) {
+  .kova-settings-page-header .kova-settings-main-title,
+  .kova-library-page #library-title {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* The auth route shares the 400px form cap, overriding legacy card sizing. */
+body .kova-auth-page > main {
+  box-sizing: border-box;
+  width: calc(100% - 32px);
+  max-width: 400px;
+  padding: 24px;
+  border-radius: var(--kova-radius-panel);
+}
+
+/* A reviewed primary action keeps its readable color pair when keyboard focused. */
+body [data-kova-dialog-primary]:focus-visible {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+body .spec400-images .spec400-image-prompt {
+  border-radius: var(--kova-radius-input);
+}
+
+/* Shared searchable selectors: unlayered legacy menu rules must not reduce targets. */
+.spec400-searchable-picker {
+  box-sizing: border-box;
+  padding: 8px;
+}
+.spec400-searchable-picker [cmdk-input] {
+  min-height: 44px;
+  height: 44px;
+}
+.spec400-searchable-picker [cmdk-item],
+.spec400-branch-options [role="option"] {
+  min-height: 44px;
+}
+
+/* A loading label stays meaningful; the decorative indicator is always 16px. */
+.spec400-loading-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.spec400-loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spec400-loading-turn 800ms linear infinite;
+}
+@keyframes spec400-loading-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spec400-loading-spinner {
+    animation: none;
+  }
+}
+
+/* Native sidebar dialogs use the same shared dialog spacing and control geometry. */
+body dialog.kova-rename-dialog,
+body dialog.kova-sidebar-personalization {
+  padding: 24px;
+  border-radius: var(--kova-radius-panel);
+}
+body .kova-sidebar-personalization .kova-sidebar-shortcut-choice {
+  border-radius: var(--kova-radius-sidebar);
+}
+body .kova-sidebar-personalization button {
+  border-radius: var(--kova-radius-button);
+}

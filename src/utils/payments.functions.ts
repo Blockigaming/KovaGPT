@@ -3,20 +3,19 @@ import { loose } from "@/lib/supabase-loose";
 import {
   type StripeEnv,
   createStripeClient,
-  durableStripeBillingEnabled,
+  monthlyIntroBillingEnabled,
 } from "@/lib/stripe.server";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
 import { CHECKOUT_RETURN_URL } from "@/lib/checkout-return-url.mjs";
 import { parseCheckoutRequest } from "@/lib/checkout-request.mjs";
-import { BILLING_ENV, resolveBillingPlan } from "@/lib/billing-plans";
+import { BILLING_ENV, BILLING_PLANS, resolveBillingPlan } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { resolveStripeCustomerId } from "@/lib/stripe-customer-mapping.mjs";
 import {
-  resolveDurableCheckoutSession,
-  StripeCheckoutPendingError,
-} from "@/lib/stripe-checkout-reconciliation.mjs";
-import { stripeSubscriptionBlocksCheckout } from "@/lib/stripe-subscription-status.mjs";
+  BillingPolicyError,
+  createMonthlyIntroCheckout,
+  requireMonthlyIntroReadiness,
+} from "@/lib/billing-policy.mjs";
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
 // Customer-facing billing is production-only. The environment supplied by a
@@ -35,7 +34,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     return parsed;
   })
   .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
-    if (!durableStripeBillingEnabled())
+    if (!monthlyIntroBillingEnabled())
       return { error: "Billing is awaiting its verified rollout. Contact support." };
     try {
       const plan = resolveBillingPlan(data.priceId);
@@ -45,14 +44,15 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         typeof context.claims.email === "string" ? context.claims.email : undefined;
       const stripe = createStripeClient(BILLING_ENV);
 
-      // Read every row for an early user-facing check. The checkout-attempt
-      // RPC below is the concurrency authority and repeats this invariant while
-      // holding the durable per-user attempt row.
+      // Read every row for an early user-facing check. The adapter also scans
+      // authoritative Stripe subscriptions; its durable per-account claim is
+      // the concurrency authority for new Checkout requests.
       const { data: subscriptionHistory, error: existingError } = await context.supabase
         .from("subscriptions")
         .select("status, current_period_end")
         .eq("user_id", userId)
-        .eq("environment", BILLING_ENV);
+        .eq("environment", BILLING_ENV)
+        .abortSignal(AbortSignal.timeout(10_000));
       if (existingError) {
         return { error: "Billing status couldn't be verified. Try again." };
       }
@@ -62,134 +62,15 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         return { error: "You already have an active subscription. Manage it from Billing." };
       }
 
-      const prices = await stripe.prices.list({
-        lookup_keys: [plan.lookupKey],
-        active: true,
-        limit: 1,
-      });
-      const stripePrice = prices.data[0];
-      if (
-        !stripePrice ||
-        stripePrice.lookup_key !== plan.lookupKey ||
-        stripePrice.id !== plan.livePriceId ||
-        stripePrice.type !== "recurring"
-      ) {
-        throw new Error("Price not found");
-      }
-
-      const customerId = await resolveStripeCustomerId({
+      const session = await createMonthlyIntroCheckout({
         stripe,
         supabase: supabaseAdmin,
-        environment: BILLING_ENV,
         userId,
+        environment: BILLING_ENV,
         email: customerEmail,
-      });
-
-      // The database check is concurrency-safe, while this authoritative
-      // Customer read closes the webhook-lag window before a new Session exists.
-      // Scheduled cancellations remain Stripe "active" and must still block.
-      const nowSeconds = Math.floor(Date.now() / 1000);
-      let stripeHasHistory = false;
-      let stripeHasBlockingSubscription = false;
-      for await (const subscription of stripe.subscriptions.list({
-        customer: customerId,
-        status: "all",
-        limit: 100,
-      })) {
-        stripeHasHistory = true;
-        if (stripeSubscriptionBlocksCheckout(subscription, nowSeconds)) {
-          stripeHasBlockingSubscription = true;
-          break;
-        }
-      }
-      if (stripeHasBlockingSubscription) {
-        return {
-          error:
-            "You already have an open subscription. Resume or manage it in Billing, or wait until it expires before starting another.",
-        };
-      }
-
-      const requestedTrialEligibility =
-        plan.trialPeriodDays > 0 && (subscriptionHistory ?? []).length === 0 && !stripeHasHistory;
-
-      // The existing promise is a 30-day first-eligible Plus trial. Customer
-      // deletion removes the former email/history signal. Until the owner
-      // approves its replacement retention policy, never silently sell a
-      // no-trial plan or grant a second trial under an unverified identity.
-      if (requestedTrialEligibility) {
-        return {
-          error:
-            "Your 30-day trial eligibility needs verification. Contact support before starting Checkout.",
-        };
-      }
-
-      const { data: checkoutAttempt, error: checkoutAttemptError } = await loose(supabaseAdmin).rpc(
-        "claim_stripe_checkout_attempt",
-        {
-          _user_id: userId,
-          _environment: BILLING_ENV,
-          _price_id: stripePrice.id,
-          _trial_eligible: requestedTrialEligibility,
-        },
-      );
-      if (checkoutAttemptError) {
-        const active = checkoutAttemptError.message?.includes("stripe_active_subscription_exists");
-        return {
-          error: active
-            ? "You already have an active subscription. Resume or manage it in Billing, or wait until it expires before starting another."
-            : "Checkout is unavailable right now. Try again.",
-        };
-      }
-      if (
-        !checkoutAttempt ||
-        typeof checkoutAttempt !== "object" ||
-        Array.isArray(checkoutAttempt)
-      ) {
-        throw new Error("Checkout attempt unavailable");
-      }
-      const attempt = checkoutAttempt as Record<string, unknown>;
-      const idempotencyKey =
-        typeof attempt.idempotencyKey === "string" ? attempt.idempotencyKey : "";
-      const attemptCustomerId =
-        typeof attempt.stripeCustomerId === "string" ? attempt.stripeCustomerId : "";
-      const attemptTrialEligible = attempt.trialEligible === true;
-      const sessionExpiresAt =
-        typeof attempt.sessionExpiresAt === "string"
-          ? Math.floor(new Date(attempt.sessionExpiresAt).getTime() / 1000)
-          : 0;
-      if (
-        !idempotencyKey ||
-        attemptCustomerId !== customerId ||
-        !Number.isSafeInteger(sessionExpiresAt) ||
-        (sessionExpiresAt <= Math.floor(Date.now() / 1000) && attempt.outcome === "new")
-      ) {
-        throw new Error("Checkout attempt invalid");
-      }
-
-      const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
-        integration_identifier: "kovagpt_checkout_wshrfyef",
-        line_items: [{ price: stripePrice.id, quantity: 1 }],
-        mode: "subscription",
-        ui_mode: "embedded_page",
-        return_url: CHECKOUT_RETURN_URL,
-        expires_at: sessionExpiresAt,
-        managed_payments: { enabled: true },
-        customer: customerId,
-        metadata: { userId, kovaCheckoutAttempt: idempotencyKey },
-        subscription_data: {
-          metadata: { userId },
-          ...(attemptTrialEligible && {
-            trial_period_days: plan.trialPeriodDays,
-          }),
-        },
-      };
-      const session = await resolveDurableCheckoutSession({
-        stripe,
-        supabase: supabaseAdmin,
-        userId,
-        environment: BILLING_ENV,
-        attempt,
-        params: sessionParams,
+        plan,
+        couponId: process.env.STRIPE_MONTHLY_INTRO_COUPON_ID,
+        returnUrl: CHECKOUT_RETURN_URL,
       });
 
       if (!session.client_secret) {
@@ -197,7 +78,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       }
       return { clientSecret: session.client_secret };
     } catch (error) {
-      if (error instanceof StripeCheckoutPendingError) {
+      if (error instanceof BillingPolicyError && error.code.includes("active_subscription")) {
+        return { error: "You already have an open subscription. Manage it from Billing." };
+      }
+      if (error instanceof BillingPolicyError && error.code.includes("reconciliation")) {
         return {
           error:
             "Checkout is being reconciled. Retry shortly or contact support; no second payment attempt was started.",
@@ -218,18 +102,23 @@ export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: Record<string, never>) => data)
   .handler(async ({ context }): Promise<PortalResult> => {
-    if (!durableStripeBillingEnabled())
+    if (!monthlyIntroBillingEnabled())
       return { error: "Billing is awaiting its verified rollout. Contact support." };
+    try {
+      await requireMonthlyIntroReadiness(supabaseAdmin);
+    } catch {
+      return { error: "Billing account couldn't be verified. Try again." };
+    }
     const { data: mapping, error: mappingError } = await loose(supabaseAdmin)
-      .from("stripe_customer_mappings")
-      .select("stripe_customer_id")
-      .eq("user_id", context.userId)
-      .eq("environment", BILLING_ENV)
-      .maybeSingle();
+      .rpc("kova_policy_customer_for_portal", {
+        p_user: context.userId,
+        p_environment: BILLING_ENV,
+      })
+      .abortSignal(AbortSignal.timeout(10_000));
     if (mappingError) {
       return { error: "Billing account couldn't be verified. Try again." };
     }
-    if (!mapping?.stripe_customer_id) {
+    if (!mapping?.customerId) {
       return { error: "No billing account found. Start a subscription first." };
     }
     const { data: rows, error: subscriptionError } = await loose(context.supabase)
@@ -237,13 +126,14 @@ export const createPortalSession = createServerFn({ method: "POST" })
       .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
       .eq("user_id", context.userId)
       .eq("environment", BILLING_ENV)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .abortSignal(AbortSignal.timeout(10_000));
     if (subscriptionError) return { error: "Billing account couldn't be verified. Try again." };
     const sub = selectSubscriptionSummaryRow(rows ?? []);
     if (
       sub &&
       hasVerifiedSubscriptionAccess(sub) &&
-      sub.stripe_customer_id !== mapping.stripe_customer_id
+      sub.stripe_customer_id !== mapping.customerId
     ) {
       return { error: "Billing Customer identity needs reconciliation. Contact support." };
     }
@@ -256,7 +146,7 @@ export const createPortalSession = createServerFn({ method: "POST" })
     try {
       const stripe = createStripeClient(BILLING_ENV);
       const portal = await stripe.billingPortal.sessions.create({
-        customer: mapping.stripe_customer_id,
+        customer: mapping.customerId,
         configuration,
         // The browser cannot choose an arbitrary post-portal redirect.
         return_url: "https://kovagpt.com/",
@@ -301,10 +191,22 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
   .validator((data: { environment: StripeEnv }) => data)
   .handler(async ({ context }): Promise<SubscriptionSummary> => {
     const { userId } = context;
-    const { data: resolvedSummary, error: summaryError } = await loose(supabaseAdmin).rpc(
-      "user_subscription_summary",
-      { _user_id: userId },
-    );
+    // The narrow monthly adapter delegates the existing personal AND shared
+    // tier authorities. It never installs the future billing-tier registry or
+    // substitutes a personal-price entitlement when shared authority is absent.
+    const monthlyPolicy = monthlyIntroBillingEnabled();
+    const { data: resolvedSummary, error: summaryError } = await loose(supabaseAdmin)
+      .rpc(
+        monthlyPolicy ? "kova_monthly_subscription_summary" : "user_subscription_summary",
+        monthlyPolicy
+          ? {
+              p_user: userId,
+              p_plus_price: BILLING_PLANS.plus_monthly.livePriceId,
+              p_pro_price: BILLING_PLANS.pro_monthly.livePriceId,
+            }
+          : { _user_id: userId },
+      )
+      .abortSignal(AbortSignal.timeout(10_000));
     if (
       summaryError ||
       !resolvedSummary ||
@@ -347,11 +249,12 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
     const trialing = summary.trialing === true;
 
     const { data: mapping, error: mappingError } = await loose(supabaseAdmin)
-      .from("stripe_customer_mappings")
+      .from("kova_policy_customer_bindings")
       .select("stripe_customer_id")
       .eq("user_id", userId)
       .eq("environment", BILLING_ENV)
-      .maybeSingle();
+      .maybeSingle()
+      .abortSignal(AbortSignal.timeout(10_000));
     if (mappingError) throw new Error("Billing details couldn't be verified.");
 
     const hasBillingAccount = !!mapping?.stripe_customer_id;

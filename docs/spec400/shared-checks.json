@@ -1,0 +1,79 @@
+{
+  "source": "Uncommitted first core snapshot",
+  "tests": {
+    "newCombinedFocused": "46 pass,0fail",
+    "shared": "5 pass,0fail",
+    "typecheck": "prior combined pass; final snapshot check running",
+    "eslint": "0errors,1existing component-export warning",
+    "browser": "Not yet run"
+  },
+  "scope": [
+    "shared tokens/current palette preservation",
+    "local fonts",
+    "sidebar navigation geometry",
+    "routable Settings and local appearance",
+    "usage truth/failure",
+    "auth presentation and configured methods"
+  ],
+  "gapsDocument": "docs/spec400/scope-and-contracts.md",
+  "successor": {
+    "focused": "105 passed,0failed across spec400,Trash,localpaste and response suites",
+    "typecheck": "tsc --noEmit exit0",
+    "firstRender": "e38 rejected for documented shared-cascade/layout findings; corrections implemented pending successor",
+    "blueInlineCodeContrast": {
+      "light": 6.49,
+      "dark": 7.44
+    },
+    "legacyAudit": "7 pass,4 obsolete pre-spec geometry assertions fail in ui-quality-source/production-recovery combined; exact error headings updated and passing"
+  },
+  "successor_checks": {
+    "focusedTests": 148,
+    "failed": 0,
+    "typecheck": "passed",
+    "rendered": "638a162 bounded core checks completed; see exact source-mapped receipt in kova-spec400-review-638a162",
+    "priorRuntime": "1c3ac7c71bf0684801704d7c118f4c3f953b06b9",
+    "corrections": [
+      "Light code foreground",
+      "320 response toolbar",
+      "paste and Trash focus",
+      "recent chat radius8",
+      "Profile and Responses separation",
+      "Appearance preview/reset",
+      "Billing workspace",
+      "Library/Settings utility cleanup",
+      "simple table wrapping"
+    ],
+    "limitations": [
+      "Earlier legacy source assertions remain separate; no all-repository pass claim",
+      "Full1440 pixels and clipboard-failure render still pending",
+      "No live provider/service acceptance"
+    ]
+  },
+  "rendered_638a162": {
+    "source": "638a1629d7cd49c79dfc1decd55bc40ce9db2780",
+    "receipt": "kova-spec400-review-638a162/receipt.md",
+    "passed": [
+      "Light and Dark code foreground",
+      "320 simple table containment and complete response action row",
+      "Paste Remove/Undo focus",
+      "Trash Restore next-control focus",
+      "8px recent-chat parent and child",
+      "Appearance preview, reset and focus",
+      "Profile cancel and separate Responses",
+      "Billing Overview/Plans/Invoices truthful service states",
+      "Auth heading, password visibility focus, recovery prefill/cancel"
+    ],
+    "assigned_successor": [
+      "400px auth cap overrides legacy440px rendered sizing",
+      "Verified Free no-subscription next-charge wording",
+      "Billing12px panels and8px controls"
+    ],
+    "not_credited": [
+      "Full1440 pixel capture",
+      "Genuinely wide table fixture",
+      "Clipboard failure rendered state",
+      "Live authentication, billing, provider or retention services",
+      "Additional review-family render gate"
+    ]
+  }
+}

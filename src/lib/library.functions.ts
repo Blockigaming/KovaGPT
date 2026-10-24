@@ -1,3 +1,6 @@
+import { reserveUploads } from "@/lib/upload-quota.server.mjs";
+import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
+import { DAILY_UPLOAD_LIMIT_BY_TIER } from "@/lib/modes";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -26,6 +29,7 @@ export type LibraryItem = {
   text_available?: boolean;
   content_loaded?: boolean;
   created_at: string;
+  updated_at?: string;
 };
 
 const ItemTypeEnum = z.enum([
@@ -72,6 +76,50 @@ export const listMyLibrary = createServerFn({ method: "GET" })
     })) as LibraryItem[];
   });
 
+/** Metadata-only title change, scoped to the current owner and exact saved generation/title. */
+export const renameLibrarySavedItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((value: unknown) =>
+    z
+      .object({
+        expectedOwnerId: z.string().uuid(),
+        id: z.string().uuid(),
+        generation: z.string().uuid(),
+        previousTitle: z.string().max(200),
+        title: z.string().trim().min(1).max(200),
+      })
+      .parse(value),
+  )
+  .handler(async ({ data, context }) => {
+    if (context.userId !== data.expectedOwnerId)
+      throw new Error("Your account changed. Refresh Library before renaming.");
+    const { data: row, error } = await (context.supabase as SupabaseClient)
+      .from("user_library_items")
+      .update({ title: data.title, updated_at: new Date().toISOString() })
+      .eq("user_id", context.userId)
+      .eq("id", data.id)
+      .eq("content_generation", data.generation)
+      .eq("title", data.previousTitle)
+      .select("id,title,updated_at,content_generation")
+      .maybeSingle();
+    if (
+      error ||
+      !row ||
+      row.id !== data.id ||
+      row.content_generation !== data.generation ||
+      row.title !== data.title
+    )
+      throw new Error(
+        "The title change could not be confirmed. Refresh Library before retrying; the item may have changed.",
+      );
+    return {
+      id: row.id as string,
+      title: row.title as string,
+      updated_at: row.updated_at as string,
+      content_generation: row.content_generation as string,
+    };
+  });
+
 const SaveSchema = z.object({
   expectedOwnerId: z.string().uuid().optional(),
   idempotencyKey: z.string().uuid().optional(),
@@ -116,6 +164,19 @@ export const saveToLibrary = createServerFn({ method: "POST" })
     };
     const existing = await findExisting();
     if (existing) return assertLibrarySaveReplay(existing, fingerprint);
+    if (data.source === "upload" && data.file_name && data.content_text) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const tier = await resolveEffectiveBillingTier(supabaseAdmin, context.userId);
+      if (
+        !(await reserveUploads(
+          { userId: context.userId, supabaseAdmin },
+          [{ kind: "text_file", name: data.file_name, content: data.content_text }],
+          DAILY_UPLOAD_LIMIT_BY_TIER[tier],
+          AbortSignal.timeout(10000),
+        ))
+      )
+        throw new Error("Daily file upload limit reached. Resets at midnight UTC.");
+    }
     const { data: row, error } = await context.supabase
       .from("user_library_items")
       .insert({

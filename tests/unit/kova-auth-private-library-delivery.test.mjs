@@ -6,7 +6,7 @@ import ts from "typescript";
 import { z } from "zod";
 import * as contract from "../../src/lib/kova-auth-contract.mjs";
 import * as security from "../../src/lib/auth-security.mjs";
-import * as validation from "../../src/lib/auth-validation-policy.mjs";
+import * as validationPolicy from "../../src/lib/auth-validation-policy.mjs";
 import { digestKovaToken } from "../../src/lib/kova-auth-crypto.server.mjs";
 import * as transport from "../../src/lib/ai/provider-transport.server.mjs";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
@@ -129,8 +129,8 @@ function fixture(options = {}) {
           : { auth: { getUser: () => assert.fail("Hosted Auth must not be called") } },
     },
     "@/lib/billing-entitlement.server": {},
-    "@/lib/auth-validation-policy.mjs": validation,
     "@/lib/auth-security.mjs": security,
+    "@/lib/auth-validation-policy.mjs": validationPolicy,
     "@/lib/kova-auth-contract.mjs": { ...contract, resolveKovaAuthMode: () => "kova" },
     "@/lib/kova-auth-crypto.server.mjs": {
       digestKovaToken,
@@ -352,6 +352,13 @@ test("actual Library server function emits owned reauthorized URLs and keeps leg
     },
   };
   const api = load("src/lib/library-images.functions.ts", {
+    "@/lib/upload-quota.server.mjs": {
+      reserveUploads: () => assert.fail("Read must not reserve uploads"),
+    },
+    "@/lib/billing-entitlement.server": {
+      resolveEffectiveBillingTier: () => assert.fail("Image URL read must not charge quota"),
+    },
+    "@/lib/modes": {},
     "@tanstack/react-start": { createServerFn: () => chain },
     "@/integrations/supabase/auth-middleware": { requireSupabaseAuth: {} },
     "@/lib/lockdown-policy.mjs": {},
@@ -406,6 +413,9 @@ test("actual original-document route withholds bytes if the owned session expire
   const f = fixture({ revokeAfterRead: true });
   const route = load("src/routes/api/library/files.ts", {
     ...f.modules,
+    "@/lib/upload-quota.server.mjs": {
+      reserveUploads: () => assert.fail("Download must not reserve uploads"),
+    },
     "@tanstack/react-router": { createFileRoute: () => (config) => config },
     "@/lib/library-private-delivery.server": f.delivery,
     "@/lib/modes": {},

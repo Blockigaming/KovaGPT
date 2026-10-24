@@ -1,7 +1,7 @@
-// Floating widget in the bottom-right that shows active timers/alarms,
-// counts down live, plays a beep + notification when a timer fires, and
+// Utility-row widget that shows active timers/alarms,
+// counts down live, shows a silent notification when already permitted, and
 // exposes a quick "add timer" affordance.
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   addTimer,
   formatRemaining,
@@ -19,28 +19,6 @@ import {
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
 } from "@/lib/principal-browser-storage.mjs";
 
-function beep() {
-  try {
-    const Ctx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = "sine";
-    o.frequency.value = 880;
-    o.connect(g);
-    g.connect(ctx.destination);
-    g.gain.setValueAtTime(0.001, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
-    o.start();
-    o.stop(ctx.currentTime + 1);
-  } catch {
-    /* silent */
-  }
-}
-
 const sessionNotifiedIdsByPrincipal = new Map<string, Set<string>>();
 
 function sessionNotifiedIds(principal: string): Set<string> {
@@ -54,7 +32,7 @@ function sessionNotifiedIds(principal: string): Set<string> {
 function notify(label: string) {
   try {
     if ("Notification" in window && Notification.permission === "granted") {
-      new Notification("KovaGPT", { body: `${label} finished`, silent: false });
+      new Notification("KovaGPT", { body: `${label} finished`, silent: true });
     }
   } catch {
     /* ignore */
@@ -77,6 +55,7 @@ export function TimersWidget({
   const visibleItems = useMemo(() => (ready ? items : []), [items, ready]);
   const [now, setNow] = useState(Date.now());
   const [open, setOpen] = useState(false);
+  const [panelOffset, setPanelOffset] = useState(0);
   const [minutes, setMinutes] = useState(5);
   const panelRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
@@ -85,6 +64,27 @@ export function TimersWidget({
     () => (principal ? sessionNotifiedIds(principal) : new Set<string>()),
     [principal],
   );
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const keepPanelInViewport = () => {
+      const panel = panelRef.current;
+      const container = panel?.parentElement;
+      if (!container || !panel) return;
+      const width = panel.offsetWidth;
+      // right:0 anchors to the relative container, which can be wider than
+      // its launcher in a project view. Measure that same containing block.
+      const anchoredLeft = container.getBoundingClientRect().right - width;
+      const left = Math.min(
+        Math.max(anchoredLeft, 16),
+        Math.max(16, window.innerWidth - width - 16),
+      );
+      setPanelOffset(left - anchoredLeft);
+    };
+    keepPanelInViewport();
+    window.addEventListener("resize", keepPanelInViewport);
+    return () => window.removeEventListener("resize", keepPanelInViewport);
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -142,7 +142,6 @@ export function TimersWidget({
     );
     for (const timer of due) {
       markFired(userKey, timer.id);
-      beep();
       notify(timer.label);
       toast.success(`${timer.label} - done`, { duration: 6000 });
     }
@@ -153,16 +152,8 @@ export function TimersWidget({
     .sort((a, b) => a.fireAt - b.fireAt);
   const nextItem = active[0];
 
-  const requestNotifPerm = () => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission().catch(() => {});
-    }
-  };
-
   return (
-    <div
-      className={`fixed bottom-auto left-[max(1rem,var(--safe-left))] right-[max(1rem,var(--safe-right))] top-[calc(4rem+var(--safe-top))] sm:top-[calc(8rem+var(--safe-top))] z-40 flex flex-col-reverse items-end gap-2 pointer-events-none 2xl:bottom-[max(1rem,var(--safe-bottom))] 2xl:left-auto 2xl:top-auto 2xl:flex-col ${mobileSidebarOpen ? "max-lg:hidden" : ""}`}
-    >
+    <div className={`relative z-40 flex items-end ${mobileSidebarOpen ? "max-lg:invisible" : ""}`}>
       {open && (
         <div
           ref={panelRef}
@@ -170,10 +161,15 @@ export function TimersWidget({
           role="region"
           aria-label="Timer controls"
           tabIndex={-1}
+          style={{ transform: `translateX(${panelOffset}px)` }}
           onKeyDown={(event) => {
-            if (event.key === "Escape") setOpen(false);
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              setOpen(false);
+            }
           }}
-          className="pointer-events-auto max-h-[calc(100dvh-8rem-var(--safe-top)-var(--safe-bottom))] w-full sm:max-h-[calc(100dvh-12rem-var(--safe-top)-var(--safe-bottom))] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-72"
+          className="absolute right-0 top-full mt-2 max-h-[calc(100dvh-12rem-var(--safe-top)-var(--safe-bottom))] w-[min(18rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-3 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
@@ -254,7 +250,6 @@ export function TimersWidget({
                   toast.error("The timer could not be saved in this browser.");
                   return;
                 }
-                requestNotifPerm();
               }}
               className="ml-auto inline-flex min-h-11 items-center gap-1 rounded-full bg-foreground px-4 text-xs text-background hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -267,7 +262,7 @@ export function TimersWidget({
         ref={launcherRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card/95 px-4 py-2 text-xs font-medium shadow-lg backdrop-blur transition hover:bg-accent"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-transparent px-4 py-2 text-xs font-medium transition hover:bg-accent"
         aria-label={ready ? "Timers" : "Timers (loading)"}
         aria-expanded={open}
         aria-controls="kova-timers-panel"

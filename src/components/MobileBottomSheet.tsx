@@ -13,12 +13,14 @@ export function MobileBottomSheet({
   title,
   children,
   ariaLabel,
+  restoreFocus = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title?: string;
   children: ReactNode;
   ariaLabel?: string;
+  restoreFocus?: boolean;
 }) {
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const [dragY, setDragY] = useState(0);
@@ -77,7 +79,8 @@ export function MobileBottomSheet({
           onCloseAutoFocus={(event) => {
             // Callers use their existing toolbar buttons rather than DialogTrigger.
             event.preventDefault();
-            if (previouslyFocused.current?.isConnected) previouslyFocused.current.focus();
+            if (restoreFocus && previouslyFocused.current?.isConnected)
+              previouslyFocused.current.focus();
           }}
           style={{
             transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,

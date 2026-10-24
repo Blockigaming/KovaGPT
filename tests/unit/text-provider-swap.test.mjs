@@ -169,6 +169,51 @@ test("text selection does not move image or embedding traffic from Azure", async
   assert.equal(JSON.parse(calls[0].init.body).model, "image-alias");
   assert.equal(JSON.parse(calls[1].init.body).model, "embedding-alias");
 });
+test("explicit image selection uses OpenAI without changing text or embedding endpoints", async () => {
+  const calls = [];
+  const api = loadProvider(
+    {
+      ...azure,
+      KOVA_IMAGE_PROVIDER: "openai",
+      AZURE_OPENAI_DEPLOYMENT_IMAGE: "missing-image-alias",
+      AZURE_OPENAI_DEPLOYMENT_EMBEDDING: "embedding-alias",
+    },
+    async (url, init) => {
+      calls.push({ url, init });
+      return new Response('{"data":[]}');
+    },
+  );
+  await api.imageGenerations({ model: "gpt-image-2.5-flare", prompt: "fixture" });
+  await api.embeddings({ model: "text-embedding-3-small", input: "fixture" });
+  assert.equal(calls[0].url, "https://api.openai.com/v1/images/generations");
+  assert.equal(calls[0].init.headers.get("authorization"), "Bearer openai-fixture");
+  assert.equal(calls[0].init.headers.has("api-key"), false);
+  assert.equal(JSON.parse(calls[0].init.body).model, "gpt-image-2.5-flare");
+  assert.equal(calls[1].url, "https://fixture.openai.azure.com/openai/v1/embeddings");
+  assert.equal(JSON.parse(calls[1].init.body).model, "embedding-alias");
+  assert.equal(api.getAiProviderConfig().provider, "azure_openai");
+  assert.doesNotMatch(JSON.stringify(api.logs), /openai-fixture|azure-fixture/);
+});
+test("invalid or incomplete image selection cannot make provider calls or fall back", async () => {
+  let calls = 0;
+  for (const env of [
+    {
+      AZURE_OPENAI_ENDPOINT: azure.AZURE_OPENAI_ENDPOINT,
+      AZURE_OPENAI_API_KEY: "fixture",
+      KOVA_IMAGE_PROVIDER: "openai",
+    },
+    { OPENAI_API_KEY: "fixture", KOVA_IMAGE_PROVIDER: "azure_openai" },
+    { ...azure, KOVA_IMAGE_PROVIDER: "invalid" },
+  ]) {
+    const api = loadProvider(env, async () => {
+      calls++;
+      return new Response("{}");
+    });
+    await assert.rejects(api.imageGenerations({ model: "gpt-image-2.5-flare", prompt: "fixture" }));
+  }
+  assert.equal(calls, 0);
+});
+
 test("provider rejection does not trigger fallback or retry", async () => {
   let calls = 0;
   const api = loadProvider({ ...azure, KOVA_TEXT_PROVIDER: "openai" }, async () => {
@@ -179,4 +224,93 @@ test("provider rejection does not trigger fallback or retry", async () => {
   assert.equal(response.status, 429);
   assert.equal(calls, 1);
   await response.body.cancel();
+});
+
+test("HTTP-200 failed or incomplete Responses cannot become successful tool-hop replies", async () => {
+  for (const result of [
+    {},
+    { output: [{ type: "message", content: [{ text: "partial" }] }] },
+    { status: "", output: [] },
+    { status: "failed", output: [] },
+    { status: "cancelled", output: [] },
+    { status: "incomplete", output: [{ type: "message", content: [{ text: "partial" }] }] },
+    { error: { message: "private-provider-error" }, output: [] },
+    null,
+    [],
+  ]) {
+    const api = loadProvider(
+      { KOVA_TEXT_PROVIDER: "openai", OPENAI_API_KEY: "fixture" },
+      async () => Response.json(result),
+    );
+    await assert.rejects(
+      api.chatCompletions({
+        model: "gpt-5.6-luna",
+        stream: false,
+        messages: [{ role: "user", content: "fixture" }],
+      }),
+      (error) => {
+        assert.equal(error.code, "provider_bad_response");
+        assert.equal(error.status, 502);
+        assert.doesNotMatch(error.message, /private-provider-error|partial/u);
+        return true;
+      },
+    );
+  }
+});
+
+test("completed Responses preserve actual reply and usage without a model retry", async () => {
+  let calls = 0;
+  const api = loadProvider(
+    { KOVA_TEXT_PROVIDER: "openai", OPENAI_API_KEY: "fixture" },
+    async () => {
+      calls++;
+      return Response.json({
+        status: "completed",
+        model: "gpt-5.6-luna",
+        output: [{ type: "message", content: [{ type: "output_text", text: "fixture reply" }] }],
+        usage: { input_tokens: 4, output_tokens: 2, total_tokens: 6 },
+      });
+    },
+  );
+  const response = await api.chatCompletions({
+    model: "gpt-5.6-luna",
+    stream: false,
+    messages: [{ role: "user", content: "fixture" }],
+  });
+  const body = await response.json();
+  assert.equal(body.choices[0].message.content, "fixture reply");
+  assert.equal(body.choices[0].finish_reason, "stop");
+  assert.equal(body.usage.total_tokens, 6);
+  assert.equal(calls, 1);
+});
+
+test("native nonstream Responses metadata is bounded before chat conversion", async () => {
+  let cancelled = false;
+  const api = loadProvider(
+    { KOVA_TEXT_PROVIDER: "openai", OPENAI_API_KEY: "fixture" },
+    async () =>
+      new Response(
+        new ReadableStream({
+          pull(controller) {
+            controller.enqueue(new Uint8Array(2 * 1024 * 1024 + 1));
+          },
+          cancel() {
+            cancelled = true;
+          },
+        }),
+        { headers: { "Content-Type": "application/json" } },
+      ),
+  );
+  await assert.rejects(
+    api.chatCompletions({
+      model: "gpt-5.6-luna",
+      stream: false,
+      messages: [{ role: "user", content: "fixture" }],
+    }),
+    (error) => {
+      assert.equal(error.status, 502);
+      return true;
+    },
+  );
+  assert.equal(cancelled, true);
 });

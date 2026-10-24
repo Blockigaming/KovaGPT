@@ -18,6 +18,9 @@ const [
   workRoute,
   onboarding,
   shellSpec,
+  headerActions,
+  starters,
+  modelStatus,
 ] = await Promise.all([
   readFile("src/routes/index.tsx", "utf8"),
   readFile("src/styles.css", "utf8"),
@@ -34,52 +37,66 @@ const [
   readFile("src/routes/work.tsx", "utf8"),
   readFile("src/components/OnboardingDialog.tsx", "utf8"),
   readFile("tests/e2e/chatgpt-shell-parity.spec.ts", "utf8"),
+  readFile("src/components/ConversationHeaderActions.tsx", "utf8"),
+  readFile("src/components/HomeChatStarters.tsx", "utf8"),
+  readFile("src/components/ComposerModelStatus.tsx", "utf8"),
 ]);
 
-test("signed-in users can move clearly between Chat and Work", () => {
+test("Chat and Work remain reachable without a phone topbar mode switch", () => {
   assert.match(workspaceModeSwitch, /aria-label="Primary workspace"/);
   assert.match(workspaceModeSwitch, /aria-current=\{active === "chat" \? "page" : undefined\}/);
   assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
-  assert.match(route, /<WorkspaceModeSwitch[\s\S]{0,160}active="chat"/);
+  // The owner removed phone Chat/Work switching; navigation lives in the sidebar.
+  assert.doesNotMatch(mobileTopBar, /WorkspaceModeSwitch/);
   assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
   assert.match(sidebar, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
+  assert.match(sidebar, /onNew\(\);[\s\S]{0,180}aria-label="New chat"/);
+});
+
+test("sidebar keeps core destinations before its native More disclosure", () => {
+  // Native details/summary replaces the old aria-controls/sidebar-more-items button.
+  const disclosure = sidebar.match(/<details[^>]*>[\s\S]*?<\/details>/)?.[0];
+  assert.ok(disclosure, "More must remain a real disclosure");
+  assert.match(disclosure, /<summary[^>]*>[\s\S]*?<span>More<\/span>[\s\S]*?<\/summary>/);
+  assert.match(disclosure, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
+  assert.match(disclosure, /navLink\("\/discovery", "Discover", Compass\)/);
+  assert.match(disclosure, /mapsReleaseApproved \? navLink\("\/maps", "Maps", Map\) : null/);
+  const moreStart = sidebar.indexOf(disclosure);
+  for (const destination of [
+    'navLink("/library", "Library"',
+    'navLink("/projects", "Projects"',
+    'navLink("/apps", "Plugins"',
+  ]) {
+    const index = sidebar.indexOf(destination);
+    assert.ok(index >= 0 && index < moreStart, `${destination} must precede More`);
+  }
+});
+
+test("secondary navigation remains discoverable without active unavailable destinations", () => {
   assert.match(
     sidebar,
-    /className="kova-sidebar-rail[\s\S]*?<Link\s+to="\/work"[\s\S]*?aria-label="Work"/,
+    /<details open=\{isOn\("\/work"\) \|\| isOn\("\/discovery"\) \|\| undefined\}>/,
   );
-});
-test("signed-in sidebar keeps core destinations visible and groups coming-soon items", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
-  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /navLink\("\/maps", "Maps", Map\)/);
-  assert.ok(
-    sidebar.indexOf('navLink("/library", "Library"') < sidebar.indexOf("sidebar-more-items"),
-  );
-  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < sidebar.indexOf("sidebar-more-items"));
-  assert.match(sidebar, /title="Health is coming soon"/);
-  assert.match(sidebar, /title="Finances is coming soon"/);
+  assert.match(sidebar, /aria-label="Expand sidebar"/);
+  // Coming-soon placeholders were removed, rather than turned into working destinations.
+  assert.doesNotMatch(sidebar, /navLink\("\/(?:health|finances)"|to="\/(?:health|finances)"/);
 });
 
-test("signed-in sidebar keeps core work visible and groups secondary destinations", () => {
-  assert.match(sidebar, /aria-controls="sidebar-more-items"/);
-  assert.match(sidebar, /aria-expanded=\{moreOpen\}/);
-  assert.match(sidebar, /<span className="kova-sidebar-label">More<\/span>/);
-  const moreControl = sidebar.indexOf('aria-controls="sidebar-more-items"');
-  assert.ok(sidebar.indexOf('navLink("/work", "Work"') < moreControl);
-  assert.ok(sidebar.indexOf('navLink("/library", "Library"') < moreControl);
-  assert.ok(sidebar.indexOf('navLink("/apps", "Plugins"') < moreControl);
-  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Health<\/span>/);
-  assert.match(sidebar, /id="sidebar-more-items"[\s\S]*?<span>Finances<\/span>/);
-});
-
-test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
-  assert.match(route, /const greeting = "What can I help with\?";/);
+test("Chat uses the current greeting and reports model availability truthfully", () => {
+  assert.match(route, /const greeting = "What are you working on\?";/);
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /KovaGPT can make mistakes\. Check important info\./);
   assert.doesNotMatch(route, /ConversationOutline/);
-  assert.equal((route.match(/canChangeAgent=\{false\}/g) ?? []).length, 2);
-  assert.match(route, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
-  assert.match(mobileTopBar, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
+  assert.equal((route.match(/canChangeAgent=\{!active\?\.kova\}/g) ?? []).length, 2);
+  assert.doesNotMatch(route, /<ResponsiveModelSelector/);
+  assert.doesNotMatch(mobileTopBar, /<ResponsiveModelSelector/);
+  assert.match(
+    chatInput,
+    /<ComposerModelStatus visible=\{showModelStatus && isLoaded && Boolean\(user\)\}/,
+  );
+  assert.match(modelStatus, /aria-label="Model availability"/);
+  assert.match(modelStatus, /Model selection isn’t available in this session/);
+  assert.match(modelStatus, /The current serving model isn’t\s*confirmed/);
   assert.match(modelSelector, /ResponsiveModelSelector/);
   assert.match(responsiveSelector, /placement\?: "composer" \| "topbar"/);
   assert.equal((responsiveSelector.match(/data-testid="model-selector-trigger"/g) ?? []).length, 1);
@@ -89,16 +106,18 @@ test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
 });
 
-test("signed-in empty chat removes guest-only onboarding clutter", () => {
-  assert.match(route, /\{isLoaded && !isSignedIn \? \(\s*<div className="kova-greeting-mark"/);
-  assert.match(
-    route,
-    /\{isLoaded && !isSignedIn \? \(\s*<p className="max-w-md[\s\S]*?Think through a question/,
-  );
-  assert.match(
-    route,
-    /\{isLoaded && !isSignedIn \? \(\s*<Suspense[\s\S]*?<HomeChatStarters setInput=\{setInput\}/,
-  );
+test("empty chat offers draft starters and scopes recent work to signed-in history", () => {
+  assert.doesNotMatch(route, /kova-greeting-mark/);
+  assert.doesNotMatch(route, /Think through a question, shape an idea/);
+  assert.match(route, /<HomeChatStarters setInput=\{setInput\}/);
+  for (const label of ["Write something", "Summarize a file", "Compare options"])
+    assert.ok(starters.includes(`label: "${label}"`));
+  assert.match(starters, /setInput\(\(current\) => \(current\.trim\(\) \? current : prompt\)\)/);
+  assert.match(starters, /\.focus\(\{ preventScroll: true \}\)/);
+  assert.doesNotMatch(starters, /onSubmit|\.submit\(/);
+  assert.match(route, /\{isLoaded && isSignedIn && historyConversations\.length > 0 \? \(/);
+  assert.match(route, /Continue working/);
+  assert.match(route, /Sign in to attach files and keep your work together/);
 });
 
 test("signed-in onboarding hands real choices to the authenticated composer", () => {
@@ -137,44 +156,73 @@ test("signed-in onboarding hands real choices to the authenticated composer", ()
   );
 });
 
-test("active desktop chat keeps one primary action and groups secondary controls", () => {
+test("active chat shares scoped header actions and keeps secondary controls reachable", () => {
   assert.doesNotMatch(shellSpec, /removeLocatorHandler\(onboarding\)/);
   assert.doesNotMatch(shellSpec, /onboarding\.waitFor\(\{ state: "visible", timeout: 10_000 \}\)/);
-  assert.match(route, /aria-label="Share chat"/);
-  assert.match(route, /\{active \? \(\s*<>\s*\{isSignedIn \? \(\s*<button/);
-  assert.match(route, /aria-label=\{[\s\S]*?"More chat actions, chat rules active"/);
-  assert.match(route, /<DropdownMenuContent align="end" className="w-56">/);
+  assert.match(route, /active && chatStarted \? \(\s*<Suspense[\s\S]*?<ConversationHeaderActions/);
+  assert.match(route, /key=\{`\$\{storagePrincipal\}:\$\{active\.id\}:\$\{compact\}`\}/);
+  assert.match(route, /conversation=\{active\}/);
+  assert.match(headerActions, /aria-label="Share chat"/);
+  assert.match(headerActions, /if \(restrictedTemporary \|\| !signedIn\)/);
+  assert.match(headerActions, /aria-label="More chat actions"/);
+  assert.match(headerActions, /<DropdownMenuContent\s+align="end"/);
   assert.match(
     route,
-    /<DropdownMenuItem onSelect=\{\(\) => setWorkspaceOpen\(true\)\}>[\s\S]*?Chat settings/,
+    /onOpenContext=\{\(trigger\) =>[\s\S]*?new CustomEvent\("kova-open-message-context", \{ detail: \{ trigger \} \}\)/,
   );
-  assert.match(route, /<Download className="mr-2 h-4 w-4" \/>[\s\S]*?Export chat/);
-  assert.ok(route.indexOf('aria-label="Share chat"') < route.indexOf("More chat actions"));
+  assert.match(chatInput, /addEventListener\("kova-open-message-context", openFromHeader\)/);
+  assert.match(chatInput, /onOpenChatContext\(contextTriggerRef\.current\)/);
+  assert.match(route, /const openChatWorkspace = [\s\S]{0,420}setWorkspaceOpen\(true\)/);
+  assert.match(headerActions, /Export chat/);
+  assert.match(
+    headerActions,
+    /new TextEncoder\(\)\.encode\(exportConversationMarkdown\(conversation\)\)/,
+  );
+  assert.match(headerActions, /safeDocumentFilename\(conversation\.title, "md"\)/);
+  assert.match(
+    route,
+    /const conversations = principalReady \? conversationState\.items : EMPTY_CONVERSATIONS/,
+  );
+  assert.ok(
+    headerActions.indexOf('aria-label="Share chat"') < headerActions.indexOf("More chat actions"),
+  );
 });
 
-test("composer actions, message editing, and markdown stay reachable and lossless", () => {
-  assert.match(chatInput, /placeholder=\{placeholder \?\? "Ask anything"\}/);
+test("compact composer groups actions and preserves message editing and markdown", () => {
+  assert.match(chatInput, /placeholder=\{placeholder \?\? "Describe what you need…"\}/);
   assert.match(
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
-  assert.match(chatInput, /COMPOSER_TOOLS\.map\(toolRow\)/);
+  assert.match(chatInput, /role="group" aria-label="Message tools"/);
+  for (const label of ["Attach", "Context", "Options"])
+    assert.ok(chatInput.includes(`aria-label="${label}"`));
+  assert.match(chatInput, /renderComposerActions\(false\)/);
+  assert.match(chatInput, /section !== "plugins" && \(\s*<div[^>]*aria-label="Attachment options"/);
+  assert.match(chatInput, /!mobile && section !== "files" && \(\s*<ComposerPluginList/);
+  assert.match(chatInput, /Open a project/);
+  assert.match(chatInput, /setProjectPickerOpen\(true\)/);
+  assert.match(chatInput, /chooseTool\(imageTool\)/);
+  assert.match(chatInput, /aria-label="Response options"/);
   assert.doesNotMatch(chatInput, /deep_research/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
-  assert.match(chatInput, /kova-send-button is-enabled/);
+  assert.match(chatInput, /disabled=\{!canSubmit\}\s+onClick=\{triggerSubmit\}/);
+  assert.match(chatInput, /aria-label="Send message"/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
   assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);
   assert.match(chatMessage, /"Retry response" : "Regenerate response"/);
-  assert.ok(
-    chatMessage.indexOf("title={retryActionLabel}") <
-      chatMessage.indexOf('aria-label="More actions"'),
+  assert.match(
+    chatMessage,
+    /<DropdownMenuItem onSelect=\{onRetry\}>[\s\S]*?Retry\s*<\/DropdownMenuItem>/,
   );
-  assert.doesNotMatch(chatMessage, /<DropdownMenuItem onClick=\{onRetry\}/);
+  assert.match(chatMessage, /aria-label="Retry stopped response"/);
+  assert.match(chatMessage, /label: retryActionLabel,[\s\S]*?onRetry\(\)/);
   assert.match(route, /setInput\(m\.content\);/);
+  // The extracted edit helper also retains the unsent draft and its attachments.
   assert.match(
     route,
-    /setEditingMessage\(\{\s*conversationId: active\.id,\s*messageId: m\.id,\s*\}\);/,
+    /setEditingMessage\(\(previous\) =>\s*beginChatEdit\(\s*previous,\s*storagePrincipal,\s*active\.id,\s*m\.id,\s*input,\s*attachments\),/,
   );
 });
 

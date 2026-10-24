@@ -19,7 +19,7 @@ const executable = stripTypeScriptTypes(source, { mode: "strip" })
   .replace(/^export\s+(?=(?:async\s+)?function\b|class\b|const\b)/gmu, "");
 assert.doesNotMatch(executable, /^import\b/mu);
 
-function harness(extra = {}) {
+function harness(extra = {}, models = {}) {
   const environment = {
     OPENAI_API_KEY: "offline-nonsecret-value",
     KOVA_TEXT_PROVIDER: "openai",
@@ -34,7 +34,8 @@ function harness(extra = {}) {
     console: { info() {}, warn() {}, error() {} },
     runtimeEnv: (name) => environment[name],
     maximumServerOutputForModel: () => 700,
-    modelForPolicy: (policy) => ({ id: policy === "instant" ? "gpt-5.6-luna" : "gpt-5.6-sol" }),
+    modelForPolicy: (policy) =>
+      models[policy] ?? { id: policy === "instant" ? "gpt-5.6-luna" : "gpt-5.6-sol" },
     AZURE_COGNITIVE_SERVICES_MANAGED_IDENTITY_RESOURCE: "https://cognitiveservices.azure.com",
     AZURE_FOUNDRY_MANAGED_IDENTITY_RESOURCE: "https://ai.azure.com",
     createManagedIdentityTokenFetcher: () => () => {
@@ -58,6 +59,65 @@ function harness(extra = {}) {
   );
   return { actual: context.actual, calls };
 }
+
+test("canonical function tools and forced choice use the Responses schema without mutating inputs", async () => {
+  const { actual, calls } = harness();
+  const parameters = {
+    type: "object",
+    properties: { query: { type: "string" }, max_results: { type: "integer" } },
+    required: ["query"],
+  };
+  const body = {
+    model: "gpt-5.6-luna",
+    messages: [{ role: "user", content: "Find the synthetic report." }],
+    tools: [
+      {
+        type: "function",
+        function: { name: "find_report", description: "Search reports", parameters },
+      },
+      { type: "function", function: { name: "strict_report", parameters, strict: true } },
+      { type: "function", name: "native_report", parameters, strict: false },
+      { type: "web_search" },
+    ],
+    tool_choice: { type: "function", function: { name: "find_report" } },
+  };
+  const before = JSON.stringify(body);
+  await actual.chatCompletions(body);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].body.tools)), [
+    {
+      type: "function",
+      name: "find_report",
+      description: "Search reports",
+      parameters,
+      strict: false,
+    },
+    { type: "function", name: "strict_report", parameters, strict: true },
+    body.tools[2],
+    body.tools[3],
+  ]);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].body.tool_choice)), {
+    type: "function",
+    name: "find_report",
+  });
+  assert.equal(JSON.stringify(body), before);
+});
+
+test("catalogued non-reasoning overrides omit reasoning options before the single provider attempt", async () => {
+  for (const model of ["gpt-4.1-nano", "gpt-4.1-mini"]) {
+    const { actual, calls } = harness({}, { normal: { id: model, reasoning: false } });
+    await actual.chatCompletions({
+      model,
+      messages: [{ role: "user", content: "A synthetic short answer." }],
+      reasoning: { effort: "high", summary: "auto" },
+    });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].body.model, model);
+    assert.equal(Object.hasOwn(calls[0].body, "reasoning"), false);
+    assert.equal(calls[0].body.max_output_tokens, 700);
+    assert.equal(calls[0].body.service_tier, "default");
+  }
+});
 
 for (const stream of [false, true]) {
   test(`canonical direct OpenAI ${stream ? "streaming" : "nonstreaming"} explicitly requests Standard`, async () => {

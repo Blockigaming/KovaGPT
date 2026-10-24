@@ -37,17 +37,27 @@ export function subscribeKovaAuthChanges(listener: () => void): () => void {
     authorityListeners.delete(listener);
   };
 }
+// Vite folds this choice into one literal. The verified-image scanner checks
+// that same literal in executable assets. The runtime consumes its value
+// rather than maintaining a separate provenance-only configuration claim.
+const compiledBrowserAuthMode =
+  import.meta.env.VITE_KOVA_AUTH_MODE === "kova"
+    ? "kova-browser-auth-mode:kova"
+    : import.meta.env.VITE_KOVA_AUTH_MODE === "dual"
+      ? "kova-browser-auth-mode:dual"
+      : !import.meta.env.VITE_KOVA_AUTH_MODE || import.meta.env.VITE_KOVA_AUTH_MODE === "supabase"
+        ? "kova-browser-auth-mode:supabase"
+        : "kova-browser-auth-mode:invalid";
+
 // In dual mode, hold direct Supabase access on the Kova path until the
 // HttpOnly-cookie probe proves that the browser has no Kova session. This
 // prevents a stale legacy localStorage token from briefly loading a different
 // account while the preferred Kova principal is still unresolved.
-let kovaSessionActive =
-  import.meta.env.VITE_KOVA_AUTH_MODE === "kova" || import.meta.env.VITE_KOVA_AUTH_MODE === "dual";
+let kovaSessionActive = browserKovaAuthMode() !== "supabase";
 
 export function browserKovaAuthMode(): "supabase" | "dual" | "kova" {
-  const value = import.meta.env.VITE_KOVA_AUTH_MODE;
-  if (!value || value === "supabase") return "supabase";
-  if (value === "dual" || value === "kova") return value;
+  const value = compiledBrowserAuthMode.slice("kova-browser-auth-mode:".length);
+  if (value === "supabase" || value === "dual" || value === "kova") return value;
   throw new Error("Invalid VITE_KOVA_AUTH_MODE");
 }
 

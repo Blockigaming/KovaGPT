@@ -1,0 +1,118 @@
+{
+  "area": "Billing, specification400 items 338–348",
+  "baseline": "Separate local candidate based on the existing 9cc palette and the 1c3ac7c review checkpoint",
+  "status": "Local Billing UI implemented; unavailable billing-service fields are explicitly disclosed. No provider or browser execution claimed.",
+  "files": [
+    "src/components/BillingWorkspace.tsx",
+    "src/components/SettingsDialog.tsx (billing-only integration and existing portal lifetime guard)",
+    "src/styles/billing-surfaces.css",
+    "src/routes/pricing.tsx (existing plan-card anchors only)",
+    "tests/unit/spec400-billing.test.mjs"
+  ],
+  "unchangedAuthorities": [
+    "src/utils/payments.functions.ts: getSubscriptionSummary, createPortalSession, createCheckoutSession",
+    "src/lib/billing-plans.ts: configured paid-plan lookup keys and trial policy",
+    "src/lib/capability-registry.ts: published plan prices, feature order inputs, and allowance descriptions",
+    "src/lib/billing-portal-url.mjs: external Stripe URL allowlist",
+    "src/hooks/useStripeCheckout.tsx and src/routes/pricing.tsx: existing checkout flow"
+  ],
+  "requirements": [
+    {
+      "id": 338,
+      "status": "implemented",
+      "evidence": "Billing contains keyboard-accessible Radix Overview, Plans, and Invoices tabs. Overview remains the default. Sub-tabs share the same verified subscription summary and portal handler."
+    },
+    {
+      "id": 339,
+      "status": "partial_service_contract",
+      "evidence": "Overview shows the verified effective plan, real recognized subscription status, configured monthly interval when its price ID matches, and supported current-period dates. Next charge is explicitly unavailable; the existing summary contains no authoritative charge amount or actual provider interval field. Invalid, stale, unverified, and conflicting data are not converted to renewal claims."
+    },
+    {
+      "id": 340,
+      "status": "implemented",
+      "evidence": "Manage subscription retains the existing authenticated, allowlisted Stripe portal flow and explicitly labels external navigation in the current tab. Repeated clicks and stale account/page results remain guarded; switching Billing sub-tabs also invalidates pending navigation."
+    },
+    {
+      "id": 341,
+      "status": "implemented",
+      "evidence": "Responsive Free, Plus, and Pro cards reuse the canonical registry prices and allowances. All cards use the same Chat modes, Messages, Images, Uploads, Storage, and Adaptive Memory order with aligned CSS subgrid rows. Existing colors are unchanged."
+    },
+    {
+      "id": 342,
+      "status": "implemented",
+      "evidence": "The verified effective plan is labeled Current plan. Available higher tiers use Upgrade and lower-tier changes use Change plan. Existing billing relationships use only the portal; unavailable management never falls back to creating a second subscription. Family-only access and unresolved billing block changes."
+    },
+    {
+      "id": 343,
+      "status": "provider_authority_preserved",
+      "evidence": "The UI makes no immediate/delayed upgrade or downgrade promises. It directs users to review the provider's actual effective date, proration, and final charge before confirmation. No local mutation, estimated proration, or replacement confirmation flow was added. Live timing and proration cannot be verified without the provider."
+    },
+    {
+      "id": 344,
+      "status": "implemented",
+      "evidence": "Plans show published USD monthly prices and applicable tax wording. New subscriptions link to the selected existing pricing card, retaining the existing Stripe confirmation/checkout flow. Final charge remains provider-authoritative and is never inferred from the published price."
+    },
+    {
+      "id": 345,
+      "status": "implemented",
+      "evidence": "No discounts, countdowns, or promo-code fields added. The existing configured Plus 30-day first-eligible trial is shown with an explicit eligibility-verification condition. No new or changed purchase policy."
+    },
+    {
+      "id": 346,
+      "status": "implemented_with_honest_fallback",
+      "evidence": "Pending cancellation displays the real supplied access-end date, or states that the date is unavailable. Existing renewal/trial notes now reject invalid or elapsed dates. No Resume action is invented because the contract exposes no supported resume capability; management stays in Stripe."
+    },
+    {
+      "id": 347,
+      "status": "partial_service_contract",
+      "evidence": "Invoices explicitly states that invoice dates, amounts, statuses, and download links are not supplied by the current service. Eligible accounts can open the existing Stripe portal for actual invoice records and downloads. No placeholder invoice rows, substitute PDFs, or fabricated zero-invoice claim."
+    },
+    {
+      "id": 348,
+      "status": "implemented",
+      "evidence": "Verified past_due, unpaid, and incomplete statuses display Update payment method through the existing portal, with support fallback when unavailable. No payment result or view interaction changes the account entitlement."
+    }
+  ],
+  "interactionCoverage": [
+    "Default Overview and switching Plans/Invoices/Overview without financial mutation",
+    "Verified, loading, error, missing, unknown-status, billing-conflict, and stale-date states",
+    "Pending cancellation with and without a usable access-end date",
+    "Payment failure and unavailable portal fallback",
+    "Family-only entitlement and own-account billing separation",
+    "Current plan, new free-account upgrade, existing-account upgrade/downgrade portal routing",
+    "Portal disabled while pending, repeated click guard, account/page closure and sub-tab stale-result suppression",
+    "Invoice unavailable state, verified portal access, unverified/guest/missing-account blocked actions"
+  ],
+  "verification": [
+    {
+      "command": "node --test tests/unit/spec400-billing.test.mjs tests/unit/billing-refund-interface.test.mjs tests/unit/billing-refresh-focus.test.mjs tests/unit/billing-portal-url.test.mjs tests/unit/billing-checkout-guards.test.mjs tests/unit/billing-tier-display.test.mjs tests/unit/account-task-action-lifetime.test.mjs",
+      "result": "36 passed, 0 failed, including 12 new Billing component and interaction-fixture tests",
+      "scope": "Executes actual component JSX and handlers with deterministic React/test boundaries; not a real-browser rendering claim."
+    },
+    {
+      "command": "node_modules/.bin/tsc --noEmit --pretty false",
+      "result": "Final completed checkout-wide typecheck passed (exit 0). Earlier unrelated scheduled-task search typing and transient ProfileSettings narrowing errors were corrected by their owners."
+    },
+    {
+      "command": "node_modules/.bin/eslint src/components/BillingWorkspace.tsx src/routes/pricing.tsx",
+      "result": "Passed, no errors or warnings. Shared SettingsDialog lint also had no errors and retained its pre-existing react-refresh export warning."
+    },
+    {
+      "command": "node_modules/.bin/prettier --check src/components/BillingWorkspace.tsx src/styles/billing-surfaces.css src/routes/pricing.tsx tests/unit/spec400-billing.test.mjs",
+      "result": "Passed"
+    },
+    {
+      "command": "git diff --check (billing-owned files)",
+      "result": "Passed"
+    },
+    {
+      "command": "Browser, build, deployment, live provider calls, payments, new dependencies",
+      "result": "Not run. Existing 1c3ac7c browser review snapshot left untouched; lead owns next build and browser checkpoint."
+    }
+  ],
+  "remainingEvidence": [
+    "Real-browser desktop/mobile layout, keyboard tabs, and routing verification on the next built checkpoint.",
+    "Authoritative upcoming charge/interval and invoice records require an expanded billing read contract; this task deliberately did not add backend/provider calls.",
+    "Live provider-supported change timing, proration, cancellation/resume capability and invoice downloads remain dependent on configured Stripe portal behavior."
+  ]
+}

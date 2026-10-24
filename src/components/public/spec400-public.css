@@ -1,0 +1,406 @@
+/* Spec400 public family geometry. Existing public light/dark palette is authoritative. */
+[data-public-shell] {
+  font-family: "IBM Plex Sans", var(--font-sans), sans-serif;
+  font-size: 15px;
+  line-height: 22px;
+  --public-section-space: 32px;
+  --public-page-width: 1200px;
+}
+[data-public-shell] :is(main h1, .public-hero h1, .legal-hero h1) {
+  font-family: inherit;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+[data-public-shell] :is(main h2, .public-section-heading h2) {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+[data-public-shell] :is(main h3) {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+[data-public-shell] :is(main p, main li) {
+  font-size: 15px;
+  line-height: 24px;
+}
+[data-public-shell]
+  :is(
+    button,
+    select,
+    input:not([type="checkbox"]),
+    summary,
+    .public-action,
+    [data-public-primary]
+  ) {
+  min-height: 44px;
+}
+
+[data-public-shell] :is(article, .rounded-3xl, .public-control-grid article, .public-use-case) {
+  border-radius: var(--kova-radius-card);
+}
+[data-public-shell] :is(.rounded-2xl, .public-workflow-example) {
+  border-radius: var(--kova-radius-card);
+}
+[data-public-shell] :is(button, a, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--ring, var(--foreground));
+  outline-offset: 3px;
+}
+[data-public-shell] :is(a, button, input, textarea, select) {
+  transition-duration: 120ms;
+}
+[data-public-shell] main > section > .max-w-7xl:not(.public-highlights-grid) {
+  padding-block: 32px;
+}
+[data-public-shell] main > section.bg-muted\/25 > div:not(.public-highlights-grid) {
+  padding-block: 32px;
+}
+[data-public-shell] .public-overview .public-hero {
+  padding-block: 32px;
+  text-align: start;
+}
+[data-public-shell] .public-overview .public-hero h1 {
+  max-width: 760px;
+  margin-inline: 0;
+}
+[data-public-shell] .public-overview .public-hero .public-actions {
+  justify-content: start;
+}
+[data-public-shell] .public-overview .public-hero h1 br {
+  display: none;
+}
+[data-public-shell] .public-overview .public-workflow-example {
+  max-width: none;
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+[data-public-shell] .public-overview :is(.public-use-cases, .public-control-section) {
+  padding-block: 32px;
+}
+[data-public-shell] .public-section-heading {
+  margin-bottom: 24px;
+}
+[data-public-shell] .public-example-options button {
+  min-height: 44px;
+}
+[data-public-shell] .public-example-caption {
+  font-size: 13px;
+  line-height: 20px;
+}
+[data-public-shell] .spec400-review {
+  width: 100%;
+  max-width: 1264px;
+  margin-inline: auto;
+  padding: 32px;
+  overflow-wrap: anywhere;
+}
+[data-public-shell] .spec400-review h1 {
+  margin: 8px 0 12px;
+}
+[data-public-shell] .spec400-review h2 {
+  margin: 0 0 12px;
+}
+[data-public-shell] .spec400-review h3 {
+  margin: 20px 0 8px;
+}
+[data-public-shell] .spec400-review p {
+  margin: 8px 0 16px;
+  color: var(--muted-foreground);
+}
+[data-public-shell] .spec400-lede {
+  max-width: 760px;
+}
+[data-public-shell] .spec400-eyebrow {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--muted-foreground);
+}
+[data-public-shell] .spec400-review-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+[data-public-shell] .spec400-review-notice {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  background: var(--muted);
+  margin-block: 24px;
+}
+[data-public-shell] .spec400-review-notice p {
+  margin-bottom: 0;
+}
+[data-public-shell] .spec400-review-toolbar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-block: 24px;
+}
+[data-public-shell] .spec400-review-toolbar label {
+  flex: 1;
+  min-width: min(220px, 100%);
+}
+[data-public-shell] .spec400-review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+[data-public-shell] .spec400-review-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+[data-public-shell] .spec400-review-card {
+  display: block;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  padding: 24px;
+  margin-bottom: 16px;
+  background: var(--background);
+}
+[data-public-shell] a.spec400-review-card:hover {
+  background: var(--muted);
+}
+[data-public-shell] .spec400-review label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+[data-public-shell] .spec400-review :is(input, select, textarea) {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  padding: 10px 12px;
+  font: inherit;
+  border-radius: var(--kova-radius-input);
+}
+[data-public-shell] .spec400-review textarea {
+  resize: vertical;
+  min-height: 132px;
+}
+[data-public-shell]
+  .spec400-review
+  :is(button, .spec400-review-toolbar a, .spec400-review-actions > a) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: var(--kova-radius-button);
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--foreground);
+  font: inherit;
+  cursor: pointer;
+}
+[data-public-shell] .spec400-review button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+[data-public-shell] .spec400-review-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-block: 16px;
+}
+[data-public-shell] .spec400-review label.spec400-check {
+  flex-direction: row;
+  align-items: start;
+  min-height: 44px;
+}
+[data-public-shell] .spec400-review input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+[data-public-shell] .spec400-review pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--muted);
+  border-radius: var(--kova-radius-output);
+  padding: 16px;
+  max-height: 440px;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 20px;
+}
+[data-public-shell] .spec400-reference {
+  max-height: 240px;
+  width: 100%;
+  object-fit: contain;
+  border-radius: var(--kova-radius-output);
+}
+[data-public-shell] .spec400-composition {
+  display: grid;
+  place-items: center;
+  width: min(100%, 320px);
+  max-height: 360px;
+  background: var(--muted);
+  border: 1px dashed var(--border);
+  overflow: hidden;
+  margin-block: 16px;
+}
+[data-public-shell] .spec400-composition img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+[data-public-shell] .spec400-transcript {
+  border-left: 2px solid var(--border);
+  padding: 16px;
+}
+@media (max-width: 1023px) {
+  [data-public-shell] .spec400-review {
+    padding: 24px;
+  }
+  [data-public-shell] .spec400-review-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 639px) {
+  [data-public-shell] .spec400-review {
+    padding: 16px;
+  }
+  [data-public-shell] :is(.spec400-review-grid, .spec400-review-columns) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-public-shell] .spec400-review-card {
+    padding: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-public-shell] * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+[data-public-shell] .spec400-review-boundary {
+  padding-block: 8px;
+  border-block: 1px solid var(--border);
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+[data-public-shell] .spec400-review-secondary {
+  padding: 8px 16px;
+  background: var(--muted);
+}
+[data-public-shell] .spec400-review-secondary > summary {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 500;
+}
+[data-public-shell] .spec400-review-secondary > summary::after {
+  content: "+";
+  margin-left: auto;
+}
+[data-public-shell] .spec400-review-secondary[open] > summary::after {
+  content: "−";
+}
+[data-public-shell] .spec400-facts {
+  margin-block: 24px;
+}
+[data-public-shell] .spec400-facts > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr);
+  gap: 16px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--border);
+}
+[data-public-shell] .spec400-facts dt {
+  color: var(--muted-foreground);
+}
+[data-public-shell] .spec400-facts dd {
+  margin: 0;
+}
+[data-public-shell] .spec400-document-status {
+  max-width: 840px;
+}
+[data-public-shell] .spec400-document-status ul {
+  list-style: disc;
+  padding-left: 24px;
+}
+[data-public-shell] .spec400-call-surface {
+  text-align: center;
+}
+[data-public-shell] .spec400-call-surface .spec400-review-actions {
+  justify-content: center;
+}
+[data-public-shell] .spec400-call-indicator {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  font-size: 48px;
+  background: var(--muted);
+  border-radius: var(--kova-radius-card);
+  margin-block: 24px;
+}
+[data-public-shell] .spec400-composition-large {
+  width: 100%;
+  max-height: 420px;
+  min-height: 220px;
+  text-align: center;
+}
+[data-public-shell] .spec400-empty-display {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-output);
+}
+@media (max-width: 639px) {
+  [data-public-shell] .spec400-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+}
+[data-public-shell] .spec400-assistant-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 32px;
+}
+[data-public-shell] .spec400-assistant-overview ul {
+  list-style: disc;
+  padding-left: 24px;
+}
+@media (max-width: 639px) {
+  [data-public-shell] .spec400-assistant-overview {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
+/* Empty media frames stay compact until an actual local reference exists. */
+[data-public-shell] .spec400-composition-large[data-empty="true"] {
+  min-height: 96px;
+  height: 96px;
+  aspect-ratio: auto;
+}
+[data-public-shell] .public-example-composer {
+  border-radius: var(--kova-radius-composer);
+}
+[data-public-shell] .public-example-prompt {
+  border-radius: var(--kova-radius-message);
+}
+[data-public-shell] .public-example-composer > span:last-child {
+  border-radius: 50%;
+}
+@media (max-width: 639px) {
+  [data-public-shell] :is(main h1, .public-hero h1, .legal-hero h1),
+  [data-public-shell] .public-overview .public-hero h1 {
+    font-size: 24px;
+    line-height: 32px;
+    letter-spacing: normal;
+  }
+}

@@ -19,7 +19,7 @@ export function LegalDocHero({
   description?: string;
 }) {
   return (
-    <header className="legal-hero">
+    <header className="legal-hero px-5 sm:px-6">
       <p className="legal-eyebrow">{eyebrow}</p>
       <h1>{title}</h1>
       {meta ? <p className="legal-hero-meta">{meta}</p> : null}
@@ -36,11 +36,11 @@ function LegalTocList({
   activeId: string | null;
 }) {
   return (
-    <ol className="legal-toc-list">
+    <ol className="legal-toc-list" style={{ listStyle: "none" }}>
       {sections.map((section, index) => (
         <li key={section.id}>
           <a href={`#${section.id}`} data-active={activeId === section.id || undefined}>
-            <span className="legal-toc-index" aria-hidden="true">
+            <span className="legal-toc-index shrink-0" aria-hidden="true">
               {String(index + 1).padStart(2, "0")}
             </span>
             <span className="legal-toc-label">{section.label}</span>
@@ -87,7 +87,7 @@ export function LegalDoc({
   }, []);
 
   return (
-    <div className="legal-doc">
+    <div className="legal-doc mx-auto w-full max-w-6xl px-5 sm:px-6">
       <details className="legal-toc-mobile">
         <summary>
           <span>On this page</span>
@@ -100,14 +100,14 @@ export function LegalDoc({
         </nav>
       </details>
 
-      <div className="legal-layout">
+      <div className="legal-layout mt-8 lg:mt-0">
         <aside className="legal-toc-aside">
           <p className="legal-toc-title">On this page</p>
           <nav aria-label="Page sections">
             <LegalTocList sections={sections} activeId={activeId} />
           </nav>
         </aside>
-        <div className="legal-body" ref={bodyRef}>
+        <div className="legal-body [&_p+p]:mt-5" ref={bodyRef}>
           {children}
         </div>
       </div>
@@ -117,7 +117,7 @@ export function LegalDoc({
 
 export function LegalDocEndnote({ children }: { children: ReactNode }) {
   return (
-    <footer className="legal-endnote">
+    <footer className="legal-endnote px-5 sm:px-6">
       <span className="legal-endnote-links">{children}</span>
       <a href="#main-content">Back to top</a>
     </footer>

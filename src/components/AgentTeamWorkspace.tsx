@@ -192,6 +192,7 @@ export function AgentTeamWorkspace() {
             <div className="flex min-w-max gap-2" role="list" aria-label="Agent workflow templates">
               {AGENT_WORKFLOW_TEMPLATES.map((item) => (
                 <button
+                  data-kova-button-shape="preserve"
                   key={item.id}
                   onClick={() => chooseTemplate(item.id)}
                   className={`w-44 rounded-xl border p-3 text-left ${item.id === templateId ? "bg-accent" : ""}`}

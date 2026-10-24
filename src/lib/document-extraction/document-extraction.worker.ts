@@ -1,11 +1,12 @@
 import { extractOfficeDocument, DocumentExtractionError } from "./office.mjs";
+import { validatePdfMetadata, type DocumentExtractionResult } from "./pdf-metadata.mjs";
 
 // All parsing happens in this disposable worker. Its parent terminates it after
 // 15 seconds, on abort, or after one result; no document bytes are cached.
 self.onmessage = async (event: MessageEvent<{ bytes: ArrayBuffer; extension: string }>) => {
   try {
     const { bytes, extension } = event.data;
-    let result: { text: string; note: string };
+    let result: DocumentExtractionResult;
     if (extension === "pdf") {
       // The PDF parser's fake-worker transport stays inside OUR worker. Loading
       // its message handler first prevents nested workers or fallback on the UI thread.
@@ -19,7 +20,12 @@ self.onmessage = async (event: MessageEvent<{ bytes: ArrayBuffer; extension: str
     self.postMessage({ kind: "document-extraction-result", ok: true, ...result });
   } catch (error) {
     // Parser internals can contain private XML. Only our fixed errors leave the worker.
+    const pdf =
+      error instanceof DocumentExtractionError && "pdf" in error
+        ? validatePdfMetadata(error.pdf)
+        : undefined;
     self.postMessage({
+      ...(pdf ? { pdf } : {}),
       kind: "document-extraction-result",
       ok: false,
       error:

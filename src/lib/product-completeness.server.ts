@@ -440,7 +440,10 @@ export type FeatureClassification =
   | "blocked_runtime_dependency"
   | "not_implemented";
 export const FEATURE_RECONCILIATION: Record<string, FeatureClassification> = {
-  voice: "deferred_product",
+  voice: "implemented_source",
+  voice_audio_api: "implemented_source",
+  voice_conversation: "implemented_source",
+  voice_live_acceptance: "blocked_external_access",
   recovery_deployment: "blocked_external_access",
   build_browser_verification: "blocked_runtime_dependency",
   ai_core: "implemented_source",

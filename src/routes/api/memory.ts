@@ -1,4 +1,4 @@
-// Cross-chat memory store + summarizer for Plus+ users.
+// Existing saved memory reads/deletion and same-chat summary admission for Plus+ users.
 import { createFileRoute } from "@tanstack/react-router";
 import {
   assertFeatureEnabled,
@@ -7,7 +7,6 @@ import {
   requireUser,
   type AuthedCaller,
 } from "@/lib/api-auth.server";
-import { chatCompletions, utilityModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 import {
   assertDatabaseSuccess,
   BodyReadError,
@@ -17,8 +16,6 @@ import {
   readUtf8BodyBounded,
 } from "@/lib/endpoint-reliability.mjs";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
-import { modelForRole } from "@/lib/ai/model-router.server";
-import { UTILITY_MAX_OUTPUT_TOKENS } from "@/lib/ai/model-config.mjs";
 import { parseChatSummarySnapshot } from "@/lib/chat-summary-policy.server.mjs";
 import {
   beginChatMemoryWrite,
@@ -29,9 +26,19 @@ import {
   readChatSummaryDescriptor,
 } from "@/lib/chat-summary.server";
 
+import { parseReviewedMemoryRequest, reviewedMemorySource } from "@/lib/reviewed-memory-policy.mjs";
+
+type HistoryQuery = PromiseLike<{ data: unknown; error?: unknown }> & {
+  select(columns: string): HistoryQuery;
+  eq(column: string, value: string): HistoryQuery;
+  is(column: string, value: null): HistoryQuery;
+  maybeSingle(): HistoryQuery;
+  abortSignal(signal: AbortSignal): HistoryQuery;
+};
+
 const MEMORY_LIMITS = {
   plus: { returned: 12, stored: 250 },
-  pro: { returned: 500, stored: null },
+  pro: { returned: 500 },
 } as const;
 
 type DatabaseResult<T = unknown> = { data: T | null; error?: unknown };
@@ -75,28 +82,106 @@ async function authorizePaidMemory(
   return caller;
 }
 
-async function summarize(messages: Array<{ role: "user" | "assistant"; content: string }>) {
-  const transcript = messages
-    .map((message) => `${message.role === "user" ? "User" : "KovaGPT"}: ${message.content}`)
-    .join("\n");
-  const response = await chatCompletions({
-    model: modelForRole("UTILITY"),
-    max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
-
-    messages: [
-      {
-        role: "system",
-        content:
-          "Summarize this conversation in 2-4 sentences as factual notes about the user and what they discussed. Focus on lasting facts, preferences, projects, decisions, names, and goals - not small talk. Write in third person ('The user...'). No markdown. No en or em dashes; use a regular hyphen. Plain text only.",
-      },
-      { role: "user", content: transcript },
-    ],
-  });
-  if (!response.ok) return null;
-  const data = await response.json();
-  const text = data?.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || !text.trim()) return null;
-  return text.trim().slice(0, 1500);
+async function saveReviewedMemory(
+  rawBody: unknown,
+  caller: Exclude<Awaited<ReturnType<typeof identifyMemoryCaller>>, Response>,
+  epoch: number,
+  request: Request,
+) {
+  let input;
+  try {
+    input = parseReviewedMemoryRequest(rawBody);
+  } catch {
+    return jsonError("Review the exact memory text and confirm before saving.", 400);
+  }
+  if (!caller.auth.emailVerified) return jsonError("Verify your email before saving memory.", 403);
+  if (request.headers.get("X-Kova-Owner") !== caller.auth.userId)
+    return jsonError("Your account changed. Reopen the memory review.", 409);
+  try {
+    // Read with the caller's RLS identity as well as explicit owner predicates.
+    // Revision validation is admission-time; the existing memory RPC atomically
+    // enforces the privacy epoch, not a chat-history revision lock.
+    const result = await (
+      caller.auth.supabaseUser as unknown as { from(table: string): HistoryQuery }
+    )
+      .from("chat_history_records")
+      .select("owner_id,id,payload,revision,deleted_at")
+      .eq("owner_id", caller.auth.userId)
+      .eq("id", input.chatId)
+      .is("deleted_at", null)
+      .maybeSingle()
+      .abortSignal(AbortSignal.any([request.signal, AbortSignal.timeout(10000)]));
+    if (result.error) return jsonError("Chat history is unavailable. Nothing was saved.", 503);
+    const record = result.data as {
+      owner_id?: unknown;
+      id?: unknown;
+      payload?: unknown;
+      revision?: unknown;
+      deleted_at?: unknown;
+    } | null;
+    if (
+      !record ||
+      record.owner_id !== caller.auth.userId ||
+      record.id !== input.chatId ||
+      record.deleted_at !== null ||
+      record.revision !== input.expectedRevision
+    )
+      return jsonError(
+        "This chat changed or is not synced. Close this review and try again from the current chat.",
+        409,
+      );
+    let source;
+    try {
+      source = reviewedMemorySource(record.payload, caller.auth.userId);
+    } catch {
+      return jsonError(
+        "This chat needs at least four eligible non-temporary messages before memory can be saved.",
+        409,
+      );
+    }
+    if (source.conversation.id !== input.chatId)
+      return jsonError("This chat is unavailable for saving memory.", 409);
+    request.signal.throwIfAborted();
+    if (caller.auth.revalidateSession && !(await caller.auth.revalidateSession()))
+      return jsonError("Your session changed. Reopen the memory review.", 401);
+    request.signal.throwIfAborted();
+    await persistMemorySafely({
+      upsert: () =>
+        persistChatMemory(caller.auth.supabaseAdmin, epoch, {
+          user_id: caller.auth.userId,
+          chat_id: input.chatId,
+          title: source.title,
+          summary: input.text,
+          message_count: source.messageCount,
+        }),
+      listOverflow:
+        caller.tier === "plus"
+          ? () =>
+              tbl(caller.auth)
+                .select("id")
+                .eq("user_id", caller.auth.userId)
+                .order("updated_at", { ascending: false })
+                .range(MEMORY_LIMITS.plus.stored, MEMORY_LIMITS.plus.stored + 50)
+          : null,
+      deleteOverflow: async (overflow: unknown[]) =>
+        await tbl(caller.auth)
+          .delete()
+          .eq("user_id", caller.auth.userId)
+          .in(
+            "id",
+            (overflow as Array<{ id: string }>).map((record) => record.id),
+          ),
+    });
+    return Response.json(
+      { ok: true, saved: true, chatId: input.chatId },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch {
+    return jsonError(
+      "Could not confirm that memory was saved. Review Memory Center before trying again.",
+      503,
+    );
+  }
 }
 
 export const Route = createFileRoute("/api/memory")({
@@ -154,28 +239,21 @@ export const Route = createFileRoute("/api/memory")({
         }
         const caller = await identifyMemoryCaller(request);
         if (caller instanceof Response) return caller;
-        // This endpoint is called automatically after conversation updates. Free
-        // accounts have always received a silent no-op and the client relies on it.
-        if (caller.tier === "free") {
-          return new Response(null, {
-            status: 204,
-            headers: { "Cache-Control": "no-store" },
-          });
-        }
-        const authorized = await authorizePaidMemory(caller);
+        const authorized = caller.tier === "free" ? caller : await authorizePaidMemory(caller);
         if (authorized instanceof Response) return authorized;
 
-        // Capture the durable privacy epoch before any request-body/provider
-        // work. A DELETE on another device invalidates both queued summaries
-        // and the final cross-chat memory write from this admitted request.
-        let memoryEpoch: number;
-        try {
-          memoryEpoch = await beginChatMemoryWrite(
-            authorized.auth.supabaseAdmin,
-            authorized.auth.userId,
-          );
-        } catch {
-          return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
+        // Capture the durable privacy epoch before reading the request body.
+        // A DELETE on another device invalidates writes from this admitted request.
+        let memoryEpoch = 0;
+        if (caller.tier !== "free") {
+          try {
+            memoryEpoch = await beginChatMemoryWrite(
+              authorized.auth.supabaseAdmin,
+              authorized.auth.userId,
+            );
+          } catch {
+            return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
+          }
         }
 
         let raw: string;
@@ -189,90 +267,50 @@ export const Route = createFileRoute("/api/memory")({
           console.error("[memory] body read failed", error);
           return jsonError("Invalid request body.", 400);
         }
+        let body: { operation?: unknown; contextSummary?: unknown; contextOnly?: unknown };
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          return jsonError("Invalid payload.", 400);
+        }
+        if (!body || typeof body !== "object" || Array.isArray(body))
+          return jsonError("Invalid payload.", 400);
+        if (body.operation === "save_reviewed_memory") {
+          if (caller.tier === "free") return jsonError("Saving memory requires Plus or Pro.", 403);
+          return saveReviewedMemory(body, authorized, memoryEpoch, request);
+        }
+        // Legacy automatic requests from free plans remain a silent no-op.
+        if (caller.tier === "free")
+          return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
         const parsed = parseMemoryPayload(raw);
         if (!parsed.ok) return jsonError(parsed.error, parsed.status);
-        const body = JSON.parse(raw) as { contextSummary?: unknown; contextOnly?: unknown };
-        if (body.contextOnly !== undefined && typeof body.contextOnly !== "boolean")
-          return jsonError("Invalid payload.", 400);
+        // Old clients must not silently promote a temporary instruction into
+        // cross-chat memory. A general memory toggle is not reviewed-save consent.
+        if (body.contextOnly !== true)
+          return jsonError("Automatic cross-chat memory saving is unavailable.", 409);
+        const snapshot = parseChatSummarySnapshot(body.contextSummary);
+        if (
+          !snapshot ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(
+            parsed.value.chatId,
+          )
+        )
+          return jsonError("Invalid conversation summary payload.", 400);
 
         // Admission runs inside the client's existing memory-write barrier.
         // Privacy deletion drains this POST before removing pending summaries.
         if (chatSummariesEnabled()) {
-          const contextSummary = body.contextSummary;
-          if (contextSummary !== undefined && contextSummary !== null) {
-            const snapshot = parseChatSummarySnapshot(contextSummary);
-            if (
-              !snapshot ||
-              !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(
-                parsed.value.chatId,
-              )
-            ) {
-              return jsonError("Invalid conversation summary payload.", 400);
-            }
-            try {
-              await queueChatSummary(
-                authorized.auth.supabaseAdmin,
-                authorized.auth.userId,
-                memoryEpoch,
-                parsed.value.chatId,
-                snapshot,
-              );
-            } catch {
-              return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
-            }
+          try {
+            await queueChatSummary(
+              authorized.auth.supabaseAdmin,
+              authorized.auth.userId,
+              memoryEpoch,
+              parsed.value.chatId,
+              snapshot,
+            );
+          } catch {
+            return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
           }
-        }
-
-        if (body.contextOnly === true)
-          return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
-
-        const missingProvider = missingAiProviderResponse();
-        if (missingProvider) return missingProvider;
-
-        let summary: string | null;
-        try {
-          summary = await summarize(parsed.value.messages);
-        } catch (error) {
-          console.error("[memory] summarizer failed", error);
-          summary = null;
-        }
-        if (!summary) return jsonError("Memory summarization failed. Please retry.", 502);
-
-        const row = {
-          user_id: authorized.auth.userId,
-          chat_id: parsed.value.chatId,
-          title: parsed.value.title,
-          summary,
-          message_count: parsed.value.messages.length,
-          updated_at: new Date().toISOString(),
-        };
-
-        try {
-          const memoryCap = MEMORY_LIMITS.plus.stored;
-          await persistMemorySafely({
-            upsert: async () =>
-              await persistChatMemory(authorized.auth.supabaseAdmin, memoryEpoch, row),
-            listOverflow:
-              authorized.tier === "plus"
-                ? async () =>
-                    await tbl(authorized.auth)
-                      .select("id")
-                      .eq("user_id", authorized.auth.userId)
-                      .order("updated_at", { ascending: false })
-                      .range(memoryCap, memoryCap + 50)
-                : null,
-            deleteOverflow: async (overflow: unknown[]) =>
-              await tbl(authorized.auth)
-                .delete()
-                .eq("user_id", authorized.auth.userId)
-                .in(
-                  "id",
-                  (overflow as Array<{ id: string }>).map((record) => record.id),
-                ),
-          });
-        } catch (error) {
-          console.error("[memory] durable write failed", error);
-          return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
         }
 
         return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });

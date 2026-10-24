@@ -9,7 +9,12 @@ import {
   isValidModelId,
   resolveRoleModel,
 } from "../../src/lib/ai/model-config.mjs";
-import { estimateCostUsd, routeModel, scoreComplexity } from "../../src/lib/ai/model-router.mjs";
+import {
+  estimateCostUsd,
+  freeModeUpgradeRequired,
+  routeModel,
+  scoreComplexity,
+} from "../../src/lib/ai/model-router.mjs";
 
 const LUNA = DEFAULT_MODELS.DEFAULT_CHAT;
 const TERRA = DEFAULT_MODELS.ADVANCED_REASONING;
@@ -78,17 +83,45 @@ test("mode output ceilings remain monotonic through Max and Ultra", () => {
   }
 });
 
-test("free users can never reach the premium model", () => {
-  const decision = routeModel({
-    task: "chat",
-    mode: "max",
-    tier: "free",
-    deepMode: true,
-    text: "extremely difficult reasoning",
-  });
-  assert.notEqual(decision.modelId, SOL);
-  assert.equal(decision.role, "DEFAULT_CHAT");
-  assert.equal(decision.downgradedFrom, "PREMIUM_REASONING");
+test("Free paid modes fail closed instead of selecting or downgrading a model", () => {
+  for (const mode of ["medium", "thinking", "high", "extra_high", "max", "ultra", "kova_5_5"]) {
+    assert.equal(freeModeUpgradeRequired("free", mode), true);
+    assert.throws(
+      () => routeModel({ task: "chat", mode, tier: "free", hasImages: true }),
+      /mode_not_entitled/,
+    );
+  }
+  assert.throws(
+    () => routeModel({ task: "chat", mode: "instant", tier: "free", deepMode: true }),
+    /mode_not_entitled/,
+  );
+});
+
+test("Free basic chat keeps its existing pin even for complex prompts", () => {
+  for (const mode of ["instant", "auto", "default", "fast"]) {
+    assert.equal(freeModeUpgradeRequired("free", mode), false);
+    const decision = routeModel({
+      task: "chat",
+      mode,
+      tier: "free",
+      text: "debug a race condition and refactor this multi-file architecture",
+      needsTools: true,
+    });
+    assert.equal(decision.role, "DEFAULT_CHAT");
+    assert.equal(decision.modelId, LUNA);
+  }
+});
+
+test("Free mode guard preserves paid routing and utility tasks", () => {
+  for (const tier of ["plus", "pro", "business"]) {
+    assert.equal(freeModeUpgradeRequired(tier, "thinking", true), false);
+  }
+  assert.equal(routeModel({ task: "chat", tier: "plus", mode: "max" }).modelId, TERRA);
+  assert.equal(routeModel({ task: "chat", tier: "pro", mode: "ultra" }).modelId, SOL);
+  assert.equal(
+    routeModel({ task: "utility", tier: "free", mode: "thinking" }).modelId,
+    DEFAULT_MODELS.UTILITY,
+  );
 });
 
 test("utility tasks always use the utility model with a tight output cap", () => {
@@ -117,14 +150,41 @@ test("routing decisions carry logging and cost metadata", () => {
   assert.ok(estimateCostUsd(SOL, 1_000_000, 0) > estimateCostUsd(LUNA, 1_000_000, 0));
 });
 
-test("invalid model overrides fail safe to built-in defaults", () => {
+test("malformed text model overrides fail closed without exposing their value", () => {
   assert.equal(isValidModelId("gpt-5.6-luna"), true);
   assert.equal(isValidModelId("changeme"), false);
   assert.equal(isValidModelId(""), false);
-  const resolved = resolveRoleModel("DEFAULT_CHAT", { KOVA_MODEL_DEFAULT_CHAT: "bad model!!" });
-  assert.equal(resolved.modelId, LUNA);
-  assert.equal(resolved.source, "default");
-  assert.equal(resolved.invalidOverride, "bad model!!");
+  for (const role of [
+    "DEFAULT_CHAT",
+    "ADVANCED_REASONING",
+    "PREMIUM_REASONING",
+    "UTILITY",
+    "IMAGE_ANALYSIS",
+  ]) {
+    const key = `KOVA_MODEL_${role}`;
+    assert.throws(
+      () => resolveRoleModel(role, { [key]: "private invalid model!!" }),
+      (error) => {
+        assert.equal(error.message, `unsupported_ai_model:${key}`);
+        assert.doesNotMatch(error.message, /private invalid model/u);
+        return true;
+      },
+    );
+  }
+  assert.throws(
+    () => routeModel({ task: "chat", env: { KOVA_MODEL_DEFAULT_CHAT: "bad model!!" } }),
+    /unsupported_ai_model:KOVA_MODEL_DEFAULT_CHAT/u,
+  );
+});
+
+test("text override validation preserves existing image and embedding model resolution", () => {
+  for (const role of ["IMAGE_GENERATION", "EMBEDDING"]) {
+    const key = `KOVA_MODEL_${role}`;
+    const resolved = resolveRoleModel(role, { [key]: "bad model!!" });
+    assert.equal(resolved.modelId, DEFAULT_MODELS[role]);
+    assert.equal(resolved.source, "default");
+    assert.equal(resolved.invalidOverride, "bad model!!");
+  }
 });
 
 test("environment overrides migrate models without code changes", () => {

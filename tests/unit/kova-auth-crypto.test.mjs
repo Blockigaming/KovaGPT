@@ -4,6 +4,7 @@ import {
   createPublicKey,
   generateKeyPairSync,
   randomBytes,
+  scryptSync,
   sign,
   verify,
 } from "node:crypto";
@@ -15,9 +16,14 @@ import {
   generateKovaToken,
   generateKovaTotpEnrollment,
   hashKovaPassword,
+  kovaPasswordHashNeedsUpgrade,
+  kovaPasswordHashWriteAlgorithm,
+  KovaPasswordInfrastructureError,
   normalizeKovaEmail,
+  rehashKovaPassword,
   signKovaCompatibilityJwt,
   verifyGoogleIdToken,
+  verifyKovaCompatibilityJwt,
   verifyKovaPassword,
   verifyKovaTotp,
 } from "../../src/lib/kova-auth-crypto.server.mjs";
@@ -26,19 +32,149 @@ function encodedJson(value) {
   return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
 }
 
-test("opaque tokens, normalized emails, and scrypt passwords fail closed", async () => {
+const ARGON_WRITES = { KOVA_AUTH_PASSWORD_HASH_WRITE: "argon2id" };
+
+function legacyPasswordHash(password) {
+  const salt = Buffer.from("kova-test-salt16", "utf8");
+  const digest = scryptSync(password, salt, 32, {
+    N: 32768,
+    r: 8,
+    p: 1,
+    maxmem: 64 * 1024 * 1024,
+  });
+  return `scrypt-v1$32768$8$1$${salt.toString("base64url")}$${digest.toString("base64url")}`;
+}
+
+test("password verification enforces the UTF-8 maximum without imposing the new-password minimum", async () => {
+  const legacyPassword = "legacy";
+  const legacyHash = legacyPasswordHash(legacyPassword);
+  assert.equal(await verifyKovaPassword(legacyPassword, legacyHash), true);
+  assert.equal(await verifyKovaPassword("wrong", legacyHash), false);
+  await assert.rejects(() => hashKovaPassword(legacyPassword), /12 or more/u);
+
+  const atLimit = "\u{1f600}".repeat(256);
+  assert.equal(Buffer.byteLength(atLimit, "utf8"), 1024);
+  const atLimitHash = await hashKovaPassword(atLimit, ARGON_WRITES);
+  assert.equal(await verifyKovaPassword(atLimit, atLimitHash), true);
+
+  // A matching, well-formed legacy fixture makes this a regression test: the
+  // previous verifier accepted these bytes despite the password writer's cap.
+  const overLimit = `${atLimit}a`;
+  assert.ok(overLimit.length < 1024);
+  assert.equal(Buffer.byteLength(overLimit, "utf8"), 1025);
+  const overLimitHash = legacyPasswordHash(overLimit);
+  assert.equal(await verifyKovaPassword(overLimit, overLimitHash), false);
+  await assert.rejects(() => hashKovaPassword(overLimit), /1024 UTF-8 bytes/u);
+});
+
+test("password verification rejects oversized ASCII and malformed input", async () => {
+  const oversized = "a".repeat(1025);
+  assert.equal(await verifyKovaPassword(oversized, legacyPasswordHash(oversized)), false);
+  for (const value of [undefined, null, 1, {}, "\ud800"]) {
+    assert.equal(await verifyKovaPassword(value, "invalid"), false);
+  }
+});
+
+test("password writes default to legacy until Argon2id is explicitly qualified", async () => {
+  assert.equal(kovaPasswordHashWriteAlgorithm({}), "scrypt-v1");
+  assert.equal(
+    kovaPasswordHashWriteAlgorithm({ KOVA_AUTH_PASSWORD_HASH_WRITE: "scrypt-v1" }),
+    "scrypt-v1",
+  );
+  assert.equal(kovaPasswordHashWriteAlgorithm(ARGON_WRITES), "argon2id");
+  const password = "nonsecret-password-fixture";
+  const defaultHash = await hashKovaPassword(password, {});
+  const explicitHash = await hashKovaPassword(password, {
+    KOVA_AUTH_PASSWORD_HASH_WRITE: "scrypt-v1",
+  });
+  for (const encoded of [defaultHash, explicitHash]) {
+    assert.match(encoded, /^scrypt-v1\$32768\$8\$1\$/u);
+    assert.equal(encoded.length, 86);
+    assert.equal(await verifyKovaPassword(password, encoded), true);
+    assert.equal(kovaPasswordHashNeedsUpgrade(encoded), true);
+  }
+});
+
+test("unknown password writer configuration fails closed with a sanitized infrastructure error", async () => {
+  for (const configured of ["", "Argon2id", "argon2i", "scrypt", "unexpected-config-value"]) {
+    const env = { KOVA_AUTH_PASSWORD_HASH_WRITE: configured };
+    assert.throws(() => kovaPasswordHashWriteAlgorithm(env), KovaPasswordInfrastructureError);
+    await assert.rejects(
+      () => hashKovaPassword("nonsecret-password-fixture", env),
+      (error) =>
+        error instanceof KovaPasswordInfrastructureError &&
+        error.code === "kova_password_infrastructure" &&
+        !error.message.includes(configured || '""'),
+    );
+  }
+});
+
+test("opaque tokens, normalized emails, and Argon2id passwords fail closed", async () => {
   assert.equal(normalizeKovaEmail(" Owner@Example.COM "), "owner@example.com");
   assert.throws(() => normalizeKovaEmail("not-an-email"), /Invalid email/u);
   const token = generateKovaToken();
   assert.match(token, /^[A-Za-z0-9_-]{43}$/u);
   assert.match(digestKovaToken(token), /^[a-f0-9]{64}$/u);
 
-  const passwordHash = await hashKovaPassword("correct horse battery staple");
-  assert.match(passwordHash, /^scrypt-v1\$32768\$8\$1\$/u);
+  const passwordHash = await hashKovaPassword("correct horse battery staple", ARGON_WRITES);
+  assert.match(passwordHash, /^\$argon2id\$v=19\$m=19456,p=1,t=2\$/u);
   assert.equal(await verifyKovaPassword("correct horse battery staple", passwordHash), true);
   assert.equal(await verifyKovaPassword("wrong password", passwordHash), false);
   assert.equal(await verifyKovaPassword("correct horse battery staple", `${passwordHash}x`), false);
   await assert.rejects(() => hashKovaPassword("too-short"), /12 or more/u);
+});
+
+test("Argon2id writes use independent salts and legacy rehash preserves existing password lengths", async () => {
+  const password = "nonsecret-password-fixture";
+  const first = await hashKovaPassword(password, ARGON_WRITES);
+  const second = await hashKovaPassword(password, ARGON_WRITES);
+  assert.notEqual(first, second);
+  const [, algorithm, version, parameters, salt, digest] = first.split("$");
+  assert.equal(algorithm, "argon2id");
+  assert.equal(version, "v=19");
+  assert.equal(parameters, "m=19456,p=1,t=2");
+  assert.equal(Buffer.from(salt, "base64").length, 16);
+  assert.equal(Buffer.from(digest, "base64").length, 32);
+  assert.equal(kovaPasswordHashNeedsUpgrade(first), false);
+
+  const shortLegacy = "legacy";
+  const legacyHash = legacyPasswordHash(shortLegacy);
+  assert.equal(kovaPasswordHashNeedsUpgrade(legacyHash), true);
+  assert.equal(await verifyKovaPassword(shortLegacy, legacyHash), true);
+  const upgraded = await rehashKovaPassword(shortLegacy);
+  assert.match(upgraded, /^\$argon2id\$v=19\$m=19456,p=1,t=2\$/u);
+  assert.equal(await verifyKovaPassword(shortLegacy, upgraded), true);
+  assert.equal(await verifyKovaPassword("wrong", upgraded), false);
+  assert.equal(kovaPasswordHashNeedsUpgrade(upgraded), false);
+  const alternateOrder = upgraded.replace("m=19456,p=1,t=2", "m=19456,t=2,p=1");
+  assert.equal(await verifyKovaPassword(shortLegacy, alternateOrder), true);
+  await assert.rejects(() => hashKovaPassword(shortLegacy), /12 or more/u);
+});
+
+test("password verification rejects unsupported costs, algorithms and noncanonical encodings before KDF", async () => {
+  const password = "nonsecret-password-fixture";
+  const encoded = await hashKovaPassword(password, ARGON_WRITES);
+  const parts = encoded.split("$");
+  const malformed = [
+    encoded.replace("argon2id", "argon2i"),
+    encoded.replace("v=19", "v=16"),
+    encoded.replace("m=19456", "m=4294967295"),
+    encoded.replace("t=2", "t=999999999"),
+    encoded.replace("p=1", "p=2"),
+    encoded.replace("m=19456,p=1,t=2", "t=2,m=19456,p=1"),
+    encoded.replace("m=19456,p=1,t=2", "m=19456,p=1,t=2,t=2"),
+    `${encoded}$extra`,
+    `${encoded}=`,
+    [...parts.slice(0, 4), `${parts[4].slice(0, -1)}B`, parts[5]].join("$"),
+    [...parts.slice(0, 5), `${parts[5].slice(0, -1)}B`].join("$"),
+    "scrypt-v1$32768$8$1$not-a-salt$not-a-digest",
+  ];
+  for (const invalid of malformed) {
+    assert.equal(await verifyKovaPassword(password, invalid), false);
+    assert.equal(kovaPasswordHashNeedsUpgrade(invalid), false);
+  }
+  await assert.rejects(() => rehashKovaPassword("a".repeat(1025)), /1024 UTF-8 bytes/u);
+  await assert.rejects(() => rehashKovaPassword("\ud800"), /UTF-8/u);
 });
 
 test("TOTP verification accepts the current RFC 6238 code and a narrow clock window", () => {
@@ -121,6 +257,49 @@ test("compatibility JWTs are ES256, short-lived, and stable-UUID bound", () => {
     ),
     true,
   );
+});
+
+test("compatibility JWTs reject issuer credentials, query and fragment", () => {
+  const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+  const env = {
+    KOVA_AUTH_JWT_PRIVATE_KEY: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+    KOVA_AUTH_JWT_KEY_ID: "issuer-validation-fixture",
+    KOVA_AUTH_JWT_PUBLIC_KEY_SHA256: createHash("sha256")
+      .update(publicKey.export({ type: "spki", format: "der" }))
+      .digest("hex"),
+    KOVA_AUTH_ISSUER: "https://auth.example.com/tenant/",
+  };
+  const principal = {
+    accountId: "10000000-0000-4000-8000-000000000001",
+    sessionId: "20000000-0000-4000-8000-000000000002",
+    email: "owner@example.com",
+    emailVerified: true,
+    assuranceLevel: "aal1",
+  };
+  const now = Date.parse("2026-09-20T20:00:00Z");
+  const validToken = signKovaCompatibilityJwt(principal, env, now);
+  assert.equal(verifyKovaCompatibilityJwt(validToken, env, now).accountId, principal.accountId);
+  assert.equal(
+    JSON.parse(Buffer.from(validToken.split(".")[1], "base64url")).iss,
+    env.KOVA_AUTH_ISSUER,
+  );
+
+  for (const issuer of [
+    "https://user@auth.example.com/tenant/",
+    "https://user:password@auth.example.com/tenant/",
+    "https://auth.example.com/tenant/?mode=owned",
+    "https://auth.example.com/tenant/#owned",
+  ]) {
+    const invalidEnv = { ...env, KOVA_AUTH_ISSUER: issuer };
+    assert.throws(
+      () => signKovaCompatibilityJwt(principal, invalidEnv, now),
+      /issuer must be an exact HTTPS URL/u,
+    );
+    assert.throws(
+      () => verifyKovaCompatibilityJwt(validToken, invalidEnv, now),
+      /issuer must be an exact HTTPS URL/u,
+    );
+  }
 });
 
 test("Google ID tokens require a valid RS256 signature, audience, nonce, and verified email", async () => {

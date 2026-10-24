@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import * as recovery from "../../src/lib/kova-recovery-link.mjs";
 import * as landing from "../../src/lib/kova-recovery-landing.mjs";
+import * as result from "../../src/lib/kova-recovery-result.mjs";
 import { authHttp, authRequest } from "../helpers/kova-auth-http.mjs";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
 import { digestKovaToken } from "../../src/lib/kova-auth-crypto.server.mjs";
@@ -23,7 +24,9 @@ test("recovery emails use a fragment; the raw bearer is absent from the HTTP tar
     authRequest({ email: "owner@example.test" }, { path: "/api/auth/recovery/request" }),
   );
   assert.equal(response.status, 202);
-  const link = new URL(payload.p_email_payload.text.split("\n\n")[1]);
+  const link = new URL(
+    payload.p_email_payload.text.match(/^Reset password: (https:\/\/\S+)$/mu)[1],
+  );
   assert.equal(link.origin + link.pathname + link.search, base);
   const value = new URLSearchParams(link.hash.slice(1)).get("token");
   assert.match(value, /^[A-Za-z0-9_-]{43,128}$/u);
@@ -100,13 +103,20 @@ function page(suffix, mode = "kova", scrubFails = false) {
       "@/lib/oauth-session": {},
       "@/lib/kova-recovery-link.mjs": recovery,
       "@/lib/kova-recovery-landing.mjs": landing,
+      "@/lib/kova-recovery-result.mjs": result,
       "@/lib/kova-auth-browser": {
         browserKovaAuthEnabled: () => mode !== "supabase",
         browserKovaAuthMode: () => mode,
         kovaPublicAuthJson: async (path, body) => {
           events.push(["submit", path, body]);
           return Response.json({
-            session: { accountId: "10000000-0000-4000-8000-000000000001", emailVerified: true },
+            session: {
+              accountId: "10000000-0000-4000-8000-000000000001",
+              sessionId: "20000000-0000-4000-8000-000000000002",
+              email: "fixture-owner@example.test",
+              emailVerified: true,
+              assuranceLevel: "aal1",
+            },
           });
         },
       },

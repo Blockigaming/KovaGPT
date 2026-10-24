@@ -1,0 +1,356 @@
+/* Only bundled by the explicit integrated-review Vite configuration. */
+.review-browser-page {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f5f3eb;
+  color: #243b32;
+  text-align: left;
+  font-family: Georgia, "Times New Roman", serif;
+}
+.review-browser-page-masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 18px 0;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -1px;
+}
+.review-browser-page-nav {
+  font-family: var(--font-sans);
+  font-size: 7px;
+  letter-spacing: 0;
+  color: #5d6b62;
+}
+.review-browser-page-story {
+  display: grid;
+  grid-template-columns: 1fr 0.72fr;
+  align-items: center;
+  gap: 15px;
+  padding: 19px 18px 15px;
+}
+.review-browser-page-copy {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+.review-browser-page-kicker {
+  font-family: var(--font-sans);
+  font-size: 6px;
+  line-height: 1.3;
+  letter-spacing: 1.3px;
+  color: #687368;
+}
+.review-browser-page-copy strong {
+  font-size: clamp(24px, 2vw, 33px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -1.2px;
+}
+.review-browser-page-deck {
+  font-size: 8px;
+  line-height: 1.5;
+  color: #566359;
+}
+.review-browser-page-read {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-family: var(--font-sans);
+  font-size: 7px;
+}
+.review-browser-page-read svg {
+  width: 9px;
+  height: 9px;
+}
+.review-browser-page-art {
+  position: relative;
+  display: block;
+  align-self: stretch;
+  min-height: 130px;
+  overflow: hidden;
+  border-radius: 46% 46% 4px 4px;
+  background: #d4dfd9;
+}
+.review-browser-art-sun {
+  position: absolute;
+  top: 15%;
+  left: 55%;
+  width: 24%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #f4efd7;
+}
+.review-browser-art-hill {
+  position: absolute;
+  width: 140%;
+  height: 80%;
+  border-radius: 50%;
+}
+.review-browser-art-hill-back {
+  top: 44%;
+  left: -42%;
+  transform: rotate(19deg);
+  background: #7b9580;
+}
+.review-browser-art-hill-front {
+  top: 65%;
+  left: 19%;
+  transform: rotate(-31deg);
+  background: #435f50;
+}
+.review-browser-art-water {
+  position: absolute;
+  inset: 82% 0 0;
+  background: #afbcb0;
+  opacity: 0.9;
+}
+.review-browser-page-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 13px 11px;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  line-height: 1.5;
+  color: #5d6b62;
+}
+.review-browser-page-caption > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.review-browser-page-caption svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+.review-browser-sample-label {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border: 1px solid #bcc6ba;
+  border-radius: 4px;
+  font-size: 8px;
+}
+.review-integrated-browser-dialog {
+  width: min(560px, calc(100vw - 24px));
+  max-width: 560px;
+  max-height: calc(100dvh - 24px);
+  gap: 18px;
+  overflow: auto;
+  padding: 24px;
+  border-radius: 24px;
+}
+.review-integrated-browser-heading {
+  display: grid;
+  gap: 6px;
+  padding-right: 28px;
+}
+.review-integrated-browser-dialog .review-browser-page-story {
+  gap: 28px;
+  padding: 28px;
+}
+.review-integrated-browser-dialog .review-browser-page-masthead {
+  padding: 20px 28px 0;
+}
+.review-integrated-browser-dialog .review-browser-page-copy strong {
+  font-size: 42px;
+}
+.review-integrated-browser-dialog .review-browser-page-kicker {
+  font-size: 8px;
+}
+.review-integrated-browser-dialog .review-browser-page-deck {
+  font-size: 11px;
+}
+.review-integrated-browser-dialog .review-browser-page-read {
+  font-size: 10px;
+}
+.review-integrated-browser-dialog .review-browser-page-art {
+  min-height: 190px;
+}
+.review-browser-session-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--foreground);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.review-browser-status-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+}
+.review-browser-status-dot-owner,
+.review-browser-status-dot-paused {
+  background: #c69a45;
+}
+.review-browser-status-dot-active {
+  background: #54a97b;
+}
+.review-browser-session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.review-browser-session-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--foreground);
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.review-browser-session-actions .review-browser-action-primary {
+  color: var(--background);
+  background: var(--foreground);
+  border-color: transparent;
+}
+.review-browser-session-actions button:hover {
+  opacity: 0.8;
+}
+.review-browser-session-actions button:focus-visible,
+.review-browser-input-label input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.review-browser-session-actions svg {
+  width: 14px;
+  height: 14px;
+}
+.review-browser-input-label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+.review-browser-input-label input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--foreground);
+}
+.review-browser-sample-disclosure {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+@media (max-width: 480px) {
+  .review-integrated-browser-dialog {
+    padding: 18px;
+    gap: 16px;
+    border-radius: 20px;
+  }
+  .review-integrated-browser-dialog .review-browser-page-story {
+    gap: 15px;
+    padding: 20px 18px;
+  }
+  .review-integrated-browser-dialog .review-browser-page-masthead {
+    padding: 16px 18px 0;
+  }
+  .review-integrated-browser-dialog .review-browser-page-copy strong {
+    font-size: 30px;
+  }
+  .review-integrated-browser-dialog .review-browser-page-deck {
+    font-size: 9px;
+  }
+  .review-integrated-browser-dialog .review-browser-page-art {
+    min-height: 145px;
+  }
+  .review-browser-session-actions button {
+    min-height: 44px;
+  }
+}
+
+/* A browser viewport keeps its landscape proportion at every review size. */
+.review-browser-page {
+  aspect-ratio: 16 / 10;
+  grid-template-rows: 30px minmax(0, 1fr) 28px;
+}
+.review-browser-page-masthead {
+  padding: 10px 14px 0;
+  font-size: 17px;
+}
+.review-browser-page-story {
+  min-height: 0;
+  padding: 12px 14px;
+  gap: 12px;
+}
+.review-browser-page-copy {
+  gap: 6px;
+}
+.review-browser-page-copy strong {
+  font-size: 25px;
+}
+.review-browser-page-art {
+  min-height: 0;
+}
+.review-browser-page-caption {
+  padding: 0 12px 8px;
+  font-size: 8px;
+}
+.review-integrated-browser-dialog .review-browser-page-story {
+  padding: 12px 18px;
+  gap: 18px;
+}
+.review-integrated-browser-dialog .review-browser-page-masthead {
+  padding: 12px 18px 0;
+}
+.review-integrated-browser-dialog .review-browser-page-copy strong {
+  font-size: 34px;
+}
+.review-integrated-browser-dialog .review-browser-page-art {
+  min-height: 0;
+}
+@media (max-width: 480px) {
+  .review-integrated-browser-dialog .review-browser-page-copy strong {
+    font-size: 24px;
+  }
+  .review-integrated-browser-dialog .review-browser-page-story {
+    padding: 10px 14px;
+    gap: 12px;
+  }
+  .review-integrated-browser-dialog .review-browser-page-kicker {
+    font-size: 6px;
+  }
+  .review-integrated-browser-dialog .review-browser-page-deck {
+    font-size: 8px;
+  }
+  .review-integrated-browser-dialog .review-browser-page-read {
+    font-size: 7px;
+  }
+}
+.review-browser-page-deck,
+.review-browser-page-read {
+  display: none;
+}
+@media (min-width: 481px) {
+  .review-integrated-browser-dialog .review-browser-page-deck {
+    display: block;
+  }
+  .review-integrated-browser-dialog .review-browser-page-read {
+    display: flex;
+  }
+}
+.review-browser-page {
+  flex: 0 0 auto;
+}

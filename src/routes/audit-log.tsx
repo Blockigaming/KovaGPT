@@ -5,8 +5,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { OperationalState } from "@/components/OperationalState";
 import { parseAuditLogRows, type AuditLogRow } from "@/lib/audit-response.mjs";
 import { listAuditLog } from "@/lib/audit.functions";
+import { useUser } from "@/components/auth/ClerkSafe";
+import { useTimeFormatPreference } from "@/hooks/use-time-format-preference";
+import { formatDisplayDateTime } from "@/lib/time-format";
 
 function AuditLogPage() {
+  const { user, isLoaded } = useUser();
+  const timeFormat = useTimeFormatPreference(user?.id ?? null, isLoaded);
   const fetchRows = useServerFn(listAuditLog);
   const [rows, setRows] = useState<AuditLogRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,8 +93,8 @@ function AuditLogPage() {
                   <div className="truncate text-sm text-muted-foreground">{row.summary}</div>
                 )}
               </div>
-              <time className="shrink-0 text-xs text-muted-foreground">
-                {new Date(row.created_at).toLocaleString()}
+              <time dateTime={row.created_at} className="shrink-0 text-xs text-muted-foreground">
+                {formatDisplayDateTime(row.created_at, timeFormat)}
               </time>
             </li>
           ))}

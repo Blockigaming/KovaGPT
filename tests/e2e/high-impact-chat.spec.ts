@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { fixture } from "./actual-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
 
@@ -63,17 +64,16 @@ test("web answers expose their real sources instead of a placeholder action", as
   const sourcesButton = page.getByRole("button", { name: "2 sources" });
   await expect(sourcesButton).toBeVisible();
   await sourcesButton.click();
-  const sources = page.getByRole("region", { name: "Sources for this response (2)" });
-  await expect(sources.getByRole("link", { name: /Launch report/ })).toHaveAttribute(
-    "href",
-    "https://example.com/report",
-  );
+  const sources = page.getByRole("dialog", { name: "Sources", exact: true });
+  await expect(
+    sources.getByRole("link", { name: /https:\/\/example.com\/report/ }),
+  ).toHaveAttribute("href", "https://example.com/report");
   await expect(sources).toContainText("Verified launch details.");
-  await expect(sources.getByText("example.com", { exact: true })).toBeVisible();
+  await expect(sources.getByText("Publisher: example.com", { exact: true })).toBeVisible();
   await expect(sources).not.toContainText("spoofed.invalid");
   await expect(sources).not.toContainText("Unsafe result");
   await expect(sources).not.toContainText("Expanded URL");
-  await expect(sources.getByText("docs.example.org", { exact: true })).toBeVisible();
+  await expect(sources.getByText("Publisher: docs.example.org", { exact: true })).toBeVisible();
 });
 
 test("stopping before the first token preserves an honest response with immediate retry", async ({
@@ -122,17 +122,16 @@ test("stopping before the first token preserves an honest response with immediat
     window.requestAnimationFrame = (callback) =>
       window.setTimeout(() => callback(performance.now()), 1_000);
   });
-  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  await page.getByRole("button", { name: "Attach", exact: true }).click();
   await page.getByRole("button", { name: "Search the web" }).click();
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find a mountain sunset");
   await page.getByRole("button", { name: "Send message" }).click();
-  await expect(page.getByText("Searching the web", { exact: true })).toBeVisible();
-  await expect(page.getByText("Creating image", { exact: true })).toBeVisible();
+  await expect(page.getByText("Generating image…", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Stop generating" }).click();
 
   await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
   await expect(page.locator(".kova-assistant-message").last()).toContainText("Partial response");
-  await expect(page.getByText("Creating image", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Generating image…", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Remove Search the web" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Retry stopped response" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Stop generating" })).toHaveCount(0);
@@ -255,15 +254,19 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Work through this carefully");
   await page.getByRole("button", { name: "Send message" }).click();
 
-  const status = page.getByRole("status").filter({ hasText: "Thinking" });
-  await expect(status).toHaveText("Thinking…");
+  const status = page.locator(".kova-thinking-indicator");
+  await expect(status).toContainText("Preparing reply…");
+  await page
+    .locator(".kova-assistant-message details > summary")
+    .filter({ hasText: "Activity" })
+    .click();
   await expect(page.getByText("Search complete", { exact: true })).toBeVisible();
   await page.clock.fastForward(8_000);
-  await expect(status).toHaveText("Still thinking…");
+  await expect(status).toContainText("Still waiting for the response…");
   await page.clock.fastForward(22_000);
-  await expect(page.getByRole("status").filter({ hasText: "Taking a little longer" })).toHaveText(
-    "Taking a little longer…",
-  );
+  await expect(
+    page.getByRole("status").filter({ hasText: "Taking a little longer" }),
+  ).toContainText("Taking a little longer…");
 
   if (testInfo.project.name === "desktop-1440x900") {
     await page.getByRole("button", { name: "New chat", exact: true }).click();
@@ -271,9 +274,9 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
       .getByRole("button", { name: /^Open chat / })
       .first()
       .click();
-    await expect(page.getByRole("status").filter({ hasText: "Taking a little longer" })).toHaveText(
-      "Taking a little longer…",
-    );
+    await expect(
+      page.getByRole("status").filter({ hasText: "Taking a little longer" }),
+    ).toContainText("Taking a little longer…");
   }
   await expect(page.getByRole("button", { name: "Stop generating" })).toBeVisible();
   await page.getByRole("button", { name: "Stop generating" }).click();
@@ -284,7 +287,7 @@ async function startAttachedConversation(
   page: import("@playwright/test").Page,
   expectedResponse: string,
 ) {
-  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  await page.getByRole("button", { name: "Attach", exact: true }).click();
   await page.locator('input[type="file"][accept*=".csv"]').setInputFiles({
     name: "brief.csv",
     mimeType: "text/csv",
@@ -298,6 +301,7 @@ async function startAttachedConversation(
 
 test("editing a prompt replaces its turn and keeps attachments", async ({ page }) => {
   let requestBody: Record<string, unknown> | undefined;
+  await fixture(page, "light", true, false);
   await page.route("**/api/chat", async (route) => {
     requestBody = route.request().postDataJSON();
     await route.fulfill({
@@ -338,6 +342,7 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   page,
 }) => {
   let requestBody: Record<string, unknown> | undefined;
+  await fixture(page, "light", true, false);
   await page.route("**/api/chat", async (route) => {
     requestBody = route.request().postDataJSON();
     await route.fulfill({
@@ -349,7 +354,9 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await startAttachedConversation(page, "Regenerated response");
-  await page.getByRole("button", { name: "Regenerate response" }).click();
+  await page.getByRole("button", { name: "More actions", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Retry", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toHaveCount(0);
 
   await expect(page.locator(".kova-user-message")).toHaveCount(1);
   await expect(page.locator(".kova-assistant-message")).toContainText("Regenerated response");
@@ -387,12 +394,12 @@ test("archived chats can be removed from Settings data controls", async ({ page 
 
   const archived = page.getByRole("region", { name: "Archived chats" });
   await expect(archived).toBeVisible();
-  page.once("dialog", async (dialog) => {
-    expect(dialog.type()).toBe("confirm");
-    expect(dialog.message()).toBe('Permanently delete "Archived chat"?');
-    await dialog.accept();
-  });
   await archived.getByRole("button", { name: "Delete archived chat Archived chat" }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Move “Archived chat” to Trash?" });
+  await confirmation.getByRole("button", { name: "Move to Trash", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Trash", exact: true })).toContainText(
+    "Archived chat",
+  );
   await expect(archived.getByText("No archived chats", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(() => ({
@@ -425,6 +432,7 @@ test("text files are attached as real request context and remain visible in hist
   page,
 }) => {
   let requestBody: Record<string, unknown> | undefined;
+  await fixture(page, "light", true, false);
   await page.route("**/api/chat", async (route) => {
     requestBody = route.request().postDataJSON();
     await route.fulfill({
@@ -436,7 +444,7 @@ test("text files are attached as real request context and remain visible in hist
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
-  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  await page.getByRole("button", { name: "Attach", exact: true }).click();
   await page.locator('input[type="file"][accept*=".csv"]').setInputFiles({
     name: "quarterly.csv",
     mimeType: "text/csv",

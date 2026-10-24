@@ -14,7 +14,11 @@ test("Apps validates principal-scoped recent activity before rendering it", () =
   assert.doesNotMatch(apps, /setActivity\(JSON\.parse/);
   assert.match(apps, /storedActivity = parseAppActivity\(storage\.getItem\(activityKey\)\)/);
   assert.match(apps, /catch \{\s+setActivityPersistenceError\(true\)/);
-  assert.match(apps, /<GitHubManager key=\{principal \?\? "unresolved"\}/);
+  assert.match(
+    apps,
+    /<GitHubManager\s+key=\{principal \?\? "unresolved"\}\s+data=\{visibleGithubData\}/,
+  );
+  assert.match(apps, /const visibleGithubData = activityReady \? githubData : null/);
 });
 
 test("Recent activity exposes browser persistence failures without losing session state", () => {
@@ -26,7 +30,8 @@ test("Recent activity exposes browser persistence failures without losing sessio
 });
 
 test("GitHub actions are busy-gated and report request failures", () => {
-  assert.match(apps, /const busy = busyAction !== null/);
+  assert.match(apps, /const busy = busyAction !== null \|\| loadError/);
+  assert.match(apps, /if \(!data && loadError\)[\s\S]*?GitHub connection status is unavailable/);
   assert.match(apps, /GitHub authorization could not be started\. Try again\./);
   assert.match(apps, /GitHub installations could not be refreshed\. Try again\./);
   assert.match(apps, /The disconnect outcome could not be confirmed/);

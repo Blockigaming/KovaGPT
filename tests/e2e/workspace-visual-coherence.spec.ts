@@ -26,28 +26,38 @@ test("signed-out workspace discovery keeps focused hierarchy and truthful contro
   await page.goto("/projects", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expectOneMainWithoutOverflow(page);
-  await expect(page.getByRole("heading", { name: "Sign in to use Projects" })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Sign in to use Projects" }),
+  ).toBeVisible();
 
   await page.goto("/library", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expectOneMainWithoutOverflow(page);
   await expect(
-    page.getByRole("heading", { name: "Saved in this browser", exact: true }),
+    page.getByRole("main").getByRole("heading", { name: "Saved in this browser", exact: true }),
   ).toBeVisible();
   await expect(page.getByPlaceholder("Search Library")).toHaveCount(0);
 
   await page.goto("/apps", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expectOneMainWithoutOverflow(page);
-  await expect(page.getByRole("heading", { name: "Apps & plugins", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sign in to connect services" })).toBeVisible();
-  await expect(page.getByPlaceholder("Search apps and plugins")).toHaveCount(0);
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Plugins", exact: true }),
+  ).toBeVisible();
+  const pluginSearch = page.getByPlaceholder("Search plugins", { exact: true });
+  await expect(pluginSearch).toBeVisible();
+  await pluginSearch.fill("Gmail");
+  await expect(page.getByRole("button", { name: "Connect Gmail", exact: true })).toBeVisible();
 
   await page.goto("/images", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expectOneMainWithoutOverflow(page);
-  await expect(page.getByRole("heading", { name: "Images", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Image history", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Images", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Image history", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Use Portrait mode style", exact: true }),
   ).toHaveCount(1);

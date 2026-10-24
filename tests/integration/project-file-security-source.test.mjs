@@ -52,7 +52,12 @@ test("Project files use the trusted bounded endpoint, never browser Storage writ
   assert.match(route, /getUserTier\(auth, project\.owner_id\)/);
   assert.match(auth, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, userId\)/);
   assert.match(auth, /export async function getUserTier/);
-  assert.match(read("src/lib/billing-entitlement.server.ts"), /rpc\("effective_user_plan_tier"/);
+  const entitlement = read("src/lib/billing-entitlement.server.ts");
+  assert.match(entitlement, /\.rpc\(routine, \{ _user_id: userId \}\)/);
+  assert.match(
+    entitlement,
+    /export async function resolveEffectiveBillingTier[\s\S]*return resolveTier\(supabaseAdmin, userId, "effective_user_plan_tier"\)/,
+  );
   const uploadHandler = route.slice(
     route.indexOf("async function upload"),
     route.indexOf("function missingObject"),

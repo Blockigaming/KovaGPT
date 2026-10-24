@@ -58,9 +58,25 @@ export function buildPreviewDoc(value: string): { doc: string; hadScripts: boole
 
 export function extractCodeBlocks(text: string): string[] {
   const blocks: string[] = [];
-  const pattern = /```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(text)) !== null) blocks.push(match[1].replace(/\s+$/, ""));
+  let fence: string | null = null;
+  let content: string[] = [];
+  for (const line of text.replace(/\r\n?/g, "\n").split("\n")) {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (!fence && marker) {
+      fence = marker[1];
+      content = [];
+    } else if (
+      fence &&
+      marker &&
+      marker[1][0] === fence[0] &&
+      marker[1].length >= fence.length &&
+      !marker[2].trim()
+    ) {
+      blocks.push(content.join("\n"));
+      fence = null;
+      content = [];
+    } else if (fence) content.push(line);
+  }
   return blocks;
 }
 

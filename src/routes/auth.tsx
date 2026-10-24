@@ -13,6 +13,7 @@ import { browserKovaAuthEnabled, kovaPublicAuthJson } from "@/lib/kova-auth-brow
 import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { cn } from "@/lib/utils";
+import { authRetryDelay } from "@/lib/auth-retry-delay.mjs";
 
 type AuthSearch = {
   email?: string;
@@ -91,7 +92,63 @@ function AuthPage() {
   const [mfaCode, setMfaCode] = useState("");
   const [mfaMethod, setMfaMethod] = useState<"totp" | "recovery">("totp");
   const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
   const submittingRef = useRef(false);
+  const authFeedbackRef = useRef<{
+    toastId?: string | number;
+    field?: "password";
+    revision: number;
+    active: boolean;
+  }>({ revision: 0, active: true });
+
+  useEffect(() => {
+    const feedback = authFeedbackRef.current;
+    feedback.active = true;
+    return () => {
+      // A pending request must not restore account feedback after leaving its context.
+      feedback.active = false;
+      feedback.revision += 1;
+      if (feedback.toastId !== undefined) toast.dismiss(feedback.toastId);
+      feedback.toastId = undefined;
+      feedback.field = undefined;
+    };
+  }, [
+    email,
+    search.email,
+    search.mode,
+    search.googleMfa,
+    mfaMethod,
+    mfaChallengeToken,
+    magicSent,
+    forgotOpen,
+  ]);
+
+  const clearAuthError = () => {
+    const feedback = authFeedbackRef.current;
+    feedback.revision += 1;
+    if (feedback.toastId !== undefined) toast.dismiss(feedback.toastId);
+    // Sonner queues dismissals; do not let an old dismissal remove a fast retry's error.
+    feedback.toastId = undefined;
+    feedback.field = undefined;
+  };
+  const showAuthError = (message: string, revision?: number, field?: "password") => {
+    const feedback = authFeedbackRef.current;
+    if (!feedback.active || (revision !== undefined && revision !== feedback.revision)) return;
+    // Synchronous validation replaces the previous attempt, just like an accepted retry.
+    if (revision === undefined) feedback.revision += 1;
+    feedback.field = field;
+    feedback.toastId = toast.error(message, {
+      id: feedback.toastId,
+      duration: Infinity,
+      closeButton: true,
+      onDismiss: (dismissed) => {
+        if (feedback.toastId === dismissed.id) {
+          feedback.toastId = undefined;
+          feedback.field = undefined;
+        }
+      },
+    });
+  };
 
   useEffect(() => {
     setPasskeySupported(browserSupportsPasskeys());
@@ -120,6 +177,7 @@ function AuthPage() {
 
   const guard = () => {
     if (submittingRef.current) return false;
+    clearAuthError();
     submittingRef.current = true;
     setLoading(true);
     return true;
@@ -134,14 +192,19 @@ function AuthPage() {
     setEmailTouched(true);
     setPasswordTouched(true);
     if (!emailValid) {
-      toast.error("Please enter a valid email address.");
+      showAuthError("Please enter a valid email address.");
       return;
     }
     if (password.length < minimumPasswordLength) {
-      toast.error(`Password must be at least ${minimumPasswordLength} characters.`);
+      showAuthError(
+        `Password must be at least ${minimumPasswordLength} characters.`,
+        undefined,
+        "password",
+      );
       return;
     }
     if (!guard()) return;
+    const feedbackRevision = authFeedbackRef.current.revision;
     const normalizedEmail = email.trim().toLowerCase();
     try {
       if (useKovaAuth) {
@@ -159,10 +222,11 @@ function AuthPage() {
           challengeToken?: unknown;
         };
         if (!response.ok) {
-          toast.error(
+          showAuthError(
             typeof payload.error === "string"
               ? payload.error
               : "Authentication could not be completed. Please try again.",
+            feedbackRevision,
           );
           return;
         }
@@ -207,7 +271,7 @@ function AuthPage() {
         console.error("[KovaAuth] Password authentication was rejected", {
           error: error.name || "auth_error",
         });
-        toast.error("That email and password could not be verified.");
+        showAuthError("That email and password could not be verified.", feedbackRevision);
         return;
       }
       toast.success("Welcome back.");
@@ -216,7 +280,7 @@ function AuthPage() {
       console.error("[KovaAuth] Email authentication failed", {
         error: err instanceof Error ? err.name : "unknown_error",
       });
-      toast.error("Authentication could not be completed. Please try again.");
+      showAuthError("Authentication could not be completed. Please try again.", feedbackRevision);
     } finally {
       release();
     }
@@ -226,6 +290,7 @@ function AuthPage() {
     event.preventDefault();
     const mfaInputValid = mfaMethod === "totp" ? /^\d{6}$/u.test(mfaCode) : mfaCode.length > 0;
     if (!hasMfaChallenge || !mfaInputValid || !guard()) return;
+    const feedbackRevision = authFeedbackRef.current.revision;
     try {
       const response = await kovaPublicAuthJson("/api/auth/login", {
         ...(search.googleMfa ? { googleMfa: true } : { challengeToken: mfaChallengeToken }),
@@ -233,10 +298,11 @@ function AuthPage() {
       });
       const payload = (await response.json().catch(() => ({}))) as { error?: unknown };
       if (!response.ok) {
-        toast.error(
+        showAuthError(
           typeof payload.error === "string"
             ? payload.error
             : "Two-factor verification could not be completed.",
+          feedbackRevision,
         );
         return;
       }
@@ -248,7 +314,7 @@ function AuthPage() {
       console.error("[KovaAuth] MFA authentication failed", {
         error: error instanceof Error ? error.name : "unknown_error",
       });
-      toast.error("Two-factor verification could not be completed.");
+      showAuthError("Two-factor verification could not be completed.", feedbackRevision);
     } finally {
       release();
     }
@@ -256,6 +322,7 @@ function AuthPage() {
 
   const submitPasskey = async () => {
     if (!useKovaAuth || !browserSupportsPasskeys() || !guard()) return;
+    const feedbackRevision = authFeedbackRef.current.revision;
     try {
       await signInWithKovaPasskey();
       setPassword("");
@@ -264,7 +331,7 @@ function AuthPage() {
       setMfaMethod("totp");
       window.location.replace(getSafePostAuthRedirect());
     } catch {
-      toast.error("Passkey sign-in was cancelled or could not be completed.");
+      showAuthError("Passkey sign-in was cancelled or could not be completed.", feedbackRevision);
     } finally {
       release();
     }
@@ -272,11 +339,12 @@ function AuthPage() {
 
   const sendMagicLink = async (resend = false) => {
     if (!emailValid) {
-      toast.error("Enter a valid email first.");
+      showAuthError("Enter a valid email first.");
       return;
     }
     if (cooldown > 0) return;
     if (!guard()) return;
+    const feedbackRevision = authFeedbackRef.current.revision;
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
@@ -290,7 +358,7 @@ function AuthPage() {
       console.error("[KovaAuth] Magic-link request failed", {
         error: err instanceof Error ? err.name : "unknown_error",
       });
-      toast.error("The sign-in link could not be requested. Please try again.");
+      showAuthError("The sign-in link could not be requested. Please try again.", feedbackRevision);
     } finally {
       release();
     }
@@ -298,15 +366,18 @@ function AuthPage() {
 
   const resendVerification = async () => {
     if (!emailValid || cooldown > 0 || !guard()) return;
+    const feedbackRevision = authFeedbackRef.current.revision;
     try {
       const response = await kovaPublicAuthJson("/api/auth/verify/resend", {
         email: email.trim().toLowerCase(),
       });
+      const retryDelay = authRetryDelay(response.headers.get("Retry-After"));
+      if (retryDelay !== null) setCooldown(retryDelay);
       if (!response.ok) throw new Error("verification_unavailable");
-      setCooldown(60);
+      if (retryDelay === null) setCooldown(60);
       toast.success("If verification is available for this address, check your inbox.");
     } catch {
-      toast.error("Verification could not be requested. Please try again.");
+      showAuthError("Verification could not be requested. Please try again.", feedbackRevision);
     } finally {
       release();
     }
@@ -327,7 +398,7 @@ function AuthPage() {
       <main
         id="main-content"
         tabIndex={-1}
-        className="mx-auto flex w-full max-w-[420px] flex-col px-6 pb-16 pt-6 sm:pt-16"
+        className="mx-auto flex w-full max-w-[400px] flex-col px-6 pb-16 pt-6 sm:pt-16"
       >
         <div className="mb-8 flex flex-col items-center text-center">
           <NovaLogo mark className="mb-6 h-10 w-10 text-foreground" />
@@ -337,8 +408,8 @@ function AuthPage() {
               : magicSent
                 ? "Sign-in link requested"
                 : isSignUp
-                  ? "Create your account"
-                  : "Enter your password"}
+                  ? "Create your Kova account"
+                  : "Log in to Kova"}
           </h1>
           {hasMfaChallenge ? (
             <p className="mt-3 text-[15px] text-muted-foreground">
@@ -423,7 +494,11 @@ function AuthPage() {
                 setMfaChallengeToken(null);
                 setMfaCode("");
                 setMfaMethod("totp");
+                setPassword("");
+                setPasswordTouched(false);
+                setShowPassword(false);
                 if (search.googleMfa) void navigate({ to: "/" });
+                else window.requestAnimationFrame(() => passwordInputRef.current?.focus());
               }}
             >
               {search.googleMfa ? "Cancel" : "Back to password"}
@@ -437,7 +512,7 @@ function AuthPage() {
               className="h-14 w-full rounded-full text-[15px]"
               onClick={() => void sendMagicLink(true)}
             >
-              {cooldown > 0 ? `Resend available in ${cooldown}s` : "Resend the link"}
+              {cooldown > 0 ? `Retry in ${cooldown}s (local delay)` : "Resend the link"}
             </Button>
             <Button
               variant="ghost"
@@ -445,6 +520,11 @@ function AuthPage() {
               onClick={() => {
                 setMagicSent(false);
                 setCooldown(0);
+                setEditingEmail(true);
+                setEmailTouched(false);
+                setPassword("");
+                setPasswordTouched(false);
+                window.requestAnimationFrame(() => emailInputRef.current?.focus());
               }}
             >
               Use a different email
@@ -520,14 +600,26 @@ function AuthPage() {
               </Label>
               <div className="relative">
                 <Input
+                  ref={passwordInputRef}
                   id="kova-auth-page-password"
                   type={showPassword ? "text" : "password"}
                   autoComplete={isSignUp ? "new-password" : "current-password"}
                   autoFocus
                   placeholder="Password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  onBlur={() => setPasswordTouched(true)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setPassword(value);
+                    if (
+                      value.length >= minimumPasswordLength &&
+                      authFeedbackRef.current.field === "password"
+                    ) {
+                      clearAuthError();
+                    }
+                  }}
+                  onBlur={() => {
+                    if (password.length > 0) setPasswordTouched(true);
+                  }}
                   minLength={minimumPasswordLength}
                   maxLength={1024}
                   aria-invalid={showPasswordError}
@@ -536,7 +628,12 @@ function AuthPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((value) => !value)}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setShowPassword((value) => !value);
+                    passwordInputRef.current?.focus();
+                  }}
+                  aria-pressed={showPassword}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   className="absolute right-1.5 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-accent hover:text-foreground"
                 >
@@ -570,7 +667,7 @@ function AuthPage() {
               className="h-14 w-full rounded-full text-[15px] font-medium"
             >
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Continue
+              {isSignUp ? "Create account" : "Log in"}
             </Button>
 
             {useKovaAuth ? (
@@ -580,7 +677,7 @@ function AuthPage() {
                 disabled={loading || !emailValid || cooldown > 0}
                 className="h-12 w-full rounded-full text-sm text-muted-foreground transition hover:text-foreground"
               >
-                {cooldown > 0 ? `Resend available in ${cooldown}s` : "Resend verification email"}
+                {cooldown > 0 ? `Retry in ${cooldown}s (local delay)` : "Resend verification email"}
               </button>
             ) : null}
             {!useKovaAuth ? (
@@ -595,9 +692,32 @@ function AuthPage() {
             ) : null}
           </form>
         )}
+        <nav
+          aria-label="Account policies"
+          className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
+        >
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center rounded-md underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+            aria-label="Terms of Service (opens in a new tab)"
+          >
+            Terms of Service
+          </a>
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center rounded-md underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+            aria-label="Privacy Policy (opens in a new tab)"
+          >
+            Privacy Policy
+          </a>
+        </nav>
       </main>
 
-      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} initialEmail={email} />
     </div>
   );
 }

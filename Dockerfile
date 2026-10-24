@@ -21,6 +21,7 @@ ARG VITE_SUPABASE_URL=
 ARG VITE_SUPABASE_PUBLISHABLE_KEY=
 ARG VITE_KOVA_AUTH_MODE=supabase
 ARG VITE_KOVA_GOOGLE_AUTH_ENABLED=false
+ARG VITE_KOVA_AUTH_ORIGIN=
 ARG VITE_PAYMENTS_CLIENT_TOKEN=
 WORKDIR /app
 ENV NODE_ENV=production \
@@ -29,13 +30,17 @@ ENV NODE_ENV=production \
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN case "$VITE_KOVA_GOOGLE_AUTH_ENABLED" in \
+RUN case "$VITE_KOVA_AUTH_MODE" in \
+      supabase|dual|kova) ;; \
+      *) echo 'VITE_KOVA_AUTH_MODE must be supabase, dual, or kova' >&2; exit 1 ;; \
+    esac \
+    && case "$VITE_KOVA_GOOGLE_AUTH_ENABLED" in \
       true|false) ;; \
       *) echo 'VITE_KOVA_GOOGLE_AUTH_ENABLED must be true or false' >&2; exit 1 ;; \
     esac
 
 RUN SHA="$KOVA_SOURCE_SHA" TREE="$KOVA_SOURCE_TREE" node -e "require('fs').writeFileSync('/app/.kova-source-attestation.json', JSON.stringify({schemaVersion:1,context:'acr-git',sourceSha:process.env.SHA,sourceTree:process.env.TREE}))"
-RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" NODE_OPTIONS=--max-old-space-size=3072 KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
+RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" NODE_OPTIONS=--max-old-space-size=5120 KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
     && find dist -name '*.map' -type f -delete \
     && if [ "$KOVA_VERIFY_BROWSER_CONFIG" = "true" ]; then \
       env \
@@ -48,6 +53,7 @@ RUN VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" NODE_OPTIONS=--max-
         KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS" \
         VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
         VITE_SUPABASE_PUBLISHABLE_KEY="$VITE_SUPABASE_PUBLISHABLE_KEY" \
+        VITE_KOVA_AUTH_MODE="$VITE_KOVA_AUTH_MODE" \
         VITE_PAYMENTS_CLIENT_TOKEN="$VITE_PAYMENTS_CLIENT_TOKEN" \
         node scripts/azure/verify-browser-config.mjs; \
     elif [ "$KOVA_VERIFY_BROWSER_CONFIG" != "false" ]; then \
@@ -74,6 +80,15 @@ RUN groupadd --system --gid 10001 kova && \
 
 COPY --from=build --chown=kova:kova /app/dist ./dist
 COPY --from=build --chown=kova:kova /app/package.json ./package.json
+COPY --from=build --chown=kova:kova /app/scripts/auth-email/dispatch.mjs ./scripts/auth-email/dispatch.mjs
+COPY --from=build --chown=kova:kova /app/scripts/auth-email/notification-dispatch.mjs ./scripts/auth-email/notification-dispatch.mjs
+COPY --from=build --chown=kova:kova /app/scripts/auth-email/production-worker.mjs ./scripts/auth-email/production-worker.mjs
+COPY --from=build --chown=kova:kova /app/src/lib/kova-email-worker-auth.server.mjs ./src/lib/kova-email-worker-auth.server.mjs
+COPY --from=build --chown=kova:kova /app/src/lib/kova-auth-email.server.mjs ./src/lib/kova-auth-email.server.mjs
+COPY --from=build --chown=kova:kova /app/src/lib/kova-account-email.server.mjs ./src/lib/kova-account-email.server.mjs
+COPY --from=build --chown=kova:kova /app/src/lib/kova-email-presentation.server.mjs ./src/lib/kova-email-presentation.server.mjs
+COPY --from=build --chown=kova:kova /app/src/lib/account-email-preferences.mjs ./src/lib/account-email-preferences.mjs
+COPY --from=build --chown=kova:kova /app/src/config/public-config.ts ./src/config/public-config.ts
 
 USER kova
 EXPOSE 3000

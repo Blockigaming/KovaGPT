@@ -1,9 +1,11 @@
 import "./public-foundation.css";
+import "./spec400-public.css";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PublicFooter } from "@/components/PublicFooter";
+import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
 
 const navigation = [
   { label: "About", to: "/overview" },
@@ -12,6 +14,7 @@ const navigation = [
   { label: "Business", to: "/business" },
   { label: "Pricing", to: "/pricing" },
   { label: "Download", to: "/download" },
+  { label: "Review", to: "/review" },
 ] as const;
 
 function isCurrentPath(pathname: string, to: string) {
@@ -29,7 +32,7 @@ function PublicNavigationLink({
   to: string;
   pathname: string;
   mobile?: boolean;
-  onNavigate?: () => void;
+  onNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const currentPage = pathname === to;
   const currentSection = isCurrentPath(pathname, to);
@@ -62,6 +65,30 @@ export function PublicHeader() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [open, setOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  const closeAfterMobileNavigation = (
+    event: MouseEvent<HTMLAnchorElement>,
+    destination: string,
+  ) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      (event.currentTarget.target && event.currentTarget.target !== "_self") ||
+      event.currentTarget.hasAttribute("download")
+    )
+      return;
+    // Root ownership survives this page's header unmount and waits for the
+    // destination render; later navigation or interaction cancels the intent.
+    requestDrawerNavigationFocus({
+      destination,
+      source: event.currentTarget.closest<HTMLElement>("#public-mobile-navigation"),
+    });
+    setOpen(false);
+  };
 
   useEffect(() => {
     setOpen(false);
@@ -103,7 +130,7 @@ export function PublicHeader() {
 
         <Link
           to="/"
-          className="ml-1 hidden min-h-11 min-w-0 max-w-full items-center justify-center rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex"
+          className="kova-button ml-1 hidden min-h-11 min-w-0 max-w-full items-center justify-center rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex"
         >
           Open KovaGPT
         </Link>
@@ -139,13 +166,13 @@ export function PublicHeader() {
                 {...item}
                 pathname={pathname}
                 mobile
-                onNavigate={() => setOpen(false)}
+                onNavigate={(event) => closeAfterMobileNavigation(event, item.to)}
               />
             ))}
             <Link
               to="/"
-              onClick={() => setOpen(false)}
-              className="mt-2 inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              onClick={(event) => closeAfterMobileNavigation(event, "/")}
+              className="kova-button mt-2 inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Open KovaGPT
             </Link>

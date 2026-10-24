@@ -19,6 +19,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { SearchablePicker } from "@/components/ui/searchable-picker";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { WorkSessionPanel } from "@/components/WorkSessionPanel";
@@ -115,6 +116,24 @@ function WorkRoute() {
   const runRequestId = useRef(0),
     detailRequestId = useRef(0),
     selectedRef = useRef<string | null>(null);
+  const workListStatusRef = useRef<HTMLElement>(null);
+  const workListFocusContext = `${principal ?? ""}:${isLoaded}:${isSignedIn}:${selected ?? ""}`;
+  const workListFocusRef = useRef({ context: workListFocusContext, generation: 0 });
+  if (workListFocusRef.current.context !== workListFocusContext) {
+    workListFocusRef.current = {
+      context: workListFocusContext,
+      generation: workListFocusRef.current.generation + 1,
+    };
+  }
+  const workListFocusGeneration = workListFocusRef.current.generation;
+  const workListFocusSelection = selected;
+  const workListFocusUrl = typeof window === "undefined" ? "" : window.location.href;
+  useEffect(
+    () => () => {
+      workListFocusRef.current.generation += 1;
+    },
+    [],
+  );
   const loadDetail = useCallback(
     async (id: string | null = selectedRef.current) => {
       const requestId = ++detailRequestId.current;
@@ -231,6 +250,31 @@ function WorkRoute() {
   useEffect(() => {
     void loadRuns();
   }, [loadRuns]);
+  const retryWorkList = () => {
+    if (
+      !isLoaded ||
+      workListFocusRef.current.generation !== workListFocusGeneration ||
+      workListFocusRef.current.context !== workListFocusContext ||
+      selectedRef.current !== workListFocusSelection ||
+      workListFocusUrl !== window.location.href
+    )
+      return;
+    const status = workListStatusRef.current;
+    const trigger = status?.querySelector<HTMLButtonElement>('[role="alert"] button');
+    if (
+      !status?.isConnected ||
+      !trigger?.isConnected ||
+      status.getClientRects().length === 0 ||
+      trigger.getClientRects().length === 0 ||
+      trigger.closest('[inert], [aria-hidden="true"], [hidden]')
+    )
+      return;
+    // Retry unmounts when Loading appears. Transfer focus before that happens;
+    // the independent execution panel and later user interactions keep their focus.
+    if (document.activeElement === trigger || document.activeElement === document.body)
+      status.focus({ preventScroll: true });
+    void loadRuns();
+  };
   async function cancelRun() {
     if (!selected) return;
     try {
@@ -263,6 +307,7 @@ function WorkRoute() {
             </div>
             {runs.map((run) => (
               <button
+                data-kova-button-shape="preserve"
                 key={run.id}
                 onClick={() => selectRun(run.id)}
                 className={`mb-2 w-full rounded-2xl border p-3 text-left ${selected === run.id ? "border-primary bg-primary/5" : ""}`}
@@ -282,7 +327,14 @@ function WorkRoute() {
               </button>
             ))}
           </aside>
-          <section className="min-w-0 flex-1 overflow-hidden rounded-3xl border bg-card">
+          <section
+            ref={workListStatusRef}
+            className="min-w-0 flex-1 overflow-hidden rounded-3xl border bg-card"
+            role="region"
+            aria-label="Work list status"
+            aria-busy={loading && !preparedDraft}
+            tabIndex={-1}
+          >
             {preparedDraft ? (
               <div className="h-full overflow-y-auto p-5 sm:p-8">
                 <div className="mx-auto max-w-3xl">
@@ -332,11 +384,7 @@ function WorkRoute() {
                 <span className="sr-only">Loading Work</span>
               </div>
             ) : error && !detail ? (
-              <ErrorState
-                title="Work unavailable"
-                description={error}
-                onRetry={() => void loadRuns()}
-              />
+              <ErrorState title="Work unavailable" description={error} onRetry={retryWorkList} />
             ) : !detail ? (
               <EmptyState
                 icon={Activity}
@@ -389,6 +437,7 @@ function WorkRoute() {
                     {(["graph", "timeline", "evidence", "deliverables", "approvals"] as const).map(
                       (value) => (
                         <button
+                          data-kova-button-shape="preserve"
                           key={value}
                           onClick={() => setTab(value)}
                           className={`min-h-10 shrink-0 rounded-full px-4 text-sm capitalize ${tab === value ? "bg-foreground text-background" : "hover:bg-muted"}`}
@@ -628,8 +677,10 @@ function DependencyGraph({ detail }: { detail: WorkDetail }) {
               </div>
             ))
           ) : (
-            <div className="text-sm text-muted-foreground">
-              Waiting for the first persisted specialist event.
+            <div className="max-w-56 text-sm text-muted-foreground" role="status">
+              {terminal.has(detail.run.status)
+                ? `This run is ${detail.run.status}. No specialist tasks${detail.events.length === 0 ? " or events" : ""} were recorded.`
+                : "Waiting for the first persisted specialist event."}
             </div>
           )}
         </div>
@@ -715,22 +766,30 @@ function Timeline({ detail }: { detail: WorkDetail }) {
   return (
     <section>
       <h3 className="mb-3 font-semibold">Specialist timeline</h3>
-      <ol className="relative ml-2 border-l pl-6">
-        {detail.events.map((event) => (
-          <li key={event.id} className="mb-5">
-            <Circle className="absolute -left-2 h-4 w-4 fill-card" />
-            <div className="flex flex-wrap justify-between gap-2">
-              <p className="font-medium capitalize">{event.type.replaceAll("_", " ")}</p>
-              <time className="text-xs text-muted-foreground">
-                {new Date(event.createdAt).toLocaleString()}
-              </time>
-            </div>
-            <pre className="mt-1 overflow-x-auto whitespace-pre-wrap text-xs text-muted-foreground">
-              {JSON.stringify(event.payload, null, 2)}
-            </pre>
-          </li>
-        ))}
-      </ol>
+      {detail.events.length === 0 ? (
+        <p className="text-sm text-muted-foreground" role="status">
+          {terminal.has(detail.run.status)
+            ? `This run is ${detail.run.status}. No events were recorded.`
+            : "Waiting for the first persisted specialist event."}
+        </p>
+      ) : (
+        <ol className="relative ml-2 border-l pl-6">
+          {detail.events.map((event) => (
+            <li key={event.id} className="mb-5">
+              <Circle className="absolute -left-2 h-4 w-4 fill-card" />
+              <div className="flex flex-wrap justify-between gap-2">
+                <p className="font-medium capitalize">{event.type.replaceAll("_", " ")}</p>
+                <time className="text-xs text-muted-foreground">
+                  {new Date(event.createdAt).toLocaleString()}
+                </time>
+              </div>
+              <pre className="mt-1 overflow-x-auto whitespace-pre-wrap text-xs text-muted-foreground">
+                {JSON.stringify(event.payload, null, 2)}
+              </pre>
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }
@@ -780,17 +839,16 @@ function Evidence({ detail }: { detail: WorkDetail }) {
             <option value="dom_snapshot">DOM</option>
             <option value="browser_event">Browser</option>
           </select>
-          <select
+          <SearchablePicker
             aria-label="Evidence specialist"
-            className="min-h-10 rounded-xl border bg-background px-2"
+            searchLabel="Search specialists"
             value={specialist}
-            onChange={(e) => setSpecialist(e.target.value)}
-          >
-            <option value="all">All specialists</option>
-            {specialists.map((name) => (
-              <option key={name}>{name}</option>
-            ))}
-          </select>
+            onValueChange={setSpecialist}
+            options={[
+              { value: "all", label: "All specialists" },
+              ...specialists.map((name) => ({ value: name, label: name })),
+            ]}
+          />
         </div>
       </div>
       <label className="mb-4 block text-xs text-muted-foreground">
@@ -843,7 +901,7 @@ function Evidence({ detail }: { detail: WorkDetail }) {
                 <a
                   href={item.previewUrl}
                   download
-                  className="mt-3 inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs"
+                  className="kova-button mt-3 inline-flex items-center gap-1 rounded-full border px-3 py-2 text-xs"
                 >
                   <Download className="h-4 w-4" />
                   Download

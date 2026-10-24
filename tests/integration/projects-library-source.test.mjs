@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import assert from "node:assert/strict";
+import { libraryDeleteConfirmation } from "../../src/lib/library-delete-confirmation.ts";
 
 const styles = await readFile("src/styles.css", "utf8");
 const reference = await readFile("docs/kova-observable-reference.md", "utf8");
@@ -12,6 +13,8 @@ const library = await readFile("src/routes/library.tsx", "utf8");
 const chatInput = await readFile("src/components/ChatInput.tsx", "utf8");
 const chatRoute = await readFile("src/routes/api/chat.ts", "utf8");
 const chatStore = await readFile("src/lib/chat-store.ts", "utf8");
+const managementStyles = await readFile("src/styles/spec400-management.css", "utf8");
+const listPreferences = await readFile("src/lib/management-list-preferences.mjs", "utf8");
 
 test("observable reference documents workspace measurements without private assets", () => {
   for (const phrase of [
@@ -44,7 +47,12 @@ test("visual system exposes semantic workspace tokens and reusable classes", () 
 });
 
 test("projects overview supports real search, sorting, view preference, counts, and permissions", () => {
-  assert.match(projects, /kova-projects-view/);
+  assert.match(
+    projects,
+    /usePrincipalSessionPreferences\(\s*PROJECT_LIST_STORAGE_BASE,\s*isLoaded \? userKey : undefined,\s*parseProjectListPreferences/,
+  );
+  assert.match(listPreferences, /PROJECT_LIST_STORAGE_BASE = "kova-project-list"/);
+  assert.match(listPreferences, /view: value\.view === "list" \? "list" : "grid"/);
   assert.match(projects, /instructions_preview/);
   assert.match(projects, /chat_count/);
   assert.match(projects, /file_count/);
@@ -62,8 +70,13 @@ test("project detail has instructions autosave states and mobile-safe tabs", () 
   assert.match(projectDetail, /Saving…/);
   assert.match(projectDetail, /Save failed/);
   assert.match(projectDetail, /Failed saves keep your unsaved text/);
-  assert.match(projectDetail, /aria-label="Project workspace sections"/);
-  assert.match(projectDetail, /overflow-x-auto/);
+  assert.match(projectDetail, /<TabsList aria-label="Project sections">/);
+  assert.match(
+    projectDetail,
+    /More project tools\s*<select[\s\S]{0,300}setTab\(event\.target\.value\)/,
+  );
+  assert.match(managementStyles, /\.spec400-project-navigation\s*\{[^}]*flex-wrap: wrap;/);
+  assert.match(managementStyles, /\.spec400-project-tools select,[^}]*max-width: 100%;/);
 });
 
 test("project context and RAG remain server-side and scoped to project membership", () => {
@@ -85,7 +98,7 @@ test("library workspace supports filters, sorting, view preference, safe actions
     "SortId",
     "Grid view",
     "List view",
-    "Delete this Library item",
+    "libraryDeleteConfirmation",
     "loadGuestLibrary",
     "deleteLibraryItem",
   ]) {
@@ -101,14 +114,31 @@ test("library workspace supports filters, sorting, view preference, safe actions
   );
   assert.match(
     library,
-    /storageTotal !== null\s+\? `Loaded file sizes: \$\{humanBytes\(storageTotal\)\}`\s+: undefined/,
+    /storageTotal !== null && <p>Loaded file sizes: \{humanBytes\(storageTotal\)\}<\/p>/,
   );
+  assert.match(library, /title=\{deleteSummary\.title\}/);
+  assert.match(library, /description=\{deleteSummary\.description\}/);
+  assert.match(library, /confirmLabel=\{deleteSummary\.confirmLabel\}/);
+  assert.match(library, /pendingDelete\.principal === principal/);
+  assert.match(library, /retentionMs !== pending\.retentionMs/);
+  const chat = libraryDeleteConfirmation(
+    [{ id: "chat:one", title: "Saved chat" }],
+    30 * 86_400_000,
+  );
+  assert.equal(chat.confirmLabel, "Move to Trash");
+  assert.match(chat.description, /can be restored for 30 days/);
+  const file = libraryDeleteConfirmation(
+    [{ id: "file:one", title: "Saved file", item_type: "upload" }],
+    null,
+  );
+  assert.equal(file.confirmLabel, "Delete permanently");
+  assert.match(file.description, /does not go to Trash and cannot be restored/);
   assert.doesNotMatch(library, /Storage totals require backend usage records/);
 });
 
 test("composer can reuse recent authorized Library files without duplicate upload", () => {
   assert.match(chatInput, /RecentLibraryFile/);
-  assert.match(chatInput, /Recent Library files/);
+  assert.match(chatInput, /Saved Library files/);
   assert.match(chatInput, /attachLibraryFile/);
   assert.match(chatInput, /libraryItemId/);
   assert.match(chatInput, /is already attached/);

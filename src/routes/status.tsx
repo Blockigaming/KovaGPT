@@ -30,7 +30,7 @@ export const Route = createFileRoute("/status")({
             guarantee that every external provider or account-specific feature is available.
           </p>
           <a
-            className="mt-4 inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium hover:bg-accent"
+            className="kova-button mt-4 inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium hover:bg-accent"
             href="/api/health"
           >
             Open health endpoint

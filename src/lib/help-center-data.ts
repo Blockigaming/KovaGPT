@@ -533,18 +533,18 @@ const rows: Row[] = [
   ],
   [
     "Billing & plans",
-    "How does the Plus trial work?",
-    `Eligible first-time Plus subscribers may receive a ${plan.plus.trialPeriodDays}-day trial. Checkout confirms eligibility, renewal timing, and the amount before you subscribe.`,
+    "How does the first-month discount work?",
+    "Eligible accounts receive 50% off the first paid month of a Plus or Pro monthly subscription, once per account. Later months use the regular published monthly price. New subscriptions do not receive a free trial; existing trials keep their original terms. Stripe Checkout confirms eligibility, the first payment and renewal amount before you subscribe.",
   ],
   [
     "Billing & plans",
     "How do I upgrade or downgrade?",
-    "Open Settings → Subscription. Choose an available plan change and review its price and effective date in checkout or the billing portal before confirming.",
+    "Open Settings → Billing. Choose an available plan change and review its price and effective date in checkout or the billing portal before confirming.",
   ],
   [
     "Billing & plans",
     "Where do I manage my subscription?",
-    "Open Settings → Subscription and choose Manage subscription. If the Stripe portal is not configured, use the displayed support option.",
+    "Open Settings → Billing and choose Manage subscription. If the Stripe portal is not configured, use the displayed support option.",
   ],
   [
     "Billing & plans",
@@ -559,7 +559,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "Where are invoices and receipts?",
-    "Open Settings → Subscription → Manage subscription to view billing records available in Stripe. If the portal is unavailable, contact support from your account email.",
+    "Open Settings → Billing → Manage subscription to view billing records available in Stripe. If the portal is unavailable, contact support from your account email.",
   ],
   [
     "Billing & plans",
@@ -569,7 +569,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "How do I update my payment method?",
-    "Open Settings → Subscription → Manage subscription and use the Stripe portal. If that control is unavailable, contact support.",
+    "Open Settings → Billing → Manage subscription and use the Stripe portal. If that control is unavailable, contact support.",
   ],
   [
     "Billing & plans",
@@ -579,7 +579,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "How do I cancel?",
-    "Open Settings → Subscription → Manage subscription and cancel in the Stripe portal. If self-service cancellation is unavailable, contact support from your account email.",
+    "Open Settings → Billing → Manage subscription and cancel in the Stripe portal. If self-service cancellation is unavailable, contact support from your account email.",
     "cancel stop charged subscription",
   ],
   [
@@ -630,12 +630,12 @@ const rows: Row[] = [
   [
     "Privacy & security",
     "How do I delete my account?",
-    "Open Settings → Account and use Delete account. Complete the confirmation and wait for success before assuming deletion finished.",
+    "Open Settings → Data controls and choose Schedule deletion. The account and data remain recoverable for 30 days; use Recover account before the displayed deadline to keep the same account. Scheduling or recovery does not cancel billing or reset your first-month discount. Use Billing to cancel separately if needed.",
   ],
   [
     "Privacy & security",
     "What happens when I delete my account?",
-    "Account-owned product data is scheduled for deletion through the account deletion flow. Some billing, security, legal, backup, or external-provider records may remain as described in the Privacy Policy.",
+    "Scheduling starts a 30-day recovery window without erasing your account or data. Final cleanup starts only after that deadline and must verify subscription retirement and private-data cleanup before removing the sign-in account. Pending status is not proof that deletion finished. Some billing, security, legal, backup, or external-provider records may remain as described in the Privacy Policy.",
   ],
   ["Privacy & security", "Does KovaGPT support MFA?", features.mfa.summary],
   [
@@ -697,7 +697,7 @@ const rows: Row[] = [
   [
     "Troubleshooting",
     "My subscription is not showing.",
-    "Refresh Settings → Subscription, verify you are in the purchasing account, then sign out and in. Do not purchase twice; contact support with the receipt if it remains missing.",
+    "Refresh Settings → Billing, verify you are in the purchasing account, then sign out and in. Do not purchase twice; contact support with the receipt if it remains missing.",
   ],
   [
     "Troubleshooting",

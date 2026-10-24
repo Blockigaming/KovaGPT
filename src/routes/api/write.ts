@@ -129,20 +129,23 @@ export const Route = createFileRoute("/api/write")({
 
         let upstream: Response;
         try {
-          upstream = await chatCompletions({
-            model: modelForRole("DEFAULT_CHAT"),
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You are a precise writing assistant. Return only the requested text with no commentary, no headings like 'Here is', and no code fences unless the source used them.",
-              },
-              {
-                role: "user",
-                content: `${instruction}\n\n---\n${text}`,
-              },
-            ],
-          });
+          upstream = await chatCompletions(
+            {
+              model: modelForRole("DEFAULT_CHAT"),
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You are a precise writing assistant. Return only the requested text with no commentary, no headings like 'Here is', and no code fences unless the source used them.",
+                },
+                {
+                  role: "user",
+                  content: `${instruction}\n\n---\n${text}`,
+                },
+              ],
+            },
+            { signal: request.signal },
+          );
         } catch (error) {
           return providerErrorResponse(error);
         }

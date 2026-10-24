@@ -82,6 +82,9 @@ test("reliability and reconciliation contracts distinguish runtime and deploymen
   assert.match(source, /blocked_external_access/);
   assert.match(source, /blocked_runtime_dependency/);
   assert.match(source, /deferred_product/);
-  assert.match(source, /voice:\s*"deferred_product"/);
-  assert.doesNotMatch(source, /voice:\s*"implemented_source"/);
+  assert.match(source, /voice:\s*"implemented_source"/);
+  assert.match(source, /voice_audio_api:\s*"implemented_source"/);
+  assert.match(source, /voice_conversation:\s*"implemented_source"/);
+  assert.match(source, /voice_live_acceptance:\s*"blocked_external_access"/);
+  assert.doesNotMatch(source, /voice(?:_conversation)?:\s*"(?:deferred_product|not_implemented)"/);
 });

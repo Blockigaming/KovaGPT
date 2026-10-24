@@ -37,6 +37,11 @@ export function reactFixture(path, select, options = {}) {
         hooks[i] = { value: run(), deps };
       return hooks[i].value;
     },
+    useId() {
+      const i = cursor++;
+      hooks[i] ??= { value: `fixture-id-${i}` };
+      return hooks[i].value;
+    },
     useState(initial) {
       const i = cursor++;
       hooks[i] ??= { value: typeof initial === "function" ? initial() : initial };

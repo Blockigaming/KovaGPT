@@ -55,6 +55,34 @@ param textProvider string = 'auto'
 @secure()
 param openAiApiKeySecretUri string = ''
 
+// Optional voice configuration only. Defaults preserve the disabled runtime.
+@description('Existing versioned Key Vault URI for ELEVENLABS_API_KEY. Never pass a raw key; leave empty while unconfigured.')
+@secure()
+param elevenLabsApiKeySecretUri string = ''
+
+@description('Owner-selected accessible ElevenLabs voice ID; no default voice is assumed.')
+param elevenLabsVoiceId string = ''
+
+@description('Owner-reviewed voice catalog entries: id, label, providerVoiceId, allowedPlans and optional showWhenLocked. Empty preserves single-voice compatibility; no plan mapping is supplied.')
+@maxLength(32)
+param voiceCatalog array = []
+
+@description('Optional preferred catalog ID. Must exist in the explicit catalog; each account falls back to its first allowed catalog entry.')
+param voiceDefaultId string = ''
+
+@description('Saved-response Read aloud only. Defaults off, is separate from browser voice and microphone permission, and still obeys the generation kill switch. Activate only after existing key/model/voice entitlement is confirmed.')
+param speechEnabled bool = false
+
+@description('Enable only after the separate owner-approved voice activation checks. Does not alter ingress, replicas or the database feature flag.')
+param voiceEnabled bool = false
+
+@description('Explicit audio/STT/STS activation. Keep false until recording and provider acceptance checks are authorized.')
+param voiceAudioEnabled bool = false
+
+@description('Owner-selected per-user UTC-day request cap, not a currency budget. Zero keeps voice unavailable.')
+@minValue(0)
+param voiceDailyRequestLimit int = 0
+
 @description('Keep billing disabled until the reviewed migration, webhook drain, account provenance, trial policy, and smoke gates pass.')
 @allowed([
   'disabled'
@@ -320,7 +348,11 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
             keyVaultUrl: kovaIpHashSecretUri
             identity: identity.id
           }
-      ], stripeSecretReferences, useDirectOpenAiApiKey ? [
+      ], stripeSecretReferences, !empty(elevenLabsApiKeySecretUri) ? [{
+        name: 'elevenlabs-api-key'
+        keyVaultUrl: elevenLabsApiKeySecretUri
+        identity: identity.id
+      }] : [], useDirectOpenAiApiKey ? [
         {
           name: 'openai-api-key'
           keyVaultUrl: openAiApiKeySecretUri
@@ -344,6 +376,26 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
             memory: '1Gi'
           }
           env: concat([
+            {
+              name: 'KOVA_SPEECH_ENABLED'
+              value: speechEnabled ? 'true' : 'false'
+            }
+            {
+              name: 'KOVA_VOICE_ENABLED'
+              value: voiceEnabled ? 'true' : 'false'
+            }
+            {
+              name: 'KOVA_VOICE_AUDIO_ENABLED'
+              value: voiceAudioEnabled ? 'true' : 'false'
+            }
+            {
+              name: 'KOVA_VOICE_DAILY_REQUEST_LIMIT'
+              value: string(voiceDailyRequestLimit)
+            }
+            {
+              name: 'ELEVENLABS_VOICE_ID'
+              value: elevenLabsVoiceId
+            }
             {
               name: 'STRIPE_BILLING_RUNTIME'
               value: stripeBillingRuntime
@@ -456,7 +508,16 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
               value: appInsights.properties.ConnectionString
             }
-          ], stripeSecretEnvironment, useDirectOpenAiApiKey ? [
+          ], stripeSecretEnvironment, !empty(voiceCatalog) ? [{
+            name: 'KOVA_VOICE_CATALOG'
+            value: string(voiceCatalog)
+          }] : [], !empty(voiceDefaultId) ? [{
+            name: 'KOVA_VOICE_DEFAULT_ID'
+            value: voiceDefaultId
+          }] : [], !empty(elevenLabsApiKeySecretUri) ? [{
+            name: 'ELEVENLABS_API_KEY'
+            secretRef: 'elevenlabs-api-key'
+          }] : [], useDirectOpenAiApiKey ? [
             {
               name: 'OPENAI_API_KEY'
               secretRef: 'openai-api-key'

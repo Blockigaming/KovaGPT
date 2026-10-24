@@ -8,6 +8,7 @@ const routes = {
   apps: await readFile("src/routes/apps.tsx", "utf8"),
   images: await readFile("src/routes/images.tsx", "utf8"),
 };
+const restoreFocus = await readFile("src/lib/dialog-return-focus.ts", "utf8");
 
 test("workspace discovery routes expose one deliberate main landmark contract", () => {
   for (const [name, source] of Object.entries(routes)) {
@@ -18,13 +19,17 @@ test("workspace discovery routes expose one deliberate main landmark contract", 
 });
 
 test("apps and plugins use one name and one truthful signed-out action", () => {
-  assert.match(routes.apps, /title="Apps & plugins"/);
-  assert.match(routes.apps, /\{!isLoaded \? \([\s\S]*: !isSignedIn \? \(/);
-  assert.match(routes.apps, /Sign in to connect services/);
-  assert.doesNotMatch(routes.apps, /FILTER_CATEGORIES|setCategory|You haven't connected any apps/);
+  assert.match(routes.apps, /title="Plugins"/);
+  assert.match(routes.apps, /\{!isLoaded \? \([\s\S]*\{!isSignedIn && \(/);
+  assert.match(routes.apps, /Sign in to connect plugins/);
+  assert.match(
+    routes.apps,
+    /<SignInButton mode="modal">\s*<Button variant="outline">Sign in<\/Button>/,
+  );
+  assert.doesNotMatch(routes.apps, /FILTER_CATEGORIES|You haven't connected any apps/);
   assert.match(routes.apps, /GitHub connection status is unavailable/);
   assert.match(routes.apps, /min-h-11/);
-  assert.match(routes.apps, /role="status"[\s\S]{0,180}Loading apps and plugins/);
+  assert.match(routes.apps, /role="status" aria-label="Loading plugins"/);
   assert.doesNotMatch(routes.apps, /aria-busy=\{!isLoaded \|\| undefined\}/);
 });
 
@@ -53,14 +58,28 @@ test("Library preview owns modal focus and mutation errors stay actionable", () 
   );
   assert.match(routes.library, /onFocus=\{\(event\) => \{\s*previewReturnFocusRef\.current/);
   assert.match(routes.library, /onPointerDown=\{\(event\) => \{\s*previewReturnFocusRef\.current/);
-  assert.match(routes.library, /<Dialog\s+[\s\S]*?open=\{Boolean\(visiblePreviewItem\)\}/);
+  assert.match(routes.library, /<Dialog\s+open=\{Boolean\(detailKey \|\| visiblePreviewItem\)\}/);
   assert.match(routes.library, /<DialogContent[\s\S]*?onCloseAutoFocus=\{/);
-  assert.match(routes.library, /if \(trigger\?\.isConnected\) trigger\.focus\(\)/);
+  assert.match(
+    routes.library,
+    /restoreDialogFocus\(\s*trigger\?\.isConnected\s*\? trigger\s*:\s*\(librarySearchRef\.current \?\? libraryRootRef\.current\)/,
+  );
+  assert.match(restoreFocus, /openedUrl !== window\.location\.href/);
+  assert.match(restoreFocus, /!target\?\.isConnected/);
+  assert.match(restoreFocus, /target\.focus\(\{ preventScroll: true \}\)/);
   assert.doesNotMatch(routes.library, /window\.addEventListener\("keydown"/);
   assert.match(routes.library, /Could not delete this Library item\. Please try again\./);
   assert.match(
     routes.library,
-    /Some selected items could not be deleted\. Review your Library and try again\./,
+    /Some removals were canceled or could not be confirmed\. Review the remaining items and try again\./,
+  );
+  assert.match(
+    routes.library,
+    /restoreDeletedItem\(\);\s*toast\.error\("Could not delete this Library item/,
+  );
+  assert.match(
+    routes.library,
+    /reconcileDeleted\(savedIds\.filter\([\s\S]{0,100}status === "fulfilled"/,
   );
   assert.doesNotMatch(routes.library, /toast\.error\([^;]*\.message/);
 });
@@ -74,9 +93,17 @@ test("Images gives every repeated control a single contextual accessible name", 
   assert.match(routes.images, /aria-label=\{`Remove image: \$\{h\.prompt\}`\}/);
   assert.match(routes.images, /Image history/);
   assert.match(routes.images, /!isSignedIn \? \([\s\S]*Sign in to generate images/);
-  assert.match(routes.images, /role="status"[\s\S]{0,420}Generating image/);
+  assert.match(routes.images, /role="status"\s+aria-labelledby="image-generating-label"/);
+  assert.match(routes.images, /<span id="image-generating-label"[^>]*>\s*Generating image…/);
   assert.doesNotMatch(routes.images, /aria-busy=\{loading \|\| undefined\}/);
-  assert.match(routes.images, /The image could not be generated\. Please try again\./);
+  assert.match(
+    routes.images,
+    /The image could not be generated\. Your prompt is kept here\. Please try again\./,
+  );
+  assert.match(
+    routes.images,
+    /error === IMAGE_GENERATION_UNAVAILABLE\s*\? IMAGE_GENERATION_UNAVAILABLE\s*: "The image could not be generated/,
+  );
   assert.doesNotMatch(routes.images, /Check your prompt and try again/);
   assert.doesNotMatch(routes.images, />\s*\{error\}\s*</);
 });

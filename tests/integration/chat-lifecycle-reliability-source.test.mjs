@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { responsesStreamToChatStream } from "../../src/lib/ai/responses-compat.server.mjs";
 
 const chatRoute = readFileSync("src/routes/api/chat.ts", "utf8");
 const homeChat = readFileSync("src/routes/index.tsx", "utf8");
@@ -36,7 +37,6 @@ test("optional chat enrichment stages fail open behind explicit short bounds", (
     "owner_lookup",
     "lockdown",
     "library_attachment",
-    "web_search",
     "memory_context",
     "project_membership",
     "project_context",
@@ -55,15 +55,46 @@ test("optional chat enrichment stages fail open behind explicit short bounds", (
   assert.match(chatRoute, /\[chat\] preflight stage/u);
 });
 
+test("explicit search requires a completed bounded search instead of an ordinary reply", () => {
+  assert.match(
+    chatRoute,
+    /preflight\.run\("web_search", search, \{\s*required: true,\s*timeoutMs: 20_000,\s*\}\)/u,
+  );
+  assert.match(
+    chatRoute,
+    /preflight\.run\("web_search", search, \{\s*required: false,\s*timeoutMs: 8_000,\s*\}\)/u,
+  );
+  assert.match(chatRoute, /web_search_unavailable/u);
+});
+
 test("inline chat attachments consume upload quota but not durable storage quota", () => {
-  assert.match(chatRoute, /enforceQuota\([\s\S]{0,100}"uploads"/u);
+  const uploadQuota = readFileSync("src/lib/upload-quota.server.mjs", "utf8");
+  assert.match(
+    chatRoute,
+    /preflight\.run\("upload_quota", \(signal\) =>\s*reserveUploads\(\s*auth,\s*currentAttachments,\s*DAILY_UPLOAD_LIMIT_BY_TIER\[callerTier\],\s*signal,/u,
+  );
+  assert.match(chatRoute, /if \(!uploadAllowed\)[\s\S]{0,180}status: 429/u);
+  assert.match(
+    uploadQuota,
+    /rpc\("try_reserve_daily_uploads", \{\s*_user_id: caller\.userId,\s*_fingerprints: fingerprints,\s*_limit: limit,/u,
+  );
+  assert.match(uploadQuota, /query\.abortSignal\(signal\)/u);
+  assert.match(uploadQuota, /if \(error \|\| typeof data !== "boolean"\) throw/u);
   assert.doesNotMatch(chatRoute, /enforceStorage/u);
   assert.doesNotMatch(chatRoute, /STORAGE_LIMITS_BYTES/u);
+  assert.doesNotMatch(uploadQuota, /enforceStorage|STORAGE_LIMITS_BYTES/u);
 });
 
 test("main chat preserves the plan-limit dialog for authoritative 429 responses", () => {
-  assert.match(homeChat, /err\.status === 429 && \/limit\/i\.test\(raw\)/u);
-  assert.match(homeChat, /setLimitDialog\(\{ open: true, kind, message: raw \}\)/u);
+  assert.match(
+    homeChat,
+    /const quotaRejected =\s*err\.status === 429 && \(\/limit\/i\.test\(raw\) \|\| err\.category === "quota_exceeded"\)/u,
+  );
+  const quotaRecovery = homeChat.slice(
+    homeChat.indexOf("if (quotaRejected && isCurrentRetryScope())"),
+    homeChat.indexOf("const isNetwork ="),
+  );
+  assert.match(quotaRecovery, /setLimitDialog\(\{ open: true, kind, message: raw \}\)/u);
 });
 
 test("manual stop preserves a truthful retryable assistant turn", () => {
@@ -74,7 +105,14 @@ test("manual stop preserves a truthful retryable assistant turn", () => {
     homeChat,
     /const stop = useCallback\(\(\) => \{[\s\S]{0,400}target\?\.flushPendingContent\(\);[\s\S]{0,200}retryGenerationRef\.current \+= 1;[\s\S]{0,200}target\?\.controller\.abort/u,
   );
-  assert.match(homeChat, /setIsStreaming\(false\);\s*setSelectedTool\(null\);/u);
+  const stop = homeChat.slice(
+    homeChat.indexOf("const stop = useCallback"),
+    homeChat.indexOf("stopComposerVoiceRequestRef.current = stop"),
+  );
+  assert.match(
+    stop,
+    /setIsStreaming\(false\);\s*if \(!composerDraftRef\.current\.text && !composerDraftRef\.current\.attachments\.length\)\s*setSelectedTool\(null\);/u,
+  );
   assert.match(homeChat, /conversation\.id !== target\.conversationId/u);
   assert.match(
     homeChat,
@@ -85,8 +123,11 @@ test("manual stop preserves a truthful retryable assistant turn", () => {
   assert.match(store, /pendingImage: _pendingImage/u);
   assert.match(message, />Response stopped</u);
   assert.match(message, /aria-label="Retry stopped response"/u);
-  assert.match(message, /message\.generationStatus !== "stopped"/u);
-  assert.equal((message.match(/message\.generationStatus !== "stopped"/gu) ?? []).length, 2);
+  assert.match(
+    message,
+    /onRetry && message\.generationStatus !== "stopped"\s*\? \[\s*\{\s*label: retryActionLabel,[\s\S]{0,180}onRetry\(\)/u,
+  );
+  assert.match(message, /<DropdownMenuItem onSelect=\{onRetry\}>[\s\S]{0,100}Retry/u);
   assert.match(message, /message\.generationStatus \? "Retry response" : "Regenerate response"/u);
   assert.match(homeChat, /generationStatus: "failed"/u);
 });
@@ -100,10 +141,26 @@ test("all chat clients share strict terminal SSE consumption", () => {
   }
 });
 
-test("Responses translation rejects malformed provider JSON", () => {
+test("Responses translation rejects malformed provider JSON", { timeout: 1000 }, async () => {
   assert.match(responsesCompat, /invalid_provider_sse_json/u);
-  assert.match(responsesCompat, /reader\.cancel\("invalid_provider_sse_json"\)/u);
   assert.doesNotMatch(responsesCompat, /catch \{\s*continue;\s*\}/u);
+  let cancellationReason;
+  const upstream = new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("data: {invalid}\n\n"));
+      },
+      cancel(reason) {
+        cancellationReason = reason;
+        return new Promise(() => {});
+      },
+    }),
+    { headers: { "Content-Type": "text/event-stream" } },
+  );
+  await assert.rejects(responsesStreamToChatStream(upstream).text(), {
+    code: "invalid_provider_sse_json",
+  });
+  assert.equal(cancellationReason, "provider_sse_rejected");
 });
 
 test("usage authorization receives cancellation and provider errors retain typed metadata", () => {

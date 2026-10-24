@@ -105,7 +105,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   expect(new URL(page.url()).origin).toBe(authFixtureOrigin);
   await waitForKovaHydration(page);
 
-  const dialog = page.getByRole("dialog", { name: "Log in or sign up" });
+  const dialog = page.getByRole("dialog", { name: "Log in to Kova", exact: true });
   const email = dialog.getByLabel("Email address");
   const googleButton = dialog.getByRole("button", {
     name: "Continue with Google",
@@ -119,12 +119,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   expect(authNetwork.settingsPreflights).toBe(0);
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
 
-  const usesInter = await page.evaluate(async () => {
-    await document.fonts.ready;
-    return Array.from(document.fonts).some(
-      (face) => face.family.replaceAll('"', "") === "Inter" && face.status === "loaded",
-    );
-  });
+  await page.evaluate(() => document.fonts.ready);
   await dialog.evaluate(async (element) => {
     await Promise.all(
       element
@@ -135,7 +130,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
 
   expect(authNetwork.writes).toEqual([]);
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
-  await expect(page).toHaveScreenshot(`guest-auth-dialog-${usesInter ? "inter" : "fallback"}.png`, {
+  await expect(page).toHaveScreenshot("guest-auth-dialog.png", {
     animations: "disabled",
     caret: "hide",
     maxDiffPixelRatio: 0.005,

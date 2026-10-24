@@ -204,6 +204,7 @@ function SourceSession({ grantId, userId }: { grantId: string; userId: string })
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
+          type="button"
           size="sm"
           variant="outline"
           disabled={busy || !status?.configured.gmail}
@@ -212,6 +213,7 @@ function SourceSession({ grantId, userId }: { grantId: string; userId: string })
           {source ? "Reset baseline" : "Set baseline"}
         </Button>
         <Button
+          type="button"
           size="sm"
           variant="outline"
           disabled={busy || !status?.watchConfigured || source?.state === "resync_required"}
@@ -221,6 +223,7 @@ function SourceSession({ grantId, userId }: { grantId: string; userId: string })
         </Button>
         {source && source.state !== "disabled" ? (
           <Button
+            type="button"
             size="sm"
             variant="outline"
             disabled={busy}
@@ -229,7 +232,7 @@ function SourceSession({ grantId, userId }: { grantId: string; userId: string })
             Stop event delivery
           </Button>
         ) : null}
-        <Button size="sm" variant="ghost" disabled={busy} onClick={() => void load()}>
+        <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void load()}>
           Refresh source
         </Button>
       </div>

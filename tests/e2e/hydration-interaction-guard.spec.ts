@@ -27,7 +27,7 @@ test("SSR controls wait for hydration and early shortcuts replay once", async ({
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "pending");
   await expect(page.getByText("Reconnect to send", { exact: true })).toHaveCount(0);
-  await expect(page.locator('button[aria-label="Add files, tools, or prompts"]')).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeDisabled();
 
   await page.evaluate(() => {
     const replayed: string[] = [];
@@ -45,7 +45,7 @@ test("SSR controls wait for hydration and early shortcuts replay once", async ({
   await waitForKovaHydration(page);
   await expect(page.getByText("Reconnect to send", { exact: true })).toHaveCount(0);
   expect(hydrationErrors).toEqual([]);
-  await expect(page.locator('button[aria-label="Add files, tools, or prompts"]')).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeEnabled();
   await expect
     .poll(() =>
       page.evaluate(
@@ -123,7 +123,7 @@ for (const { mode, system, dark } of themeCases) {
       await expect(page.locator("body")).toHaveCSS("background-color", background);
       await expect(page.locator("body")).toHaveCSS("color", foreground);
       const serverControl = await page
-        .locator('button[aria-label="Add files, tools, or prompts"]')
+        .getByRole("button", { name: "Attach", exact: true })
         .elementHandle();
       await page.evaluate(
         () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),

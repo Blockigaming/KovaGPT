@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { openResponseOptions } from "./current-ui";
 
 test("Free chat has no model picker and Thinking is an upgrade action", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "free" });
@@ -14,12 +15,13 @@ test("Free chat has no model picker and Thinking is an upgrade action", async ({
   await waitForKovaHydration(page);
 
   await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toHaveCount(0);
-  await expect(page.locator(".kova-model-static").first()).toContainText("KovaGPT");
+  const responseOptions = await openResponseOptions(page);
+  await expect(responseOptions).toContainText("Your Free plan uses its included setting.");
   const upgrade = page.getByTestId("thinking-upgrade-button");
   await expect(upgrade).toBeVisible();
-  await expect(upgrade).toHaveAttribute("href", "/pricing");
+  await expect(upgrade).toHaveAttribute("aria-label", "Thinking is locked. Open Subscriptions");
   await upgrade.click();
-  await expect(page).toHaveURL(/\/pricing(?:[?#]|$)/);
+  await expect(page).toHaveURL(/\/settings\/billing(?:[?#]|$)/);
   expect(chatRequests).toBe(0);
 });
 
@@ -32,6 +34,7 @@ test("Plus model selector exposes Lite Medium and Thinking using the High route"
 
   const viewport = page.viewportSize();
   const width = viewport?.width ?? 0;
+  await openResponseOptions(page);
   const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
   await expect(trigger).toBeVisible();
   await trigger.click();
@@ -66,6 +69,7 @@ test("Pro picker keeps all six modes and the High label", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "pro" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
+  await openResponseOptions(page);
   const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
   await expect(trigger).toBeVisible();
   await trigger.click();
@@ -91,6 +95,7 @@ test("signed-out Thinking navigates to upgrade without executing Chat", async ({
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toHaveCount(0);
+  await openResponseOptions(page);
   await page.getByTestId("thinking-upgrade-button").click();
   await expect(page).toHaveURL(/\/pricing(?:[?#]|$)/);
   expect(chatRequests).toBe(0);

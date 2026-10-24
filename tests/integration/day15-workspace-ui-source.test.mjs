@@ -56,11 +56,14 @@ test("per-chat rules and pinned files have a real management surface", () => {
 
 test("the chat route wires branches, rules disclosure, and edit application", () => {
   const source = read("src/routes/index.tsx");
-  assert.match(source, /useChatBranches/u);
-  assert.match(source, /<ChatBranchBar/u);
+  const transcript = read("src/components/ActiveChatTranscript.tsx");
+  assert.match(source, /<ActiveChatTranscript/u);
+  assert.match(source, /renderMessage=\{renderTranscriptMessage\}/u);
+  assert.match(transcript, /useChatBranches/u);
+  assert.match(transcript, /<ChatBranchBar/u);
   assert.match(source, /ChatWorkspaceDialog/u);
   assert.match(source, /replaceMessageContent/u);
-  assert.match(source, /Chat rules are active/u);
+  assert.match(transcript, /Chat rules are active/u);
   // Mobile users reach the same surface from the top bar.
   assert.match(source, /onOpenChatSettings/u);
 });
@@ -74,5 +77,10 @@ test("mobile top bar exposes chat settings with an accessible target", () => {
 
 test("sharing discloses that only the active branch is snapshotted", () => {
   const source = read("src/components/ShareChatDialog.tsx");
-  assert.match(source, /branch you are currently viewing/u);
+  assert.match(source, /branch you’re viewing before sharing/u);
+  assert.match(
+    source,
+    /Only the text shown above is included\. Attachments, tool data and other branches\s+aren’t shared/u,
+  );
+  assert.match(source, /Later replies and edits won’t update/u);
 });

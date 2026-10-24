@@ -1,5 +1,10 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
+import {
+  inspectConfiguredVoiceComposer,
+  inspectConfiguredVoiceDialog,
+  inspectVoiceRouteSource,
+} from "./voice-unavailable-contract.mjs";
 
 const root = process.cwd();
 const sourceRoots = ["src/components", "src/routes"];
@@ -32,22 +37,6 @@ const deadControlPatterns = [
     pattern: /(?:toast|alert)\s*\(\s*["'](?:coming soon|not implemented|placeholder)/iu,
   },
 ];
-const voicePatterns = [
-  /\bSpeechRecognition\b/u,
-  /\bwebkitSpeechRecognition\b/u,
-  /\bSpeechSynthesisUtterance\b/u,
-  /\bspeechSynthesis\b/u,
-  /\bstartListening\b/u,
-  /\bstopListening\b/u,
-  /\bisListening\b/u,
-  /\bvoiceMode\b/u,
-  /\bDictate\b/u,
-  /\bdictation\b/iu,
-  /\bRead aloud\b/iu,
-  /\bmicrophone\b/iu,
-  /<Mic(?:\s|\/|>)/u,
-  /<Volume2(?:\s|\/|>)/u,
-];
 
 function filesUnder(directory) {
   const absolute = join(root, directory);
@@ -67,6 +56,11 @@ function read(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
+export function inspectProductionVoiceSource(source) {
+  if (/\bComposerVoiceDialog\b/u.test(source)) return inspectConfiguredVoiceComposer(source);
+  return inspectVoiceRouteSource(source);
+}
+
 export function auditUiTruthfulness() {
   const errors = [];
   const visibleFiles = sourceRoots.flatMap(filesUnder);
@@ -84,10 +78,21 @@ export function auditUiTruthfulness() {
   for (const path of voiceCriticalFiles) {
     if (!existsSync(join(root, path))) continue;
     const source = read(path);
-    for (const pattern of voicePatterns) {
-      if (pattern.test(source)) errors.push(`${path}: exposed voice/dictation contract ${pattern}`);
-    }
+    // The owner requested real Dictate/Voice controls. Validate the mounted
+    // dialog boundary while keeping capture/provider guards on other surfaces.
+    const result = inspectProductionVoiceSource(source);
+    errors.push(...result.errors.map((error) => `${path}: ${error}`));
   }
+
+  const dialogPath = "src/components/ComposerVoiceDialog.tsx";
+  if (!existsSync(join(root, dialogPath)))
+    errors.push(`${dialogPath}: configured voice dialog missing`);
+  else
+    errors.push(
+      ...inspectConfiguredVoiceDialog(read(dialogPath)).errors.map(
+        (error) => `${dialogPath}: ${error}`,
+      ),
+    );
 
   const stateSources = [
     "src/components/OperationalState.tsx",

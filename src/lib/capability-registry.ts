@@ -9,6 +9,7 @@ import {
   type Tier,
 } from "@/lib/modes";
 import { BILLING_PLANS, type BillingLookupKey } from "@/lib/billing-plans";
+import { modeDisplayLabel } from "@/lib/mode-display-label";
 
 export type CapabilityAvailability =
   "available" | "limited" | "provider-dependent" | "unavailable" | "excluded";
@@ -55,7 +56,7 @@ export type PublishedPlan = Readonly<{
 }>;
 
 type CapabilityRegistry = Readonly<{
-  voiceScope: "required_unavailable";
+  voiceScope: "required_provider_dependent";
   modes: readonly PublishedMode[];
   modesByTier: Readonly<Record<Tier, readonly PublishedMode[]>>;
   features: Readonly<Record<CapabilityId, PublishedCapability>>;
@@ -121,8 +122,8 @@ function formatStorage(bytes: number): string {
 export const PLAN_ALLOWANCE_COPY = {
   free: {
     chat: "Small message allowance",
-    image: "Small image generation allowance",
-    upload: "Small file and image upload allowance",
+    image: "3 image generations per day",
+    upload: "2 file uploads per day",
     storage: "Small published storage allowance",
   },
   plus: {
@@ -141,11 +142,12 @@ export const PLAN_ALLOWANCE_COPY = {
 
 function planFeatures(tier: Tier): readonly string[] {
   const allowance = PLAN_ALLOWANCE_COPY[tier];
+  // Public plan wording uses Instant; compatibility mode labels and routing stay intact.
+  const modeLabels = modesByTier[tier].map(modeDisplayLabel);
   const features = [
-    `${modesByTier[tier]
-      .map((mode) => mode.label)
-      .join(modesByTier[tier].length === 2 ? " and " : ", ")
-      .replace(/, ([^,]+)$/, ", and $1")} ${modesByTier[tier].length === 1 ? "mode" : "modes"}`,
+    `${modeLabels
+      .join(modeLabels.length === 2 ? " and " : ", ")
+      .replace(/, ([^,]+)$/, ", and $1")} ${modeLabels.length === 1 ? "mode" : "modes"}`,
     allowance.chat,
     allowance.image,
     allowance.upload,
@@ -158,7 +160,7 @@ function planFeatures(tier: Tier): readonly string[] {
 }
 
 export const CAPABILITY_REGISTRY = Object.freeze({
-  voiceScope: "required_unavailable",
+  voiceScope: "required_provider_dependent",
   modes,
   modesByTier,
   features: {
@@ -175,8 +177,9 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       availability: "limited",
       minimumTier: "free",
       summary:
-        "Chat accepts text, code, CSV, JSON, and image attachments. Project knowledge indexes supported text-like files.",
-      limitation: "PDF, Word, PowerPoint, and Excel extraction is not currently supported.",
+        "Chat accepts text, code, CSV, JSON, and image attachments, and extracts readable text from supported PDF, DOCX, XLSX, and PPTX files. Project knowledge indexes supported text-like files.",
+      limitation:
+        "Document extraction is limited to 10 MB and may omit formatting, scanned content, or unreadable pages. Library original PDF preview is separate from extracted text; Office originals can be downloaded but are not rendered.",
     },
     dataAnalysis: {
       label: "Data analysis",
@@ -255,11 +258,11 @@ export const CAPABILITY_REGISTRY = Object.freeze({
     },
     voice: {
       label: "Voice",
-      availability: "unavailable",
+      availability: "provider-dependent",
       summary:
-        "Live voice and audio are required KovaGPT scope but are not currently available in this build.",
+        "Transcription, speech synthesis, voice conversion, and saved-response Read aloud depend on configured voice access and remaining usage allowances.",
       limitation:
-        "Voice stays unavailable until consent, safety, latency, provider, device, and per-minute plus backend-compute cost gates are implemented and verified.",
+        "Microphone conversations require explicit Start and Finish turn. Provider access, commercial entitlement, browser permission, and actual playback must be qualified for the deployed runtime.",
     },
   },
   plans: {
@@ -279,7 +282,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
       description:
-        "Lite, Medium, Thinking, and Adaptive Memory. Operational usage limits still apply.",
+        "Instant, Medium, Thinking, and Adaptive Memory. Operational usage limits still apply.",
       features: planFeatures("plus"),
     },
     pro: {
@@ -288,7 +291,8 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       monthlyPriceUsd: 80,
       lookupKey: BILLING_PLANS.pro_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.pro_monthly.trialPeriodDays,
-      description: "All six Chat modes. Operational token and premium-request limits still apply.",
+      description:
+        "Instant, Medium, High, Extra high, Max, and Ultra. Operational token and premium-request limits still apply.",
       features: planFeatures("pro"),
     },
   },

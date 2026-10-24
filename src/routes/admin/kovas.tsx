@@ -127,12 +127,14 @@ function Queue({ owner }: { owner: string }) {
     }
   }
   async function inspect() {
+    if (busy || lookup.trim().length !== 36) return;
+    setRows([]);
     setBusy(true);
     setError("");
     try {
       const v = await requestKovas<Report>(
         owner,
-        `/api/admin/kovas?id=${encodeURIComponent(lookup)}`,
+        `/api/admin/kovas?id=${encodeURIComponent(lookup.trim())}`,
         lifetime.current.signal,
       );
       if (!lifetime.current.signal.aborted) setRows([v]);
@@ -154,21 +156,25 @@ function Queue({ owner }: { owner: string }) {
       </p>
       {error && <p role="alert">{error}</p>}
       <div className="flex flex-wrap gap-3">
-        <button className="underline" disabled={busy} onClick={() => setEpoch((v) => v + 1)}>
+        <button
+          className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={busy}
+          onClick={() => setEpoch((v) => v + 1)}
+        >
           Refresh reports
         </button>
-        <label className="text-sm">
+        <label className="min-w-0 text-sm">
           Kova ID
           <input
-            className="ml-2 rounded border bg-background p-2"
+            className="block min-h-11 w-full rounded border bg-background p-2 sm:ml-2 sm:inline-block sm:w-auto"
             value={lookup}
             onChange={(e) => setLookup(e.target.value)}
             maxLength={36}
           />
         </label>
         <button
-          className="underline"
-          disabled={busy || lookup.length !== 36}
+          className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={busy || lookup.trim().length !== 36}
           onClick={() => void inspect()}
         >
           Inspect moderation state
@@ -187,7 +193,10 @@ function Queue({ owner }: { owner: string }) {
       {busy && <p role="status">Loading moderation state…</p>}
       {!busy && !rows.length && !error && <p>No open reports.</p>}
       {rows.map((row) => (
-        <article key={row.id ?? row.kova_id} className="space-y-2 rounded border p-4">
+        <article
+          key={row.id ?? row.kova_id}
+          className="min-w-0 space-y-2 rounded border p-4 [overflow-wrap:anywhere]"
+        >
           <h2 className="font-semibold">{row.name}</h2>
           <p className="text-sm">{row.reason ?? "No open report selected."}</p>
           <p className="text-xs text-muted-foreground">
@@ -197,11 +206,13 @@ function Queue({ owner }: { owner: string }) {
             <summary>Published snapshot</summary>
             {row.config ? (
               <>
-                <pre className="whitespace-pre-wrap text-sm">{row.config.instructions}</pre>
+                <pre className="whitespace-pre-wrap break-words text-sm">
+                  {row.config.instructions}
+                </pre>
                 {row.knowledge?.map((k, i) => (
                   <div key={i}>
                     <h3>{k.title}</h3>
-                    <pre className="whitespace-pre-wrap text-sm">{k.content}</pre>
+                    <pre className="whitespace-pre-wrap break-words text-sm">{k.content}</pre>
                   </div>
                 ))}
               </>
@@ -214,28 +225,28 @@ function Queue({ owner }: { owner: string }) {
           </details>
           <div className="flex flex-wrap gap-3">
             <button
-              className="underline"
+              className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
               disabled={busy || !reason.trim() || row.blocked}
               onClick={() => void act(row.kova_id, row.revision, "block")}
             >
               Block Kova
             </button>
             <button
-              className="underline"
+              className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
               disabled={busy || !reason.trim() || !row.blocked}
               onClick={() => void act(row.kova_id, row.revision, "restore")}
             >
               Restore access
             </button>
             <button
-              className="underline"
+              className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
               disabled={busy || !reason.trim() || !row.id}
               onClick={() => void act(row.kova_id, row.revision, "review", row.id)}
             >
               Mark this report reviewed
             </button>
             <Link
-              className="underline"
+              className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
               to={"/kovas" as never}
               search={{ id: row.kova_id } as never}
             >

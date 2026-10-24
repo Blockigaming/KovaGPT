@@ -1,3 +1,6 @@
+import { reserveUploads } from "@/lib/upload-quota.server.mjs";
+import { resolveEffectiveBillingTier } from "@/lib/billing-entitlement.server";
+import { DAILY_UPLOAD_LIMIT_BY_TIER } from "@/lib/modes";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
@@ -192,6 +195,18 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
       if (active.error || !active.data || active.data.storage_path !== existing.file_url)
         throw new Error("Library save is incomplete. Please retry.");
       return replay;
+    }
+    if (data.imageUrl.startsWith("data:")) {
+      const tier = await resolveEffectiveBillingTier(supabaseAdmin, context.userId);
+      if (
+        !(await reserveUploads(
+          { userId: context.userId, supabaseAdmin },
+          [{ kind: "image", dataUrl: data.imageUrl }],
+          DAILY_UPLOAD_LIMIT_BY_TIER[tier],
+          AbortSignal.timeout(10000),
+        ))
+      )
+        throw new Error("Daily file upload limit reached. Resets at midnight UTC.");
     }
     return publishLibraryImageBytes(
       supabaseAdmin,

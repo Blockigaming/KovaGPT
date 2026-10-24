@@ -85,19 +85,26 @@ test("the worker uses leases, private storage, redaction, and truthful settlemen
 
 test("account deletion is fenced and export cleanup completes before auth cascade", async () => {
   const accountRoute = await read("src/routes/api/account.ts");
+  const finalizer = await read("src/lib/account-deletion-finalizer.server.ts");
+  const policy = await read("src/lib/account-lifecycle-policy.mjs");
   const cleanup = await read("src/lib/account-export.server.ts");
   const storageCleanup = await read("src/lib/account-storage-cleanup.server.ts");
   const migration = await read(
     "supabase/migrations/20260903204500_account_export_deletion_fence.sql",
   );
 
+  assert.match(accountRoute, /makeAccountLifecycleHandlers\(\{ authenticate: requireUser \}\)/u);
+  assert.doesNotMatch(accountRoute, /deleteUser|cleanupAccountExports|cleanupOwnedStorage/u);
+  const exportCleanupIndex = finalizer.indexOf(
+    "cleanupAccountExportsBeforeAccountDeletion(auth.userId)",
+  );
+  const authDeleteIndex = finalizer.indexOf(".auth.admin.deleteUser(");
   assert.ok(
-    accountRoute.indexOf("cleanupAccountExportsBeforeAccountDeletion(auth.userId)") <
-      accountRoute.indexOf(".auth.admin.deleteUser("),
+    exportCleanupIndex >= 0 && authDeleteIndex > exportCleanupIndex,
     "auth deletion must not cascade export metadata before cleanup",
   );
-  assert.match(accountRoute, /account_export_cleanup_pending/u);
-  assert.match(accountRoute, /account_export_cleanup_failed/u);
+  assert.match(finalizer, /account_export_cleanup_pending/u);
+  assert.match(finalizer, /account_export_cleanup_failed/u);
   assert.match(cleanup, /begin_account_export_account_deletion/u);
   assert.match(cleanup, /discoverAccountExportJobIds\(userId, remaining\)/u);
   assert.match(cleanup, /MAX_DELETION_CLEANUPS_PER_REQUEST = 25/u);
@@ -105,12 +112,13 @@ test("account deletion is fenced and export cleanup completes before auth cascad
   assert.match(cleanup, /hasProcessingAccountExportJob/u);
   assert.doesNotMatch(cleanup, /\.range\(0, 999\)/u);
   assert.doesNotMatch(cleanup, /cancel_account_export_account_deletion/u);
-  assert.match(accountRoute, /cleanupOwnedStorageBeforeAccountDeletion/u);
-  assert.doesNotMatch(accountRoute, /releaseAccountExportDeletionFence/u);
-  assert.match(accountRoute, /readAccountDeletionState/u);
+  assert.match(finalizer, /cleanupOwnedStorageBeforeAccountDeletion/u);
+  assert.doesNotMatch(finalizer, /releaseAccountExportDeletionFence/u);
+  assert.match(finalizer, /renewAccountFinalization/u);
+  assert.match(policy, /"kova_policy_begin_finalization"/u);
+  const storageCleanupIndex = finalizer.indexOf("await cleanupOwnedStorageBeforeAccountDeletion(");
   assert.ok(
-    accountRoute.indexOf("await cleanupOwnedStorageBeforeAccountDeletion(") <
-      accountRoute.indexOf(".auth.admin.deleteUser("),
+    storageCleanupIndex >= 0 && authDeleteIndex > storageCleanupIndex,
     "all owned Storage objects must be removed before Auth deletion",
   );
   assert.match(storageCleanup, /account_storage_cleanup_unverified/u);

@@ -1,0 +1,136 @@
+{
+  "feature": "Recoverable browser Trash and configurable retention",
+  "status": "local implementation; server retention integration incomplete",
+  "defaultRetentionDays": 30,
+  "monthMeansDays": 30,
+  "presets": [
+    "Instantly",
+    "1 hour",
+    "One day",
+    "One week",
+    "2 weeks",
+    "One month (30 days)",
+    "Custom"
+  ],
+  "customValidation": {
+    "minimum": "1 minute",
+    "maximum": "3650 days",
+    "units": ["minutes", "hours", "days"],
+    "rejects": [
+      "zero custom duration",
+      "negative",
+      "NaN",
+      "Infinity",
+      "scientific notation",
+      "unsafe integer milliseconds"
+    ]
+  },
+  "sources": [
+    "src/components/ChatTrashPanel.tsx",
+    "src/components/ChatDeleteConfirmation.tsx",
+    "src/lib/chat-trash.ts",
+    "src/lib/chat-trash-policy.mjs",
+    "src/lib/chat-trash-policy.d.mts",
+    "src/lib/chat-trash-review-fixtures.mjs",
+    "src/lib/chat-trash-review-fixtures.d.mts",
+    "src/lib/home-chat-history-actions.ts",
+    "src/components/AppShell.tsx",
+    "src/lib/chat-store.ts",
+    "src/lib/principal-browser-storage.mjs",
+    "tests/unit/chat-trash.test.mjs",
+    "tests/unit/home-chat-history-actions.test.mjs",
+    "review-kit/private-http-review.mjs",
+    "review-kit/review-state-fixtures.mjs",
+    "tests/unit/chat-trash-review-fixture.test.mjs"
+  ],
+  "settingsIntegration": {
+    "owner": "lead agent",
+    "file": "src/components/SettingsDialog.tsx",
+    "location": "Data controls below Archived chats, signed-in and guest"
+  },
+  "interactionInventory": [
+    {
+      "control": "Delete chat (home and AppShell menus)",
+      "result": "Persist principal-scoped recoverable snapshot before removing active chat; default 30-day expiry; temporary/Instant require styled permanent confirmation"
+    },
+    {
+      "control": "Archive chat",
+      "result": "Existing archive remains separate; no retention expiry added"
+    },
+    {
+      "control": "Restore",
+      "result": "Persist active chat before removing Trash entry; preserve draft; reject expired entry and stale principal generation"
+    },
+    {
+      "control": "Delete permanently",
+      "result": "Shared AlertDialog names chat, Cancel initially focused, explicit destructive confirmation, opener focus restored"
+    },
+    {
+      "control": "Retention preset selector",
+      "result": "Six exact preset durations and Custom; choice alone does not mutate data"
+    },
+    {
+      "control": "Custom amount and unit",
+      "result": "Validated finite duration; validation error is announced with role alert"
+    },
+    {
+      "control": "Save retention",
+      "result": "Recomputes expiry from original deletedAt; confirms Instant or shortening that removes existing copies"
+    },
+    {
+      "control": "Confirm retention change",
+      "result": "Re-reads latest storage and principal generation; if affected IDs or titles changed, updates list and requires another confirmation"
+    },
+    {
+      "control": "Cancel destructive dialog",
+      "result": "No pending retention or permanent-delete mutation; focus returns to opener or panel"
+    },
+    {
+      "control": "Open Trash / regain focus",
+      "result": "Opportunistic local expiry sweep, paused during pending destructive confirmation; no browser timer scheduler"
+    }
+  ],
+  "isolation": {
+    "namespace": "kova-chat-trash-v1:user:<encoded owner> or :guest",
+    "accountCleanup": "Included in both chat-store cleanup and principal-browser-storage key plan",
+    "guest": "Inherits existing fresh-load guest purge; not durable across refresh/new session",
+    "drafts": "Never removed by Trash operations",
+    "partialFailure": "Trash copy written before active removal; failed history save keeps copy; failed restore keeps copy; corrupt or full storage fails closed"
+  },
+  "reviewFixtures": {
+    "module": "src/lib/chat-trash-review-fixtures.mjs",
+    "factory": "createTrashReviewFixtures(now)",
+    "cases": ["deleted", "expiringSoon", "expired", "restored"],
+    "fields": ["deletedAt", "expiresAt", "restoredAt (restored case)"],
+    "seedsRealHistory": false,
+    "httpScenario": {
+      "id": "chat-trash",
+      "accounts": ["free", "plus", "pro"],
+      "path": "/settings/privacy",
+      "seed": "Three synthetic browser-local records: deleted, expiring soon, already expired. An already-restored synthetic chat is in History. Original deleted-chat draft is seeded separately.",
+      "restoreAdapter": "Only two known unexpired synthetic IDs, exact original payload, archived false, initial revision 0. Existing epoch/owner/request-size/schema/replay/mutation-capacity guards retained. Unknown, expired, edited-content and arbitrary new writes rejected.",
+      "packaging": "private-http-review.mjs self-contained copied fixture; no src imports added. State selector remains bundled.",
+      "disclosure": "TRASH_REVIEW_DISCLOSURE rendered in external review controller."
+    }
+  },
+  "tests": {
+    "command": "node --test tests/unit/chat-trash.test.mjs tests/unit/home-chat-history-actions.test.mjs tests/unit/principal-browser-storage.test.mjs tests/unit/principal-chat-storage.test.mjs",
+    "passed": 44,
+    "failed": 0,
+    "browserRendering": "Not run by this worker; local Chromium blocked and lead owns cloud-browser review",
+    "fullBuild": "Not run; lead owns build",
+    "typecheck": "npx tsc --noEmit --pretty false: passed (exit 0)",
+    "diffCheck": "git diff --check: passed",
+    "reviewFixtures": {
+      "command": "node --test tests/unit/chat-trash-review-fixture.test.mjs tests/unit/chat-outputs-review-fixture.test.mjs tests/unit/review-state-fixtures.test.mjs",
+      "passed": 29,
+      "failed": 0
+    }
+  },
+  "integrationGaps": [
+    "Existing server chat_history_records contract removes payload on delete and retains only a tombstone. Trash payload is recoverable only from the current browser.",
+    "Server scheduler, server retention preference, soft-deleted payload persistence and cross-device Trash are not implemented. UI explicitly discloses this.",
+    "Expiry cleanup runs when Trash opens or focus returns. No claim of guaranteed purge while app is closed.",
+    "No production migration, purge, provider request or deployment was executed."
+  ]
+}

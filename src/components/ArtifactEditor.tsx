@@ -1,4 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { SelectionEditDialog, type SelectionTarget } from "./SelectionEditDialog";
+import { ResultServerExportDialog } from "./ResultServerExportDialog";
+import { downloadBytes, safeDocumentFilename } from "@/lib/writing-export/common";
+import "./result-editor.css";
 import {
   Copy,
   Check,
@@ -16,6 +27,10 @@ import {
   GitCompare,
   MessageSquare,
   Search,
+  Undo2,
+  Redo2,
+  Share2,
+  MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -24,6 +39,12 @@ import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
 import { addToContextPack, continueInChat, openInWork } from "@/lib/workspace-handoffs";
 import { CollaborationStatus } from "@/components/CollaborationStatus";
 import { CanvasComments } from "@/components/CanvasComments";
+import {
+  ResultCommentDeleteDialog,
+  type ResultCommentDeleteTarget,
+} from "@/components/ResultCommentDeleteDialog";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
+import { useScopedActionFeedback } from "@/lib/use-scoped-action-feedback";
 import { useCanvasCollaboration } from "@/lib/use-canvas-collaboration";
 import { buildPreviewDoc, type ArtifactKind } from "./artifact-utils";
 import { createSerializedWriteQueue } from "@/lib/serialized-write-queue";
@@ -42,6 +63,13 @@ type SessionVersion = {
   remoteRevision?: number;
 };
 
+type ResultFocusOrigin = {
+  target: HTMLElement | null;
+  url: string;
+  scope: string;
+  generation: number;
+};
+
 function documentOutline(value: string, isCode: boolean) {
   const lines = value.split("\n");
   return lines
@@ -58,7 +86,22 @@ function documentOutline(value: string, isCode: boolean) {
     .slice(0, 80);
 }
 
+export type ResultDescriptor = {
+  title: string;
+  initialContent: string;
+  kind: ArtifactKind;
+  initialMode?: "edit" | "preview";
+  chatId?: string | null;
+  messageId?: string | null;
+  projectId?: string | null;
+};
+
 type ArtifactEditorProps = {
+  title?: string;
+  embedded?: boolean;
+  onDraftChange?: (content: string) => void;
+  /** Tabbed layouts keep the reset action in More rather than adding an empty split-control row. */
+  onResetLayout?: () => void;
   open: boolean;
   onClose: () => void;
   initialContent: string;
@@ -93,8 +136,33 @@ function ArtifactEditorSession({
   chatId,
   messageId,
   projectId,
+  title,
+  embedded = false,
+  onDraftChange,
+  onResetLayout,
 }: ArtifactEditorProps) {
   const [value, setValue] = useState(initialContent);
+  const onDraftChangeRef = useRef(onDraftChange);
+  onDraftChangeRef.current = onDraftChange;
+  useEffect(() => {
+    onDraftChangeRef.current?.(value);
+  }, [value]);
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
+  const [shareSnapshot, setShareSnapshot] = useState<string | null>(null);
+  const [closeReview, setCloseReview] = useState(false);
+  const [serverExportOpen, setServerExportOpen] = useState(false);
+  const serverExportReturnRef = useRef<ResultFocusOrigin | null>(null);
+  const exportTriggerRef = useRef<HTMLButtonElement>(null);
+  const closeReviewReturnRef = useRef<(ResultFocusOrigin & { discard: boolean }) | null>(null);
+  const keepEditingRef = useRef<HTMLButtonElement>(null);
+  const resultRootRef = useRef<HTMLDivElement>(null);
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null);
+  const resultCloseRef = useRef<HTMLButtonElement>(null);
+  const compareReturnRef = useRef<ResultFocusOrigin | null>(null);
+  const [rewriteTarget, setRewriteTarget] = useState<SelectionTarget | null>(null);
+  const [copyError, setCopyError] = useState(false);
+  const librarySavedValue = useRef<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -107,8 +175,16 @@ function ArtifactEditorSession({
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
   const [comments, setComments] = useState<{ id: number; body: string; selection: string }[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
+  const commentDraftRef = useRef(commentDraft);
+  commentDraftRef.current = commentDraft;
+  const commentFieldId = useId();
+  const commentsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const [deleteCommentTarget, setDeleteCommentTarget] = useState<ResultCommentDeleteTarget | null>(
+    null,
+  );
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved" | "session_only">(
-    "saved",
+    "session_only",
   );
   const [versions, setVersions] = useState<SessionVersion[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -116,12 +192,41 @@ function ArtifactEditorSession({
   const lastScheduledValueRef = useRef(initialContent);
   const autosaveGenerationRef = useRef(0);
   const localEditRevisionRef = useRef(0);
+  const editOriginRef = useRef("User edit");
   const [acknowledgedEditRevision, setAcknowledgedEditRevision] = useState(0);
   const pendingAutosavesRef = useRef(0);
   const autosaveQueueRef = useRef(createSerializedWriteQueue());
   const [autosaveRetryNonce, setAutosaveRetryNonce] = useState(0);
   const { isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
+  const resultScope = JSON.stringify([userKey, chatId, messageId, projectId, kind, initialContent]);
+  const actionFeedback = useScopedActionFeedback(resultScope);
+  const historyScopeRef = useRef(resultScope);
+  historyScopeRef.current = resultScope;
+  const historyActiveRef = useRef(true);
+  const historyVisibleRef = useRef(historyOpen);
+  historyVisibleRef.current = historyOpen;
+  const historyScrollRef = useRef(0);
+  const historyHeadingRef = useRef<HTMLHeadingElement>(null);
+  const historyRequestRef = useRef(0);
+  const historyPreviewTicketRef = useRef<ReturnType<typeof actionFeedback.begin>>(null);
+  const historyReturnRef = useRef<{
+    trigger: HTMLButtonElement;
+    url: string;
+    scope: string;
+    generation: number;
+  } | null>(null);
+  const closeHistory = () => {
+    if (!historyActiveRef.current || historyScopeRef.current !== resultScope) return;
+    historyVisibleRef.current = false;
+    // This read-only inspector never discards the working draft or selected comparison.
+    historyRequestRef.current += 1;
+    const ticket = historyPreviewTicketRef.current;
+    historyPreviewTicketRef.current = null;
+    if (ticket) actionFeedback.finish(ticket);
+    setHistoryOpen(false);
+  };
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
   const canPersistVersions = Boolean(isSignedIn && chatId && messageId);
@@ -136,11 +241,70 @@ function ArtifactEditorSession({
   const saveVersionFn = collaboration.save;
   const [historyError, setHistoryError] = useState<string | null>(null);
   const artifactTitle =
-    kind === "code"
-      ? "Code artifact"
-      : kind === "website"
-        ? "Website artifact"
-        : "Writing artifact";
+    title?.trim() ||
+    initialContent.match(/^#{1,3}\s+(.+)$/m)?.[1]?.slice(0, 120) ||
+    (kind === "writing" ? "Writing result" : kind === "website" ? "Website result" : "Code result");
+  const resultFocusIsCurrent = (origin: ResultFocusOrigin | null) =>
+    Boolean(
+      origin &&
+      historyActiveRef.current &&
+      origin.scope === historyScopeRef.current &&
+      origin.generation === autosaveGenerationRef.current &&
+      window.location.href === origin.url &&
+      resultRootRef.current?.isConnected,
+    );
+  const resultOwnsFocus = (origin: ResultFocusOrigin, surface: EventTarget | null) => {
+    const active = document.activeElement;
+    return (
+      active === null ||
+      active === document.body ||
+      active === origin.target ||
+      (surface instanceof HTMLElement && (surface === active || surface.contains(active)))
+    );
+  };
+  const restoreResultFocus = (origin: ResultFocusOrigin, surface: EventTarget | null) => {
+    if (!resultFocusIsCurrent(origin) || !resultOwnsFocus(origin, surface)) return;
+    const target = [
+      origin.target,
+      textareaRef.current,
+      resultCloseRef.current,
+      resultHeadingRef.current,
+    ].find(
+      (candidate) =>
+        candidate?.isConnected &&
+        resultRootRef.current?.contains(candidate) &&
+        candidate.getClientRects().length &&
+        !candidate.closest('[inert], [aria-hidden="true"]') &&
+        !candidate.matches(':disabled, [aria-disabled="true"]'),
+    );
+    restoreDialogFocus(target, origin.url);
+  };
+  const requestClose = (target?: HTMLElement) => {
+    if (!historyActiveRef.current || historyScopeRef.current !== resultScope || closeReview) return;
+    if (librarySavedValue.current === value) {
+      onClose();
+      return;
+    }
+    if (
+      saveState === "saving" ||
+      saveState === "unsaved" ||
+      (saveState === "session_only" && value !== initialContent)
+    ) {
+      const active = target ?? document.activeElement;
+      closeReviewReturnRef.current = {
+        target:
+          active instanceof HTMLElement && resultRootRef.current?.contains(active) ? active : null,
+        url: window.location.href,
+        scope: resultScope,
+        generation: autosaveGenerationRef.current,
+        discard: false,
+      };
+      setCloseReview(true);
+    } else onClose();
+  };
+  const closeReviewOrigin = closeReviewReturnRef.current;
+  const compareOrigin = compareReturnRef.current;
+  const serverExportOrigin = serverExportReturnRef.current;
 
   const preview = useMemo(
     () => (kind === "website" ? buildPreviewDoc(value) : { doc: "", hadScripts: false }),
@@ -151,14 +315,28 @@ function ArtifactEditorSession({
     // Opening, closing, or replacing an artifact invalidates all asynchronous
     // work captured by the previous Canvas session.
     autosaveGenerationRef.current += 1;
+    historyActiveRef.current = true;
+    historyVisibleRef.current = false;
+    historyScrollRef.current = 0;
+    historyReturnRef.current = null;
+    historyRequestRef.current += 1;
+    historyPreviewTicketRef.current = null;
+    closeReviewReturnRef.current = null;
+    compareReturnRef.current = null;
     if (open) {
+      setCloseReview(false);
+      setCompareVersion(null);
       localEditRevisionRef.current = 0;
       setAcknowledgedEditRevision(0);
       lastRecordedValueRef.current = initialContent;
       lastScheduledValueRef.current = initialContent;
       setValue(initialContent);
       setCopied(false);
+      setCopyError(false);
       setSaved(false);
+      setSaving(false);
+      setDeleteCommentTarget(null);
+      clearTimeout(savedTimerRef.current);
       let preferred: string | undefined;
 
       try {
@@ -167,11 +345,14 @@ function ArtifactEditorSession({
       } catch {
         /* Invalid local preferences fall back to the requested initial mode. */
       }
-      setMode(preferred === "Preview" && kind === "website" ? "preview" : initialMode);
-      setSplitView(preferred === "Split view" && kind === "website");
+      // Generated previews require an explicit Run preview action each session.
+      setMode("edit");
+      setSplitView(false);
+      setUndoStack([]);
+      setRedoStack([]);
       setOutlineOpen(false);
       setHistoryOpen(false);
-      setSaveState("saved");
+      setSaveState("session_only");
       setVersions([
         { id: Date.now(), content: initialContent, savedAt: Date.now(), label: "Original" },
       ]);
@@ -182,6 +363,13 @@ function ArtifactEditorSession({
     }
     return () => {
       autosaveGenerationRef.current += 1;
+      historyActiveRef.current = false;
+      historyReturnRef.current = null;
+      historyRequestRef.current += 1;
+      historyPreviewTicketRef.current = null;
+      closeReviewReturnRef.current = null;
+      compareReturnRef.current = null;
+      clearTimeout(savedTimerRef.current);
     };
   }, [open, initialContent, initialMode, kind, userKey, chatId, messageId, projectId]);
 
@@ -227,15 +415,6 @@ function ArtifactEditorSession({
     }
   }, [open, remoteSnapshot, adoptRemote, value, acknowledgedEditRevision]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
   const isCode = kind === "code" || kind === "website";
   const label = kind === "website" ? "Website draft" : kind === "code" ? "Code" : "Writing";
   const outline = documentOutline(value, isCode);
@@ -252,11 +431,33 @@ function ArtifactEditorSession({
     };
   }, [value]);
 
-  const updateValue = (next: string) => {
+  const updateValue = (next: string, recordUndo = true, origin = "User edit") => {
+    editOriginRef.current = origin;
     if (canPersistVersions && remoteSnapshot && !remoteSnapshot.canEdit) return;
+    if (recordUndo) {
+      setUndoStack((stack) => [...stack, value].slice(-200));
+      setRedoStack([]);
+    }
     localEditRevisionRef.current += 1;
     setValue(next);
     setSaveState("unsaved");
+  };
+
+  const undo = () => {
+    if (!undoStack.length) return;
+    setRedoStack((stack) => [...stack, value]);
+    const previous = undoStack[undoStack.length - 1];
+    setUndoStack((stack) => stack.slice(0, -1));
+    updateValue(previous, false);
+    textareaRef.current?.focus();
+  };
+  const redo = () => {
+    if (!redoStack.length) return;
+    setUndoStack((stack) => [...stack, value]);
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack((stack) => stack.slice(0, -1));
+    updateValue(next, false);
+    textareaRef.current?.focus();
   };
 
   const exportActorRef = useRef(userKey);
@@ -267,40 +468,57 @@ function ArtifactEditorSession({
     },
     [],
   );
-  const [exportFormat, setExportFormat] = useState<"source" | "pdf" | "docx" | "xlsx" | "pptx">(
-    "source",
-  );
   const [exporting, setExporting] = useState(false);
-  const exportOffice = async () => {
-    if (!open || exporting || exportFormat === "source") return;
+  const exportOffice = async (format: "pdf" | "docx" | "xlsx" | "pptx") => {
+    if (!open) return;
+    const ticket = actionFeedback.begin("export");
+    if (!ticket) return;
     const generation = autosaveGenerationRef.current;
     const actor = userKey;
     const current = () =>
-      generation === autosaveGenerationRef.current && actor === exportActorRef.current;
+      actionFeedback.current(ticket) &&
+      generation === autosaveGenerationRef.current &&
+      actor === exportActorRef.current;
     setExporting(true);
     try {
       const { downloadDocument } = await import("@/lib/writing-export/export");
-      if (current() && (await downloadDocument(exportFormat, artifactTitle, value, current)))
+      if (!current()) return;
+      if (await downloadDocument(format, artifactTitle, value, current)) {
+        if (!current()) return;
+        actionFeedback.finish(ticket);
         toast.success("Document exported");
+      } else actionFeedback.finish(ticket);
     } catch (error) {
-      if (current()) toast.error(error instanceof Error ? error.message : "Document export failed");
+      actionFeedback.finish(
+        ticket,
+        `Export could not be completed. ${error instanceof Error ? error.message : "Please try the same format again."} Your draft is preserved.`,
+      );
     } finally {
-      if (current()) setExporting(false);
+      if (actionFeedback.scopeCurrent(ticket)) setExporting(false);
     }
   };
   useEffect(() => {
     setExporting(false);
+    setServerExportOpen(false);
   }, [open, userKey, initialContent]);
 
   const exportDocument = () => {
-    const extension = kind === "writing" ? "md" : kind === "website" ? "html" : "txt";
-    const blob = new Blob([value], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `kova-${kind}-${new Date().toISOString().slice(0, 10)}.${extension}`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    const ticket = actionFeedback.begin("export");
+    if (!ticket) return;
+    try {
+      const extension = kind === "writing" ? "md" : kind === "website" ? "html" : "txt";
+      downloadBytes(
+        new TextEncoder().encode(value),
+        "text/plain;charset=utf-8",
+        safeDocumentFilename(artifactTitle, extension),
+      );
+      actionFeedback.finish(ticket);
+    } catch (error) {
+      actionFeedback.finish(
+        ticket,
+        `Download could not be started. ${error instanceof Error ? error.message : "Try Download again."} Your draft is preserved.`,
+      );
+    }
   };
 
   useEffect(() => {
@@ -318,6 +536,7 @@ function ArtifactEditorSession({
       return;
     let cancelled = false;
     const snapshot = value;
+    const snapshotOrigin = editOriginRef.current;
     const editRevision = localEditRevisionRef.current;
     const generation = autosaveGenerationRef.current;
     const timer = window.setTimeout(() => {
@@ -387,7 +606,7 @@ function ArtifactEditorSession({
               id: Date.now(),
               content: snapshot,
               savedAt: Date.now(),
-              label: durable ? "Saved to this chat" : "Session only",
+              label: `${snapshotOrigin} · ${durable ? "saved to this result" : "session only"}`,
               durable,
             },
             ...current,
@@ -418,10 +637,14 @@ function ArtifactEditorSession({
   if (!open) return null;
 
   const copy = async (text: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast.success("Copied");
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setCopyError(false);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopyError(true);
+    }
   };
 
   const save = async () => {
@@ -429,173 +652,284 @@ function ArtifactEditorSession({
       clerk?.openSignIn();
       return;
     }
+    const ticket = actionFeedback.begin("save");
+    if (!ticket) return;
     if (value.length > 200_000) {
-      toast.error(
+      actionFeedback.finish(
+        ticket,
         "This draft is too large for Library. Export it to download the complete file instead.",
       );
       return;
     }
+    clearTimeout(savedTimerRef.current);
+    setSaved(false);
     setSaving(true);
     try {
       const item_type =
         kind === "website" ? "website_draft" : kind === "code" ? "code" : "document";
-      const title =
-        kind === "website"
-          ? "Website draft (edited)"
-          : kind === "code"
-            ? "Code draft (edited)"
-            : "Writing draft (edited)";
-      await saveFn({
-        data: {
-          title,
-          item_type,
-          source: "chat",
-          content_text: value,
-        },
-      });
+      const title = artifactTitle;
+      await saveFn({ data: { title, item_type, source: "chat", content_text: value } });
+      if (!actionFeedback.current(ticket)) return;
+      librarySavedValue.current = value;
       setSaved(true);
+      actionFeedback.finish(ticket);
       toast.success("Saved to Library");
-      setTimeout(() => setSaved(false), 2000);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save");
+      savedTimerRef.current = setTimeout(() => {
+        if (actionFeedback.scopeCurrent(ticket)) setSaved(false);
+      }, 2000);
+    } catch (error) {
+      actionFeedback.finish(
+        ticket,
+        `Library save could not be confirmed. ${error instanceof Error ? error.message : "The service did not return a confirmed result."} Your result is preserved; the request may already have succeeded. Check Library before saving again.`,
+      );
     } finally {
-      setSaving(false);
+      if (actionFeedback.scopeCurrent(ticket)) setSaving(false);
     }
   };
 
   const improve = () => {
-    if (!onImprove || (canPersistVersions && !remoteSnapshot?.canEdit)) return;
-    const start = textareaRef.current?.selectionStart ?? 0;
-    const end = textareaRef.current?.selectionEnd ?? 0;
-    const selected = end > start ? value.slice(start, end) : value;
-    const trimmed = selected.trim();
-    if (!trimmed) {
-      toast.error("Add some content to improve first.");
+    if (canPersistVersions && !remoteSnapshot?.canEdit) return;
+    const area = textareaRef.current;
+    if (!area || area.selectionStart === area.selectionEnd) {
+      toast.error("Select the passage you want to revise first.");
       return;
     }
-    if (trimmed.length > 8000) {
-      toast.error("Improve supports up to 8,000 characters at once. Select a shorter section.");
-      return;
-    }
-    const prompt =
-      kind === "writing"
-        ? `Improve the following text. Keep meaning intact, tighten prose, fix grammar, and return only the improved version.\n\n${trimmed}`
-        : kind === "website"
-          ? `Improve the following website draft. Keep structure, improve accessibility, semantics, and styling. Return only the updated code.\n\n${trimmed}`
-          : `Improve the following code. Keep behavior, improve clarity, naming, and safety. Return only the updated code.\n\n${trimmed}`;
-    onImprove(prompt);
-    onClose();
+    setRewriteTarget({ source: value, start: area.selectionStart, end: area.selectionEnd });
   };
-
-  return (
+  const editorBody = (
     <div
-      className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-center bg-black/50 p-0 sm:p-4"
-      onClick={onClose}
+      ref={resultRootRef}
+      className={`kova-result-editor ${embedded ? "kova-result-embedded" : ""}`}
     >
-      <div
-        className="bg-background w-full sm:max-w-6xl sm:rounded-xl border border-border shadow-xl flex flex-col h-full sm:h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${label} editor`}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-            <CollaborationStatus {...collaboration.presence} />
-            <span className="text-[11px] text-muted-foreground">
+      <div className="kova-result-surface">
+        <header className="kova-result-heading">
+          <div className="min-w-0">
+            <h2
+              ref={resultHeadingRef}
+              tabIndex={-1}
+              className="break-words text-base font-semibold"
+            >
+              {artifactTitle}
+            </h2>
+            <p className="text-xs text-muted-foreground">
               {projectId
                 ? "Shared with Project members"
                 : canPersistVersions
                   ? "Only you"
                   : "This session only"}
-            </span>
-            {kind === "website" && !splitView && (
-              <div className="ml-2 inline-flex rounded border border-border overflow-hidden">
-                <button
-                  onClick={() => setMode("edit")}
-                  className={`text-xs px-2 py-1 inline-flex items-center gap-1 ${mode === "edit" ? "bg-accent" : "hover:bg-accent"}`}
-                  aria-pressed={mode === "edit"}
-                >
-                  <Pencil className="w-3 h-3" /> Edit
-                </button>
-                <button
-                  onClick={() => setMode("preview")}
-                  className={`text-xs px-2 py-1 inline-flex items-center gap-1 ${mode === "preview" ? "bg-accent" : "hover:bg-accent"}`}
-                  aria-pressed={mode === "preview"}
-                >
-                  <Eye className="w-3 h-3" /> Preview
-                </button>
-              </div>
-            )}
-            <span
-              className="hidden text-xs text-muted-foreground sm:inline"
-              aria-live="polite"
-              role="status"
+            </p>
+          </div>
+          <button
+            type="button"
+            ref={resultCloseRef}
+            onClick={(event) => requestClose(event.currentTarget)}
+            className="kova-icon-button"
+            aria-label="Close result"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </header>
+        <div className="kova-result-toolbar" role="toolbar" aria-label="Result actions">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("edit");
+              setSplitView(false);
+            }}
+            aria-pressed={mode === "edit"}
+          >
+            <Pencil />
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              if (!historyActiveRef.current || historyScopeRef.current !== resultScope) return;
+              if (historyOpen) {
+                closeHistory();
+                return;
+              }
+              historyReturnRef.current = {
+                trigger: event.currentTarget,
+                url: window.location.href,
+                scope: resultScope,
+                generation: autosaveGenerationRef.current,
+              };
+              historyVisibleRef.current = true;
+              setHistoryOpen(true);
+              setOutlineOpen(false);
+              setCommentsOpen(false);
+            }}
+            aria-pressed={historyOpen}
+          >
+            <History />
+            Versions
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" ref={exportTriggerRef} disabled={exporting}>
+                <Download />
+                {exporting ? "Exporting…" : "Export"}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onSelect={exportDocument}>
+                Download {kind === "writing" ? "Markdown" : kind === "website" ? "HTML" : "text"}
+              </DropdownMenuItem>
+              {kind === "writing" &&
+                ["pdf", "docx", "xlsx", "pptx"].map((format) => (
+                  <DropdownMenuItem
+                    key={format}
+                    onSelect={() => void exportOffice(format as "pdf" | "docx" | "xlsx" | "pptx")}
+                  >
+                    Download {format.toUpperCase()}
+                  </DropdownMenuItem>
+                ))}
+              <DropdownMenuItem
+                onSelect={() => {
+                  if (!open || !historyActiveRef.current || historyScopeRef.current !== resultScope)
+                    return;
+                  serverExportReturnRef.current = {
+                    target: exportTriggerRef.current,
+                    url: window.location.href,
+                    scope: resultScope,
+                    generation: autosaveGenerationRef.current,
+                  };
+                  setServerExportOpen(true);
+                }}
+              >
+                Download via server…
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <button type="button" onClick={() => setShareSnapshot(value)}>
+            <Share2 />
+            Share
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button">
+                <MoreHorizontal />
+                More
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {onResetLayout && (
+                <DropdownMenuItem onSelect={onResetLayout}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset layout
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={() => void copy(value)}>Copy result</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => void save()} disabled={saving}>
+                {saving ? (
+                  <span className="spec400-loading-label">
+                    <span className="spec400-loading-spinner" aria-hidden="true" />
+                    Saving…
+                  </span>
+                ) : (
+                  "Save to Library"
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={improve}>Rewrite selected passage</DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  setCommentsOpen((value) => !value);
+                  setOutlineOpen(false);
+                  setHistoryOpen(false);
+                }}
+              >
+                Comments
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openInWork(
+                    { type: "artifact", id: kind, title: artifactTitle, content: value },
+                    userKey,
+                  )
+                }
+              >
+                Open in Work
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="kova-result-secondary-toolbar">
+          <button type="button" onClick={undo} disabled={!undoStack.length} aria-label="Undo">
+            <Undo2 />
+          </button>
+          <button type="button" onClick={redo} disabled={!redoStack.length} aria-label="Redo">
+            <Redo2 />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOutlineOpen((value) => !value);
+              setHistoryOpen(false);
+              setCommentsOpen(false);
+            }}
+            aria-pressed={outlineOpen}
+          >
+            <ListTree />
+            Outline
+          </button>
+          {kind === "website" && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode("preview");
+                setSplitView(false);
+              }}
             >
-              {saveState === "saving"
+              <Eye />
+              Run preview
+            </button>
+          )}
+          <span role="status" className="ml-auto text-xs text-muted-foreground">
+            {canPersistVersions && !collaboration.ready && !collaboration.error
+              ? "Loading saved result…"
+              : saveState === "saving"
                 ? "Saving…"
                 : saveState === "unsaved"
-                  ? "Unsaved"
+                  ? "Unsaved changes"
                   : saveState === "session_only"
                     ? "Session only"
                     : "Saved"}
-            </span>
-            <span className="hidden text-xs text-muted-foreground lg:inline">
-              {statistics.words.toLocaleString()} words · {statistics.readingMinutes} min read ·{" "}
-              {statistics.lines.toLocaleString()} lines
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setOutlineOpen((v) => !v)}
-              className="kova-icon-button"
-              aria-label="Toggle document outline"
-              aria-pressed={outlineOpen}
-            >
-              <ListTree className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setCommentsOpen((v) => !v)}
-              className="kova-icon-button"
-              aria-label="Toggle artifact comments"
-              aria-pressed={commentsOpen}
-            >
-              <MessageSquare className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setHistoryOpen((v) => !v)}
-              className="kova-icon-button"
-              aria-label="Toggle version history"
-              aria-pressed={historyOpen}
-            >
-              <History className="h-4 w-4" />
-            </button>
-            {kind === "website" ? (
-              <button
-                onClick={() => setSplitView((v) => !v)}
-                className="kova-icon-button"
-                aria-label="Toggle split view"
-                aria-pressed={splitView}
-              >
-                <Columns2 className="h-4 w-4" />
-              </button>
-            ) : null}
-            <button onClick={onClose} className="kova-icon-button" aria-label="Close editor">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          </span>
         </div>
-
+        {Object.entries(actionFeedback.errors).length ? (
+          <div
+            className="max-h-40 shrink-0 overflow-y-auto border-b p-3 text-sm"
+            aria-label="Result operation feedback"
+          >
+            {Object.entries(actionFeedback.errors).map(([action, message]) => (
+              <div key={action} className="flex items-start gap-2">
+                <p role="alert" className="min-w-0 flex-1 text-destructive">
+                  {message}
+                </p>
+                <button
+                  type="button"
+                  className="min-h-11 shrink-0 rounded-lg px-3"
+                  aria-label={`Dismiss ${action} error`}
+                  onClick={() => actionFeedback.clear(action)}
+                >
+                  Dismiss
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <div className="flex min-h-0 flex-1">
           {outlineOpen ? (
-            <aside
-              className="hidden w-56 shrink-0 overflow-y-auto border-r border-border p-3 md:block"
-              aria-label="Document outline"
-            >
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Outline
-              </h2>
+            <aside className="kova-result-inspector" aria-label="Document outline">
+              <h2 className="mb-2 text-sm font-semibold">Outline</h2>
+              <button
+                type="button"
+                onClick={() => setOutlineOpen(false)}
+                className="mb-2 min-h-11 px-3"
+              >
+                Close outline
+              </button>
               <label className="relative mb-2 block">
                 <span className="sr-only">Search outline</span>
                 <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
@@ -609,19 +943,28 @@ function ArtifactEditorSession({
               {filteredOutline.length ? (
                 filteredOutline.map((item) => (
                   <button
+                    data-kova-button-shape="preserve"
                     key={`${item.line}-${item.label}`}
                     className="block w-full truncate rounded px-2 py-1.5 text-left text-xs hover:bg-accent"
                     style={{ paddingLeft: `${item.depth * 8}px` }}
                     onClick={() => {
-                      const area = textareaRef.current;
-                      if (!area) return;
+                      setMode("edit");
+                      setOutlineOpen(false);
                       const start =
                         value
                           .split("\n")
                           .slice(0, item.line - 1)
                           .join("\n").length + (item.line > 1 ? 1 : 0);
-                      area.focus();
-                      area.setSelectionRange(start, start);
+                      requestAnimationFrame(() => {
+                        const area = textareaRef.current;
+                        if (!area) return;
+                        area.focus();
+                        area.setSelectionRange(start, start);
+                        area.scrollTop = Math.max(
+                          0,
+                          (item.line - 2) * parseFloat(getComputedStyle(area).lineHeight),
+                        );
+                      });
                     }}
                   >
                     {item.label}
@@ -663,8 +1006,26 @@ function ArtifactEditorSession({
                   )}
                   value={value}
                   onChange={(e) => updateValue(e.target.value)}
+                  onKeyDown={(event) => {
+                    if (
+                      (event.ctrlKey || event.metaKey) &&
+                      !event.altKey &&
+                      event.key.toLowerCase() === "z"
+                    ) {
+                      event.preventDefault();
+                      if (event.shiftKey) redo();
+                      else undo();
+                    } else if (
+                      (event.ctrlKey || event.metaKey) &&
+                      !event.altKey &&
+                      event.key.toLowerCase() === "y"
+                    ) {
+                      event.preventDefault();
+                      redo();
+                    }
+                  }}
                   spellCheck={!isCode}
-                  className={`flex-1 w-full resize-none bg-background outline-none p-4 text-sm leading-relaxed ${
+                  className={`kova-result-textarea flex-1 w-full resize-none bg-background p-4 ${
                     isCode ? "font-mono" : ""
                   }`}
                   aria-label={`${label} content`}
@@ -683,91 +1044,150 @@ function ArtifactEditorSession({
               </div>
             ) : null}
           </div>
-          {historyOpen ? (
-            <aside
-              className="w-64 shrink-0 overflow-y-auto border-l border-border bg-[var(--surface-secondary)] p-3"
+          <Dialog
+            open={historyOpen}
+            onOpenChange={(next) => {
+              if (!next) closeHistory();
+            }}
+          >
+            <DialogContent
+              className="spec400-library-inspector"
               aria-label="Version history"
+              closeLabel="Close version history"
+              onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                const origin = historyReturnRef.current;
+                if (
+                  historyActiveRef.current &&
+                  historyVisibleRef.current &&
+                  origin?.scope === historyScopeRef.current &&
+                  origin.generation === autosaveGenerationRef.current &&
+                  window.location.href === origin.url
+                )
+                  historyHeadingRef.current?.focus({ preventScroll: true });
+              }}
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                const origin = historyReturnRef.current;
+                historyReturnRef.current = null;
+                const active = document.activeElement;
+                const focusMoved =
+                  active !== null &&
+                  active !== document.body &&
+                  active !== origin?.trigger &&
+                  !(event.target instanceof HTMLElement && event.target.contains(active));
+                restoreDialogFocus(
+                  origin?.trigger,
+                  origin?.url,
+                  !historyActiveRef.current ||
+                    focusMoved ||
+                    origin?.scope !== historyScopeRef.current ||
+                    origin?.generation !== autosaveGenerationRef.current,
+                );
+              }}
             >
-              <h2 className="mb-1 text-sm font-semibold">Version history</h2>
-              <p className="mb-3 text-xs text-muted-foreground">
-                {canPersistVersions
-                  ? "Edits are saved to this chat and stay available after you close Canvas."
-                  : "Versions are kept only while this Canvas is open."}
-              </p>
-              {historyError ? (
-                <p role="alert" className="mb-3 text-xs text-destructive">
-                  {historyError}
-                </p>
-              ) : null}
-              <div className="space-y-2">
-                {versions.map((version) => (
-                  <div
-                    key={version.id}
-                    className="rounded-lg border border-border bg-background p-2"
-                  >
-                    <div className="flex items-center gap-1.5 text-xs font-medium">
-                      {version.label}
-                      {version.durable ? null : (
-                        <span className="rounded bg-muted px-1 py-px text-[10px] font-normal text-muted-foreground">
-                          not saved
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {new Date(version.savedAt).toLocaleTimeString()}
-                    </div>
-                    <button
-                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium disabled:opacity-50"
-                      disabled={canPersistVersions && !remoteSnapshot?.canEdit}
-                      onClick={async () => {
-                        const generation = autosaveGenerationRef.current;
-                        try {
-                          const content = version.remoteRevision
-                            ? await collaboration.versionContent(version.remoteRevision)
-                            : version.content;
-                          if (autosaveGenerationRef.current !== generation) return;
-                          updateValue(content);
-                          toast.success("Version restored");
-                        } catch (error) {
-                          if (autosaveGenerationRef.current !== generation) return;
-                          toast.error(
-                            error instanceof Error ? error.message : "Version could not be loaded.",
-                          );
-                        }
-                      }}
+              <header className="spec400-library-inspector-header shrink-0 border-b border-border">
+                <div className="spec400-library-inspector-title">
+                  <DialogTitle ref={historyHeadingRef} tabIndex={-1}>
+                    Versions of {artifactTitle}
+                  </DialogTitle>
+                </div>
+              </header>
+              <div
+                className="spec400-inspector-body flex-1"
+                ref={(element) => {
+                  if (element) element.scrollTop = historyScrollRef.current;
+                }}
+                onScroll={(event) => {
+                  if (historyActiveRef.current && historyScopeRef.current === resultScope)
+                    historyScrollRef.current = event.currentTarget.scrollTop;
+                }}
+              >
+                <DialogDescription className="mb-3">
+                  {canPersistVersions
+                    ? "Confirmed edits stay with this result. Preview an earlier revision before restoring it as a new revision."
+                    : "Versions are kept only while this result is open. Save to Library or export to keep your work."}
+                </DialogDescription>
+                {historyError || actionFeedback.errors.version ? (
+                  <p role="alert" className="mb-3 text-xs text-destructive">
+                    {historyError || actionFeedback.errors.version}
+                  </p>
+                ) : null}
+                <div className="space-y-2">
+                  {versions.map((version) => (
+                    <div
+                      key={version.id}
+                      className="rounded-lg border border-border bg-background p-2"
                     >
-                      <RotateCcw className="h-3 w-3" /> Restore
-                    </button>
-                    <button
-                      className="ml-3 mt-2 inline-flex items-center gap-1 text-xs font-medium"
-                      onClick={async () => {
-                        const generation = autosaveGenerationRef.current;
-                        try {
-                          const content = version.remoteRevision
-                            ? await collaboration.versionContent(version.remoteRevision)
-                            : version.content;
-                          if (autosaveGenerationRef.current !== generation) return;
-                          setVersions((current) =>
-                            current.map((row) =>
-                              row.id === version.id ? { ...row, content } : row,
-                            ),
-                          );
-                          setCompareVersion(version.id);
-                        } catch (error) {
-                          if (autosaveGenerationRef.current !== generation) return;
-                          toast.error(
-                            error instanceof Error ? error.message : "Version could not be loaded.",
-                          );
-                        }
-                      }}
-                    >
-                      <GitCompare className="h-3 w-3" /> Compare
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-1.5 text-xs font-medium">
+                        {version.label}
+                        {version.durable ? null : (
+                          <span className="rounded bg-muted px-1 py-px text-[10px] font-normal text-muted-foreground">
+                            not saved
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {new Date(version.savedAt).toLocaleTimeString()}
+                      </div>
+                      <button
+                        type="button"
+                        className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium"
+                        onClick={async () => {
+                          if (!historyVisibleRef.current) return;
+                          const ticket = actionFeedback.begin("version");
+                          if (
+                            !ticket ||
+                            !historyActiveRef.current ||
+                            historyScopeRef.current !== resultScope
+                          )
+                            return;
+                          historyPreviewTicketRef.current = ticket;
+                          const request = ++historyRequestRef.current;
+                          const generation = autosaveGenerationRef.current;
+                          try {
+                            const content = version.remoteRevision
+                              ? await collaboration.versionContent(version.remoteRevision)
+                              : version.content;
+                            if (
+                              autosaveGenerationRef.current !== generation ||
+                              historyRequestRef.current !== request ||
+                              !actionFeedback.current(ticket)
+                            )
+                              return;
+                            actionFeedback.finish(ticket);
+                            setVersions((current) =>
+                              current.map((row) =>
+                                row.id === version.id ? { ...row, content } : row,
+                              ),
+                            );
+                            const origin = historyReturnRef.current;
+                            compareReturnRef.current = origin
+                              ? { ...origin, target: origin.trigger }
+                              : null;
+                            setCompareVersion(version.id);
+                            closeHistory();
+                          } catch (error) {
+                            if (
+                              autosaveGenerationRef.current !== generation ||
+                              historyRequestRef.current !== request
+                            )
+                              return;
+                            actionFeedback.finish(
+                              ticket,
+                              `Version could not be loaded. ${error instanceof Error ? error.message : "Try Preview version again."} Your current draft is preserved.`,
+                            );
+                          }
+                        }}
+                      >
+                        <GitCompare className="h-3 w-3" /> Preview version
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </aside>
-          ) : null}
+            </DialogContent>
+          </Dialog>
           {commentsOpen ? (
             <aside
               className="fixed inset-x-0 bottom-0 z-20 max-h-[70dvh] w-full shrink-0 overflow-y-auto rounded-t-2xl border bg-[var(--surface-secondary)] p-3 shadow-xl md:static md:max-h-none md:w-72 md:rounded-none md:border-y-0 md:border-r-0 md:shadow-none"
@@ -776,7 +1196,7 @@ function ArtifactEditorSession({
               {canPersistVersions ? (
                 remoteSnapshot ? (
                   <CanvasComments
-                    key={remoteSnapshot.document.id}
+                    key={JSON.stringify([userKey, remoteSnapshot.document.id])}
                     snapshot={remoteSnapshot}
                     value={value}
                     actorId={userKey}
@@ -811,11 +1231,18 @@ function ArtifactEditorSession({
                 )
               ) : (
                 <>
-                  <h2 className="text-sm font-semibold">Comments</h2>
+                  <h2 ref={commentsHeadingRef} tabIndex={-1} className="text-sm font-semibold">
+                    Comments
+                  </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Comments stay with this open editing session.
                   </p>
+                  <label htmlFor={commentFieldId} className="mt-3 block text-sm font-medium">
+                    Comment
+                  </label>
                   <textarea
+                    ref={commentInputRef}
+                    id={commentFieldId}
                     value={commentDraft}
                     onChange={(event) => setCommentDraft(event.target.value)}
                     className="mt-3 min-h-20 w-full rounded-lg border bg-background p-2 text-xs"
@@ -825,6 +1252,9 @@ function ArtifactEditorSession({
                   <button
                     disabled={!commentDraft.trim()}
                     onClick={() => {
+                      if (!commentDraft.trim() || commentDraftRef.current !== commentDraft) return;
+                      commentDraftRef.current = "";
+                      commentInputRef.current?.focus({ preventScroll: true });
                       const area = textareaRef.current;
                       const selection = area
                         ? value.slice(area.selectionStart, area.selectionEnd)
@@ -839,7 +1269,7 @@ function ArtifactEditorSession({
                       ]);
                       setCommentDraft("");
                     }}
-                    className="mt-2 min-h-9 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
+                    className="mt-2 min-h-11 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
                   >
                     Add comment
                   </button>
@@ -859,14 +1289,18 @@ function ArtifactEditorSession({
                           )}
                           <p>{comment.body}</p>
                           <button
-                            onClick={() =>
-                              setComments((current) =>
-                                current.filter((value) => value.id !== comment.id),
-                              )
+                            onClick={(event) =>
+                              setDeleteCommentTarget({
+                                id: comment.id,
+                                body: comment.body,
+                                scope: resultScope,
+                                trigger: event.currentTarget,
+                                url: window.location.href,
+                              })
                             }
-                            className="mt-2 text-destructive"
+                            className="mt-2 min-h-11 text-destructive"
                           >
-                            Delete
+                            Delete comment
                           </button>
                         </li>
                       ))}
@@ -888,15 +1322,26 @@ function ArtifactEditorSession({
                 ? "Another editor saved changes. Your draft is preserved; copy it before loading the current version."
                 : collaboration.error}
             </span>
-            <button className="min-h-9 rounded-lg border px-3" onClick={() => void copy(value)}>
+            <button className="min-h-11 rounded-lg border px-4" onClick={() => void copy(value)}>
               Copy my draft
             </button>
             {collaboration.conflict ? (
               <button
-                className="min-h-9 rounded-lg border px-3"
-                onClick={() => {
+                className="min-h-11 rounded-lg border px-4"
+                onClick={(event) => {
                   const content = collaboration.adopt();
                   if (content !== null) {
+                    // The recovery control disappears after adoption. Hand focus to a
+                    // surviving Result target now, without scheduling a later focus steal.
+                    restoreResultFocus(
+                      {
+                        target: null,
+                        url: window.location.href,
+                        scope: resultScope,
+                        generation: autosaveGenerationRef.current,
+                      },
+                      event.currentTarget,
+                    );
                     autosaveGenerationRef.current += 1;
                     localEditRevisionRef.current = 0;
                     setAcknowledgedEditRevision(0);
@@ -910,7 +1355,7 @@ function ArtifactEditorSession({
                 Load current version
               </button>
             ) : (
-              <button className="min-h-9 rounded-lg border px-3" onClick={collaboration.retry}>
+              <button className="min-h-11 rounded-lg border px-4" onClick={collaboration.retry}>
                 Reconnect
               </button>
             )}
@@ -928,10 +1373,42 @@ function ArtifactEditorSession({
                 {versions.find((version) => version.id === compareVersion)?.label}
               </h2>
               <button
-                onClick={() => setCompareVersion(null)}
+                type="button"
+                onClick={(event) => {
+                  if (
+                    !compareOrigin ||
+                    compareReturnRef.current !== compareOrigin ||
+                    !resultFocusIsCurrent(compareOrigin)
+                  )
+                    return;
+                  // Transfer focus before removing the focused preview control; no delayed work
+                  // can steal focus from a later interaction or a replacement Result.
+                  restoreResultFocus(compareOrigin, event.currentTarget);
+                  compareReturnRef.current = null;
+                  setCompareVersion(null);
+                }}
                 className="min-h-9 rounded-lg px-3 text-xs hover:bg-accent"
               >
-                Close comparison
+                Close preview
+              </button>
+              <button
+                type="button"
+                className="min-h-11 rounded-lg border px-3 text-sm"
+                disabled={canPersistVersions && !remoteSnapshot?.canEdit}
+                onClick={() => {
+                  const version = versions.find((item) => item.id === compareVersion);
+                  if (!version) return;
+                  updateValue(version.content);
+                  compareReturnRef.current = null;
+                  setCompareVersion(null);
+                  toast.message(
+                    canPersistVersions
+                      ? "Earlier version loaded. Saving it as a new revision…"
+                      : "Earlier version loaded into this session. Save to Library or export to keep it.",
+                  );
+                }}
+              >
+                Restore this version
               </button>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
@@ -951,113 +1428,211 @@ function ArtifactEditorSession({
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2 px-3 py-3 border-t border-border">
-          <button
-            onClick={() => copy(initialContent)}
-            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
-          >
-            <Copy className="w-3.5 h-3.5 inline mr-1" />
-            Copy original
-          </button>
-          <button
-            onClick={() => copy(value)}
-            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
-          >
-            {copied ? (
-              <Check className="w-3.5 h-3.5 inline mr-1" />
-            ) : (
-              <Copy className="w-3.5 h-3.5 inline mr-1" />
-            )}
-            {copied ? "Copied" : "Copy edited"}
-          </button>
-          {kind === "writing" && (
-            <select
-              aria-label="Export document format"
-              value={exportFormat}
-              onChange={(event) => setExportFormat(event.target.value as typeof exportFormat)}
-              className="text-xs px-2 py-1.5 rounded border border-border bg-background"
-            >
-              <option value="source">Markdown</option>
-              <option value="pdf">PDF</option>
-              <option value="docx">Word DOCX</option>
-              <option value="xlsx">Excel XLSX</option>
-              <option value="pptx">PowerPoint PPTX</option>
-            </select>
-          )}
-          <button
-            onClick={() =>
-              kind === "writing" && exportFormat !== "source"
-                ? void exportOffice()
-                : exportDocument()
-            }
-            disabled={exporting}
-            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent disabled:opacity-50"
-          >
-            <Download className="mr-1 inline h-3.5 w-3.5" /> Export
-          </button>
-          <button
-            onClick={save}
-            disabled={saving}
-            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent disabled:opacity-50"
-          >
-            <Bookmark className={`w-3.5 h-3.5 inline mr-1 ${saved ? "fill-current" : ""}`} />
-            {saved ? "Saved" : saving ? "Saving…" : "Save to Library"}
-          </button>
-          <button
-            onClick={() =>
-              openInWork(
-                { type: "artifact", id: kind, title: artifactTitle, content: value },
-                userKey,
-              )
-            }
-            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
-          >
-            Open in Work
-          </button>
-          <button
-            onClick={() =>
-              continueInChat(
-                {
-                  type: "artifact",
-                  id: kind,
-                  title: artifactTitle,
-                  content: value,
-                },
-                userKey,
-              )
-            }
-            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
-          >
-            Ask Kova
-          </button>
-          <button
-            onClick={() =>
-              addToContextPack(
-                { type: "artifact", id: kind, title: artifactTitle, content: value },
-                userKey,
-              )
-            }
-            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
-          >
-            Add to Context Pack
-          </button>
-          {onImprove && (
+        {copyError && (
+          <div role="alert" className="border-t p-3 text-sm">
+            Couldn’t copy.{" "}
             <button
-              onClick={improve}
-              disabled={canPersistVersions && !remoteSnapshot?.canEdit}
-              className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
+              type="button"
+              className="underline"
+              onClick={() => {
+                setMode("edit");
+                requestAnimationFrame(() => {
+                  textareaRef.current?.focus();
+                  textareaRef.current?.select();
+                });
+              }}
             >
-              <Wand2 className="w-3.5 h-3.5 inline mr-1" />
-              Improve with KovaGPT
-            </button>
-          )}
-          <div className="ml-auto">
-            <button onClick={onClose} className="text-xs px-3 py-1.5 rounded hover:bg-accent">
-              Close
+              Select the result to copy manually
             </button>
           </div>
+        )}
+        <div className="flex flex-wrap items-center gap-3 border-t p-3 text-xs text-muted-foreground">
+          <span>
+            {statistics.words.toLocaleString()} words · {statistics.lines.toLocaleString()} lines
+          </span>
+          {saved && <span role="status">Saved to Library</span>}
+          {copied && <span role="status">Copied</span>}
+          {canPersistVersions && <CollaborationStatus {...collaboration.presence} />}
         </div>
       </div>
     </div>
+  );
+  return (
+    <>
+      {embedded ? (
+        editorBody
+      ) : (
+        <Dialog
+          open={open}
+          onOpenChange={(next) => {
+            if (!next) requestClose();
+          }}
+        >
+          <DialogContent className="kova-result-dialog" aria-describedby={undefined}>
+            <DialogTitle className="sr-only">{artifactTitle}</DialogTitle>
+            {editorBody}
+          </DialogContent>
+        </Dialog>
+      )}
+      <ResultCommentDeleteDialog
+        target={deleteCommentTarget}
+        scope={resultScope}
+        durable={false}
+        fallbackRef={commentsHeadingRef}
+        onClose={() => setDeleteCommentTarget(null)}
+        onDelete={(id) => {
+          setComments((current) => current.filter((comment) => comment.id !== id));
+        }}
+      />
+      {rewriteTarget && (
+        <SelectionEditDialog
+          open
+          onOpenChange={(next) => {
+            if (!next) setRewriteTarget(null);
+          }}
+          target={rewriteTarget}
+          onApply={(next, origin) =>
+            updateValue(next, true, origin === "ai" ? "AI revision" : "User edit")
+          }
+        />
+      )}
+      {shareSnapshot !== null && (
+        <Dialog
+          open
+          onOpenChange={(next) => {
+            if (!next) setShareSnapshot(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Share result snapshot</DialogTitle>
+              <DialogDescription>
+                Only the text below is included. Later edits, chat history, attachments, and private
+                metadata are excluded.
+              </DialogDescription>
+            </DialogHeader>
+            <pre className="max-h-80 overflow-auto whitespace-pre-wrap font-sans text-sm">
+              {shareSnapshot}
+            </pre>
+            <button
+              type="button"
+              className="min-h-11 rounded-lg border px-4"
+              onClick={async () => {
+                try {
+                  if (navigator.share)
+                    await navigator.share({ title: artifactTitle, text: shareSnapshot });
+                  else {
+                    await navigator.clipboard.writeText(shareSnapshot);
+                    toast.success("Snapshot copied");
+                  }
+                  setShareSnapshot(null);
+                } catch (error) {
+                  if (!(error instanceof Error && error.name === "AbortError"))
+                    toast.error("Couldn’t share. Your result is preserved.");
+                }
+              }}
+            >
+              {typeof navigator !== "undefined" && typeof navigator.share === "function"
+                ? "Share this snapshot"
+                : "Copy this snapshot"}
+            </button>
+          </DialogContent>
+        </Dialog>
+      )}
+      {open && serverExportOpen && (
+        <ResultServerExportDialog
+          key={resultScope}
+          title={artifactTitle}
+          content={value}
+          kind={kind}
+          isCurrent={() =>
+            serverExportReturnRef.current === serverExportOrigin &&
+            resultFocusIsCurrent(serverExportOrigin)
+          }
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (!serverExportOrigin || serverExportReturnRef.current !== serverExportOrigin) return;
+            serverExportReturnRef.current = null;
+            restoreResultFocus(serverExportOrigin, event.target);
+          }}
+          onClose={() => {
+            if (serverExportReturnRef.current === serverExportOrigin) setServerExportOpen(false);
+          }}
+        />
+      )}
+      <Dialog
+        open={closeReview}
+        onOpenChange={(next) => {
+          if (closeReviewReturnRef.current === closeReviewOrigin) setCloseReview(next);
+        }}
+      >
+        <DialogContent
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            if (
+              closeReviewReturnRef.current === closeReviewOrigin &&
+              resultFocusIsCurrent(closeReviewOrigin)
+            )
+              keepEditingRef.current?.focus({ preventScroll: true });
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            const origin = closeReviewOrigin;
+            if (!origin || closeReviewReturnRef.current !== origin) return;
+            closeReviewReturnRef.current = null;
+            if (!resultFocusIsCurrent(origin) || !resultOwnsFocus(origin, event.target)) return;
+            if (origin.discard) onClose();
+            else restoreResultFocus(origin, event.target);
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Keep your result before closing?</DialogTitle>
+            <DialogDescription>
+              {saveState === "saving"
+                ? "Saving is still in progress. Keep editing until it completes, or download your current draft."
+                : "Your latest changes are not confirmed saved beyond this session. Download them or keep editing before closing."}
+            </DialogDescription>
+          </DialogHeader>
+          {actionFeedback.errors.export ? (
+            <p role="alert" className="text-sm text-destructive">
+              {actionFeedback.errors.export}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className="min-h-11 rounded-lg border px-4"
+            onClick={exportDocument}
+          >
+            Download current draft
+          </button>
+          <button
+            type="button"
+            ref={keepEditingRef}
+            className="min-h-11 rounded-lg border px-4"
+            onClick={() => {
+              if (closeReviewReturnRef.current === closeReviewOrigin) setCloseReview(false);
+            }}
+          >
+            Keep editing
+          </button>
+          <button
+            type="button"
+            className="min-h-11 rounded-lg border px-4"
+            onClick={() => {
+              if (
+                closeReviewOrigin &&
+                closeReviewReturnRef.current === closeReviewOrigin &&
+                resultFocusIsCurrent(closeReviewOrigin)
+              ) {
+                closeReviewOrigin.discard = true;
+                setCloseReview(false);
+              }
+            }}
+          >
+            Close without keeping changes
+          </button>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

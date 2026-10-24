@@ -1,5 +1,6 @@
 import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { PublicSite } from "@/components/public/PublicSite";
+import { SearchablePicker } from "@/components/ui/searchable-picker";
 import { resolveLocale, RTL_LOCALES, translations, SUPPORTED_LOCALES } from "@/lib/locales";
 export const Route = createFileRoute("/$locale/home")({
   loader: ({ params }) => {
@@ -50,23 +51,27 @@ function LocaleHome() {
         <p className="mt-6 max-w-2xl text-lg text-muted-foreground">{copy.description}</p>
         <Link
           to="/"
-          className="mt-8 inline-flex min-h-11 w-fit items-center rounded-full bg-foreground px-5 text-background"
+          className="kova-button mt-8 inline-flex min-h-11 w-fit items-center rounded-full bg-foreground px-5 text-background"
         >
           {copy.open}
         </Link>
         <label className="mt-10 w-fit text-sm">
-          <span lang="en" className="sr-only">
+          <span lang="en" className="sr-only" id="locale-language-label">
             Language
           </span>
-          <select
+          <SearchablePicker
+            aria-labelledby="locale-language-label"
             value={locale}
-            onChange={(event) => location.assign(`/${event.target.value}/home`)}
-            className="min-h-11 rounded-lg border bg-background px-3"
-          >
-            {SUPPORTED_LOCALES.map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
+            dir={direction}
+            options={SUPPORTED_LOCALES.map((item) => ({ value: item, label: item }))}
+            onValueChange={(value) => {
+              const nextLocale = resolveLocale(value);
+              if (nextLocale) location.assign(`/${nextLocale}/home`);
+            }}
+            searchLabel="Search languages"
+            emptyText="No languages found."
+            className="min-h-11 rounded-lg border bg-background px-3 text-start"
+          />
         </label>
       </main>
     </PublicSite>

@@ -1,0 +1,37 @@
+/* Only the routable Settings page uses the shell's shared title utility slot. */
+body
+  .kova-settings-route
+  section.kova-settings-page.kova-settings-dialog
+  > .kova-settings-page-header {
+  padding-inline: 0;
+  text-align: left;
+}
+body
+  .kova-settings-route
+  section.kova-settings-page.kova-settings-dialog
+  > .kova-settings-page-header
+  > div {
+  align-items: flex-start;
+}
+body
+  section.kova-settings-page.kova-settings-dialog
+  > .kova-settings-page-header
+  > div
+  > div:first-child {
+  min-width: 0;
+}
+body
+  section.kova-settings-page.kova-settings-dialog
+  > .kova-settings-page-header
+  .kova-core-utilities {
+  flex-shrink: 0;
+}
+@container settings (max-width: 959px) {
+  body
+    .kova-settings-route
+    section.kova-settings-page.kova-settings-dialog
+    .kova-settings-content-header {
+    padding-inline: 0;
+    margin-inline: 0;
+  }
+}

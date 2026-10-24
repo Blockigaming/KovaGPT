@@ -333,6 +333,7 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
         <label className="grid gap-1 text-sm">
           Notes or an explanation to practice
           <textarea
+            aria-label="Notes or an explanation to practice"
             rows={5}
             maxLength={20000}
             value={material}

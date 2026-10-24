@@ -287,7 +287,7 @@ export async function requireVerifiedUser(request: Request): Promise<HttpAuthedC
 
 export async function enforceQuota(
   caller: AuthedCaller,
-  kind: "images" | "chats" | "uploads",
+  kind: "images" | "chats" | "uploads" | "voice",
   limit: number,
   increment = 1,
   signal?: AbortSignal,
@@ -308,11 +308,13 @@ export async function enforceQuota(
     return jsonError("Quota check failed", 500);
   }
   if (data === false) {
+    if (kind === "voice") return tooMany(`Daily voice request limit reached (${limit}/day).`);
     const label = kind === "images" ? "image" : kind === "uploads" ? "file upload" : "message";
     return tooMany(
-      `Daily ${label} limit reached (${limit}/day). Resets in 24 hours or upgrade for more.`,
+      `Daily ${label} limit reached (${limit}/day). Resets at midnight UTC. Upgrade for more.`,
     );
   }
+  if (data !== true) return jsonError("Quota could not be verified", 503);
   return null;
 }
 
@@ -392,7 +394,7 @@ export async function assertNotBanned(caller: AuthedCaller): Promise<Response | 
  */
 export async function assertFeatureEnabled(
   caller: AuthedCaller,
-  feature: "chat" | "images" | "uploads" | "signups",
+  feature: "chat" | "images" | "uploads" | "signups" | "voice",
 ): Promise<Response | null> {
   const { data, error } = await caller.supabaseAdmin
     .from("feature_flags")
@@ -403,7 +405,7 @@ export async function assertFeatureEnabled(
     console.error("[assertFeatureEnabled] lookup error", error);
     return jsonError("Feature availability could not be verified. Please try again shortly.", 503);
   }
-  if (data && data.enabled === false) {
+  if ((feature === "voice" && data?.enabled !== true) || (data && data.enabled === false)) {
     return jsonError(
       `${feature[0].toUpperCase() + feature.slice(1)} is temporarily unavailable for maintenance. Please try again shortly.`,
       503,

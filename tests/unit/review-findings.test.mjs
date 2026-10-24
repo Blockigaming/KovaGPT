@@ -7,8 +7,8 @@ const read = (path) => readFileSync(path, "utf8");
 test("Playwright starts the built preview app before browser tests", () => {
   const config = read("playwright.config.ts");
   assert.match(config, /webServer:\s*{/);
-  assert.match(config, /npm run preview -- --host 127\.0\.0\.1 --port 8080/);
-  assert.match(config, /url:\s*"http:\/\/127\.0\.0\.1:8080"/);
+  assert.match(config, /npm run preview -- --host 127\.0\.0\.1 --port 4189/);
+  assert.match(config, /url:\s*"http:\/\/127\.0\.0\.1:4189"/);
 });
 
 test("retired compatibility email routes are absent and support delivery remains fail closed", () => {
@@ -102,24 +102,42 @@ test("model selectors only advertise backed intelligence modes", () => {
   assert.equal(existsSync("src/lib/kova-version.ts"), false);
 });
 
-test("upload quotas follow the signed-in tier and reject invalid sizes before charging", () => {
+test("uploads retain authoritative tier quotas and reject invalid sizes before autosave", () => {
   const composer = read("src/components/ChatInput.tsx");
-  const limits = read("src/lib/limits.ts");
   const modes = read("src/lib/modes.ts");
-  assert.match(composer, /const uploadLimit = DAILY_UPLOAD_LIMIT_BY_TIER\[userTier\]/);
-  assert.equal((composer.match(/tryUseUpload\(uploadLimit\)/g) ?? []).length, 2);
-  assert.doesNotMatch(composer, /getUsage\(\)|u\.uploads >= DAILY_UPLOAD_LIMIT/);
-  assert.match(limits, /tryUseUpload\(limit = DAILY_UPLOAD_LIMIT\)/);
-  assert.match(limits, /u\.uploads >= normalizedLimit/);
-  assert.match(modes, /free: 3,\s*plus: 50,\s*pro: 200,/);
-  const imageSize = composer.indexOf("f.size > MAX_IMAGE_FILE_BYTES");
-  const imageCharge = composer.indexOf("tryUseUpload(uploadLimit)");
-  const textSize = composer.indexOf(
-    "f.size > (isDocument ? 10 * 1024 * 1024 : MAX_TEXT_FILE_BYTES)",
+  const chat = read("src/routes/api/chat.ts");
+  const quota = read("src/lib/upload-quota.server.mjs");
+  assert.match(modes, /DAILY_UPLOAD_LIMIT_BY_TIER[\s\S]*?free: 2,\s*plus: 50,\s*pro: 200,/);
+  assert.doesNotMatch(composer, /tryUseUpload\(|u\.uploads >= DAILY_UPLOAD_LIMIT/);
+  assert.match(
+    composer,
+    /<ComposerUploadAllowance ownerId=\{isLoaded \? \(user\?\.id \?\? null\) : null\}/,
   );
-  const textCharge = composer.indexOf("tryUseUpload(uploadLimit)", imageCharge + 1);
-  assert.ok(imageSize > -1 && imageSize < imageCharge);
-  assert.ok(textSize > -1 && textSize < textCharge);
+  assert.match(
+    chat,
+    /reserveUploads\(\s*auth,\s*currentAttachments,\s*DAILY_UPLOAD_LIMIT_BY_TIER\[callerTier\],\s*signal/,
+  );
+  assert.match(chat, /if \(!uploadAllowed\)[\s\S]*?status: 429/);
+  assert.match(quota, /try_reserve_daily_uploads/);
+  assert.match(
+    quota,
+    /if \(error \|\| typeof data !== "boolean"\) throw new Error\("upload_quota_unavailable"\)/,
+  );
+  assert.match(quota, /item\.kind !== "library_file"/);
+  for (const [guard, next] of [
+    ["f.size > MAX_IMAGE_FILE_BYTES", "attachmentAutoSave.save(completed, readScope)"],
+    [
+      "f.size > (isDocument ? 10 * 1024 * 1024 : MAX_TEXT_FILE_BYTES)",
+      "attachmentAutoSave.save(completed, readScope, isDocument ? f : undefined)",
+    ],
+  ]) {
+    const start = composer.indexOf(guard);
+    const save = composer.indexOf(next, start);
+    assert.ok(start >= 0 && save > start, "Validate file size before persistence/admission");
+    const rejection = composer.slice(start, composer.indexOf("const uploading:", start));
+    assert.match(rejection, /status: "failed"/);
+    assert.match(rejection, /continue;/);
+  }
 });
 
 test("scheduled task surfaces stay truthful while the runner is disabled", () => {
@@ -142,7 +160,24 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
   assert.match(route, /Scheduled Tasks Status/);
   assert.match(route, /Upgrading will not enable scheduled/);
   assert.doesNotMatch(route, /Schedule KovaGPT to do something for you later/);
-  assert.match(sidebar, /Scheduled tasks status/);
+  // Approved navigation uses the concise destination name. Truthfulness lives in
+  // the destination's runtime readiness notice and creation gate, not a suffix.
+  assert.match(
+    sidebar,
+    /canSchedule \? navLink\("\/scheduled-tasks", "Scheduled tasks", TasksGlyph\) : null/,
+  );
+  assert.match(route, /!executionAvailable[\s\S]*?aria-label="Scheduled Tasks Status"/);
+  assert.match(route, /visibleAccess === "eligible" && \(/);
+  assert.match(
+    route,
+    /disabled=\{!executionAvailable\}[\s\S]*?openTaskEditor\("new", "settings", event\.currentTarget\)/,
+  );
+  assert.match(route, /<AutomationBuilder[\s\S]*?open=\{executionAvailable && builderOpen\}/);
+  assert.match(
+    route,
+    /<ScheduledTaskEditor[\s\S]*?executionAvailable=\{executionAvailable && visibleAccess === "eligible"\}/,
+  );
+  assert.match(read("src/components/ScheduledTaskEditor.tsx"), /!task && !executionAvailable/);
   assert.match(palette, /Scheduled Tasks status/);
   assert.match(capabilities, /label: "Scheduled Tasks status"/);
   assert.match(
@@ -164,15 +199,22 @@ test("billing checkout and entitlements use exact supported plan keys", () => {
   const apiAuth = read("src/lib/api-auth.server.ts");
   const clientTier = read("src/hooks/useTier.ts");
   const webhook = read("src/routes/api/public/payments/webhook.ts");
-  assert.match(plans, /plus_monthly:[\s\S]*tier: "plus"[\s\S]*trialPeriodDays: 30/);
-  assert.match(plans, /pro_monthly:[\s\S]*tier: "pro"[\s\S]*trialPeriodDays: 0/);
+  const policy = read("src/lib/billing-policy.mjs");
+  const checkoutParams = read("src/lib/billing-policy-params.ts");
+  assert.match(plans, /plus_monthly:\s*\{[^}]*tier: "plus"[^}]*trialPeriodDays: 0/);
+  assert.match(plans, /pro_monthly:\s*\{[^}]*tier: "pro"[^}]*trialPeriodDays: 0/);
   assert.match(plans, /export const BILLING_ENV = "live" as const/);
   assert.match(plans, /Object\.prototype\.hasOwnProperty\.call\(BILLING_PLANS, value\)/);
   assert.ok(
-    checkout.indexOf("resolveBillingPlan(data.priceId)") < checkout.indexOf("stripe.prices.list"),
+    checkout.indexOf("const plan = resolveBillingPlan(data.priceId)") <
+      checkout.indexOf("const session = await createMonthlyIntroCheckout("),
   );
-  assert.match(checkout, /lookup_keys: \[plan\.lookupKey\]/);
-  assert.match(checkout, /trial_period_days: plan\.trialPeriodDays/);
+  assert.match(checkout, /if \(!plan\) throw new Error\("Invalid priceId"\)/);
+  assert.match(checkout, /createMonthlyIntroCheckout\(\{[\s\S]*?\n\s*plan,/);
+  assert.match(policy, /lookup_keys: \[plan\.lookupKey\]/);
+  assert.match(policy, /price\.id !== plan\.livePriceId/);
+  assert.match(checkoutParams, /line_items: \[\{ price: input\.priceId, quantity: 1 \}\]/);
+  assert.doesNotMatch(checkoutParams, /trial_period_days:|trial_end:/);
   for (const source of [checkout, apiAuth, clientTier])
     assert.doesNotMatch(source, /\.includes\(["'](?:plus|pro)["']\)/);
   assert.match(apiAuth, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, userId\)/);

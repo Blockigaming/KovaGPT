@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Sparkles, Wand2 } from "lucide-react";
+import { Loader2, Pencil, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -23,6 +23,7 @@ import {
   validateSelectionRange,
 } from "@/lib/selection-edit.mjs";
 import { saveLocalVersion } from "@/lib/local-chat-workspace.mjs";
+import { resultRevisionDiff, applyReviewedDiff } from "@/lib/result-revision-diff.mjs";
 import { safeBrowserStorage } from "@/lib/principal-browser-storage.mjs";
 
 export type SelectionTarget = {
@@ -50,6 +51,7 @@ export function SelectionEditDialog({
   messageId,
   temporary = false,
   onApply,
+  initialInstruction = "",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -57,12 +59,17 @@ export function SelectionEditDialog({
   chatId?: string | null;
   messageId?: string | null;
   temporary?: boolean;
-  onApply: (nextContent: string) => void;
+  onApply: (nextContent: string, origin?: "user" | "ai") => void;
+  initialInstruction?: string;
 }) {
   const { isSignedIn } = useUser();
   const saveVersion = useServerFn(saveMessageVersion);
-  const [instruction, setInstruction] = useState("");
+  const [instruction, setInstruction] = useState(initialInstruction);
+  useEffect(() => {
+    if (open) setInstruction(initialInstruction);
+  }, [open, initialInstruction]);
   const [draft, setDraft] = useState<string | null>(null);
+  const [draftOrigin, setDraftOrigin] = useState<"user" | "ai">("user");
   const [busy, setBusy] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +88,14 @@ export function SelectionEditDialog({
 
   const invalid = range && "error" in range ? range.error : null;
   const selected = range && !("error" in range) ? range.selected : "";
+  const revisionChunks = useMemo(
+    () => resultRevisionDiff(selected, draft ?? selected),
+    [selected, draft],
+  );
+  const [rejectedChanges, setRejectedChanges] = useState<number[]>([]);
+  useEffect(() => setRejectedChanges([]), [draft, selected]);
+  const reviewedDraft = applyReviewedDiff(revisionChunks, rejectedChanges);
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   useEffect(() => {
     if (open) return;
@@ -140,6 +155,7 @@ export function SelectionEditDialog({
         setError("The rewrite came back empty, so nothing was changed.");
         return;
       }
+      setDraftOrigin("ai");
       setDraft(next);
     } catch (err) {
       if (controller.signal.aborted) return;
@@ -158,7 +174,7 @@ export function SelectionEditDialog({
     if (!target || invalid || draft === null) return;
     let merged: string;
     try {
-      merged = applySelectionEdit(target.source, target.start, target.end, draft);
+      merged = applySelectionEdit(target.source, target.start, target.end, reviewedDraft);
     } catch (err) {
       setError(err instanceof Error ? err.message : "That rewrite could not be applied.");
       return;
@@ -167,7 +183,7 @@ export function SelectionEditDialog({
     setError(null);
     try {
       if (temporary) {
-        onApply(merged);
+        onApply(merged, draftOrigin);
         toast.message("Edit applied. Temporary chats keep no edit history.");
       } else if (isSignedIn && chatId && messageId) {
         await saveVersion({
@@ -181,7 +197,7 @@ export function SelectionEditDialog({
             accepted: true,
           },
         });
-        onApply(merged);
+        onApply(merged, draftOrigin);
         toast.success("Edit saved to this chat");
       } else if (chatId && messageId) {
         saveLocalVersion(safeBrowserStorage("localStorage"), chatId, messageId, {
@@ -190,10 +206,10 @@ export function SelectionEditDialog({
           instruction: instruction.trim() || null,
           source: "inline_edit",
         });
-        onApply(merged);
+        onApply(merged, draftOrigin);
         toast.message("Edit saved on this device only");
       } else {
-        onApply(merged);
+        onApply(merged, draftOrigin);
         toast.message("Edit applied to this response");
       }
       onOpenChange(false);
@@ -208,6 +224,8 @@ export function SelectionEditDialog({
   }, [
     chatId,
     draft,
+    reviewedDraft,
+    draftOrigin,
     instruction,
     invalid,
     isSignedIn,
@@ -267,12 +285,12 @@ export function SelectionEditDialog({
                 onClick={() => void generate()}
                 disabled={busy || applying}
                 aria-busy={busy}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
               >
                 {busy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Sparkles className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                 )}
                 {draft === null ? "Rewrite with Kova" : "Retry"}
               </button>
@@ -280,7 +298,7 @@ export function SelectionEditDialog({
                 <button
                   type="button"
                   onClick={() => abortRef.current?.abort()}
-                  className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium hover:bg-accent"
+                  className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-accent"
                 >
                   Stop
                 </button>
@@ -289,32 +307,93 @@ export function SelectionEditDialog({
                 <button
                   type="button"
                   onClick={() => setDraft(null)}
-                  className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium hover:bg-accent"
+                  className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-accent"
                 >
-                  Reject rewrite
+                  Reject changes
                 </button>
               )}
             </div>
 
             {draft !== null && (
+              <fieldset className="max-h-64 overflow-auto rounded-xl border border-border p-3">
+                <legend className="px-1 text-sm font-medium">Review changes</legend>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Removed text is struck through. Added text is underlined. Clear a change to keep
+                  its original text.
+                </p>
+                {revisionChunks.map((chunk, index) =>
+                  chunk.kind === "unchanged" ? (
+                    <p key={index} className="whitespace-pre-wrap text-sm">
+                      {chunk.before}
+                    </p>
+                  ) : (
+                    <div key={index} className="my-3 rounded-lg border border-border p-3">
+                      <label className="mb-2 flex min-h-11 items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={!rejectedChanges.includes(index)}
+                          onChange={(event) =>
+                            setRejectedChanges((previous) =>
+                              event.target.checked
+                                ? previous.filter((item) => item !== index)
+                                : [...previous, index],
+                            )
+                          }
+                        />
+                        Accept change{" "}
+                        {
+                          revisionChunks
+                            .slice(0, index + 1)
+                            .filter((item) => item.kind === "change").length
+                        }
+                      </label>
+                      {chunk.before && (
+                        <del className="block whitespace-pre-wrap text-sm">{chunk.before}</del>
+                      )}
+                      {chunk.after && (
+                        <ins className="mt-2 block whitespace-pre-wrap text-sm">{chunk.after}</ins>
+                      )}
+                    </div>
+                  ),
+                )}
+              </fieldset>
+            )}
+
+            {draft !== null && (
               <div>
                 <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <Wand2 className="h-3.5 w-3.5" /> Replacement preview (editable)
+                  <Wand2 className="h-3.5 w-3.5" /> Proposed replacement (editable)
                 </p>
                 <textarea
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                   rows={Math.min(14, Math.max(4, draft.split("\n").length + 1))}
                   className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/30"
-                  aria-label="Replacement text"
+                  aria-label="Proposed replacement text"
+                  aria-describedby="selection-proposal-guidance"
                 />
+                <p id="selection-proposal-guidance" className="mt-2 text-xs text-muted-foreground">
+                  Only checked changes will be applied. Editing this proposal selects all changes
+                  again so you can review the new version.
+                </p>
+                <details className="mt-3 rounded-xl border border-border px-3">
+                  <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">
+                    Preview accepted text
+                  </summary>
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words pb-3 font-sans text-sm">
+                    {reviewedDraft}
+                  </pre>
+                </details>
               </div>
             )}
 
             {draft === null && (
               <button
                 type="button"
-                onClick={() => setDraft(selected)}
+                onClick={() => {
+                  setDraftOrigin("user");
+                  setDraft(selected);
+                }}
                 className="self-start text-xs font-medium text-muted-foreground underline hover:text-foreground"
               >
                 Edit the passage by hand instead
@@ -324,9 +403,11 @@ export function SelectionEditDialog({
             <p className="text-xs text-muted-foreground">
               {temporary
                 ? "Temporary chat: this edit applies to the visible response and is not saved to edit history."
-                : isSignedIn
-                  ? "Accepted edits are saved to this chat's version history."
-                  : "Accepted edits are kept on this device only until you sign in."}
+                : chatId && messageId
+                  ? isSignedIn
+                    ? "Accepted edits are saved to this chat's version history."
+                    : "Accepted edits are kept in this chat's history on this device only."
+                  : "Accepted edits apply to this local Result. They are not saved to chat history."}
             </p>
           </div>
         )}
@@ -341,7 +422,7 @@ export function SelectionEditDialog({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-border px-4 text-sm font-medium hover:bg-accent"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-accent"
           >
             Cancel
           </button>
@@ -350,10 +431,10 @@ export function SelectionEditDialog({
             onClick={() => void accept()}
             disabled={draft === null || applying || Boolean(invalid)}
             aria-busy={applying}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
           >
             {applying && <Loader2 className="h-4 w-4 animate-spin" />}
-            Accept edit
+            Accept changes
           </button>
         </DialogFooter>
       </DialogContent>

@@ -431,6 +431,7 @@ function SummaryPage() {
             Here's what's happening in your workspace.
           </p>
           <button
+            data-kova-button-shape="preserve"
             onClick={() => navigate({ to: "/" })}
             className="mt-5 w-full flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-left text-muted-foreground hover:bg-accent/40 hover:border-foreground/20 transition shadow-sm"
           >
@@ -454,7 +455,7 @@ function SummaryPage() {
                   <Link
                     key={a.label}
                     to={a.to}
-                    className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent/40 transition"
+                    className="kova-button flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent/40 transition"
                   >
                     <a.icon className="w-4 h-4 text-muted-foreground" />
                     <span className="truncate">{a.label}</span>
@@ -478,6 +479,7 @@ function SummaryPage() {
                   {continueChats.map((c) => (
                     <li key={c.id}>
                       <button
+                        data-kova-button-shape="preserve"
                         onClick={() => {
                           try {
                             savePendingActive(userKey, c.id);
@@ -507,6 +509,7 @@ function SummaryPage() {
                 {pinned.map((c) => (
                   <li key={c.id}>
                     <button
+                      data-kova-button-shape="preserve"
                       onClick={() => {
                         try {
                           savePendingActive(userKey, c.id);

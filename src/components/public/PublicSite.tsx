@@ -43,9 +43,7 @@ export function PublicPageView({
       <main id="main-content" tabIndex={-1} className="min-w-0 [overflow-wrap:anywhere]">
         <section className="relative overflow-hidden border-b border-border/70">
           <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              {eyebrow}
-            </p>
+            <p className="text-sm font-semibold text-muted-foreground">{eyebrow}</p>
             <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-.04em] text-balance sm:text-6xl">
               {title}
             </h1>
@@ -56,14 +54,14 @@ export function PublicPageView({
               <Link
                 to={primaryAction.to as never}
                 data-public-primary
-                className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="kova-button inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {primaryAction.label} <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
               </Link>
               {secondaryAction ? (
                 <Link
                   to={secondaryAction.to as never}
-                  className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border bg-background/70 px-5 py-2.5 text-center text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                  className="kova-button inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border bg-background/70 px-5 py-2.5 text-center text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {secondaryAction.label}
                 </Link>
@@ -103,10 +101,6 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
     <PublicShell>
       <main id="main-content" tabIndex={-1} className="min-w-0 [overflow-wrap:anywhere]">
         <section className="relative overflow-hidden border-b border-border/70">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent"
-          />
           <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
             <nav
               aria-label="Breadcrumb"
@@ -133,9 +127,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               </span>
             </nav>
 
-            <p className="mt-12 text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              {item.eyebrow}
-            </p>
+            <p className="mt-12 text-sm font-semibold text-muted-foreground">{item.eyebrow}</p>
             <h1 className="mt-4 max-w-5xl text-4xl font-semibold tracking-[-.045em] text-balance sm:text-6xl lg:text-7xl">
               {item.title}
             </h1>
@@ -146,7 +138,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               <Link
                 to={item.primaryAction.to as never}
                 data-public-primary
-                className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="kova-button inline-flex min-h-11 min-w-0 max-w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {item.primaryAction.label}
                 <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -154,7 +146,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
               {item.secondaryAction ? (
                 <Link
                   to={item.secondaryAction.to as never}
-                  className="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border bg-background/70 px-5 py-2.5 text-center text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                  className="kova-button inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full border border-border bg-background/70 px-5 py-2.5 text-center text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {item.secondaryAction.label}
                 </Link>
@@ -164,7 +156,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
         </section>
 
         <section aria-label="Page highlights" className="border-b border-border bg-muted/25">
-          <div className="mx-auto grid max-w-7xl gap-px bg-border sm:grid-cols-3">
+          <div className="public-highlights-grid mx-auto grid max-w-7xl gap-px bg-border sm:grid-cols-3">
             {item.highlights.map((highlight) => (
               <div
                 key={highlight}
@@ -251,7 +243,7 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
             </div>
             <Link
               to={item.primaryAction.to as never}
-              className="inline-flex min-h-11 min-w-0 max-w-full shrink-0 items-center justify-center gap-2 rounded-full bg-background px-5 py-2.5 text-center text-sm font-medium text-foreground outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground md:max-w-xs"
+              className="kova-button inline-flex min-h-11 min-w-0 max-w-full shrink-0 items-center justify-center gap-2 rounded-full bg-background px-5 py-2.5 text-center text-sm font-medium text-foreground outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground md:max-w-xs"
             >
               {item.primaryAction.label}
               <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />

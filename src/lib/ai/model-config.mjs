@@ -28,7 +28,7 @@ export const DEFAULT_MODELS = Object.freeze({
   PREMIUM_REASONING: "gpt-5.6-sol",
   UTILITY: "gpt-5.6-luna",
   IMAGE_ANALYSIS: "gpt-5.6-luna",
-  IMAGE_GENERATION: "gpt-image-1",
+  IMAGE_GENERATION: "gpt-image-2.5-flare",
   EMBEDDING: "text-embedding-3-small",
 });
 
@@ -52,6 +52,8 @@ export const MODEL_COST_PER_MTOK = Object.freeze({
   "gpt-5.6-terra": { input: 2, output: 12 },
   "gpt-5.6-sol": { input: 4, output: 20 },
   "gpt-image-1": { input: 5, output: 40 },
+  // Current replacement; text input and image output estimates, checked 2026-10-24.
+  "gpt-image-2.5-flare": { input: 5, output: 30 },
   "text-embedding-3-small": { input: 0.02, output: 0 },
 });
 
@@ -88,8 +90,8 @@ export const ROUTING_THRESHOLDS = Object.freeze({
 const MODEL_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{2,63}$/i;
 
 /**
- * Model ids are configuration, so an invalid or placeholder value must fail
- * safe (fall back to the built-in default) instead of reaching the provider.
+ * Model ids are configuration. Validate their shape without sending malformed
+ * or placeholder values to a provider.
  * @param {unknown} value
  * @returns {boolean}
  */
@@ -114,6 +116,12 @@ export function resolveRoleModel(role, env = {}) {
     return { modelId: fallback, source: "default" };
   }
   if (!isValidModelId(raw)) {
+    // Text selection must fail closed when an operator supplied a bad override;
+    // using a different model would conceal the configuration error and spend
+    // against an unselected model. Keep image/embedding routing unchanged.
+    if (role !== "IMAGE_GENERATION" && role !== "EMBEDDING") {
+      throw new Error(`unsupported_ai_model:${key}`);
+    }
     return { modelId: fallback, source: "default", invalidOverride: String(raw).slice(0, 64) };
   }
   return { modelId: String(raw).trim(), source: "env" };

@@ -15,7 +15,7 @@
 }
 
 /* Quiet focus for menus and list items (background only, no hard ring). */
-:where([role="menu"], [role="listbox"], .kova-model-menu, .kova-glass)
+:where([role="menu"], [role="listbox"], .kova-model-menu)
   :where(button, [role="menuitem"], [role="option"]):focus-visible {
   outline: none !important;
   box-shadow: none !important;
@@ -39,7 +39,7 @@
 .kova-nav-row,
 .kova-chat-row {
   min-height: 40px !important;
-  border-radius: 10px !important;
+  border-radius: var(--kova-radius-sidebar);
   transition:
     background-color 140ms var(--ease-standard, ease),
     color 140ms var(--ease-standard, ease) !important;
@@ -58,7 +58,7 @@
 /* New chat button: slightly stronger presence without becoming a filled CTA. */
 .kova-new-chat {
   min-height: 42px !important;
-  border-radius: 10px !important;
+  border-radius: var(--kova-radius-button);
   font-weight: 500 !important;
 }
 
@@ -114,7 +114,7 @@
   place-items: center !important;
   width: 44px !important;
   height: 44px !important;
-  border-radius: 12px !important;
+  border-radius: var(--kova-radius-control);
   transition: background-color 120ms ease !important;
 }
 
@@ -130,7 +130,7 @@
 .kova-floating-sidebar-trigger {
   width: 44px !important;
   height: 44px !important;
-  border-radius: 12px !important;
+  border-radius: var(--kova-radius-button);
   border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
   background: color-mix(in oklab, var(--background) 94%, transparent) !important;
   box-shadow: 0 1px 2px rgb(0 0 0 / 6%) !important;
@@ -210,7 +210,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.875rem;
-  font-weight: 550;
+  font-weight: 500;
 }
 
 .kova-account-copy small {
@@ -250,7 +250,7 @@
 .kova-message-actions button {
   width: 36px;
   height: 36px;
-  border-radius: 8px !important;
+  border-radius: var(--kova-radius-button);
   transition:
     background-color 100ms ease,
     color 100ms ease !important;
@@ -320,7 +320,7 @@
 /* ------------------------------------------------------------------ */
 
 .kova-composer {
-  border-radius: 28px !important;
+  border-radius: var(--kova-radius-composer);
   border: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent) !important;
   background: var(--surface-composer) !important;
   transition:
@@ -351,7 +351,7 @@
 .kova-composer-button {
   width: 36px;
   height: 36px;
-  border-radius: 999px !important;
+  border-radius: var(--kova-radius-button);
   transition:
     background-color 100ms ease,
     color 100ms ease,
@@ -393,7 +393,7 @@
 
 /* Attachment chips: quieter surface, clearer status. */
 .kova-composer [aria-label="Attachments"] > div {
-  border-radius: 14px !important;
+  border-radius: var(--kova-radius-input);
   border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
   background: var(--muted) !important;
   box-shadow: none !important;
@@ -439,8 +439,7 @@ section.kova-empty-chat > div.kova-empty-chat-content {
 .kova-empty-chat .kova-composer {
   --composer-height: 3.25rem !important;
   --composer-control: 2.75rem !important;
-  --composer-inset: 0.2rem !important;
-  border-radius: 1.75rem !important;
+  --composer-inset: 0.1875rem !important;
   background: var(--background) !important;
   box-shadow:
     0 1px 2px rgb(0 0 0 / 4%),
@@ -460,8 +459,22 @@ section.kova-empty-chat > div.kova-empty-chat-content {
   line-height: 1.5rem !important;
 }
 
-.kova-empty-chat .kova-starter-grid,
-.kova-starter-grid {
+/* Natural width keeps the Thinking label and lock clear of the send control. */
+.kova-composer [data-testid="thinking-upgrade-button"] {
+  width: auto !important;
+  min-width: 2.75rem;
+  height: 2.75rem !important;
+  flex: 0 0 auto !important;
+  gap: 0.375rem;
+  padding-inline: 0.75rem;
+  white-space: nowrap;
+}
+
+.kova-composer [data-testid="thinking-upgrade-button"] svg {
+  flex-shrink: 0;
+}
+
+.kova-empty-chat .kova-starter-grid {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -481,8 +494,7 @@ section.kova-empty-chat > div.kova-empty-chat-content {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.9rem;
-  border-radius: 999px;
+  padding: 0.5rem 0.875rem;
   background: transparent;
   border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
   transition:
@@ -496,7 +508,6 @@ section.kova-empty-chat > div.kova-empty-chat-content {
   width: 1rem;
   height: 1rem;
   flex: 0 0 1rem;
-  border-radius: 0;
   background: transparent;
   color: var(--muted-foreground);
 }
@@ -530,7 +541,7 @@ section.kova-empty-chat > div.kova-empty-chat-content {
 /* ------------------------------------------------------------------ */
 
 .kova-user-message {
-  border-radius: 22px !important;
+  border-radius: var(--kova-radius-message);
   background: var(--user-bubble) !important;
   box-shadow: none !important;
   padding: 0.75rem 1rem !important;
@@ -585,7 +596,7 @@ section.kova-empty-chat > div.kova-empty-chat-content {
 .kova-row,
 .kova-plan-card,
 .kova-connector-card {
-  border-radius: 12px !important;
+  border-radius: var(--kova-radius-card);
   box-shadow: none !important;
   transition:
     background-color 120ms ease,
@@ -607,12 +618,7 @@ section.kova-empty-chat > div.kova-empty-chat-content {
     padding-inline: 0.625rem;
   }
 
-  .kova-composer [data-testid="thinking-upgrade-button"] > span {
-    display: none;
-  }
-
-  .kova-empty-chat .kova-starter-grid,
-  .kova-starter-grid {
+  .kova-empty-chat .kova-starter-grid {
     width: 100%;
   }
 

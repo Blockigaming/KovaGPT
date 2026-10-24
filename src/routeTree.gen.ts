@@ -73,6 +73,7 @@ import { Route as AdminKovasRouteImport } from './routes/admin/kovas'
 import { Route as ApiAccountRouteImport } from './routes/api/account'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiDiscoveryRouteImport } from './routes/api/discovery'
+import { Route as ApiDocumentExportRouteImport } from './routes/api/document-export'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiKovasRouteImport } from './routes/api/kovas'
@@ -86,9 +87,11 @@ import { Route as ApiProjectTemplatesRouteImport } from './routes/api/project-te
 import { Route as ApiPushRouteImport } from './routes/api/push'
 import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
 import { Route as ApiSitesRouteImport } from './routes/api/sites'
+import { Route as ApiSpeechRouteImport } from './routes/api/speech'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiTrustedContactsRouteImport } from './routes/api/trusted-contacts'
 import { Route as ApiVersionRouteImport } from './routes/api/version'
+import { Route as ApiVoiceRouteImport } from './routes/api/voice'
 import { Route as ApiWeatherRouteImport } from './routes/api/weather'
 import { Route as ApiWriteRouteImport } from './routes/api/write'
 import { Route as AssistantsAssistantSlugRouteImport } from './routes/assistants.$assistantSlug'
@@ -105,6 +108,7 @@ import { Route as DevelopersPricingRouteImport } from './routes/developers.prici
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
+import { Route as SettingsSectionRouteImport } from './routes/settings.$section'
 import { Route as TranslateIndexRouteImport } from './routes/translate.index'
 import { Route as TranslatePairSlugRouteImport } from './routes/translate.$pairSlug'
 import { Route as WritingIndexRouteImport } from './routes/writing.index'
@@ -112,6 +116,7 @@ import { Route as WritingToolSlugRouteImport } from './routes/writing.$toolSlug'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
 import { Route as SectionCategoryArticleSlugRouteImport } from './routes/$section.$category.$articleSlug'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiAccountEmailPreferencesRouteImport } from './routes/api/account/email-preferences'
 import { Route as ApiAccountExportRouteImport } from './routes/api/account/export'
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
 import { Route as ApiAdminDeveloperBillingRouteImport } from './routes/api/admin/developer-billing'
@@ -120,6 +125,7 @@ import { Route as ApiAdminKovasRouteImport } from './routes/api/admin/kovas'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
+import { Route as ApiAiServicesRouteImport } from './routes/api/ai/services'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthPasswordRouteImport } from './routes/api/auth/password'
@@ -150,10 +156,12 @@ import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
 import { Route as ApiGoogleSelectRouteImport } from './routes/api/google/select'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
+import { Route as ApiInternalAccountDeletionsRouteImport } from './routes/api/internal/account-deletions'
 import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
 import { Route as ApiInternalChatSummariesRouteImport } from './routes/api/internal/chat-summaries'
 import { Route as ApiInternalDeveloperBillingRouteImport } from './routes/api/internal/developer-billing'
 import { Route as ApiInternalDeveloperFundingRouteImport } from './routes/api/internal/developer-funding'
+import { Route as ApiInternalEmailDispatchRouteImport } from './routes/api/internal/email-dispatch'
 import { Route as ApiInternalGoogleOauthCleanupRouteImport } from './routes/api/internal/google-oauth-cleanup'
 import { Route as ApiInternalReceiptMaintenanceRouteImport } from './routes/api/internal/receipt-maintenance'
 import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
@@ -169,6 +177,7 @@ import { Route as ApiLibraryFilesRouteImport } from './routes/api/library/files'
 import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
 import { Route as ApiLibraryItemsRouteImport } from './routes/api/library/items'
 import { Route as ApiMapsSearchRouteImport } from './routes/api/maps/search'
+import { Route as ApiOpenaiWebhookRouteImport } from './routes/api/openai/webhook'
 import { Route as ApiOrganizationsScimRouteImport } from './routes/api/organizations/scim'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiPushRevokeDeviceRouteImport } from './routes/api/push/revoke-device'
@@ -538,6 +547,11 @@ const ApiDiscoveryRoute = ApiDiscoveryRouteImport.update({
   path: '/api/discovery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDocumentExportRoute = ApiDocumentExportRouteImport.update({
+  id: '/api/document-export',
+  path: '/api/document-export',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
   id: '/api/generate-image',
   path: '/api/generate-image',
@@ -603,6 +617,11 @@ const ApiSitesRoute = ApiSitesRouteImport.update({
   path: '/api/sites',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSpeechRoute = ApiSpeechRouteImport.update({
+  id: '/api/speech',
+  path: '/api/speech',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTitleRoute = ApiTitleRouteImport.update({
   id: '/api/title',
   path: '/api/title',
@@ -616,6 +635,11 @@ const ApiTrustedContactsRoute = ApiTrustedContactsRouteImport.update({
 const ApiVersionRoute = ApiVersionRouteImport.update({
   id: '/api/version',
   path: '/api/version',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVoiceRoute = ApiVoiceRouteImport.update({
+  id: '/api/voice',
+  path: '/api/voice',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWeatherRoute = ApiWeatherRouteImport.update({
@@ -700,6 +724,11 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
 } as any)
+const SettingsSectionRoute = SettingsSectionRouteImport.update({
+  id: '/settings/$section',
+  path: '/settings/$section',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TranslateIndexRoute = TranslateIndexRouteImport.update({
   id: '/translate/',
   path: '/translate/',
@@ -736,6 +765,12 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     id: '/.mcp/invoke-tool/$tool',
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAccountEmailPreferencesRoute =
+  ApiAccountEmailPreferencesRouteImport.update({
+    id: '/email-preferences',
+    path: '/email-preferences',
+    getParentRoute: () => ApiAccountRoute,
   } as any)
 const ApiAccountExportRoute = ApiAccountExportRouteImport.update({
   id: '/export',
@@ -776,6 +811,11 @@ const ApiAgentsRunsRoute = ApiAgentsRunsRouteImport.update({
 const ApiAgentsTeamsRoute = ApiAgentsTeamsRouteImport.update({
   id: '/api/agents/teams',
   path: '/api/agents/teams',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiServicesRoute = ApiAiServicesRouteImport.update({
+  id: '/api/ai/services',
+  path: '/api/ai/services',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
@@ -928,6 +968,12 @@ const ApiIntegrationsAccountsRoute = ApiIntegrationsAccountsRouteImport.update({
   path: '/api/integrations/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalAccountDeletionsRoute =
+  ApiInternalAccountDeletionsRouteImport.update({
+    id: '/api/internal/account-deletions',
+    path: '/api/internal/account-deletions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalAccountExportsRoute =
   ApiInternalAccountExportsRouteImport.update({
     id: '/api/internal/account-exports',
@@ -950,6 +996,12 @@ const ApiInternalDeveloperFundingRoute =
   ApiInternalDeveloperFundingRouteImport.update({
     id: '/api/internal/developer-funding',
     path: '/api/internal/developer-funding',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalEmailDispatchRoute =
+  ApiInternalEmailDispatchRouteImport.update({
+    id: '/api/internal/email-dispatch',
+    path: '/api/internal/email-dispatch',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiInternalGoogleOauthCleanupRoute =
@@ -1032,6 +1084,11 @@ const ApiLibraryItemsRoute = ApiLibraryItemsRouteImport.update({
 const ApiMapsSearchRoute = ApiMapsSearchRouteImport.update({
   id: '/api/maps/search',
   path: '/api/maps/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenaiWebhookRoute = ApiOpenaiWebhookRouteImport.update({
+  id: '/api/openai/webhook',
+  path: '/api/openai/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOrganizationsScimRoute = ApiOrganizationsScimRouteImport.update({
@@ -1339,6 +1396,7 @@ export interface FileRoutesByFullPath {
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/discovery': typeof ApiDiscoveryRoute
+  '/api/document-export': typeof ApiDocumentExportRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/kovas': typeof ApiKovasRouteWithChildren
@@ -1352,9 +1410,11 @@ export interface FileRoutesByFullPath {
   '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
   '/api/sites': typeof ApiSitesRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/title': typeof ApiTitleRoute
   '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
+  '/api/voice': typeof ApiVoiceRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
   '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
@@ -1370,6 +1430,7 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/settings/$section': typeof SettingsSectionRoute
   '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
@@ -1378,6 +1439,7 @@ export interface FileRoutesByFullPath {
   '/writing/': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/email-preferences': typeof ApiAccountEmailPreferencesRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
@@ -1386,6 +1448,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/ai/services': typeof ApiAiServicesRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -1416,10 +1479,12 @@ export interface FileRoutesByFullPath {
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
   '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
   '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
+  '/api/internal/email-dispatch': typeof ApiInternalEmailDispatchRoute
   '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
@@ -1435,6 +1500,7 @@ export interface FileRoutesByFullPath {
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
   '/api/maps/search': typeof ApiMapsSearchRoute
+  '/api/openai/webhook': typeof ApiOpenaiWebhookRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
@@ -1546,6 +1612,7 @@ export interface FileRoutesByTo {
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/discovery': typeof ApiDiscoveryRoute
+  '/api/document-export': typeof ApiDocumentExportRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/kovas': typeof ApiKovasRouteWithChildren
@@ -1559,9 +1626,11 @@ export interface FileRoutesByTo {
   '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
   '/api/sites': typeof ApiSitesRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/title': typeof ApiTitleRoute
   '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
+  '/api/voice': typeof ApiVoiceRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
   '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
@@ -1577,6 +1646,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/settings/$section': typeof SettingsSectionRoute
   '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
@@ -1585,6 +1655,7 @@ export interface FileRoutesByTo {
   '/writing': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/email-preferences': typeof ApiAccountEmailPreferencesRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
@@ -1593,6 +1664,7 @@ export interface FileRoutesByTo {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/ai/services': typeof ApiAiServicesRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -1623,10 +1695,12 @@ export interface FileRoutesByTo {
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
   '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
   '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
+  '/api/internal/email-dispatch': typeof ApiInternalEmailDispatchRoute
   '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
@@ -1642,6 +1716,7 @@ export interface FileRoutesByTo {
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
   '/api/maps/search': typeof ApiMapsSearchRoute
+  '/api/openai/webhook': typeof ApiOpenaiWebhookRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
@@ -1754,6 +1829,7 @@ export interface FileRoutesById {
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/discovery': typeof ApiDiscoveryRoute
+  '/api/document-export': typeof ApiDocumentExportRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/kovas': typeof ApiKovasRouteWithChildren
@@ -1767,9 +1843,11 @@ export interface FileRoutesById {
   '/api/push': typeof ApiPushRouteWithChildren
   '/api/readyz': typeof ApiReadyzRoute
   '/api/sites': typeof ApiSitesRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/api/title': typeof ApiTitleRoute
   '/api/trusted-contacts': typeof ApiTrustedContactsRoute
   '/api/version': typeof ApiVersionRoute
+  '/api/voice': typeof ApiVoiceRoute
   '/api/weather': typeof ApiWeatherRoute
   '/api/write': typeof ApiWriteRoute
   '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
@@ -1785,6 +1863,7 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/settings/$section': typeof SettingsSectionRoute
   '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
@@ -1793,6 +1872,7 @@ export interface FileRoutesById {
   '/writing/': typeof WritingIndexRoute
   '/$section/$category/$articleSlug': typeof SectionCategoryArticleSlugRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/account/email-preferences': typeof ApiAccountEmailPreferencesRoute
   '/api/account/export': typeof ApiAccountExportRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/developer-billing': typeof ApiAdminDeveloperBillingRoute
@@ -1801,6 +1881,7 @@ export interface FileRoutesById {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/ai/services': typeof ApiAiServicesRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -1831,10 +1912,12 @@ export interface FileRoutesById {
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
   '/api/internal/chat-summaries': typeof ApiInternalChatSummariesRoute
   '/api/internal/developer-billing': typeof ApiInternalDeveloperBillingRoute
   '/api/internal/developer-funding': typeof ApiInternalDeveloperFundingRoute
+  '/api/internal/email-dispatch': typeof ApiInternalEmailDispatchRoute
   '/api/internal/google-oauth-cleanup': typeof ApiInternalGoogleOauthCleanupRoute
   '/api/internal/receipt-maintenance': typeof ApiInternalReceiptMaintenanceRoute
   '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
@@ -1850,6 +1933,7 @@ export interface FileRoutesById {
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
   '/api/maps/search': typeof ApiMapsSearchRoute
+  '/api/openai/webhook': typeof ApiOpenaiWebhookRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
@@ -1963,6 +2047,7 @@ export interface FileRouteTypes {
     | '/api/account'
     | '/api/chat'
     | '/api/discovery'
+    | '/api/document-export'
     | '/api/generate-image'
     | '/api/health'
     | '/api/kovas'
@@ -1976,9 +2061,11 @@ export interface FileRouteTypes {
     | '/api/push'
     | '/api/readyz'
     | '/api/sites'
+    | '/api/speech'
     | '/api/title'
     | '/api/trusted-contacts'
     | '/api/version'
+    | '/api/voice'
     | '/api/weather'
     | '/api/write'
     | '/assistants/$assistantSlug'
@@ -1994,6 +2081,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/settings/$section'
     | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
@@ -2002,6 +2090,7 @@ export interface FileRouteTypes {
     | '/writing/'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/email-preferences'
     | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/developer-billing'
@@ -2010,6 +2099,7 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/ai/services'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2040,10 +2130,12 @@ export interface FileRouteTypes {
     | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
     | '/api/internal/developer-billing'
     | '/api/internal/developer-funding'
+    | '/api/internal/email-dispatch'
     | '/api/internal/google-oauth-cleanup'
     | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
@@ -2059,6 +2151,7 @@ export interface FileRouteTypes {
     | '/api/library/folders'
     | '/api/library/items'
     | '/api/maps/search'
+    | '/api/openai/webhook'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
@@ -2170,6 +2263,7 @@ export interface FileRouteTypes {
     | '/api/account'
     | '/api/chat'
     | '/api/discovery'
+    | '/api/document-export'
     | '/api/generate-image'
     | '/api/health'
     | '/api/kovas'
@@ -2183,9 +2277,11 @@ export interface FileRouteTypes {
     | '/api/push'
     | '/api/readyz'
     | '/api/sites'
+    | '/api/speech'
     | '/api/title'
     | '/api/trusted-contacts'
     | '/api/version'
+    | '/api/voice'
     | '/api/weather'
     | '/api/write'
     | '/assistants/$assistantSlug'
@@ -2201,6 +2297,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/settings/$section'
     | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
@@ -2209,6 +2306,7 @@ export interface FileRouteTypes {
     | '/writing'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/email-preferences'
     | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/developer-billing'
@@ -2217,6 +2315,7 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/ai/services'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2247,10 +2346,12 @@ export interface FileRouteTypes {
     | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
     | '/api/internal/developer-billing'
     | '/api/internal/developer-funding'
+    | '/api/internal/email-dispatch'
     | '/api/internal/google-oauth-cleanup'
     | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
@@ -2266,6 +2367,7 @@ export interface FileRouteTypes {
     | '/api/library/folders'
     | '/api/library/items'
     | '/api/maps/search'
+    | '/api/openai/webhook'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
@@ -2377,6 +2479,7 @@ export interface FileRouteTypes {
     | '/api/account'
     | '/api/chat'
     | '/api/discovery'
+    | '/api/document-export'
     | '/api/generate-image'
     | '/api/health'
     | '/api/kovas'
@@ -2390,9 +2493,11 @@ export interface FileRouteTypes {
     | '/api/push'
     | '/api/readyz'
     | '/api/sites'
+    | '/api/speech'
     | '/api/title'
     | '/api/trusted-contacts'
     | '/api/version'
+    | '/api/voice'
     | '/api/weather'
     | '/api/write'
     | '/assistants/$assistantSlug'
@@ -2408,6 +2513,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/oauth/consent'
     | '/projects/$projectId'
+    | '/settings/$section'
     | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
@@ -2416,6 +2522,7 @@ export interface FileRouteTypes {
     | '/writing/'
     | '/$section/$category/$articleSlug'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/account/email-preferences'
     | '/api/account/export'
     | '/api/admin/ai-usage'
     | '/api/admin/developer-billing'
@@ -2424,6 +2531,7 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/ai/services'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2454,10 +2562,12 @@ export interface FileRouteTypes {
     | '/api/google/select'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
     | '/api/internal/chat-summaries'
     | '/api/internal/developer-billing'
     | '/api/internal/developer-funding'
+    | '/api/internal/email-dispatch'
     | '/api/internal/google-oauth-cleanup'
     | '/api/internal/receipt-maintenance'
     | '/api/internal/scheduled-execution'
@@ -2473,6 +2583,7 @@ export interface FileRouteTypes {
     | '/api/library/folders'
     | '/api/library/items'
     | '/api/maps/search'
+    | '/api/openai/webhook'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
@@ -2585,6 +2696,7 @@ export interface RootRouteChildren {
   ApiAccountRoute: typeof ApiAccountRouteWithChildren
   ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiDiscoveryRoute: typeof ApiDiscoveryRoute
+  ApiDocumentExportRoute: typeof ApiDocumentExportRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiKovasRoute: typeof ApiKovasRouteWithChildren
@@ -2598,9 +2710,11 @@ export interface RootRouteChildren {
   ApiPushRoute: typeof ApiPushRouteWithChildren
   ApiReadyzRoute: typeof ApiReadyzRoute
   ApiSitesRoute: typeof ApiSitesRoute
+  ApiSpeechRoute: typeof ApiSpeechRoute
   ApiTitleRoute: typeof ApiTitleRoute
   ApiTrustedContactsRoute: typeof ApiTrustedContactsRoute
   ApiVersionRoute: typeof ApiVersionRoute
+  ApiVoiceRoute: typeof ApiVoiceRoute
   ApiWeatherRoute: typeof ApiWeatherRoute
   ApiWriteRoute: typeof ApiWriteRoute
   BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
@@ -2614,6 +2728,7 @@ export interface RootRouteChildren {
   DevelopersPricingRoute: typeof DevelopersPricingRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   OauthConsentRoute: typeof OauthConsentRoute
+  SettingsSectionRoute: typeof SettingsSectionRoute
   TranslatePairSlugRoute: typeof TranslatePairSlugRoute
   WritingToolSlugRoute: typeof WritingToolSlugRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
@@ -2629,6 +2744,7 @@ export interface RootRouteChildren {
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
+  ApiAiServicesRoute: typeof ApiAiServicesRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthPasswordRoute: typeof ApiAuthPasswordRoute
@@ -2657,10 +2773,12 @@ export interface RootRouteChildren {
   ApiGoogleSelectRoute: typeof ApiGoogleSelectRoute
   ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
+  ApiInternalAccountDeletionsRoute: typeof ApiInternalAccountDeletionsRoute
   ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
   ApiInternalChatSummariesRoute: typeof ApiInternalChatSummariesRoute
   ApiInternalDeveloperBillingRoute: typeof ApiInternalDeveloperBillingRoute
   ApiInternalDeveloperFundingRoute: typeof ApiInternalDeveloperFundingRoute
+  ApiInternalEmailDispatchRoute: typeof ApiInternalEmailDispatchRoute
   ApiInternalGoogleOauthCleanupRoute: typeof ApiInternalGoogleOauthCleanupRoute
   ApiInternalReceiptMaintenanceRoute: typeof ApiInternalReceiptMaintenanceRoute
   ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
@@ -2675,6 +2793,7 @@ export interface RootRouteChildren {
   ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
   ApiLibraryItemsRoute: typeof ApiLibraryItemsRoute
   ApiMapsSearchRoute: typeof ApiMapsSearchRoute
+  ApiOpenaiWebhookRoute: typeof ApiOpenaiWebhookRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
@@ -3168,6 +3287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDiscoveryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/document-export': {
+      id: '/api/document-export'
+      path: '/api/document-export'
+      fullPath: '/api/document-export'
+      preLoaderRoute: typeof ApiDocumentExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/generate-image': {
       id: '/api/generate-image'
       path: '/api/generate-image'
@@ -3259,6 +3385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSitesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/speech': {
+      id: '/api/speech'
+      path: '/api/speech'
+      fullPath: '/api/speech'
+      preLoaderRoute: typeof ApiSpeechRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/title': {
       id: '/api/title'
       path: '/api/title'
@@ -3278,6 +3411,13 @@ declare module '@tanstack/react-router' {
       path: '/api/version'
       fullPath: '/api/version'
       preLoaderRoute: typeof ApiVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/voice': {
+      id: '/api/voice'
+      path: '/api/voice'
+      fullPath: '/api/voice'
+      preLoaderRoute: typeof ApiVoiceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/weather': {
@@ -3392,6 +3532,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
     }
+    '/settings/$section': {
+      id: '/settings/$section'
+      path: '/settings/$section'
+      fullPath: '/settings/$section'
+      preLoaderRoute: typeof SettingsSectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/translate/': {
       id: '/translate/'
       path: '/translate'
@@ -3440,6 +3587,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/.mcp/invoke-tool/$tool'
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/account/email-preferences': {
+      id: '/api/account/email-preferences'
+      path: '/email-preferences'
+      fullPath: '/api/account/email-preferences'
+      preLoaderRoute: typeof ApiAccountEmailPreferencesRouteImport
+      parentRoute: typeof ApiAccountRoute
     }
     '/api/account/export': {
       id: '/api/account/export'
@@ -3495,6 +3649,13 @@ declare module '@tanstack/react-router' {
       path: '/api/agents/teams'
       fullPath: '/api/agents/teams'
       preLoaderRoute: typeof ApiAgentsTeamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai/services': {
+      id: '/api/ai/services'
+      path: '/api/ai/services'
+      fullPath: '/api/ai/services'
+      preLoaderRoute: typeof ApiAiServicesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/login': {
@@ -3707,6 +3868,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIntegrationsAccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/account-deletions': {
+      id: '/api/internal/account-deletions'
+      path: '/api/internal/account-deletions'
+      fullPath: '/api/internal/account-deletions'
+      preLoaderRoute: typeof ApiInternalAccountDeletionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/account-exports': {
       id: '/api/internal/account-exports'
       path: '/api/internal/account-exports'
@@ -3733,6 +3901,13 @@ declare module '@tanstack/react-router' {
       path: '/api/internal/developer-funding'
       fullPath: '/api/internal/developer-funding'
       preLoaderRoute: typeof ApiInternalDeveloperFundingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/email-dispatch': {
+      id: '/api/internal/email-dispatch'
+      path: '/api/internal/email-dispatch'
+      fullPath: '/api/internal/email-dispatch'
+      preLoaderRoute: typeof ApiInternalEmailDispatchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/internal/google-oauth-cleanup': {
@@ -3838,6 +4013,13 @@ declare module '@tanstack/react-router' {
       path: '/api/maps/search'
       fullPath: '/api/maps/search'
       preLoaderRoute: typeof ApiMapsSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/openai/webhook': {
+      id: '/api/openai/webhook'
+      path: '/api/openai/webhook'
+      fullPath: '/api/openai/webhook'
+      preLoaderRoute: typeof ApiOpenaiWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/organizations/scim': {
@@ -4194,10 +4376,12 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
 )
 
 interface ApiAccountRouteChildren {
+  ApiAccountEmailPreferencesRoute: typeof ApiAccountEmailPreferencesRoute
   ApiAccountExportRoute: typeof ApiAccountExportRoute
 }
 
 const ApiAccountRouteChildren: ApiAccountRouteChildren = {
+  ApiAccountEmailPreferencesRoute: ApiAccountEmailPreferencesRoute,
   ApiAccountExportRoute: ApiAccountExportRoute,
 }
 
@@ -4331,6 +4515,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAccountRoute: ApiAccountRouteWithChildren,
   ApiChatRoute: ApiChatRouteWithChildren,
   ApiDiscoveryRoute: ApiDiscoveryRoute,
+  ApiDocumentExportRoute: ApiDocumentExportRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiKovasRoute: ApiKovasRouteWithChildren,
@@ -4344,9 +4529,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPushRoute: ApiPushRouteWithChildren,
   ApiReadyzRoute: ApiReadyzRoute,
   ApiSitesRoute: ApiSitesRoute,
+  ApiSpeechRoute: ApiSpeechRoute,
   ApiTitleRoute: ApiTitleRoute,
   ApiTrustedContactsRoute: ApiTrustedContactsRoute,
   ApiVersionRoute: ApiVersionRoute,
+  ApiVoiceRoute: ApiVoiceRoute,
   ApiWeatherRoute: ApiWeatherRoute,
   ApiWriteRoute: ApiWriteRoute,
   BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
@@ -4360,6 +4547,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersPricingRoute: DevelopersPricingRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   OauthConsentRoute: OauthConsentRoute,
+  SettingsSectionRoute: SettingsSectionRoute,
   TranslatePairSlugRoute: TranslatePairSlugRoute,
   WritingToolSlugRoute: WritingToolSlugRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
@@ -4375,6 +4563,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
+  ApiAiServicesRoute: ApiAiServicesRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthPasswordRoute: ApiAuthPasswordRoute,
@@ -4403,10 +4592,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleSelectRoute: ApiGoogleSelectRoute,
   ApiGoogleStatusRoute: ApiGoogleStatusRoute,
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
+  ApiInternalAccountDeletionsRoute: ApiInternalAccountDeletionsRoute,
   ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,
   ApiInternalChatSummariesRoute: ApiInternalChatSummariesRoute,
   ApiInternalDeveloperBillingRoute: ApiInternalDeveloperBillingRoute,
   ApiInternalDeveloperFundingRoute: ApiInternalDeveloperFundingRoute,
+  ApiInternalEmailDispatchRoute: ApiInternalEmailDispatchRoute,
   ApiInternalGoogleOauthCleanupRoute: ApiInternalGoogleOauthCleanupRoute,
   ApiInternalReceiptMaintenanceRoute: ApiInternalReceiptMaintenanceRoute,
   ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
@@ -4422,6 +4613,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
   ApiLibraryItemsRoute: ApiLibraryItemsRoute,
   ApiMapsSearchRoute: ApiMapsSearchRoute,
+  ApiOpenaiWebhookRoute: ApiOpenaiWebhookRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,

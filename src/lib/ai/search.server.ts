@@ -1,4 +1,5 @@
 import { replaceControlCharacters } from "@/lib/sanitize-text";
+import { runtimeEnv } from "@/lib/runtime-env.server";
 import {
   createCitationMap,
   dedupeKovaSources,
@@ -106,7 +107,7 @@ function dedupeSources(results: FirecrawlResult[], limit: number): WebSource[] {
 }
 
 function searchTimeoutMs(): number {
-  const raw = process.env.KOVA_SEARCH_TIMEOUT_MS;
+  const raw = runtimeEnv("KOVA_SEARCH_TIMEOUT_MS");
   const n = Number(raw);
   if (!Number.isFinite(n)) return DEFAULT_SEARCH_TIMEOUT_MS;
   return Math.min(Math.max(n, 3_000), 60_000);
@@ -149,7 +150,10 @@ export async function searchWeb(
   query: string,
   opts: { wantsNews?: boolean; limit?: number; signal?: AbortSignal } = {},
 ): Promise<SearchResponse> {
-  const apiKey = process.env.FIRECRAWL_API_KEY;
+  const apiKey = runtimeEnv("FIRECRAWL_API_KEY");
+  const useOpenAi =
+    (runtimeEnv("KOVA_WEB_SEARCH_PROVIDER") ??
+      (runtimeEnv("KOVA_TEXT_PROVIDER") === "openai" ? "openai" : "firecrawl")) === "openai";
   const safeQuery = cleanText(query, 300);
   if (!safeQuery)
     return {
@@ -161,7 +165,7 @@ export async function searchWeb(
       retryable: false,
       error: "Empty search query.",
     };
-  if (!apiKey)
+  if (!apiKey && !useOpenAi)
     return {
       status: "not_configured",
       query: safeQuery,
@@ -178,6 +182,40 @@ export async function searchWeb(
   if (opts.signal?.aborted) abort();
   else opts.signal?.addEventListener("abort", abort, { once: true });
   try {
+    if (useOpenAi) {
+      const [{ openAiServices }, { consumeApplicationRateLimit }] = await Promise.all([
+        import("./openai-service-runtime.server"),
+        import("@/lib/distributed-rate-limit.server"),
+      ]);
+      const budget = await consumeApplicationRateLimit({
+        identity: "openai_search_global",
+        action: "openai_search_daily",
+        limit: 100,
+        windowSeconds: 86400,
+      });
+      if (!budget.allowed) throw new Error("search_budget_unavailable");
+      const result = await openAiServices().search(safeQuery, {
+        signal: controller.signal,
+        limit: opts.limit,
+      });
+      const sources = dedupeSources(
+        result.sources.map((source, index) => ({
+          ...source,
+          description: index === 0 ? result.summary : "",
+        })),
+        opts.limit ?? 8,
+      );
+      const kovaSources = dedupeKovaSources(sources);
+      return {
+        status: sources.length ? "ok" : "empty",
+        query: safeQuery,
+        sources,
+        kovaSources,
+        citations: createCitationMap(kovaSources),
+        retryable: sources.length === 0,
+      };
+    }
+    if (!apiKey) throw new Error("search_not_configured");
     const [general, news] = await Promise.all([
       firecrawlSearch(apiKey, safeQuery, { limit: opts.limit ?? 5, signal: controller.signal }),
       opts.wantsNews

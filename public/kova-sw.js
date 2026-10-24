@@ -343,6 +343,7 @@ self.addEventListener("push", (event) =>
           tag: "kova-update",
           data: { subscriptionId: binding.id },
           renotify: false,
+          silent: true,
         });
       } catch {
         /* Malformed payloads never expose notification content. */

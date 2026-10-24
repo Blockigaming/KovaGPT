@@ -35,6 +35,9 @@ export function chatHistoryView(ownerId: string | null) {
 export function canWriteChatHistory(ownerId: string | null) {
   return !closed.has(ownerId ?? "guest") && (!ownerId || views.get(ownerId)?.writable !== false);
 }
+export function canSendChatHistory(ownerId: string | null) {
+  return canWriteChatHistory(ownerId) && (!ownerId || views.get(ownerId)?.ready === true);
+}
 export function markChatHistoryDirty(ownerId: string | null) {
   if (ownerId) views.get(ownerId)?.markDirty();
 }

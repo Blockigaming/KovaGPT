@@ -1,6 +1,7 @@
 import { originalLibraryHeaders } from "./library-original-client";
 import { readResponseBytesBounded } from "./endpoint-reliability.mjs";
 import type { LibraryItem } from "./library.functions";
+import { libraryItemDetailSearch, libraryModifiedAt } from "./library-detail";
 export type LibraryPageQuery = {
   query: string;
   sort: string;
@@ -25,6 +26,7 @@ export function libraryItemFromRow(raw: Record<string, unknown>, loaded = false)
     metadata && typeof metadata === "object" ? (metadata as Record<string, unknown>) : {};
   return {
     ...row,
+    updated_at: libraryModifiedAt(row.updated_at),
     content_text: loaded ? (typeof row.content_text === "string" ? row.content_text : null) : null,
     content_loaded: loaded,
     original_generation:
@@ -33,6 +35,16 @@ export function libraryItemFromRow(raw: Record<string, unknown>, loaded = false)
         : undefined,
     work_output: meta.work_output === true,
   } as LibraryItem;
+}
+
+export class LibraryItemsRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "LibraryItemsRequestError";
+  }
 }
 export async function libraryItemsRequest(
   owner: string,
@@ -67,7 +79,10 @@ export async function libraryItemsRequest(
   });
   const value = JSON.parse(new TextDecoder().decode(bytes));
   if (!response.ok)
-    throw new Error(typeof value.error === "string" ? value.error : "Library could not be loaded.");
+    throw new LibraryItemsRequestError(
+      typeof value.error === "string" ? value.error : "Library could not be loaded.",
+      response.status,
+    );
   current.throwIfAborted();
   return value;
 }
@@ -93,7 +108,20 @@ export async function readLibraryItem(
   item: LibraryItem,
   signal: AbortSignal,
 ): Promise<LibraryItem> {
+  const value = await readLibraryItemAtGeneration(owner, item, signal);
+  if (value.content_revision !== item.content_revision)
+    throw new Error("This item changed. Refresh Library to open its current version.");
+  return value;
+}
+
+/** Item links open the current revision of the exact original item generation. */
+export async function readLibraryItemAtGeneration(
+  owner: string,
+  item: Pick<LibraryItem, "id" | "content_generation">,
+  signal: AbortSignal,
+): Promise<LibraryItem> {
   if (!item.content_generation) throw new Error("Refresh Library before opening this item.");
+  if (!libraryItemDetailSearch(item)) throw new Error("This Library link is invalid.");
   const value = await libraryItemsRequest(
     owner,
     `?id=${encodeURIComponent(item.id)}&generation=${encodeURIComponent(item.content_generation)}`,
@@ -102,7 +130,9 @@ export async function readLibraryItem(
   if (
     value.id !== item.id ||
     value.content_generation !== item.content_generation ||
-    value.content_revision !== item.content_revision
+    !Number.isSafeInteger(value.content_revision) ||
+    value.content_revision < 1 ||
+    value.content_revision > 1000000
   )
     throw new Error("This item changed. Refresh Library to open its current version.");
   return libraryItemFromRow(value, true);

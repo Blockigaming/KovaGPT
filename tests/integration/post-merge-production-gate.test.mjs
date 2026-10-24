@@ -86,7 +86,7 @@ test("Azure-origin, edge-validation, and security slices coexist on the current 
   assert.match(seoPolicy, /PUBLIC_FOLLOWABLE_NOINDEX_PATHS\.has\(normalized\)/);
   assert.match(seoPolicy, /return "noindex, follow"/);
   assert.match(seoPolicy, /return "noindex, nofollow"/);
-  assert.match(root, /KovaGPT couldn't load this page/);
+  assert.match(root, /This page couldn’t load/);
   assert.doesNotMatch(root, /correlationId|randomUUID|console\.error/);
 
   assert.match(

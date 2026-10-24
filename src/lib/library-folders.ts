@@ -1,4 +1,5 @@
-import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
+import { originalLibraryHeaders } from "@/lib/library-original-client";
+import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 
 export type LibraryFolder = {
   id: string;
@@ -76,8 +77,20 @@ function folderValue(value: unknown): LibraryFolder | null {
   };
 }
 
-async function responseObject(response: Response): Promise<JsonObject> {
-  const payload = objectValue(await response.json().catch(() => null));
+async function responseObject(response: Response, signal: AbortSignal): Promise<JsonObject> {
+  let payload: JsonObject | null = null;
+  try {
+    const bytes = await readResponseBytesBounded(response, 512 * 1024, {
+      signal,
+      timeoutMs: 15_000,
+    });
+    payload = objectValue(JSON.parse(new TextDecoder().decode(bytes)));
+  } catch {
+    // Preserve malformed-response error mapping, but never turn cancellation
+    // into a retryable server error or accept a response from an ended lifetime.
+    signal.throwIfAborted();
+  }
+  signal.throwIfAborted();
   if (!response.ok) {
     const code = typeof payload?.error === "string" ? payload.error : "library_request_failed";
     throw new LibraryFolderRequestError(code, response.status);
@@ -89,25 +102,35 @@ async function responseObject(response: Response): Promise<JsonObject> {
 }
 
 async function libraryRequest(
+  ownerId: string,
+  signal: AbortSignal,
   method: string,
   path: string,
   body?: JsonObject,
 ): Promise<JsonObject> {
-  const response = await fetchWithTimeoutAuthenticated(
-    path,
-    {
-      method,
-      cache: "no-store",
-      headers: body ? { "Content-Type": "application/json" } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    },
-    15_000,
-  );
-  return responseObject(response);
+  const current = AbortSignal.any([signal, AbortSignal.timeout(15_000)]);
+  current.throwIfAborted();
+  const headers = await originalLibraryHeaders(ownerId, current);
+  const requestBody = body ? JSON.stringify(body) : undefined;
+  current.throwIfAborted();
+  const response = await fetch(path, {
+    method,
+    cache: "no-store",
+    credentials: "same-origin",
+    mode: "same-origin",
+    redirect: "error",
+    headers: { ...headers, ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: requestBody,
+    signal: current,
+  });
+  return responseObject(response, current);
 }
 
-export async function listLibraryFolders(): Promise<LibraryFolder[]> {
-  const payload = await libraryRequest("GET", "/api/library/folders");
+export async function listLibraryFolders(
+  ownerId: string,
+  signal: AbortSignal,
+): Promise<LibraryFolder[]> {
+  const payload = await libraryRequest(ownerId, signal, "GET", "/api/library/folders");
   if (!Array.isArray(payload.folders)) {
     throw new LibraryFolderRequestError("invalid_library_response", 503);
   }
@@ -118,11 +141,12 @@ export async function listLibraryFolders(): Promise<LibraryFolder[]> {
   return folders as LibraryFolder[];
 }
 
-export async function createLibraryFolder(input: {
-  name: string;
-  parentId: string | null;
-}): Promise<LibraryFolder> {
-  const payload = await libraryRequest("POST", "/api/library/folders", input);
+export async function createLibraryFolder(
+  ownerId: string,
+  input: { name: string; parentId: string | null },
+  signal: AbortSignal,
+): Promise<LibraryFolder> {
+  const payload = await libraryRequest(ownerId, signal, "POST", "/api/library/folders", input);
   const folder = folderValue(payload.folder);
   if (!folder) {
     throw new LibraryFolderRequestError("invalid_library_response", 503);
@@ -130,11 +154,12 @@ export async function createLibraryFolder(input: {
   return folder;
 }
 
-export async function renameLibraryFolder(input: {
-  id: string;
-  name: string;
-}): Promise<LibraryFolder> {
-  const payload = await libraryRequest("PATCH", "/api/library/folders", input);
+export async function renameLibraryFolder(
+  ownerId: string,
+  input: { id: string; name: string },
+  signal: AbortSignal,
+): Promise<LibraryFolder> {
+  const payload = await libraryRequest(ownerId, signal, "PATCH", "/api/library/folders", input);
   const folder = folderValue(payload.folder);
   if (!folder) {
     throw new LibraryFolderRequestError("invalid_library_response", 503);
@@ -143,9 +168,11 @@ export async function renameLibraryFolder(input: {
 }
 
 export async function deleteLibraryFolder(
+  ownerId: string,
   id: string,
+  signal: AbortSignal,
 ): Promise<{ deletedFolderCount: number; movedToRootCount: number }> {
-  const payload = await libraryRequest("DELETE", "/api/library/folders", { id });
+  const payload = await libraryRequest(ownerId, signal, "DELETE", "/api/library/folders", { id });
   if (
     typeof payload.deletedFolderCount !== "number" ||
     !Number.isInteger(payload.deletedFolderCount) ||
@@ -160,11 +187,12 @@ export async function deleteLibraryFolder(
   };
 }
 
-export async function moveLibraryItems(input: {
-  itemIds: string[];
-  folderId: string | null;
-}): Promise<{ movedCount: number; folderId: string | null }> {
-  const payload = await libraryRequest("POST", "/api/library/bulk-move", input);
+export async function moveLibraryItems(
+  ownerId: string,
+  input: { itemIds: string[]; folderId: string | null },
+  signal: AbortSignal,
+): Promise<{ movedCount: number; folderId: string | null }> {
+  const payload = await libraryRequest(ownerId, signal, "POST", "/api/library/bulk-move", input);
   if (typeof payload.movedCount !== "number" || payload.movedCount !== input.itemIds.length) {
     throw new LibraryFolderRequestError("invalid_library_response", 503);
   }

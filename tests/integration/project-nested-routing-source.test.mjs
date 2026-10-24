@@ -12,7 +12,8 @@ test("projects renders its overview only at the exact projects route", () => {
     projects,
     /function ProjectsRoute\(\)[\s\S]*?from: "\/projects\/\$projectId"[\s\S]*?shouldThrow: false[\s\S]*?return projectMatch \? <Outlet \/> : <ProjectsPage \/>/,
   );
-  assert.match(projects, /function ProjectsPage\(\)[\s\S]*?return \(\s*<AppShell>/);
+  // Shell options may vary; nesting correctness does not depend on a bare JSX tag.
+  assert.match(projects, /function ProjectsPage\(\)[\s\S]*?return \(\s*<AppShell\b[^>]*>/);
 });
 
 test("project detail yields to its nested chat without adding a second shell", () => {
@@ -21,6 +22,9 @@ test("project detail yields to its nested chat without adding a second shell", (
     projectDetail,
     /function ProjectDetailRoute\(\)[\s\S]*?from: "\/projects\/\$projectId\/chat\/\$chatId"[\s\S]*?shouldThrow: false[\s\S]*?return chatMatch \? <Outlet \/> : <ProjectDetailPage \/>/,
   );
-  assert.match(projectDetail, /function ProjectDetailPage\(\)[\s\S]*?return \(\s*<AppShell>/);
-  assert.match(projectChat, /function ProjectChatPage\(\)[\s\S]*?<AppShell>/);
+  assert.match(
+    projectDetail,
+    /function ProjectDetailPage\(\)[\s\S]*?return \(\s*<AppShell\b[^>]*>/,
+  );
+  assert.match(projectChat, /function ProjectChatPage\(\)[\s\S]*?<AppShell\b[^>]*>/);
 });

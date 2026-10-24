@@ -1,26 +1,18 @@
 import type { Dispatch, SetStateAction } from "react";
-import { Lightbulb, ListChecks, PenLine, Sparkles } from "lucide-react";
+import { Columns2, FileText, PenLine } from "lucide-react";
 
 const EMPTY_STATE_STARTERS = [
+  { label: "Write something", prompt: "Help me write ", icon: PenLine },
   {
-    label: "Brainstorm ideas",
-    prompt: "Help me brainstorm thoughtful ideas for ",
-    icon: Lightbulb,
+    label: "Summarize a file",
+    prompt: "Summarize the file I attach, highlighting its key points and any important caveats.",
+    icon: FileText,
   },
   {
-    label: "Make a plan",
-    prompt: "Create a practical step-by-step plan for ",
-    icon: ListChecks,
-  },
-  {
-    label: "Improve writing",
-    prompt: "Help me rewrite this clearly while preserving the meaning:\n\n",
-    icon: PenLine,
-  },
-  {
-    label: "Explore a topic",
-    prompt: "Explain this topic clearly, including the most important context: ",
-    icon: Sparkles,
+    label: "Compare options",
+    prompt:
+      "Compare these options, including their benefits, drawbacks, and important trade-offs:\n\n",
+    icon: Columns2,
   },
 ] as const;
 
@@ -31,31 +23,27 @@ const EMPTY_STATE_STARTERS = [
  */
 export function HomeChatStarters({ setInput }: { setInput: Dispatch<SetStateAction<string>> }) {
   return (
-    <div className="kova-starter-grid" role="group" aria-label="Suggested prompts">
-      {EMPTY_STATE_STARTERS.map((starter) => {
-        const Icon = starter.icon;
-        return (
-          <button
-            key={starter.label}
-            type="button"
-            className="kova-starter-prompt"
-            aria-label={`Start with ${starter.label}`}
-            onClick={() => {
-              setInput((current) => (current.trim() ? current : starter.prompt));
-              window.requestAnimationFrame(() => {
-                document
-                  .querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')
-                  ?.focus({ preventScroll: true });
-              });
-            }}
-          >
-            <span className="kova-starter-icon" aria-hidden="true">
-              <Icon className="h-4 w-4" strokeWidth={1.75} />
-            </span>
-            <span>{starter.label}</span>
-          </button>
-        );
-      })}
+    <div className="spec400-starter-actions" aria-label="Start a draft">
+      {EMPTY_STATE_STARTERS.map(({ label, prompt, icon: Icon }) => (
+        <button
+          key={label}
+          type="button"
+          className="spec400-toolbar-button"
+          aria-label={`Start with ${label}`}
+          onClick={() => {
+            // A starter never overwrites work already entered and never submits.
+            setInput((current) => (current.trim() ? current : prompt));
+            window.requestAnimationFrame(() =>
+              document
+                .querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')
+                ?.focus({ preventScroll: true }),
+            );
+          }}
+        >
+          <Icon aria-hidden="true" />
+          <span>{label}</span>
+        </button>
+      ))}
     </div>
   );
 }

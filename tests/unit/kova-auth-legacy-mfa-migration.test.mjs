@@ -146,7 +146,7 @@ test("mailbox-proven recovery adopts an email-only hosted account and retires ho
     await db.query("select public.kova_auth_create_recovery($1,$2,$3,'{}',$4)", [
       email,
       digest("email-only-recovery"),
-      expiry,
+      new Date(Date.parse(now) + 3600_000).toISOString(),
       now,
     ]);
     assert.equal(await adoptionGapCount(db), 1); // Email delivery alone does not prove ownership.

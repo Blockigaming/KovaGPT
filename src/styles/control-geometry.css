@@ -1,0 +1,105 @@
+/* Ordinary actions share the Button primitive's pill contract. This is a
+   semantic default, without important declarations or specificity escalation.
+   Full surfaces, navigation rows, menus and widgets retain their own geometry. */
+body
+  :is(
+    button,
+    a[role="button"],
+    .kova-button,
+    a.public-action,
+    a[data-public-primary],
+    a.kova-billing-plan-action,
+    .spec400-review-toolbar a,
+    .spec400-review-actions > a
+  ):not(
+    :where(
+      [role]:not([role="button"]),
+      [data-kova-button-shape="preserve"],
+      [data-day],
+      [data-range-middle],
+      [role="menu"] *,
+      [role="listbox"] *,
+      [role="tablist"] *,
+      .kova-file-view-toggle *,
+      .kova-file-filters *,
+      .spec400-inspector-tabs *,
+      .public-example-options *,
+      .rdp-root *,
+      .kova-sidebar-scrim,
+      .kova-browser-card,
+      .work-browser-preview,
+      .kova-card,
+      .kova-project-card,
+      .kova-directory-row,
+      .kova-connector-card,
+      .kova-plan-card,
+      .kova-image-preset,
+      .kova-state-panel,
+      .spec400-review-card,
+      .kova-nav-row:not(.kova-new-chat),
+      .kova-chat-row-main,
+      .kova-account-main,
+      .kova-settings-nav-item,
+      .kova-file-open,
+      .kova-output-row,
+      .spec400-task-title,
+      .spec400-recent-work > button,
+      .kova-composer-action,
+      .kova-composer-plugin,
+      .spec400-attachment-inspect,
+      .spec400-context-inspect,
+      .spec400-chip-inspect,
+      [data-state="on"],
+      [data-state="off"]
+    )
+  ) {
+  border-radius: var(--kova-radius-button);
+}
+:is(
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"],
+  [role="option"],
+  .kova-select-item,
+  .kova-dropdown-item,
+  .kova-composer-action,
+  .kova-composer-plugin
+) {
+  border-radius: var(--kova-radius-compact);
+}
+:is(
+  [role="menu"],
+  [role="listbox"],
+  .kova-composer-menu,
+  .kova-profile-menu,
+  .kova-dropdown-content,
+  .kova-select-content
+) {
+  border-radius: var(--kova-radius-menu);
+}
+:is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not(
+      [type="file"]
+    ),
+  select,
+  textarea:not(.kova-composer-input):not(.spec400-composer-input)
+) {
+  border-radius: var(--kova-radius-input);
+}
+:is(input, textarea, select):focus {
+  border-color: var(--ring);
+}
+/* The composer owns its one outer focus treatment; do not draw a second box. */
+:is(input, textarea, select):not(.kova-composer-input):not(.spec400-composer-input):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+button[data-day] {
+  border-radius: var(--kova-radius-compact);
+}
+button[data-range-middle="true"] {
+  border-radius: 0;
+}
+[role="checkbox"] {
+  border-radius: 4px;
+}

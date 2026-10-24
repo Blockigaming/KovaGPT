@@ -1,7 +1,24 @@
+import "@/styles/spec400-management.css";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
+import { usePrincipalSessionPreferences } from "@/hooks/use-principal-session-preferences";
+import {
+  MAX_MANAGEMENT_QUERY_LENGTH,
+  parseScheduledTaskListPreferences,
+  SCHEDULED_TASK_LIST_STORAGE_BASE,
+} from "@/lib/management-list-preferences.mjs";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { useTimeFormatPreference } from "@/hooks/use-time-format-preference";
+import { formatDisplayDateTime } from "@/lib/time-format";
 import { AppShell } from "@/components/AppShell";
 import {
   listScheduledTasks,
@@ -24,12 +41,34 @@ import {
   RotateCcw,
   WandSparkles,
   AlertCircle,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AutomationBuilder, type AutomationDraft } from "@/components/AutomationBuilder";
 import { ScheduledTaskEditor } from "@/components/ScheduledTaskEditor";
 import { ScheduledTaskCopies } from "@/components/ScheduledTaskCopies";
+import { ScheduledTaskLastRun } from "@/components/ScheduledTaskLastRun";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
+import { useScheduledTaskRunPreviews } from "@/hooks/use-scheduled-task-run-previews";
+import { TASK_RUN_PAGE_SIZE } from "@/lib/scheduled-task-run-page";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   browserStoragePrincipal,
   consumePrincipalHandoff,
@@ -40,6 +79,9 @@ import {
 
 export const Route = createFileRoute("/scheduled-tasks")({
   component: ScheduledTasksPage,
+  validateSearch: (search: Record<string, unknown>): { taskId?: string } => ({
+    taskId: typeof search.taskId === "string" ? search.taskId : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "KovaGPT Tasks" },
@@ -52,12 +94,37 @@ export const Route = createFileRoute("/scheduled-tasks")({
   }),
 });
 
-type PlanState = "loading" | "free" | "paid" | "signed-out" | "error";
-type TaskFilter = "all" | "active" | "paused" | "history" | "failed";
+type AccessState = "loading" | "eligible" | "unavailable" | "signed-out" | "error";
+type TaskFilter = "active" | "paused" | "all";
+type TaskAction = "paused" | "scheduled" | "retry" | "delete";
+type TaskActionFeedback = {
+  task: ScheduledTask;
+  action: TaskAction;
+  request: { expectedUserId: string; id: string; mutationId: string; expectedRevision: number };
+  state: "pending" | "error" | "success";
+  message: string;
+};
+type FocusOrigin = {
+  trigger: HTMLElement | null;
+  url: string;
+  principal: string | null;
+  generation: number;
+};
+const taskActionLabels: Record<TaskAction, string> = {
+  paused: "pause",
+  scheduled: "resume",
+  retry: "retry failed run",
+  delete: "delete",
+};
 
 function ScheduledTasksPage() {
   const { isLoaded, isSignedIn, user } = useUser();
+  const { taskId: requestedTaskId } = Route.useSearch();
+  const openedTaskLink = useRef<string | null>(null);
+  const taskListLoaded = useRef(false);
+  const [taskLinkError, setTaskLinkError] = useState<string | null>(null);
   const userKey = user?.id ?? null;
+  const timeFormat = useTimeFormatPreference(userKey, isLoaded);
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
   const principalRef = useRef(principal);
   principalRef.current = principal;
@@ -67,22 +134,64 @@ function ScheduledTasksPage() {
   const [lifecycleVersion, setLifecycleVersion] = useState(0);
   const dataReady =
     principal !== null && dataPrincipal === principal && dataGeneration === generationRef.current;
-  const [plan, setPlan] = useState<PlanState>("loading");
+  const [accessState, setAccessState] = useState<AccessState>("loading");
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editor, setEditor] = useState<ScheduledTask | "new" | null>(null);
+  const [createdTask, setCreatedTask] = useState<ScheduledTask | null>(null);
+  const [editorSection, setEditorSection] = useState<"settings" | "history">("settings");
+  const editorReturnRef = useRef<{
+    trigger: HTMLElement | null;
+    url: string;
+    principal: string | null;
+    generation: number;
+  } | null>(null);
+  const taskActionButtonsRef = useRef(new Map<string, HTMLButtonElement>());
+  const pageHeadingRef = useRef<HTMLHeadingElement>(null);
   const mutations = useRef(new Map<string, { revision: number; mutationId: string }>());
+  const pendingTaskIdsRef = useRef(new Set<string>());
+  const [pendingTaskIds, setPendingTaskIds] = useState<Set<string>>(new Set());
+  const [taskFeedback, setTaskFeedback] = useState<Record<string, TaskActionFeedback>>({});
+  const taskFeedbackRefs = useRef(new Map<string, HTMLElement>());
+  const actionFocusRef = useRef(new Map<string, { handoff: () => void; cleanup: () => void }>());
+  const taskMenuActionsRef = useRef(new Set<string>());
+  const [deleteTask, setDeleteTask] = useState<ScheduledTask | null>(null);
+  const deleteReturnRef = useRef<(FocusOrigin & { taskId: string }) | null>(null);
+  const deleteCancelRef = useRef<HTMLButtonElement>(null);
+  const deleteFeedbackRef = useRef<HTMLDivElement>(null);
+  const listRequestRef = useRef(0);
+  const refreshButtonRef = useRef<HTMLButtonElement>(null);
+  const retryPendingRef = useRef<object | null>(null);
+  useEffect(
+    () => () => {
+      generationRef.current += 1;
+      editorReturnRef.current = null;
+      deleteReturnRef.current = null;
+      for (const focus of actionFocusRef.current.values()) focus.cleanup();
+      actionFocusRef.current.clear();
+      taskMenuActionsRef.current.clear();
+    },
+    [],
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<TaskFilter>("all");
+  const [{ query, filter }, setListPreferences] = usePrincipalSessionPreferences(
+    SCHEDULED_TASK_LIST_STORAGE_BASE,
+    isLoaded ? userKey : undefined,
+    parseScheduledTaskListPreferences,
+  );
+  const setQuery = (query: string) => setListPreferences({ query });
+  const setFilter = (filter: TaskFilter) => setListPreferences({ filter });
   const [builderOpen, setBuilderOpen] = useState(false);
   const [executionAvailable, setExecutionAvailable] = useState(false);
+  const [runRefreshVersion, setRunRefreshVersion] = useState(0);
+  const [taskPage, setTaskPage] = useState({ scope: "", index: 0 });
+  const [relatedWorkspaceOpen, setRelatedWorkspaceOpen] = useState(false);
 
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
   const [when, setWhen] = useState("");
-  const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");
+  const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("daily");
 
   const list = useServerFn(listScheduledTasks);
   const update = useServerFn(updateScheduledTask);
@@ -94,26 +203,39 @@ function ScheduledTasksPage() {
     generationRef.current = generation;
     setDataPrincipal(null);
     setDataGeneration(generation);
-    setPlan("loading");
+    setAccessState("loading");
     setTasks([]);
+    taskListLoaded.current = false;
+    openedTaskLink.current = null;
+    setTaskLinkError(null);
+    setCreatedTask(null);
+    editorReturnRef.current = null;
     setEditor(null);
+    setDeleteTask(null);
+    deleteReturnRef.current = null;
+    setTaskFeedback({});
+    for (const focus of actionFocusRef.current.values()) focus.cleanup();
+    actionFocusRef.current.clear();
+    taskMenuActionsRef.current.clear();
     mutations.current.clear();
+    pendingTaskIdsRef.current.clear();
+    setPendingTaskIds(new Set());
     setLoading(false);
     setCreating(false);
     setLoadError(null);
-    setQuery("");
-    setFilter("all");
+    retryPendingRef.current = null;
     setBuilderOpen(false);
     setExecutionAvailable(false);
+    setRelatedWorkspaceOpen(false);
     setTitle("");
     setPrompt("");
     setWhen("");
-    setRepeat("none");
+    setRepeat("daily");
     if (!principal) return;
     if (!isSignedIn) {
       setDataPrincipal(principal);
       setDataGeneration(generation);
-      setPlan("signed-out");
+      setAccessState("signed-out");
       return;
     }
     let cancel = false;
@@ -124,13 +246,13 @@ function ScheduledTasksPage() {
         setExecutionAvailable(r.executionAvailable);
         setDataPrincipal(principal);
         setDataGeneration(generation);
-        setPlan(r.eligible ? "paid" : "free");
+        setAccessState(r.eligible ? "eligible" : "unavailable");
       })
       .catch(() => {
         if (!cancel && generationRef.current === generation && principalRef.current === principal) {
           setDataPrincipal(principal);
           setDataGeneration(generation);
-          setPlan("error");
+          setAccessState("error");
         }
       });
     return () => {
@@ -139,34 +261,110 @@ function ScheduledTasksPage() {
   }, [checkEligible, isSignedIn, lifecycleVersion, principal, userKey]);
 
   const loadTasks = useCallback(async () => {
-    if (
-      !dataReady ||
-      dataGeneration !== generationRef.current ||
-      (plan !== "paid" && plan !== "free")
-    )
+    if (pendingTaskIdsRef.current.size > 0) return;
+    if (!dataReady || dataGeneration !== generationRef.current || accessState !== "eligible")
       return;
     const generation = generationRef.current;
+    const request = ++listRequestRef.current;
     setLoading(true);
-    setLoadError(null);
     try {
       const next = await list({ data: { expectedUserId: userKey! } });
-      if (generation !== generationRef.current || principalRef.current !== principal) return;
+      if (
+        generation !== generationRef.current ||
+        principalRef.current !== principal ||
+        request !== listRequestRef.current
+      )
+        return;
+      taskListLoaded.current = true;
       setTasks(next);
+      setLoadError(null);
+      setRunRefreshVersion((value) => value + 1);
     } catch (error) {
-      if (generation !== generationRef.current || principalRef.current !== principal) return;
+      if (
+        generation !== generationRef.current ||
+        principalRef.current !== principal ||
+        request !== listRequestRef.current
+      )
+        return;
       const message = error instanceof Error ? error.message : "Failed to load tasks";
       setLoadError(message);
       toast.error(message);
     } finally {
-      if (generation === generationRef.current && principalRef.current === principal) {
+      if (
+        generation === generationRef.current &&
+        principalRef.current === principal &&
+        request === listRequestRef.current
+      ) {
         setLoading(false);
       }
     }
-  }, [dataGeneration, dataReady, list, plan, principal, userKey]);
+  }, [accessState, dataGeneration, dataReady, list, principal, userKey]);
 
   useEffect(() => {
     void loadTasks();
   }, [loadTasks]);
+
+  const openTaskEditor = useCallback(
+    (task: ScheduledTask | "new", section: "settings" | "history", trigger: HTMLElement | null) => {
+      if (!dataReady || dataGeneration !== generationRef.current) return;
+      // Capture the real page control before the portaled dialog or menu moves focus.
+      editorReturnRef.current = {
+        trigger,
+        url: window.location.href,
+        principal,
+        generation: generationRef.current,
+      };
+      setEditorSection(section);
+      setEditor(task);
+    },
+    [dataGeneration, dataReady, principal],
+  );
+
+  useEffect(() => {
+    if (
+      !requestedTaskId ||
+      !dataReady ||
+      loading ||
+      !taskListLoaded.current ||
+      openedTaskLink.current === requestedTaskId
+    )
+      return;
+    openedTaskLink.current = requestedTaskId;
+    const selected = tasks.find((task) => task.id === requestedTaskId);
+    if (selected) {
+      openTaskEditor(selected, "settings", null);
+      setTaskLinkError(null);
+    } else
+      setTaskLinkError("This scheduled task is unavailable or is not accessible to this account.");
+  }, [requestedTaskId, dataReady, loading, tasks, openTaskEditor]);
+
+  const retryLoadTasks = async (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (loading || retryPendingRef.current || pendingTaskIdsRef.current.size > 0) return;
+    const target = event.currentTarget;
+    const hadFocus = document.activeElement === target;
+    const openedUrl = window.location.href;
+    const generation = generationRef.current;
+    const attempt = {};
+    retryPendingRef.current = attempt;
+    try {
+      await loadTasks();
+    } finally {
+      if (retryPendingRef.current === attempt) retryPendingRef.current = null;
+      window.requestAnimationFrame(() => {
+        // A failed retry keeps its button. Only replace focus after success removes it,
+        // and never override a newer focus choice or a changed account/page.
+        if (
+          !hadFocus ||
+          target.isConnected ||
+          generationRef.current !== generation ||
+          principalRef.current !== principal ||
+          document.activeElement !== document.body
+        )
+          return;
+        restoreDialogFocus(refreshButtonRef.current, openedUrl);
+      });
+    }
+  };
 
   useEffect(() => {
     if (!dataReady || dataGeneration !== generationRef.current) return;
@@ -200,12 +398,13 @@ function ScheduledTasksPage() {
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       generationRef.current += 1;
+      editorReturnRef.current = null;
       setDataPrincipal(null);
       setTasks([]);
       setTitle("");
       setPrompt("");
       setWhen("");
-      setRepeat("none");
+      setRepeat("daily");
       setBuilderOpen(false);
       setLifecycleVersion((value) => value + 1);
     };
@@ -213,15 +412,13 @@ function ScheduledTasksPage() {
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
   }, [isLoaded, principal, userKey]);
 
-  const visibleTasks = useMemo(() => {
+  const filteredTasks = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return (dataReady ? tasks : []).filter((task) => {
       const statusMatch =
         filter === "all" ||
         (filter === "active" && ["scheduled", "running"].includes(task.status)) ||
-        (filter === "paused" && task.status === "paused") ||
-        (filter === "history" && task.status === "completed") ||
-        (filter === "failed" && task.status === "failed");
+        (filter === "paused" && task.status === "paused");
       return (
         statusMatch &&
         (!normalized || `${task.title} ${task.prompt}`.toLowerCase().includes(normalized))
@@ -229,7 +426,22 @@ function ScheduledTasksPage() {
     });
   }, [dataReady, filter, query, tasks]);
 
-  const visiblePlan: PlanState = dataReady ? plan : "loading";
+  const pageScope = JSON.stringify([principal, lifecycleVersion, filter, query]);
+  const pageCount = Math.max(1, Math.ceil(filteredTasks.length / TASK_RUN_PAGE_SIZE));
+  const pageIndex = Math.min(taskPage.scope === pageScope ? taskPage.index : 0, pageCount - 1);
+  const visibleTasks = useMemo(
+    () => filteredTasks.slice(pageIndex * TASK_RUN_PAGE_SIZE, (pageIndex + 1) * TASK_RUN_PAGE_SIZE),
+    [filteredTasks, pageIndex],
+  );
+  const runPreviews = useScheduledTaskRunPreviews(
+    userKey,
+    dataReady && accessState === "eligible",
+    lifecycleVersion,
+    runRefreshVersion,
+    visibleTasks,
+  );
+
+  const visibleAccess: AccessState = dataReady ? accessState : "loading";
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,7 +453,11 @@ function ScheduledTasksPage() {
       !when
     )
       return;
-    setEditor("new");
+    openTaskEditor(
+      "new",
+      "settings",
+      e.nativeEvent instanceof SubmitEvent ? e.nativeEvent.submitter : null,
+    );
   };
   const createAutomation = async (draft: AutomationDraft) => {
     if (!dataReady || dataGeneration !== generationRef.current) return;
@@ -250,8 +466,9 @@ function ScheduledTasksPage() {
     setRepeat(draft.repeat);
     const date = new Date(draft.runAt);
     setWhen(new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
-    setEditor("new");
+    openTaskEditor("new", "settings", null);
   };
+  const editorFocusOrigin = editorReturnRef.current;
   const identity = (task: ScheduledTask, action: string) => {
     const key = task.id + ":" + action;
     const saved = mutations.current.get(key);
@@ -268,122 +485,295 @@ function ScheduledTasksPage() {
     };
   };
 
-  const togglePause = async (t: ScheduledTask) => {
-    if (!dataReady || dataGeneration !== generationRef.current) return;
-    const generation = generationRef.current;
-    const next = t.status === "paused" ? "scheduled" : "paused";
-    try {
-      const updated = await update({ data: { ...identity(t, next), status: next } });
-      if (generation !== generationRef.current || principalRef.current !== principal) return;
-      setTasks((arr) => arr.map((x) => (x.id === t.id ? updated : x)));
-    } catch (e) {
-      if (generation === generationRef.current && principalRef.current === principal) {
-        toast.error(e instanceof Error ? e.message : "Failed to update");
-      }
-    }
+  const beginTaskMutation = (id: string) => {
+    if (pendingTaskIdsRef.current.has(id)) return false;
+    pendingTaskIdsRef.current.add(id);
+    setPendingTaskIds(new Set(pendingTaskIdsRef.current));
+    // A list requested before this action must not restore an old task revision.
+    listRequestRef.current += 1;
+    setLoading(false);
+    return true;
+  };
+  const finishTaskMutation = (id: string, generation: number) => {
+    if (generation !== generationRef.current || principalRef.current !== principal) return;
+    pendingTaskIdsRef.current.delete(id);
+    setPendingTaskIds(new Set(pendingTaskIdsRef.current));
   };
 
-  const del = async (t: ScheduledTask) => {
-    if (!dataReady || dataGeneration !== generationRef.current) return;
-    const generation = generationRef.current;
-    if (
-      !window.confirm("Delete this task and its run history? Pending copy offers will be revoked.")
-    )
-      return;
-    try {
-      await remove({ data: identity(t, "delete") });
-      if (generation !== generationRef.current || principalRef.current !== principal) return;
-      setTasks((arr) => arr.filter((x) => x.id !== t.id));
-    } catch (e) {
-      if (generation === generationRef.current && principalRef.current === principal) {
-        toast.error(e instanceof Error ? e.message : "Failed to delete");
-      }
-    }
+  const captureActionFocus = (taskId: string, action: TaskAction, trigger: HTMLElement | null) => {
+    actionFocusRef.current.get(taskId)?.cleanup();
+    const source = document.activeElement;
+    const origin: FocusOrigin = {
+      trigger,
+      url: window.location.href,
+      principal,
+      generation: generationRef.current,
+    };
+    let moved = source === document.body;
+    const destination = () =>
+      action === "delete" && deleteFeedbackRef.current
+        ? deleteFeedbackRef.current
+        : taskFeedbackRefs.current.get(taskId);
+    const onFocus = (event: FocusEvent) => {
+      if (event.target !== source && event.target !== trigger && event.target !== destination())
+        moved = true;
+    };
+    const onPointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        !trigger?.contains(target) &&
+        !(source instanceof HTMLElement && source.contains(target)) &&
+        !destination()?.contains(target)
+      )
+        moved = true;
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Tab") moved = true;
+    };
+    document.addEventListener("focusin", onFocus, true);
+    document.addEventListener("pointerdown", onPointer, true);
+    document.addEventListener("keydown", onKey, true);
+    const focus = {
+      handoff: () => {
+        if (
+          moved ||
+          principalRef.current !== origin.principal ||
+          generationRef.current !== origin.generation
+        )
+          return;
+        const target = destination();
+        restoreDialogFocus(target, origin.url);
+        if (target && document.activeElement === target)
+          target.scrollIntoView({ block: "nearest" });
+      },
+      cleanup: () => {
+        document.removeEventListener("focusin", onFocus, true);
+        document.removeEventListener("pointerdown", onPointer, true);
+        document.removeEventListener("keydown", onKey, true);
+      },
+    };
+    actionFocusRef.current.set(taskId, focus);
+    window.requestAnimationFrame(focus.handoff);
+    return focus;
   };
 
-  const retry = async (task: ScheduledTask) => {
+  const runTaskAction = async (
+    task: ScheduledTask,
+    action: TaskAction,
+    trigger: HTMLElement | null,
+    savedRequest?: TaskActionFeedback["request"],
+  ) => {
     if (!dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
+    if (!beginTaskMutation(task.id)) return;
+    // Preserve the complete original request after an uncertain response, even if
+    // a later refresh changes the displayed revision. The server owns deduplication.
+    const request = savedRequest ?? identity(task, action);
+    const feedback: TaskActionFeedback = {
+      task,
+      action,
+      request,
+      state: "pending",
+      message: `${action === "delete" ? "Deleting" : "Saving change for"} “${task.title}”…`,
+    };
+    setTaskFeedback((current) => ({ ...current, [task.id]: feedback }));
+    const focus = captureActionFocus(task.id, action, trigger);
     try {
-      const updated = await update({
-        data: { ...identity(task, "retry"), status: "scheduled", retry: true },
+      const updated =
+        action === "delete"
+          ? await remove({ data: request })
+          : await update({
+              data: {
+                ...request,
+                status: action === "retry" ? "scheduled" : action,
+                ...(action === "retry" ? { retry: true } : {}),
+              },
+            });
+      if (generation !== generationRef.current || principalRef.current !== principal) return;
+      if (action === "delete") {
+        setTasks((current) => current.filter((item) => item.id !== task.id));
+        setDeleteTask(null);
+      } else {
+        setTasks((current) =>
+          current.map((item) => (item.id === task.id ? (updated as ScheduledTask) : item)),
+        );
+      }
+      const message =
+        action === "delete"
+          ? `“${task.title}” deleted.`
+          : action === "retry"
+            ? `“${task.title}” queued to retry.`
+            : `“${task.title}” ${action === "paused" ? "paused" : "resumed"}.`;
+      setTaskFeedback((current) => {
+        const next = { ...current };
+        delete next[task.id];
+        next[task.id] = { ...feedback, state: "success", message };
+        const completed = Object.keys(next).filter((id) => next[id].state === "success");
+        for (const id of completed.slice(0, -3)) {
+          // Keep unresolved work and any result the user is currently reading.
+          if (!taskFeedbackRefs.current.get(id)?.contains(document.activeElement)) delete next[id];
+        }
+        return next;
       });
-      if (generation !== generationRef.current || principalRef.current !== principal) return;
-      setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
-      toast.success("Task queued to retry");
     } catch (error) {
       if (generation === generationRef.current && principalRef.current === principal) {
-        toast.error(error instanceof Error ? error.message : "Could not retry task");
+        const detail = error instanceof Error ? error.message : "The response was interrupted.";
+        const message = `Couldn’t confirm ${taskActionLabels[action]} for “${task.title}”. ${detail}`;
+        setTaskFeedback((current) => ({
+          ...current,
+          [task.id]: { ...feedback, state: "error", message },
+        }));
       }
+    } finally {
+      finishTaskMutation(task.id, generation);
+      window.requestAnimationFrame(() => {
+        if (actionFocusRef.current.get(task.id) !== focus) return;
+        // The named status stays mounted even when a successful change removes
+        // its source row from the active filter. Never reclaim a user's new focus.
+        focus.handoff();
+        focus.cleanup();
+        actionFocusRef.current.delete(task.id);
+      });
     }
   };
 
+  const togglePause = (task: ScheduledTask) => {
+    taskMenuActionsRef.current.add(task.id);
+    return runTaskAction(
+      task,
+      task.status === "paused" ? "scheduled" : "paused",
+      taskActionButtonsRef.current.get(task.id) ?? null,
+    );
+  };
+  const retry = (task: ScheduledTask) => {
+    taskMenuActionsRef.current.add(task.id);
+    return runTaskAction(task, "retry", taskActionButtonsRef.current.get(task.id) ?? null);
+  };
+  const openDelete = (
+    task: ScheduledTask,
+    trigger: HTMLElement | null = taskActionButtonsRef.current.get(task.id) ?? null,
+  ) => {
+    if (
+      !dataReady ||
+      dataGeneration !== generationRef.current ||
+      pendingTaskIdsRef.current.has(task.id)
+    )
+      return;
+    deleteReturnRef.current = {
+      trigger,
+      taskId: task.id,
+      url: window.location.href,
+      principal,
+      generation: generationRef.current,
+    };
+    setDeleteTask(task);
+  };
+  const deleteFocusOrigin = deleteReturnRef.current;
+  const deleteFeedback = deleteTask ? taskFeedback[deleteTask.id] : undefined;
+  const deletePending = !!deleteTask && pendingTaskIds.has(deleteTask.id);
+
   return (
-    <AppShell>
+    <AppShell hideUtilities>
       <div className="min-h-screen bg-background text-foreground">
-        <div className="kova-page kova-secondary-page max-w-3xl">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to chat
-          </Link>
+        <main
+          id="main-content"
+          className="kova-page kova-secondary-page spec400-management spec400-schedules"
+          aria-labelledby="scheduled-tasks-title"
+        >
+          <header className="spec400-page-header">
+            <div>
+              <h1 id="scheduled-tasks-title" ref={pageHeadingRef} tabIndex={-1}>
+                Scheduled tasks
+              </h1>
+              <p>Run a prompt automatically on a schedule</p>
+            </div>
+            {visibleAccess === "eligible" && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="spec400-primary"
+                  disabled={!executionAvailable}
+                  onClick={(event) => openTaskEditor("new", "settings", event.currentTarget)}
+                >
+                  <Plus aria-hidden="true" /> New scheduled task
+                </button>
+                <button
+                  type="button"
+                  ref={refreshButtonRef}
+                  onClick={() => {
+                    if (!loading) void loadTasks();
+                  }}
+                  aria-disabled={loading}
+                  aria-busy={loading}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm hover:bg-accent aria-disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+                </button>
+              </div>
+            )}
+          </header>
 
-          <div className="flex items-center gap-3 mb-2">
-            <Calendar className="w-6 h-6" />
-            <h1 className="font-display text-2xl font-semibold tracking-tight">Tasks</h1>
-          </div>
-          <p className="text-sm text-muted-foreground mb-8">
-            Review scheduled work and its real execution status. New tasks are available only when a
-            background runner is configured.
-          </p>
-
-          {visiblePlan === "loading" && (
+          {createdTask && (
+            <div role="status" className="mb-4">
+              <button
+                className="spec400-created-receipt"
+                onClick={(event) => openTaskEditor(createdTask, "settings", event.currentTarget)}
+              >
+                <Check className="text-green-600" aria-hidden="true" />
+                Scheduled task created
+              </button>
+            </div>
+          )}
+          {taskLinkError && (
+            <p role="alert" className="spec400-supporting">
+              {taskLinkError}
+            </p>
+          )}
+          {visibleAccess === "loading" && (
             <div className="text-sm text-muted-foreground">Loading…</div>
           )}
 
-          {visiblePlan === "signed-out" && (
+          {visibleAccess === "signed-out" && (
             <div className="kova-empty-state">
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
-              <div className="font-medium mb-1">Sign in to review task history</div>
+              <div className="font-medium mb-1">Sign in to use Scheduled tasks</div>
               <p className="text-sm text-muted-foreground mb-4">
                 Sign in to review your saved tasks and background execution availability.
               </p>
               <Link
                 to="/"
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium"
+                className="kova-button inline-flex items-center justify-center px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium"
               >
                 Go to sign in
               </Link>
             </div>
           )}
 
-          {visiblePlan === "free" && (
+          {visibleAccess === "unavailable" && (
             <div className="kova-empty-state">
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
-              <div className="font-medium mb-1">
-                Running tasks requires an active Plus or Pro plan
-              </div>
+              <div className="font-medium mb-1">Scheduled tasks are unavailable</div>
               <p className="text-sm text-muted-foreground mb-4">
-                Your existing history and pause/delete controls remain available below. A plan alone
-                does not activate an unconfigured background runner.
+                Tasks are included with every signed-in plan. Access could not be confirmed for this
+                account. Sign in again or try later.
               </p>
               <Link
                 to="/"
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium"
+                className="kova-button inline-flex items-center justify-center px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium"
               >
                 Back to chat
               </Link>
             </div>
           )}
 
-          {visiblePlan === "error" && (
+          {visibleAccess === "error" && (
             <div className="kova-empty-state" role="alert">
               <AlertCircle className="mx-auto mb-3 h-6 w-6 text-destructive" />
-              <div className="font-medium mb-1">Plan status is unavailable</div>
+              <div className="font-medium mb-1">Scheduled tasks are unavailable</div>
               <p className="text-sm text-muted-foreground mb-4">
-                KovaGPT could not safely verify access to Scheduled Tasks. No plan restriction was
-                inferred.
+                KovaGPT could not safely verify account access to Scheduled Tasks. Try again to
+                check availability.
               </p>
               <button
                 type="button"
@@ -395,7 +785,7 @@ function ScheduledTasksPage() {
             </div>
           )}
 
-          {(visiblePlan === "paid" || visiblePlan === "free") && (
+          {visibleAccess === "eligible" && (
             <>
               {!executionAvailable ? (
                 <div
@@ -412,99 +802,18 @@ function ScheduledTasksPage() {
                   </p>
                 </div>
               ) : null}
-              {executionAvailable && visiblePlan === "paid" ? (
-                <div className="mb-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setBuilderOpen(true)}
-                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-3.5 text-sm font-medium shadow-sm hover:bg-accent"
-                  >
-                    <WandSparkles className="h-4 w-4" /> Build an automation
-                  </button>
-                </div>
-              ) : null}
               <AutomationBuilder
+                timeFormat={timeFormat}
                 open={executionAvailable && builderOpen}
                 onOpenChange={setBuilderOpen}
                 onCreate={createAutomation}
               />
-              {executionAvailable && visiblePlan === "paid" ? (
-                <form
-                  onSubmit={submit}
-                  className="kova-card kova-form-surface p-4 sm:p-5 mb-8 space-y-3"
-                >
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Title</label>
-                    <input
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Morning market summary"
-                      className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
-                      maxLength={200}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">
-                      What should Kova do?
-                    </label>
-                    <textarea
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="Summarize the top 5 AI news stories from the last 24 hours."
-                      className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition min-h-[90px]"
-                      maxLength={4000}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground">When</label>
-                      <input
-                        type="datetime-local"
-                        value={when}
-                        onChange={(e) => setWhen(e.target.value)}
-                        className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground">Repeat</label>
-                      <select
-                        value={repeat}
-                        onChange={(e) => setRepeat(e.target.value as ScheduledTask["repeat"])}
-                        className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
-                      >
-                        <option value="none">Once</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={creating}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 disabled:opacity-50 transition active:scale-[0.98]"
-                    >
-                      <Plus className="w-4 h-4" />
-                      {creating ? "Scheduling…" : "Schedule"}
-                    </button>
-                  </div>
-                </form>
-              ) : null}
-
               {userKey && (
                 <ScheduledTaskCopies
                   key={principal ?? userKey}
                   tasks={tasks}
                   userKey={userKey}
-                  eligible={visiblePlan === "paid"}
+                  eligible={visibleAccess === "eligible"}
                   onChanged={() => void loadTasks()}
                 />
               )}
@@ -512,28 +821,151 @@ function ScheduledTasksPage() {
                 <ScheduledTaskEditor
                   key={`${principal}:${editor === "new" ? "new" : editor.id + ":" + editor.revision}`}
                   userKey={userKey}
+                  initialSection={editorSection}
+                  timeFormat={timeFormat}
                   task={editor === "new" ? undefined : editor}
                   draft={editor === "new" ? { title, prompt, localTime: when, repeat } : undefined}
-                  executionAvailable={executionAvailable && visiblePlan === "paid"}
+                  executionAvailable={executionAvailable && visibleAccess === "eligible"}
                   onClose={() => setEditor(null)}
+                  onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    // A replaced editor must not consume the newer editor's return target.
+                    if (!editorFocusOrigin || editorReturnRef.current !== editorFocusOrigin) return;
+                    editorReturnRef.current = null;
+                    const active = document.activeElement;
+                    const focusMoved =
+                      active !== null &&
+                      active !== document.body &&
+                      active !== editorFocusOrigin.trigger &&
+                      !(event.target instanceof HTMLElement && event.target.contains(active));
+                    const trigger = editorFocusOrigin.trigger;
+                    const usableTrigger =
+                      trigger?.isConnected &&
+                      trigger.getClientRects().length > 0 &&
+                      !trigger.closest('[hidden], [inert], [aria-hidden="true"]') &&
+                      !trigger.matches(':disabled, [aria-disabled="true"]');
+                    restoreDialogFocus(
+                      usableTrigger
+                        ? trigger
+                        : (refreshButtonRef.current ?? pageHeadingRef.current),
+                      editorFocusOrigin.url,
+                      focusMoved ||
+                        principalRef.current !== editorFocusOrigin.principal ||
+                        generationRef.current !== editorFocusOrigin.generation,
+                    );
+                  }}
                   onSaved={() => void loadTasks()}
+                  onCreated={(persistedTask) => setCreatedTask(persistedTask)}
                 />
               )}
+              <AlertDialog
+                open={deleteTask !== null}
+                onOpenChange={(open) => {
+                  if (!open && !deletePending) setDeleteTask(null);
+                }}
+              >
+                <AlertDialogContent
+                  onOpenAutoFocus={(event) => {
+                    event.preventDefault();
+                    deleteCancelRef.current?.focus();
+                  }}
+                  onEscapeKeyDown={(event) => {
+                    if (deletePending) event.preventDefault();
+                  }}
+                  onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    if (!deleteFocusOrigin || deleteReturnRef.current !== deleteFocusOrigin) return;
+                    deleteReturnRef.current = null;
+                    const active = document.activeElement;
+                    const focusMoved =
+                      active !== null &&
+                      active !== document.body &&
+                      active !== deleteFocusOrigin.trigger &&
+                      !(event.target instanceof HTMLElement && event.target.contains(active));
+                    const trigger = deleteFocusOrigin.trigger;
+                    const usableTrigger =
+                      trigger?.isConnected &&
+                      trigger.getClientRects().length > 0 &&
+                      !trigger.closest('[hidden], [inert], [aria-hidden="true"]') &&
+                      !trigger.matches(':disabled, [aria-disabled="true"]');
+                    restoreDialogFocus(
+                      usableTrigger
+                        ? trigger
+                        : (taskFeedbackRefs.current.get(deleteFocusOrigin.taskId) ??
+                            refreshButtonRef.current ??
+                            pageHeadingRef.current),
+                      deleteFocusOrigin.url,
+                      focusMoved ||
+                        principalRef.current !== deleteFocusOrigin.principal ||
+                        generationRef.current !== deleteFocusOrigin.generation,
+                    );
+                  }}
+                >
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete “{deleteTask?.title}”?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This deletes the scheduled task and its run history. Pending copy offers will
+                      be revoked.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div
+                    ref={deleteFeedbackRef}
+                    tabIndex={-1}
+                    role="region"
+                    aria-label={`Delete status for ${deleteTask?.title ?? "scheduled task"}`}
+                    aria-busy={deletePending}
+                  >
+                    {deleteFeedback?.action === "delete" && (
+                      <p role={deleteFeedback.state === "error" ? "alert" : "status"}>
+                        {deleteFeedback.message}
+                        {deleteFeedback.state === "error" &&
+                          " Retry the same request to check the outcome."}
+                      </p>
+                    )}
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel
+                      ref={deleteCancelRef}
+                      aria-disabled={deletePending}
+                      onClick={(event) => {
+                        if (deletePending) event.preventDefault();
+                      }}
+                    >
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      aria-disabled={deletePending}
+                      aria-busy={deletePending}
+                      onClick={(event) => {
+                        // Keep confirmation and its error mounted until the server
+                        // confirms success. Radix's default Action would close now.
+                        event.preventDefault();
+                        if (!deleteTask || deletePending) return;
+                        void runTaskAction(
+                          deleteFeedback?.action === "delete" ? deleteFeedback.task : deleteTask,
+                          "delete",
+                          event.currentTarget,
+                          deleteFeedback?.action === "delete" ? deleteFeedback.request : undefined,
+                        );
+                      }}
+                    >
+                      {deletePending
+                        ? "Deleting…"
+                        : deleteFeedback?.action === "delete" && deleteFeedback.state === "error"
+                          ? "Retry the same delete request"
+                          : "Delete scheduled task"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <h2 className="font-display text-lg font-semibold">Your scheduled tasks</h2>
+                  <h2 className="sr-only">Your scheduled tasks</h2>
                   <p className="text-xs text-muted-foreground">
                     Times are shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={loadTasks}
-                  disabled={loading}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm hover:bg-accent disabled:opacity-50"
-                >
-                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
-                </button>
               </div>
               <div className="mb-4 flex flex-col gap-2 sm:flex-row">
                 <label className="relative min-w-0 flex-1">
@@ -541,6 +973,7 @@ function ScheduledTasksPage() {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     value={query}
+                    maxLength={MAX_MANAGEMENT_QUERY_LENGTH}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search tasks"
                     className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm"
@@ -551,20 +984,29 @@ function ScheduledTasksPage() {
                   role="tablist"
                   aria-label="Task filters"
                 >
-                  {(["all", "active", "paused", "history", "failed"] as TaskFilter[]).map(
-                    (value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        role="tab"
-                        aria-selected={filter === value}
-                        onClick={() => setFilter(value)}
-                        className={`min-h-10 shrink-0 rounded-lg px-3 text-sm capitalize ${filter === value ? "bg-foreground text-background" : "bg-accent/50 hover:bg-accent"}`}
-                      >
-                        {value}
-                      </button>
-                    ),
-                  )}
+                  {(["active", "paused", "all"] as TaskFilter[]).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="tab"
+                      aria-selected={filter === value}
+                      onClick={() => setFilter(value)}
+                      className={`min-h-10 shrink-0 rounded-lg px-3 text-sm capitalize ${filter === value ? "bg-foreground text-background" : "bg-accent/50 hover:bg-accent"}`}
+                    >
+                      {value}{" "}
+                      <span className="spec400-count">
+                        {
+                          tasks.filter(
+                            (task) =>
+                              value === "all" ||
+                              (value === "active"
+                                ? ["scheduled", "running"].includes(task.status)
+                                : task.status === "paused"),
+                          ).length
+                        }
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
               {loadError ? (
@@ -572,17 +1014,98 @@ function ScheduledTasksPage() {
                   className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
                   role="alert"
                 >
-                  <div className="font-medium">Could not load scheduled tasks</div>
+                  <div className="font-medium">This page couldn’t load</div>
                   <p className="mt-1 text-muted-foreground">{loadError}</p>
                   <button
-                    className="mt-3 rounded-lg border border-border px-3 py-2 font-medium"
-                    onClick={loadTasks}
+                    type="button"
+                    className="mt-3 min-h-11 rounded-lg border border-border px-3 py-2 font-medium aria-disabled:opacity-50"
+                    onClick={retryLoadTasks}
+                    aria-disabled={loading}
+                    aria-busy={loading}
                   >
-                    Try again
+                    {loading ? "Trying again…" : "Try again"}
                   </button>
                 </div>
               ) : null}
-              {loading ? (
+              {Object.values(taskFeedback).map((feedback) => (
+                <section
+                  key={feedback.task.id}
+                  ref={(element) => {
+                    if (element) taskFeedbackRefs.current.set(feedback.task.id, element);
+                    else taskFeedbackRefs.current.delete(feedback.task.id);
+                  }}
+                  tabIndex={-1}
+                  aria-label={`Action status for ${feedback.task.title}`}
+                  aria-busy={feedback.state === "pending"}
+                  className="mb-4 rounded-xl border border-border p-4 text-sm"
+                >
+                  <p
+                    role={feedback.state === "error" ? "alert" : "status"}
+                    aria-live={deleteTask?.id === feedback.task.id ? "off" : undefined}
+                  >
+                    {feedback.message}
+                  </p>
+                  {feedback.state === "error" && (
+                    <>
+                      <p className="mt-1 text-muted-foreground">
+                        Retry the same request to check the outcome.
+                      </p>
+                      <button
+                        type="button"
+                        className="mt-3 min-h-11 rounded-lg border border-border px-3 py-2 font-medium"
+                        onClick={(event) => {
+                          if (feedback.action === "delete")
+                            openDelete(feedback.task, event.currentTarget);
+                          else
+                            void runTaskAction(
+                              feedback.task,
+                              feedback.action,
+                              event.currentTarget,
+                              feedback.request,
+                            );
+                        }}
+                      >
+                        Retry{" "}
+                        {feedback.action === "retry"
+                          ? "failed run"
+                          : taskActionLabels[feedback.action]}{" "}
+                        for “{feedback.task.title}”
+                      </button>
+                    </>
+                  )}
+                  {feedback.state === "success" && (
+                    <button
+                      type="button"
+                      className="mt-3 min-h-11 rounded-lg border border-border px-3 py-2 font-medium"
+                      onClick={(event) => {
+                        const trigger = event.currentTarget;
+                        const hadFocus = document.activeElement === trigger;
+                        const url = window.location.href;
+                        const generation = generationRef.current;
+                        setTaskFeedback((current) => {
+                          const next = { ...current };
+                          delete next[feedback.task.id];
+                          return next;
+                        });
+                        window.requestAnimationFrame(() => {
+                          restoreDialogFocus(
+                            taskActionButtonsRef.current.get(feedback.task.id) ??
+                              refreshButtonRef.current,
+                            url,
+                            !hadFocus ||
+                              document.activeElement !== document.body ||
+                              principalRef.current !== principal ||
+                              generationRef.current !== generation,
+                          );
+                        });
+                      }}
+                    >
+                      Dismiss result for “{feedback.task.title}”
+                    </button>
+                  )}
+                </section>
+              ))}
+              {loading && tasks.length === 0 ? (
                 <ul className="flex flex-col gap-2" aria-hidden>
                   {Array.from({ length: 3 }).map((_, i) => (
                     <li key={i} className="rounded-xl border border-border p-4">
@@ -592,7 +1115,7 @@ function ScheduledTasksPage() {
                     </li>
                   ))}
                 </ul>
-              ) : tasks.length === 0 ? (
+              ) : tasks.length === 0 && loadError ? null : tasks.length === 0 ? (
                 <div className="kova-empty-state">
                   <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                     <Calendar className="w-5 h-5 text-muted-foreground" />
@@ -600,7 +1123,7 @@ function ScheduledTasksPage() {
                   <div className="text-base font-medium mb-1">Nothing scheduled yet</div>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                     {executionAvailable
-                      ? "Use the form above to schedule a one-time or repeating prompt."
+                      ? "Create a scheduled task to run a prompt once or on a repeating schedule."
                       : "No historical task records are available for this account."}
                   </p>
                 </div>
@@ -619,19 +1142,25 @@ function ScheduledTasksPage() {
                       className="kova-row flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4"
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{t.title}</div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                        <button
+                          type="button"
+                          className="spec400-task-title"
+                          onClick={(event) => openTaskEditor(t, "settings", event.currentTarget)}
+                        >
+                          {t.title}
+                        </button>
+                        <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5 mt-1">
                           <Clock className="w-3.5 h-3.5" />
                           {t.next_run_at
-                            ? `Next ${new Date(t.next_run_at).toLocaleString()}`
-                            : `Originally ${new Date(t.run_at).toLocaleString()}`}{" "}
+                            ? `Next ${formatDisplayDateTime(t.next_run_at, timeFormat)}`
+                            : `Originally ${formatDisplayDateTime(t.run_at, timeFormat)}`}{" "}
                           ·{" "}
                           {t.trigger_mode === "event"
                             ? "Matching connected events"
                             : t.repeat === "none"
                               ? "Once"
                               : t.repeat}{" "}
-                          · {t.timezone}
+                          · Schedule zone: {t.timezone}
                           <span className="ml-1 px-1.5 py-0.5 rounded bg-accent/60">
                             {t.status}
                           </span>
@@ -639,69 +1168,174 @@ function ScheduledTasksPage() {
                         <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                           {t.prompt}
                         </p>
-                        {t.last_run_at ? (
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            Last run {new Date(t.last_run_at).toLocaleString()}
-                            {t.last_result ? ` · ${t.last_result}` : ""}
-                          </p>
-                        ) : null}
+                        <ScheduledTaskLastRun
+                          preview={runPreviews[t.id]}
+                          timeFormat={timeFormat}
+                          lastRunAt={t.last_run_at}
+                          lastResult={t.last_result}
+                        />
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          className="rounded border border-border px-3 py-2 text-sm"
-                          onClick={() => setEditor(t)}
-                        >
-                          Settings and history
-                        </button>
-                        {t.status === "failed" ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <button
-                            onClick={() => retry(t)}
-                            disabled={visiblePlan !== "paid" || !executionAvailable}
-                            className="p-2 rounded-md hover:bg-accent transition"
-                            aria-label="Retry failed task"
-                            title="Retry"
+                            type="button"
+                            ref={(element) => {
+                              if (element) taskActionButtonsRef.current.set(t.id, element);
+                              else taskActionButtonsRef.current.delete(t.id);
+                            }}
+                            className="spec400-icon-button"
+                            aria-label={`More actions for ${t.title}`}
+                            disabled={pendingTaskIds.has(t.id)}
                           >
-                            <RotateCcw className="h-4 w-4" />
+                            <MoreHorizontal aria-hidden="true" />
                           </button>
-                        ) : null}
-                        {["scheduled", "running", "paused"].includes(t.status) ? (
-                          <button
-                            onClick={() => togglePause(t)}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          onCloseAutoFocus={(event) => {
+                            const origin = editorReturnRef.current;
+                            // A fast response can finish before Radix closes its
+                            // portal. Consume this intent separately from the request.
+                            const actionClosed = taskMenuActionsRef.current.delete(t.id);
+                            if (
+                              (origin &&
+                                origin.trigger === taskActionButtonsRef.current.get(t.id)) ||
+                              deleteReturnRef.current?.trigger ===
+                                taskActionButtonsRef.current.get(t.id) ||
+                              actionClosed ||
+                              actionFocusRef.current.has(t.id)
+                            )
+                              event.preventDefault();
+                          }}
+                        >
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              openTaskEditor(
+                                t,
+                                "settings",
+                                taskActionButtonsRef.current.get(t.id) ?? null,
+                              );
+                            }}
+                          >
+                            Open
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              openTaskEditor(
+                                t,
+                                "settings",
+                                taskActionButtonsRef.current.get(t.id) ?? null,
+                              );
+                            }}
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              openTaskEditor(
+                                t,
+                                "history",
+                                taskActionButtonsRef.current.get(t.id) ?? null,
+                              );
+                            }}
+                          >
+                            View runs
+                          </DropdownMenuItem>
+                          {["scheduled", "running", "paused"].includes(t.status) && (
+                            <DropdownMenuItem
+                              disabled={
+                                (t.status === "paused" && !executionAvailable) ||
+                                taskFeedback[t.id]?.state === "error"
+                              }
+                              onSelect={() => void togglePause(t)}
+                            >
+                              {t.status === "paused" ? "Resume" : "Pause"}
+                            </DropdownMenuItem>
+                          )}
+                          {t.status === "failed" && (
+                            <DropdownMenuItem
+                              disabled={
+                                !executionAvailable || taskFeedback[t.id]?.state === "error"
+                              }
+                              onSelect={() => void retry(t)}
+                            >
+                              Retry failed run
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
                             disabled={
-                              t.status === "paused" &&
-                              (visiblePlan !== "paid" || !executionAvailable)
+                              taskFeedback[t.id]?.state === "error" &&
+                              taskFeedback[t.id]?.action !== "delete"
                             }
-                            className="p-2 rounded-md hover:bg-accent transition"
-                            aria-label={t.status === "paused" ? "Resume" : "Pause"}
-                            title={t.status === "paused" ? "Resume" : "Pause"}
+                            onSelect={() => openDelete(t)}
                           >
-                            {t.status === "paused" ? (
-                              <Play className="w-4 h-4" />
-                            ) : (
-                              <Pause className="w-4 h-4" />
-                            )}
-                          </button>
-                        ) : null}
-                        <button
-                          onClick={() => del(t)}
-                          className="p-2 rounded-md hover:bg-destructive/10 text-destructive transition"
-                          aria-label="Delete"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </li>
                   ))}
                 </ul>
               )}
+              {filteredTasks.length > 0 && (
+                <nav
+                  aria-label="Scheduled task pages"
+                  className="mt-4 flex flex-wrap items-center justify-between gap-2"
+                >
+                  <p className="text-xs text-muted-foreground" role="status">
+                    Page {pageIndex + 1} of {pageCount} · {filteredTasks.length} matching tasks
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-lg border border-border px-3 text-sm aria-disabled:opacity-50"
+                      aria-disabled={pageIndex === 0}
+                      onClick={() => {
+                        if (pageIndex > 0) setTaskPage({ scope: pageScope, index: pageIndex - 1 });
+                      }}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      className="min-h-11 rounded-lg border border-border px-3 text-sm aria-disabled:opacity-50"
+                      aria-disabled={pageIndex + 1 >= pageCount}
+                      onClick={() => {
+                        if (pageIndex + 1 < pageCount)
+                          setTaskPage({ scope: pageScope, index: pageIndex + 1 });
+                      }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </nav>
+              )}
+              <details
+                className="mt-6 rounded-xl border border-border"
+                open={relatedWorkspaceOpen}
+                onToggle={(event) => setRelatedWorkspaceOpen(event.currentTarget.open)}
+              >
+                <summary className="min-h-11 cursor-pointer content-center px-3 py-3 text-sm font-medium">
+                  Related workspace
+                </summary>
+                {relatedWorkspaceOpen && (
+                  <div className="px-3 pb-3">
+                    <p className="text-xs text-muted-foreground">
+                      Browse projects, context packs, files, and memories. Browsing does not attach
+                      them to a task. Choose context in the task editor to attach it.
+                    </p>
+                    <RelatedWorkspaceItems
+                      kinds={["project", "context_pack", "file", "memory"]}
+                      title="Context for automations"
+                    />
+                  </div>
+                )}
+              </details>
             </>
           )}
-        </div>
-        <RelatedWorkspaceItems
-          kinds={["project", "context_pack", "file", "memory"]}
-          title="Context for automations"
-        />
+        </main>
       </div>
     </AppShell>
   );
