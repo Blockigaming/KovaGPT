@@ -161,6 +161,23 @@ function assertMicrophoneControls(html, dictateDisabled = false) {
   }
 }
 
+test("history initialization blocks Send while the draft remains editable", () => {
+  for (const viewport of [desktopLayout, phoneLayout]) {
+    const html = render(
+      { value: "Keep this first draft", sendDisabled: true },
+      signedInAccount,
+      viewport,
+    );
+    const input = html.match(/<textarea\b[^>]*>/)?.[0];
+    const send = html.match(/<button\b[^>]*data-testid="send-button"[^>]*>/)?.[0];
+    assert.ok(input);
+    assert.doesNotMatch(input, /\sdisabled(?:=|\s|>)/);
+    assert.match(html, /Keep this first draft<\/textarea>/);
+    assert.ok(send);
+    assert.match(send, /\sdisabled(?:=|\s|>)/);
+  }
+});
+
 for (const [name, props, action, disabled] of [
   ["empty draft offers disabled Send", {}, "send", true],
   ["one character offers Send", { value: "a" }, "send", false],

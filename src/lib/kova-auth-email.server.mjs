@@ -1,3 +1,5 @@
+import { presentKovaEmailHtml } from "./kova-email-presentation.server.mjs";
+
 // Server-side rendering only. This module sends no email and changes no provider.
 // Palette/font fallbacks are based on email-templates/_brand.tsx at da4b02ea554b16862b70b311854761554bafb765.
 const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
@@ -105,8 +107,21 @@ function expiryCopy(issuedAt, expiresAt) {
   return `This link expires ${duration}, at ${absolute}. If it has expired, request a new link from KovaGPT.`;
 }
 
-/** Pure renderer for the two action types the owned Auth service currently queues. */
-export function renderKovaAuthEmail({ label, recipient, link, publicOrigin, issuedAt, expiresAt }) {
+/** New messages get presentation at enqueue time, so retries send identical bytes. */
+export function renderKovaAuthEmail(input) {
+  const rendered = renderLegacyKovaAuthEmail(input);
+  return { ...rendered, html: presentKovaEmailHtml(rendered.html) };
+}
+
+/** Canonical version 1, retained exactly for already queued messages. */
+export function renderLegacyKovaAuthEmail({
+  label,
+  recipient,
+  link,
+  publicOrigin,
+  issuedAt,
+  expiresAt,
+}) {
   const action = Object.hasOwn(ACTIONS, label) ? ACTIONS[label] : null;
   if (!action) throw new Error("auth_email_action_unsupported");
   if (

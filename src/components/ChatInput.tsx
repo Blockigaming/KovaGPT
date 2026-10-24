@@ -165,6 +165,7 @@ export function ChatInput({
   sendOnEnter,
 
   disabled = false,
+  sendDisabled = false,
   showAddMenu = true,
   saveAttachmentsToLibrary = false,
   attachments,
@@ -211,6 +212,7 @@ export function ChatInput({
 
   /** Disables text entry and submission without changing existing callers. */
   disabled?: boolean;
+  sendDisabled?: boolean;
   /** Hides and disables attachments, tools, and prompt shortcuts. */
   showAddMenu?: boolean;
   /** Only persistent, authenticated chat may automatically retain uploads. */
@@ -614,7 +616,7 @@ export function ChatInput({
   };
 
   const triggerSubmit = () => {
-    if (disabled || submittingRef.current || isStreaming || pasteOffer) return;
+    if (disabled || sendDisabled || submittingRef.current || isStreaming || pasteOffer) return;
     if (!online) return;
     if (!value.trim() && !validAttachmentInstruction) return;
     if ((attachments.length > 0 || selectedToolRef.current === "image") && !requireFileAccount())
@@ -1306,6 +1308,18 @@ export function ChatInput({
                 <span>Open a project</span>
               </button>
             )}
+            {section === "all" && (
+              <button
+                type="button"
+                className={rowClass}
+                disabled={!onToolSelect || disabled || isStreaming}
+                aria-pressed={selectedTool === "web_search"}
+                onClick={() => chooseTool(COMPOSER_TOOLS[0])}
+              >
+                <Globe aria-hidden="true" />
+                <span>Search the web</span>
+              </button>
+            )}
             {!mobile && section === "all" && (
               <>
                 <button
@@ -1426,6 +1440,7 @@ export function ChatInput({
   const canSubmit =
     !pasteOffer &&
     !disabled &&
+    !sendDisabled &&
     online &&
     Boolean(value.trim() || validAttachmentInstruction) &&
     !blockedAttachmentMessage;
@@ -1782,6 +1797,7 @@ export function ChatInput({
                     <label>
                       Format
                       <select
+                        aria-label="Format"
                         value={responseSettings.responseFormat ?? "automatic"}
                         onChange={(event) =>
                           onResponseSettingsChange({
@@ -1797,6 +1813,7 @@ export function ChatInput({
                     <label>
                       Length
                       <select
+                        aria-label="Length"
                         value={responseSettings.responseLength}
                         onChange={(event) =>
                           onResponseSettingsChange({
@@ -1812,6 +1829,7 @@ export function ChatInput({
                     <label>
                       Tone
                       <select
+                        aria-label="Tone"
                         value={responseSettings.responseTone ?? "direct"}
                         onChange={(event) =>
                           onResponseSettingsChange({
@@ -1941,7 +1959,9 @@ export function ChatInput({
               title={
                 disabled
                   ? "Messaging is unavailable"
-                  : (blockedAttachmentMessage ?? (!online ? "Reconnect to send" : "Send message"))
+                  : sendDisabled
+                    ? "Getting this chat ready…"
+                    : (blockedAttachmentMessage ?? (!online ? "Reconnect to send" : "Send message"))
               }
             >
               <ArrowUp aria-hidden="true" />

@@ -291,6 +291,8 @@ function KovaGPT() {
     items: Conversation[];
   }>({ principal: null, items: [] });
   const principalReady = isLoaded && conversationState.principal === storagePrincipal;
+  const historyView = chatHistoryView(userKey);
+  const historyReady = !userKey || Boolean(historyView?.ready && historyView.writable);
   const conversations = principalReady ? conversationState.items : EMPTY_CONVERSATIONS;
   const setConversations = useCallback(
     (next: SetStateAction<Conversation[]>) => {
@@ -1794,7 +1796,7 @@ function KovaGPT() {
       if (voiceRequest?.signal.aborted) return;
       const trimmed = text.trim();
       if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
-      if (!canWriteChatHistory(userKey)) {
+      if (!canWriteChatHistory(userKey) || (userKey && !chatHistoryView(userKey)?.ready)) {
         toast.error("Chat history is not ready for editing. Check the sync status.");
         return;
       }
@@ -3141,11 +3143,13 @@ function KovaGPT() {
                 readingAnchorControllerRef.current?.capture();
                 setSidebarOpen(true);
                 if (!keyboardActivated) return;
-                window.requestAnimationFrame(() => {
-                  document
-                    .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
-                    ?.focus({ preventScroll: true });
-                });
+                window.requestAnimationFrame(() =>
+                  window.requestAnimationFrame(() => {
+                    document
+                      .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
+                      ?.focus({ preventScroll: true });
+                  }),
+                );
               }}
               className="kova-topbar-button kova-sidebar-toggle shrink-0 rounded-xl p-2 transition"
               aria-label="Open sidebar"
@@ -3333,6 +3337,7 @@ function KovaGPT() {
                           .at(-1)?.content
                       }
                       disabled={!principalReady}
+                      sendDisabled={!historyReady}
                       saveAttachmentsToLibrary={principalReady && !tempChat}
                       attachments={principalReady ? attachments : []}
                       onAttachmentsChange={setAttachments}
@@ -3344,7 +3349,7 @@ function KovaGPT() {
                       mode={mode}
                       onModeChange={active?.kova ? undefined : setMode}
                       userTier={tier}
-                      canChangeAgent={false}
+                      canChangeAgent={!active?.kova}
                       showModelStatus
                       showChooseProject
                       savedConversations={userKey && principalReady ? conversations : []}
@@ -3500,6 +3505,7 @@ function KovaGPT() {
                         .at(-1)?.content
                     }
                     disabled={!principalReady}
+                    sendDisabled={!historyReady}
                     saveAttachmentsToLibrary={principalReady && !tempChat}
                     attachments={principalReady ? attachments : []}
                     onAttachmentsChange={setAttachments}
@@ -3511,7 +3517,7 @@ function KovaGPT() {
                     mode={mode}
                     onModeChange={active?.kova ? undefined : setMode}
                     userTier={tier}
-                    canChangeAgent={false}
+                    canChangeAgent={!active?.kova}
                     showModelStatus
                     showChooseProject
                     savedConversations={userKey && principalReady ? conversations : []}

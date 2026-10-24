@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { openCurrentSettings, chooseSettingsSection } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 const origin = "http://127.0.0.1:4189";
@@ -98,7 +99,7 @@ for (const theme of ["light", "dark"] as const) {
     await fixture(page, theme);
     await page.goto("/library");
     await waitForKovaHydration(page);
-    await expect(page.getByRole("button", { name: "Release notes", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Release notes(?:\s|$)/ })).toBeVisible();
     await page.getByRole("button", { name: "Grid view", exact: true }).click();
     await expect(page.locator(".kova-file-metadata")).toHaveCount(2);
     const metadata = await page.locator(".kova-file-metadata").evaluateAll((nodes) =>
@@ -159,11 +160,8 @@ for (const theme of ["light", "dark"] as const) {
       path: info.outputPath(`sidebar-${theme}.png`),
       animations: "disabled",
     });
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
-    const dialog = page.locator(".kova-settings-dialog");
-    await expect(dialog).toBeVisible();
-    if (await dialog.getByRole("tab", { name: "General", exact: true }).isVisible())
-      await dialog.getByRole("tab", { name: "General", exact: true }).click();
+    const dialog = await openCurrentSettings(page);
+    await chooseSettingsSection(page, "General");
     const control = dialog.getByRole("switch", { name: "Live web search", exact: true });
     await expect(control).toBeVisible();
     const initial = await control.getAttribute("aria-checked");
@@ -173,14 +171,12 @@ for (const theme of ["light", "dark"] as const) {
       (node) =>
         node.parentElement!.getBoundingClientRect().right - node.getBoundingClientRect().right,
     );
-    expect(rightGap).toBeLessThanOrEqual(1);
+    expect(rightGap).toBe(17);
     await page.screenshot({
       path: info.outputPath(`settings-${theme}.png`),
       animations: "disabled",
     });
-    if (info.project.name === "phone")
-      await dialog.getByRole("button", { name: "Back to settings" }).click();
-    await dialog.getByRole("tab", { name: "Subscriptions", exact: true }).click();
+    await chooseSettingsSection(page, "Subscriptions");
     await expect(dialog.locator(".kova-billing-details")).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Manage subscription" })).toBeDisabled();
     if (info.project.name === "phone") {

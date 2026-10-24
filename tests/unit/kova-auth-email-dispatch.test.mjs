@@ -315,6 +315,7 @@ test("real signup queue, leasing and finish RPCs drive the native provider contr
       const body = JSON.parse(init.body);
       assert.deepEqual(body.to, ["fixture@example.test"]);
       assert.equal(body.html, f.queued.message.html);
+      assert.equal(body.text, f.queued.message.text);
       return Response.json({ id: "11111111-1111-4111-8111-111111111111" });
     });
     assert.deepEqual(await dispatchAuthEmailBatch(f.config, { rpc: f.rpc, send }), {

@@ -1,7 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { readFileSync } from "node:fs";
-import { renderKovaAuthEmail } from "../../src/lib/kova-auth-email.server.mjs";
+import {
+  renderKovaAuthEmail,
+  renderLegacyKovaAuthEmail,
+} from "../../src/lib/kova-auth-email.server.mjs";
 
 // Existing Resend resource only; no provider signup, SDK, daemon or cron setup.
 // https://resend.com/docs/api-reference/emails/send-email
@@ -203,16 +206,20 @@ export function validatedAuthEmail(payload, config) {
     issued < Date.parse(config.issuedNotBefore)
   )
     fail("envelope_invalid");
-  const rendered = renderKovaAuthEmail({
+  const renderInput = {
     label: payload.label,
     recipient: payload.to,
     link: link.toString(),
     publicOrigin: config.publicOrigin,
     issuedAt: payload.queued_at,
     expiresAt: new Date(issued + 3600_000).toISOString(),
-  });
+  };
+  const rendered = renderKovaAuthEmail(renderInput);
+  // Accept only either exact canonical version. Deliver queued bytes unchanged:
+  // a prior provider acceptance may be awaiting its database acknowledgement.
   if (
-    rendered.html !== payload.html ||
+    (rendered.html !== payload.html &&
+      renderLegacyKovaAuthEmail(renderInput).html !== payload.html) ||
     rendered.text !== payload.text ||
     rendered.subject !== payload.subject
   )

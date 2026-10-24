@@ -314,11 +314,13 @@ export function AppShell({
               const keyboardActivated = event.detail === 0;
               setSidebarOpen(true);
               if (!keyboardActivated) return;
-              window.requestAnimationFrame(() => {
-                document
-                  .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
-                  ?.focus({ preventScroll: true });
-              });
+              window.requestAnimationFrame(() =>
+                window.requestAnimationFrame(() => {
+                  document
+                    .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
+                    ?.focus({ preventScroll: true });
+                }),
+              );
             }}
             className="kova-floating-sidebar-trigger kova-sidebar-toggle hidden lg:flex fixed top-3 left-3 z-30 h-10 w-10 rounded-xl transition items-center justify-center"
             aria-label="Open sidebar"

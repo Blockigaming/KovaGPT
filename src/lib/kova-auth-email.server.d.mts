@@ -7,3 +7,5 @@ export function renderKovaAuthEmail(input: {
   issuedAt: string;
   expiresAt: string;
 }): { subject: string; html: string; text: string };
+
+export const renderLegacyKovaAuthEmail: typeof renderKovaAuthEmail;

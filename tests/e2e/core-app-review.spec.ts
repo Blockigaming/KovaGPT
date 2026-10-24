@@ -1,5 +1,6 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Page, type TestInfo, type Locator } from "@playwright/test";
 import { coreFixture, reviewProject } from "./core-app-fixture";
+import { openResponseOptions, openCurrentSettings, chooseSettingsSection } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 async function openSidebar(page: Page) {
@@ -18,6 +19,32 @@ async function openSidebar(page: Page) {
     .filter({ visible: true });
   if (await opener.count()) await opener.first().click();
   await expect(navigation).toBeVisible();
+}
+
+async function expectReadableFilter(tab: Locator) {
+  await expect
+    .poll(() =>
+      tab.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const context = document.createElement("canvas").getContext("2d")!;
+        const luminance = (color: string) => {
+          context.fillStyle = color;
+          context.fillRect(0, 0, 1, 1);
+          const rgba = context.getImageData(0, 0, 1, 1).data;
+          const rgb = [...rgba].slice(0, 3).map((value) => {
+            const channel = value / 255;
+            return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+          });
+          return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+        };
+        const foreground = luminance(style.color),
+          background = luminance(style.backgroundColor);
+        return (
+          (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
+        );
+      }),
+    )
+    .toBeGreaterThanOrEqual(4.5);
 }
 
 async function capture(page: Page, info: TestInfo, name: string) {
@@ -42,22 +69,36 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await coreFixture(page, "light", "plus");
   await page.goto("/");
   await waitForKovaHydration(page);
+  await openResponseOptions(page);
   await expect(page.getByTestId("model-selector-trigger").filter({ visible: true })).toBeVisible();
+  await page.keyboard.press("Escape");
   await openSidebar(page);
-  await page.getByRole("button", { name: "Search chats", exact: true }).click();
-  const search = page.getByRole("textbox", { name: "Search chats", exact: true });
+  await page
+    .getByRole("navigation", { name: "KovaGPT features", exact: true })
+    .getByRole("button", { name: "Search", exact: true })
+    .click();
+  const search = page.getByRole("combobox", {
+    name: "Search workspace, commands, and chats",
+    exact: true,
+  });
   await search.fill("Second review");
-  await expect(
-    page.getByRole("button", { name: "Open chat Second review chat", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Open chat Composer review chat", exact: true }),
-  ).toHaveCount(0);
+  const results = page.getByRole("dialog", {
+    name: "Search workspace, chats, and actions",
+    exact: true,
+  });
+  await expect(results.getByRole("option").filter({ hasText: "Second review chat" })).toBeVisible();
+  await expect(results.getByRole("option").filter({ hasText: "Composer review chat" })).toHaveCount(
+    0,
+  );
   await capture(page, info, "sidebar-search");
   await search.fill("");
+  await page.keyboard.press("Escape");
 
+  await openSidebar(page);
   await page.getByRole("link", { name: "Images", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Images", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Images", exact: true }),
+  ).toBeVisible();
   const imagePrompt = page.getByRole("textbox", { name: "Describe the image to generate" });
   await imagePrompt.fill("A rounded paper sculpture in morning light");
   await page.getByLabel("Output image shape").selectOption("2:3");
@@ -74,17 +115,20 @@ test("sidebar search and all main destinations keep honest service states", asyn
   ]) {
     await openSidebar(page);
     await page.getByRole("link", { name, exact: true }).click();
-    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("heading", { name: heading, exact: true }),
+    ).toBeVisible();
     if (name === "Library") {
       await page.getByPlaceholder("Search Library", { exact: true }).fill("Release notes");
-      await page.getByRole("button", { name: "Release notes", exact: true }).click();
+      await page.getByRole("button", { name: /^Release notes(?:\s|$)/ }).click();
       const preview = page.getByRole("dialog", { name: "Release notes", exact: true });
+      await preview.getByRole("button", { name: "Extracted text", exact: true }).click();
       await expect(preview).toContainText(
         "Synthetic review content. No account records are included.",
       );
       await capture(page, info, "library-preview");
       await page.keyboard.press("Escape");
-      await expect(page.getByRole("button", { name: "Release notes", exact: true })).toBeFocused();
+      await expect(page.getByRole("button", { name: /^Release notes(?:\s|$)/ })).toBeFocused();
     }
   }
   await openSidebar(page);
@@ -94,28 +138,29 @@ test("sidebar search and all main destinations keep honest service states", asyn
   );
   await expect(page.getByRole("button", { name: "New task", exact: true })).toHaveCount(0);
   await page.getByRole("textbox", { name: "Search scheduled tasks" }).fill("morning");
-  await page.getByRole("tab", { name: "paused", exact: true }).click();
-  await expect(page.getByRole("tab", { name: "paused", exact: true })).toHaveAttribute(
+  await page.getByRole("tab", { name: /^paused\b/i }).click();
+  await expect(page.getByRole("tab", { name: /^paused\b/i })).toHaveAttribute(
     "aria-selected",
     "true",
   );
-  await expect(page.getByRole("tab", { name: "paused", exact: true })).toHaveCSS(
-    "color",
-    await page.locator("body").evaluate((element) => getComputedStyle(element).color),
-  );
+  await expectReadableFilter(page.getByRole("tab", { name: /^paused\b/i }));
   await capture(page, info, "tasks");
 
   await openSidebar(page);
   await page.getByRole("link", { name: "Plugins", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Apps & plugins" })).toBeVisible();
-  await expect(page.getByText("Credentials not configured", { exact: true })).toBeVisible();
-  await page.getByPlaceholder("Search apps and plugins").fill("Gmail");
-  await page.getByRole("button", { name: "Details", exact: true }).first().click();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Plugins", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Plugins", exact: true }),
+  ).toBeVisible();
+  await page.getByPlaceholder("Search plugins").fill("Gmail");
+  await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
   const plugin = page.getByRole("dialog", { name: "Gmail", exact: true });
   await expect(plugin).toContainText("Capabilities and permissions");
   await capture(page, info, "plugins-details");
   await page.keyboard.press("Escape");
-  await page.getByPlaceholder("Search apps and plugins").fill("");
+  await page.getByPlaceholder("Search plugins").fill("");
   await capture(page, info, "plugins");
 
   await openSidebar(page);
@@ -129,14 +174,18 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await capture(page, info, "work");
   await openSidebar(page);
   await page.getByRole("link", { name: "Discover", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Search and discovery" })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Search and discovery" }),
+  ).toBeVisible();
   await expect(page.getByText(/Live discovery is not available here yet/)).toBeVisible();
   await page.getByRole("button", { name: "Local places", exact: true }).click();
   await page.getByRole("textbox", { name: "What are you looking for?" }).fill("Quiet cafes");
   await page
     .getByRole("textbox", { name: "City, neighborhood, or place (entered manually)" })
     .fill("London");
-  await expect(page.getByRole("button", { name: "Search", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("main").getByRole("button", { name: "Search", exact: true }),
+  ).toBeDisabled();
   await expect(
     page.getByRole("link", { name: "Open this search in Google Maps (shares the entered place)" }),
   ).toHaveAttribute("href", /maps/);
@@ -145,14 +194,15 @@ test("sidebar search and all main destinations keep honest service states", asyn
 
   await openSidebar(page);
   await page.getByRole("button", { name: "Account menu", exact: true }).click();
-  await expect(page.getByRole("menuitem", { name: "Plans and subscriptions" })).toHaveAttribute(
-    "href",
-    "/pricing",
-  );
+  await expect(page.getByRole("menuitem", { name: "Billing", exact: true })).toBeVisible();
   await page.getByRole("menuitem", { name: "Help", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "How can we help?" })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "How can we help?" }),
+  ).toBeVisible();
   await page.getByRole("textbox", { name: "Search help", exact: true }).fill("cancel subscription");
-  await expect(page.getByRole("heading", { name: "Search results", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: "Search results", exact: true }),
+  ).toBeVisible();
   await capture(page, info, "help-search");
   await page.getByLabel("Message", { exact: false }).fill("Synthetic review draft; do not submit.");
   await expect(page.getByLabel("Message", { exact: false })).toHaveValue(
@@ -165,13 +215,10 @@ test("dark task filter keeps a readable selected label", async ({ page }, info) 
   await coreFixture(page, "dark", "plus");
   await page.goto("/scheduled-tasks");
   await waitForKovaHydration(page);
-  const paused = page.getByRole("tab", { name: "paused", exact: true });
+  const paused = page.getByRole("tab", { name: /^paused\b/i });
   await paused.click();
   await expect(paused).toHaveAttribute("aria-selected", "true");
-  await expect(paused).toHaveCSS(
-    "color",
-    await page.locator("body").evaluate((element) => getComputedStyle(element).color),
-  );
+  await expectReadableFilter(paused);
   await capture(page, info, "task-filter-dark");
 });
 
@@ -183,20 +230,10 @@ test("project sections and account settings remain navigable and cancel safely",
   await coreFixture(page, "dark");
   await page.goto(`/projects/${reviewProject.id}`);
   await waitForKovaHydration(page);
-  await expect(page.getByRole("heading", { name: reviewProject.name, exact: true })).toBeVisible();
-  for (const name of [
-    "Chats",
-    "Files",
-    "Images",
-    "Instructions",
-    "Notes",
-    "Tasks",
-    "Memory",
-    "Members",
-    "Collaboration",
-    "Settings",
-    "Overview",
-  ]) {
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: reviewProject.name, exact: true }),
+  ).toBeVisible();
+  for (const name of ["Chats", "Context"]) {
     await page.getByRole("tab", { name, exact: true }).click();
     await expect(page.getByRole("tabpanel")).toBeVisible();
     await expect(page.getByRole("tab", { name, exact: true })).toHaveAttribute(
@@ -204,11 +241,24 @@ test("project sections and account settings remain navigable and cancel safely",
       "true",
     );
   }
+  for (const view of [
+    "files",
+    "images",
+    "notes",
+    "tasks",
+    "memory",
+    "members",
+    "collaboration",
+    "settings",
+    "overview",
+  ]) {
+    await page
+      .getByRole("combobox", { name: "More project tools", exact: true })
+      .selectOption(view);
+    await expect(page.getByRole("tabpanel")).toBeVisible();
+  }
   await capture(page, info, "project-workspace");
-  await openSidebar(page);
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  const settings = page.locator(".kova-settings-dialog");
-  await expect(settings).toBeVisible();
+  const settings = await openCurrentSettings(page);
   for (const name of [
     "General",
     "Personalization",
@@ -228,18 +278,16 @@ test("project sections and account settings remain navigable and cancel safely",
     "About",
     "Data control",
   ]) {
-    const back = settings.getByRole("button", { name: "Back to settings" });
-    if (await back.isVisible()) await back.click();
-    await settings.getByRole("tab", { name, exact: true }).click();
-    await expect(settings.getByRole("tabpanel")).toBeVisible();
+    await chooseSettingsSection(page, name);
+    await expect(settings.getByRole("tabpanel").first()).toBeVisible();
     if (name === "Subscriptions")
       await expect(settings.getByRole("button", { name: "Manage subscription" })).toBeDisabled();
   }
-  await settings.getByRole("button", { name: "Delete account", exact: true }).click();
-  const deletion = page.getByRole("alertdialog", { name: "Delete your account permanently?" });
+  await settings.getByRole("button", { name: "Schedule deletion", exact: true }).click();
+  const deletion = page.getByRole("alertdialog", { name: "Schedule account deletion?" });
   await expect(deletion).toBeVisible();
   await expect(
-    deletion.getByRole("button", { name: "Delete account", exact: true }),
+    deletion.getByRole("button", { name: "Schedule deletion", exact: true }),
   ).toBeDisabled();
   await capture(page, info, "account-deletion-cancel");
   await deletion.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -247,12 +295,23 @@ test("project sections and account settings remain navigable and cancel safely",
   await capture(page, info, "settings-data");
   const back = settings.getByRole("button", { name: "Back to settings" });
   if (await back.isVisible()) await back.click();
-  await settings
-    .getByRole("textbox", { name: "Search settings", exact: true })
-    .fill("subscription");
-  await expect(settings.getByRole("tab", { name: "Subscriptions", exact: true })).toBeVisible();
-  await expect(settings.getByRole("tab", { name: "General", exact: true })).toHaveCount(0);
-  await settings.getByRole("button", { name: "Close settings", exact: true }).click();
+  const searchSettings = settings.getByRole("textbox", { name: "Search settings", exact: true });
+  if (await searchSettings.isVisible()) {
+    await searchSettings.fill("subscription");
+    await expect(settings.getByRole("tab", { name: "Billing", exact: true })).toBeVisible();
+    await expect(settings.getByRole("tab", { name: "Responses", exact: true })).toHaveCount(0);
+  } else {
+    await settings.getByRole("button", { name: "Section", exact: true }).click();
+    await page.getByRole("combobox", { name: "Search sections", exact: true }).fill("Billing");
+    await expect(page.getByRole("option", { name: "Billing", exact: true })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Responses", exact: true })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+  }
+  await openSidebar(page);
+  await page
+    .getByRole("navigation", { name: "KovaGPT features" })
+    .getByRole("link", { name: "Chat", exact: true })
+    .click();
   await expect(settings).toBeHidden();
   expect(errors).toEqual([]);
 });

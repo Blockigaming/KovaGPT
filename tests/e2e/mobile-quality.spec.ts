@@ -42,13 +42,13 @@ test("navigation opens, contains its controls, and dismisses predictably", async
 test("composer and attachment sheet stay reachable on narrow screens", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  const composer = page.locator(".kova-composer");
+  const composer = page.locator(".spec400-composer");
   await expect(composer).toBeVisible();
   const box = await composer.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  await page.getByRole("button", { name: "Attach", exact: true }).click();
   const sheet = page.getByTestId("mobile-bottom-sheet");
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Close sheet" })).toBeVisible();

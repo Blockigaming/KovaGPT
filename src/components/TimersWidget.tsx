@@ -68,11 +68,13 @@ export function TimersWidget({
   useLayoutEffect(() => {
     if (!open) return;
     const keepPanelInViewport = () => {
-      const launcher = launcherRef.current;
       const panel = panelRef.current;
-      if (!launcher || !panel) return;
+      const container = panel?.parentElement;
+      if (!container || !panel) return;
       const width = panel.offsetWidth;
-      const anchoredLeft = launcher.getBoundingClientRect().right - width;
+      // right:0 anchors to the relative container, which can be wider than
+      // its launcher in a project view. Measure that same containing block.
+      const anchoredLeft = container.getBoundingClientRect().right - width;
       const left = Math.min(
         Math.max(anchoredLeft, 16),
         Math.max(16, window.innerWidth - width - 16),

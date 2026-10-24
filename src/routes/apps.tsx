@@ -1194,6 +1194,17 @@ function AppsPage() {
       try {
         const next = await loadGitHub();
         if (!isCurrent()) return false;
+        if (
+          !next ||
+          typeof next.configured !== "boolean" ||
+          !Array.isArray(next.accounts) ||
+          !Array.isArray(next.installations) ||
+          !Array.isArray(next.repositories) ||
+          !["healthy", "degraded", "reconnect_required", "credentials_not_configured"].includes(
+            next.health,
+          )
+        )
+          throw new Error("GitHub status was invalid");
         setGithubData(next);
         return true;
       } catch {

@@ -36,13 +36,20 @@ test("keyboard users can dismiss menus and dialogs with focus restoration", asyn
   const settings = page.getByRole("button", { name: "Settings" }).first();
   await settings.focus();
   await page.keyboard.press("Enter");
-  const dialog = page.getByRole("dialog", { name: /Settings/i });
+  await expect(page).toHaveURL(/\/settings(?:\/[^?#]+)?(?:[?#]|$)/);
+  await expect(page.getByRole("region", { name: "Settings", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("region", { name: "Settings", exact: true })).toBeVisible();
+  await page.goBack();
+  await waitForKovaHydration(page);
+  const expand = page.getByRole("button", { name: "Expand input", exact: true });
+  await expand.focus();
+  await expand.press("Enter");
+  const dialog = page.getByRole("dialog", { name: "Expand input", exact: true });
   await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
-  await expect(
-    width < 1024 ? page.getByRole("button", { name: "Open menu" }) : settings,
-  ).toBeFocused();
+  await expect(expand).toBeFocused();
 });
 
 test("keyboard focus is visibly distinguishable on primary controls", async ({ page }) => {

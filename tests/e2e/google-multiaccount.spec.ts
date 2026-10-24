@@ -1,5 +1,17 @@
-import { expect, test, type Request } from "@playwright/test";
+import { expect, test, type Request, type Page } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
+
+async function openWorkflowSkills(page: Page) {
+  const summary = page.locator("details.spec400-plugin-skills > summary");
+  const expanded = await summary.evaluate((element) => element.parentElement?.hasAttribute("open"));
+  if (!expanded) await summary.click();
+}
+async function openGoogleAccounts(page: Page) {
+  await page.getByRole("button", { name: "Manage Gmail", exact: true }).click();
+  const panel = page.getByRole("region", { name: "Google connection status", exact: true });
+  await expect(panel).toBeVisible();
+  return panel;
+}
 
 const accountA = "11111111-1111-4111-8111-111111111111";
 const accountB = "33333333-3333-4333-8333-333333333333";
@@ -40,9 +52,12 @@ test("workflow skill load failures stay contained and can be retried", async ({ 
     route.fulfill({ status: 503, json: { error: "Authentication is temporarily unavailable." } }),
   );
   await page.goto("/apps");
+  await openWorkflowSkills(page);
   const error = page.getByRole("alert").filter({ hasText: "Workflow skills could not be loaded." });
   await expect(error).toBeVisible();
+  await openGoogleAccounts(page);
   await expect(page.getByText("first@example.test", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("alert", { name: "This page couldn’t load" })).toHaveCount(0);
 
   // Restore a valid empty list through the same transport and exercise the real retry UI.
@@ -52,7 +67,9 @@ test("workflow skill load failures stay contained and can be retried", async ({ 
   await error.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByText("No workflow skills yet.", { exact: false })).toBeVisible();
   await expect(error).toHaveCount(0);
+  await openGoogleAccounts(page);
   await expect(page.getByText("first@example.test", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
 });
 
 test("workflow skill mutations retain their replay identity until success is confirmed", async ({
@@ -84,6 +101,7 @@ test("workflow skill mutations retain their replay identity until success is con
   });
 
   await page.goto("/apps");
+  await openWorkflowSkills(page);
   await expect(page.getByText("No workflow skills yet.", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "New skill" }).click();
   await page.getByRole("textbox", { name: "Name" }).fill("Editorial review");
@@ -181,6 +199,7 @@ test("an older workflow skill list response cannot replace mutation-fresh state"
 
   // Discover the generated workflow-list URL from its reload after a known workflow mutation.
   await page.goto("/apps");
+  await openWorkflowSkills(page);
   await expect(page.getByText("No workflow skills yet.", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "New skill" }).click();
   await page.getByRole("textbox", { name: "Name" }).fill("Editorial review");
@@ -192,6 +211,7 @@ test("an older workflow skill list response cannot replace mutation-fresh state"
   // On a fresh panel instance, keep its initial list request pending past a successful mutation.
   staleMode = true;
   await page.reload();
+  await openWorkflowSkills(page);
   await expect.poll(() => staleListCalls).toBe(1);
   await page.getByRole("button", { name: "New skill" }).click();
   await page.getByRole("textbox", { name: "Name" }).fill("Editorial review");
@@ -263,7 +283,7 @@ test("Google account selection, refresh, disconnect and reauthorization retain t
   );
   await page.goto("/apps");
   const appOrigin = new URL(page.url()).origin;
-  const panel = page.getByRole("region", { name: "Google accounts" });
+  const panel = await openGoogleAccounts(page);
   await expect(panel.getByText("first@example.test", { exact: true })).toBeVisible();
   await panel.getByRole("button", { name: "Use second@example.test for new requests" }).click();
   await expect.poll(() => calls.length).toBe(1);
@@ -277,9 +297,9 @@ test("Google account selection, refresh, disconnect and reauthorization retain t
   await expect(panel.locator("li").filter({ hasText: "second@example.test" })).toContainText(
     "Selected for new requests",
   );
-  await expect(panel.getByRole("button", { name: "Refresh Google accounts" })).toBeEnabled();
+  await expect(panel.getByRole("button", { name: "Refresh status", exact: true })).toBeEnabled();
   delayRefresh = true;
-  await panel.getByRole("button", { name: "Refresh Google accounts" }).click();
+  await panel.getByRole("button", { name: "Refresh status", exact: true }).click();
   await expect.poll(() => statusRequested).toBe(true);
   await expect(
     panel.getByRole("button", { name: "Use first@example.test for new requests" }),
@@ -291,6 +311,12 @@ test("Google account selection, refresh, disconnect and reauthorization retain t
   release!();
   await expect(panel.getByRole("button", { name: "Disconnect second@example.test" })).toBeEnabled();
   await panel.getByRole("button", { name: "Disconnect second@example.test" }).click();
+  const disconnect = page.getByRole("alertdialog", {
+    name: "Disconnect second@example.test?",
+    exact: true,
+  });
+  await expect(disconnect).toContainText("Other connected accounts are unchanged.");
+  await disconnect.getByRole("button", { name: "Disconnect account", exact: true }).click();
   await expect(panel.getByText("second@example.test", { exact: true })).toHaveCount(0);
   expect(calls[1].body).toEqual({ connectionId: accountB, expectedRevision: 3 });
   current = status(
@@ -298,7 +324,7 @@ test("Google account selection, refresh, disconnect and reauthorization retain t
     accountA,
     10,
   );
-  await panel.getByRole("button", { name: "Refresh Google accounts" }).click();
+  await panel.getByRole("button", { name: "Refresh status", exact: true }).click();
   await panel.getByRole("button", { name: "Reconnect first@example.test" }).click();
   await expect(page).toHaveURL(/accounts\.google\.com/u);
   const cookies = await context.cookies(appOrigin);
@@ -321,8 +347,9 @@ test("a status response arriving after sign-out cannot restore the prior account
     await route.fulfill({ json: status() });
   });
   await page.goto("/apps");
+  await openGoogleAccounts(page);
   await expect(page.getByText("first@example.test", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Refresh Google accounts" }).click();
+  await page.getByRole("button", { name: "Refresh status", exact: true }).click();
   await expect.poll(() => Boolean(release)).toBe(true);
   const origin = [...mockedOrigins][0];
   expect(origin).toBeTruthy();
@@ -346,6 +373,6 @@ test("a status response arriving after sign-out cannot restore the prior account
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       ),
   );
-  await expect(page.getByRole("button", { name: "Refresh Google accounts" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Refresh status", exact: true })).toHaveCount(0);
   await expect(page.getByText("first@example.test", { exact: true })).toHaveCount(0);
 });

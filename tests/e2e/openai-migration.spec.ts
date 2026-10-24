@@ -10,7 +10,7 @@ const sse = (...chunks: string[]) =>
     )
     .join("");
 
-test("guest chat consumes Kova SSE, persists once, and renders one top-left brand", async ({
+test("guest chat consumes Kova SSE once and keeps page and menu identity", async ({
   page,
 }, testInfo) => {
   const errors: string[] = [];
@@ -50,8 +50,14 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left bran
     await expect(sidebarBrand).toHaveText("KovaGPT");
   } else {
     await expect(
-      page.locator("header.kova-topbar:visible").getByText("KovaGPT", { exact: true }),
+      page
+        .locator("header.kova-topbar:visible")
+        .getByRole("heading", { name: "Chat", exact: true }),
     ).toHaveCount(1);
+    await page.getByRole("button", { name: "Open menu", exact: true }).click();
+    await expect(page.locator(".kova-sidebar-brand:visible")).toHaveCount(1);
+    await expect(page.locator(".kova-sidebar-brand:visible")).toHaveText("KovaGPT");
+    await page.keyboard.press("Escape");
   }
   if (testInfo.project.name === "desktop-1280x800") {
     await page.screenshot({ path: "test-results/openai-migration-logo.png", fullPage: false });

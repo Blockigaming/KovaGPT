@@ -17,19 +17,20 @@ test("collapsed sidebar leaves the layout and reopens from its external control"
 
   const openSidebar = page.getByRole("button", { name: "Open sidebar" });
   await expect(openSidebar).toBeVisible();
-  await openSidebar.click();
+  await openSidebar.focus();
+  await openSidebar.press("Enter");
 
   const navigation = page.getByRole("navigation", { name: "Primary navigation" });
   await expect(navigation).toBeVisible();
-  await expect(sidebar).toHaveCSS("width", "272px");
+  await expect(sidebar).toHaveCSS("width", "256px");
   const collapseSidebar = page.getByRole("button", { name: "Collapse sidebar" });
   await expect(collapseSidebar).toBeVisible();
   await expect(collapseSidebar).toBeFocused();
-  await collapseSidebar.click();
+  await collapseSidebar.press("Enter");
   await expect(sidebar).toHaveCSS("width", "0px");
   await expect(openSidebar).toBeFocused();
 
-  const composer = page.locator(".kova-composer");
+  const composer = page.locator(".spec400-composer");
   await expect(composer).toBeVisible();
   const composerBox = await composer.boundingBox();
   expect(composerBox).not.toBeNull();

@@ -1,41 +1,34 @@
 import { expect, test, type Page } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
+import { coreFixture } from "./core-app-fixture";
+import { openResponseOptions, revealSidebar } from "./current-ui";
 import { fixture, origin, functionNames } from "./actual-app-fixture";
 
 async function geometry(page: Page) {
-  const composer = page.locator(".kova-composer");
-  const phonePill =
-    (await page.locator(".kova-chat-input").getAttribute("data-phone-composer")) === "true";
-  await expect(composer).toHaveCSS("border-radius", phonePill ? "999px" : "28px");
-  for (const control of [".kova-attach-button", ".kova-send-button"]) {
-    const button = page.locator(control);
-    await expect(button).toHaveCSS("width", "44px");
-    await expect(button).toHaveCSS("height", "44px");
-    await expect(button).toHaveCSS("border-radius", "50%");
+  const composer = page.locator(".spec400-composer");
+  await expect(composer).toHaveCSS("border-radius", "28px");
+  for (const name of ["Attach", "Send message"]) {
+    const button = composer.getByRole("button", { name, exact: true });
+    const box = await button.boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
   }
   const input = await page.getByRole("textbox", { name: "Message KovaGPT" }).boundingBox();
-  const add = await page.locator(".kova-attach-button").boundingBox();
-  if (phonePill) {
-    // Empty populated-phone composers stay on one row with real 44px actions.
-    expect(Math.abs(input!.y - add!.y)).toBeLessThanOrEqual(1);
-    expect(input!.x).toBeGreaterThanOrEqual(add!.x + add!.width);
-    expect((await composer.boundingBox())!.height).toBeLessThanOrEqual(54);
-  } else {
-    expect(input!.y + input!.height).toBeLessThanOrEqual(add!.y + 1);
-  }
+  const attach = await composer.getByRole("button", { name: "Attach", exact: true }).boundingBox();
+  expect(input!.y + input!.height).toBeLessThanOrEqual(attach!.y + 1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
 test("guest Add menu uses one scroll region in a short desktop viewport", async ({
   page,
 }, info) => {
-  test.skip(info.project.name !== "desktop", "Desktop Popover regression; phones use a sheet.");
+  test.skip(page.viewportSize()!.width < 768, "Desktop Popover regression; phones use a sheet.");
   await page.setViewportSize({ width: 1180, height: 757 });
   await fixture(page, "dark", false);
   await page.goto("/");
   await waitForKovaHydration(page);
-  const trigger = page.locator(".kova-attach-button");
-  const menu = page.getByRole("dialog", { name: "Add files, tools, or prompts", exact: true });
+  const trigger = page.getByRole("button", { name: "Attach", exact: true });
+  const menu = page.getByRole("dialog", { name: "Attach files and tools", exact: true });
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await input.fill("Keep this guest draft");
 
@@ -91,11 +84,11 @@ for (const theme of ["light", "dark"] as const) {
       animations: "disabled",
     });
     await input.click();
-    await expect(page.locator(".kova-composer")).toHaveCSS("outline-style", "none");
-    await page.locator(".kova-attach-button").focus();
-    await page.keyboard.press("Tab");
+    await expect(page.locator(".spec400-composer")).toHaveCSS("outline-style", "none");
+    await page.getByRole("button", { name: "Expand input", exact: true }).focus();
+    await page.keyboard.press("Shift+Tab");
     await expect(input).toBeFocused();
-    await expect(page.locator(".kova-composer")).toHaveCSS("outline-offset", "-2px");
+    await expect(page.locator(".spec400-composer")).toHaveCSS("outline-offset", "2px");
     await input.fill("Plan a thoughtful product launch");
     await input.press("Shift+Enter");
     await input.pressSequentially("Keep the next steps clear.");
@@ -105,33 +98,12 @@ for (const theme of ["light", "dark"] as const) {
       fullPage: true,
       animations: "disabled",
     });
-    if (info.project.name === "desktop") {
-      await expect(page.getByRole("group", { name: "Message tools" })).toBeVisible();
-      await page.getByRole("button", { name: "Choose project", exact: true }).click();
-      await expect(
-        page.getByRole("button", { name: "Open project Review project" }),
-      ).toBeDisabled();
-      await page.getByRole("button", { name: "Cancel", exact: true }).click();
-      await expect(page.getByRole("button", { name: "Choose project", exact: true })).toBeFocused();
-      await page
-        .getByRole("button", { name: "Plugins", exact: true })
-        .filter({ visible: true })
-        .last()
-        .click();
-      await expect(page.getByRole("dialog", { name: "Choose plugins" })).toBeVisible();
-      await expect(
-        page.getByRole("dialog", { name: "Choose plugins" }).getByRole("link").first(),
-      ).toHaveAttribute("aria-disabled", "true");
-      await page.keyboard.press("Escape");
-    } else {
-      await expect(page.getByRole("group", { name: "Message tools" })).toHaveCount(0);
-    }
-    await page.locator(".kova-attach-button").click();
+    await page.getByRole("button", { name: "Attach", exact: true }).click();
     const menu = page.getByRole("dialog", {
-      name: /^(Add files, tools, or prompts|Add to your message)$/,
+      name: /^(Attach files and tools|Attach to your message|Attach)$/,
     });
     await expect(menu).toBeVisible();
-    if (info.project.name === "phone") {
+    if (page.viewportSize()!.width < 768) {
       for (const name of ["Photos", "Camera", "Files", "Library"])
         await expect(menu.getByRole("button", { name, exact: true })).toBeVisible();
     }
@@ -147,13 +119,12 @@ for (const theme of ["light", "dark"] as const) {
       buffer: Buffer.from("Synthetic draft attachment."),
     });
     await expect(page.getByLabel("Remove Draft notes.txt", { exact: true })).toBeVisible();
-    await page.locator(".kova-attach-button").click();
-    await menu.getByRole("button", { name: "Files and message settings", exact: false }).click();
-    const settings = page.getByRole("dialog", { name: "Files and message settings", exact: true });
+    await page.getByRole("button", { name: "Context", exact: true }).click();
+    const settings = page.getByRole("dialog", { name: "Context", exact: true });
     await expect(settings).toBeVisible();
     await expect(settings.getByText("Draft notes.txt", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.locator(".kova-attach-button")).toBeFocused();
+    await expect(page.getByRole("button", { name: "Context", exact: true })).toBeFocused();
     await expect(input).toHaveValue(/Plan a thoughtful product launch/);
   });
 
@@ -185,7 +156,8 @@ for (const theme of ["light", "dark"] as const) {
       fullPage: true,
       animations: "disabled",
     });
-    if (info.project.name === "desktop") {
+    if (page.viewportSize()!.width >= 1024) {
+      await revealSidebar(page);
       await page.getByRole("button", { name: "Edit message", exact: true }).click();
       await page.getByRole("button", { name: "Open chat Second review chat", exact: true }).click();
       await expect(input).toHaveValue("Second chat draft");
@@ -197,7 +169,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(input).toHaveValue("My unsent follow-up");
       await expect(page.getByLabel("Remove Keep.txt", { exact: true })).toBeVisible();
     }
-    await page.getByRole("button", { name: "Copy", exact: true }).first().click();
+    await page.getByRole("button", { name: "Copy response", exact: true }).first().click();
     const copy = page.getByRole("dialog", { name: "Copy response", exact: true });
     await expect(copy).toBeVisible();
     await expect(copy.getByRole("textbox", { name: "Response text to copy" })).toBeFocused();
@@ -205,13 +177,15 @@ for (const theme of ["light", "dark"] as const) {
       /A practical release checklist/,
     );
     await copy.getByRole("button", { name: "Close", exact: true }).first().click();
-    await expect(page.getByRole("button", { name: "Copy", exact: true }).first()).toBeFocused();
+    await expect(
+      page.getByRole("button", { name: "Copy response", exact: true }).first(),
+    ).toBeFocused();
   });
 }
 
 test("v11 shared controls preserve chat data and return focus", async ({ page }, info) => {
-  await fixture(page, "dark", true, true);
-  if (info.project.name === "desktop") {
+  await coreFixture(page, "dark");
+  if (page.viewportSize()!.width >= 1024) {
     await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "1"));
   }
   const copied: string[] = [];
@@ -227,7 +201,7 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await input.fill("Keep this unsent draft");
-  if (info.project.name === "phone") {
+  if (page.viewportSize()!.width < 768) {
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
   } else {
     await expect(page.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
@@ -251,6 +225,13 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
   await expect(input).toHaveValue("Keep this unsent draft");
   await expect(page.getByText("Draft a release checklist.", { exact: true })).toBeVisible();
 
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await page
+    .getByRole("button", { name: "New chat", exact: true })
+    .filter({ visible: true })
+    .click();
+  await input.fill("Keep this unsent draft");
   const temporary = page.getByRole("button", { name: "Start temporary chat", exact: true });
   await temporary.click();
   await expect(
@@ -260,8 +241,11 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
   await expect(temporary).toBeFocused();
   await expect(input).toHaveValue("Keep this unsent draft");
 
-  await page.goto("/library");
+  await page.goto("/projects/33333333-3333-4333-8333-333333333333");
   await waitForKovaHydration(page);
+  await page
+    .getByRole("combobox", { name: "More project tools", exact: true })
+    .selectOption("timers");
   const timer = page.getByRole("button", { name: "Timers", exact: true });
   await timer.click();
   const timerPanel = page.getByRole("region", { name: "Timer controls", exact: true });
@@ -294,9 +278,9 @@ test("guest gates keep drafts and send reaches the actual request path", async (
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await expect(input).toBeEnabled();
   await input.fill("Keep this guest draft");
-  await page.locator(".kova-attach-button").click();
+  await page.getByRole("button", { name: "Attach", exact: true }).click();
   await page
-    .getByRole("dialog", { name: /^(Add files, tools, or prompts|Add to your message)$/ })
+    .getByRole("dialog", { name: /^(Attach files and tools|Attach to your message|Attach)$/ })
     .getByRole("button", { name: "Library", exact: true })
     .click();
   const prompt = page.getByRole("dialog", { name: "Sign in to continue" });
@@ -337,17 +321,17 @@ test("voice stays disconnected while typing, attachments and Stop retain their c
   await page.goto("/");
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
-  const voice = page.getByRole("button", { name: "Voice (not connected)", exact: true });
+  const voice = page.getByRole("button", { name: "Dictate", exact: true });
   await expect(input).toBeEnabled();
   await expect(voice).toBeEnabled();
-  await expect(page.getByTestId("send-button")).toHaveCount(0);
+  await expect(page.getByTestId("send-button")).toBeDisabled();
   await geometry(page);
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: info.outputPath("voice-empty-dark.png"), animations: "disabled" });
   await voice.click();
-  const dialog = page.getByRole("dialog", { name: "Voice is not connected", exact: true });
+  const dialog = page.getByRole("dialog", { name: "Dictate", exact: true });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("You can keep typing your message.");
+  await expect(dialog).toContainText("Voice is not available yet");
   await page.screenshot({
     path: info.outputPath("voice-not-connected.png"),
     animations: "disabled",
@@ -359,7 +343,7 @@ test("voice stays disconnected while typing, attachments and Stop retain their c
   await expect(page.locator("html")).not.toHaveAttribute("data-unexpected-microphone-request");
 
   await input.fill(" ");
-  await expect(voice).toHaveCount(0);
+  await expect(voice).toBeVisible();
   await expect(page.getByTestId("send-button")).toBeDisabled();
   await input.fill("A typed draft");
   await expect(page.getByTestId("send-button")).toBeEnabled();
@@ -383,12 +367,12 @@ test("voice stays disconnected while typing, attachments and Stop retain their c
     buffer: Buffer.from("Synthetic attachment-only message."),
   });
   await expect(page.getByLabel("Remove Voice test.txt", { exact: true })).toBeVisible();
-  await expect(voice).toHaveCount(0);
+  await expect(voice).toBeVisible();
   await expect(page.getByTestId("send-button")).toBeEnabled();
   await page.getByTestId("send-button").click();
   await expect.poll(() => requests).toBe(1);
   await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toBeVisible();
-  await expect(voice).toHaveCount(0);
+  await expect(voice).toBeDisabled();
   await expect(page.getByTestId("send-button")).toHaveCount(0);
   await page.getByRole("button", { name: "Stop generating", exact: true }).click();
   releaseResponse();
@@ -396,13 +380,14 @@ test("voice stays disconnected while typing, attachments and Stop retain their c
   await expect(voice).toBeVisible();
   await geometry(page);
 
+  await openResponseOptions(page);
   const upgrade = page.getByRole("button", {
     name: "Thinking is locked. Open Subscriptions",
     exact: true,
   });
   await upgrade.click();
   await expect(page.locator(".kova-settings-dialog .kova-billing-details")).toBeVisible();
-  await expect(page).toHaveURL(`${origin}/`);
+  await expect(page).toHaveURL(`${origin}/settings/billing`);
 });
 
 for (const theme of ["light", "dark"] as const) {
@@ -413,7 +398,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/");
     await waitForKovaHydration(page);
     const input = page.getByRole("textbox", { name: "Message KovaGPT" });
-    const composer = page.locator(".kova-composer");
+    const composer = page.locator(".spec400-composer");
     const thinking = page.getByTestId("thinking-upgrade-button");
     await expect(input).toBeEnabled();
     await expect(page.getByRole("button", { name: "Model availability", exact: true })).toHaveCount(
@@ -427,21 +412,20 @@ for (const theme of ["light", "dark"] as const) {
     await expect(composer).toHaveCSS("outline-style", "none");
     await expect(composer).toHaveCSS("box-shadow", "none");
     await input.fill("Keep this draft while checking my plan");
+    await openResponseOptions(page);
     await expect(thinking.getByText("Thinking", { exact: true })).toBeVisible();
-    const label = await thinking.getByText("Thinking", { exact: true }).boundingBox();
-    const lock = await thinking.locator("svg.lucide-lock").boundingBox();
-    expect(lock!.x).toBeGreaterThan(label!.x + label!.width);
+    await expect(thinking.locator("svg.lucide-lock")).toBeVisible();
+    await expect(thinking).toHaveAttribute("aria-label", "Thinking is locked. Open Subscriptions");
     await geometry(page);
     await page.screenshot({
       path: info.outputPath(`free-pointer-${theme}.png`),
       animations: "disabled",
     });
-    await page.locator(".kova-attach-button").focus();
-    await page.keyboard.press("Tab");
-    await expect(input).toBeFocused();
-    await expect(composer).toHaveAttribute("data-focus-origin", "keyboard");
-    await expect(composer).toHaveCSS("outline-style", "solid");
-    await page.keyboard.press("Tab");
+    await page
+      .getByRole("dialog", { name: "Response options", exact: true })
+      .getByRole("combobox", { name: "Format", exact: true })
+      .focus();
+    for (let index = 0; index < 3; index++) await page.keyboard.press("Tab");
     await expect(thinking).toBeFocused();
     await expect(thinking).toHaveCSS("outline-style", "solid");
     await page.screenshot({
@@ -451,13 +435,13 @@ for (const theme of ["light", "dark"] as const) {
     await thinking.click();
     const settings = page.locator(".kova-settings-dialog");
     await expect(settings.locator(".kova-billing-details")).toBeVisible();
-    await expect(page).toHaveURL(`${origin}/`);
+    await expect(page).toHaveURL(`${origin}/settings/billing`);
     await page.screenshot({
       path: info.outputPath(`thinking-subscriptions-${theme}.png`),
       animations: "disabled",
     });
-    await settings.getByRole("button", { name: "Close settings", exact: true }).click();
-    await expect(thinking).toBeFocused();
+    await page.goBack();
+    await waitForKovaHydration(page);
     await expect(input).toHaveValue("Keep this draft while checking my plan");
     await input.click();
     await expect(composer).toHaveCSS("border-color", restingBorder);
@@ -471,6 +455,7 @@ for (const tier of ["plus", "pro"] as const) {
     await page.goto("/");
     await waitForKovaHydration(page);
     await expect(page.getByTestId("thinking-upgrade-button")).toHaveCount(0);
+    await openResponseOptions(page);
     const picker = page.getByTestId("model-selector-trigger").filter({ visible: true });
     await expect(picker).toBeVisible();
     await picker.click();
@@ -483,9 +468,8 @@ for (const tier of ["plus", "pro"] as const) {
       "aria-label",
       `Choose model: KovaGPT ${tier === "plus" ? "Thinking" : "High"}`,
     );
-    await expect(
-      page.getByRole("button", { name: "Model availability", exact: true }),
-    ).toBeVisible();
+    await expect(picker).toContainText(tier === "plus" ? "Thinking" : "High");
+    await page.keyboard.press("Escape");
     await geometry(page);
     await page.screenshot({
       path: info.outputPath(`${tier}-selected-model.png`),

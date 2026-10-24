@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openCurrentSettings, chooseSettingsSection } from "./current-ui";
+import { coreFixture } from "./core-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 
 const owner = "22222222-2222-4222-8222-222222222222";
@@ -64,17 +66,20 @@ for (const path of ["/", "/apps"]) {
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await installAuthenticatedFixture(page);
+    await coreFixture(page);
     await page.goto(path);
-    await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+    await openCurrentSettings(page);
     await seedImageHistory(page);
-    await page.getByRole("tab", { name: "Storage", exact: true }).click();
+    await chooseSettingsSection(page, "Storage");
     await page
       .getByRole("button", { name: "Reset this profile's local data", exact: true })
       .click();
-    await expect(
-      page.getByText("This profile's local browser data was reset.", { exact: true }),
-    ).toBeVisible();
+    const confirmation = page.getByRole("alertdialog", {
+      name: "Reset this profile's local data?",
+    });
+    await confirmation.getByRole("button", { name: "Reset local data", exact: true }).click();
+    await expect(confirmation).toBeHidden();
+    await expect.poll(() => imageOwners(page)).toEqual([otherOwner]);
     expect(await imageOwners(page)).toEqual([otherOwner]);
   });
 }
@@ -109,9 +114,9 @@ test("scheduling and recovering account deletion preserve IndexedDB image histor
     await route.fulfill({ json: active });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+  await openCurrentSettings(page);
   await seedImageHistory(page);
-  await page.getByRole("tab", { name: "Data control", exact: true }).click();
+  await chooseSettingsSection(page, "Data control");
   await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
   const confirmation = page.getByRole("alertdialog", { name: "Schedule account deletion?" });
   await expect(confirmation).toContainText("recoverable for 30 days");
@@ -147,9 +152,9 @@ test("only verified final account deletion removes IndexedDB image history from 
     await route.fulfill({ status: 204 });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).first().click();
+  await openCurrentSettings(page);
   await seedImageHistory(page);
-  await page.getByRole("tab", { name: "Data control", exact: true }).click();
+  await chooseSettingsSection(page, "Data control");
   await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
   const confirmation = page.getByRole("alertdialog", { name: "Schedule account deletion?" });
   await confirmation.getByRole("textbox", { name: "Type DELETE to confirm" }).fill("DELETE");

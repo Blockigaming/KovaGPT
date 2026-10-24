@@ -974,7 +974,12 @@ export function SettingsDialog({
         { v: "linked", label: "Connections", icon: Link2 },
         { v: "data", label: "Privacy", icon: ShieldCheck },
         { v: "usage", label: "Usage", icon: BarChart3 },
-        { v: "billing", label: "Billing", icon: CreditCard },
+        {
+          v: "billing",
+          label: "Billing",
+          icon: CreditCard,
+          keywords: ["subscription", "plan", "payment", "invoice"],
+        },
       ],
     },
   ];

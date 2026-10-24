@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { openCurrentSettings } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
@@ -192,34 +193,16 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
   ).not.toBeNull();
   expect([...mockedBackendOrigins]).toEqual([`https://${storageMatch![1]}.supabase.co`]);
 
-  // Hydration completes before the mocked auth session necessarily propagates
-  // through every consumer. Wait for the signed-in shell to mount, then allow
-  // its asynchronous onboarding lookup to settle before exercising the same
-  // mobile navigation path a user takes.
-  const signedInControls = page.locator('button[aria-label="Start temporary chat"]');
-  await expect(signedInControls.first()).toBeAttached();
-  await onboarding.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
-  if (await onboarding.isVisible().catch(() => false)) {
-    await onboarding.getByRole("button", { name: "Close" }).click();
-    await expect(onboarding).toHaveCount(0);
-  }
-  await page.getByRole("button", { name: "Open menu" }).click();
-  await page.getByRole("button", { name: "Settings" }).click();
-  const settingsDialog = page.locator(".kova-settings-dialog");
-  await expect(settingsDialog).toBeVisible();
-  // The sidebar deliberately opens General. Return through the real mobile
-  // control before measuring the navigation list; hidden rows have no height.
-  await settingsDialog.getByRole("button", { name: "Back to settings", exact: true }).click();
-  await expect(settingsDialog.getByRole("textbox", { name: "Search settings" })).toBeVisible();
-  const options = settingsDialog.locator(".kova-settings-nav-item");
-  await expect(options).toHaveCount(20);
-  for (let index = 0; index < (await options.count()); index += 1) {
+  const settingsDialog = await openCurrentSettings(page);
+  await settingsDialog.getByRole("button", { name: "Section", exact: true }).click();
+  const options = page
+    .getByRole("listbox", { name: "Suggestions", exact: true })
+    .getByRole("option");
+  await expect(options).toHaveCount(8);
+  for (let index = 0; index < (await options.count()); index++) {
     await expect(options.nth(index)).toBeVisible();
-    const height = await options
-      .nth(index)
-      .evaluate((element: HTMLElement) => element.offsetHeight);
-    expect(height, `settings row ${index + 1} should meet the 44px target`).toBeGreaterThanOrEqual(
-      44,
-    );
+    expect(
+      await options.nth(index).evaluate((element: HTMLElement) => element.offsetHeight),
+    ).toBeGreaterThanOrEqual(44);
   }
 });

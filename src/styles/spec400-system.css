@@ -275,7 +275,7 @@ body .kova-settings-page.kova-settings-dialog {
   border: 0 !important;
   border-radius: 0;
   box-shadow: none !important;
-  background: transparent !important;
+  background: var(--surface-modal) !important;
   overflow: visible !important;
 }
 body .kova-settings-page > [data-orientation="vertical"] {

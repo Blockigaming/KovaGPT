@@ -16,14 +16,14 @@ for (const theme of ["dark", "light"] as const) {
       page.getByRole("heading", { name: "What are you working on?", exact: true }),
     ).toBeVisible();
     await expect(input).toHaveAttribute("placeholder", "Describe what you need…");
-    await expect(composer).toHaveCSS("border-radius", "12px");
+    await expect(composer).toHaveCSS("border-radius", "28px");
     expect((await composer.boundingBox())!.height).toBeGreaterThanOrEqual(160);
     await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Open voice", exact: true })).toHaveCount(0);
     await expect(page.getByText("Continue working", { exact: true })).toHaveCount(0);
     for (const action of ["Write something", "Summarize a file", "Compare options"]) {
       await input.fill("");
-      await page.getByRole("button", { name: action, exact: true }).click();
+      await page.getByRole("button", { name: `Start with ${action}`, exact: true }).click();
       await expect(input).not.toHaveValue("");
       await expect(input).toBeFocused();
       await expect(page.locator("[data-chat-transcript]")).toHaveCount(0);
@@ -83,7 +83,7 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect(input).toBeEnabled();
   const composer = page.locator(".spec400-composer");
-  await expect(composer).toHaveCSS("border-radius", "12px");
+  await expect(composer).toHaveCSS("border-radius", "28px");
   const width = page.viewportSize()!.width;
   expect((await composer.boundingBox())!.height).toBeGreaterThanOrEqual(width < 1024 ? 120 : 128);
   await input.fill("First line");

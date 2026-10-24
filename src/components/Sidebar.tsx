@@ -620,9 +620,10 @@ export function Sidebar({
   );
 
   const query = searchQuery.trim();
+  const savedConversations = signedIn ? conversations : [];
   const filtered = query
-    ? searchConversations(conversations, query).map((result) => result.conversation)
-    : conversations;
+    ? searchConversations(savedConversations, query).map((result) => result.conversation)
+    : savedConversations;
   const pinned = filtered
     .filter((conversation) => conversation.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
@@ -1331,7 +1332,7 @@ export function Sidebar({
                   View all chats
                 </button>
               ) : null}
-              {conversations.length === 0 ? (
+              {savedConversations.length === 0 ? (
                 <p className="kova-sidebar-empty">
                   No saved chats here.
                   {isLoaded && !signedIn ? (
@@ -1339,7 +1340,7 @@ export function Sidebar({
                   ) : null}
                 </p>
               ) : null}
-              {query && conversations.length > 0 && filtered.length === 0 ? (
+              {query && savedConversations.length > 0 && filtered.length === 0 ? (
                 <p className="kova-sidebar-empty">No matches</p>
               ) : null}
             </section>
