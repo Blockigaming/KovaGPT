@@ -1,4 +1,5 @@
 import { expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import { waitForKovaHydration } from "./hydration";
 
 export const VIEWPORTS = [
   [320, 700],
@@ -122,7 +123,7 @@ export type CaptureMetadata = {
 
 export async function stablePage(page: Page) {
   await page.waitForLoadState("domcontentloaded");
-  await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => undefined);
+  await waitForKovaHydration(page);
   await page.evaluate(async () => {
     await document.fonts.ready;
     await new Promise<void>((resolve) =>
