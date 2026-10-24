@@ -26,7 +26,7 @@
 }
 .spec400-input-region {
   position: relative;
-  flex: 1;
+  flex: 1 0 auto;
   min-width: 0;
   padding-right: 44px;
 }
@@ -60,8 +60,13 @@
 }
 .spec400-composer-toolbar {
   justify-content: space-between;
+  align-items: flex-end;
   flex: none;
   margin-top: auto;
+}
+.spec400-composer-tools {
+  flex: 1;
+  flex-wrap: wrap;
 }
 .spec400-toolbar-button,
 .spec400-send-button,

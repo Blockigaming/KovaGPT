@@ -70,20 +70,6 @@
   stroke-linejoin: round;
 }
 
-@media (max-width: 359px) {
-  .kova-message-actions.kova-response-action-bar .kova-open-result-action {
-    width: 44px !important;
-    min-width: 44px !important;
-    height: 44px !important;
-    padding: 12px !important;
-    justify-content: center;
-    flex: 0 0 44px !important;
-  }
-  .kova-open-result-action > span {
-    display: none;
-  }
-}
-
 /* Beat the shared full-viewport menu cap: upward menus only own the space
    Radix measured above their trigger. Keep every response action scrollable. */
 body .kova-response-menu[role="menu"] {

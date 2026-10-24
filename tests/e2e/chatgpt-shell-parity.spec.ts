@@ -87,6 +87,10 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
 
+    // This fresh desktop profile restores its default expanded sidebar after hydration.
+    await expect(
+      page.getByRole("navigation", { name: "Primary navigation", exact: true }),
+    ).toBeVisible();
     await revealSidebar(page);
     const chatNavigation = page.getByRole("navigation", { name: "KovaGPT features" });
     await expect(chatNavigation).toBeVisible();
@@ -95,7 +99,9 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
       "page",
     );
 
-    await chatNavigation.locator("summary").filter({ hasText: "More" }).click();
+    if (!(await chatNavigation.getByRole("link", { name: "Work", exact: true }).isVisible())) {
+      await chatNavigation.locator("summary").filter({ hasText: "More" }).click();
+    }
     await chatNavigation.getByRole("link", { name: "Work" }).click();
     await expect(page).toHaveURL(/\/work$/);
     await expectAuthenticatedDesktopReady(page);
@@ -119,12 +125,14 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await expectAuthenticatedDesktopReady(page);
 
     await revealSidebar(page);
-    await page
-      .getByRole("navigation", { name: "KovaGPT features" })
-      .locator("summary")
-      .filter({ hasText: "More" })
-      .click();
     const workLink = page.getByRole("link", { name: "Work" });
+    if (!(await workLink.isVisible())) {
+      await page
+        .getByRole("navigation", { name: "KovaGPT features" })
+        .locator("summary")
+        .filter({ hasText: "More" })
+        .click();
+    }
     await expect(workLink).toBeVisible();
     await workLink.click();
     await expect(page).toHaveURL(/\/work$/);

@@ -106,7 +106,13 @@ body [role="menu"] {
   padding: 8px;
   border-radius: var(--kova-radius-menu);
   box-shadow: var(--menu-shadow);
-  max-height: calc(100dvh - 24px);
+  max-height: min(
+    var(
+      --radix-dropdown-menu-content-available-height,
+      var(--radix-popover-content-available-height, 100dvh)
+    ),
+    calc(100dvh - 24px)
+  );
 }
 body [role="menuitem"],
 body [role="menuitemradio"],

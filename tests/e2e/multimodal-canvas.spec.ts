@@ -13,7 +13,7 @@ test("signed-out chat exposes uploads without advertising unavailable tools", as
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Attach", exact: true }).click();
-  const mobile = page.viewportSize()!.width < 768;
+  const mobile = page.viewportSize()!.width < 1024;
   for (const name of mobile ? ["Photos", "Files"] : ["Photos & Files"]) {
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }

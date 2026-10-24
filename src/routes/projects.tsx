@@ -1620,7 +1620,17 @@ function ProjectsPage() {
                 id="create-project-name"
                 aria-invalid={Boolean(createNameError)}
                 aria-describedby={createNameError ? "create-project-name-error" : undefined}
-                onBlur={() => setCreateNameTouched(true)}
+                onBlur={(event) => {
+                  // Dismissal should not move Cancel beneath the pointer by
+                  // inserting a validation message between pointer down and up.
+                  if (
+                    (event?.relatedTarget as HTMLElement | null)?.closest?.(
+                      "[data-project-create-dismiss]",
+                    )
+                  )
+                    return;
+                  setCreateNameTouched(true);
+                }}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Marketing campaign"
@@ -1719,7 +1729,13 @@ function ProjectsPage() {
               </div>
             )}
             <DialogFooter>
-              <Button type="button" variant="ghost" disabled={busy} onClick={closeCreate}>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={busy}
+                data-project-create-dismiss=""
+                onClick={closeCreate}
+              >
                 Cancel
               </Button>
               <Button

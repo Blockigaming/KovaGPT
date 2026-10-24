@@ -13,9 +13,16 @@ async function geometry(page: Page) {
     expect(box!.width).toBeGreaterThanOrEqual(44);
     expect(box!.height).toBeGreaterThanOrEqual(44);
   }
-  const input = await page.getByRole("textbox", { name: "Message KovaGPT" }).boundingBox();
-  const attach = await composer.getByRole("button", { name: "Attach", exact: true }).boundingBox();
-  expect(input!.y + input!.height).toBeLessThanOrEqual(attach!.y + 1);
+  // Read both bounds in one layout and wait for textarea/font resizing to settle.
+  await expect
+    .poll(() =>
+      composer.evaluate((node) => {
+        const input = node.querySelector("textarea")!.getBoundingClientRect();
+        const attach = node.querySelector('[aria-label="Attach"]')!.getBoundingClientRect();
+        return input.bottom - attach.top;
+      }),
+    )
+    .toBeLessThanOrEqual(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
@@ -201,10 +208,8 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await input.fill("Keep this unsent draft");
-  if (page.viewportSize()!.width < 768) {
-    await page.getByRole("button", { name: "Open menu", exact: true }).click();
-  } else {
-    await expect(page.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
+  await revealSidebar(page);
+  if (await page.getByRole("navigation", { name: "Primary navigation", exact: true }).isVisible()) {
     await page.getByRole("button", { name: "Open chat Composer review chat", exact: true }).hover();
   }
   await page.getByRole("button", { name: "Options for Composer review chat", exact: true }).click();

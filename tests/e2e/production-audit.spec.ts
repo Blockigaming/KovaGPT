@@ -42,12 +42,11 @@ const routes = [
   "/reset-password",
 ];
 
-test("implemented routes render without server errors or horizontal overflow", async ({
-  page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop-1440x900");
-  test.setTimeout(90_000);
-  for (const route of routes) {
+for (const route of routes) {
+  test(`implemented route ${route} renders without server errors or horizontal overflow`, async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop-1440x900");
     const response = await page.goto(route, { waitUntil: "domcontentloaded" });
     expect(response?.status(), `${route} should be implemented`).toBeLessThan(400);
     await expect(page.locator("body")).toBeVisible();
@@ -58,8 +57,8 @@ test("implemented routes render without server errors or horizontal overflow", a
     expect(overflow.scrollWidth, `${route} should fit the viewport`).toBeLessThanOrEqual(
       overflow.width + 1,
     );
-  }
-});
+  });
+}
 
 test("guest chat, authentication, command palette, and mobile navigation stay operable", async ({
   page,
