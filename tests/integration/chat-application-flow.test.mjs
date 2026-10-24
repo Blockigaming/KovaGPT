@@ -437,6 +437,7 @@ function composer(f) {
     tempChatContext: "clean",
     settings: { rememberAcross: false },
     canWriteChatHistory: () => true,
+    canSendChatHistory: () => true,
     clearRetryTimer: no,
     newId: () => crypto.randomUUID(),
     setConversations: (updater) => {

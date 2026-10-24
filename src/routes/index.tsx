@@ -27,6 +27,7 @@ import {
 } from "@/lib/chat-edit-draft";
 import {
   canWriteChatHistory,
+  canSendChatHistory,
   markChatHistoryDirty,
   chatHistoryView,
   chatHistorySnapshot,
@@ -291,8 +292,7 @@ function KovaGPT() {
     items: Conversation[];
   }>({ principal: null, items: [] });
   const principalReady = isLoaded && conversationState.principal === storagePrincipal;
-  const historyView = chatHistoryView(userKey);
-  const historyReady = !userKey || Boolean(historyView?.ready && historyView.writable);
+  const historyReady = canSendChatHistory(userKey);
   const conversations = principalReady ? conversationState.items : EMPTY_CONVERSATIONS;
   const setConversations = useCallback(
     (next: SetStateAction<Conversation[]>) => {
@@ -1796,7 +1796,7 @@ function KovaGPT() {
       if (voiceRequest?.signal.aborted) return;
       const trimmed = text.trim();
       if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
-      if (!canWriteChatHistory(userKey) || (userKey && !chatHistoryView(userKey)?.ready)) {
+      if (!canSendChatHistory(userKey)) {
         toast.error("Chat history is not ready for editing. Check the sync status.");
         return;
       }

@@ -177,6 +177,7 @@ function fixture() {
     settings: { rememberAcross: false },
     isStreaming: false,
     canWriteChatHistory: () => true,
+    canSendChatHistory: () => true,
     chatHistoryView: () => ({ ready: true, writable: true }),
     hasPendingChatAttachments: (attachments) =>
       attachments.some((file) => file.status === "uploading" || file.status === "selected"),
@@ -321,6 +322,7 @@ test("a signed-in first send keeps its draft until lazy history initialization c
   const f = fixture();
   for (const view of [undefined, { ready: false, writable: false }]) {
     f.context.chatHistoryView = () => view;
+    f.context.canSendChatHistory = () => false;
     await f.context.send(f.context.input, f.context.attachments, null);
     assert.equal(f.requests.length, 0);
     assert.equal(f.context.input, "First message");
@@ -328,6 +330,7 @@ test("a signed-in first send keeps its draft until lazy history initialization c
     assert.match(f.errors.at(-1)[0], /history is not ready/u);
   }
   f.context.chatHistoryView = () => ({ ready: true, writable: true });
+  f.context.canSendChatHistory = () => true;
   const pending = f.context.send(f.context.input, f.context.attachments, null);
   await settle();
   assert.equal(f.requests.length, 1);
