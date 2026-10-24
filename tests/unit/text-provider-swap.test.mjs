@@ -169,6 +169,51 @@ test("text selection does not move image or embedding traffic from Azure", async
   assert.equal(JSON.parse(calls[0].init.body).model, "image-alias");
   assert.equal(JSON.parse(calls[1].init.body).model, "embedding-alias");
 });
+test("explicit image selection uses OpenAI without changing text or embedding endpoints", async () => {
+  const calls = [];
+  const api = loadProvider(
+    {
+      ...azure,
+      KOVA_IMAGE_PROVIDER: "openai",
+      AZURE_OPENAI_DEPLOYMENT_IMAGE: "missing-image-alias",
+      AZURE_OPENAI_DEPLOYMENT_EMBEDDING: "embedding-alias",
+    },
+    async (url, init) => {
+      calls.push({ url, init });
+      return new Response('{"data":[]}');
+    },
+  );
+  await api.imageGenerations({ model: "gpt-image-2.5-flare", prompt: "fixture" });
+  await api.embeddings({ model: "text-embedding-3-small", input: "fixture" });
+  assert.equal(calls[0].url, "https://api.openai.com/v1/images/generations");
+  assert.equal(calls[0].init.headers.get("authorization"), "Bearer openai-fixture");
+  assert.equal(calls[0].init.headers.has("api-key"), false);
+  assert.equal(JSON.parse(calls[0].init.body).model, "gpt-image-2.5-flare");
+  assert.equal(calls[1].url, "https://fixture.openai.azure.com/openai/v1/embeddings");
+  assert.equal(JSON.parse(calls[1].init.body).model, "embedding-alias");
+  assert.equal(api.getAiProviderConfig().provider, "azure_openai");
+  assert.doesNotMatch(JSON.stringify(api.logs), /openai-fixture|azure-fixture/);
+});
+test("invalid or incomplete image selection cannot make provider calls or fall back", async () => {
+  let calls = 0;
+  for (const env of [
+    {
+      AZURE_OPENAI_ENDPOINT: azure.AZURE_OPENAI_ENDPOINT,
+      AZURE_OPENAI_API_KEY: "fixture",
+      KOVA_IMAGE_PROVIDER: "openai",
+    },
+    { OPENAI_API_KEY: "fixture", KOVA_IMAGE_PROVIDER: "azure_openai" },
+    { ...azure, KOVA_IMAGE_PROVIDER: "invalid" },
+  ]) {
+    const api = loadProvider(env, async () => {
+      calls++;
+      return new Response("{}");
+    });
+    await assert.rejects(api.imageGenerations({ model: "gpt-image-2.5-flare", prompt: "fixture" }));
+  }
+  assert.equal(calls, 0);
+});
+
 test("provider rejection does not trigger fallback or retry", async () => {
   let calls = 0;
   const api = loadProvider({ ...azure, KOVA_TEXT_PROVIDER: "openai" }, async () => {

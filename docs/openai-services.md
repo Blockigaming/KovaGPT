@@ -4,6 +4,10 @@ Kova's existing Responses adapter uses the selected chat models. Image and
 embedding routing stays independent, including existing Azure deployments.
 The unconfigured image fallback is `gpt-image-2.5-flare`, replacing the retired
 `gpt-image-1`. Explicit image model and Azure deployment settings are preserved.
+`KOVA_IMAGE_PROVIDER=openai` explicitly routes image generation and editing to
+OpenAI with the existing key. Its default `auto` retains Azure routing when an
+endpoint is configured. An explicit Azure selection requires that endpoint;
+missing credentials or provider errors never trigger an automatic fallback.
 The additional server integration uses the pinned OpenAI JavaScript SDK
 7.30.0 and the existing `OPENAI_API_KEY`. No provider credential reaches the
 browser. The SDK base URL is pinned to OpenAI, redirects are refused, and
