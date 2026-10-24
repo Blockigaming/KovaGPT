@@ -251,7 +251,7 @@ test("Settings retains all eight sections and includes a legacy current section 
   const pageGroups = source(path)
     .split("const pageGroups: TabGroup[] = [")[1]
     .split("const groups")[0];
-  assert.equal((pageGroups.match(/\{ v:/g) ?? []).length, 8);
+  assert.equal((pageGroups.match(/\{\s*v:/g) ?? []).length, 8);
 });
 
 test("Project and Work dynamic pickers retain ids, disabled state, placeholders and dependent resets", () => {
