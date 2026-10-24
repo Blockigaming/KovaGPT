@@ -62,6 +62,9 @@ test("a web-search deadline aborts both outstanding Firecrawl requests", async (
     {
       "@/lib/sanitize-text": { replaceControlCharacters: (value) => value },
       "@/lib/ai/sources.server": {},
+      "@/lib/runtime-env.server": {
+        runtimeEnv: (name) => ({ FIRECRAWL_API_KEY: "offline-test-key" })[name],
+      },
     },
     {
       process: { env: { FIRECRAWL_API_KEY: "offline-test-key" } },

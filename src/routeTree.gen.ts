@@ -125,6 +125,7 @@ import { Route as ApiAdminKovasRouteImport } from './routes/api/admin/kovas'
 import { Route as ApiAdminPricingRouteImport } from './routes/api/admin/pricing'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
+import { Route as ApiAiServicesRouteImport } from './routes/api/ai/services'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthPasswordRouteImport } from './routes/api/auth/password'
@@ -176,6 +177,7 @@ import { Route as ApiLibraryFilesRouteImport } from './routes/api/library/files'
 import { Route as ApiLibraryFoldersRouteImport } from './routes/api/library/folders'
 import { Route as ApiLibraryItemsRouteImport } from './routes/api/library/items'
 import { Route as ApiMapsSearchRouteImport } from './routes/api/maps/search'
+import { Route as ApiOpenaiWebhookRouteImport } from './routes/api/openai/webhook'
 import { Route as ApiOrganizationsScimRouteImport } from './routes/api/organizations/scim'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiPushRevokeDeviceRouteImport } from './routes/api/push/revoke-device'
@@ -811,6 +813,11 @@ const ApiAgentsTeamsRoute = ApiAgentsTeamsRouteImport.update({
   path: '/api/agents/teams',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiServicesRoute = ApiAiServicesRouteImport.update({
+  id: '/api/ai/services',
+  path: '/api/ai/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   id: '/api/auth/login',
   path: '/api/auth/login',
@@ -1077,6 +1084,11 @@ const ApiLibraryItemsRoute = ApiLibraryItemsRouteImport.update({
 const ApiMapsSearchRoute = ApiMapsSearchRouteImport.update({
   id: '/api/maps/search',
   path: '/api/maps/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOpenaiWebhookRoute = ApiOpenaiWebhookRouteImport.update({
+  id: '/api/openai/webhook',
+  path: '/api/openai/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOrganizationsScimRoute = ApiOrganizationsScimRouteImport.update({
@@ -1436,6 +1448,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/ai/services': typeof ApiAiServicesRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -1487,6 +1500,7 @@ export interface FileRoutesByFullPath {
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
   '/api/maps/search': typeof ApiMapsSearchRoute
+  '/api/openai/webhook': typeof ApiOpenaiWebhookRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
@@ -1650,6 +1664,7 @@ export interface FileRoutesByTo {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/ai/services': typeof ApiAiServicesRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -1701,6 +1716,7 @@ export interface FileRoutesByTo {
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
   '/api/maps/search': typeof ApiMapsSearchRoute
+  '/api/openai/webhook': typeof ApiOpenaiWebhookRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
@@ -1865,6 +1881,7 @@ export interface FileRoutesById {
   '/api/admin/pricing': typeof ApiAdminPricingRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
+  '/api/ai/services': typeof ApiAiServicesRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/password': typeof ApiAuthPasswordRoute
@@ -1916,6 +1933,7 @@ export interface FileRoutesById {
   '/api/library/folders': typeof ApiLibraryFoldersRoute
   '/api/library/items': typeof ApiLibraryItemsRoute
   '/api/maps/search': typeof ApiMapsSearchRoute
+  '/api/openai/webhook': typeof ApiOpenaiWebhookRoute
   '/api/organizations/scim': typeof ApiOrganizationsScimRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/api/push/revoke-device': typeof ApiPushRevokeDeviceRoute
@@ -2081,6 +2099,7 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/ai/services'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2132,6 +2151,7 @@ export interface FileRouteTypes {
     | '/api/library/folders'
     | '/api/library/items'
     | '/api/maps/search'
+    | '/api/openai/webhook'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
@@ -2295,6 +2315,7 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/ai/services'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2346,6 +2367,7 @@ export interface FileRouteTypes {
     | '/api/library/folders'
     | '/api/library/items'
     | '/api/maps/search'
+    | '/api/openai/webhook'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
@@ -2509,6 +2531,7 @@ export interface FileRouteTypes {
     | '/api/admin/pricing'
     | '/api/agents/runs'
     | '/api/agents/teams'
+    | '/api/ai/services'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/password'
@@ -2560,6 +2583,7 @@ export interface FileRouteTypes {
     | '/api/library/folders'
     | '/api/library/items'
     | '/api/maps/search'
+    | '/api/openai/webhook'
     | '/api/organizations/scim'
     | '/api/public/help-submit'
     | '/api/push/revoke-device'
@@ -2720,6 +2744,7 @@ export interface RootRouteChildren {
   ApiAdminPricingRoute: typeof ApiAdminPricingRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
+  ApiAiServicesRoute: typeof ApiAiServicesRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthPasswordRoute: typeof ApiAuthPasswordRoute
@@ -2768,6 +2793,7 @@ export interface RootRouteChildren {
   ApiLibraryFoldersRoute: typeof ApiLibraryFoldersRoute
   ApiLibraryItemsRoute: typeof ApiLibraryItemsRoute
   ApiMapsSearchRoute: typeof ApiMapsSearchRoute
+  ApiOpenaiWebhookRoute: typeof ApiOpenaiWebhookRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   ApiSecurityLockdownRoute: typeof ApiSecurityLockdownRoute
   ApiTasksEventSourcesRoute: typeof ApiTasksEventSourcesRoute
@@ -3625,6 +3651,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAgentsTeamsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai/services': {
+      id: '/api/ai/services'
+      path: '/api/ai/services'
+      fullPath: '/api/ai/services'
+      preLoaderRoute: typeof ApiAiServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/login': {
       id: '/api/auth/login'
       path: '/api/auth/login'
@@ -3980,6 +4013,13 @@ declare module '@tanstack/react-router' {
       path: '/api/maps/search'
       fullPath: '/api/maps/search'
       preLoaderRoute: typeof ApiMapsSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/openai/webhook': {
+      id: '/api/openai/webhook'
+      path: '/api/openai/webhook'
+      fullPath: '/api/openai/webhook'
+      preLoaderRoute: typeof ApiOpenaiWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/organizations/scim': {
@@ -4523,6 +4563,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminPricingRoute: ApiAdminPricingRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
+  ApiAiServicesRoute: ApiAiServicesRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthPasswordRoute: ApiAuthPasswordRoute,
@@ -4572,6 +4613,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLibraryFoldersRoute: ApiLibraryFoldersRoute,
   ApiLibraryItemsRoute: ApiLibraryItemsRoute,
   ApiMapsSearchRoute: ApiMapsSearchRoute,
+  ApiOpenaiWebhookRoute: ApiOpenaiWebhookRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   ApiSecurityLockdownRoute: ApiSecurityLockdownRoute,
   ApiTasksEventSourcesRoute: ApiTasksEventSourcesRoute,

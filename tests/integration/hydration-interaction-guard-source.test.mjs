@@ -131,7 +131,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     ["tests/e2e/core-chat-experience.spec.ts", 2, 2],
     ["tests/e2e/depth.spec.ts", 5, 5],
     ["tests/e2e/desktop-polish.spec.ts", 2, 2],
-    ["tests/e2e/final-readiness.spec.ts", 2, 2],
+    ["tests/e2e/final-readiness.spec.ts", 2, 3, 2],
     ["tests/e2e/functional-reliability.spec.ts", 1, 1],
     ["tests/e2e/high-impact-chat.spec.ts", 9, 9],
     ["tests/e2e/mobile-quality.spec.ts", 5, 5],

@@ -28,7 +28,7 @@ export const DEFAULT_MODELS = Object.freeze({
   PREMIUM_REASONING: "gpt-5.6-sol",
   UTILITY: "gpt-5.6-luna",
   IMAGE_ANALYSIS: "gpt-5.6-luna",
-  IMAGE_GENERATION: "gpt-image-1",
+  IMAGE_GENERATION: "gpt-image-2.5-flare",
   EMBEDDING: "text-embedding-3-small",
 });
 
@@ -52,6 +52,8 @@ export const MODEL_COST_PER_MTOK = Object.freeze({
   "gpt-5.6-terra": { input: 2, output: 12 },
   "gpt-5.6-sol": { input: 4, output: 20 },
   "gpt-image-1": { input: 5, output: 40 },
+  // Current replacement; text input and image output estimates, checked 2026-10-24.
+  "gpt-image-2.5-flare": { input: 5, output: 30 },
   "text-embedding-3-small": { input: 0.02, output: 0 },
 });
 

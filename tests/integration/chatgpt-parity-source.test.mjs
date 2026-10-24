@@ -87,7 +87,7 @@ test("Chat uses the current greeting and reports model availability truthfully",
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /KovaGPT can make mistakes\. Check important info\./);
   assert.doesNotMatch(route, /ConversationOutline/);
-  assert.equal((route.match(/canChangeAgent=\{false\}/g) ?? []).length, 2);
+  assert.equal((route.match(/canChangeAgent=\{!active\?\.kova\}/g) ?? []).length, 2);
   assert.doesNotMatch(route, /<ResponsiveModelSelector/);
   assert.doesNotMatch(mobileTopBar, /<ResponsiveModelSelector/);
   assert.match(

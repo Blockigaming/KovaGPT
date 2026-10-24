@@ -37,7 +37,6 @@ test("optional chat enrichment stages fail open behind explicit short bounds", (
     "owner_lookup",
     "lockdown",
     "library_attachment",
-    "web_search",
     "memory_context",
     "project_membership",
     "project_context",
@@ -54,6 +53,18 @@ test("optional chat enrichment stages fail open behind explicit short bounds", (
     assert.match(stageCall, /\{ required: false(?:, timeoutMs: [\d_]+)? \}/u);
   }
   assert.match(chatRoute, /\[chat\] preflight stage/u);
+});
+
+test("explicit search requires a completed bounded search instead of an ordinary reply", () => {
+  assert.match(
+    chatRoute,
+    /preflight\.run\("web_search", search, \{\s*required: true,\s*timeoutMs: 20_000,\s*\}\)/u,
+  );
+  assert.match(
+    chatRoute,
+    /preflight\.run\("web_search", search, \{\s*required: false,\s*timeoutMs: 8_000,\s*\}\)/u,
+  );
+  assert.match(chatRoute, /web_search_unavailable/u);
 });
 
 test("inline chat attachments consume upload quota but not durable storage quota", () => {

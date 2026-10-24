@@ -1069,17 +1069,31 @@ export const Route = createFileRoute("/api/chat")({
                 clientTool === "web_search" ||
                 shouldRunWebSearch(lastText, personalContext?.webSearch)
               ) {
-                const result = await preflight.run(
-                  "web_search",
-                  async (signal) => {
-                    await assertSelectedContextsCurrent(signal);
-                    return searchWeb(lastText, {
-                      wantsNews: NEWS_TRIGGER.test(lastText),
-                      signal,
-                    });
-                  },
-                  { required: false, timeoutMs: 8_000 },
-                );
+                const search = async (signal: AbortSignal) => {
+                  await assertSelectedContextsCurrent(signal);
+                  return searchWeb(lastText, {
+                    wantsNews: NEWS_TRIGGER.test(lastText),
+                    signal,
+                  });
+                };
+                const result =
+                  clientTool === "web_search"
+                    ? await preflight.run("web_search", search, {
+                        required: true,
+                        timeoutMs: 20_000,
+                      })
+                    : await preflight.run("web_search", search, {
+                        required: false,
+                        timeoutMs: 8_000,
+                      });
+                if (clientTool === "web_search" && result?.status !== "ok")
+                  return Response.json(
+                    {
+                      error: "Web search could not be completed. Please try again.",
+                      code: "web_search_unavailable",
+                    },
+                    { status: 503, headers: { "Cache-Control": "no-store" } },
+                  );
                 if (result) {
                   webBlock = formatSearchResultsForPrompt(result) ?? "";
                   webSources = result.kovaSources;
@@ -1434,7 +1448,15 @@ export const Route = createFileRoute("/api/chat")({
             //
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
+            const selectedHostedTool =
+              auth &&
+              runtimeEnv("KOVA_OPENAI_SERVICES_ENABLED") === "true" &&
+              getAiProviderConfig().provider === "openai" &&
+              (clientTool === "data_analysis" || (clientTool === "file_analysis" && hasAttachments))
+                ? clientTool
+                : null;
             const googleContext =
+              !selectedHostedTool &&
               auth &&
               usesExistingContext &&
               (!customKova || customKova.config.apps.length > 0) &&
@@ -1468,7 +1490,12 @@ export const Route = createFileRoute("/api/chat")({
             const maximumProviderCalls = enableTools ? 9 : 1;
             const estimatedCost =
               estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) *
-              maximumProviderCalls;
+                maximumProviderCalls +
+              (selectedHostedTool === "data_analysis"
+                ? 0.03
+                : selectedHostedTool === "file_analysis"
+                  ? 0.01
+                  : 0);
             let runtimeConfig;
             try {
               runtimeConfig = getAiRuntimeConfig();
@@ -1955,17 +1982,34 @@ export const Route = createFileRoute("/api/chat")({
             try {
               await assertSelectedContextsCurrent(request.signal);
               providerCalls += 1;
-              upstream = await chatCompletions(
-                finalBody,
-                {
-                  signal: request.signal,
-                },
-                {
-                  ownerId: auth?.userId ?? "",
-                  operationId: request.headers.get("x-kova-acceptance-operation") ?? "",
-                  chatId: chatId ?? "",
-                },
-              );
+              const hostedTool = selectedHostedTool;
+              if (hostedTool) {
+                const { hostedChatCompletion } = await import("@/lib/ai/hosted-chat.server");
+                upstream = await hostedChatCompletion(
+                  finalBody,
+                  hostedTool,
+                  lastText,
+                  auth!.userId,
+                  request.signal,
+                );
+                await assertSelectedContextsCurrent(request.signal);
+                activityEvents.push({
+                  tool: hostedTool === "data_analysis" ? "data_analysis" : "project_files",
+                  label:
+                    hostedTool === "data_analysis" ? "Analyzed data" : "Searched attached files",
+                });
+              } else
+                upstream = await chatCompletions(
+                  finalBody,
+                  {
+                    signal: request.signal,
+                  },
+                  {
+                    ownerId: auth?.userId ?? "",
+                    operationId: request.headers.get("x-kova-acceptance-operation") ?? "",
+                    chatId: chatId ?? "",
+                  },
+                );
             } catch (error) {
               const contextFailure = error instanceof ChatPreflightError;
               await finalizeGeneration({

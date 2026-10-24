@@ -48,7 +48,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(composer, /const blockedAttachmentMessage = blockedAttachment/);
   assert.match(
     composer,
-    /const canSubmit =\s*!pasteOffer &&\s*!disabled &&\s*online &&\s*Boolean\(value\.trim\(\) \|\| validAttachmentInstruction\) &&\s*!blockedAttachmentMessage;/,
+    /const canSubmit =\s*!pasteOffer &&\s*!disabled &&\s*!sendDisabled &&\s*online &&\s*Boolean\(value\.trim\(\) \|\| validAttachmentInstruction\) &&\s*!blockedAttachmentMessage;/,
   );
   assert.match(
     composer,

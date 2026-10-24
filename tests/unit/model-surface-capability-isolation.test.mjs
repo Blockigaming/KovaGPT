@@ -159,7 +159,7 @@ test("image and embedding model selection does not borrow missing text credentia
     },
     "selectModelForCapabilities, selectModelForMode",
   );
-  assert.equal(registry.selectModelForMode("image").model.modelId, "gpt-image-1");
+  assert.equal(registry.selectModelForMode("image").model.modelId, "gpt-image-2.5-flare");
   assert.equal(
     registry.selectModelForCapabilities(undefined, ["embeddings"], "embedding").model.modelId,
     "text-embedding-3-small",

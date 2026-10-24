@@ -296,7 +296,7 @@ export function getAiProviderConfig(capability?: ProviderCapability): ProviderCo
     chatModel: modelForPolicy("normal").id,
     fastModel: modelForPolicy("instant").id,
     deepModel: modelForPolicy("deep").id,
-    imageModel: env("KOVA_IMAGE_MODEL") ?? "gpt-image-1",
+    imageModel: env("KOVA_IMAGE_MODEL") ?? "gpt-image-2.5-flare",
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? "text-embedding-3-small",
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),

@@ -435,23 +435,13 @@ function KovaGPT() {
     setRecentLibraryLoading(true);
     setRecentLibraryError(null);
     try {
-      const { listMyLibrary } = await import("@/lib/library.functions");
-      const rows = isSignedIn ? await listMyLibrary() : [];
+      const files = isSignedIn
+        ? await (
+            await import("@/lib/recent-library-files.mjs")
+          ).loadRecentLibraryFileOptions("Saved from chat")
+        : [];
       if (!isCurrent()) return;
-      setRecentLibraryFiles(
-        rows
-          .filter((item) => item.file_name || item.content_text || item.file_type)
-          .slice(0, 12)
-          .map((item) => ({
-            id: item.id,
-            title: item.title,
-            fileName: item.file_name || item.title,
-            fileType: item.file_type || item.item_type,
-            fileSize: item.file_size,
-            createdAt: item.created_at,
-            projectName: item.source === "chat" ? "Saved from chat" : null,
-          })),
-      );
+      setRecentLibraryFiles(files);
     } catch (error) {
       if (!isCurrent()) return;
       console.warn("[recentLibraryFiles]", error);
