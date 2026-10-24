@@ -119,6 +119,15 @@ const markdownComponents = {
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   ),
+  // Model output is untrusted. Rendering a remote image would make the browser
+  // request its URL automatically, which can disclose connector results placed
+  // in that URL by a malicious prompt. Keep the destination user-initiated.
+  img: ({ alt, src }: React.ComponentProps<"img">) => (
+    <a href={src} target="_blank" rel="noreferrer noopener">
+      {alt || "Open image"}
+      <span className="sr-only"> (opens in a new tab)</span>
+    </a>
+  ),
 };
 
 const MarkdownContent = memo(function MarkdownContent({ children }: { children: string }) {
