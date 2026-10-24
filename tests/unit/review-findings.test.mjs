@@ -7,8 +7,8 @@ const read = (path) => readFileSync(path, "utf8");
 test("Playwright starts the built preview app before browser tests", () => {
   const config = read("playwright.config.ts");
   assert.match(config, /webServer:\s*{/);
-  assert.match(config, /npm run preview -- --host 127\.0\.0\.1 --port 8080/);
-  assert.match(config, /url:\s*"http:\/\/127\.0\.0\.1:8080"/);
+  assert.match(config, /npm run preview -- --host 127\.0\.0\.1 --port 4189/);
+  assert.match(config, /url:\s*"http:\/\/127\.0\.0\.1:4189"/);
 });
 
 test("retired compatibility email routes are absent and support delivery remains fail closed", () => {
