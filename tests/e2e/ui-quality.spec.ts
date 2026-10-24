@@ -378,6 +378,10 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   for (const action of [
     page.getByRole("button", { name: "Open menu" }),
     page.getByRole("button", { name: "Attach", exact: true }),
+    page.getByRole("button", { name: "Context", exact: true }),
+    page.getByRole("button", { name: "Options", exact: true }),
+    page.getByRole("button", { name: "Dictate", exact: true }),
+    page.getByRole("button", { name: "Voice", exact: true }),
     page.getByRole("button", { name: "Send message" }),
   ]) {
     const actionBox = await action.first().boundingBox();
@@ -488,13 +492,15 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   if (page.viewportSize()!.width < 1024)
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
   await expect(savedRow).toHaveCount(0);
-  expect(
-    await page.evaluate(() =>
-      Array.from({ length: localStorage.length }, (_, index) =>
-        localStorage.getItem(localStorage.key(index) ?? ""),
-      ).some((value) => value?.includes("Stability")),
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Array.from({ length: localStorage.length }, (_, index) =>
+          localStorage.getItem(localStorage.key(index) ?? ""),
+        ).some((value) => value?.includes("Stability")),
+      ),
+    )
+    .toBe(true);
   // A fresh load deliberately purges guest content. Durable authenticated
   // history is a separate acceptance path and is not claimed by this fixture.
   await page.reload({ waitUntil: "domcontentloaded" });

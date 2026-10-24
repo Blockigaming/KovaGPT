@@ -588,9 +588,10 @@
     overflow-wrap: anywhere;
   }
 }
-@media (max-width: 359px) {
+@media (max-width: 479px) {
   .spec400-composer-tools > .spec400-toolbar-button {
     width: 44px;
+    min-width: 44px;
     padding: 0;
   }
   .spec400-composer-tools > .spec400-toolbar-button > span {
@@ -599,6 +600,11 @@
   .spec400-composer-tools > .spec400-toolbar-button > svg {
     width: 20px;
     height: 20px;
+  }
+}
+@media (max-width: 359px) {
+  .spec400-composer {
+    padding-inline: 8px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
