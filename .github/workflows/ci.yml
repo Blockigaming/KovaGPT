@@ -447,7 +447,8 @@ jobs:
     needs: verify
     # The isolated local PostgreSQL rehearsal can provide source evidence even
     # when an unrelated unit test fails. A failed verify job still blocks merge.
-    if: always() && needs.verify.outputs.run_database == 'true'
+    # A superseded, cancelled run must not queue another rehearsal.
+    if: always() && needs.verify.outputs.run_database == 'true' && !cancelled()
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

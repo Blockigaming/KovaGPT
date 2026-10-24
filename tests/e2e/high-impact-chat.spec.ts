@@ -118,16 +118,41 @@ test("stopping before the first token preserves an honest response with immediat
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page.evaluate(() => {
-    window.requestAnimationFrame = (callback) =>
-      window.setTimeout(() => callback(performance.now()), 1_000);
-  });
   await page.getByRole("button", { name: "Attach", exact: true }).click();
   await page.getByRole("button", { name: "Search the web" }).click();
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find a mountain sunset");
+  await page.evaluate(() => {
+    // Hold buffered text until Stop flushes it, independent of runner speed.
+    const requestFrame = window.requestAnimationFrame.bind(window);
+    const cancelFrame = window.cancelAnimationFrame.bind(window);
+    const held = new Map<number, FrameRequestCallback>();
+    let nextId = -1;
+    window.requestAnimationFrame = (callback) => {
+      const id = nextId--;
+      held.set(id, callback);
+      return id;
+    };
+    window.cancelAnimationFrame = (id) => {
+      if (id < 0) held.delete(id);
+      else cancelFrame(id);
+    };
+    Reflect.defineProperty(window, "__kovaRestoreAnimationFrames", {
+      value: () => {
+        window.requestAnimationFrame = requestFrame;
+        window.cancelAnimationFrame = cancelFrame;
+        for (const callback of held.values()) requestFrame(callback);
+        held.clear();
+      },
+    });
+  });
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.getByText("Generating image…", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Stop generating" }).click();
+  await page.evaluate(() =>
+    (
+      window as unknown as { __kovaRestoreAnimationFrames: () => void }
+    ).__kovaRestoreAnimationFrames(),
+  );
 
   await expect(page.getByText("Response stopped", { exact: true })).toBeVisible();
   await expect(page.locator(".kova-assistant-message").last()).toContainText("Partial response");
