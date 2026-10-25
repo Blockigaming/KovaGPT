@@ -397,6 +397,32 @@ export function SettingsDialog({
     url: string;
     ownerId: string | null;
   } | null>(null);
+  const deletionDialogCurrent =
+    deleteAccountOpen &&
+    open &&
+    tab === "data" &&
+    isLoaded &&
+    deleteAccountReturnRef.current?.ownerId === userKey;
+  const deletionDialogViewRef = useRef({
+    ownerId: userKey,
+    recoverable: deletionRecoverable,
+    pending: deletionPending,
+    deadline: deletionDeadline,
+  });
+  // Keep the last open presentation through the exit animation. A successful
+  // schedule/recovery must not turn the closing confirmation into another action.
+  if (deletionDialogCurrent) {
+    deletionDialogViewRef.current = {
+      ownerId: userKey,
+      recoverable: deletionRecoverable,
+      pending: deletionPending,
+      deadline: deletionDeadline,
+    };
+  }
+  const deletionDialogView =
+    deletionDialogViewRef.current.ownerId === userKey
+      ? deletionDialogViewRef.current
+      : { recoverable: false, pending: false, deadline: null };
   useEffect(() => {
     // Account deletion controls remain bound to the account and section that opened them.
     setDeleteAccountOpen(false);
@@ -2496,50 +2522,56 @@ export function SettingsDialog({
         >
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {deletionRecoverable
+              {deletionDialogView.recoverable
                 ? "Recover your account?"
-                : deletionPending
+                : deletionDialogView.pending
                   ? "Account deletion status"
                   : "Schedule account deletion?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {deletionRecoverable
-                ? `Recover before ${deletionDeadline} to keep the same account and data. Your subscription and discount are unchanged; recovery does not cancel billing.`
-                : deletionPending
+              {deletionDialogView.recoverable
+                ? `Recover before ${deletionDialogView.deadline} to keep the same account and data. Your subscription and discount are unchanged; recovery does not cancel billing.`
+                : deletionDialogView.pending
                   ? "The recovery deadline may have passed or deletion status needs verification. A status check does not recover the account, start cleanup or change billing."
                   : "Your account and data stay recoverable for 30 days before final deletion. Scheduling does not cancel billing or change your discount; cancel separately in Billing if desired. Legally required billing, security, and backup records may be retained. Type DELETE to schedule."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {!deletionPending && (
+          {!deletionDialogView.pending && (
             <Input
               value={deleteConfirmation}
               onChange={(event) => setDeleteConfirmation(event.target.value)}
               placeholder="Type DELETE"
               aria-label="Type DELETE to confirm"
               autoComplete="off"
-              disabled={deleteAccountBusy}
+              disabled={!deletionDialogCurrent || deleteAccountBusy}
             />
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteAccountBusy}>
-              {deletionPending ? "Close" : "Cancel"}
+            <AlertDialogCancel disabled={!deletionDialogCurrent || deleteAccountBusy}>
+              {deletionDialogView.pending ? "Close" : "Cancel"}
             </AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={
-                deletionRecoverable
-                  ? handleRecoverAccount
-                  : deletionPending
-                    ? handleCheckDeletion
-                    : handleDeleteAccount
+                !deletionDialogCurrent
+                  ? undefined
+                  : deletionDialogView.recoverable
+                    ? handleRecoverAccount
+                    : deletionDialogView.pending
+                      ? handleCheckDeletion
+                      : handleDeleteAccount
               }
-              disabled={(!deletionPending && deleteConfirmation !== "DELETE") || deleteAccountBusy}
+              disabled={
+                !deletionDialogCurrent ||
+                (!deletionDialogView.pending && deleteConfirmation !== "DELETE") ||
+                deleteAccountBusy
+              }
             >
               {deleteAccountBusy
                 ? "Working…"
-                : deletionRecoverable
+                : deletionDialogView.recoverable
                   ? "Recover account"
-                  : deletionPending
+                  : deletionDialogView.pending
                     ? "Check deletion status"
                     : "Schedule deletion"}
             </Button>

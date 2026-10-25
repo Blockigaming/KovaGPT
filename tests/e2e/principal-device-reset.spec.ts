@@ -89,6 +89,8 @@ test("scheduling and recovering account deletion preserve IndexedDB image histor
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await installAuthenticatedFixture(page);
+  // Keep this account-data test on a defined returning-user navigation state.
+  await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
   const active = { state: "active", scheduledAt: null, recoverUntil: null };
   const scheduled = {
     state: "scheduled",
@@ -117,17 +119,29 @@ test("scheduling and recovering account deletion preserve IndexedDB image histor
   await openCurrentSettings(page);
   await seedImageHistory(page);
   await chooseSettingsSection(page, "Data control");
+  const pausedExit = await page.addStyleTag({
+    content:
+      '[role="alertdialog"][data-state="closed"] { animation-duration: 60s !important; animation-play-state: paused !important; }',
+  });
   await page.getByRole("button", { name: "Schedule deletion", exact: true }).click();
   const confirmation = page.getByRole("alertdialog", { name: "Schedule account deletion?" });
   await expect(confirmation).toContainText("recoverable for 30 days");
   await confirmation.getByRole("textbox", { name: "Type DELETE to confirm" }).fill("DELETE");
   await confirmation.getByRole("button", { name: "Schedule deletion", exact: true }).click();
+  await expect(confirmation).toHaveAttribute("data-state", "closed");
+  await expect(
+    confirmation.getByRole("button", { name: "Schedule deletion", exact: true }),
+  ).toBeDisabled();
+  expect(mutations).toEqual(["DELETE"]);
+  await pausedExit.evaluate((style) => style.remove());
   await expect(confirmation).toBeHidden();
   await expect(page.getByRole("button", { name: "Recover account", exact: true })).toBeVisible();
   expect(await imageOwners(page)).toEqual([owner, otherOwner]);
 
   await page.getByRole("button", { name: "Recover account", exact: true }).click();
   const recovery = page.getByRole("alertdialog", { name: "Recover your account?" });
+  await expect(recovery).toBeVisible();
+  expect(mutations).toEqual(["DELETE"]);
   await recovery.getByRole("button", { name: "Recover account", exact: true }).click();
   await expect(recovery).toBeHidden();
   await expect(page.getByRole("button", { name: "Schedule deletion", exact: true })).toBeVisible();
@@ -140,6 +154,7 @@ test("only verified final account deletion removes IndexedDB image history from 
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await installAuthenticatedFixture(page);
+  await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
   let deletionRequests = 0;
   await page.route("**/api/account", async (route) => {
     if (route.request().method() === "GET") {

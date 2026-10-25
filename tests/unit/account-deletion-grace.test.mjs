@@ -191,8 +191,8 @@ test("production entry binds scheduling and recovery to the confirmed account wi
     assert.equal(
       evaluate(expression(action, "onClick"), {
         ...handlers,
-        deletionRecoverable: recoverable,
-        deletionPending: pending,
+        deletionDialogCurrent: true,
+        deletionDialogView: { recoverable, pending },
       }),
       expected,
     );
@@ -206,12 +206,30 @@ test("production entry binds scheduling and recovery to the confirmed account wi
   ])
     assert.equal(
       evaluate(expression(action, "disabled"), {
-        deletionPending: pending,
+        deletionDialogCurrent: true,
+        deletionDialogView: { pending },
         deleteConfirmation: confirmation,
         deleteAccountBusy: busy,
       }),
       expected,
     );
+  assert.equal(
+    evaluate(expression(action, "onClick"), {
+      ...handlers,
+      deletionDialogCurrent: false,
+      deletionDialogView: { recoverable: true, pending: true },
+    }),
+    undefined,
+  );
+  assert.equal(
+    evaluate(expression(action, "disabled"), {
+      deletionDialogCurrent: false,
+      deletionDialogView: { pending: true },
+      deleteConfirmation: "DELETE",
+      deleteAccountBusy: false,
+    }),
+    true,
+  );
   const element = dialog.getText(parsed);
   assert.match(element, /recoverable for 30 days before final deletion/);
   assert.doesNotMatch(element, /Delete your account permanently|Continue account deletion/);
