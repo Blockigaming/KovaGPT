@@ -1264,7 +1264,7 @@ export function Sidebar({
                   type="button"
                   className="kova-nav-row"
                   onClick={() => {
-                    if (mobileViewport && open) onToggle();
+                    closeAfterMobileNavigation();
                     onOpenWorkspaceSearch();
                   }}
                 >

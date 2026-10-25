@@ -76,3 +76,86 @@ test("mobile menu, sidebar geometry, and modal behavior share the 1024px desktop
   assert.match(sidebar, /open \? "max-lg:translate-x-0" : "max-lg:-translate-x-full"/);
   assert.doesNotMatch(sidebar, /max-md:|md:!w-0|max-width: 767px/);
 });
+
+function workspaceSearchCallback(deps) {
+  const file = ts.createSourceFile(
+    "Sidebar.tsx",
+    sidebar,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  let viewport;
+  let close;
+  const searches = [];
+  function visit(node) {
+    if (ts.isFunctionDeclaration(node) && node.name?.text === "isMobileViewport")
+      viewport = node.getText(file);
+    if (ts.isVariableDeclaration(node) && node.name.getText(file) === "closeAfterMobileNavigation")
+      close = node.initializer.getText(file);
+    if (ts.isJsxOpeningElement(node) && node.tagName.getText(file) === "button") {
+      const attributes = node.attributes.properties;
+      const row = attributes.find((attribute) => attribute.name?.getText(file) === "className");
+      const click = attributes.find((attribute) => attribute.name?.getText(file) === "onClick");
+      const label =
+        ts.isJsxElement(node.parent) &&
+        node.parent.children.some(
+          (child) =>
+            ts.isJsxElement(child) &&
+            child.openingElement.tagName.getText(file) === "span" &&
+            child.children.some((text) => ts.isJsxText(text) && text.text.trim() === "Search"),
+        );
+      if (
+        label &&
+        row?.initializer?.text === "kova-nav-row" &&
+        click?.initializer?.expression?.getText(file).includes("onOpenWorkspaceSearch()")
+      )
+        searches.push(click.initializer.expression.getText(file));
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(file);
+  assert.ok(viewport && close, "Compile the actual drawer Search handler and viewport helper");
+  assert.equal(searches.length, 1, "Only the expanded Search action matches the runtime fixture");
+  return new Function(
+    ...Object.keys(deps),
+    ts.transpileModule(
+      `${viewport}\nconst closeAfterMobileNavigation = ${close};\nreturn (${searches[0]});`,
+      { compilerOptions: { target: ts.ScriptTarget.ES2022 } },
+    ).outputText,
+  )(...Object.values(deps));
+}
+
+for (const [width, mobileViewport, open] of [
+  [390, false, true],
+  [412, false, true],
+  [1023, false, true],
+  [1024, true, true],
+  [1440, false, true],
+  [390, false, false],
+]) {
+  test(`workspace Search uses the actual ${width}px viewport with stale mobile=${mobileViewport}, open=${open}`, () => {
+    const events = [];
+    const toggle = () => events.push("close");
+    const activate = workspaceSearchCallback({
+      window: {
+        matchMedia: (query) => {
+          assert.equal(query, "(max-width: 1023px)");
+          return { matches: width < 1024 };
+        },
+      },
+      mobileViewport,
+      open,
+      onToggle: toggle,
+      swipeToggleRef: { current: toggle },
+      cancelPendingSelection: () => events.push("cancel-pending-selection"),
+      onOpenWorkspaceSearch: () => events.push("search"),
+    });
+    activate();
+    assert.deepEqual(
+      events,
+      ["cancel-pending-selection", ...(open && width < 1024 ? ["close"] : []), "search"],
+      "Close an open mobile drawer before Search, without toggling a desktop or closed drawer",
+    );
+  });
+}
