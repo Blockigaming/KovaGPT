@@ -5,7 +5,7 @@ import {
   getCallerTier,
   enforceQuota,
 } from "@/lib/api-auth.server";
-import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { consumeOpenAiApplicationAdmission } from "@/lib/ai/openai-admission-runtime.server";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { openAiServices } from "@/lib/ai/openai-service-runtime.server";
 import { createOpenAiServiceHandler } from "@/lib/ai/openai-service-handler.server.mjs";
@@ -17,7 +17,7 @@ const handle = createOpenAiServiceHandler({
   assertNotBanned,
   getCallerTier,
   enforceQuota,
-  consumeRateLimit: consumeApplicationRateLimit,
+  consumeRateLimit: consumeOpenAiApplicationAdmission,
   env: runtimeEnv,
   services: openAiServices,
   reserveDocuments: (

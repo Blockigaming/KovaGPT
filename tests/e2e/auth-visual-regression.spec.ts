@@ -115,6 +115,13 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   await expect(googleButton).toBeEnabled({ timeout: 15_000 });
   await expect(googleButton).toHaveAttribute("aria-busy", "false");
   await expect(googleButton.locator(".animate-spin")).toHaveCount(0);
+  const logo = dialog.locator('img[src="/kova-logo.png"]');
+  await expect(logo).toBeVisible();
+  await expect
+    .poll(() =>
+      logo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+    )
+    .toBe(true);
   expect(authNetwork.settingsReads).toBe(1);
   expect(authNetwork.settingsPreflights).toBe(0);
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
