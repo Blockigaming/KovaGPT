@@ -192,9 +192,6 @@ for (const theme of ["light", "dark"] as const) {
 
 test("v11 shared controls preserve chat data and return focus", async ({ page }, info) => {
   await coreFixture(page, "dark");
-  if (page.viewportSize()!.width >= 1024) {
-    await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "1"));
-  }
   const copied: string[] = [];
   await page.route("**/_serverFn/**", async (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
@@ -232,10 +229,9 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
 
   await page.goto("/");
   await waitForKovaHydration(page);
-  await page
-    .getByRole("button", { name: "New chat", exact: true })
-    .filter({ visible: true })
-    .click();
+  // The fixture restores its closed sidebar preference on every navigation.
+  const navigation = await revealSidebar(page);
+  await navigation.getByRole("button", { name: "New chat", exact: true }).click();
   await input.fill("Keep this unsent draft");
   const temporary = page.getByRole("button", { name: "Start temporary chat", exact: true });
   await temporary.click();
