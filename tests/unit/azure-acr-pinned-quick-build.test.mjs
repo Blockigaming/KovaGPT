@@ -90,6 +90,261 @@ test("one bound POST, CPU pin and sanitized durable evidence precede polling", a
   assert.equal(receipt.remoteCleanupVerified, true);
 });
 
+for (const [label, agentConfiguration] of [
+  ["omitted", undefined],
+  ["empty", {}],
+  ["null configuration", null],
+  ["null cpu", { cpu: null }],
+]) {
+  test(`unreported ${label} submission and queued CPU stays unknown until GET reports 2`, async (t) => {
+    const input = fixture(t);
+    const calls = [];
+    let clock = 0;
+    let gets = 0;
+    const result = await schedulePinnedAcrBuild(input, {
+      now: () => clock,
+      sleep: async (ms) => {
+        clock += ms;
+      },
+      request: async (request) => {
+        calls.push(request);
+        if (calls.length > 1 && gets < 2) {
+          const receipt = JSON.parse(readFileSync(input.receiptPath));
+          assert.equal(receipt.requestedAgentCpu, 2);
+          assert.equal(receipt.observedAgentCpu, null);
+          assert.equal(receipt.cpuObservation, "unreported");
+        }
+        if (request.method === "POST") return run("Queued", { agentConfiguration });
+        gets++;
+        if (gets === 1) return run("Queued", { agentConfiguration });
+        return run(gets === 2 ? "Running" : "Succeeded");
+      },
+    });
+    assert.equal(result.agentCpu, 2);
+    assert.deepEqual(
+      calls.map((request) => request.method),
+      ["POST", "GET", "GET", "GET"],
+    );
+    assert.equal(calls[0].body.agentConfiguration.cpu, 2);
+    assert.equal(calls[0].body.timeout, 1200);
+    const receipt = JSON.parse(readFileSync(input.receiptPath));
+    assert.equal(receipt.observedAgentCpu, 2);
+    assert.equal(receipt.cpuObservation, "verified");
+    assert.equal(receipt.cpuObservationSource, "run-get");
+    assert.equal(receipt.cancelPostAttempts, 0);
+  });
+}
+
+test("a terminal-looking submission without CPU cannot bypass the authoritative GET", async (t) => {
+  const input = fixture(t);
+  const calls = [];
+  const result = await schedulePinnedAcrBuild(input, {
+    request: async (request) => {
+      calls.push(request);
+      return run("Succeeded", calls.length === 1 ? { agentConfiguration: undefined } : {});
+    },
+  });
+  assert.deepEqual(
+    calls.map((request) => request.method),
+    ["POST", "GET"],
+  );
+  assert.equal(result.agentCpu, 2);
+});
+
+for (const [label, agentConfiguration] of [
+  ["zero", { cpu: 0 }],
+  ["one", { cpu: 1 }],
+  ["four", { cpu: 4 }],
+  ["fractional", { cpu: 2.5 }],
+  ["string", { cpu: "2" }],
+  ["nonfinite", { cpu: NaN }],
+  ["array configuration", []],
+  ["string configuration", "private provider text"],
+]) {
+  for (const phase of ["submission", "GET"]) {
+    test(`${phase} explicit invalid ${label} CPU cancels only the owned run once`, async (t) => {
+      const input = fixture(t);
+      const calls = [];
+      let cancelling = false;
+      await assert.rejects(
+        schedulePinnedAcrBuild(input, {
+          request: async (request) => {
+            calls.push(request);
+            if (request.url.includes("/cancel?")) {
+              cancelling = true;
+              return null;
+            }
+            if (cancelling) return run("Canceled", { agentConfiguration });
+            if (phase === "submission" || request.method === "GET")
+              return run("Running", { agentConfiguration });
+            return run("Queued");
+          },
+        }),
+        /acr_cpu_mismatch/u,
+      );
+      assert.equal(calls.filter((request) => request.url.includes("/scheduleRun?")).length, 1);
+      assert.equal(calls.filter((request) => request.url.includes("/cancel?")).length, 1);
+      const receipt = JSON.parse(readFileSync(input.receiptPath));
+      assert.equal(receipt.remoteOutcome, "Canceled");
+      assert.equal(receipt.remoteCleanupVerified, true);
+      assert.equal(receipt.cancelPostAttempts, 1);
+      assert.equal(receipt.retries, 0);
+      assert.notEqual(receipt.cpuObservation, "verified");
+      assert.doesNotMatch(JSON.stringify(receipt), /private provider text/u);
+    });
+  }
+}
+
+for (const status of ["Started", "Running", "Succeeded"]) {
+  test(`GET ${status} without CPU proof never qualifies the candidate`, async (t) => {
+    const input = fixture(t);
+    const calls = [];
+    let cancelling = false;
+    await assert.rejects(
+      schedulePinnedAcrBuild(input, {
+        request: async (request) => {
+          calls.push(request);
+          if (request.url.includes("/cancel?")) {
+            cancelling = true;
+            return null;
+          }
+          if (cancelling) return run("Canceled", { agentConfiguration: undefined });
+          if (request.method === "POST") return run("Queued", { agentConfiguration: undefined });
+          return run(status, { agentConfiguration: undefined });
+        },
+      }),
+      /acr_cpu_unreported/u,
+    );
+    const receipt = JSON.parse(readFileSync(input.receiptPath));
+    assert.equal(receipt.observedAgentCpu, null);
+    assert.equal(receipt.cpuObservation, "unreported");
+    assert.equal(receipt.remoteCleanupVerified, true);
+    assert.equal(receipt.remoteOutcome, status === "Succeeded" ? "Succeeded" : "Canceled");
+    assert.equal(receipt.cancelPostAttempts, status === "Succeeded" ? 0 : 1);
+    assert.equal(calls.filter((request) => request.url.includes("/scheduleRun?")).length, 1);
+  });
+}
+
+test("queued CPU omission with a start time is not treated as an unstarted queue", async (t) => {
+  const input = fixture(t);
+  let cancelling = false;
+  await assert.rejects(
+    schedulePinnedAcrBuild(input, {
+      request: async (request) => {
+        if (request.url.includes("/cancel?")) {
+          cancelling = true;
+          return null;
+        }
+        if (cancelling) return run("Canceled");
+        if (request.method === "POST") return run("Queued", { agentConfiguration: undefined });
+        return run("Queued", { agentConfiguration: undefined, startTime: "2026-10-25T21:25:00Z" });
+      },
+    }),
+    /acr_cpu_unreported/u,
+  );
+  assert.equal(JSON.parse(readFileSync(input.receiptPath)).cancelPostAttempts, 1);
+});
+
+test("earlier CPU2 observations cannot substitute for terminal GET CPU proof", async (t) => {
+  const input = fixture(t);
+  let calls = 0;
+  await assert.rejects(
+    schedulePinnedAcrBuild(input, {
+      sleep: async () => {},
+      request: async () => {
+        calls++;
+        return run(
+          calls < 3 ? "Running" : "Succeeded",
+          calls === 3 ? { agentConfiguration: undefined } : {},
+        );
+      },
+    }),
+    /acr_cpu_unreported/u,
+  );
+  assert.equal(calls, 3);
+  const receipt = JSON.parse(readFileSync(input.receiptPath));
+  assert.equal(receipt.remoteOutcome, "Succeeded");
+  assert.equal(receipt.observedAgentCpu, null);
+  assert.equal(receipt.cancelPostAttempts, 0);
+});
+
+test("terminal GET with wrong CPU proves stopped but never returns a qualified run", async (t) => {
+  const input = fixture(t);
+  let calls = 0;
+  await assert.rejects(
+    schedulePinnedAcrBuild(input, {
+      request: async () => {
+        calls++;
+        return run(
+          calls === 1 ? "Queued" : "Succeeded",
+          calls === 2 ? { agentConfiguration: { cpu: 4 } } : {},
+        );
+      },
+    }),
+    /acr_cpu_mismatch/u,
+  );
+  const receipt = JSON.parse(readFileSync(input.receiptPath));
+  assert.equal(receipt.remoteOutcome, "Succeeded");
+  assert.equal(receipt.remoteCleanupVerified, true);
+  assert.equal(receipt.observedAgentCpu, 4);
+  assert.equal(receipt.cpuObservation, "mismatch");
+  assert.equal(receipt.cancelPostAttempts, 0);
+  assert.equal(calls, 2);
+});
+
+test("unreported queued CPU cannot reset the existing wall deadline", async (t) => {
+  const input = fixture(t);
+  let clock = 0;
+  let submissions = 0;
+  let cancelling = false;
+  await assert.rejects(
+    schedulePinnedAcrBuild(input, {
+      now: () => clock,
+      sleep: async (ms) => {
+        clock += ms;
+      },
+      request: async (request) => {
+        if (request.url.includes("/scheduleRun?")) submissions++;
+        if (request.url.includes("/cancel?")) {
+          cancelling = true;
+          return null;
+        }
+        if (cancelling) return run("Canceled", { agentConfiguration: undefined });
+        return run("Queued", { agentConfiguration: undefined });
+      },
+    }),
+    /build_wall_budget_exhausted/u,
+  );
+  assert.equal(clock, 1_200_000);
+  assert.equal(submissions, 1);
+  const receipt = JSON.parse(readFileSync(input.receiptPath));
+  assert.equal(receipt.cancelPostAttempts, 1);
+  assert.equal(receipt.remoteCleanupVerified, true);
+  assert.equal(receipt.observedAgentCpu, null);
+});
+
+test("a late GET cannot extend the deadline even when it finally proves CPU2", async (t) => {
+  const input = fixture(t);
+  let clock = 0;
+  let calls = 0;
+  await assert.rejects(
+    schedulePinnedAcrBuild(input, {
+      now: () => clock,
+      request: async () => {
+        calls++;
+        if (calls === 1) return run("Queued", { agentConfiguration: undefined });
+        clock = 1_200_001;
+        return run("Succeeded");
+      },
+    }),
+    /build_wall_budget_exhausted/u,
+  );
+  const receipt = JSON.parse(readFileSync(input.receiptPath));
+  assert.equal(receipt.remoteOutcome, "Succeeded");
+  assert.equal(receipt.cancelPostAttempts, 0);
+  assert.equal(calls, 2);
+});
+
 test("late preflight refuses submission without creating consumed receipt", async (t) => {
   const input = fixture(t, { budgetMs: 1_319_999 });
   let calls = 0;

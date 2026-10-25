@@ -113,7 +113,7 @@ function identifiedRun(raw, expectedRunId) {
   return run;
 }
 
-function sanitizedRun(raw, expectedRunId, expectedTag) {
+function knownRun(raw, expectedRunId) {
   const run = identifiedRun(raw, expectedRunId);
   fail(
     [
@@ -128,7 +128,31 @@ function sanitizedRun(raw, expectedRunId, expectedTag) {
     ].includes(run.status),
     "acr_status_invalid",
   );
-  fail(run.agentConfiguration?.cpu === ACR_CPU, "acr_cpu_mismatch");
+  return run;
+}
+
+function runCpu(run) {
+  const configuration = run.agentConfiguration;
+  if (configuration == null) return { cpu: null, observation: "unreported" };
+  if (typeof configuration !== "object" || Array.isArray(configuration))
+    return { cpu: null, observation: "invalid" };
+  const cpu = configuration.cpu;
+  if (cpu == null) return { cpu: null, observation: "unreported" };
+  if (typeof cpu !== "number" || !Number.isFinite(cpu))
+    return { cpu: null, observation: "invalid" };
+  return { cpu, observation: cpu === ACR_CPU ? "verified" : "mismatch" };
+}
+
+function sanitizedRun(raw, expectedRunId, expectedTag, submission = false) {
+  const run = knownRun(raw, expectedRunId);
+  const { cpu, observation } = runCpu(run);
+  fail(["verified", "unreported"].includes(observation), "acr_cpu_mismatch");
+  // scheduleRun may omit CPU even in its terminal-looking response. Only a
+  // subsequent GET can qualify the candidate; queued metadata may still settle.
+  fail(
+    observation === "verified" || submission || (run.status === "Queued" && run.startTime == null),
+    "acr_cpu_unreported",
+  );
   const outputImages = (run.outputImages ?? []).map((image) => {
     fail(
       image?.registry === "kovagptacr-dte9hugbhjghcyb8.azurecr.io" &&
@@ -144,7 +168,7 @@ function sanitizedRun(raw, expectedRunId, expectedTag) {
       digest: image.digest,
     };
   });
-  return { runId: run.runId, status: run.status, agentCpu: ACR_CPU, outputImages };
+  return { runId: run.runId, status: run.status, agentCpu: cpu, outputImages };
 }
 
 export async function schedulePinnedAcrBuild(
@@ -196,7 +220,10 @@ export async function schedulePinnedAcrBuild(
     sourceSha,
     tag,
     apiVersion: ACR_API_VERSION,
-    agentCpu: ACR_CPU,
+    agentCpu: ACR_CPU, // Legacy receipt field describes the requested allocation.
+    requestedAgentCpu: ACR_CPU,
+    observedAgentCpu: null,
+    cpuObservation: "unreported",
     cancelPostAttempts: 0,
     serverTimeoutSeconds: ACR_SERVER_SECONDS,
     remoteOutcome: "UNKNOWN",
@@ -240,6 +267,16 @@ export async function schedulePinnedAcrBuild(
     receipt.remoteCleanupVerified = true;
     update();
   };
+  const observe = (raw, source) => {
+    const run = knownRun(raw, receipt.runId);
+    const { cpu, observation } = runCpu(run);
+    receipt.lastStatus = run.status;
+    receipt.observedAgentCpu = cpu;
+    receipt.cpuObservation = observation;
+    receipt.cpuObservationSource = source;
+    update();
+    return run;
+  };
   const cancelAndReconcile = async () => {
     // Only the run ID returned by our one bound submission can be cancelled.
     fail(
@@ -259,13 +296,12 @@ export async function schedulePinnedAcrBuild(
       update();
     }
     while (deadline - now() > 1000) {
-      const run = sanitizedRun(
+      // Cleanup proves only that our bound run stopped. A CPU violation must not
+      // prevent observing its terminal status or qualify its image as successful.
+      const run = observe(
         await call("GET", `/runs/${receipt.runId}`, undefined, true),
-        receipt.runId,
-        tag,
+        "cleanup-get",
       );
-      receipt.lastStatus = run.status;
-      update();
       if (!["Queued", "Started", "Running"].includes(run.status)) {
         terminal(run);
         return;
@@ -286,20 +322,23 @@ export async function schedulePinnedAcrBuild(
     const raw = await call("POST", "/scheduleRun", input.body);
     receipt.runId = identifiedRun(raw).runId;
     receipt.state = "REMOTE_RUN_IDENTIFIED";
-    update();
-    let run = sanitizedRun(raw, receipt.runId, tag);
-    while (["Queued", "Started", "Running"].includes(run.status)) {
-      receipt.lastStatus = run.status;
-      update();
+    observe(raw, "schedule-response");
+    sanitizedRun(raw, receipt.runId, tag, true);
+    let run;
+    while (true) {
       if (now() >= pollDeadline) {
         await cancelAndReconcile();
         throw new Error("production_candidate_build_wall_budget_exhausted");
       }
+      // Never turn a minimal submission response into CPU or success proof.
+      const response = await call("GET", `/runs/${receipt.runId}`);
+      const observed = observe(response, "run-get");
+      if (!["Queued", "Started", "Running"].includes(observed.status)) terminal(observed);
+      fail(now() < pollDeadline, "build_wall_budget_exhausted");
+      run = sanitizedRun(response, receipt.runId, tag);
+      if (!["Queued", "Started", "Running"].includes(run.status)) break;
       await sleep(Math.min(10_000, pollDeadline - now()));
-      if (now() >= pollDeadline) continue;
-      run = sanitizedRun(await call("GET", `/runs/${run.runId}`), run.runId, tag);
     }
-    terminal(run);
     fail(run.status === "Succeeded", "acr_build_not_succeeded");
     return run;
   } catch (error) {
