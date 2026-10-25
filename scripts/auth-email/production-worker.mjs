@@ -1,14 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { signEmailWorkerRequest } from "../../src/lib/kova-email-worker-auth.server.mjs";
+import { parseAzureDirectPublicOrigin } from "../../src/lib/azure-direct-origin.server.mjs";
 
-const URL = "https://kovagpt.com/api/internal/email-dispatch";
+const DEFAULT_ORIGIN = "https://kovagpt.com";
 const fail = () => {
   throw new Error("kova_email_worker_invocation_unconfirmed");
 };
 
 /** Entry point for an existing authorized durable scheduler. This creates no
- * timer, credential or infrastructure and never accepts a custom destination. */
+ * timer, credential or infrastructure. Its destination is either the existing
+ * Kova origin or the explicitly configured production Azure app HTTPS origin. */
 export async function invokeProductionEmailWorker({
   env = process.env,
   fetcher = fetch,
@@ -17,10 +19,19 @@ export async function invokeProductionEmailWorker({
 } = {}) {
   if (env.KOVA_EMAIL_WORKER_OPERATOR_ENABLED !== "true")
     return { execution_enabled: false, reason: "operator_disabled" };
+  const originMode = env.KOVA_PRODUCTION_ORIGIN_MODE;
+  const origin =
+    originMode === undefined || originMode === "cloudflare"
+      ? DEFAULT_ORIGIN
+      : originMode === "azure-direct" && env.AZURE_ENVIRONMENT === "production"
+        ? parseAzureDirectPublicOrigin(env)
+        : null;
+  if (!origin) fail();
+  const url = `${origin}/api/internal/email-dispatch`;
   const run = { runId: newId(), issuedAt: new Date(now()).toISOString() };
   const signature = signEmailWorkerRequest(run, env.KOVA_EMAIL_WORKER_SECRET);
   try {
-    const response = await fetcher(URL, {
+    const response = await fetcher(url, {
       method: "POST",
       redirect: "error",
       signal: AbortSignal.timeout(120_000),

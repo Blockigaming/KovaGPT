@@ -20,7 +20,10 @@ function serverWithRoute(fetch) {
     "./lib/error-page": { renderErrorPage: () => "Fixture error" },
     "./lib/http-security.server": { rejectCrossSiteRequest: () => null },
     "./lib/azure-runtime-env.server": { validateAzureRuntimeEnv: () => {} },
-    "./lib/origin-boundary.server": { enforceAzureProductionOriginBoundary: () => null },
+    "./lib/origin-boundary.server": {
+      enforceAzureProductionOriginBoundary: () => null,
+      normalizeAzureProductionRequest: (request) => request,
+    },
     "./lib/runtime-env.server": { withRuntimeBindings: (_env, operation) => operation() },
     "@tanstack/react-start/server-entry": { default: { fetch } },
   };

@@ -97,7 +97,10 @@ export function toChatIngressErrorEnvelope(
 };
 
 export function normalizeIpAddress(value: unknown): string | null;
-export function resolveAnonymousClientKey(headers: Headers): string;
+export function resolveAnonymousClientKey(
+  headers: Headers,
+  environment?: Record<string, string | undefined>,
+): string;
 export function createAnonymousRateLimiter(options?: {
   maxRequests?: number;
   windowMs?: number;

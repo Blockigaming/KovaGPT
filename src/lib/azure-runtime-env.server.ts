@@ -1,4 +1,7 @@
-import { parseTrustedProxyCertificateFingerprints } from "./origin-boundary.server";
+import {
+  parseAzureDirectPublicOrigin,
+  parseTrustedProxyCertificateFingerprints,
+} from "./origin-boundary.server";
 
 const SECRET_NAME_PATTERN = /(SECRET|TOKEN|KEY|PASSWORD|PRIVATE|CONNECTION_STRING)/u;
 
@@ -55,15 +58,22 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
     );
   }
 
-  if (
-    environment.AZURE_ENVIRONMENT?.trim().toLowerCase() === "production" &&
-    !parseTrustedProxyCertificateFingerprints(
-      environment.KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS,
-    )
-  ) {
-    throw new Error(
-      "[env] Azure production requires one or two valid Cloudflare client-certificate SHA-256 fingerprints.",
-    );
+  if (environment.AZURE_ENVIRONMENT?.trim().toLowerCase() === "production") {
+    const mode = environment.KOVA_PRODUCTION_ORIGIN_MODE ?? "cloudflare";
+    if (mode === "azure-direct") {
+      if (!parseAzureDirectPublicOrigin(environment))
+        throw new Error("[env] Azure direct ingress requires its exact HTTPS app origin.");
+    } else if (mode !== "cloudflare") {
+      throw new Error("[env] Invalid Azure production origin mode.");
+    } else if (
+      !parseTrustedProxyCertificateFingerprints(
+        environment.KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS,
+      )
+    ) {
+      throw new Error(
+        "[env] Azure production requires one or two valid Cloudflare client-certificate SHA-256 fingerprints.",
+      );
+    }
   }
 
   const aiGenerationEnabled = booleanEnv(environment, "AI_GENERATION_ENABLED", false);

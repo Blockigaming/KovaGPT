@@ -1,4 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
+import { parseAzureDirectPublicOrigin } from "./azure-direct-origin.server.mjs";
+
+export { parseAzureDirectPublicOrigin };
 
 const SHA256_FINGERPRINT_PATTERN = /^[0-9a-f]{64}$/u;
 const MAX_TRUSTED_CERTIFICATES = 2;
@@ -61,6 +64,36 @@ export function enforceAzureProductionOriginBoundary(
     return null;
   }
 
+  const mode = environment.KOVA_PRODUCTION_ORIGIN_MODE ?? "cloudflare";
+  if (mode === "azure-direct") {
+    const origin = parseAzureDirectPublicOrigin(environment);
+    if (!origin) return forbidden();
+    const target = new URL(request.url);
+    const authority = new URL(origin).host;
+    // ACA overwrites X-Forwarded-Proto. Do not accept caller-selected hosts or
+    // forwarded-host chains; only this app's explicitly configured Azure FQDN.
+    if (
+      request.headers.get("x-forwarded-proto") !== "https" ||
+      target.host !== authority ||
+      !["http:", "https:"].includes(target.protocol) ||
+      (request.headers.has("host") && request.headers.get("host") !== authority) ||
+      (request.headers.has("x-forwarded-host") &&
+        request.headers.get("x-forwarded-host") !== authority)
+    )
+      return forbidden();
+    // A browser's same-site signal can include a different Azure tenant. For
+    // mutations, require the exact app origin whenever an Origin is supplied.
+    // Originless provider callbacks still reach their signature/auth guards.
+    if (
+      ["POST", "PUT", "PATCH", "DELETE"].includes(request.method) &&
+      request.headers.has("origin") &&
+      request.headers.get("origin") !== origin
+    )
+      return forbidden();
+    return null;
+  }
+  if (mode !== "cloudflare") return forbidden();
+
   const trustedFingerprints = parseTrustedProxyCertificateFingerprints(
     environment.KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS,
   );
@@ -74,4 +107,24 @@ export function enforceAzureProductionOriginBoundary(
     authorized += Number(fingerprintMatches(presentedFingerprint, trustedFingerprint));
   }
   return authorized === 1 ? null : forbidden();
+}
+
+/** Call only after the origin boundary accepts the request. */
+export function normalizeAzureProductionRequest(
+  request: Request,
+  environment: Environment = process.env,
+): Request {
+  if (
+    environment.AZURE_ENVIRONMENT?.trim().toLowerCase() !== "production" ||
+    environment.KOVA_PRODUCTION_ORIGIN_MODE !== "azure-direct"
+  )
+    return request;
+  // Recheck the boundary so callers cannot use this helper to rewrite an
+  // untrusted authority. Preserve method, body, headers and cancellation.
+  if (enforceAzureProductionOriginBoundary(request, environment)) {
+    throw new Error("azure_direct_origin_rejected");
+  }
+  const target = new URL(request.url);
+  target.protocol = "https:";
+  return new Request(target, request);
 }

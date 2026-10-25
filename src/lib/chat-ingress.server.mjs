@@ -474,7 +474,20 @@ export function normalizeIpAddress(value) {
   return normalizeIpv4(candidate) ?? normalizeIpv6(candidate);
 }
 
-export function resolveAnonymousClientKey(headers) {
+export function resolveAnonymousClientKey(headers, environment = process.env) {
+  if (
+    environment.AZURE_ENVIRONMENT?.trim().toLowerCase() === "production" &&
+    environment.KOVA_PRODUCTION_ORIGIN_MODE === "azure-direct"
+  ) {
+    // ACA overwrites the public protocol and appends its observed client IP.
+    // Only the rightmost XFF entry is supplied by ACA; all earlier entries and
+    // CF-Connecting-IP are caller-controlled in this direct-ingress mode.
+    const forwarded = headers.get("x-forwarded-for");
+    if (headers.get("x-forwarded-proto") !== "https" || !forwarded || forwarded.length > 2048)
+      return "ip:unknown";
+    const connectingIp = normalizeIpAddress(forwarded.slice(forwarded.lastIndexOf(",") + 1));
+    return connectingIp ? `ip:${connectingIp}` : "ip:unknown";
+  }
   const connectingIp = normalizeIpAddress(headers.get("cf-connecting-ip"));
   // KovaGPT runs behind Cloudflare. Do not trust X-Forwarded-For directly: a
   // client can supply or prepend it and rotate arbitrary bucket keys.

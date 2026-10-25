@@ -287,7 +287,10 @@ function serverFixture(handler) {
       "./lib/error-page": { renderErrorPage: () => "Server unavailable" },
       "./lib/http-security.server": security,
       "./lib/azure-runtime-env.server": { validateAzureRuntimeEnv() {} },
-      "./lib/origin-boundary.server": { enforceAzureProductionOriginBoundary: () => null },
+      "./lib/origin-boundary.server": {
+        enforceAzureProductionOriginBoundary: () => null,
+        normalizeAzureProductionRequest: (request) => request,
+      },
       "./lib/runtime-env.server": { withRuntimeBindings: (_env, run) => run() },
       "@tanstack/react-start/server-entry": { __esModule: true, default: { fetch: handler } },
     },

@@ -26,6 +26,14 @@ const env = () => ({
   SUPABASE_SERVICE_ROLE_KEY: "synthetic-service-key-only",
   RESEND_API_KEY: "synthetic-resend-key-only",
 });
+const directOrigin = "https://kovagpt-prod-web.review.eastus.azurecontainerapps.io";
+const directEnv = () => ({
+  ...env(),
+  KOVA_PRODUCTION_ORIGIN_MODE: "azure-direct",
+  KOVA_AZURE_PUBLIC_ORIGIN: directOrigin,
+  KOVA_AUTH_PUBLIC_ORIGIN: directOrigin,
+  KOVA_AUTH_ORIGIN: directOrigin,
+});
 const scope = () => ({
   auth: {
     messageIds: ["m".repeat(43)],
@@ -231,81 +239,161 @@ test("operator defaults off and emits one signed exact-origin empty-body request
   assert.doesNotMatch(JSON.stringify(output), /secret/);
 });
 
-test("production worker reaches both existing claim/prepare/finish pipelines with exact branded renderers", async () => {
-  const token = "t".repeat(43),
-    queuedAt = new Date(at - 60_000).toISOString();
-  const label = "kova-auth-verification";
-  const rendered = renderKovaAuthEmail({
-    label,
-    recipient: "owner@example.test",
-    link: `https://kovagpt.com/api/auth/verify?token=${token}`,
-    publicOrigin: "https://kovagpt.com",
-    issuedAt: queuedAt,
-    expiresAt: new Date(at - 60_000 + 3600_000).toISOString(),
+for (const originMode of ["cloudflare", "azure-direct"]) {
+  test(`production worker reaches both branded dispatch pipelines (${originMode})`, async () => {
+    const configuredEnv = originMode === "azure-direct" ? directEnv() : env();
+    const publicOrigin = configuredEnv.KOVA_AUTH_PUBLIC_ORIGIN;
+    const token = "t".repeat(43),
+      queuedAt = new Date(at - 60_000).toISOString();
+    const label = "kova-auth-verification";
+    const rendered = renderKovaAuthEmail({
+      label,
+      recipient: "owner@example.test",
+      link: `${publicOrigin}/api/auth/verify?token=${token}`,
+      publicOrigin,
+      issuedAt: queuedAt,
+      expiresAt: new Date(at - 60_000 + 3600_000).toISOString(),
+    });
+    const payload = {
+      message_id: "m".repeat(43),
+      to: "owner@example.test",
+      from: "KovaGPT <noreply@kovagpt.com>",
+      sender_domain: "notify.kovagpt.com",
+      ...rendered,
+      purpose: "auth",
+      label,
+      idempotency_key: `${label}:${createHash("sha256").update(token).digest("hex")}`,
+      queued_at: queuedAt,
+    };
+    const calls = [];
+    const rpc = async (name) => {
+      calls.push(name);
+      if (name === "kova_email_worker_scope") return scope();
+      if (name === "kova_auth_claim_email_dispatch")
+        return [
+          {
+            queue_id: 42,
+            attempt: 1,
+            lease_expires_at: new Date(at + 60_000).toISOString(),
+            payload,
+          },
+        ];
+      if (name === "kova_email_claim_account_dispatch")
+        return [
+          {
+            id: run.runId,
+            event_type: "password_changed",
+            recipient: "owner@example.test",
+            occurred_at: queuedAt,
+            metadata: {},
+            lease_token: run.runId,
+            lease_expires_at: new Date(at + 120_000).toISOString(),
+          },
+        ];
+      return true;
+    };
+    const result = await runProductionEmailWorker(
+      run,
+      productionEmailWorkerConfiguration(configuredEnv),
+      {
+        rpc,
+        now: () => at,
+        send: async (_payload, body) => {
+          calls.push("send");
+          assert.equal(body.from, "KovaGPT <noreply@kovagpt.com>");
+          assert.deepEqual(body.to, ["owner@example.test"]);
+          return { outcome: "sent", providerId: run.runId };
+        },
+      },
+    );
+    assert.equal(result.attempted, 2);
+    assert.equal(result.auth.sent, 1);
+    assert.equal(result.account.sent, 1);
+    assert.deepEqual(calls, [
+      "kova_email_claim_worker_run",
+      "kova_email_worker_scope",
+      "kova_auth_claim_email_dispatch",
+      "kova_auth_prepare_email_dispatch",
+      "send",
+      "kova_auth_finish_email_dispatch",
+      "kova_email_claim_account_dispatch",
+      "account_email_prepare_dispatch",
+      "send",
+      "account_email_finish_dispatch",
+      "kova_email_finish_worker_run",
+    ]);
+    assert.doesNotMatch(JSON.stringify(result), new RegExp(token));
   });
-  const payload = {
-    message_id: "m".repeat(43),
-    to: "owner@example.test",
-    from: "KovaGPT <noreply@kovagpt.com>",
-    sender_domain: "notify.kovagpt.com",
-    ...rendered,
-    purpose: "auth",
-    label,
-    idempotency_key: `${label}:${createHash("sha256").update(token).digest("hex")}`,
-    queued_at: queuedAt,
+}
+
+test("direct Azure worker configuration pins the exact app origin and rejects conflicting targets", () => {
+  assert.equal(productionEmailWorkerConfiguration(directEnv()).publicOrigin, directOrigin);
+  for (const change of [
+    { KOVA_PRODUCTION_ORIGIN_MODE: "unknown" },
+    { KOVA_PRODUCTION_ORIGIN_MODE: "" },
+    { KOVA_AZURE_PUBLIC_ORIGIN: "http://kovagpt-prod-web.review.eastus.azurecontainerapps.io" },
+    { KOVA_AZURE_PUBLIC_ORIGIN: `${directOrigin}/path` },
+    { KOVA_AZURE_PUBLIC_ORIGIN: "https://foreign-app.review.eastus.azurecontainerapps.io" },
+    { KOVA_AZURE_PUBLIC_ORIGIN: "https://kovagpt-prod-web.attacker.test" },
+    { CONTAINER_APP_NAME: "foreign-app" },
+    { KOVA_AUTH_ORIGIN: "https://kovagpt.com" },
+    { KOVA_AUTH_PUBLIC_ORIGIN: "https://kovagpt.com" },
+    { AZURE_ENVIRONMENT: "staging" },
+  ])
+    assert.throws(
+      () => productionEmailWorkerConfiguration({ ...directEnv(), ...change }),
+      /target_invalid/,
+    );
+});
+
+test("direct Azure scheduler sends exactly one signed request to the configured production app", async () => {
+  const secret = "synthetic-dedicated-worker-secret-123456789";
+  const operator = {
+    ...directEnv(),
+    KOVA_EMAIL_WORKER_OPERATOR_ENABLED: "true",
+    KOVA_EMAIL_WORKER_SECRET: secret,
   };
-  const calls = [];
-  const rpc = async (name) => {
-    calls.push(name);
-    if (name === "kova_email_worker_scope") return scope();
-    if (name === "kova_auth_claim_email_dispatch")
-      return [
-        {
-          queue_id: 42,
-          attempt: 1,
-          lease_expires_at: new Date(at + 60_000).toISOString(),
-          payload,
-        },
-      ];
-    if (name === "kova_email_claim_account_dispatch")
-      return [
-        {
-          id: run.runId,
-          event_type: "password_changed",
-          recipient: "owner@example.test",
-          occurred_at: queuedAt,
-          metadata: {},
-          lease_token: run.runId,
-          lease_expires_at: new Date(at + 120_000).toISOString(),
-        },
-      ];
-    return true;
-  };
-  const result = await runProductionEmailWorker(run, productionEmailWorkerConfiguration(env()), {
-    rpc,
+  let calls = 0;
+  const output = await invokeProductionEmailWorker({
+    env: operator,
     now: () => at,
-    send: async (_payload, body) => {
-      calls.push("send");
-      assert.equal(body.from, "KovaGPT <noreply@kovagpt.com>");
-      assert.deepEqual(body.to, ["owner@example.test"]);
-      return { outcome: "sent", providerId: run.runId };
+    newId: () => run.runId,
+    fetcher: async (url, options) => {
+      calls++;
+      assert.equal(url, `${directOrigin}/api/internal/email-dispatch`);
+      assert.equal(options.redirect, "error");
+      assert.equal(options.body, "{}");
+      assert.deepEqual(
+        authenticateEmailWorkerRequest(
+          new Request(url, options),
+          { KOVA_EMAIL_WORKER_SECRET: secret },
+          at,
+        ),
+        run,
+      );
+      return Response.json({ ok: true, claimed: true, attempted: 0 });
     },
   });
-  assert.equal(result.attempted, 2);
-  assert.equal(result.auth.sent, 1);
-  assert.equal(result.account.sent, 1);
-  assert.deepEqual(calls, [
-    "kova_email_claim_worker_run",
-    "kova_email_worker_scope",
-    "kova_auth_claim_email_dispatch",
-    "kova_auth_prepare_email_dispatch",
-    "send",
-    "kova_auth_finish_email_dispatch",
-    "kova_email_claim_account_dispatch",
-    "account_email_prepare_dispatch",
-    "send",
-    "account_email_finish_dispatch",
-    "kova_email_finish_worker_run",
-  ]);
-  assert.doesNotMatch(JSON.stringify(result), new RegExp(token));
+  assert.equal(calls, 1);
+  assert.deepEqual(output, { ok: true, claimed: true, attempted: 0, runId: run.runId });
+  for (const change of [
+    { KOVA_PRODUCTION_ORIGIN_MODE: "unknown" },
+    { KOVA_PRODUCTION_ORIGIN_MODE: "" },
+    { KOVA_AZURE_PUBLIC_ORIGIN: `${directOrigin}/path` },
+    { KOVA_AZURE_PUBLIC_ORIGIN: "https://foreign-app.review.eastus.azurecontainerapps.io" },
+    { CONTAINER_APP_NAME: "foreign-app" },
+    { AZURE_ENVIRONMENT: "staging" },
+  ]) {
+    await assert.rejects(
+      invokeProductionEmailWorker({
+        env: { ...operator, ...change },
+        fetcher: async () => {
+          calls++;
+          throw new Error("must not fetch");
+        },
+      }),
+      (error) => error.message === "kova_email_worker_invocation_unconfirmed",
+    );
+  }
+  assert.equal(calls, 1);
 });

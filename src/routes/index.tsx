@@ -50,6 +50,7 @@ import {
 } from "react";
 import { PanelLeft, Files } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
+import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 
 import type { TranscriptMessageRenderer } from "@/components/ActiveChatTranscript";
 import {
@@ -406,6 +407,13 @@ function KovaGPT() {
   // SSR/hydration. On desktop we honor the persisted user preference so the
   // sidebar remembers its collapsed state across reloads.
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const trigger = sidebarKeyboardTriggerRef.current;
+    sidebarKeyboardTriggerRef.current = null;
+    if (!sidebarOpen || !trigger) return;
+    return focusReopenedSidebar(trigger);
+  }, [sidebarOpen]);
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
     let saved: string | null = null;
@@ -3129,17 +3137,9 @@ function KovaGPT() {
           >
             <button
               onClick={(event) => {
-                const keyboardActivated = event.detail === 0;
                 readingAnchorControllerRef.current?.capture();
+                sidebarKeyboardTriggerRef.current = event.detail === 0 ? event.currentTarget : null;
                 setSidebarOpen(true);
-                if (!keyboardActivated) return;
-                window.requestAnimationFrame(() =>
-                  window.requestAnimationFrame(() => {
-                    document
-                      .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
-                      ?.focus({ preventScroll: true });
-                  }),
-                );
               }}
               className="kova-topbar-button kova-sidebar-toggle shrink-0 rounded-xl p-2 transition"
               aria-label="Open sidebar"

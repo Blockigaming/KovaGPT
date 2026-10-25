@@ -24,9 +24,14 @@ test.describe("mobile shell UI truth", () => {
     expect(box!.height).toBeGreaterThanOrEqual(viewport.height - 1);
 
     const close = page.getByRole("button", { name: "Close sidebar", exact: true });
-    const closeBox = await close.boundingBox();
-    expect(closeBox?.width).toBeGreaterThanOrEqual(44);
-    expect(closeBox?.height).toBeGreaterThanOrEqual(44);
+    // Translation can briefly subtract fractional edges as 43.99998px for a
+    // 44px control. Wait for settled geometry and keep the exact target minimum.
+    await expect
+      .poll(async () => {
+        const closeBox = await close.boundingBox();
+        return closeBox ? Math.min(closeBox.width, closeBox.height) : 0;
+      })
+      .toBeGreaterThanOrEqual(44);
     await close.click();
     await expect(opener).toBeFocused();
   });

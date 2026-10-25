@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { resolveAnonymousClientKey } from "../../src/lib/chat-ingress.server.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
 
@@ -49,7 +50,7 @@ test("chat logs are emitted only through the safe field whitelist", () => {
   assert.doesNotMatch(safeLogger, /prompt|token|secret|body|message|stack|error\s*:/i);
 });
 
-test("anonymous limiting uses bounded buckets and only trusted Cloudflare client IPs", () => {
+test("anonymous limiting uses bounded buckets and the selected ingress's trusted client IP", () => {
   const chat = read("src/routes/api/chat.ts");
   const ingress = read("src/lib/chat-ingress.server.mjs");
 
@@ -62,7 +63,20 @@ test("anonymous limiting uses bounded buckets and only trusted Cloudflare client
   assert.match(ingress, /buckets\.size >= maxBuckets - 1/);
   assert.match(ingress, /const overflowKey = "ip:overflow"/);
   assert.match(ingress, /headers\.get\("cf-connecting-ip"\)/);
-  assert.doesNotMatch(ingress, /headers\.get\("x-forwarded-for"\)/);
+  const headers = new Headers({
+    "cf-connecting-ip": "192.0.2.9",
+    "x-forwarded-for": "192.0.2.88, 198.51.100.7",
+    "x-forwarded-proto": "https",
+  });
+  // The default authenticated Cloudflare boundary still ignores XFF entirely.
+  assert.equal(resolveAnonymousClientKey(headers, {}), "ip:192.0.2.9");
+  assert.equal(
+    resolveAnonymousClientKey(headers, {
+      AZURE_ENVIRONMENT: "production",
+      KOVA_PRODUCTION_ORIGIN_MODE: "azure-direct",
+    }),
+    "ip:198.51.100.7",
+  );
 });
 
 test("chat normalization strips client extras and validates all prompt-control fields", () => {

@@ -12,7 +12,7 @@ const source = ts.transpileModule(
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   },
 ).outputText;
-function fixture({ enabled = true, failure = false } = {}) {
+function fixture({ enabled = true, failure = false, publicOrigin = "https://kovagpt.com" } = {}) {
   const calls = [],
     exports = {};
   const modules = {
@@ -29,7 +29,7 @@ function fixture({ enabled = true, failure = false } = {}) {
     "@/lib/kova-email-worker.server.mjs": {
       productionEmailWorkerConfiguration: () => {
         if (!enabled) throw new Error("private config");
-        return { publicOrigin: "https://kovagpt.com" };
+        return { publicOrigin };
       },
       runProductionEmailWorker: async (run) => {
         calls.push(run);
@@ -95,4 +95,14 @@ test("disabled configuration and uncertain worker return safe errors without raw
   assert.equal(response.status, 503);
   assert.equal(f.calls.length, 1);
   assert.deepEqual(await response.json(), { ok: false, error: "email_worker_pending" });
+});
+
+test("a direct Azure worker endpoint accepts only its configured exact origin", async () => {
+  const origin = "https://kovagpt-prod-web.review.eastus.azurecontainerapps.io";
+  const f = fixture({ publicOrigin: origin });
+  assert.equal((await f.handle(request({ origin }))).status, 200);
+  assert.equal(f.calls.length, 1);
+  assert.equal((await f.handle(request())).status, 401);
+  assert.equal((await f.handle(request({ origin, signature: false }))).status, 401);
+  assert.equal(f.calls.length, 1);
 });

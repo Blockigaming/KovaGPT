@@ -1,5 +1,6 @@
 import { dispatchAuthEmailBatch } from "../../scripts/auth-email/dispatch.mjs";
 import { dispatchAccountNotifications } from "../../scripts/auth-email/notification-dispatch.mjs";
+import { parseAzureDirectPublicOrigin } from "./azure-direct-origin.server.mjs";
 
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iu;
 const MESSAGE = /^[A-Za-z0-9_-]{43}$/u;
@@ -26,12 +27,20 @@ const RPCS = new Set([
  * This is configuration, never proof of usable keys or authorization to deploy. */
 export function productionEmailWorkerConfiguration(env = process.env) {
   if (env.KOVA_PRODUCTION_EMAIL_WORKER_ENABLED !== "true") fail("disabled");
+  const originMode = env.KOVA_PRODUCTION_ORIGIN_MODE;
+  const publicOrigin =
+    originMode === undefined || originMode === "cloudflare"
+      ? PRODUCTION_ORIGIN
+      : originMode === "azure-direct"
+        ? parseAzureDirectPublicOrigin(env)
+        : null;
   if (
+    !publicOrigin ||
     env.AZURE_ENVIRONMENT !== "production" ||
     env.CONTAINER_APP_NAME !== "kovagpt-prod-web" ||
     !["dual", "kova"].includes(env.KOVA_AUTH_MODE) ||
-    env.KOVA_AUTH_PUBLIC_ORIGIN !== PRODUCTION_ORIGIN ||
-    env.KOVA_AUTH_ORIGIN !== PRODUCTION_ORIGIN ||
+    env.KOVA_AUTH_PUBLIC_ORIGIN !== publicOrigin ||
+    env.KOVA_AUTH_ORIGIN !== publicOrigin ||
     env.SUPABASE_URL !== DATABASE_ORIGIN ||
     env.KOVA_EXPECTED_SUPABASE_PROJECT_REF !== "mfbycmbjygcfkrsuepxf"
   )
@@ -44,7 +53,7 @@ export function productionEmailWorkerConfiguration(env = process.env) {
     if (typeof env[name] !== "string" || env[name].length < 16 || /[\r\n]/u.test(env[name]))
       fail("private_configuration_missing");
   return {
-    publicOrigin: PRODUCTION_ORIGIN,
+    publicOrigin,
     databaseOrigin: DATABASE_ORIGIN,
     serviceKey: env.SUPABASE_SERVICE_ROLE_KEY,
     resendKey: env.RESEND_API_KEY,

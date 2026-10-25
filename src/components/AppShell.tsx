@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNod
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { settingsSectionForTab } from "@/lib/settings-types";
 import { Sidebar } from "@/components/Sidebar";
+import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
 );
@@ -86,6 +87,12 @@ export function AppShell({
   // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
   // narrow viewports; on desktop we restore the persisted user preference.
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarKeyboardFocusRef = useRef(false);
+  useEffect(() => {
+    if (!sidebarOpen || !sidebarKeyboardFocusRef.current) return;
+    sidebarKeyboardFocusRef.current = false;
+    return focusReopenedSidebar();
+  }, [sidebarOpen]);
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
     let saved: string | null = null;
@@ -311,16 +318,8 @@ export function AppShell({
           <button
             type="button"
             onClick={(event) => {
-              const keyboardActivated = event.detail === 0;
+              sidebarKeyboardFocusRef.current = event.detail === 0;
               setSidebarOpen(true);
-              if (!keyboardActivated) return;
-              window.requestAnimationFrame(() =>
-                window.requestAnimationFrame(() => {
-                  document
-                    .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
-                    ?.focus({ preventScroll: true });
-                }),
-              );
             }}
             className="kova-floating-sidebar-trigger kova-sidebar-toggle hidden lg:flex fixed top-3 left-3 z-30 h-10 w-10 rounded-xl transition items-center justify-center"
             aria-label="Open sidebar"

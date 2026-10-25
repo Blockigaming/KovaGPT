@@ -2,7 +2,10 @@ import { renderErrorPage } from "./lib/error-page";
 import { rejectCrossSiteRequest } from "./lib/http-security.server";
 
 import { validateAzureRuntimeEnv } from "./lib/azure-runtime-env.server";
-import { enforceAzureProductionOriginBoundary } from "./lib/origin-boundary.server";
+import {
+  enforceAzureProductionOriginBoundary,
+  normalizeAzureProductionRequest,
+} from "./lib/origin-boundary.server";
 import { withRuntimeBindings } from "./lib/runtime-env.server";
 
 validateAzureRuntimeEnv();
@@ -138,6 +141,7 @@ export default {
     try {
       const rejectedOrigin = enforceAzureProductionOriginBoundary(request);
       if (rejectedOrigin) return hardenResponse(rejectedOrigin);
+      request = normalizeAzureProductionRequest(request);
 
       if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
         const rejected = rejectCrossSiteRequest(request);
