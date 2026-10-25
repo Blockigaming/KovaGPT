@@ -279,7 +279,9 @@ jobs:
     name: Browser (${{ matrix.id }})
     needs: [verify, public-surface]
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    # The phone group covers five viewports and more than 1,100 cases.
+    # Keep the complete matrix and per-test limits within this wall-clock budget.
+    timeout-minutes: 45
     env:
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "core"
@@ -352,7 +354,9 @@ jobs:
     if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     needs: [verify, public-surface]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Each shard has about 870 cases. Allow the complete run and report upload
+    # within this job budget; individual test limits and two workers stay bounded.
+    timeout-minutes: 45
     env:
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "core"
