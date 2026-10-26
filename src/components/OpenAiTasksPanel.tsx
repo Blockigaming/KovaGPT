@@ -5,6 +5,7 @@ import {
   type OpenAiTaskAvailability,
   type OpenAiTaskOperation,
 } from "@/lib/openai-task-client.mjs";
+import { authFetch } from "@/lib/auth-fetch";
 
 export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
   const [availability, setAvailability] = useState<OpenAiTaskAvailability | null>(null);
@@ -31,7 +32,7 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
     if (!ownerId) return;
     const controller = new AbortController();
     setChecking(true);
-    void loadOpenAiTaskAvailability(ownerId, { signal: controller.signal })
+    void loadOpenAiTaskAvailability(ownerId, { signal: controller.signal, fetchImpl: authFetch })
       .then((next) => {
         if (owner.current === ownerId && !controller.signal.aborted) {
           setAvailability(next);
@@ -65,7 +66,7 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
     try {
       const answer = await submitOpenAiTask(
         { ownerId, operation, input, requestId: crypto.randomUUID() },
-        { signal: controller.signal },
+        { signal: controller.signal, fetchImpl: authFetch },
       );
       if (owner.current === ownerId && active.current === controller && !controller.signal.aborted)
         setResult({ ownerId, ...answer });
