@@ -55,7 +55,8 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!ownerId || running || !availability?.[operation] || !input.trim()) return;
+    if (!ownerId || running || active.current || !availability?.[operation] || !input.trim())
+      return;
     const controller = new AbortController();
     active.current = controller;
     setRunning(true);
