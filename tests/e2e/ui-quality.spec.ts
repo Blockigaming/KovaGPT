@@ -475,6 +475,39 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.locator(".kova-user-message")).toBeVisible();
   await expect(page.locator(".kova-assistant-message")).toBeVisible();
+  const prompt = page.locator(".kova-user-message");
+  const promptBox = (await prompt.boundingBox())!;
+  const promptColumn = (await prompt.locator("..").boundingBox())!;
+  // A short prompt should occupy only its content and sit at the end of the
+  // reading column, leaving the assistant's reply a distinct visual turn.
+  expect(promptBox.width).toBeLessThan(promptColumn.width);
+  expect(promptBox.x + promptBox.width).toBeCloseTo(promptColumn.x + promptColumn.width, 0);
+  const promptContrasts = await prompt.evaluate((element) => {
+    const root = element.ownerDocument.documentElement;
+    const wasDark = root.classList.contains("dark");
+    const luminance = (color: string) => {
+      const channels = color
+        .match(/[\d.]+/g)!
+        .slice(0, 3)
+        .map(Number)
+        .map((value) => {
+          const channel = value / 255;
+          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        });
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    try {
+      return [false, true].map((dark) => {
+        root.classList.toggle("dark", dark);
+        const style = getComputedStyle(element);
+        const values = [luminance(style.color), luminance(style.backgroundColor)];
+        return (Math.max(...values) + 0.05) / (Math.min(...values) + 0.05);
+      });
+    } finally {
+      root.classList.toggle("dark", wasDark);
+    }
+  });
+  for (const contrast of promptContrasts) expect(contrast).toBeGreaterThanOrEqual(4.5);
   await expect(page.locator(".kova-assistant-message")).toContainText("Stability");
   await expect(page.locator(".kova-assistant-message table")).toBeVisible();
   await expect(page.locator(".kova-assistant-message pre code")).toBeVisible();
@@ -492,6 +525,13 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   expect(assistant!.width).toBeLessThanOrEqual(Math.min(page.viewportSize()!.width, 820));
 
   if (page.viewportSize()!.width < 1024) {
+    for (const label of ["Edit message", "Branch from this message in a new chat"]) {
+      const promptAction = page.getByRole("button", { name: label, exact: true });
+      await expect(promptAction).toBeVisible();
+      const promptActionBox = (await promptAction.boundingBox())!;
+      expect(promptActionBox.width + 0.01).toBeGreaterThanOrEqual(44);
+      expect(promptActionBox.height + 0.01).toBeGreaterThanOrEqual(44);
+    }
     const action = page.getByRole("button", { name: "Copy response", exact: true });
     const artifactAction = page.getByRole("button", { name: "Open code result", exact: true });
     await expect(action).toBeVisible();
