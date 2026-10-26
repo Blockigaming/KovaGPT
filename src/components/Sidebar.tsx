@@ -466,7 +466,60 @@ export function Sidebar({
     if (content) content.inert = true;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    drawerRef.current?.querySelector<HTMLElement>('[aria-label="Close sidebar"]')?.focus();
+    // Opening motion can leave the close control unfocusable during this effect.
+    // Wait for a visible commit and confirm focus actually moved; a later user
+    // action or a closing drawer always cancels this bounded opening request.
+    const drawer = drawerRef.current;
+    const openingSource = lastFocusedRef.current;
+    const focusDeadline = window.performance.now() + 500;
+    let openingFocusFrame: number | null = null;
+    let openingFocusCancelled = false;
+    let openingFocusAttempts = 0;
+    const cancelOpeningFocus = () => {
+      openingFocusCancelled = true;
+      if (openingFocusFrame !== null) window.cancelAnimationFrame(openingFocusFrame);
+      openingFocusFrame = null;
+    };
+    const focusOpeningControl = () => {
+      openingFocusFrame = null;
+      if (
+        openingFocusCancelled ||
+        !drawer?.isConnected ||
+        drawerRef.current !== drawer ||
+        drawer.dataset.state !== "open" ||
+        !isMobileViewport()
+      )
+        return;
+      const active = document.activeElement;
+      if (
+        active !== document.body &&
+        active !== document.documentElement &&
+        active !== openingSource
+      )
+        return;
+      const close = drawer.querySelector<HTMLButtonElement>('[aria-label="Close sidebar"]');
+      openingFocusAttempts += 1;
+      if (
+        close?.isConnected &&
+        !close.disabled &&
+        !close.closest("[inert]") &&
+        close.offsetParent !== null &&
+        getComputedStyle(close).visibility === "visible"
+      ) {
+        close.focus({ preventScroll: true });
+        if (document.activeElement === close) return;
+      }
+      if (openingFocusAttempts < 60 && window.performance.now() < focusDeadline)
+        openingFocusFrame = window.requestAnimationFrame(focusOpeningControl);
+    };
+    const onOpeningFocusMoved = (event: FocusEvent) => {
+      if (event.target === document.body || event.target === document.documentElement) return;
+      cancelOpeningFocus();
+    };
+    document.addEventListener("pointerdown", cancelOpeningFocus, true);
+    document.addEventListener("keydown", cancelOpeningFocus, true);
+    document.addEventListener("focusin", onOpeningFocusMoved, true);
+    openingFocusFrame = window.requestAnimationFrame(focusOpeningControl);
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
       const nested =
@@ -488,16 +541,21 @@ export function Sidebar({
       if (!items.length) return;
       const [first] = items;
       const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
+      const outsideDrawer = !drawerRef.current.contains(document.activeElement);
+      if (event.shiftKey && (document.activeElement === first || outsideDrawer)) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && (document.activeElement === last || outsideDrawer)) {
         event.preventDefault();
         first.focus();
       }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
+      cancelOpeningFocus();
+      document.removeEventListener("pointerdown", cancelOpeningFocus, true);
+      document.removeEventListener("keydown", cancelOpeningFocus, true);
+      document.removeEventListener("focusin", onOpeningFocusMoved, true);
       document.body.style.overflow = previousOverflow;
       if (content) content.inert = previousInert;
       document.removeEventListener("keydown", onKeyDown);

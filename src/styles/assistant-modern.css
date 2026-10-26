@@ -367,6 +367,12 @@ body:has(.kova-assistant[data-ui="modern"]),
 }
 
 @media (max-width: 359px) {
+  .kova-assistant[data-ui="modern"] {
+    --chat-gutter: 12px;
+  }
+  .kova-assistant[data-ui="modern"] .kova-empty-chat {
+    padding-inline: 12px;
+  }
   .kova-assistant[data-ui="modern"] .spec400-composer {
     padding-inline: 8px;
   }
