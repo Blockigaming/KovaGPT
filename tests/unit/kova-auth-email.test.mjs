@@ -114,3 +114,12 @@ test("long addresses, both themes and fallback font behavior are present without
   assert.match(result.html, /max-width: 620px/);
   assert.doesNotMatch(result.html, /url\(|<img|<link\b/);
 });
+
+test("new auth mail remains branded when a client strips embedded CSS", () => {
+  const html = renderKovaAuthEmail(base).html.replace(/<style>[\s\S]*?<\/style>/u, "");
+  assert.match(html, /<body class="kova-page" style="[^"]*background-color:#f4f4f2;padding:32px 12px;/u);
+  assert.match(html, /<td class="kova-container" style="[^"]*border:1px solid #e5e5e3;border-radius:24px;padding:40px;/u);
+  assert.match(html, /<h1 class="kova-heading" style="[^"]*font-size:30px;line-height:1.15;/u);
+  assert.match(html, /<a class="kova-button" href="[^"]+" style="[^"]*border-radius:999px;/u);
+});
+

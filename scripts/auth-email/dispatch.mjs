@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { readFileSync } from "node:fs";
 import {
   renderKovaAuthEmail,
+  renderPreviousKovaAuthEmail,
   renderLegacyKovaAuthEmail,
 } from "../../src/lib/kova-auth-email.server.mjs";
 
@@ -215,10 +216,11 @@ export function validatedAuthEmail(payload, config) {
     expiresAt: new Date(issued + 3600_000).toISOString(),
   };
   const rendered = renderKovaAuthEmail(renderInput);
-  // Accept only either exact canonical version. Deliver queued bytes unchanged:
+  // Accept only exact canonical versions. Deliver queued bytes unchanged:
   // a prior provider acceptance may be awaiting its database acknowledgement.
   if (
     (rendered.html !== payload.html &&
+      renderPreviousKovaAuthEmail(renderInput).html !== payload.html &&
       renderLegacyKovaAuthEmail(renderInput).html !== payload.html) ||
     rendered.text !== payload.text ||
     rendered.subject !== payload.subject
@@ -354,3 +356,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exitCode = 1;
   }
 }
+

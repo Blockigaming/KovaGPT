@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 import {
   renderKovaAuthEmail,
+  renderPreviousKovaAuthEmail,
   renderLegacyKovaAuthEmail,
 } from "../../src/lib/kova-auth-email.server.mjs";
 import { validatedAuthEmail } from "../../scripts/auth-email/dispatch.mjs";
@@ -22,8 +23,11 @@ for (const label of ["kova-auth-verification", "kova-auth-recovery"]) {
       expiresAt: "2026-10-24T17:00:00.000Z",
     };
     const current = renderKovaAuthEmail(input);
+    const previous = renderPreviousKovaAuthEmail(input);
     const legacy = renderLegacyKovaAuthEmail(input);
     assert.notEqual(current.html, legacy.html);
+    assert.notEqual(current.html, previous.html);
+    assert.notEqual(previous.html, legacy.html);
     assert.equal(current.text, legacy.text);
     assert.equal(current.subject, legacy.subject);
     const config = {
@@ -32,7 +36,7 @@ for (const label of ["kova-auth-verification", "kova-auth-recovery"]) {
       publicOrigin: origin,
       issuedNotBefore: "2026-10-24T15:59:00.000Z",
     };
-    for (const rendered of [current, legacy]) {
+    for (const rendered of [current, previous, legacy]) {
       const payload = {
         ...rendered,
         message_id: config.messageIds[0],
@@ -63,3 +67,4 @@ for (const label of ["kova-auth-verification", "kova-auth-recovery"]) {
     }
   });
 }
+

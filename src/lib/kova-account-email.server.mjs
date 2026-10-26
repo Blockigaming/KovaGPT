@@ -1,3 +1,5 @@
+import { presentKovaEmailHtml } from "./kova-email-presentation.server.mjs";
+
 // Pure server-side account notification rendering. This module never sends mail.
 // Keep the existing KovaGPT palette/font fallbacks without remote assets or tracking.
 const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
@@ -245,5 +247,6 @@ ${content.billing ? `<p class="kova-muted" style="font-size:13px;margin:0 0 22px
 <p class="kova-muted" style="font-size:12px;margin:0 0 12px;">KovaGPT will never ask you to reply with your password, verification code, or recovery code.</p>
 <p class="kova-muted" style="font-size:12px;margin:0;"><a class="kova-link" href="mailto:support@kovagpt.com" style="color:#2563eb;">Support</a> &nbsp;·&nbsp; <a class="kova-link" href="${escapeHtml(privacyUrl)}" style="color:#2563eb;">Privacy</a></p>
 </div></td></tr></table></td></tr></table></body></html>`;
-  return { subject: content.subject, html, text };
+  return { subject: content.subject, html: presentKovaEmailHtml(html), text };
 }
+
