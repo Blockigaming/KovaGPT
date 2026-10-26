@@ -7,8 +7,12 @@ on:
       - .github/workflows/assistant-ui-browser.yml
       - playwright.spec400-chat.config.ts
       - playwright.rounded.config.ts
+      - playwright.config.ts
       - tests/e2e/spec400-chat.spec.ts
       - tests/e2e/model-selector.spec.ts
+      - tests/e2e/ui-quality.spec.ts
+      - tests/e2e/ui-quality.spec.ts-snapshots/**
+      - tests/e2e/candidate-visual-evidence.ts
       - tests/e2e/actual-app-fixture.ts
       - tests/e2e/authenticated-fixture.ts
       - tests/e2e/current-ui.ts
@@ -64,7 +68,15 @@ jobs:
       - name: Build the actual Node application
         run: npm run build:azure
       - name: Install pinned Chromium
-        run: npx --no-install playwright install --with-deps chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The Azure mirror stalled two runners before browser tests could run.
+          # Keep Ubuntu's signed archives and every browser/check unchanged.
+          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
+            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          fi
+          npx --no-install playwright install --with-deps chromium
       - name: Select existing assistant tests and isolated preview
         run: |
           mkdir -p test-results/assistant-ui
@@ -115,5 +127,103 @@ jobs:
         with:
           name: assistant-ui-${{ matrix.project }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: test-results/assistant-ui/
+          if-no-files-found: error
+          retention-days: 7
+
+  quality:
+    name: Assistant quality (${{ matrix.project }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [desktop-1440x900, phone-390x844, tablet-1024x768, phone-320x700]
+    env:
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - name: Checkout exact candidate without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build the actual Node application
+        run: npm run build:azure
+      - name: Install pinned Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The Azure mirror stalled two runners before browser tests could run.
+          # Keep Ubuntu's signed archives and every browser/check unchanged.
+          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
+            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          fi
+          npx --no-install playwright install --with-deps chromium
+      - name: Select existing strict quality tests and isolated preview
+        run: |
+          mkdir -p test-results/assistant-quality
+          cat > test-results/assistant-quality.generated.config.ts <<'CONFIG'
+          import path from "node:path";
+          import { defineConfig } from "@playwright/test";
+          import quality from "../playwright.config";
+          import actualApp from "../playwright.rounded.config";
+
+          const root = process.cwd();
+          const projects = new Set([
+            "desktop-1440x900", "phone-390x844", "tablet-1024x768", "phone-320x700",
+          ]);
+          export default defineConfig({
+            ...quality,
+            testDir: path.join(root, "tests/e2e"),
+            testMatch: "ui-quality.spec.ts",
+            outputDir: path.join(root, "test-results/assistant-quality/results"),
+            reporter: [
+              ["list"],
+              ["json", { outputFile: path.join(root, "test-results/assistant-quality/results.json") }],
+            ],
+            webServer: { ...actualApp.webServer, cwd: root },
+            use: {
+              ...quality.use,
+              serviceWorkers: "block",
+              launchOptions: {
+                ...quality.use?.launchOptions,
+                args: ["--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost"],
+              },
+            },
+            projects: quality.projects?.filter((project) => projects.has(project.name ?? "")),
+          });
+          CONFIG
+      - name: Exercise existing strict quality and snapshot assertions
+        env:
+          KOVA_CANDIDATE_VISUAL_EVIDENCE_DIR: test-results/assistant-quality/candidate-visual
+        run: npx --no-install playwright test --config test-results/assistant-quality.generated.config.ts --project=${{ matrix.project }}
+      - name: Record exact source provenance
+        if: always()
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          mkdir -p test-results/assistant-quality
+          printf '%s\n' "$SOURCE_SHA" > test-results/assistant-quality/commit.txt
+          git rev-parse 'HEAD^{tree}' > test-results/assistant-quality/tree.txt
+          sha256sum package-lock.json > test-results/assistant-quality/lock.sha256
+      - name: Preserve strict quality snapshots and results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: assistant-quality-${{ matrix.project }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            test-results/assistant-quality/
+            tests/e2e/ui-quality.spec.ts-snapshots/
           if-no-files-found: error
           retention-days: 7
