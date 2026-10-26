@@ -1,0 +1,119 @@
+name: Assistant UI Browser
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/assistant-ui-browser.yml
+      - playwright.spec400-chat.config.ts
+      - playwright.rounded.config.ts
+      - tests/e2e/spec400-chat.spec.ts
+      - tests/e2e/model-selector.spec.ts
+      - tests/e2e/actual-app-fixture.ts
+      - tests/e2e/authenticated-fixture.ts
+      - tests/e2e/current-ui.ts
+      - tests/e2e/hydration.ts
+      - tests/fixtures/azure-local-network-guard.mjs
+      - scripts/azure/local-preview.mjs
+      - src/components/**
+      - src/hooks/**
+      - src/routes/index.tsx
+      - src/routes/__root.tsx
+      - src/lib/modes.ts
+      - src/styles.css
+      - src/styles/**
+      - package.json
+      - package-lock.json
+      - tsconfig.json
+      - vite.config.ts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assistant-ui-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    name: Assistant UI (${{ matrix.project }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [desktop, phone, narrow]
+    env:
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - name: Checkout exact candidate without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build the actual Node application
+        run: npm run build:azure
+      - name: Install pinned Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Select existing assistant tests and isolated preview
+        run: |
+          mkdir -p test-results/assistant-ui
+          cat > test-results/assistant-ui.generated.config.ts <<'CONFIG'
+          import path from "node:path";
+          import { defineConfig } from "@playwright/test";
+          import actualApp from "../playwright.spec400-chat.config";
+
+          const root = process.cwd();
+          export default defineConfig({
+            ...actualApp,
+            testDir: path.join(root, "tests/e2e"),
+            testMatch: ["spec400-chat.spec.ts", "model-selector.spec.ts"],
+            outputDir: path.join(root, "test-results/assistant-ui/results"),
+            reporter: [
+              ["list"],
+              ["json", { outputFile: path.join(root, "test-results/assistant-ui/results.json") }],
+            ],
+            webServer: { ...actualApp.webServer, cwd: root },
+            use: {
+              ...actualApp.use,
+              launchOptions: {
+                ...actualApp.use?.launchOptions,
+                // Synthetic page.route responses run before transport. Any
+                // unmatched nonlocal browser request cannot resolve a host.
+                args: ["--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost"],
+              },
+            },
+          });
+          CONFIG
+      - name: Exercise real assistant components with mocked services
+        run: npx --no-install playwright test --config test-results/assistant-ui.generated.config.ts --project=${{ matrix.project }}
+      - name: Record exact source provenance
+        if: always()
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          mkdir -p test-results/assistant-ui
+          printf '%s\n' "$SOURCE_SHA" > test-results/assistant-ui/commit.txt
+          git rev-parse 'HEAD^{tree}' > test-results/assistant-ui/tree.txt
+          sha256sum package-lock.json > test-results/assistant-ui/lock.sha256
+      - name: Preserve assistant screenshots and results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: assistant-ui-${{ matrix.project }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: test-results/assistant-ui/
+          if-no-files-found: error
+          retention-days: 7
