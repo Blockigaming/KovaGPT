@@ -13,6 +13,7 @@
 @import "./styles/spec400-chat.css";
 @import "./styles/visual-tokens.css";
 @import "./styles/control-geometry.css";
+@import "./styles/assistant-modern.css";
 
 @custom-variant dark (&:is(.dark *));
 

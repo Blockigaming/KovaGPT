@@ -151,22 +151,46 @@ test("empty workspace remains contained and composer focus is deliberate", async
 
   const starterLayout = await page.locator(".spec400-starter-actions").evaluate((grid) => {
     const style = getComputedStyle(grid);
-    const visibleLabels = Array.from(grid.querySelectorAll(".spec400-toolbar-button > span"))
+    const visibleLabels = Array.from(grid.querySelectorAll(".kova-home-starter-copy"))
       .filter((label) => (label as HTMLElement).offsetParent !== null)
-      .map((label) => ({ clientWidth: label.clientWidth, scrollWidth: label.scrollWidth }));
+      .map((label) => {
+        const box = label.getBoundingClientRect();
+        const target = label.closest("button")!.getBoundingClientRect();
+        return {
+          clientWidth: label.clientWidth,
+          scrollWidth: label.scrollWidth,
+          left: box.left,
+          right: box.right,
+          top: box.top,
+          bottom: box.bottom,
+          target: {
+            left: target.left,
+            right: target.right,
+            top: target.top,
+            bottom: target.bottom,
+            width: target.width,
+            height: target.height,
+          },
+        };
+      });
     return {
       display: style.display,
-      flexWrap: style.flexWrap,
-      justifyContent: style.justifyContent,
+      columns: style.gridTemplateColumns.split(/\s+/).length,
       visibleLabels,
     };
   });
-  expect(starterLayout.display).toBe("flex");
-  expect(starterLayout.flexWrap).toBe(page.viewportSize()!.width < 768 ? "wrap" : "nowrap");
-  expect(starterLayout.justifyContent).toBe("flex-start");
+  expect(starterLayout.display).toBe("grid");
+  expect(starterLayout.columns).toBe(page.viewportSize()!.width <= 600 ? 1 : 3);
   expect(starterLayout.visibleLabels).toHaveLength(3);
-  for (const label of starterLayout.visibleLabels)
+  for (const label of starterLayout.visibleLabels) {
     expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth + 1);
+    expect(label.left).toBeGreaterThanOrEqual(label.target.left);
+    expect(label.right).toBeLessThanOrEqual(label.target.right);
+    expect(label.top).toBeGreaterThanOrEqual(label.target.top);
+    expect(label.bottom).toBeLessThanOrEqual(label.target.bottom);
+    expect(label.target.width).toBeGreaterThanOrEqual(44);
+    expect(label.target.height).toBeGreaterThanOrEqual(44);
+  }
   await input.clear();
   await page.getByRole("button", { name: "Start with Write something", exact: true }).click();
   await expect(input).toHaveValue("Help me write ");

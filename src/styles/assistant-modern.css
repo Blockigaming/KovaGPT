@@ -1,0 +1,349 @@
+/* Main assistant presentation. Existing interaction and responsive contracts
+   stay in their component styles; this scope does not restyle other routes. */
+.kova-assistant[data-ui="modern"] {
+  --assistant-canvas: #fafaf9;
+  --assistant-panel: #f3f3f1;
+  --assistant-card: #ffffff;
+  --assistant-line: #e3e3df;
+  --assistant-muted: #686864;
+  --assistant-focus: #555b65;
+  --background: var(--assistant-canvas);
+  --foreground: #242522;
+  --card: var(--assistant-card);
+  --card-foreground: var(--foreground);
+  --muted: #efefec;
+  --muted-foreground: var(--assistant-muted);
+  --accent: #eaeae6;
+  --accent-foreground: var(--foreground);
+  --border: var(--assistant-line);
+  --ring: var(--assistant-focus);
+  --sidebar-hover: #e8e8e4;
+  --sidebar-active: #e5e5e0;
+  --surface-workspace: var(--assistant-canvas);
+  --surface-raised: var(--assistant-card);
+  --surface-input: var(--assistant-card);
+  --surface-hover: var(--accent);
+  --user-bubble: #ecece8;
+  --modern-shadow: 0 8px 32px #24252206, 0 2px 6px #24252203;
+  --chat-body-font: "Kova DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--chat-body-font);
+  --font-display: var(--chat-body-font);
+  font-family: var(--chat-body-font);
+  background: var(--assistant-canvas);
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark .kova-assistant[data-ui="modern"] {
+  --assistant-canvas: #1c1d1f;
+  --assistant-panel: #17181a;
+  --assistant-card: #252629;
+  --assistant-line: #37383b;
+  --assistant-muted: #a2a4aa;
+  --assistant-focus: #c3c7d0;
+  --foreground: #eeefef;
+  --muted: #2c2d30;
+  --accent: #303135;
+  --sidebar-hover: #242528;
+  --sidebar-active: #2b2c30;
+  --user-bubble: #303135;
+  --modern-shadow: 0 10px 40px #00000018, 0 2px 8px #0000000d;
+}
+
+.kova-assistant[data-ui="modern"] .kova-chat-main {
+  background: var(--assistant-canvas);
+}
+
+.kova-assistant[data-ui="modern"] .kova-topbar {
+  background: var(--assistant-canvas) !important;
+  border-bottom: 0 !important;
+}
+
+.kova-assistant[data-ui="modern"] .kova-desktop-topbar {
+  height: 72px !important;
+  min-height: 72px !important;
+  padding-inline: 28px;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-chat-title {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+.kova-assistant[data-ui="modern"] .kova-topbar .spec400-toolbar-button {
+  color: var(--assistant-muted);
+  font-size: 13px;
+}
+
+.kova-assistant[data-ui="modern"] .kova-empty-chat {
+  padding-inline: clamp(20px, 4vw, 56px);
+}
+
+.kova-assistant[data-ui="modern"] section.kova-empty-chat > div.kova-empty-chat-content {
+  max-width: 760px;
+  margin-block: auto;
+  padding-block: 48px !important;
+  transform: translateY(-24px);
+}
+
+.kova-assistant[data-ui="modern"] section.kova-empty-chat .kova-greeting {
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.kova-assistant[data-ui="modern"] .kova-home-eyebrow {
+  display: block;
+  color: var(--assistant-muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.015em;
+}
+
+.kova-assistant[data-ui="modern"] section.kova-empty-chat .kova-greeting h1 {
+  padding: 0;
+  font-family: var(--chat-body-font);
+  font-size: clamp(30px, 3vw, 42px);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.045em !important;
+  text-align: left;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-composer {
+  padding: 16px;
+  border-color: var(--assistant-line);
+  background: var(--assistant-card);
+  box-shadow: var(--modern-shadow);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-composer:focus-within {
+  border-color: color-mix(in srgb, var(--foreground) 28%, var(--assistant-line));
+}
+
+.kova-assistant[data-ui="modern"] .spec400-composer-input {
+  padding: 4px 6px;
+  font-size: 16px;
+  line-height: 1.625;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-composer-input::placeholder {
+  color: var(--assistant-muted);
+}
+
+.kova-assistant[data-ui="modern"] .spec400-composer-toolbar {
+  padding-top: 6px;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-composer-tools {
+  gap: 2px;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-composer-tools > .spec400-toolbar-button {
+  color: var(--assistant-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-composer-tools > .spec400-toolbar-button:hover {
+  color: var(--foreground);
+}
+
+.kova-assistant[data-ui="modern"] .spec400-expand-input {
+  color: var(--assistant-muted);
+  opacity: 0.65;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-send-button:not(:disabled) {
+  background: var(--foreground);
+  color: var(--assistant-canvas);
+  box-shadow: 0 2px 4px #00000012;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-send-button:disabled {
+  background: var(--muted);
+  color: var(--assistant-muted);
+}
+
+.kova-assistant[data-ui="modern"] .spec400-starter-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-starter-actions .kova-home-starter {
+  position: relative;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  min-height: 112px;
+  padding: 16px;
+  border: 1px solid var(--assistant-line);
+  border-radius: 20px;
+  background: transparent;
+  text-align: left;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.kova-assistant[data-ui="modern"] .kova-home-starter:hover {
+  background: var(--assistant-card);
+  border-color: color-mix(in srgb, var(--foreground) 22%, var(--assistant-line));
+}
+
+.kova-assistant[data-ui="modern"] .kova-home-starter-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  place-items: center;
+  color: var(--assistant-muted);
+}
+
+.kova-assistant[data-ui="modern"] .kova-home-starter-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.6;
+}
+
+.kova-assistant[data-ui="modern"] .kova-home-starter-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 4px;
+  padding-right: 4px;
+}
+
+.kova-assistant[data-ui="modern"] .kova-home-starter-copy strong {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.kova-assistant[data-ui="modern"] .kova-home-starter-copy small {
+  color: var(--assistant-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.kova-assistant[data-ui="modern"] .kova-home-starter .kova-home-starter-arrow {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 14px;
+  height: 14px;
+  color: var(--assistant-muted);
+  opacity: 0.6;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-capability-note {
+  max-width: 560px;
+  margin: 22px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-recent-work h2 {
+  color: var(--assistant-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-recent-work button {
+  padding-inline: 12px;
+}
+
+.kova-assistant[data-ui="modern"] :is(.kova-sidebar, .kova-sidebar-rail) {
+  --font-sans: "Kova DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (max-width: 1023px) {
+  .kova-assistant[data-ui="modern"] section.kova-empty-chat > div.kova-empty-chat-content {
+    max-width: 680px;
+    transform: none;
+  }
+  .kova-assistant[data-ui="modern"] .kova-home-eyebrow {
+    display: none;
+  }
+  .kova-assistant[data-ui="modern"] .spec400-starter-actions .kova-home-starter {
+    gap: 8px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .kova-assistant[data-ui="modern"] .kova-empty-chat {
+    padding-inline: 16px;
+  }
+  .kova-assistant[data-ui="modern"] section.kova-empty-chat > div.kova-empty-chat-content {
+    margin-block: auto;
+    padding-block: 24px !important;
+  }
+  .kova-assistant[data-ui="modern"] section.kova-empty-chat .kova-greeting {
+    margin-bottom: 24px;
+  }
+  .kova-assistant[data-ui="modern"] section.kova-empty-chat .kova-greeting h1 {
+    max-width: 290px;
+    font-size: 30px;
+    line-height: 1.2;
+  }
+  .kova-assistant[data-ui="modern"] .spec400-composer {
+    padding: 12px;
+  }
+  .kova-assistant[data-ui="modern"] .spec400-starter-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .kova-assistant[data-ui="modern"] .spec400-starter-actions .kova-home-starter {
+    align-items: center;
+    gap: 12px;
+    min-height: 62px;
+    padding: 10px 14px;
+    border-radius: 16px;
+  }
+  .kova-assistant[data-ui="modern"] .kova-home-starter-copy {
+    gap: 1px;
+    padding: 0 20px 0 0;
+  }
+  .kova-assistant[data-ui="modern"] .kova-home-starter .kova-home-starter-arrow {
+    top: calc(50% - 7px);
+    bottom: auto;
+  }
+  .kova-assistant[data-ui="modern"] .spec400-capability-note {
+    margin-top: 18px;
+  }
+}
+
+@media (max-height: 700px) {
+  .kova-assistant[data-ui="modern"] section.kova-empty-chat > div.kova-empty-chat-content {
+    margin-block: 0;
+    transform: none;
+  }
+}
+
+@media (max-width: 479px) {
+  .kova-assistant[data-ui="modern"] .spec400-composer-tools {
+    gap: 0;
+  }
+}
+
+@media (max-width: 359px) {
+  .kova-assistant[data-ui="modern"] .spec400-composer {
+    padding-inline: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-assistant[data-ui="modern"] :is(.spec400-composer, .kova-home-starter) {
+    transition: none;
+  }
+}

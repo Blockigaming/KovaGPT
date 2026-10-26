@@ -259,3 +259,289 @@
   width: 20px;
   height: 20px;
 }
+
+/* Main assistant navigation: a quiet surface, with contrast reserved for New chat.
+   Width, drawer visibility and scrolling remain owned by the shared sidebar. */
+.kova-assistant {
+  --chat-nav-surface: #f5f5f3;
+  --chat-nav-hover: rgb(22 24 28 / 5%);
+  --chat-nav-selected: rgb(22 24 28 / 7%);
+  --chat-nav-muted: #686b70;
+  --chat-nav-line: rgb(22 24 28 / 7%);
+}
+.dark .kova-assistant {
+  --chat-nav-surface: #17181a;
+  --chat-nav-hover: rgb(255 255 255 / 5%);
+  --chat-nav-selected: rgb(255 255 255 / 8%);
+  --chat-nav-muted: #a0a3aa;
+  --chat-nav-line: rgb(255 255 255 / 6%);
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-icon
+  svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.7;
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  [data-kova-navigation-glyph] {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.7;
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  :is(.kova-header-button, .kova-chat-options, .kova-rail-button) {
+  color: var(--chat-nav-muted);
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  :is(.kova-header-button, .kova-chat-options, .kova-rail-button):hover {
+  background: var(--chat-nav-hover);
+  color: var(--foreground);
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  [aria-current="page"] {
+  color: var(--foreground);
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  [aria-current="page"]::before {
+  content: none;
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-brand {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-brand
+  > .kova-logo {
+  width: 26px;
+  height: 26px;
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-primary {
+  padding: 12px;
+  gap: 3px;
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row {
+  gap: 12px !important;
+  padding-inline: 12px !important;
+  font-size: 14px !important;
+  font-weight: 400;
+  color: var(--chat-nav-muted);
+  border-radius: 12px;
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row:is(:hover, .is-active) {
+  background: var(--chat-nav-hover);
+  color: var(--foreground);
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row.is-active {
+  background: var(--chat-nav-selected) !important;
+  font-weight: 500;
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row.is-active::before {
+  content: none;
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row.kova-new-chat {
+  justify-content: flex-start;
+  margin-bottom: 12px;
+  padding-inline: 16px !important;
+  border: 1px solid var(--chat-nav-line);
+  border-radius: var(--kova-radius-button);
+  background: var(--foreground);
+  color: var(--assistant-accent-ink, var(--background));
+  font-weight: 500;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 5%);
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row.kova-new-chat:hover {
+  background: color-mix(in srgb, var(--foreground) 90%, var(--chat-nav-surface));
+  color: var(--assistant-accent-ink, var(--background));
+  filter: none;
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-history {
+  margin-top: 8px;
+  padding-inline: 12px;
+  border-top: 1px solid var(--chat-nav-line);
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-history
+  h2 {
+  color: var(--chat-nav-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.035em;
+  text-transform: none;
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  :is(.kova-sidebar-empty, .kova-account-copy small) {
+  color: var(--chat-nav-muted);
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-empty {
+  font-size: 12px;
+  line-height: 1.65;
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-chat-row-main {
+  font-size: 13px;
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-help {
+  padding: 8px 12px 0;
+}
+body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-footer {
+  padding-inline: 12px;
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  :is(.kova-account-main, .kova-chat-row):hover {
+  background: var(--chat-nav-hover);
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  [aria-current="page"].kova-rail-button {
+  background: var(--chat-nav-selected);
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-search {
+  border-color: var(--chat-nav-line);
+  background: var(--chat-nav-hover);
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-search:focus-visible {
+  border-color: var(--ring);
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  :is(.kova-sidebar-inner, .kova-sidebar-header, .kova-sidebar-footer) {
+  background: var(--chat-nav-surface);
+}
+body
+  .kova-assistant
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-header {
+  padding-inline: 16px 6px;
+}
+body .kova-assistant .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
+body
+  .kova-assistant
+  .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
+  --sidebar-hover: var(--chat-nav-hover);
+  --sidebar-active: var(--chat-nav-selected);
+  background: var(--chat-nav-surface) !important;
+  border-right-color: var(--chat-nav-line) !important;
+}
+.dark
+  body
+  .kova-assistant
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
+.dark
+  body
+  .kova-assistant
+  .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
+  background: var(--chat-nav-surface) !important;
+}
