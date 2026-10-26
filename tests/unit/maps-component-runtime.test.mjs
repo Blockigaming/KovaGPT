@@ -346,10 +346,48 @@ test("A startup timeout does not enable controls; a successful late load does", 
   for (const callback of [...f.timers.values()]) callback();
   await f.flush();
   assertDisabled(f);
+  assert.ok(
+    f
+      .nodes()
+      .some((node) => node.props.role === "alert" && /taking too long/.test(node.props.children)),
+  );
   f.maps[0].emit("load");
   await f.flush();
   assert.equal(f.control("Search maps").disabled, false);
+  assert.equal(f.nodes().filter((node) => node.props.role === "alert").length, 0);
 });
+
+for (const events of [
+  ["error", "load"],
+  ["error", "timeout", "load"],
+  ["timeout", "error", "load"],
+]) {
+  test(`Map provider errors survive startup ordering: ${events.join(" → ")}`, async () => {
+    const f = fixture();
+    await f.start();
+    await f.resolveChunk();
+    let providerFailed = false;
+    for (const event of events) {
+      if (event === "timeout") {
+        for (const callback of [...f.timers.values()]) callback();
+      } else {
+        f.maps[0].emit(event, { error: new Error("Tile failed") });
+      }
+      providerFailed ||= event === "error";
+      await f.flush();
+      if (providerFailed) {
+        assert.deepEqual(
+          f
+            .nodes()
+            .filter((node) => node.props.role === "alert")
+            .map((node) => node.props.children),
+          ["Some map data could not load. Check your connection and try again."],
+          `provider warning must survive ${event}`,
+        );
+      }
+    }
+  });
+}
 
 test("A delayed style callback never restores an older selected place", async () => {
   const f = fixture();
