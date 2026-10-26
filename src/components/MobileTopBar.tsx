@@ -48,6 +48,8 @@ export function MobileTopBar({
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
+          aria-controls="kova-primary-navigation"
+          aria-haspopup="dialog"
           className="kova-action kova-sidebar-toggle w-11 h-11 text-foreground"
         >
           <PanelLeft className="w-5 h-5" aria-hidden="true" />
@@ -59,14 +61,14 @@ export function MobileTopBar({
             data-kova-navigation-heading=""
             className="spec400-mobile-page-title min-w-0 truncate text-sm font-medium"
           >
-            {title || "Chat"}
+            {title || "Kova GPT"}
           </span>
           {skill ? (
             <button
               type="button"
               onClick={skill.clear}
               disabled={skill.disabled}
-              className="max-w-[5.5rem] shrink truncate rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
+              className="min-h-11 min-w-11 max-w-[5.5rem] shrink truncate rounded-full border border-border/80 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
               aria-label={`Clear workflow skill ${skill.name}`}
               title="Clear skill"
             >

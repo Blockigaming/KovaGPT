@@ -545,3 +545,34 @@ body
   .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
   background: var(--chat-nav-surface) !important;
 }
+
+/* The assistant keeps navigation identity and account actions compact without
+   changing the shared drawer's width, visibility or focus ownership. */
+.kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-header-button[aria-expanded="true"] {
+  color: var(--foreground);
+  background: var(--chat-nav-selected);
+}
+
+.kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-brand {
+  line-height: 1.2;
+}
+
+.kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-footer
+  .kova-sign-in {
+  width: 100%;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-mobile-page-title {
+  font-size: 15px;
+  line-height: 22px;
+  letter-spacing: -0.02em;
+}

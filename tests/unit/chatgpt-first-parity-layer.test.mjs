@@ -45,7 +45,10 @@ test("current primary destinations and signed-out controls retain Kova branding"
   ])
     assert.match(sidebar, new RegExp(label, "u"));
   assert.match(sidebar, /Log in to view saved chats\./u);
-  assert.match(sidebar, /<SignInButton mode="modal">[\s\S]*?Log in to KovaGPT/u);
+  assert.match(
+    sidebar,
+    /<SignInButton mode="modal">[\s\S]*?className="kova-sign-in[^"]*">\s*Log in\s*<\/button>/u,
+  );
   assert.doesNotMatch(sidebar, /OpenAI|ChatGPT logo/u);
   assert.match(
     mobileTopBar,

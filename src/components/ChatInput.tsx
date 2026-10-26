@@ -5,6 +5,7 @@ import {
   AudioLines,
   Lock,
   Paperclip,
+  Plus,
   Square,
   X,
   Image as ImageIcon,
@@ -1714,11 +1715,12 @@ export function ChatInput({
                     disabled={disabled || isStreaming}
                     className="spec400-toolbar-button"
                     aria-label="Attach"
+                    title="Add files and tools"
                     aria-haspopup="dialog"
                     aria-expanded={plusOpen}
                     onClick={isMobileLayout ? () => setPlusOpen(true) : undefined}
                   >
-                    <Paperclip aria-hidden="true" />
+                    <Plus aria-hidden="true" />
                     <span>Attach</span>
                   </button>
                 </PopoverTrigger>
@@ -1753,6 +1755,7 @@ export function ChatInput({
                 type="button"
                 className="spec400-toolbar-button"
                 aria-label="Context"
+                title="Files, instructions, and saved material"
                 aria-haspopup="dialog"
                 aria-expanded={contextOpen}
                 disabled={disabled && !readOnlyContext}
@@ -1772,6 +1775,7 @@ export function ChatInput({
                   className="spec400-toolbar-button"
                   disabled={disabled}
                   aria-label="Options"
+                  title="Response format, length, and tone"
                   aria-haspopup="dialog"
                   aria-expanded={optionsOpen}
                 >

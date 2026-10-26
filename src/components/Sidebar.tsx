@@ -1187,7 +1187,7 @@ export function Sidebar({
           <header className="kova-sidebar-header">
             <span className="kova-sidebar-brand flex items-center gap-2">
               <NovaLogo decorative className="h-7 w-7" />
-              KovaGPT
+              Kova GPT
             </span>
             <div className="kova-sidebar-header-actions">
               <button
@@ -1195,6 +1195,7 @@ export function Sidebar({
                 className="kova-header-button flex"
                 onClick={() => setSearchOpen((value) => !value)}
                 aria-label="Search chats"
+                aria-expanded={searchOpen}
                 title="Search chats"
               >
                 <SearchGlyph />
@@ -1334,10 +1335,11 @@ export function Sidebar({
               ) : null}
               {savedConversations.length === 0 ? (
                 <p className="kova-sidebar-empty">
-                  No saved chats here.
-                  {isLoaded && !signedIn ? (
-                    <span className="mt-1 block">Log in to view saved chats.</span>
-                  ) : null}
+                  {!isLoaded
+                    ? "Loading chats…"
+                    : signedIn
+                      ? "No saved chats yet."
+                      : "Log in to view saved chats."}
                 </p>
               ) : null}
               {query && savedConversations.length > 0 && filtered.length === 0 ? (
@@ -1346,19 +1348,21 @@ export function Sidebar({
             </section>
           </div>
 
-          <div className="kova-sidebar-help">
-            <button
-              className="kova-nav-row"
-              type="button"
-              onClick={() => {
-                closeAfterMobileNavigation("/help");
-                onOpenHelp();
-              }}
-            >
-              {icon(CircleHelp)}
-              <span>Help</span>
-            </button>
-          </div>
+          {signedIn ? (
+            <div className="kova-sidebar-help">
+              <button
+                className="kova-nav-row"
+                type="button"
+                onClick={() => {
+                  closeAfterMobileNavigation("/help");
+                  onOpenHelp();
+                }}
+              >
+                {icon(CircleHelp)}
+                <span>Help</span>
+              </button>
+            </div>
+          ) : null}
           <footer className="kova-sidebar-footer">
             {signedIn ? (
               <>
@@ -1443,7 +1447,7 @@ export function Sidebar({
             ) : isLoaded ? (
               <div className="w-full">
                 <nav className="kova-guest-account-options" aria-label="Account options">
-                  {navLink("/pricing", "Plans", CreditCard)}
+                  {navLink("/pricing", "Subscriptions", CreditCard)}
                   <button
                     type="button"
                     className={navRow()}
@@ -1471,7 +1475,7 @@ export function Sidebar({
                 <div className="flex items-center gap-2">
                   <SignInButton mode="modal">
                     <button type="button" className="kova-sign-in min-w-0 flex-1">
-                      Log in to KovaGPT
+                      Log in
                     </button>
                   </SignInButton>
                 </div>

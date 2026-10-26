@@ -17,7 +17,7 @@ async function expectEmptyWorkspaceLandmarks(page: Page) {
   const navigationTitle = page.locator("[data-kova-navigation-heading]");
   await expect(navigationTitle).toHaveAttribute("role", "heading");
   await expect(navigationTitle).toHaveAttribute("aria-level", "1");
-  await expect(navigationTitle).toHaveText("Chat");
+  await expect(navigationTitle).toHaveText("Kova GPT");
   if (page.viewportSize()!.width < 1024) await expect(navigationTitle).toBeVisible();
   else await expect(navigationTitle).toBeHidden();
 }
@@ -354,7 +354,7 @@ for (const theme of ["light", "dark"] as const) {
     if (page.viewportSize()!.width >= 1024) {
       await expect(page.getByRole("main")).toHaveAttribute("data-sidebar", "open");
       await expect(sidebarBrand).toBeVisible();
-      await expect(sidebarBrand).toHaveText("KovaGPT");
+      await expect(sidebarBrand).toHaveText("Kova GPT");
     }
     expect(rasterLogoRequests).toBeGreaterThanOrEqual(1);
     expect(rasterLogoResponses.length).toBeGreaterThanOrEqual(1);

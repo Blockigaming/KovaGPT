@@ -34,6 +34,12 @@ function fixture({ signedIn = true, loaded = true, desktop = true, menuOpen = fa
       return { useUser: () => ({ isSignedIn: signedIn, isLoaded: loaded }) };
     if (id === "@/components/MobileBottomSheet")
       return { MobileBottomSheet: ({ open, children }) => (open ? children : null) };
+    if (id === "@/components/ui/popover")
+      return {
+        Popover: ({ children }) => children,
+        PopoverTrigger: ({ children }) => children,
+        PopoverContent: ({ children }) => (menuOpen ? children : null),
+      };
     // Render the actual option markup in both layouts without a browser or effects.
     if (id === "react" && menuOpen) return { ...React, useState: () => React.useState(true) };
     if (["react", "react/jsx-runtime", "lucide-react"].includes(id)) return nativeRequire(id);
@@ -85,14 +91,16 @@ for (const desktop of [true, false]) {
       for (const placement of ["topbar", "composer"]) {
         for (const compact of [true, false]) {
           const html = closed.render(tier, "instant", placement, compact);
-          assert.match(html, /aria-label="Choose model: KovaGPT Instant"/);
+          assert.match(html, /aria-label="Choose model: Kova GPT Instant"/);
           assert.doesNotMatch(html, /\bLite\b|data-testid="model-option-/);
         }
       }
+      const openHtml = open.render(tier, "instant", "composer");
+      assert.ok(openHtml.includes(`Kova GPT ${modelIdentity.KOVA_MODEL_VERSION}`));
       const options = Array.from(
-        open
-          .render(tier, "instant", "composer")
-          .matchAll(/data-testid="model-option-([^"]+)"[^>]*>[\s\S]*?<span[^>]*>([^<]+)<\/span>/g),
+        openHtml.matchAll(
+          /data-testid="model-option-([^"]+)"[^>]*>[\s\S]*?<span[^>]*>([^<]+)<\/span>/g,
+        ),
         (match) => [match[1], match[2]],
       );
       assert.deepEqual(
@@ -116,8 +124,8 @@ for (const desktop of [true, false]) {
     const f = fixture({ desktop });
     for (const placement of ["topbar", "composer"]) {
       const html = f.render("plus", "high", placement);
-      assert.match(html, /aria-label="Choose model: KovaGPT Thinking"/);
-      assert.doesNotMatch(html, /KovaGPT High/);
+      assert.match(html, /aria-label="Choose model: Kova GPT Thinking"/);
+      assert.doesNotMatch(html, /Kova GPT High/);
     }
     assert.equal(f.modes.getMode("high").id, "high");
     assert.equal(f.modes.getMode("high").label, "High");
@@ -133,7 +141,7 @@ for (const desktop of [true, false]) {
       Array.from(f.modes.modesForTier("pro"), (mode) => mode.id),
       ["instant", "medium", "high", "extra_high", "max", "ultra"],
     );
-    assert.match(f.render("pro", "high"), /aria-label="Choose model: KovaGPT High"/);
+    assert.match(f.render("pro", "high"), /aria-label="Choose model: Kova GPT High"/);
   });
 }
 

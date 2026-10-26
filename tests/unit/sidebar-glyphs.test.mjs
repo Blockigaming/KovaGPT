@@ -63,13 +63,13 @@ test("glyphs remain decorative and non-focusable while preserving caller props",
   }
 });
 
-test("sidebar styling paints glyphs with the canonical rounded 2px stroke", () => {
+test("sidebar glyphs retain shared rounded strokes with a scoped modern optical weight", () => {
   const css = postcss.parse(readFileSync("src/styles/sidebar-personalization.css", "utf8"));
   const rules = [];
   css.walkRules((rule) => {
     if (rule.selector.includes("[data-kova-navigation-glyph]")) rules.push(rule);
   });
-  assert.equal(rules.length, 1);
+  assert.equal(rules.length, 2);
   const declarations = Object.fromEntries(
     rules[0].nodes.filter((node) => node.type === "decl").map(({ prop, value }) => [prop, value]),
   );
@@ -95,4 +95,13 @@ test("sidebar styling paints glyphs with the canonical rounded 2px stroke", () =
   );
   assert.equal(declarations["stroke-linecap"], "round");
   assert.equal(declarations["stroke-linejoin"], "round");
+  const modern = rules[1];
+  assert.match(modern.selector, /\.kova-assistant/);
+  assert.doesNotMatch(modern.selector, /kova-app-shell/);
+  const modernDeclarations = Object.fromEntries(
+    modern.nodes.filter((node) => node.type === "decl").map(({ prop, value }) => [prop, value]),
+  );
+  assert.equal(modernDeclarations.width, "20px");
+  assert.equal(modernDeclarations.height, "20px");
+  assert.equal(modernDeclarations["stroke-width"], "1.7");
 });

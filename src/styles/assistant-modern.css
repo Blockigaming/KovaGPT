@@ -1,5 +1,6 @@
 /* Main assistant presentation. Existing interaction and responsive contracts
    stay in their component styles; this scope does not restyle other routes. */
+body:has(.kova-assistant[data-ui="modern"]),
 .kova-assistant[data-ui="modern"] {
   --assistant-canvas: #fafaf9;
   --assistant-panel: #f3f3f1;
@@ -11,6 +12,8 @@
   --foreground: #242522;
   --card: var(--assistant-card);
   --card-foreground: var(--foreground);
+  --popover: var(--assistant-card);
+  --popover-foreground: var(--foreground);
   --muted: #efefec;
   --muted-foreground: var(--assistant-muted);
   --accent: #eaeae6;
@@ -21,8 +24,16 @@
   --sidebar-active: #e5e5e0;
   --surface-workspace: var(--assistant-canvas);
   --surface-raised: var(--assistant-card);
+  --surface-floating: var(--assistant-card);
+  --surface-secondary: var(--muted);
+  --surface-composer: var(--assistant-card);
   --surface-input: var(--assistant-card);
+  --surface-modal: var(--assistant-card);
   --surface-hover: var(--accent);
+  --surface-selected: var(--accent);
+  --input: var(--assistant-line);
+  --text-secondary: var(--assistant-muted);
+  --border-subtle: var(--assistant-line);
   --user-bubble: #000000;
   --modern-shadow: 0 8px 32px #24252206, 0 2px 6px #24252203;
   --chat-body-font: "Kova DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -33,6 +44,7 @@
   -webkit-font-smoothing: antialiased;
 }
 
+.dark body:has(.kova-assistant[data-ui="modern"]),
 .dark .kova-assistant[data-ui="modern"] {
   --assistant-canvas: #1c1d1f;
   --assistant-panel: #17181a;
@@ -142,6 +154,24 @@
   gap: 2px;
 }
 
+.kova-assistant[data-ui="modern"]
+  .spec400-composer-tools
+  > .spec400-toolbar-button[aria-label="Attach"] {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  border-color: var(--assistant-line);
+  border-radius: 50%;
+}
+
+.kova-assistant[data-ui="modern"]
+  .spec400-composer-tools
+  > .spec400-toolbar-button[aria-label="Attach"]
+  > span {
+  display: none;
+}
+
 .kova-assistant[data-ui="modern"] .spec400-composer-tools > .spec400-toolbar-button {
   color: var(--assistant-muted);
   font-size: 13px;
@@ -154,7 +184,7 @@
 
 .kova-assistant[data-ui="modern"] .spec400-expand-input {
   color: var(--assistant-muted);
-  opacity: 0.65;
+  opacity: 1;
 }
 
 .kova-assistant[data-ui="modern"] .spec400-send-button:not(:disabled) {
