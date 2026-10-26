@@ -23,6 +23,7 @@ import { SearchablePicker } from "@/components/ui/searchable-picker";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { WorkSessionPanel } from "@/components/WorkSessionPanel";
+import { OpenAiTasksPanel } from "@/components/OpenAiTasksPanel";
 import { WorkSyncStatus } from "@/components/WorkSyncStatus";
 import { WorkspaceModeSwitch } from "@/components/WorkspaceModeSwitch";
 import { recordWorkRecent } from "@/lib/work-sync-client";
@@ -295,6 +296,12 @@ function WorkRoute() {
         <WorkSyncStatus />
         {isLoaded && (
           <WorkSessionPanel key={principal} ownerId={userKey} prepared={preparedDraft} />
+        )}
+        {isLoaded && (
+          <OpenAiTasksPanel
+            key={`openai-tasks:${principal}`}
+            ownerId={isSignedIn ? userKey : null}
+          />
         )}
         <div className="flex h-[calc(100dvh-12rem)] min-h-[32rem] gap-3">
           <aside className="hidden w-72 shrink-0 overflow-y-auto rounded-3xl border bg-card p-3 md:block">
