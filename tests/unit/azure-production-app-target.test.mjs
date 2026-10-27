@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { validateProductionAppTarget } from "../../scripts/azure/production-app-target.mjs";
+import {
+  validateFrozenProductionPlanTarget,
+  validateProductionAppTarget,
+} from "../../scripts/azure/production-app-target.mjs";
 
 const input = () => ({
   parameters: { containerAppName: { value: "ca-kovagpt-prod" } },
@@ -62,6 +65,31 @@ test("production PLAN rejects invalid or absent protected identities", () => {
   }
 });
 
+test("frozen PLAN rejects the live direct Azure topology before provider what-if", () => {
+  const frozen = {
+    properties: {
+      configuration: { activeRevisionsMode: "Single" },
+      template: { scale: { minReplicas: 0, rules: [] } },
+    },
+  };
+  assert.deepEqual(validateFrozenProductionPlanTarget(frozen), { mode: "migration-frozen" });
+  for (const mutate of [
+    (value) => (value.properties.configuration.ingress = { external: true, targetPort: 3000 }),
+    (value) => (value.properties.configuration.activeRevisionsMode = "Multiple"),
+    (value) => (value.properties.template.scale.minReplicas = 1),
+    (value) => (value.properties.template.scale.rules = [{ name: "http" }]),
+    (value) => delete value.properties.template.scale.rules,
+    (value) => delete value.properties,
+  ]) {
+    const value = structuredClone(frozen);
+    mutate(value);
+    assert.throws(
+      () => validateFrozenProductionPlanTarget(value),
+      /migration-frozen Bicep template cannot plan/u,
+    );
+  }
+});
+
 test("production PLAN source remains read-only and Bicep requires an exact app name", () => {
   const bicep = readFileSync("infra/azure/production/main.bicep", "utf8");
   const workflow = readFileSync(".github/workflows/validate-azure-production.yml", "utf8");
@@ -79,6 +107,8 @@ test("production PLAN source remains read-only and Bicep requires an exact app n
     "REPLACE_WITH_PRODUCTION_CONTAINER_APP_NAME",
   );
   assert.match(workflow, /az resource show/u);
+  assert.match(workflow, /ingress:properties\.configuration\.ingress/u);
+  assert.match(workflow, /minReplicas:properties\.template\.scale\.minReplicas/u);
   assert.match(workflow, /scripts\/azure\/production-app-target\.mjs/u);
   assert.match(workflow, /KOVA_PRODUCTION_ACR_RESOURCE_GROUP/u);
   assert.match(workflow, /validateProductionParameterTargets\(document/u);
@@ -87,4 +117,8 @@ test("production PLAN source remains read-only and Bicep requires an exact app n
   assert.match(workflow, /Azure CLI 2\.76\.0 or later is required/u);
   assert.equal((workflow.match(/--validation-level ProviderNoRbac/gu) ?? []).length, 2);
   assert.doesNotMatch(workflow, /az deployment group create|az containerapp update/u);
+  const guard = workflow.indexOf("node scripts/azure/production-app-target.mjs");
+  const validate = workflow.indexOf("az deployment group validate");
+  const whatIf = workflow.indexOf("az deployment group what-if");
+  assert.ok(guard > -1 && guard < validate && validate < whatIf);
 });

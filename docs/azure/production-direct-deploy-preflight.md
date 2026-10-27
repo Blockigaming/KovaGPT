@@ -52,6 +52,13 @@ still in `Single` mode, or the old image/traffic is unqualified, the workflow
 returns `BLOCKED`. This source does not change the mode or create a revision.
 The current migration Bicep template describes disabled ingress and single
 revision mode; only the live ARM read can establish its present state.
+The migration-frozen PLAN workflow now refuses to run provider validation or
+what-if when the existing app has ingress, Multiple revision mode, nonzero
+minimum replicas, or scaling rules. ARM incremental redeployment reapplies
+resource properties and can reset omitted properties to defaults. Do not
+apply `infra/azure/production/main.bicep` to the live direct app. The existing
+read-only ARM preflight is the inventory for its exact FQDN, ingress, mode and
+traffic; it never updates the app.
 
 To run the source test without Azure credentials:
 
@@ -64,3 +71,36 @@ candidate is built and verified at its own source SHA, a separate reviewed
 release mechanism must prove candidate provenance, preserve live app config,
 manage a controlled traffic change and test an actual rollback. This preflight
 does not approve or perform any of those steps.
+
+For that later release, keep the current Container App rather than recreating
+it from the migration template. The protected deploy identity needs a narrowly
+scoped, time-limited app write permission. Immediately before changing anything,
+recheck the exact target, old image, source SHA, direct FQDN, HTTPS external
+ingress on port 3000, Multiple revision mode, direct-origin settings, Key Vault
+secret references and 100% traffic to the healthy rollback revision. Keep a
+private copy of the full app configuration for comparison, without printing
+secrets in workflow logs. The current preflight records only a bounded subset.
+
+After a separately approved immutable candidate build, update only the image
+of the existing app with the Azure Container Apps update operation in Multiple
+mode. This creates a new revision from the latest template; do not use
+`az containerapp up` or the frozen Bicep PUT. Confirm the old revision retains
+100% canonical-host traffic and the candidate becomes ready with the exact
+qualified image. If ingress, mode, secret references or traffic change
+unexpectedly, restore old-revision traffic and stop. The direct-origin boundary
+rejects revision and label hostnames, so full authenticated HTTP acceptance
+requires a controlled canonical-host traffic promotion. After promotion, test
+real owner Auth, Responses/Agents/Browser, voice, email and webhooks, and
+restore old-revision traffic on failure. Remove temporary app write access
+when the bounded release ends.
+
+The direct Azure URL needs no Cloudflare certificate. A Stripe callback to
+`/api/public/payments/webhook?env=live` still needs a verified live endpoint,
+signed HMAC/timestamp and durable database readiness. ACA ingress IP rules
+apply to the entire app, so a Stripe-only allowlist there would block Kova
+users too.
+
+Azure references: [ARM incremental deployments](https://learn.microsoft.com/en-us/azure/azure-resource-manager/deployment-modes),
+[Container App revisions](https://learn.microsoft.com/en-us/azure/container-apps/revisions),
+[CLI update](https://learn.microsoft.com/en-us/cli/azure/containerapp?view=azure-cli-latest#az-containerapp-update),
+and [traffic splitting](https://learn.microsoft.com/en-us/azure/container-apps/traffic-splitting).

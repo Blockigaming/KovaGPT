@@ -37,6 +37,25 @@ export function validateProductionAppTarget({
   return { name: approvedName, id: expectedId };
 }
 
+// This template is frozen for migration and would reapply a disabled-ingress,
+// Single-revision Container App. Reject a live direct app before provider
+// validation or what-if, which would otherwise plan destructive changes.
+export function validateFrozenProductionPlanTarget(observed) {
+  const properties = observed?.properties;
+  if (
+    properties?.configuration?.ingress != null ||
+    properties?.configuration?.activeRevisionsMode !== "Single" ||
+    properties?.template?.scale?.minReplicas !== 0 ||
+    !Array.isArray(properties?.template?.scale?.rules) ||
+    properties.template.scale.rules.length !== 0
+  ) {
+    throw new Error(
+      "The migration-frozen Bicep template cannot plan against an active/direct production app",
+    );
+  }
+  return { mode: "migration-frozen" };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const [parametersPath, observedPath, approvedName, resourceGroup, subscriptionId] =
     process.argv.slice(2);
@@ -50,5 +69,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     subscriptionId,
     observed,
   });
+  validateFrozenProductionPlanTarget(observed);
   console.log(`Existing production Container App target verified: ${result.name}`);
 }
