@@ -1,4 +1,7 @@
-import { presentKovaEmailHtml } from "./kova-email-presentation.server.mjs";
+import {
+  presentKovaEmailHtml,
+  presentPreviousKovaEmailHtml,
+} from "./kova-email-presentation.server.mjs";
 
 // Server-side rendering only. This module sends no email and changes no provider.
 // Palette/font fallbacks are based on email-templates/_brand.tsx at da4b02ea554b16862b70b311854761554bafb765.
@@ -111,6 +114,12 @@ function expiryCopy(issuedAt, expiresAt) {
 export function renderKovaAuthEmail(input) {
   const rendered = renderLegacyKovaAuthEmail(input);
   return { ...rendered, html: presentKovaEmailHtml(rendered.html) };
+}
+
+/** Previous queued presentation, retained for exact retry validation. */
+export function renderPreviousKovaAuthEmail(input) {
+  const rendered = renderLegacyKovaAuthEmail(input);
+  return { ...rendered, html: presentPreviousKovaEmailHtml(rendered.html) };
 }
 
 /** Canonical version 1, retained exactly for already queued messages. */

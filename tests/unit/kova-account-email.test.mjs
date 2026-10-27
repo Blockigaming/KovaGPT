@@ -183,3 +183,17 @@ test("the restrained brand adapts to mobile and dark email clients with a readab
   assert.match(html, /Helvetica, Arial, sans-serif/);
   assert.match(html, /Manage account email preferences in Settings → Notifications/);
 });
+
+test("account notices retain the same visual hierarchy without embedded CSS", () => {
+  const html = renderKovaAccountEmail(base).html.replace(/<style>[\s\S]*?<\/style>/u, "");
+  assert.match(
+    html,
+    /<body class="kova-page" style="[^"]*background-color:#f4f4f2;padding:32px 12px;/u,
+  );
+  assert.match(
+    html,
+    /<td class="kova-container" style="[^"]*border:1px solid #e5e5e3;border-radius:24px;padding:40px;/u,
+  );
+  assert.match(html, /<h1 class="kova-heading" style="[^"]*font-size:30px;line-height:1.15;/u);
+  assert.match(html, /<a class="kova-button" href="[^"]+" style="[^"]*border-radius:999px;/u);
+});
