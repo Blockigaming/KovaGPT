@@ -1,0 +1,102 @@
+name: Preflight Azure direct production release (read only)
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/preflight-direct-azure-production.yml
+      - scripts/azure/production-direct-deploy-preflight.mjs
+      - tests/unit/production-direct-deploy-preflight.test.mjs
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type PREFLIGHT_DIRECT_AZURE for read-only live checks
+        required: true
+        type: string
+      source_sha:
+        description: Exact current main SHA matching the selected workflow revision
+        required: true
+        type: string
+      expected_current_sha:
+        description: Existing public Azure revision's exact served source SHA
+        required: true
+        type: string
+      expected_current_image:
+        description: Existing rollback image as immutable production ACR digest
+        required: true
+        type: string
+      direct_origin:
+        description: Existing exact HTTPS Container App origin, without path
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kovagpt-azure-direct-production-preflight
+  cancel-in-progress: false
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Check metadata-only operator contract
+        run: node --test tests/unit/production-direct-deploy-preflight.test.mjs
+
+  read-only-preflight:
+    needs: source-tests
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/main' && inputs.source_sha == github.sha && inputs.confirmation == 'PREFLIGHT_DIRECT_AZURE'
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      KOVA_PREFLIGHT_CONFIRMATION: ${{ inputs.confirmation }}
+      KOVA_PREFLIGHT_SOURCE_SHA: ${{ inputs.source_sha }}
+      KOVA_PREFLIGHT_CURRENT_SHA: ${{ inputs.expected_current_sha }}
+      KOVA_PREFLIGHT_CURRENT_IMAGE: ${{ inputs.expected_current_image }}
+      KOVA_PREFLIGHT_ORIGIN: ${{ inputs.direct_origin }}
+      KOVA_PRODUCTION_ACR_LOGIN_SERVER: ${{ vars.KOVA_PRODUCTION_ACR_LOGIN_SERVER }}
+      KOVA_PRODUCTION_IMAGE_REPOSITORY: ${{ vars.KOVA_PRODUCTION_IMAGE_REPOSITORY }}
+    steps:
+      - name: Check out selected main source without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Use existing protected Azure federation
+        uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
+        with:
+          client-id: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.KOVAGPTPROD_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+      - name: Check existing Azure identity, app, direct ingress and rollback state
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/azure-direct-preflight"
+          node scripts/azure/production-direct-deploy-preflight.mjs --check \
+            > "$RUNNER_TEMP/azure-direct-preflight/receipt.json"
+      - name: Upload sanitized read-only receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: azure-direct-preflight-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/azure-direct-preflight/receipt.json
+          if-no-files-found: warn
+          retention-days: 7
