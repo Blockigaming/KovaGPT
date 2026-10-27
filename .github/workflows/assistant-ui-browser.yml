@@ -8,10 +8,15 @@ on:
       - playwright.spec400-chat.config.ts
       - playwright.rounded.config.ts
       - playwright.config.ts
+      - playwright.auth-visual.config.ts
       - tests/e2e/spec400-chat.spec.ts
       - tests/e2e/model-selector.spec.ts
       - tests/e2e/ui-quality.spec.ts
       - tests/e2e/ui-quality.spec.ts-snapshots/**
+      - tests/e2e/auth-visual-regression.spec.ts
+      - tests/e2e/auth-visual-regression.spec.ts-snapshots/**
+      - tests/e2e/auth-visual-preview.mjs
+      - tests/e2e/candidate-dist-fingerprint.mjs
       - tests/e2e/candidate-visual-evidence.ts
       - tests/e2e/actual-app-fixture.ts
       - tests/e2e/authenticated-fixture.ts
@@ -22,6 +27,7 @@ on:
       - src/components/**
       - src/hooks/**
       - src/routes/index.tsx
+      - src/routes/auth.tsx
       - src/routes/__root.tsx
       - src/lib/modes.ts
       - src/styles.css
@@ -127,6 +133,84 @@ jobs:
         with:
           name: assistant-ui-${{ matrix.project }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: test-results/assistant-ui/
+          if-no-files-found: error
+          retention-days: 7
+
+  auth-visual:
+    name: Assistant auth visual
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - name: Checkout exact candidate without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install pinned Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The Azure mirror stalled two runners before browser tests could run.
+          # Keep Ubuntu's signed archives and every browser/check unchanged.
+          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
+            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          fi
+          npx --no-install playwright install --with-deps chromium
+      - name: Select the existing isolated auth visual gate
+        run: |
+          mkdir -p test-results/assistant-auth-visual
+          cat > test-results/assistant-auth-visual.generated.config.ts <<'CONFIG'
+          import path from "node:path";
+          import { defineConfig } from "@playwright/test";
+          import auth from "../playwright.auth-visual.config";
+
+          const root = process.cwd();
+          export default defineConfig({
+            ...auth,
+            testDir: path.join(root, "tests/e2e"),
+            outputDir: path.join(root, "test-results/assistant-auth-visual/results"),
+            reporter: [
+              ["list"],
+              ["json", { outputFile: path.join(root, "test-results/assistant-auth-visual/results.json") }],
+            ],
+            webServer: { ...auth.webServer, cwd: root },
+          });
+          CONFIG
+      - name: Exercise existing auth visual assertions
+        env:
+          KOVA_CANDIDATE_VISUAL_EVIDENCE_DIR: test-results/assistant-auth-visual/candidate-visual
+        run: npx --no-install playwright test --config test-results/assistant-auth-visual.generated.config.ts
+      - name: Record exact source provenance
+        if: always()
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          mkdir -p test-results/assistant-auth-visual
+          printf '%s\n' "$SOURCE_SHA" > test-results/assistant-auth-visual/commit.txt
+          git rev-parse 'HEAD^{tree}' > test-results/assistant-auth-visual/tree.txt
+          sha256sum package-lock.json > test-results/assistant-auth-visual/lock.sha256
+      - name: Preserve auth visual snapshots and results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: assistant-auth-visual-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            test-results/assistant-auth-visual/
+            tests/e2e/auth-visual-regression.spec.ts-snapshots/
           if-no-files-found: error
           retention-days: 7
 
