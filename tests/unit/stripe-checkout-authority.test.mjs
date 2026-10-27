@@ -5,6 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import { BillingPolicyError } from "../../src/lib/billing-policy.mjs";
 import { BILLING_ENV, resolveBillingPlan } from "../../src/lib/billing-plans.ts";
+import { billingReturnUrls } from "../../src/lib/checkout-return-url.mjs";
 
 const source = await readFile("src/utils/payments.functions.ts", "utf8");
 const compiled = ts.transpileModule(
@@ -17,6 +18,7 @@ async function checkout({
   priceId = "plus_monthly",
   enabled = true,
   adapterError = null,
+  billingOrigin = "https://kovagpt.com",
 } = {}) {
   let options;
   let clientCreations = 0;
@@ -35,7 +37,12 @@ async function checkout({
     },
   };
   const context = {
-    process: { env: { STRIPE_MONTHLY_INTRO_COUPON_ID: "nonsecret_fixture_coupon" } },
+    process: {
+      env: {
+        STRIPE_MONTHLY_INTRO_COUPON_ID: "nonsecret_fixture_coupon",
+        KOVA_BILLING_RETURN_ORIGIN: billingOrigin,
+      },
+    },
     createStripeClient: () => {
       clientCreations++;
       return {};
@@ -52,7 +59,7 @@ async function checkout({
     loose: (client) => client,
     BILLING_ENV,
     resolveBillingPlan,
-    CHECKOUT_RETURN_URL: "https://kovagpt.com/checkout/return",
+    billingReturnUrls,
     requireSupabaseAuth: {},
     console: { error() {} },
     createServerFn: () => ({
@@ -85,7 +92,23 @@ test("handler passes canonical monthly Price, fixed URL, configured Coupon and l
   assert.equal(attempt.options.plan, resolveBillingPlan("pro_monthly"));
   assert.equal(attempt.options.environment, "live");
   assert.equal(attempt.options.couponId, "nonsecret_fixture_coupon");
-  assert.equal(attempt.options.returnUrl, "https://kovagpt.com/checkout/return");
+  assert.equal(
+    attempt.options.returnUrl,
+    "https://kovagpt.com/checkout/return?session_id={CHECKOUT_SESSION_ID}",
+  );
+});
+
+test("direct Azure origin is bound to the policy claim without browser override", async () => {
+  const attempt = await checkout({
+    billingOrigin: "https://kovagpt-prod-web.purpleglacier-b10c3746.eastus.azurecontainerapps.io",
+  });
+  assert.equal(
+    attempt.options.returnUrl,
+    "https://kovagpt-prod-web.purpleglacier-b10c3746.eastus.azurecontainerapps.io/checkout/return?session_id={CHECKOUT_SESSION_ID}",
+  );
+  const invalid = await checkout({ billingOrigin: "https://evil.example" });
+  assert.match(invalid.result.error, /unavailable right now/u);
+  assert.equal(invalid.options, undefined);
 });
 
 test("expired local history reaches the authoritative adapter, without reinstating trials", async () => {

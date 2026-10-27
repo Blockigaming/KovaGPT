@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 
 const LIVE_ACCOUNT = "acct_1UAeDgAEZlsb6DBY";
 const PORTAL_CONFIGURATION = "bpc_1UB2ZxAEZlsb6DBYU3PoJJPU";
+const BILLING_RETURN_ORIGINS = new Set([
+  "https://kovagpt.com",
+  "https://kovagpt-prod-web.purpleglacier-b10c3746.eastus.azurecontainerapps.io",
+]);
 const SECRET_PARAMETERS = [
   "stripeLiveApiKeySecretUri",
   "stripeLiveWebhookSecretUri",
@@ -34,6 +38,10 @@ export function validateProductionBillingParameters({
     "stripeBillingPortalConfigurationId",
     PORTAL_CONFIGURATION,
   );
+  const billingReturnOrigin = parameterValue(parameters, "billingReturnOrigin", "");
+  if (billingReturnOrigin !== "" && !BILLING_RETURN_ORIGINS.has(billingReturnOrigin)) {
+    throw new Error("The production billing return origin is not approved");
+  }
   if (account !== LIVE_ACCOUNT || portal !== PORTAL_CONFIGURATION) {
     throw new Error("The production Stripe account or Portal configuration is not approved");
   }
@@ -75,16 +83,18 @@ export function validateProductionBillingParameters({
     runtime === "durable" &&
     (!stripePublishableKey ||
       !secretValues.stripeLiveApiKeySecretUri ||
-      !secretValues.stripeLiveWebhookSecretUri)
+      !secretValues.stripeLiveWebhookSecretUri ||
+      !billingReturnOrigin)
   ) {
     throw new Error(
-      "Durable billing requires the verified browser key and both live secret references",
+      "Durable billing requires the verified browser key, both live secret references, and return origin",
     );
   }
   return {
     stripeBillingRuntime: { value: runtime },
     stripeLiveAccountId: { value: account },
     stripeBillingPortalConfigurationId: { value: portal },
+    billingReturnOrigin: { value: billingReturnOrigin },
     ...Object.fromEntries(Object.entries(secretValues).map(([name, value]) => [name, { value }])),
   };
 }

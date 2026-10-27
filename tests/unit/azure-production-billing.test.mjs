@@ -12,6 +12,9 @@ function configured() {
     parameters: {
       keyVaultName: { value: "production-vault" },
       stripeBillingRuntime: { value: "durable" },
+      billingReturnOrigin: {
+        value: "https://kovagpt-prod-web.purpleglacier-b10c3746.eastus.azurecontainerapps.io",
+      },
       stripeLiveApiKeySecretUri: { value: secretUri },
       stripeLiveWebhookSecretUri: { value: secretUri.replace("existing-name", "existing-webhook") },
     },
@@ -29,6 +32,7 @@ test("production billing remains disabled with no credentials configured", () =>
   assert.equal(result.stripeBillingRuntime.value, "disabled");
   assert.equal(result.stripeLiveAccountId.value, "acct_1UAeDgAEZlsb6DBY");
   assert.equal(result.stripeBillingPortalConfigurationId.value, "bpc_1UB2ZxAEZlsb6DBYU3PoJJPU");
+  assert.equal(result.billingReturnOrigin.value, "");
   assert.equal(result.stripeLiveApiKeySecretUri.value, "");
   assert.equal(Object.hasOwn(parameters, "stripeBillingRuntime"), false);
 });
@@ -47,6 +51,9 @@ test("durable planning requires matching compiled key and both versioned live re
   input.stripePublishableKey = "";
   input.provenance.stripePublishableKeySha256 = null;
   assert.throws(() => validateProductionBillingParameters(input), /verified browser key/u);
+  const noReturn = configured();
+  delete noReturn.parameters.billingReturnOrigin;
+  assert.throws(() => validateProductionBillingParameters(noReturn), /return origin/u);
 });
 
 test("old or mismatched browser provenance cannot pass even with billing disabled", () => {
@@ -77,6 +84,7 @@ test("production rejects test keys, secret keys and unapproved account or Portal
     ["stripeLiveAccountId", "acct_other"],
     ["stripeBillingPortalConfigurationId", "bpc_other"],
     ["stripeBillingRuntime", "enabled"],
+    ["billingReturnOrigin", "https://evil.example"],
   ]) {
     const input = configured();
     input.parameters[name] = { value };
@@ -126,9 +134,11 @@ test("production source connects approved parameters to existing identity and ke
   ).parameters;
   const workflow = read(".github/workflows/validate-azure-production.yml");
   assert.equal(parameters.stripeBillingRuntime.value, "disabled");
+  assert.equal(parameters.billingReturnOrigin.value, "");
   assert.equal(parameters.stripeLiveApiKeySecretUri.value, "");
   assert.match(bicep, /param stripeBillingRuntime string = 'disabled'/u);
   assert.match(bicep, /name: 'STRIPE_BILLING_RUNTIME'\s+value: stripeBillingRuntime/u);
+  assert.match(bicep, /name: 'KOVA_BILLING_RETURN_ORIGIN'\s+value: billingReturnOrigin/u);
   for (const name of [
     "STRIPE_LIVE_API_KEY",
     "PAYMENTS_LIVE_WEBHOOK_SECRET",
