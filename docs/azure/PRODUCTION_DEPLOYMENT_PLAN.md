@@ -11,6 +11,13 @@
 
 It has no deployment command, Container App update, DNS operation, Cloudflare credential, or traffic-shift step. Running the plan is not production deployment evidence.
 
+**Current live direct app:** The migration-frozen template has disabled ingress,
+Single revision mode and zero minimum replicas. The live direct Azure app has
+public ingress and Multiple revisions. The PLAN target guard rejects that live
+topology before provider validation or what-if. Never apply this template to
+the already-public app; use the [direct release preflight and image-only
+rollout boundary](production-direct-deploy-preflight.md) instead.
+
 While the Azure migration is incomplete, the repository enforces a migration cost freeze: the production Container App template accepts only `minReplicas = 0`, omits ingress, and declares no scaling rules. The production parameter example is zero. The protected plan rejects nonzero production replicas and checks the compiled template for ingress and scale rules. An HTTP request cannot wake the source-defined frozen app. Production activation requires a separate reviewed change to restore ingress with `external: true`, `allowInsecure: false`, `clientCertificateMode: 'require'`, target port `3000`, and an HTTP scale rule with `concurrentRequests: '20'`; test the origin-certificate boundary before serving traffic. This source rule does not itself change an already-running Azure resource or a separately created Container Apps job.
 
 The staging rehearsal is also non-deploying. An owner must deploy the staging digest through an independently reviewed Azure path first. The rehearsal then requires `/api/version` and `X-Kova-Build` to match the exact workflow SHA, requires root metadata emitted from the same immutable browser-config manifest used by the Supabase client to match the protected staging URL and publishable-key fingerprint, and traverses the deployed JavaScript dependency graph for the exact browser SHA before it performs edge, authenticated, or browser checks and before it emits candidate evidence. The public manifest deliberately uses only build-time browser values and public fallbacks; server-only Supabase variables remain isolated in the separate server client. Every smoke request has a bounded per-request timeout.

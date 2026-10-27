@@ -259,7 +259,7 @@ jobs:
             --resource-group "$RESOURCE_GROUP" \
             --name "$CONTAINER_APP_NAME" \
             --resource-type Microsoft.App/containerApps \
-            --query '{id:id,name:name,type:type}' \
+            --query '{id:id,name:name,type:type,properties:{configuration:{activeRevisionsMode:properties.configuration.activeRevisionsMode,ingress:properties.configuration.ingress},template:{scale:{minReplicas:properties.template.scale.minReplicas,rules:properties.template.scale.rules}}}}' \
             --only-show-errors \
             --output json > "$observed_path"
           subscription_id="$(az account show --query id --output tsv --only-show-errors)"

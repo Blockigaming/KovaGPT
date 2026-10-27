@@ -58,6 +58,9 @@ The migration-frozen Bicep template is unchanged. This runtime mode is for the
 separately approved existing-app activation. Build/provenance qualification,
 immutable image selection, traffic preservation and live acceptance are still
 required. Source tests do not establish production API success.
+The [direct release preflight](production-direct-deploy-preflight.md) checks
+the existing app's ingress and revision state. The frozen production PLAN
+cannot safely validate or apply its migration template against that live app.
 
 Microsoft documents HTTPS ingress and the overwritten/appended headers in
 [Ingress in Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/ingress?tabs=bash),

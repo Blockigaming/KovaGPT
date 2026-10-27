@@ -1,3 +1,6 @@
+// Migration-frozen template only. It disables ingress and uses Single revision
+// mode, so never apply or plan it against the existing live direct Azure app.
+// The production PLAN workflow rejects that live topology before what-if.
 targetScope = 'resourceGroup'
 
 @description('Azure region for production resources.')
