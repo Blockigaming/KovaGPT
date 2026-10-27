@@ -249,4 +249,3 @@ ${content.billing ? `<p class="kova-muted" style="font-size:13px;margin:0 0 22px
 </div></td></tr></table></td></tr></table></body></html>`;
   return { subject: content.subject, html: presentKovaEmailHtml(html), text };
 }
-

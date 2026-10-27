@@ -67,4 +67,3 @@ for (const label of ["kova-auth-verification", "kova-auth-recovery"]) {
     }
   });
 }
-

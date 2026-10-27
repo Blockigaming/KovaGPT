@@ -39,13 +39,20 @@ const INLINE = [
   ["td", "kova-container", "border:1px solid #e5e5e3;border-radius:24px;padding:40px;"],
   ["p", "kova-brand", "font-size:18px;font-weight:600;letter-spacing:-.035em;margin-bottom:32px;"],
   ["h1", "kova-heading", "font-size:30px;line-height:1.15;font-weight:600;letter-spacing:-.035em;"],
-  ["a", "kova-button", "border-radius:999px;min-height:20px;padding:14px 24px;font-size:14px;line-height:20px;"],
+  [
+    "a",
+    "kova-button",
+    "border-radius:999px;min-height:20px;padding:14px 24px;font-size:14px;line-height:20px;",
+  ],
 ];
 
 export function presentKovaEmailHtml(html) {
   let rendered = presentPreviousKovaEmailHtml(html);
   for (const [tag, className, style] of INLINE) {
-    const expression = new RegExp(`(<${tag}\\b[^>]*\\bclass="${className}"[^>]*\\bstyle=")([^"]*)(")`, "gu");
+    const expression = new RegExp(
+      `(<${tag}\\b[^>]*\\bclass="${className}"[^>]*\\bstyle=")([^"]*)(")`,
+      "gu",
+    );
     let count = 0;
     rendered = rendered.replace(expression, (_match, before, existing, after) => {
       count += 1;
@@ -55,4 +62,3 @@ export function presentKovaEmailHtml(html) {
   }
   return rendered;
 }
-

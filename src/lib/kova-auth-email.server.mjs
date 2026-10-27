@@ -203,4 +203,3 @@ export function renderLegacyKovaAuthEmail({
 </div></td></tr></table></td></tr></table></body></html>`;
   return { subject: action.subject, html, text };
 }
-
