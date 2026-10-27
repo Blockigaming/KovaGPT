@@ -18,15 +18,23 @@ Select current `main` and provide:
   origin. The live app's ingress FQDN must match it.
 
 The protected `production` environment uses the existing OIDC identity. The
-script checks its actual subscription and tenant, effective
+script checks its actual subscription and tenant, then asks that already
+authenticated Azure CLI session for an ARM access token. It validates the
+token's tenant, audience, protected client ID and expiry and records only its
+service-principal object ID in the receipt. This script holds the returned
+token in process memory and never writes it to a file, log or artifact; Azure
+CLI manages its own authenticated session. The decoded claims are a
+subject hint, not independent signature verification or permission to grant a
+role. Cross-check the object ID in Azure before any separately approved role
+change. The script also checks effective
 `Microsoft.App/containerApps/write` permission at the exact existing app
 resource, live external HTTPS ingress on port 3000, direct-origin runtime
 settings, Key Vault backed OpenAI and ElevenLabs references, Running and
 Healthy rollback revision with the reviewed digest, 100% traffic to that
 revision, both public build endpoints, and unchanged app metadata on a second
 read. The only output is a sanitized receipt with check booleans and a stable
-failure code. No environment values, secret URIs or Azure error response are
-printed or uploaded. A missing effective write permission is recorded as a
+failure code. No environment values, secret URIs, access token or Azure error
+response are printed or uploaded. A missing effective write permission is recorded as a
 blocker, while independent read-only app, rollback and public-build checks
 continue. The receipt lists sanitized `failureCodes`; it remains `BLOCKED`
 until every check passes. An account or tenant mismatch stops resource reads.
