@@ -2,7 +2,11 @@ import type { Dispatch, SetStateAction } from "react";
 import { Columns2, FileText, PenLine } from "lucide-react";
 
 const EMPTY_STATE_STARTERS = [
-  { label: "Write something", prompt: "Help me write ", icon: PenLine },
+  {
+    label: "Write something",
+    prompt: "Help me write ",
+    icon: PenLine,
+  },
   {
     label: "Summarize a file",
     prompt: "Summarize the file I attach, highlighting its key points and any important caveats.",
@@ -28,7 +32,7 @@ export function HomeChatStarters({ setInput }: { setInput: Dispatch<SetStateActi
         <button
           key={label}
           type="button"
-          className="spec400-toolbar-button"
+          className="spec400-toolbar-button kova-home-starter"
           aria-label={`Start with ${label}`}
           onClick={() => {
             // A starter never overwrites work already entered and never submits.
@@ -40,8 +44,10 @@ export function HomeChatStarters({ setInput }: { setInput: Dispatch<SetStateActi
             );
           }}
         >
-          <Icon aria-hidden="true" />
-          <span>{label}</span>
+          <span className="kova-home-starter-icon">
+            <Icon aria-hidden="true" />
+          </span>
+          <span className="kova-home-starter-copy">{label}</span>
         </button>
       ))}
     </div>

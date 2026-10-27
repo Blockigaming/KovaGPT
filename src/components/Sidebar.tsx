@@ -14,7 +14,6 @@ import {
 } from "@/components/SidebarIcons";
 import {
   Archive,
-  Plus,
   MessageSquare,
   ChevronDown,
   BarChart3,
@@ -466,7 +465,60 @@ export function Sidebar({
     if (content) content.inert = true;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    drawerRef.current?.querySelector<HTMLElement>('[aria-label="Close sidebar"]')?.focus();
+    // Opening motion can leave the close control unfocusable during this effect.
+    // Wait for a visible commit and confirm focus actually moved; a later user
+    // action or a closing drawer always cancels this bounded opening request.
+    const drawer = drawerRef.current;
+    const openingSource = lastFocusedRef.current;
+    const focusDeadline = window.performance.now() + 500;
+    let openingFocusFrame: number | null = null;
+    let openingFocusCancelled = false;
+    let openingFocusAttempts = 0;
+    const cancelOpeningFocus = () => {
+      openingFocusCancelled = true;
+      if (openingFocusFrame !== null) window.cancelAnimationFrame(openingFocusFrame);
+      openingFocusFrame = null;
+    };
+    const focusOpeningControl = () => {
+      openingFocusFrame = null;
+      if (
+        openingFocusCancelled ||
+        !drawer?.isConnected ||
+        drawerRef.current !== drawer ||
+        drawer.dataset.state !== "open" ||
+        !isMobileViewport()
+      )
+        return;
+      const active = document.activeElement;
+      if (
+        active !== document.body &&
+        active !== document.documentElement &&
+        active !== openingSource
+      )
+        return;
+      const close = drawer.querySelector<HTMLButtonElement>('[aria-label="Close sidebar"]');
+      openingFocusAttempts += 1;
+      if (
+        close?.isConnected &&
+        !close.disabled &&
+        !close.closest("[inert]") &&
+        close.offsetParent !== null &&
+        getComputedStyle(close).visibility === "visible"
+      ) {
+        close.focus({ preventScroll: true });
+        if (document.activeElement === close) return;
+      }
+      if (openingFocusAttempts < 60 && window.performance.now() < focusDeadline)
+        openingFocusFrame = window.requestAnimationFrame(focusOpeningControl);
+    };
+    const onOpeningFocusMoved = (event: FocusEvent) => {
+      if (event.target === document.body || event.target === document.documentElement) return;
+      cancelOpeningFocus();
+    };
+    document.addEventListener("pointerdown", cancelOpeningFocus, true);
+    document.addEventListener("keydown", cancelOpeningFocus, true);
+    document.addEventListener("focusin", onOpeningFocusMoved, true);
+    openingFocusFrame = window.requestAnimationFrame(focusOpeningControl);
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
       const nested =
@@ -488,16 +540,21 @@ export function Sidebar({
       if (!items.length) return;
       const [first] = items;
       const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
+      const outsideDrawer = !drawerRef.current.contains(document.activeElement);
+      if (event.shiftKey && (document.activeElement === first || outsideDrawer)) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && (document.activeElement === last || outsideDrawer)) {
         event.preventDefault();
         first.focus();
       }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
+      cancelOpeningFocus();
+      document.removeEventListener("pointerdown", cancelOpeningFocus, true);
+      document.removeEventListener("keydown", cancelOpeningFocus, true);
+      document.removeEventListener("focusin", onOpeningFocusMoved, true);
       document.body.style.overflow = previousOverflow;
       if (content) content.inert = previousInert;
       document.removeEventListener("keydown", onKeyDown);
@@ -1101,7 +1158,7 @@ export function Sidebar({
                     className="kova-rail-button kova-new-chat"
                     aria-label="New chat"
                   >
-                    <Plus aria-hidden="true" />
+                    <NewChatGlyph aria-hidden="true" />
                   </button>
                 </RailTooltip>
                 <RailTooltip label="Search">
@@ -1187,7 +1244,7 @@ export function Sidebar({
           <header className="kova-sidebar-header">
             <span className="kova-sidebar-brand flex items-center gap-2">
               <NovaLogo decorative className="h-7 w-7" />
-              KovaGPT
+              Kova GPT
             </span>
             <div className="kova-sidebar-header-actions">
               <button
@@ -1195,6 +1252,7 @@ export function Sidebar({
                 className="kova-header-button flex"
                 onClick={() => setSearchOpen((value) => !value)}
                 aria-label="Search chats"
+                aria-expanded={searchOpen}
                 title="Search chats"
               >
                 <SearchGlyph />
@@ -1256,7 +1314,7 @@ export function Sidebar({
                 className="kova-new-chat kova-nav-row"
                 aria-label="New chat"
               >
-                {icon(Plus)}
+                {icon(NewChatGlyph)}
                 <span>New chat</span>
               </button>
               {onOpenWorkspaceSearch ? (
@@ -1334,10 +1392,11 @@ export function Sidebar({
               ) : null}
               {savedConversations.length === 0 ? (
                 <p className="kova-sidebar-empty">
-                  No saved chats here.
-                  {isLoaded && !signedIn ? (
-                    <span className="mt-1 block">Log in to view saved chats.</span>
-                  ) : null}
+                  {!isLoaded
+                    ? "Loading chats…"
+                    : signedIn
+                      ? "No saved chats yet."
+                      : "Log in to view saved chats."}
                 </p>
               ) : null}
               {query && savedConversations.length > 0 && filtered.length === 0 ? (
@@ -1346,19 +1405,21 @@ export function Sidebar({
             </section>
           </div>
 
-          <div className="kova-sidebar-help">
-            <button
-              className="kova-nav-row"
-              type="button"
-              onClick={() => {
-                closeAfterMobileNavigation("/help");
-                onOpenHelp();
-              }}
-            >
-              {icon(CircleHelp)}
-              <span>Help</span>
-            </button>
-          </div>
+          {signedIn ? (
+            <div className="kova-sidebar-help">
+              <button
+                className="kova-nav-row"
+                type="button"
+                onClick={() => {
+                  closeAfterMobileNavigation("/help");
+                  onOpenHelp();
+                }}
+              >
+                {icon(CircleHelp)}
+                <span>Help</span>
+              </button>
+            </div>
+          ) : null}
           <footer className="kova-sidebar-footer">
             {signedIn ? (
               <>
@@ -1443,7 +1504,7 @@ export function Sidebar({
             ) : isLoaded ? (
               <div className="w-full">
                 <nav className="kova-guest-account-options" aria-label="Account options">
-                  {navLink("/pricing", "Plans", CreditCard)}
+                  {navLink("/pricing", "Subscriptions", CreditCard)}
                   <button
                     type="button"
                     className={navRow()}
@@ -1471,7 +1532,7 @@ export function Sidebar({
                 <div className="flex items-center gap-2">
                   <SignInButton mode="modal">
                     <button type="button" className="kova-sign-in min-w-0 flex-1">
-                      Log in to KovaGPT
+                      Log in
                     </button>
                   </SignInButton>
                 </div>

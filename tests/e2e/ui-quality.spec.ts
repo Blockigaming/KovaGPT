@@ -17,7 +17,7 @@ async function expectEmptyWorkspaceLandmarks(page: Page) {
   const navigationTitle = page.locator("[data-kova-navigation-heading]");
   await expect(navigationTitle).toHaveAttribute("role", "heading");
   await expect(navigationTitle).toHaveAttribute("aria-level", "1");
-  await expect(navigationTitle).toHaveText("Chat");
+  await expect(navigationTitle).toHaveText("Kova GPT");
   if (page.viewportSize()!.width < 1024) await expect(navigationTitle).toBeVisible();
   else await expect(navigationTitle).toBeHidden();
 }
@@ -149,24 +149,65 @@ test("empty workspace remains contained and composer focus is deliberate", async
     await expect(attach).toBeFocused();
   }
 
-  const starterLayout = await page.locator(".spec400-starter-actions").evaluate((grid) => {
-    const style = getComputedStyle(grid);
-    const visibleLabels = Array.from(grid.querySelectorAll(".spec400-toolbar-button > span"))
+  const starterActions = page.locator(".spec400-starter-actions");
+  await expect(starterActions.locator("strong, small, .kova-home-starter-arrow")).toHaveCount(0);
+  await expect(page.locator(".kova-home-eyebrow")).toHaveCount(0);
+  const starterLayout = await starterActions.evaluate((container) => {
+    const style = getComputedStyle(container);
+    const visibleLabels = Array.from(container.querySelectorAll(".kova-home-starter-copy"))
       .filter((label) => (label as HTMLElement).offsetParent !== null)
-      .map((label) => ({ clientWidth: label.clientWidth, scrollWidth: label.scrollWidth }));
+      .map((label) => {
+        const box = label.getBoundingClientRect();
+        const button = label.closest("button")!;
+        const target = button.getBoundingClientRect();
+        return {
+          text: label.textContent?.trim(),
+          clientWidth: label.clientWidth,
+          scrollWidth: label.scrollWidth,
+          left: box.left,
+          right: box.right,
+          top: box.top,
+          bottom: box.bottom,
+          target: {
+            left: target.left,
+            right: target.right,
+            top: target.top,
+            bottom: target.bottom,
+            width: target.width,
+            height: target.height,
+            radius: Number.parseFloat(getComputedStyle(button).borderTopLeftRadius),
+          },
+        };
+      });
     return {
       display: style.display,
       flexWrap: style.flexWrap,
       justifyContent: style.justifyContent,
+      gap: style.gap,
       visibleLabels,
     };
   });
   expect(starterLayout.display).toBe("flex");
-  expect(starterLayout.flexWrap).toBe(page.viewportSize()!.width < 768 ? "wrap" : "nowrap");
-  expect(starterLayout.justifyContent).toBe("flex-start");
+  expect(starterLayout.flexWrap).toBe("wrap");
+  expect(starterLayout.justifyContent).toBe("center");
+  expect(starterLayout.gap).toBe("8px");
   expect(starterLayout.visibleLabels).toHaveLength(3);
-  for (const label of starterLayout.visibleLabels)
+  expect(starterLayout.visibleLabels.map((label) => label.text)).toEqual([
+    "Write something",
+    "Summarize a file",
+    "Compare options",
+  ]);
+  for (const label of starterLayout.visibleLabels) {
     expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth + 1);
+    expect(label.left).toBeGreaterThanOrEqual(label.target.left);
+    expect(label.right).toBeLessThanOrEqual(label.target.right);
+    expect(label.top).toBeGreaterThanOrEqual(label.target.top);
+    expect(label.bottom).toBeLessThanOrEqual(label.target.bottom);
+    expect(label.target.width).toBeGreaterThanOrEqual(44);
+    expect(label.target.height).toBeGreaterThanOrEqual(44);
+    expect(label.target.height).toBeCloseTo(44, 1);
+    expect(label.target.radius).toBeGreaterThanOrEqual(label.target.height / 2);
+  }
   await input.clear();
   await page.getByRole("button", { name: "Start with Write something", exact: true }).click();
   await expect(input).toHaveValue("Help me write ");
@@ -330,7 +371,7 @@ for (const theme of ["light", "dark"] as const) {
     if (page.viewportSize()!.width >= 1024) {
       await expect(page.getByRole("main")).toHaveAttribute("data-sidebar", "open");
       await expect(sidebarBrand).toBeVisible();
-      await expect(sidebarBrand).toHaveText("KovaGPT");
+      await expect(sidebarBrand).toHaveText("Kova GPT");
     }
     expect(rasterLogoRequests).toBeGreaterThanOrEqual(1);
     expect(rasterLogoResponses.length).toBeGreaterThanOrEqual(1);
@@ -451,6 +492,39 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(page.locator(".kova-user-message")).toBeVisible();
   await expect(page.locator(".kova-assistant-message")).toBeVisible();
+  const prompt = page.locator(".kova-user-message");
+  const promptBox = (await prompt.boundingBox())!;
+  const promptColumn = (await prompt.locator("..").boundingBox())!;
+  // A short prompt should occupy only its content and sit at the end of the
+  // reading column, leaving the assistant's reply a distinct visual turn.
+  expect(promptBox.width).toBeLessThan(promptColumn.width);
+  expect(promptBox.x + promptBox.width).toBeCloseTo(promptColumn.x + promptColumn.width, 0);
+  const promptContrasts = await prompt.evaluate((element) => {
+    const root = element.ownerDocument.documentElement;
+    const wasDark = root.classList.contains("dark");
+    const luminance = (color: string) => {
+      const channels = color
+        .match(/[\d.]+/g)!
+        .slice(0, 3)
+        .map(Number)
+        .map((value) => {
+          const channel = value / 255;
+          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        });
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    try {
+      return [false, true].map((dark) => {
+        root.classList.toggle("dark", dark);
+        const style = getComputedStyle(element);
+        const values = [luminance(style.color), luminance(style.backgroundColor)];
+        return (Math.max(...values) + 0.05) / (Math.min(...values) + 0.05);
+      });
+    } finally {
+      root.classList.toggle("dark", wasDark);
+    }
+  });
+  for (const contrast of promptContrasts) expect(contrast).toBeGreaterThanOrEqual(4.5);
   await expect(page.locator(".kova-assistant-message")).toContainText("Stability");
   await expect(page.locator(".kova-assistant-message table")).toBeVisible();
   await expect(page.locator(".kova-assistant-message pre code")).toBeVisible();
@@ -468,6 +542,13 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   expect(assistant!.width).toBeLessThanOrEqual(Math.min(page.viewportSize()!.width, 820));
 
   if (page.viewportSize()!.width < 1024) {
+    for (const label of ["Edit message", "Branch from this message in a new chat"]) {
+      const promptAction = page.getByRole("button", { name: label, exact: true });
+      await expect(promptAction).toBeVisible();
+      const promptActionBox = (await promptAction.boundingBox())!;
+      expect(promptActionBox.width + 0.01).toBeGreaterThanOrEqual(44);
+      expect(promptActionBox.height + 0.01).toBeGreaterThanOrEqual(44);
+    }
     const action = page.getByRole("button", { name: "Copy response", exact: true });
     const artifactAction = page.getByRole("button", { name: "Open code result", exact: true });
     await expect(action).toBeVisible();

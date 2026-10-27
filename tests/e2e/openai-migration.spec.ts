@@ -47,16 +47,16 @@ test("guest chat consumes Kova SSE once and keeps page and menu identity", async
   if (viewport && viewport.width >= 1024) {
     const sidebarBrand = page.locator("aside .kova-sidebar-brand:visible");
     await expect(sidebarBrand).toHaveCount(1);
-    await expect(sidebarBrand).toHaveText("KovaGPT");
+    await expect(sidebarBrand).toHaveText("Kova GPT");
   } else {
     await expect(
       page
         .locator("header.kova-topbar:visible")
-        .getByRole("heading", { name: "Chat", exact: true }),
+        .getByRole("heading", { name: "Kova GPT", exact: true }),
     ).toHaveCount(1);
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
     await expect(page.locator(".kova-sidebar-brand:visible")).toHaveCount(1);
-    await expect(page.locator(".kova-sidebar-brand:visible")).toHaveText("KovaGPT");
+    await expect(page.locator(".kova-sidebar-brand:visible")).toHaveText("Kova GPT");
     await page.keyboard.press("Escape");
   }
   if (testInfo.project.name === "desktop-1280x800") {

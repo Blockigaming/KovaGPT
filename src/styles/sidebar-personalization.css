@@ -259,3 +259,322 @@
   width: 20px;
   height: 20px;
 }
+
+/* Main assistant navigation: the unfilled compose action and quiet history of ChatGPT.
+   Width, drawer visibility and scrolling remain owned by the shared sidebar. */
+.kova-assistant[data-ui="modern"] {
+  --chat-nav-surface: #f9f9f9;
+  --chat-nav-hover: rgb(0 0 0 / 5%);
+  --chat-nav-selected: rgb(0 0 0 / 7%);
+  --chat-nav-muted: #676767;
+  --chat-nav-line: rgb(0 0 0 / 7%);
+}
+.dark .kova-assistant[data-ui="modern"] {
+  --chat-nav-surface: #171717;
+  --chat-nav-hover: rgb(255 255 255 / 5%);
+  --chat-nav-selected: rgb(255 255 255 / 8%);
+  --chat-nav-muted: #a3a3a3;
+  --chat-nav-line: rgb(255 255 255 / 6%);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-icon
+  svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.7;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  [data-kova-navigation-glyph] {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.7;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  :is(.kova-header-button, .kova-chat-options, .kova-rail-button) {
+  color: var(--chat-nav-muted);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  :is(.kova-header-button, .kova-chat-options, .kova-rail-button):hover {
+  background: var(--chat-nav-hover);
+  color: var(--foreground);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  [aria-current="page"] {
+  color: var(--foreground);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  [aria-current="page"]::before {
+  content: none;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-brand {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-brand
+  > .kova-logo {
+  width: 26px;
+  height: 26px;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-primary {
+  padding: 12px;
+  gap: 3px;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row {
+  gap: 12px !important;
+  padding-inline: 12px !important;
+  font-size: 14px !important;
+  font-weight: 400;
+  color: var(--foreground);
+  border-radius: 10px;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row:is(:hover, .is-active) {
+  background: var(--chat-nav-hover);
+  color: var(--foreground);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row.is-active {
+  background: var(--chat-nav-selected) !important;
+  font-weight: 500;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row.is-active::before {
+  content: none;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row.kova-new-chat {
+  justify-content: flex-start;
+  margin-bottom: 0;
+  padding-inline: 12px !important;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  font-weight: 500;
+  box-shadow: none;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-nav-row.kova-new-chat:hover {
+  background: var(--chat-nav-hover);
+  color: var(--foreground);
+  filter: none;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-history {
+  margin-top: 8px;
+  padding-inline: 12px;
+  border-top: 0;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-history
+  h2 {
+  color: var(--chat-nav-muted) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  :is(.kova-sidebar-empty, .kova-account-copy small) {
+  color: var(--chat-nav-muted);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-empty {
+  font-size: 12px;
+  line-height: 1.65;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-chat-row-main {
+  font-size: 13px;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-help {
+  padding: 8px 12px 0;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-footer {
+  padding-inline: 12px;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  :is(.kova-account-main, .kova-chat-row):hover {
+  background: var(--chat-nav-hover);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  [aria-current="page"].kova-rail-button {
+  background: var(--chat-nav-selected);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-search {
+  border-color: var(--chat-nav-line);
+  background: var(--chat-nav-hover);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-search:focus-visible {
+  border-color: var(--ring);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  :is(.kova-sidebar-inner, .kova-sidebar-header, .kova-sidebar-footer) {
+  background: var(--chat-nav-surface);
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  .kova-sidebar-header {
+  padding-inline: 16px 6px;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
+body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
+  --sidebar-hover: var(--chat-nav-hover);
+  --sidebar-active: var(--chat-nav-selected);
+  background: var(--chat-nav-surface) !important;
+  border-right-color: var(--chat-nav-line) !important;
+}
+.dark
+  body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
+.dark
+  body
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
+  background: var(--chat-nav-surface) !important;
+}
+
+/* The assistant keeps navigation identity and account actions compact without
+   changing the shared drawer's width, visibility or focus ownership. */
+.kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-header-button[aria-expanded="true"] {
+  color: var(--foreground);
+  background: var(--chat-nav-selected);
+}
+
+.kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-brand {
+  line-height: 1.2;
+}
+
+.kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-footer
+  .kova-sign-in {
+  width: 100%;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.kova-assistant[data-ui="modern"] .spec400-mobile-page-title {
+  font-size: 15px;
+  line-height: 22px;
+  letter-spacing: -0.02em;
+}

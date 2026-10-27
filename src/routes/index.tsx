@@ -48,7 +48,7 @@ import {
   useState,
   type SetStateAction,
 } from "react";
-import { PanelLeft, Files } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 
@@ -3043,6 +3043,7 @@ function KovaGPT() {
   return (
     <div
       className="kova-assistant flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
+      data-ui="modern"
       style={{ height: "100dvh" }}
     >
       <p className="sr-only" aria-live="polite">
@@ -3151,7 +3152,7 @@ function KovaGPT() {
 
           <div className="flex items-center min-w-0 flex-1 relative">
             <div className="spec400-chat-title">
-              {chatStarted ? active?.title || "Chat" : "Chat"}
+              {chatStarted ? active?.title || "Chat" : sidebarOpen ? "" : "Kova GPT"}
             </div>
             {selectedWorkflowSkill ? (
               <button
@@ -3169,23 +3170,6 @@ function KovaGPT() {
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
             {conversationActions()}
-            {!chatStarted && (
-              <button
-                type="button"
-                className="spec400-toolbar-button"
-                aria-label="Open Context"
-                onClick={(event) =>
-                  window.dispatchEvent(
-                    new CustomEvent("kova-open-message-context", {
-                      detail: { trigger: event.currentTarget },
-                    }),
-                  )
-                }
-              >
-                <Files aria-hidden="true" />
-                <span>Context</span>
-              </button>
-            )}
             {isLoaded && isSignedIn && !chatStarted && (
               <Suspense fallback={<span className="h-9 w-9" aria-hidden="true" />}>
                 <TemporaryChatToggle

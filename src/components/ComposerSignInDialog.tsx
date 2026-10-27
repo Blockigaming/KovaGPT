@@ -32,29 +32,47 @@ export function ComposerSignInDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const mustFinishMessage = hasPendingMessage;
-  const continueToAuth = async (mode: "sign-in" | "sign-up") => {
+  const continueToAuth = (mode: "sign-in" | "sign-up") => {
     if (started.current || mustFinishMessage || !currentGuest.current) return;
     const generation = kovaAuthGeneration();
     started.current = true;
     setBusy(true);
     setError("");
+    const resetOpening = () => {
+      started.current = false;
+      setBusy(false);
+    };
+    const showOpeningFailure = () => {
+      resetOpening();
+      setError("Could not open sign in. Your draft is unchanged. Try again.");
+    };
     try {
       // Stay on the current route; the existing Auth adapter owns continuation.
       const valid = () =>
         currentGuest.current &&
         kovaAuthGeneration() === generation &&
         window.location.href === openingUrl.current;
-      if (!valid()) return;
-      onClose();
+      if (!valid()) {
+        resetOpening();
+        return;
+      }
       window.requestAnimationFrame(() => {
-        if (!valid()) return;
-        if (mode === "sign-up") auth.openSignUp();
-        else auth.openSignIn();
+        if (!valid()) {
+          resetOpening();
+          return;
+        }
+        try {
+          if (mode === "sign-up") auth.openSignUp();
+          else auth.openSignIn();
+          // Keep this prompt mounted until the adapter accepts the handoff so
+          // a synchronous opening failure can be shown and retried in place.
+          onClose();
+        } catch {
+          showOpeningFailure();
+        }
       });
     } catch {
-      started.current = false;
-      setBusy(false);
-      setError("Could not open sign in. Your draft is unchanged. Try again.");
+      showOpeningFailure();
     }
   };
   return (

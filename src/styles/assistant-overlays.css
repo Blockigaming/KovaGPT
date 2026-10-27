@@ -1,0 +1,70 @@
+/* Assistant menus live in Radix portals outside the workspace element.
+   The main route lifts its semantic tokens onto body; keep every overlay on
+   those same surfaces without changing Radix placement, focus or scrolling. */
+body:has(.kova-assistant[data-ui="modern"])
+  :is(
+    .kova-composer-menu,
+    .spec400-options-panel,
+    .spec400-context-drawer,
+    .spec400-expanded-input,
+    .spec400-attachment-preview,
+    .kova-response-menu,
+    .kova-sidebar-chat-menu,
+    .kova-profile-menu,
+    .kova-conversation-menu,
+    .kova-conversation-submenu,
+    .kova-conversation-outputs,
+    .kova-sources-inspector
+  ) {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border-color: var(--border);
+  font-family: var(--font-sans);
+}
+
+/* A quiet resting edge, with the existing visible keyboard focus retained. */
+body:has(.kova-assistant[data-ui="modern"])
+  :is(.spec400-options-panel select, .spec400-expanded-textarea, .kova-header-title-input) {
+  min-width: 0;
+  max-width: 100%;
+  border-color: var(--border);
+  background: var(--surface-input, var(--background));
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+body:has(.kova-assistant[data-ui="modern"])
+  :is(
+    .spec400-options-panel select,
+    .spec400-expanded-textarea,
+    .kova-header-title-input
+  ):focus-visible {
+  border-color: var(--ring);
+}
+
+body:has(.kova-assistant[data-ui="modern"]) .spec400-options-panel p {
+  line-height: 1.55;
+}
+
+/* Menu rows may grow for long labels, localization and larger text. The
+   shared menu primitives still own their minimum 44px interaction targets. */
+body:has(.kova-assistant[data-ui="modern"])
+  :is(
+    .kova-response-menu,
+    .kova-sidebar-chat-menu,
+    .kova-profile-menu,
+    .kova-conversation-menu,
+    .kova-conversation-submenu
+  )
+  [role="menuitem"] {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.45;
+}
+body:has(.kova-assistant[data-ui="modern"])
+  :is(.kova-composer-action, .kova-composer-plugin)
+  > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

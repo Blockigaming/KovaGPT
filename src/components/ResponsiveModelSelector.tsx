@@ -6,6 +6,7 @@ import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { NovaLogo } from "@/components/NovaLogo";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 /**
  * Adaptive model selector with a stable trigger element.
@@ -33,24 +34,13 @@ export function ResponsiveModelSelector({
   const locked = !isLoaded || !isSignedIn || userTier === "free";
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const groups = versionGroupsForTier(userTier);
   const current =
     groups.flatMap((group) => group.modes).find((item) => item.id === mode) ?? MODES[0];
   const topbar = placement === "topbar";
-
-  useEffect(() => {
-    if (useSheet || !open) return;
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [open, useSheet]);
 
   // Signed-out and Free visitors are pinned to Instant even if stale local state
   // previously contained a paid/legacy mode.
@@ -114,7 +104,9 @@ export function ResponsiveModelSelector({
 
   const options = groups.map((group) => (
     <div key={group.id} className="pb-1">
-      <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">{group.label}</div>
+      <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+        {group.label.replace(/^KovaGPT(?=\s|$)/u, "Kova GPT")}
+      </div>
       {group.modes.map(renderOption)}
     </div>
   ));
@@ -124,81 +116,93 @@ export function ResponsiveModelSelector({
     return (
       <span className="kova-model-static inline-flex h-10 min-w-0 select-none items-center gap-2 px-2.5 text-[15px] font-semibold tracking-[-0.015em] text-foreground">
         <NovaLogo decorative className="h-6 w-6" />
-        <span className="truncate leading-none">KovaGPT</span>
+        <span className="truncate leading-none">Kova GPT</span>
       </span>
     );
 
   return (
-    <div
-      ref={containerRef}
-      className="relative inline-flex min-w-0"
-      onKeyDown={(event) => {
-        if (event.key !== "Escape" || !open) return;
-        event.preventDefault();
-        closeAndRestoreFocus();
-      }}
-    >
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen((value) => (useSheet ? true : !value))}
-        aria-haspopup="dialog"
-        aria-label={"Choose model: KovaGPT " + modeDisplayLabel(current)}
-        aria-expanded={open}
-        aria-controls={!useSheet && open ? menuId : undefined}
-        data-testid="model-selector-trigger"
-        className={triggerClass}
-      >
-        {topbar ? <NovaLogo decorative className="h-6 w-6" /> : null}
-        <span className={(useSheet ? "truncate " : "") + "leading-none text-muted-foreground"}>
-          {compact ? (
-            modeDisplayLabel(current)
-          ) : (
-            <>
-              KovaGPT<span className="ml-1 font-normal">· {modeDisplayLabel(current)}</span>
-            </>
-          )}
-        </span>
+    <Popover open={open} onOpenChange={setOpen}>
+      <div className="relative inline-flex min-w-0">
+        <PopoverTrigger asChild>
+          <button
+            ref={triggerRef}
+            type="button"
+            onClick={
+              useSheet
+                ? (event) => {
+                    event.preventDefault();
+                    setOpen(true);
+                  }
+                : undefined
+            }
+            aria-haspopup="dialog"
+            aria-label={"Choose model: Kova GPT " + modeDisplayLabel(current)}
+            aria-expanded={open}
+            aria-controls={!useSheet && open ? menuId : undefined}
+            data-testid="model-selector-trigger"
+            className={triggerClass}
+          >
+            {topbar ? <NovaLogo decorative className="h-6 w-6" /> : null}
+            <span className={(useSheet ? "truncate " : "") + "leading-none text-muted-foreground"}>
+              {compact ? (
+                modeDisplayLabel(current)
+              ) : (
+                <>
+                  Kova GPT<span className="ml-1 font-normal">· {modeDisplayLabel(current)}</span>
+                </>
+              )}
+            </span>
 
-        <ChevronDown
-          className={
-            "h-4 w-4 text-muted-foreground transition-transform " +
-            (!useSheet && open ? "rotate-180" : "")
-          }
-        />
-      </button>
+            <ChevronDown
+              className={
+                "h-4 w-4 text-muted-foreground transition-transform " +
+                (!useSheet && open ? "rotate-180" : "")
+              }
+            />
+          </button>
+        </PopoverTrigger>
 
-      {useSheet ? (
-        <MobileBottomSheet
-          open={open}
-          onOpenChange={(next) => {
-            if (next) setOpen(true);
-            else closeAndRestoreFocus();
-          }}
-          title="Intelligence"
-          ariaLabel="Choose model"
-        >
-          <div className="flex flex-col gap-1">{options}</div>
-        </MobileBottomSheet>
-      ) : (
-        open && (
-          <div
+        {useSheet ? (
+          <MobileBottomSheet
+            open={open}
+            onOpenChange={(next) => {
+              if (next) setOpen(true);
+              else closeAndRestoreFocus();
+            }}
+            title="Intelligence"
+            ariaLabel="Choose model"
+          >
+            <div className="flex flex-col gap-1">{options}</div>
+          </MobileBottomSheet>
+        ) : (
+          <PopoverContent
+            ref={contentRef}
             id={menuId}
             role="dialog"
             aria-label="Choose model"
-            className={
-              "kova-model-menu absolute left-0 z-50 w-64 rounded-xl border border-border bg-popover p-1.5 shadow-lg animate-in fade-in-0 duration-100 " +
-              (topbar ? "top-full mt-1 origin-top-left" : "bottom-full mb-2 origin-bottom-left")
-            }
+            side={topbar ? "bottom" : "top"}
+            align="start"
+            sideOffset={8}
+            collisionPadding={12}
+            className="kova-model-menu w-64 rounded-xl border border-border bg-popover p-1.5 shadow-lg"
+            onOpenAutoFocus={(event) => {
+              // The menu is portalled out of the Options scroll container.
+              // Begin at the selected option without replacing the trigger.
+              const selected =
+                contentRef.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
+              if (!selected) return;
+              event.preventDefault();
+              selected.focus({ preventScroll: true });
+            }}
           >
             <div className="px-3 pb-1.5 pt-2 text-xs font-medium text-muted-foreground">
               Intelligence
             </div>
 
             {options}
-          </div>
-        )
-      )}
-    </div>
+          </PopoverContent>
+        )}
+      </div>
+    </Popover>
   );
 }

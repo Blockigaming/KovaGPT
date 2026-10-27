@@ -67,7 +67,7 @@ test.describe("KovaGPT responsive shell", () => {
       await expect(
         page
           .locator("header.kova-topbar:visible")
-          .getByRole("heading", { name: "Chat", exact: true }),
+          .getByRole("heading", { name: "Kova GPT", exact: true }),
       ).toBeVisible();
     }
 

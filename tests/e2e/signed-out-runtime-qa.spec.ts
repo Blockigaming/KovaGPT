@@ -75,7 +75,7 @@ for (const theme of themes) {
       const sendButton = page.getByRole("button", { name: "Send message", exact: true });
       await expect(menuButton).toBeVisible();
       await expect(
-        page.getByRole("heading", { level: 1, name: "Chat", exact: true }),
+        page.getByRole("heading", { level: 1, name: "Kova GPT", exact: true }),
       ).toBeVisible();
       await expectMinimumTouchTarget(menuButton);
       await expectMinimumTouchTarget(addButton);

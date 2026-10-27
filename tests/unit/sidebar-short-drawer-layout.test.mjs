@@ -151,7 +151,19 @@ test("history, primary navigation, Help and account retain their source order an
     "kova-sidebar-primary",
     "kova-sidebar-history",
   ]);
-  const siblings = body.parent.children.filter(ts.isJsxElement).map(className);
+  const siblings = body.parent.children.flatMap((node) => {
+    if (ts.isJsxElement(node)) return [className(node)];
+    if (!ts.isJsxExpression(node) || !node.expression) return [];
+    const expression = node.expression;
+    if (!ts.isConditionalExpression(expression)) return [];
+    const child = ts.isParenthesizedExpression(expression.whenTrue)
+      ? expression.whenTrue.expression
+      : expression.whenTrue;
+    if (className(child) !== "kova-sidebar-help") return [];
+    assert.equal(expression.condition.getText(file), "signedIn");
+    assert.equal(expression.whenFalse.kind, ts.SyntaxKind.NullKeyword);
+    return [className(child)];
+  });
   assert.deepEqual(siblings.slice(siblings.indexOf("kova-sidebar-scroll")), [
     "kova-sidebar-scroll",
     "kova-sidebar-help",
