@@ -102,6 +102,7 @@ function fixture({
   publicSha = currentSha,
   accountId = subscription,
   tokenClaims = {},
+  tokenAvailable = true,
 } = {}) {
   const calls = [];
   let appReads = 0;
@@ -109,8 +110,9 @@ function fixture({
     calls.push(args);
     if (args[0] === "account" && args[1] === "get-access-token") {
       assert.equal(args[args.indexOf("--subscription") + 1], subscription);
-      assert.equal(args[args.indexOf("--tenant") + 1], tenant);
+      assert.equal(args.includes("--tenant"), false);
       assert.equal(args[args.indexOf("--resource") + 1], "https://management.azure.com/");
+      if (!tokenAvailable) return { ok: false, stdout: "" };
       return {
         ok: true,
         stdout: JSON.stringify({
@@ -215,6 +217,37 @@ test("missing resource-scoped write permission still checks app, rollback and pu
   assert.equal(receipt.principalObjectId, principalObjectId);
 });
 
+test("unavailable token is diagnostic and cannot block independently passing release checks", async () => {
+  for (const permission of [false, true]) {
+    const receipt = await preflightDirectAzureRelease(
+      input,
+      fixture({ permission, tokenAvailable: false }),
+    );
+    assert.equal(receipt.principalObjectId, null);
+    assert.equal(receipt.checks.principalIdentity, false);
+    assert.equal(receipt.principalDiagnosticCode, "direct_preflight_principal_token_unavailable");
+    assert.equal(
+      receipt.failureCode,
+      permission ? null : "direct_preflight_app_write_permission_missing",
+    );
+    assert.deepEqual(
+      receipt.failureCodes,
+      permission ? [] : ["direct_preflight_app_write_permission_missing"],
+    );
+    assert.equal(receipt.status, permission ? "READY_FOR_SEPARATE_DEPLOY_REVIEW" : "BLOCKED");
+    assert.equal(receipt.checks.rollbackRevision, true);
+    assert.equal(receipt.checks.publicBuild, true);
+    assert.equal(receipt.azureMutations, 0);
+  }
+  const missingClient = await preflightDirectAzureRelease(
+    { ...input, azureClientId: "" },
+    fixture(),
+  );
+  assert.equal(missingClient.status, "READY_FOR_SEPARATE_DEPLOY_REVIEW");
+  assert.equal(missingClient.principalDiagnosticCode, "direct_preflight_azure_client_id_invalid");
+  assert.equal(missingClient.principalObjectId, null);
+});
+
 test("a wrong client, tenant, audience or expired token never yields an object ID", async () => {
   for (const tokenClaims of [
     { appid: "ffffffff-ffff-ffff-ffff-ffffffffffff" },
@@ -227,7 +260,9 @@ test("a wrong client, tenant, audience or expired token never yields an object I
     const receipt = await preflightDirectAzureRelease(input, fixture({ tokenClaims }));
     assert.equal(receipt.checks.principalIdentity, false);
     assert.equal(receipt.principalObjectId, null);
-    assert.equal(receipt.failureCode, "direct_preflight_principal_claims_invalid");
+    assert.equal(receipt.principalDiagnosticCode, "direct_preflight_principal_claims_invalid");
+    assert.equal(receipt.failureCode, null);
+    assert.equal(receipt.status, "READY_FOR_SEPARATE_DEPLOY_REVIEW");
     assert.equal(receipt.checks.targetAndConfig, true);
     assert.doesNotMatch(JSON.stringify(receipt), /never-emit-arm-access-token|accessToken/);
   }
