@@ -67,6 +67,7 @@ jobs:
       KOVA_PREFLIGHT_CURRENT_SHA: ${{ inputs.expected_current_sha }}
       KOVA_PREFLIGHT_CURRENT_IMAGE: ${{ inputs.expected_current_image }}
       KOVA_PREFLIGHT_ORIGIN: ${{ inputs.direct_origin }}
+      KOVA_PREFLIGHT_AZURE_CLIENT_ID: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
       KOVA_PRODUCTION_ACR_LOGIN_SERVER: ${{ vars.KOVA_PRODUCTION_ACR_LOGIN_SERVER }}
       KOVA_PRODUCTION_IMAGE_REPOSITORY: ${{ vars.KOVA_PRODUCTION_IMAGE_REPOSITORY }}
     steps:
