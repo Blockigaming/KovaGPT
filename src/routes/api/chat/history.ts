@@ -56,7 +56,7 @@ export const Route = createFileRoute("/api/chat/history")({
         const rate = await consumeApplicationRateLimit({
           identity: `user:${auth.userId}`,
           action: "chat_history_read",
-          limit: 300,
+          limit: 100,
           windowSeconds: 60,
         });
         if (!rate.allowed) return json({ error: "chat_history_rate_limited" }, 429);
@@ -95,7 +95,7 @@ export const Route = createFileRoute("/api/chat/history")({
         const rate = await consumeApplicationRateLimit({
           identity: `user:${auth.userId}`,
           action: "chat_history_write",
-          limit: 120,
+          limit: 100,
           windowSeconds: 60,
         });
         if (!rate.allowed) return json({ error: "chat_history_rate_limited" }, 429);
