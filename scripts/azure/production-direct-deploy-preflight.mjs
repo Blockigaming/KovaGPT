@@ -252,6 +252,19 @@ export async function preflightDirectAzureRelease(
     liveAuthVerified: false,
     providerGenerationVerified: false,
     failureCode: null,
+    failureCodes: [],
+  };
+  const recordFailure = (error) => {
+    const code = safeCode(error);
+    receipt.failureCode ??= code;
+    receipt.failureCodes.push(code);
+  };
+  const checkIndependently = async (check) => {
+    try {
+      await check();
+    } catch (error) {
+      recordFailure(error);
+    }
   };
   const arm = async (path, apiVersion, query, exactUrl = "", readFailure = "azure_read_failed") => {
     const result = await run([
@@ -272,6 +285,7 @@ export async function preflightDirectAzureRelease(
       throw new Error("direct_preflight_azure_response_invalid");
     }
   };
+  // The Azure account boundary must hold before reading any resource metadata.
   try {
     const account = await run(["account", "show", "--query", "{id:id,tenantId:tenantId}"]);
     valid(account?.ok === true, "azure_read_failed");
@@ -287,7 +301,14 @@ export async function preflightDirectAzureRelease(
       "azure_account_mismatch",
     );
     receipt.checks.account = true;
+  } catch (error) {
+    recordFailure(error);
+    return receipt;
+  }
 
+  // A missing write role must not hide independent read-only app, rollback or
+  // public-build findings. Every check below remains incapable of mutation.
+  await checkIndependently(async () => {
     const permissionPath = `${targetId}/providers/Microsoft.Authorization/permissions`;
     const permissionBase = `${ARM}${permissionPath}?api-version=2022-04-01`;
     let next = permissionBase;
@@ -310,21 +331,30 @@ export async function preflightDirectAzureRelease(
       "app_write_permission_missing",
     );
     receipt.checks.effectiveWrite = true;
+  });
 
-    const app = await arm(targetId, API_VERSION, APP_QUERY, "", "app_read_failed");
-    const revisionName = validateDirectApp(app, input);
+  let app;
+  let revisionName;
+  await checkIndependently(async () => {
+    app = await arm(targetId, API_VERSION, APP_QUERY, "", "app_read_failed");
+    revisionName = validateDirectApp(app, input);
     receipt.rollbackRevision = revisionName;
     receipt.checks.targetAndConfig = true;
-    const revision = await arm(
-      `${targetId}/revisions/${revisionName}`,
-      API_VERSION,
-      REVISION_QUERY,
-      "",
-      "revision_read_failed",
-    );
-    validateDirectRevision(revision, input, revisionName);
-    receipt.checks.rollbackRevision = true;
+  });
+  if (revisionName)
+    await checkIndependently(async () => {
+      const revision = await arm(
+        `${targetId}/revisions/${revisionName}`,
+        API_VERSION,
+        REVISION_QUERY,
+        "",
+        "revision_read_failed",
+      );
+      validateDirectRevision(revision, input, revisionName);
+      receipt.checks.rollbackRevision = true;
+    });
 
+  await checkIndependently(async () => {
     const health = await getJson(fetcher, `${input.origin}/api/health`);
     const version = await getJson(fetcher, `${input.origin}/api/version`);
     valid(
@@ -338,13 +368,15 @@ export async function preflightDirectAzureRelease(
       "public_build_mismatch",
     );
     receipt.checks.publicBuild = true;
-    const stable = await arm(targetId, API_VERSION, APP_QUERY, "", "app_reread_failed");
-    valid(JSON.stringify(stable) === JSON.stringify(app), "target_changed_during_preflight");
-    receipt.checks.stableTarget = true;
-    receipt.status = "READY_FOR_SEPARATE_DEPLOY_REVIEW";
-  } catch (error) {
-    receipt.failureCode = safeCode(error);
-  }
+  });
+
+  if (app)
+    await checkIndependently(async () => {
+      const stable = await arm(targetId, API_VERSION, APP_QUERY, "", "app_reread_failed");
+      valid(JSON.stringify(stable) === JSON.stringify(app), "target_changed_during_preflight");
+      receipt.checks.stableTarget = true;
+    });
+  if (receipt.failureCodes.length === 0) receipt.status = "READY_FOR_SEPARATE_DEPLOY_REVIEW";
   return receipt;
 }
 

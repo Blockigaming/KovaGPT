@@ -88,6 +88,7 @@ function fixture({
   revisionValue = revision,
   permission = true,
   publicSha = currentSha,
+  accountId = subscription,
 } = {}) {
   const calls = [];
   let appReads = 0;
@@ -97,7 +98,7 @@ function fixture({
       return {
         ok: true,
         stdout: JSON.stringify({
-          id: subscription,
+          id: accountId,
           tenantId: "18a67414-b56e-4b79-8dc8-435494fcc9be",
         }),
       };
@@ -158,12 +159,61 @@ test("exact live rollback target, direct ingress and effective write permission 
   assert.ok(f.calls.every((args) => args[0] === "account" || args.includes("get")));
 });
 
-test("OIDC without resource-scoped write permission blocks before reading app or changing Azure", async () => {
+test("missing resource-scoped write permission still checks app, rollback and public build", async () => {
   const f = fixture({ permission: false });
   const receipt = await preflightDirectAzureRelease(input, f);
   assert.equal(receipt.failureCode, "direct_preflight_app_write_permission_missing");
+  assert.deepEqual(receipt.failureCodes, ["direct_preflight_app_write_permission_missing"]);
   assert.equal(receipt.status, "BLOCKED");
-  assert.equal(f.calls.length, 2);
+  assert.equal(f.calls.length, 5);
+  assert.deepEqual(receipt.checks, {
+    account: true,
+    effectiveWrite: false,
+    targetAndConfig: true,
+    rollbackRevision: true,
+    publicBuild: true,
+    stableTarget: true,
+  });
+  assert.equal(receipt.azureMutations, 0);
+});
+
+test("independent checks report role, rollback-mode and public-build blockers together", async () => {
+  const single = structuredClone(app);
+  single.mode = "Single";
+  single.containers[0].env.push({
+    name: "UNRELATED_PRIVATE_VALUE",
+    value: "never-emit-second-secret",
+  });
+  const f = fixture({ permission: false, appValue: single, publicSha: "e".repeat(40) });
+  const receipt = await preflightDirectAzureRelease(input, f);
+  assert.deepEqual(receipt.failureCodes, [
+    "direct_preflight_app_write_permission_missing",
+    "direct_preflight_rollback_mode_not_multiple",
+    "direct_preflight_public_build_mismatch",
+  ]);
+  assert.equal(receipt.checks.stableTarget, true);
+  assert.equal(receipt.checks.rollbackRevision, false);
+  assert.doesNotMatch(JSON.stringify(receipt), /never-emit-second-secret/);
+  assert.equal(receipt.azureMutations, 0);
+  assert.ok(f.calls.every((args) => args[0] === "account" || args.includes("get")));
+});
+
+test("wrong Azure account stops all resource reads", async () => {
+  const f = fixture({
+    accountId:
+      "f".repeat(8) +
+      "-" +
+      "f".repeat(4) +
+      "-" +
+      "f".repeat(4) +
+      "-" +
+      "f".repeat(4) +
+      "-" +
+      "f".repeat(12),
+  });
+  const receipt = await preflightDirectAzureRelease(input, f);
+  assert.deepEqual(receipt.failureCodes, ["direct_preflight_azure_account_mismatch"]);
+  assert.equal(f.calls.length, 1);
 });
 
 test("single revision, wrong provider references and changed rollback traffic all fail closed", async () => {
