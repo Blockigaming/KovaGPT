@@ -19,8 +19,12 @@ Select current `main` and provide:
 
 The protected `production` environment uses the existing OIDC identity. The
 script checks its actual subscription and tenant, then asks that already
-authenticated Azure CLI session for an ARM access token. It validates the
-token's tenant, audience, protected client ID and expiry and records only its
+authenticated Azure CLI session for an ARM access token using only the
+subscription selector. Azure CLI currently rejects `--subscription` and
+`--tenant` together ([upstream issue](https://github.com/Azure/azure-cli/issues/32755));
+the already checked account and the token claims independently fence the
+tenant. The script validates the token's tenant, audience, protected client ID
+and expiry and records only its
 service-principal object ID in the receipt. This script holds the returned
 token in process memory and never writes it to a file, log or artifact; Azure
 CLI manages its own authenticated session. The decoded claims are a
@@ -34,10 +38,13 @@ Healthy rollback revision with the reviewed digest, 100% traffic to that
 revision, both public build endpoints, and unchanged app metadata on a second
 read. The only output is a sanitized receipt with check booleans and a stable
 failure code. No environment values, secret URIs, access token or Azure error
-response are printed or uploaded. A missing effective write permission is recorded as a
-blocker, while independent read-only app, rollback and public-build checks
-continue. The receipt lists sanitized `failureCodes`; it remains `BLOCKED`
-until every check passes. An account or tenant mismatch stops resource reads.
+response are printed or uploaded. A missing or invalid token sets only
+`principalDiagnosticCode` and leaves the optional `principalObjectId` null;
+it does not affect release readiness. A missing effective write permission is
+recorded as a blocker, while independent read-only app, rollback and
+public-build checks continue. The receipt lists sanitized `failureCodes`; it
+remains `BLOCKED` until every release check passes. An account or tenant
+mismatch stops resource reads.
 
 `Multiple` revision mode is required because a known-good active rollback
 revision must remain available for a controlled traffic return. If the app is
