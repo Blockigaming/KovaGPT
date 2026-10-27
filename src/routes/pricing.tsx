@@ -282,6 +282,13 @@ function PricingPage() {
           />
         </section>
 
+        <p className="mx-auto mt-8 max-w-2xl text-center text-sm leading-6 text-muted-foreground">
+          Plus and Pro are eligible for one-shot hosted Agent and approved-public-page Browser tasks
+          in Work when the OpenAI service is configured and available. Usage limits apply.
+          Interactive Work browser runs are currently unavailable. Paying OpenAI separately does not
+          change your Kova plan.
+        </p>
+
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-5 text-muted-foreground">
           Stripe hosts checkout. Confirm the introductory discount eligibility, first-month amount,
           regular renewal price and date, tax, and available payment methods before purchase.

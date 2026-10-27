@@ -209,6 +209,10 @@ test("pricing routes signed-in paid CTAs to canonical checkout and guests to sig
         : ["sign-in", "sign-in", "sign-in", "sign-in"],
     );
     assert.match(f.text(), /Stripe Checkout confirms eligibility/);
+    assert.match(f.text(), /Plus and Pro are eligible for one-shot hosted Agent/);
+    assert.match(f.text(), /approved-public-page Browser tasks/);
+    assert.match(f.text(), /Interactive Work browser runs are currently unavailable/);
+    assert.match(f.text(), /Paying OpenAI separately does not change your Kova plan/);
     assert.match(f.text(), /Existing trials and subscriptions keep their current terms/);
     assert.match(f.text(), /New subscriptions do not receive a free trial/);
     assert.doesNotMatch(
