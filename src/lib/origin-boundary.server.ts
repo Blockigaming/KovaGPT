@@ -71,7 +71,7 @@ export function enforceAzureProductionOriginBoundary(
     const target = new URL(request.url);
     const authority = new URL(origin).host;
     // ACA overwrites X-Forwarded-Proto. Do not accept caller-selected hosts or
-    // forwarded-host chains; only this app's explicitly configured Azure FQDN.
+    // forwarded-host chains; only the one explicitly configured public authority.
     if (
       request.headers.get("x-forwarded-proto") !== "https" ||
       target.host !== authority ||
@@ -82,7 +82,7 @@ export function enforceAzureProductionOriginBoundary(
     )
       return forbidden();
     // A browser's same-site signal can include a different Azure tenant. For
-    // mutations, require the exact app origin whenever an Origin is supplied.
+    // mutations, require the exact canonical origin whenever an Origin is supplied.
     // Originless provider callbacks still reach their signature/auth guards.
     if (
       ["POST", "PUT", "PATCH", "DELETE"].includes(request.method) &&
