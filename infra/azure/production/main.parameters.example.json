@@ -116,6 +116,9 @@
     "stripeBillingPortalConfigurationId": {
       "value": "bpc_1UB2ZxAEZlsb6DBYU3PoJJPU"
     },
+    "billingReturnOrigin": {
+      "value": ""
+    },
     "stripeLiveApiKeySecretUri": {
       "value": ""
     },

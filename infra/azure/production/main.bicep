@@ -102,6 +102,14 @@ param stripeLiveAccountId string = 'acct_1UAeDgAEZlsb6DBY'
 ])
 param stripeBillingPortalConfigurationId string = 'bpc_1UB2ZxAEZlsb6DBYU3PoJJPU'
 
+@description('Exact server-selected Checkout and Portal return origin. Empty keeps billing returns unavailable; select the direct Azure origin while Cloudflare is out of path.')
+@allowed([
+  ''
+  'https://kovagpt.com'
+  'https://kovagpt-prod-web.purpleglacier-b10c3746.eastus.azurecontainerapps.io'
+])
+param billingReturnOrigin string = ''
+
 @description('Versioned existing Key Vault URI for STRIPE_LIVE_API_KEY; leave empty while unconfigured.')
 @secure()
 param stripeLiveApiKeySecretUri string = ''
@@ -407,6 +415,10 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
             {
               name: 'STRIPE_BILLING_PORTAL_CONFIGURATION_ID'
               value: stripeBillingPortalConfigurationId
+            }
+            {
+              name: 'KOVA_BILLING_RETURN_ORIGIN'
+              value: billingReturnOrigin
             }
             {
               name: 'NODE_ENV'

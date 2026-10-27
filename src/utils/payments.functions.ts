@@ -6,7 +6,7 @@ import {
   monthlyIntroBillingEnabled,
 } from "@/lib/stripe.server";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
-import { CHECKOUT_RETURN_URL } from "@/lib/checkout-return-url.mjs";
+import { billingReturnOriginConfigured, billingReturnUrls } from "@/lib/checkout-return-url.mjs";
 import { parseCheckoutRequest } from "@/lib/checkout-request.mjs";
 import { BILLING_ENV, BILLING_PLANS, resolveBillingPlan } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -70,7 +70,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         email: customerEmail,
         plan,
         couponId: process.env.STRIPE_MONTHLY_INTRO_COUPON_ID,
-        returnUrl: CHECKOUT_RETURN_URL,
+        returnUrl: billingReturnUrls(process.env.KOVA_BILLING_RETURN_ORIGIN).checkout,
       });
 
       if (!session.client_secret) {
@@ -149,7 +149,7 @@ export const createPortalSession = createServerFn({ method: "POST" })
         customer: mapping.customerId,
         configuration,
         // The browser cannot choose an arbitrary post-portal redirect.
-        return_url: "https://kovagpt.com/",
+        return_url: billingReturnUrls(process.env.KOVA_BILLING_RETURN_ORIGIN).portal,
       });
       const portalUrl = parseAllowedBillingPortalUrl(portal.url);
       if (!portalUrl) {
@@ -270,7 +270,11 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       cancelAtPeriodEnd,
       trialing,
       hasBillingAccount,
-      billingPortalAvailable: hasBillingAccount && !!billingPortalConfigurationId(),
+      billingPortalAvailable:
+        hasBillingAccount &&
+        monthlyPolicy &&
+        !!billingPortalConfigurationId() &&
+        billingReturnOriginConfigured(process.env.KOVA_BILLING_RETURN_ORIGIN),
     };
   });
 

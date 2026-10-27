@@ -121,7 +121,9 @@ export function verifyStripeTestPath({
     failures.push("Checkout parameters use an unsafe type assertion");
   if (
     !(
-      policyAdapter ? /returnUrl:\s*CHECKOUT_RETURN_URL/u : /return_url:\s*CHECKOUT_RETURN_URL/u
+      policyAdapter
+        ? /returnUrl:\s*billingReturnUrls\(process\.env\.KOVA_BILLING_RETURN_ORIGIN\)\.checkout/u
+        : /return_url:\s*CHECKOUT_RETURN_URL/u
     ).test(checkoutSource)
   )
     failures.push("fixed Checkout return URL missing");
