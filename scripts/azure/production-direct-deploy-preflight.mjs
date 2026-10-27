@@ -35,7 +35,6 @@ export function validateDirectPreflightInput(input) {
       /^[a-z0-9]+(?:[._/-][a-z0-9]+)*$/u.test(input.imageRepository ?? ""),
     "registry_invalid",
   );
-  valid(UUID.test(input.azureClientId ?? ""), "azure_client_id_invalid");
   let origin;
   try {
     origin = new URL(input.origin);
@@ -58,6 +57,7 @@ export function validateDirectPreflightInput(input) {
 // session. This does not independently verify the token's signature or approve
 // any role assignment. The credential itself must never leave process memory.
 export function identifyArmPrincipalObjectId(value, azureClientId, now = Date.now()) {
+  valid(UUID.test(azureClientId ?? ""), "azure_client_id_invalid");
   valid(
     value?.tokenType === "Bearer" &&
       value.subscription?.toLowerCase() === TARGET.subscription &&
@@ -281,6 +281,7 @@ export async function preflightDirectAzureRelease(
     status: "BLOCKED",
     rollbackRevision: null,
     principalObjectId: null,
+    principalDiagnosticCode: null,
     checks: {
       account: false,
       principalIdentity: false,
@@ -349,14 +350,15 @@ export async function preflightDirectAzureRelease(
     return receipt;
   }
 
-  await checkIndependently(async () => {
+  // The Azure CLI rejects --subscription and --tenant together. The account
+  // was already fenced to both values above; the token claims are checked too.
+  try {
+    valid(UUID.test(input.azureClientId ?? ""), "azure_client_id_invalid");
     const result = await run([
       "account",
       "get-access-token",
       "--subscription",
       TARGET.subscription,
-      "--tenant",
-      TARGET.tenant,
       "--resource",
       `${ARM}/`,
     ]);
@@ -369,7 +371,11 @@ export async function preflightDirectAzureRelease(
     }
     receipt.principalObjectId = identifyArmPrincipalObjectId(token, input.azureClientId);
     receipt.checks.principalIdentity = true;
-  });
+  } catch (error) {
+    // Identity enrichment supports an independently reviewed role proposal.
+    // Its absence does not change the release readiness result.
+    receipt.principalDiagnosticCode = safeCode(error);
+  }
 
   // A missing write role must not hide independent read-only app, rollback or
   // public-build findings. Every check below remains incapable of mutation.
