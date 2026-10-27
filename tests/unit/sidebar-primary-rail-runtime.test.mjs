@@ -86,7 +86,7 @@ function fixture(options = {}) {
         "RailTooltip",
         "TooltipProvider",
         "NovaLogo",
-        "Plus",
+        "NewChatGlyph",
         "SearchGlyph",
         "MessageSquare",
         "ProjectsGlyph",

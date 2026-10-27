@@ -1,22 +1,19 @@
 import type { Dispatch, SetStateAction } from "react";
-import { ArrowUpRight, Columns2, FileText, PenLine } from "lucide-react";
+import { Columns2, FileText, PenLine } from "lucide-react";
 
 const EMPTY_STATE_STARTERS = [
   {
     label: "Write something",
-    description: "Find the right words",
     prompt: "Help me write ",
     icon: PenLine,
   },
   {
     label: "Summarize a file",
-    description: "Get to the key points",
     prompt: "Summarize the file I attach, highlighting its key points and any important caveats.",
     icon: FileText,
   },
   {
     label: "Compare options",
-    description: "See the trade-offs clearly",
     prompt:
       "Compare these options, including their benefits, drawbacks, and important trade-offs:\n\n",
     icon: Columns2,
@@ -31,7 +28,7 @@ const EMPTY_STATE_STARTERS = [
 export function HomeChatStarters({ setInput }: { setInput: Dispatch<SetStateAction<string>> }) {
   return (
     <div className="spec400-starter-actions" aria-label="Start a draft">
-      {EMPTY_STATE_STARTERS.map(({ label, description, prompt, icon: Icon }) => (
+      {EMPTY_STATE_STARTERS.map(({ label, prompt, icon: Icon }) => (
         <button
           key={label}
           type="button"
@@ -50,11 +47,7 @@ export function HomeChatStarters({ setInput }: { setInput: Dispatch<SetStateActi
           <span className="kova-home-starter-icon">
             <Icon aria-hidden="true" />
           </span>
-          <span className="kova-home-starter-copy">
-            <strong>{label}</strong>
-            <small>{description}</small>
-          </span>
-          <ArrowUpRight className="kova-home-starter-arrow" aria-hidden="true" />
+          <span className="kova-home-starter-copy">{label}</span>
         </button>
       ))}
     </div>

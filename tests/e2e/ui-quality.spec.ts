@@ -149,14 +149,19 @@ test("empty workspace remains contained and composer focus is deliberate", async
     await expect(attach).toBeFocused();
   }
 
-  const starterLayout = await page.locator(".spec400-starter-actions").evaluate((grid) => {
-    const style = getComputedStyle(grid);
-    const visibleLabels = Array.from(grid.querySelectorAll(".kova-home-starter-copy"))
+  const starterActions = page.locator(".spec400-starter-actions");
+  await expect(starterActions.locator("strong, small, .kova-home-starter-arrow")).toHaveCount(0);
+  await expect(page.locator(".kova-home-eyebrow")).toHaveCount(0);
+  const starterLayout = await starterActions.evaluate((container) => {
+    const style = getComputedStyle(container);
+    const visibleLabels = Array.from(container.querySelectorAll(".kova-home-starter-copy"))
       .filter((label) => (label as HTMLElement).offsetParent !== null)
       .map((label) => {
         const box = label.getBoundingClientRect();
-        const target = label.closest("button")!.getBoundingClientRect();
+        const button = label.closest("button")!;
+        const target = button.getBoundingClientRect();
         return {
+          text: label.textContent?.trim(),
           clientWidth: label.clientWidth,
           scrollWidth: label.scrollWidth,
           left: box.left,
@@ -170,18 +175,28 @@ test("empty workspace remains contained and composer focus is deliberate", async
             bottom: target.bottom,
             width: target.width,
             height: target.height,
+            radius: Number.parseFloat(getComputedStyle(button).borderTopLeftRadius),
           },
         };
       });
     return {
       display: style.display,
-      columns: style.gridTemplateColumns.split(/\s+/).length,
+      flexWrap: style.flexWrap,
+      justifyContent: style.justifyContent,
+      gap: style.gap,
       visibleLabels,
     };
   });
-  expect(starterLayout.display).toBe("grid");
-  expect(starterLayout.columns).toBe(page.viewportSize()!.width <= 600 ? 1 : 3);
+  expect(starterLayout.display).toBe("flex");
+  expect(starterLayout.flexWrap).toBe("wrap");
+  expect(starterLayout.justifyContent).toBe("center");
+  expect(starterLayout.gap).toBe("8px");
   expect(starterLayout.visibleLabels).toHaveLength(3);
+  expect(starterLayout.visibleLabels.map((label) => label.text)).toEqual([
+    "Write something",
+    "Summarize a file",
+    "Compare options",
+  ]);
   for (const label of starterLayout.visibleLabels) {
     expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth + 1);
     expect(label.left).toBeGreaterThanOrEqual(label.target.left);
@@ -190,6 +205,8 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(label.bottom).toBeLessThanOrEqual(label.target.bottom);
     expect(label.target.width).toBeGreaterThanOrEqual(44);
     expect(label.target.height).toBeGreaterThanOrEqual(44);
+    expect(label.target.height).toBeCloseTo(44, 1);
+    expect(label.target.radius).toBeGreaterThanOrEqual(label.target.height / 2);
   }
   await input.clear();
   await page.getByRole("button", { name: "Start with Write something", exact: true }).click();

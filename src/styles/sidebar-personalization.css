@@ -260,24 +260,24 @@
   height: 20px;
 }
 
-/* Main assistant navigation: a quiet surface, with contrast reserved for New chat.
+/* Main assistant navigation: the unfilled compose action and quiet history of ChatGPT.
    Width, drawer visibility and scrolling remain owned by the shared sidebar. */
-.kova-assistant {
-  --chat-nav-surface: #f5f5f3;
-  --chat-nav-hover: rgb(22 24 28 / 5%);
-  --chat-nav-selected: rgb(22 24 28 / 7%);
-  --chat-nav-muted: #686b70;
-  --chat-nav-line: rgb(22 24 28 / 7%);
+.kova-assistant[data-ui="modern"] {
+  --chat-nav-surface: #f9f9f9;
+  --chat-nav-hover: rgb(0 0 0 / 5%);
+  --chat-nav-selected: rgb(0 0 0 / 7%);
+  --chat-nav-muted: #676767;
+  --chat-nav-line: rgb(0 0 0 / 7%);
 }
-.dark .kova-assistant {
-  --chat-nav-surface: #17181a;
+.dark .kova-assistant[data-ui="modern"] {
+  --chat-nav-surface: #171717;
   --chat-nav-hover: rgb(255 255 255 / 5%);
   --chat-nav-selected: rgb(255 255 255 / 8%);
-  --chat-nav-muted: #a0a3aa;
+  --chat-nav-muted: #a3a3a3;
   --chat-nav-line: rgb(255 255 255 / 6%);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -289,7 +289,7 @@ body
   stroke-width: 1.7;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -300,7 +300,7 @@ body
   stroke-width: 1.7;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -309,7 +309,7 @@ body
   color: var(--chat-nav-muted);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -319,7 +319,7 @@ body
   color: var(--foreground);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -328,7 +328,7 @@ body
   color: var(--foreground);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -337,7 +337,7 @@ body
   content: none;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -348,7 +348,7 @@ body
   letter-spacing: -0.04em;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -359,7 +359,7 @@ body
   height: 26px;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -369,110 +369,110 @@ body
   gap: 3px;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row {
   gap: 12px !important;
   padding-inline: 12px !important;
   font-size: 14px !important;
   font-weight: 400;
-  color: var(--chat-nav-muted);
-  border-radius: 12px;
+  color: var(--foreground);
+  border-radius: 10px;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row:is(:hover, .is-active) {
   background: var(--chat-nav-hover);
   color: var(--foreground);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row.is-active {
   background: var(--chat-nav-selected) !important;
   font-weight: 500;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row.is-active::before {
   content: none;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row.kova-new-chat {
   justify-content: flex-start;
-  margin-bottom: 12px;
-  padding-inline: 16px !important;
-  border: 1px solid var(--chat-nav-line);
-  border-radius: var(--kova-radius-button);
-  background: var(--foreground);
-  color: var(--assistant-accent-ink, var(--background));
+  margin-bottom: 0;
+  padding-inline: 12px !important;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
   font-weight: 500;
-  box-shadow: 0 2px 5px rgb(0 0 0 / 5%);
+  box-shadow: none;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row.kova-new-chat:hover {
-  background: color-mix(in srgb, var(--foreground) 90%, var(--chat-nav-surface));
-  color: var(--assistant-accent-ink, var(--background));
+  background: var(--chat-nav-hover);
+  color: var(--foreground);
   filter: none;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-history {
   margin-top: 8px;
   padding-inline: 12px;
-  border-top: 1px solid var(--chat-nav-line);
+  border-top: 0;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-history
   h2 {
-  color: var(--chat-nav-muted);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.035em;
-  text-transform: none;
+  color: var(--chat-nav-muted) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   :is(.kova-sidebar-empty, .kova-account-copy small) {
   color: var(--chat-nav-muted);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-empty {
   font-size: 12px;
   line-height: 1.65;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-chat-row-main {
   font-size: 13px;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-help {
   padding: 8px 12px 0;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-footer {
   padding-inline: 12px;
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -481,7 +481,7 @@ body
   background: var(--chat-nav-hover);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -490,7 +490,7 @@ body
   background: var(--chat-nav-selected);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -500,7 +500,7 @@ body
   background: var(--chat-nav-hover);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -509,7 +509,7 @@ body
   border-color: var(--ring);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -518,7 +518,7 @@ body
   background: var(--chat-nav-surface);
 }
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -526,9 +526,11 @@ body
   .kova-sidebar-header {
   padding-inline: 16px 6px;
 }
-body .kova-assistant .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
 body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
+body
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
   --sidebar-hover: var(--chat-nav-hover);
   --sidebar-active: var(--chat-nav-selected);
@@ -537,11 +539,11 @@ body
 }
 .dark
   body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
 .dark
   body
-  .kova-assistant
+  .kova-assistant[data-ui="modern"]
   .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
   background: var(--chat-nav-surface) !important;
 }

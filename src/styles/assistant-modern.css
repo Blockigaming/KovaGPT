@@ -1,15 +1,15 @@
-/* Main assistant presentation. Existing interaction and responsive contracts
-   stay in their component styles; this scope does not restyle other routes. */
+/* Claude's quiet writing surface and serif greeting; ChatGPT's compact tools,
+   navigation and conversation rhythm. Component styles retain behavior. */
 body:has(.kova-assistant[data-ui="modern"]),
 .kova-assistant[data-ui="modern"] {
-  --assistant-canvas: #fafaf9;
+  --assistant-canvas: #faf9f5;
   --assistant-panel: #f3f3f1;
   --assistant-card: #ffffff;
-  --assistant-line: #e3e3df;
-  --assistant-muted: #686864;
+  --assistant-line: #deddd7;
+  --assistant-muted: #64645f;
   --assistant-focus: #555b65;
   --background: var(--assistant-canvas);
-  --foreground: #242522;
+  --foreground: #242424;
   --card: var(--assistant-card);
   --card-foreground: var(--foreground);
   --popover: var(--assistant-card);
@@ -34,9 +34,11 @@ body:has(.kova-assistant[data-ui="modern"]),
   --input: var(--assistant-line);
   --text-secondary: var(--assistant-muted);
   --border-subtle: var(--assistant-line);
-  --user-bubble: #000000;
-  --modern-shadow: 0 8px 32px #24252206, 0 2px 6px #24252203;
-  --chat-body-font: "Kova DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --user-bubble: #efeeea;
+  --modern-shadow: 0 2px 8px #24252208;
+  --chat-body-font:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --chat-greeting-font: Georgia, "Times New Roman", serif;
   --font-sans: var(--chat-body-font);
   --font-display: var(--chat-body-font);
   font-family: var(--chat-body-font);
@@ -46,19 +48,19 @@ body:has(.kova-assistant[data-ui="modern"]),
 
 .dark body:has(.kova-assistant[data-ui="modern"]),
 .dark .kova-assistant[data-ui="modern"] {
-  --assistant-canvas: #1c1d1f;
-  --assistant-panel: #17181a;
-  --assistant-card: #252629;
-  --assistant-line: #37383b;
-  --assistant-muted: #a2a4aa;
+  --assistant-canvas: #212121;
+  --assistant-panel: #171717;
+  --assistant-card: #303030;
+  --assistant-line: #454545;
+  --assistant-muted: #b4b4b4;
   --assistant-focus: #c3c7d0;
-  --foreground: #eeefef;
-  --muted: #2c2d30;
-  --accent: #303135;
-  --sidebar-hover: #242528;
-  --sidebar-active: #2b2c30;
-  --user-bubble: #303135;
-  --modern-shadow: 0 10px 40px #00000018, 0 2px 8px #0000000d;
+  --foreground: #ececec;
+  --muted: #363636;
+  --accent: #3b3b3b;
+  --sidebar-hover: #242424;
+  --sidebar-active: #2b2b2b;
+  --user-bubble: #303030;
+  --modern-shadow: none;
 }
 
 .kova-assistant[data-ui="modern"] .kova-chat-main {
@@ -71,9 +73,17 @@ body:has(.kova-assistant[data-ui="modern"]),
 }
 
 .kova-assistant[data-ui="modern"] .kova-desktop-topbar {
-  height: 72px !important;
-  min-height: 72px !important;
-  padding-inline: 28px;
+  height: 56px !important;
+  min-height: 56px !important;
+  padding-inline: 20px;
+}
+
+.kova-assistant[data-ui="modern"]
+  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
+  .kova-sidebar-header {
+  height: calc(56px + var(--safe-top));
+  min-height: calc(56px + var(--safe-top));
+  padding-block: calc(6px + var(--safe-top)) 6px;
 }
 
 .kova-assistant[data-ui="modern"] .spec400-chat-title {
@@ -95,31 +105,22 @@ body:has(.kova-assistant[data-ui="modern"]),
   max-width: 760px;
   margin-block: auto;
   padding-block: 48px !important;
-  transform: translateY(-24px);
 }
 
 .kova-assistant[data-ui="modern"] section.kova-empty-chat .kova-greeting {
-  align-items: flex-start;
-  gap: 14px;
-  margin-bottom: 32px;
-}
-
-.kova-assistant[data-ui="modern"] .kova-home-eyebrow {
-  display: block;
-  color: var(--assistant-muted);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.015em;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 28px;
 }
 
 .kova-assistant[data-ui="modern"] section.kova-empty-chat .kova-greeting h1 {
   padding: 0;
-  font-family: var(--chat-body-font);
+  font-family: var(--chat-greeting-font);
   font-size: clamp(30px, 3vw, 42px);
-  font-weight: 500;
-  line-height: 1.18;
-  letter-spacing: -0.045em !important;
-  text-align: left;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.025em !important;
+  text-align: center;
 }
 
 .kova-assistant[data-ui="modern"] .spec400-composer {
@@ -190,7 +191,7 @@ body:has(.kova-assistant[data-ui="modern"]),
 .kova-assistant[data-ui="modern"] .spec400-send-button:not(:disabled) {
   background: var(--foreground);
   color: var(--assistant-canvas);
-  box-shadow: 0 2px 4px #00000012;
+  box-shadow: none;
 }
 
 .kova-assistant[data-ui="modern"] .spec400-send-button:disabled {
@@ -199,78 +200,56 @@ body:has(.kova-assistant[data-ui="modern"]),
 }
 
 .kova-assistant[data-ui="modern"] .spec400-starter-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
 }
 
 .kova-assistant[data-ui="modern"] .spec400-starter-actions .kova-home-starter {
-  position: relative;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 14px;
+  flex: 0 1 auto;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  min-height: 112px;
-  padding: 16px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
   border: 1px solid var(--assistant-line);
-  border-radius: 20px;
+  border-radius: 999px;
   background: transparent;
-  text-align: left;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease;
+  color: var(--assistant-muted);
+  text-align: center;
+  transition: background-color 120ms ease;
 }
 
 .kova-assistant[data-ui="modern"] .kova-home-starter:hover {
-  background: var(--assistant-card);
-  border-color: color-mix(in srgb, var(--foreground) 22%, var(--assistant-line));
+  background: var(--muted);
+  color: var(--foreground);
 }
 
 .kova-assistant[data-ui="modern"] .kova-home-starter-icon {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 18px;
+  height: 18px;
   flex: none;
   place-items: center;
   color: var(--assistant-muted);
 }
 
 .kova-assistant[data-ui="modern"] .kova-home-starter-icon svg {
-  width: 20px;
-  height: 20px;
-  stroke-width: 1.6;
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.75;
 }
 
 .kova-assistant[data-ui="modern"] .kova-home-starter-copy {
-  display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: 5px;
-  padding-top: 4px;
-  padding-right: 4px;
-}
-
-.kova-assistant[data-ui="modern"] .kova-home-starter-copy strong {
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
-}
-
-.kova-assistant[data-ui="modern"] .kova-home-starter-copy small {
-  color: var(--assistant-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.kova-assistant[data-ui="modern"] .kova-home-starter .kova-home-starter-arrow {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  width: 14px;
-  height: 14px;
-  color: var(--assistant-muted);
-  opacity: 0.6;
 }
 
 .kova-assistant[data-ui="modern"] .spec400-capability-note {
@@ -293,20 +272,12 @@ body:has(.kova-assistant[data-ui="modern"]),
 }
 
 .kova-assistant[data-ui="modern"] :is(.kova-sidebar, .kova-sidebar-rail) {
-  --font-sans: "Kova DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--chat-body-font);
 }
 
 @media (max-width: 1023px) {
   .kova-assistant[data-ui="modern"] section.kova-empty-chat > div.kova-empty-chat-content {
     max-width: 680px;
-    transform: none;
-  }
-  .kova-assistant[data-ui="modern"] .kova-home-eyebrow {
-    display: none;
-  }
-  .kova-assistant[data-ui="modern"] .spec400-starter-actions .kova-home-starter {
-    gap: 8px;
-    padding: 12px;
   }
 }
 
@@ -322,31 +293,15 @@ body:has(.kova-assistant[data-ui="modern"]),
     margin-bottom: 24px;
   }
   .kova-assistant[data-ui="modern"] section.kova-empty-chat .kova-greeting h1 {
-    max-width: 290px;
+    max-width: 100%;
     font-size: 30px;
     line-height: 1.2;
   }
   .kova-assistant[data-ui="modern"] .spec400-composer {
     padding: 12px;
   }
-  .kova-assistant[data-ui="modern"] .spec400-starter-actions {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
   .kova-assistant[data-ui="modern"] .spec400-starter-actions .kova-home-starter {
-    align-items: center;
-    gap: 12px;
-    min-height: 62px;
-    padding: 10px 14px;
-    border-radius: 16px;
-  }
-  .kova-assistant[data-ui="modern"] .kova-home-starter-copy {
-    gap: 1px;
-    padding: 0 20px 0 0;
-  }
-  .kova-assistant[data-ui="modern"] .kova-home-starter .kova-home-starter-arrow {
-    top: calc(50% - 7px);
-    bottom: auto;
+    padding-inline: 14px;
   }
   .kova-assistant[data-ui="modern"] .spec400-capability-note {
     margin-top: 18px;
@@ -356,7 +311,6 @@ body:has(.kova-assistant[data-ui="modern"]),
 @media (max-height: 700px) {
   .kova-assistant[data-ui="modern"] section.kova-empty-chat > div.kova-empty-chat-content {
     margin-block: 0;
-    transform: none;
   }
 }
 
@@ -384,8 +338,7 @@ body:has(.kova-assistant[data-ui="modern"]),
   }
 }
 
-/* Conversation prompts keep their established light/dark colors, while a
-   content-sized bubble separates the user's turn from the full-width reply. */
+/* ChatGPT's compact gray prompt bubble and unboxed assistant reading column. */
 .kova-assistant[data-ui="modern"] .kova-user-message-group {
   align-items: flex-end;
   max-width: 100%;
@@ -395,6 +348,8 @@ body:has(.kova-assistant[data-ui="modern"]),
   width: fit-content;
   max-width: min(88%, 42rem);
   overflow-wrap: anywhere;
+  color: var(--foreground);
+  border-color: transparent;
 }
 
 /* Copyable writing and code use the same raised surface as the composer.

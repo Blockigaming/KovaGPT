@@ -14,7 +14,6 @@ import {
 } from "@/components/SidebarIcons";
 import {
   Archive,
-  Plus,
   MessageSquare,
   ChevronDown,
   BarChart3,
@@ -1159,7 +1158,7 @@ export function Sidebar({
                     className="kova-rail-button kova-new-chat"
                     aria-label="New chat"
                   >
-                    <Plus aria-hidden="true" />
+                    <NewChatGlyph aria-hidden="true" />
                   </button>
                 </RailTooltip>
                 <RailTooltip label="Search">
@@ -1315,7 +1314,7 @@ export function Sidebar({
                 className="kova-new-chat kova-nav-row"
                 aria-label="New chat"
               >
-                {icon(Plus)}
+                {icon(NewChatGlyph)}
                 <span>New chat</span>
               </button>
               {onOpenWorkspaceSearch ? (

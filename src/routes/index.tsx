@@ -3278,7 +3278,6 @@ function KovaGPT() {
               >
                 <div className="kova-empty-chat-content flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
                   <div className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6">
-                    <p className="kova-home-eyebrow">Your space to think</p>
                     <h1
                       id="chat-greeting"
                       className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
