@@ -1,4 +1,5 @@
 // Explicit direct Azure ingress configuration. This never reads request headers.
+// The optional production custom domain replaces, rather than expands, the one authority.
 export function parseAzureDirectPublicOrigin(environment) {
   const appName = environment.CONTAINER_APP_NAME;
   const value = environment.KOVA_AZURE_PUBLIC_ORIGIN;
@@ -22,7 +23,10 @@ export function parseAzureDirectPublicOrigin(environment) {
       )
     )
       return null;
-    return origin.origin;
+    const customOrigin = environment.KOVA_AZURE_CUSTOM_PUBLIC_ORIGIN;
+    if (customOrigin === undefined) return origin.origin;
+    if (appName !== "kovagpt-prod-web" || customOrigin !== "https://kovagpt.com") return null;
+    return customOrigin;
   } catch {
     return null;
   }

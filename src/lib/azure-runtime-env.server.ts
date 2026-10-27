@@ -62,7 +62,9 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
     const mode = environment.KOVA_PRODUCTION_ORIGIN_MODE ?? "cloudflare";
     if (mode === "azure-direct") {
       if (!parseAzureDirectPublicOrigin(environment))
-        throw new Error("[env] Azure direct ingress requires its exact HTTPS app origin.");
+        throw new Error(
+          "[env] Azure direct ingress requires its exact HTTPS app origin and, when configured, the approved production custom origin.",
+        );
     } else if (mode !== "cloudflare") {
       throw new Error("[env] Invalid Azure production origin mode.");
     } else if (

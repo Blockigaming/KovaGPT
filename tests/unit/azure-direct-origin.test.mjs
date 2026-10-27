@@ -239,6 +239,22 @@ test("production startup validates the selected origin mode before accepting run
   }));
   const validate = exports.validateAzureRuntimeEnv;
   assert.doesNotThrow(() => validate(env));
+  assert.doesNotThrow(() =>
+    validate({ ...env, KOVA_AZURE_CUSTOM_PUBLIC_ORIGIN: "https://kovagpt.com" }),
+  );
+  assert.throws(
+    () => validate({ ...env, KOVA_AZURE_CUSTOM_PUBLIC_ORIGIN: "https://www.kovagpt.com" }),
+    /approved production custom origin/,
+  );
+  assert.throws(
+    () =>
+      validate({
+        ...env,
+        KOVA_AZURE_CUSTOM_PUBLIC_ORIGIN: "https://kovagpt.com",
+        KOVA_AZURE_PUBLIC_ORIGIN: undefined,
+      }),
+    /exact HTTPS app origin/,
+  );
   assert.throws(
     () => validate({ ...env, KOVA_AZURE_PUBLIC_ORIGIN: "https://attacker.test" }),
     /exact HTTPS app origin/,
@@ -256,5 +272,158 @@ test("production startup validates the selected origin mode before accepting run
       AZURE_ENVIRONMENT: "production",
       KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS: "ab".repeat(32),
     }),
+  );
+});
+
+const customOrigin = "https://kovagpt.com";
+const customEnv = { ...env, KOVA_AZURE_CUSTOM_PUBLIC_ORIGIN: customOrigin };
+const customRequest = (path = "/api/health", headers = {}, options = {}) =>
+  new Request(`${customOrigin}${path}`, {
+    ...options,
+    headers: { "x-forwarded-proto": "https", ...headers },
+  });
+
+test("custom canonical configuration replaces one authority without browser environment inputs", () => {
+  assert.equal(
+    Object.keys(customEnv).some((key) => key.startsWith("VITE_")),
+    false,
+  );
+  assert.equal(parseAzureDirectPublicOrigin(customEnv), customOrigin);
+  assert.equal(parseAzureDirectPublicOrigin(env), origin);
+  assert.equal(
+    parseAzureDirectPublicOrigin({ ...customEnv, VITE_KOVA_AUTH_ORIGIN: "https://attacker.test" }),
+    customOrigin,
+  );
+  for (const value of [
+    "",
+    " ",
+    " https://kovagpt.com",
+    "https://kovagpt.com ",
+    "http://kovagpt.com",
+    "https://www.kovagpt.com",
+    "https://KovaGPT.com",
+    "HTTPS://kovagpt.com",
+    "https://kovagpt.com/",
+    "https://kovagpt.com:443",
+    "https://kovagpt.com:8443",
+    "https://kovagpt.com/path",
+    "https://kovagpt.com?next=1",
+    "https://kovagpt.com#fragment",
+    "https://user:password@kovagpt.com",
+    "https://kovagpt.com.attacker.test",
+    "https://attacker.test",
+    origin,
+    `${customOrigin},${origin}`,
+    null,
+    true,
+  ])
+    assert.equal(
+      parseAzureDirectPublicOrigin({ ...customEnv, KOVA_AZURE_CUSTOM_PUBLIC_ORIGIN: value }),
+      null,
+    );
+  for (const change of [
+    { CONTAINER_APP_NAME: undefined },
+    {
+      CONTAINER_APP_NAME: "different-app",
+      KOVA_AZURE_PUBLIC_ORIGIN: "https://different-app.fixture.eastus.azurecontainerapps.io",
+    },
+    { KOVA_AZURE_PUBLIC_ORIGIN: undefined },
+    { KOVA_AZURE_PUBLIC_ORIGIN: "https://attacker.test" },
+    { KOVA_AZURE_PUBLIC_ORIGIN: "https://other-app.fixture.eastus.azurecontainerapps.io" },
+    { KOVA_AZURE_PUBLIC_ORIGIN: customOrigin },
+  ])
+    assert.equal(parseAzureDirectPublicOrigin({ ...customEnv, ...change }), null);
+});
+
+test("custom mode admits only the selected canonical authority and rejects Azure/forwarded host spoofing", () => {
+  for (const path of ["/", "/api/health", "/api/version", "/api/ai/services", "/api/auth/session"])
+    assert.equal(enforceAzureProductionOriginBoundary(customRequest(path), customEnv), null);
+  assert.equal(enforceAzureProductionOriginBoundary(customRequest(), env).status, 403);
+  for (const incoming of [
+    request(),
+    customRequest("/", { host: new URL(origin).host }),
+    customRequest("/", { "x-forwarded-host": new URL(origin).host }),
+    customRequest("/", { host: "attacker.test" }),
+    customRequest("/", { "x-forwarded-host": "kovagpt.com,attacker.test" }),
+    customRequest("/", { "x-forwarded-proto": "http" }),
+    customRequest("/", { "x-forwarded-proto": "https,http" }),
+    new Request("https://www.kovagpt.com/", { headers: { "x-forwarded-proto": "https" } }),
+    new Request(`${origin}/`, {
+      headers: {
+        "x-forwarded-proto": "https",
+        host: "kovagpt.com",
+        "x-forwarded-host": "kovagpt.com",
+      },
+    }),
+  ]) {
+    const denied = enforceAzureProductionOriginBoundary(incoming, customEnv);
+    assert.equal(denied.status, 403);
+    assert.equal(denied.headers.get("cache-control"), "no-store");
+    assert.throws(() => normalizeAzureProductionRequest(incoming, customEnv), /origin_rejected/);
+  }
+});
+
+test("custom canonical mutations retain exact Origin checking for all mutation methods", () => {
+  for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+    assert.equal(
+      enforceAzureProductionOriginBoundary(
+        customRequest("/api/auth/session", { origin: customOrigin }, { method }),
+        customEnv,
+      ),
+      null,
+    );
+    for (const suppliedOrigin of [
+      origin,
+      "https://www.kovagpt.com",
+      "https://attacker.test",
+      "null",
+      "",
+      `${customOrigin},${customOrigin}`,
+    ]) {
+      const incoming = customRequest(
+        "/api/auth/session",
+        { origin: suppliedOrigin, "sec-fetch-site": "same-site" },
+        { method },
+      );
+      assert.equal(enforceAzureProductionOriginBoundary(incoming, customEnv).status, 403);
+      assert.throws(() => normalizeAzureProductionRequest(incoming, customEnv), /origin_rejected/);
+    }
+  }
+});
+
+test("custom canonical normalization retains body bytes, headers, query, method and cancellation", async () => {
+  const controller = new AbortController();
+  const body = '{ "fixture": [1, 2], "text": "unchanged" }\n';
+  const incoming = new Request("http://kovagpt.com/api/ai/services?mode=1", {
+    method: "POST",
+    headers: {
+      "x-forwarded-proto": "https",
+      host: "kovagpt.com",
+      "x-forwarded-host": "kovagpt.com",
+      origin: customOrigin,
+      authorization: "Bearer fixture",
+      "content-type": "application/json",
+    },
+    body,
+    signal: controller.signal,
+  });
+  assert.equal(enforceAzureProductionOriginBoundary(incoming, customEnv), null);
+  const normalized = normalizeAzureProductionRequest(incoming, customEnv);
+  assert.equal(normalized.url, `${customOrigin}/api/ai/services?mode=1`);
+  assert.equal(normalized.method, "POST");
+  assert.equal(normalized.headers.get("authorization"), "Bearer fixture");
+  assert.equal(normalized.headers.get("origin"), customOrigin);
+  assert.equal(await normalized.text(), body);
+  controller.abort();
+  assert.equal(normalized.signal.aborted, true);
+  const callback = customRequest(
+    "/api/openai/webhook",
+    { "webhook-signature": "fixture-signature" },
+    { method: "POST", body: "{}" },
+  );
+  assert.equal(enforceAzureProductionOriginBoundary(callback, customEnv), null);
+  assert.equal(
+    normalizeAzureProductionRequest(callback, customEnv).headers.get("webhook-signature"),
+    "fixture-signature",
   );
 });

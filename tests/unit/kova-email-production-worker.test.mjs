@@ -397,3 +397,38 @@ test("direct Azure scheduler sends exactly one signed request to the configured 
   }
   assert.equal(calls, 1);
 });
+
+test("direct Azure custom canonical keeps worker and scheduler on the single configured origin", async () => {
+  const configured = {
+    ...directEnv(),
+    KOVA_AZURE_CUSTOM_PUBLIC_ORIGIN: "https://kovagpt.com",
+    KOVA_AUTH_PUBLIC_ORIGIN: "https://kovagpt.com",
+    KOVA_AUTH_ORIGIN: "https://kovagpt.com",
+    KOVA_EMAIL_WORKER_OPERATOR_ENABLED: "true",
+    KOVA_EMAIL_WORKER_SECRET: "synthetic-dedicated-worker-secret-123456789",
+  };
+  assert.equal(productionEmailWorkerConfiguration(configured).publicOrigin, "https://kovagpt.com");
+  for (const change of [
+    { KOVA_AUTH_PUBLIC_ORIGIN: directOrigin },
+    { KOVA_AUTH_ORIGIN: directOrigin },
+    { KOVA_AZURE_CUSTOM_PUBLIC_ORIGIN: "https://www.kovagpt.com" },
+    { KOVA_AZURE_PUBLIC_ORIGIN: undefined },
+  ])
+    assert.throws(
+      () => productionEmailWorkerConfiguration({ ...configured, ...change }),
+      /target_invalid/,
+    );
+  const calls = [];
+  await invokeProductionEmailWorker({
+    env: configured,
+    now: () => at,
+    newId: () => run.runId,
+    fetcher: async (url, options) => {
+      calls.push(url);
+      assert.equal(options.redirect, "error");
+      assert.ok(options.headers["X-Kova-Email-Signature"]);
+      return Response.json({ ok: true, claimed: false, attempted: 0 });
+    },
+  });
+  assert.deepEqual(calls, ["https://kovagpt.com/api/internal/email-dispatch"]);
+});
