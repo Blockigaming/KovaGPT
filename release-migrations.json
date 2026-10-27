@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 193,
-  "latest": "20261021130544_production_owned_email_worker.sql",
+  "count": 194,
+  "latest": "20261027230755_kova_production_subscription_summary_read_only.sql",
   "migrations": [
     {
       "order": 1,
@@ -4042,6 +4042,20 @@
       "rls": [],
       "policies": [],
       "indexes": ["email_worker_runs_expiry"]
+    },
+    {
+      "order": 194,
+      "filename": "20261027230755_kova_production_subscription_summary_read_only.sql",
+      "timestamp": "20261027230755",
+      "sha256": "e6245bcdda7cdbad7d47e166e40ec5ce6d7b0bd9c262264949356c6159f21fc0",
+      "tables": [],
+      "functions": ["user_subscription_summary", "current_subscription_summary"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

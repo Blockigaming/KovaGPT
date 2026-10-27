@@ -4,7 +4,7 @@ import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
 const migration =
-  "supabase/migrations/20261027223130_production_subscription_summary_read_only.sql";
+  "supabase/migrations/20261027230755_kova_production_subscription_summary_read_only.sql";
 const owner = "11111111-1111-4111-8111-111111111111";
 
 async function baseline() {
