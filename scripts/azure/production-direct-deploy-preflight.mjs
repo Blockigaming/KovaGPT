@@ -8,6 +8,7 @@ const APP = "kovagpt-prod-web";
 const ARM = "https://management.azure.com";
 const API_VERSION = "2025-07-01";
 const SHA = /^[a-f0-9]{40}$/u;
+const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/iu;
 const IMAGE =
   /^[a-z0-9][a-z0-9.-]*\.azurecr\.io\/[a-z0-9]+(?:[._/-][a-z0-9]+)*@sha256:[a-f0-9]{64}$/u;
 const APP_QUERY =
@@ -34,6 +35,7 @@ export function validateDirectPreflightInput(input) {
       /^[a-z0-9]+(?:[._/-][a-z0-9]+)*$/u.test(input.imageRepository ?? ""),
     "registry_invalid",
   );
+  valid(UUID.test(input.azureClientId ?? ""), "azure_client_id_invalid");
   let origin;
   try {
     origin = new URL(input.origin);
@@ -50,6 +52,45 @@ export function validateDirectPreflightInput(input) {
     "origin_invalid",
   );
   return { ...input, originHost: origin.hostname };
+}
+
+// Parse only the subject of an ARM token from this already authenticated CLI
+// session. This does not independently verify the token's signature or approve
+// any role assignment. The credential itself must never leave process memory.
+export function identifyArmPrincipalObjectId(value, azureClientId, now = Date.now()) {
+  valid(
+    value?.tokenType === "Bearer" &&
+      value.subscription?.toLowerCase() === TARGET.subscription &&
+      value.tenant?.toLowerCase() === TARGET.tenant &&
+      typeof value.accessToken === "string" &&
+      /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(value.accessToken),
+    "principal_token_invalid",
+  );
+  let claims;
+  try {
+    claims = JSON.parse(Buffer.from(value.accessToken.split(".")[1], "base64url").toString("utf8"));
+  } catch {
+    throw new Error("direct_preflight_principal_claims_invalid");
+  }
+  const clientIds = [claims?.appid, claims?.azp].filter((id) => id !== undefined);
+  valid(
+    UUID.test(claims?.oid ?? "") &&
+      claims.oid.toLowerCase() !== "00000000-0000-0000-0000-000000000000" &&
+      claims.tid?.toLowerCase() === TARGET.tenant &&
+      [ARM, `${ARM}/`].includes(claims.aud) &&
+      clientIds.length > 0 &&
+      clientIds.every(
+        (id) => typeof id === "string" && id.toLowerCase() === azureClientId.toLowerCase(),
+      ) &&
+      (claims.idtyp === undefined || claims.idtyp === "app") &&
+      claims.scp === undefined &&
+      Number.isInteger(claims.exp) &&
+      Number.isFinite(now) &&
+      claims.exp * 1000 > now + 60_000 &&
+      claims.exp * 1000 <= now + 2 * 60 * 60_000,
+    "principal_claims_invalid",
+  );
+  return claims.oid.toLowerCase();
 }
 
 // Azure CLI output is captured in memory. Neither stdout nor stderr is copied to
@@ -239,8 +280,10 @@ export async function preflightDirectAzureRelease(
     origin: input.origin,
     status: "BLOCKED",
     rollbackRevision: null,
+    principalObjectId: null,
     checks: {
       account: false,
+      principalIdentity: false,
       effectiveWrite: false,
       targetAndConfig: false,
       rollbackRevision: false,
@@ -305,6 +348,28 @@ export async function preflightDirectAzureRelease(
     recordFailure(error);
     return receipt;
   }
+
+  await checkIndependently(async () => {
+    const result = await run([
+      "account",
+      "get-access-token",
+      "--subscription",
+      TARGET.subscription,
+      "--tenant",
+      TARGET.tenant,
+      "--resource",
+      `${ARM}/`,
+    ]);
+    valid(result?.ok === true && typeof result.stdout === "string", "principal_token_unavailable");
+    let token;
+    try {
+      token = JSON.parse(result.stdout);
+    } catch {
+      throw new Error("direct_preflight_principal_token_invalid");
+    }
+    receipt.principalObjectId = identifyArmPrincipalObjectId(token, input.azureClientId);
+    receipt.checks.principalIdentity = true;
+  });
 
   // A missing write role must not hide independent read-only app, rollback or
   // public-build findings. Every check below remains incapable of mutation.
@@ -393,6 +458,7 @@ export async function directPreflightMain(args = process.argv.slice(2), env = pr
     currentImage: env.KOVA_PREFLIGHT_CURRENT_IMAGE,
     acrLoginServer: env.KOVA_PRODUCTION_ACR_LOGIN_SERVER,
     imageRepository: env.KOVA_PRODUCTION_IMAGE_REPOSITORY,
+    azureClientId: env.KOVA_PREFLIGHT_AZURE_CLIENT_ID,
     origin: env.KOVA_PREFLIGHT_ORIGIN,
   });
   console.log(JSON.stringify(receipt));
