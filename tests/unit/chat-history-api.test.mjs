@@ -4,6 +4,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import { readFile } from "node:fs/promises";
 import * as policy from "../../src/lib/chat-history-policy.mjs";
+import { consumeDistributedRateLimit } from "../../src/lib/distributed-rate-limit.mjs";
 import { readBoundedJsonObject, BoundedJsonError } from "../../src/lib/bounded-json.server.mjs";
 const source = await readFile("src/routes/api/chat/history.ts", "utf8");
 const compiled = ts.transpileModule(
@@ -11,7 +12,12 @@ const compiled = ts.transpileModule(
   { compilerOptions: { module: ts.ModuleKind.None, target: ts.ScriptTarget.ES2022 } },
 ).outputText;
 const owner = "123e4567-e89b-42d3-a456-426614174000";
-function fixture({ crossSite = false, denied = false, failure = false } = {}) {
+function fixture({
+  crossSite = false,
+  denied = false,
+  failure = false,
+  realRateLimit = false,
+} = {}) {
   const calls = [];
   const auth = async () => {
     if (denied) return new Response(null, { status: 401 });
@@ -45,7 +51,16 @@ function fixture({ crossSite = false, denied = false, failure = false } = {}) {
     getCallerTier: async () => "free",
     STORAGE_LIMITS_BYTES: { free: 1000000 },
     isCrossSiteMutation: () => crossSite,
-    consumeApplicationRateLimit: async () => ({ allowed: true }),
+    consumeApplicationRateLimit: realRateLimit
+      ? (input) =>
+          consumeDistributedRateLimit({
+            ...input,
+            backendUrl: "https://example.test",
+            serviceRoleKey: "fixture-service-role",
+            hashSecret: "x".repeat(32),
+            fetchImpl: async () => Response.json([{ allowed: true, retry_after: 60 }]),
+          })
+      : async () => ({ allowed: true }),
     createFileRoute: () => (value) => value,
   };
   vm.runInNewContext(compiled + "\nglobalThis.handlers=Route.server.handlers;", context);
@@ -110,4 +125,13 @@ test("API validation errors are definite while transport uncertainty remains ret
     "no-store",
   );
   assert.equal(g.calls[0][1].p_limit, 1);
+});
+test("history reads and writes stay within the deployed rate limiter contract", async () => {
+  const f = fixture({ realRateLimit: true });
+  assert.equal((await f.handlers.GET({ request: request() })).status, 200);
+  assert.equal((await f.handlers.POST({ request: request(input()) })).status, 200);
+  assert.deepEqual(
+    f.calls.map(([name]) => name),
+    ["read_chat_history_changes", "mutate_chat_history"],
+  );
 });
