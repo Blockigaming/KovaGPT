@@ -26,7 +26,10 @@ Healthy rollback revision with the reviewed digest, 100% traffic to that
 revision, both public build endpoints, and unchanged app metadata on a second
 read. The only output is a sanitized receipt with check booleans and a stable
 failure code. No environment values, secret URIs or Azure error response are
-printed or uploaded.
+printed or uploaded. A missing effective write permission is recorded as a
+blocker, while independent read-only app, rollback and public-build checks
+continue. The receipt lists sanitized `failureCodes`; it remains `BLOCKED`
+until every check passes. An account or tenant mismatch stops resource reads.
 
 `Multiple` revision mode is required because a known-good active rollback
 revision must remain available for a controlled traffic return. If the app is
