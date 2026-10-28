@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { consumeOpenAiApplicationAdmission } from "@/lib/ai/openai-admission-runtime.server";
 import { readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { searchWorkspace } from "@/lib/workspace-search-policy.server.mjs";
@@ -50,14 +51,14 @@ export const Route = createFileRoute("/api/workspace/search")({
           );
         let semanticAllowed = false;
         if (workspaceSemanticEnabled()) {
-          const userBudget = await consumeApplicationRateLimit({
+          const userBudget = await consumeOpenAiApplicationAdmission({
             identity: caller.userId,
             action: "workspace_semantic_daily",
             limit: 60,
             windowSeconds: 86400,
           });
           if (userBudget.allowed) {
-            const globalBudget = await consumeApplicationRateLimit({
+            const globalBudget = await consumeOpenAiApplicationAdmission({
               identity: "workspace_global",
               action: "workspace_semantic_global_daily",
               limit: 1000,
