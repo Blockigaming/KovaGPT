@@ -10,11 +10,12 @@ const scheduled = await readFile("src/lib/scheduled-tasks.functions.ts", "utf8")
 test("sidebar preserves the reference navigation hierarchy and canonical routes", () => {
   const ordered = [
     'navLink("/", "Chat", MessageSquare)',
-    'navLink("/projects", "Projects", ProjectsGlyph)',
-    'navLink("/scheduled-tasks", "Scheduled tasks", TasksGlyph)',
-    'navLink("/library", "Library", LibraryGlyph)',
-    'navLink("/apps", "Plugins", PluginsGlyph)',
     'navLink("/images", "Images", ImagesGlyph)',
+    'navLink("/apps", "Plugins", PluginsGlyph)',
+    'aria-label="Workspace destinations"',
+    'navLink("/projects", "Projects", ProjectsGlyph)',
+    'navLink("/library", "Library", LibraryGlyph)',
+    'navLink("/scheduled-tasks", "Scheduled tasks", TasksGlyph)',
     ">More</span>",
     'navLink("/work", "Work", BriefcaseBusiness)',
     'navLink("/discovery", "Discover", Compass)',
@@ -40,7 +41,10 @@ test("sidebar interaction and layout contracts are accessible and responsive", (
   assert.match(sidebar, /aria-label="Search chats"/);
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
   assert.match(sidebar, /aria-label="Expand sidebar"/);
-  assert.match(sidebar, /<details open=\{isOn\("\/work"\)/);
+  assert.match(
+    sidebar,
+    /<details\s+className="kova-sidebar-more-disclosure"\s+open=\{isOn\("\/work"\) \|\| isOn\("\/discovery"\) \|\| undefined\}\s*>/,
+  );
   assert.match(sidebar, /<summary className="kova-nav-row cursor-pointer">/);
   assert.match(sidebar, /event\.key === "Escape"/);
   assert.match(sidebar, /const EXPANDED_WIDTH = 248/);

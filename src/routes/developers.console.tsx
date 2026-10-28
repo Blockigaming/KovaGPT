@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
@@ -183,25 +190,29 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
           </form>
           <section className="space-y-4 rounded-xl border p-5">
             <h2 className="text-lg font-semibold">Keys and spending limits</h2>
-            <label className="block">
-              Account
-              <select
-                className={fieldClass}
-                value={account}
-                onChange={(event) => {
-                  setAccount(event.target.value);
+            <div className="grid gap-1">
+              <label htmlFor="developer-console-account">Account</label>
+              <Select
+                value={account || "__none__"}
+                onValueChange={(value) => {
+                  setAccount(value === "__none__" ? "" : value);
                   setProject("");
                   setSecret("");
                 }}
               >
-                <option value="">Select an account</option>
-                {data?.accounts.map((row) => (
-                  <option key={String(row.account_id)} value={String(row.account_id)}>
-                    {row.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <SelectTrigger id="developer-console-account">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Select an account</SelectItem>
+                  {data?.accounts.map((row) => (
+                    <SelectItem key={String(row.account_id)} value={String(row.account_id)}>
+                      {row.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {selected && (
               <p>
                 Available: {selected.available_amount} {selected.currency} minor units. Reserved:{" "}
@@ -209,23 +220,27 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
                 {selected.suspended_at ? "This account is suspended." : ""}
               </p>
             )}
-            <label className="block">
-              Project
-              <select
-                className={fieldClass}
-                value={project}
-                onChange={(event) => setProject(event.target.value)}
+            <div className="grid gap-1">
+              <label htmlFor="developer-console-project">Project</label>
+              <Select
+                value={project || "__none__"}
+                onValueChange={(value) => setProject(value === "__none__" ? "" : value)}
               >
-                <option value="">Select a project</option>
-                {data?.projects
-                  .filter((row) => row.account_id === account)
-                  .map((row) => (
-                    <option key={String(row.id)} value={String(row.id)}>
-                      {row.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
+                <SelectTrigger id="developer-console-project">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Select a project</SelectItem>
+                  {data?.projects
+                    .filter((row) => row.account_id === account)
+                    .map((row) => (
+                      <SelectItem key={String(row.id)} value={String(row.id)}>
+                        {row.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
             <p>
               Enter spending limits in the account currency’s minor units. Organization, project,
               and key limits all apply.

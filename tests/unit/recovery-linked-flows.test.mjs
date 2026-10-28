@@ -20,7 +20,8 @@ test("context search filters the display without discarding hidden selections on
 test("prompt dialogs use focus-managed primitives and invalidate cancelled history loads", () => {
   const text = source("routes/prompt-studio.tsx");
   assert.equal((text.match(/<DialogContent/g) || []).length, 2);
-  assert.equal((text.match(/onCloseAutoFocus=/g) || []).length, 2);
+  assert.equal((text.match(/onCloseAutoFocus=/g) || []).length, 3);
+  assert.equal((text.match(/<ConfirmActionDialog/g) || []).length, 1);
   assert.match(text, /dialogTriggerRef\.current\?\.focus\(\)/);
   assert.match(text, /request !== inspectionRequestRef\.current/);
   assert.match(text, /inspectionRequestRef\.current \+= 1/);

@@ -7,9 +7,16 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createHookHarness, loadUiModule, elements, text } from "../helpers/ui-state-harness.mjs";
 const voiceIcons = { Circle, Pause, Waves };
+const selectComponents = Object.fromEntries(
+  ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"].map((name) => [
+    name,
+    name,
+  ]),
+);
 const familySurface = loadUiModule("src/components/public/ReviewFamilySurface.tsx", {
   "@tanstack/react-router": { Link: "Link" },
   "lucide-react": voiceIcons,
+  "@/components/ui/select": selectComponents,
 });
 const registry = loadUiModule("src/lib/review-page-content.ts", {});
 const button = (tree, label) => elements(tree, (n) => n.type === "button" && text(n) === label)[0];
@@ -18,7 +25,11 @@ function harness(slug, principal = "owner-a", saved = new Map(), globals = {}) {
   const surface = Object.keys(globals).length
     ? loadUiModule(
         "src/components/public/ReviewFamilySurface.tsx",
-        { "@tanstack/react-router": { Link: "Link" }, "lucide-react": voiceIcons },
+        {
+          "@tanstack/react-router": { Link: "Link" },
+          "lucide-react": voiceIcons,
+          "@/components/ui/select": selectComponents,
+        },
         globals,
       )
     : familySurface;
@@ -296,9 +307,7 @@ test("team retention exposes specific fields and an accurate local proposal summ
   elements(tree, (n) => n.type === "input" && n.props.type === "number")[0].props.onChange({
     target: { value: "45" },
   });
-  elements(tree, (n) => n.type === "select")[0].props.onChange({
-    target: { value: "Files proposal" },
-  });
+  elements(tree, (n) => n.type === "Select")[0].props.onValueChange("Files proposal");
   tree = h.render();
   assert.match(text(tree), /45 days proposed/);
   assert.match(text(tree), /Files proposal/);

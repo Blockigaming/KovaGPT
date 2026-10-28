@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -79,15 +86,19 @@ export function AgentAnalyticsDialog({
         <div className="flex flex-wrap items-center gap-2">
           <label className="text-sm">
             Date range{" "}
-            <select
-              value={days}
-              onChange={(e) => setDays(Number(e.target.value) as 7 | 30 | 90)}
-              className="ml-2 h-10 rounded-lg border bg-background px-2"
+            <Select
+              value={String(days)}
+              onValueChange={(value) => setDays(Number(value) as 7 | 30 | 90)}
             >
-              <option value={7}>7 days</option>
-              <option value={30}>30 days</option>
-              <option value={90}>90 days</option>
-            </select>
+              <SelectTrigger aria-label="Date range" className="mt-1 w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">7 days</SelectItem>
+                <SelectItem value="30">30 days</SelectItem>
+                <SelectItem value="90">90 days</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
           <button
             disabled={!data}

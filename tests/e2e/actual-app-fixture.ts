@@ -21,6 +21,7 @@ export async function fixture(
   signedIn = true,
   saved = false,
   tier: "free" | "plus" | "pro" = "free",
+  options: { preserveStorageOnReload?: boolean } = {},
 ) {
   await page
     .context()
@@ -30,7 +31,7 @@ export async function fixture(
         : route.abort("blockedbyclient"),
     );
   await page.context().routeWebSocket("**/*", (socket) => socket.close());
-  if (signedIn) await installAuthenticatedFixture(page, { tier });
+  if (signedIn) await installAuthenticatedFixture(page, { tier, ...options });
   await page.addInitScript(
     ({ theme, owner, saved, chatA, chatB }) => {
       localStorage.setItem("kova-theme-mode", theme);

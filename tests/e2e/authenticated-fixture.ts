@@ -21,7 +21,11 @@ const e2eUser = {
 
 export async function installAuthenticatedFixture(
   page: Page,
-  options: { authUserDelayMs?: number; tier?: "free" | "plus" | "pro" } = {},
+  options: {
+    authUserDelayMs?: number;
+    tier?: "free" | "plus" | "pro";
+    preserveStorageOnReload?: boolean;
+  } = {},
 ) {
   // This fixture exercises the returning-user shell. Server-function onboarding
   // can arrive after hydration; dismiss that separate flow through its real UI
@@ -37,8 +41,14 @@ export async function installAuthenticatedFixture(
     await welcomeDialog.waitFor({ state: "hidden" });
   });
   await page.addInitScript(
-    ({ storageKeyPatternSource, user }) => {
-      localStorage.clear();
+    ({ storageKeyPatternSource, user, storageFixtureId }) => {
+      // Persistence tests opt into a returning browser profile. The first
+      // document still starts clean; auth injection below runs on every load.
+      const initializedKey = "kova-e2e-storage-initialized";
+      if (!storageFixtureId || sessionStorage.getItem(initializedKey) !== storageFixtureId) {
+        localStorage.clear();
+        if (storageFixtureId) sessionStorage.setItem(initializedKey, storageFixtureId);
+      }
       const base64Url = (value: unknown) =>
         btoa(JSON.stringify(value)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
       const storageKeyPattern = new RegExp(storageKeyPatternSource);
@@ -73,6 +83,7 @@ export async function installAuthenticatedFixture(
     {
       storageKeyPatternSource: supabaseAuthStorageKeyPattern.source,
       user: e2eUser,
+      storageFixtureId: options.preserveStorageOnReload ? crypto.randomUUID() : null,
     },
   );
 

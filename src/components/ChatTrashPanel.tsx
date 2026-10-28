@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useRef, useState } from "react";
 import {
   AlertDialog,
@@ -237,20 +244,19 @@ export function ChatTrashPanel({ userKey }: { userKey: string | null }) {
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex min-w-0 flex-col gap-1 text-xs">
           Delete chats in Trash after
-          <select
-            aria-label="Trash retention"
-            className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-            value={choice}
-            onChange={(event) => setChoice(event.target.value)}
-            disabled={!state || busy}
-          >
-            {TRASH_RETENTION_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-            <option value="custom">Custom</option>
-          </select>
+          <Select value={choice} onValueChange={setChoice} disabled={!state || busy}>
+            <SelectTrigger aria-label="Trash retention" className="min-h-11 w-auto">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TRASH_RETENTION_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </SelectItem>
+              ))}
+              <SelectItem value="custom">Custom</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
         {choice === "custom" && (
           <>
@@ -259,7 +265,7 @@ export function ChatTrashPanel({ userKey }: { userKey: string | null }) {
               <input
                 aria-label="Custom Trash duration"
                 inputMode="decimal"
-                className="h-9 w-24 rounded-md border border-border bg-background px-2 text-sm"
+                className="h-11 w-24 rounded-md border border-border bg-background px-2 text-sm"
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
                 disabled={busy}
@@ -267,17 +273,16 @@ export function ChatTrashPanel({ userKey }: { userKey: string | null }) {
             </label>
             <label className="flex flex-col gap-1 text-xs">
               Unit
-              <select
-                aria-label="Custom Trash duration unit"
-                className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                value={unit}
-                onChange={(event) => setUnit(event.target.value)}
-                disabled={busy}
-              >
-                <option value="minutes">Minutes</option>
-                <option value="hours">Hours</option>
-                <option value="days">Days</option>
-              </select>
+              <Select value={unit} onValueChange={setUnit} disabled={busy}>
+                <SelectTrigger aria-label="Custom Trash duration unit" className="min-h-11 w-auto">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="minutes">Minutes</SelectItem>
+                  <SelectItem value="hours">Hours</SelectItem>
+                  <SelectItem value="days">Days</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
           </>
         )}

@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import {
   ArrowUp,
   Check,
-  ChevronDown,
   Copy,
   FilePenLine,
   FolderOpen,
@@ -12,6 +11,13 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import {
   WRITING_FORMATS,
@@ -79,23 +85,21 @@ function SelectControl({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="relative inline-flex min-h-10 items-center rounded-xl border border-transparent px-2 text-sm font-medium hover:bg-black/[0.045] dark:hover:bg-white/[0.07]">
-      <span className="sr-only">{label}</span>
-      <select
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger
         aria-label={label}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="appearance-none bg-transparent py-2 pr-6 outline-none"
+        className="w-auto border-transparent bg-transparent px-3 shadow-none hover:bg-accent"
       >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
         {options.map((option) => (
-          <option key={option}>{option}</option>
+          <SelectItem key={option} value={option}>
+            {option}
+          </SelectItem>
         ))}
-      </select>
-      <ChevronDown
-        aria-hidden="true"
-        className="pointer-events-none absolute right-2 h-3.5 w-3.5"
-      />
-    </label>
+      </SelectContent>
+    </Select>
   );
 }
 

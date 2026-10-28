@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
 import { imageApiRequest } from "@/lib/image-api-client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const emptyImageChoice = "no-library-image";
 type ImageChoice = { id: string; title: string; file_type: string };
 export type ImageEditSelection = { source: ImageChoice; mask?: ImageChoice } | null;
 export default function ImageEditControls({
@@ -74,57 +83,65 @@ export default function ImageEditControls({
               </p>
               <label className="grid min-w-0 gap-2">
                 Original image{" "}
-                <select
+                <Select
                   disabled={disabled}
-                  aria-label="Original image"
-                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2"
-                  value={value?.source.id ?? ""}
-                  onChange={(event) => {
-                    const source = images.find((item) => item.id === event.target.value);
+                  value={value?.source.id ?? emptyImageChoice}
+                  onValueChange={(id) => {
+                    const source = images.find((item) => item.id === id);
                     onChange(source ? { source } : null);
                   }}
                 >
-                  <option value="">Choose a Library image</option>
-                  {value && !images.some((item) => item.id === value.source.id) && (
-                    <option value={value.source.id}>{value.source.title}</option>
-                  )}
-                  {images.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.title}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger aria-label="Original image" className="min-h-11 w-full min-w-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={emptyImageChoice}>Choose a Library image</SelectItem>
+                    {value && !images.some((item) => item.id === value.source.id) && (
+                      <SelectItem value={value.source.id}>{value.source.title}</SelectItem>
+                    )}
+                    {images.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
               {value && (
                 <label className="grid min-w-0 gap-2">
                   Optional PNG mask{" "}
-                  <select
+                  <Select
                     disabled={disabled}
-                    aria-label="Optional PNG mask"
-                    className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2"
-                    value={value.mask?.id ?? ""}
-                    onChange={(event) =>
+                    value={value.mask?.id ?? emptyImageChoice}
+                    onValueChange={(id) =>
                       onChange({
                         source: value.source,
                         mask: images.find(
-                          (item) =>
-                            item.id === event.target.value && item.file_type === "image/png",
+                          (item) => item.id === id && item.file_type === "image/png",
                         ),
                       })
                     }
                   >
-                    <option value="">No mask</option>
-                    {value.mask && !images.some((item) => item.id === value.mask?.id) && (
-                      <option value={value.mask.id}>{value.mask.title}</option>
-                    )}
-                    {images
-                      .filter((item) => item.file_type === "image/png")
-                      .map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.title}
-                        </option>
-                      ))}
-                  </select>
+                    <SelectTrigger
+                      aria-label="Optional PNG mask"
+                      className="min-h-11 w-full min-w-0"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={emptyImageChoice}>No mask</SelectItem>
+                      {value.mask && !images.some((item) => item.id === value.mask?.id) && (
+                        <SelectItem value={value.mask.id}>{value.mask.title}</SelectItem>
+                      )}
+                      {images
+                        .filter((item) => item.file_type === "image/png")
+                        .map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.title}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </label>
               )}
               <p className="text-xs text-muted-foreground">

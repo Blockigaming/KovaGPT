@@ -1,3 +1,11 @@
+import { Slider } from "@/components/ui/slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -429,17 +437,18 @@ function WorkRoute() {
                     Agent execution is unavailable. Historical records remain readable; active
                     legacy runs can only be cancelled.
                   </p>
-                  <select
-                    className="mt-3 min-h-11 w-full rounded-xl border bg-background px-3 md:hidden"
-                    value={selected ?? ""}
-                    onChange={(e) => selectRun(e.target.value)}
-                  >
-                    {runs.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.kind} · {factualStatus(r)}
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={selected ?? ""} onValueChange={selectRun}>
+                    <SelectTrigger aria-label="Historical Work run" className="mt-3 md:hidden">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {runs.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.kind} · {factualStatus(r)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <nav className="mt-4 flex gap-1 overflow-x-auto" aria-label="Work views">
                     {(["graph", "timeline", "evidence", "deliverables", "approvals"] as const).map(
                       (value) => (
@@ -835,17 +844,17 @@ function Evidence({ detail }: { detail: WorkDetail }) {
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
-          <select
-            aria-label="Evidence type"
-            className="min-h-10 rounded-xl border bg-background px-2"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-          >
-            <option value="all">All types</option>
-            <option value="screenshot">Screenshots</option>
-            <option value="dom_snapshot">DOM</option>
-            <option value="browser_event">Browser</option>
-          </select>
+          <Select value={type} onValueChange={setType}>
+            <SelectTrigger aria-label="Evidence type" className="w-auto">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="screenshot">Screenshots</SelectItem>
+              <SelectItem value="dom_snapshot">DOM</SelectItem>
+              <SelectItem value="browser_event">Browser</SelectItem>
+            </SelectContent>
+          </Select>
           <SearchablePicker
             aria-label="Evidence specialist"
             searchLabel="Search specialists"
@@ -863,14 +872,17 @@ function Evidence({ detail }: { detail: WorkDetail }) {
         {detail.events[Math.max(0, cursor)]
           ? new Date(detail.events[Math.max(0, cursor)].createdAt).toLocaleString()
           : "start"}
-        <input
-          className="mt-1 w-full"
-          type="range"
-          min="0"
-          max={Math.max(0, detail.events.length - 1)}
-          value={Math.max(0, cursor)}
-          onChange={(e) => setCursor(Number(e.target.value))}
-        />
+        {detail.events.length > 1 ? (
+          <Slider
+            className="mt-1"
+            min={0}
+            max={Math.max(0, detail.events.length - 1)}
+            step={1}
+            value={[Math.max(0, cursor)]}
+            onValueChange={([value]) => setCursor(Number(value))}
+            thumbProps={{ "aria-label": "Timeline through" }}
+          />
+        ) : null}
       </label>
       <div className="grid gap-3 lg:grid-cols-2">
         {evidence.map((item) => (

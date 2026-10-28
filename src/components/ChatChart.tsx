@@ -2,6 +2,13 @@ import { useId, useMemo, useRef, useState } from "react";
 import { BarChart3, Copy, Download, Table2 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   LineChart,
   Line,
   BarChart,
@@ -85,18 +92,18 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
         <label className="sr-only" htmlFor={chartTypeId}>
           Chart type
         </label>
-        <select
-          id={chartTypeId}
-          value={type}
-          onChange={(event) => setType(event.target.value as ChartType)}
-          className="min-h-11 rounded-lg border border-border bg-background px-2 text-sm"
-        >
-          {CHART_TYPES.map((item) => (
-            <option key={item} value={item}>
-              {item[0].toUpperCase() + item.slice(1)}
-            </option>
-          ))}
-        </select>
+        <Select value={type} onValueChange={(value) => setType(value as ChartType)}>
+          <SelectTrigger id={chartTypeId} className="w-auto">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CHART_TYPES.map((item) => (
+              <SelectItem key={item} value={item}>
+                {item[0].toUpperCase() + item.slice(1)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <button
           type="button"
           onClick={() => setTable((value) => !value)}

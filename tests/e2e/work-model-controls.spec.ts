@@ -106,11 +106,13 @@ test("Work submits the displayed model mode and effort and shows the saved selec
   await page.goto("/work");
   const panel = page.getByRole("region", { name: "Work execution", exact: true });
   await expect(panel.getByLabel("Work model mode")).toBeVisible();
+  await panel.getByRole("combobox", { name: "Work model mode", exact: true }).click();
   await expect(
-    panel.getByLabel("Work model mode").locator('option[value="deep"]'),
-  ).toHaveJSProperty("disabled", true);
-  await panel.getByLabel("Work model mode").selectOption("thinking");
-  await panel.getByLabel("Reasoning effort").selectOption("high");
+    page.getByRole("option", { name: "Deep · gpt-5.6-sol · Deep requires Pro.", exact: true }),
+  ).toHaveAttribute("aria-disabled", "true");
+  await page.getByRole("option", { name: "Thinking · gpt-5.6-terra", exact: true }).click();
+  await panel.getByRole("combobox", { name: "Reasoning effort", exact: true }).click();
+  await page.getByRole("option", { name: "high", exact: true }).click();
   await panel.getByLabel("Objective", { exact: true }).fill("Prepare the quarterly report");
   await panel.getByLabel("Save output files in Project").selectOption(projectId);
   await panel.getByRole("button", { name: "Start work", exact: true }).click();
@@ -142,8 +144,10 @@ test("current option revocation and principal reset clear Work choices without s
   });
   await page.goto("/work");
   const panel = page.getByRole("region", { name: "Work execution", exact: true });
-  await panel.getByLabel("Work model mode").selectOption("thinking");
-  await panel.getByLabel("Reasoning effort").selectOption("high");
+  await panel.getByRole("combobox", { name: "Work model mode", exact: true }).click();
+  await page.getByRole("option", { name: "Thinking · gpt-5.6-terra", exact: true }).click();
+  await panel.getByRole("combobox", { name: "Reasoning effort", exact: true }).click();
+  await page.getByRole("option", { name: "high", exact: true }).click();
   modelOptions = choices.map((item) =>
     item.mode === "thinking" ? { ...item, reasoningEfforts: ["low"] } : item,
   );
@@ -167,7 +171,19 @@ test("current option revocation and principal reset clear Work choices without s
       ),
     `user:${owner}`,
   );
-  await expect(panel.getByLabel("Work model mode")).toHaveValue("normal");
-  await expect(panel.getByLabel("Reasoning effort")).toHaveValue("default");
+  for (const [label, selected] of [
+    ["Work model mode", "Normal · gpt-5.6-luna"],
+    ["Reasoning effort", "Provider default"],
+  ]) {
+    const trigger = panel.getByRole("combobox", { name: label, exact: true });
+    await expect(trigger).toHaveText(selected);
+    await trigger.click();
+    await expect(page.getByRole("option", { name: selected, exact: true })).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await page.keyboard.press("Escape");
+    await expect(trigger).toBeFocused();
+  }
   await expect(panel.getByLabel("Objective", { exact: true })).toHaveValue("");
 });

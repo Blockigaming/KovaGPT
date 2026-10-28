@@ -123,7 +123,8 @@ test("owner takeover sends exact revision and target, keeps credentials transien
   expect(
     await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, "injectedBrowser")),
   ).toBe(false);
-  await f.panel.getByRole("combobox", { name: "Page control", exact: true }).selectOption(targetId);
+  await f.panel.getByRole("combobox", { name: "Page control", exact: true }).click();
+  await page.getByRole("option", { name: "Password (password)", exact: true }).click();
   const field = f.panel.getByLabel("Enter text privately");
   await expect(field).toHaveAttribute("type", "password");
   await field.fill("ephemeral-owner-password");
@@ -151,7 +152,8 @@ test("principal clear aborts an in-flight private command and rejects its delaye
 }) => {
   const f = await fixture(page, { delayFill: true });
   await f.panel.getByRole("button", { name: "Read current page", exact: true }).click();
-  await f.panel.getByRole("combobox", { name: "Page control", exact: true }).selectOption(targetId);
+  await f.panel.getByRole("combobox", { name: "Page control", exact: true }).click();
+  await page.getByRole("option", { name: "Password (password)", exact: true }).click();
   await f.panel.getByLabel("Enter text privately").fill("pending-private-password");
   await f.panel.getByRole("button", { name: "Fill selected field" }).click();
   await expect.poll(() => f.requests.length).toBe(2);

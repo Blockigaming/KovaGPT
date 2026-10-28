@@ -154,7 +154,20 @@ test("image-edit fields keep full-width rounded phone geometry and 44px controls
     "utf8",
   );
   assert.equal((edit.match(/<label className="grid min-w-0 gap-2">/g) || []).length, 2);
-  assert.equal((edit.match(/min-h-11 w-full min-w-0 rounded-lg/g) || []).length, 2);
+  assert.equal(
+    (edit.match(/<SelectTrigger[\s\S]*?className="min-h-11 w-full min-w-0"/g) || []).length,
+    2,
+  );
+  assert.match(edit, /SelectContent,\s*SelectItem,\s*SelectTrigger,\s*SelectValue/);
+  assert.doesNotMatch(edit, /<select\b/);
   assert.equal((edit.match(/min-h-11 items-center justify-center rounded-lg/g) || []).length, 3);
-  assert.match(source, /Output shape[\s\S]*?min-h-11 max-w-full rounded-lg/);
+  assert.match(
+    source,
+    /Output shape[\s\S]*?<SelectTrigger[\s\S]*?aria-label="Output image shape"[\s\S]*?className="min-h-11 w-auto max-w-full"/,
+  );
+  const sharedSelect = readFileSync(
+    new URL("../../src/components/ui/select.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(sharedSelect, /rounded-\[var\(--kova-radius-input\)\]/);
 });

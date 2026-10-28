@@ -123,6 +123,13 @@ function fixture({ task, draft, createResult, executionAvailable = true } = {}) 
         AlertDialogAction: "alert-dialog-action",
       },
       "@/components/TaskGmailEventSource": { TaskGmailEventSource: "gmail-source" },
+      "@/components/ui/select": {
+        Select: "Select",
+        SelectContent: "SelectContent",
+        SelectItem: "SelectItem",
+        SelectTrigger: "SelectTrigger",
+        SelectValue: "SelectValue",
+      },
       "@/components/ui/searchable-picker": { SearchablePicker: "searchable-picker" },
       "@tanstack/react-start": { useServerFn: (fn) => fn },
       "@/lib/scheduled-tasks.functions": services,

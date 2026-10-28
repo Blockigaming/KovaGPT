@@ -94,6 +94,37 @@ choices such as 44px interaction targets, 20px glyphs, 8/12/16/24px spacing,
 bounded reading columns and shared corner-radius tokens are implementation
 choices. They are not measurements of every reference product.
 
+## Continued control and spacing refinement
+
+Visible choice controls now use the shared Select component across workspace,
+composer, appearance, image, study, scheduled-task, work, organization,
+developer, writing and generated-content surfaces. Existing values, parsers,
+disabled states, access checks and submission handlers remain authoritative.
+Empty associations map to an internal menu value and back to their existing
+empty or null state; that menu value is not sent to the server. The searchable
+picker retains its hidden native select as a compatibility bridge; its visible
+searchable popup remains the shared interface.
+
+Kovas, Study, Prompt Studio and Context Packs use shared confirmation dialogs
+instead of browser confirmation boxes. Kovas reporting uses the shared text
+entry dialog. Deferred confirmations check their original principal and
+resource/configuration lifetime before acting, consume approval once, and
+restore keyboard focus. Prompt/context deletion also exposes a pending state,
+disables competing delete controls and focuses the saved-list heading after
+the deleted trigger disappears.
+
+The Work evidence timeline uses the shared slider for two or more events,
+retaining its event-index range and step. Zero or one event keeps its timestamp
+label without presenting an inert range. Appearance's reading sample explicitly
+uses the reading font; its controls retain the interface font.
+
+The earlier global page rules no longer force every workspace to 1200px with
+32px padding. Shared defaults consume the page variables. The Projects directory
+owns its 1280px maximum, desktop responsive gutters and 16px phone gutters;
+Library, Settings and generic workspace pages retain their respective layout
+owners. These dimensions are Kova implementation choices, not measured claims
+about the reference products.
+
 ## Verification status
 
 This document records source intent and inspected external evidence. It does

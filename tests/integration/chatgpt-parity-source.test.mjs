@@ -75,7 +75,7 @@ test("sidebar keeps core destinations before its native More disclosure", () => 
 test("secondary navigation remains discoverable without active unavailable destinations", () => {
   assert.match(
     sidebar,
-    /<details open=\{isOn\("\/work"\) \|\| isOn\("\/discovery"\) \|\| undefined\}>/,
+    /<details\s+className="kova-sidebar-more-disclosure"\s+open=\{isOn\("\/work"\) \|\| isOn\("\/discovery"\) \|\| undefined\}\s*>/,
   );
   assert.match(sidebar, /aria-label="Expand sidebar"/);
   // Coming-soon placeholders were removed, rather than turned into working destinations.

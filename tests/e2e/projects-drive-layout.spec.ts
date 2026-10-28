@@ -119,6 +119,22 @@ for (const theme of ["light", "dark"] as const) {
     await expect(directory).toHaveAttribute("data-project-view", "list");
     await expect(directory.locator(".kova-project-file:visible")).toHaveCount(3);
     await expandDesktopNavigation(page);
+    for (const name of ["New project", "Project templates"]) {
+      const button = page.getByRole("button", { name, exact: true });
+      await expect(button).toBeInViewport();
+      const box = await button.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+    }
+    if (page.viewportSize()!.width < 768) {
+      const description = await directory.locator(".kova-page-description").boundingBox();
+      const actions = await directory.locator(".kova-project-header-actions").boundingBox();
+      const search = await directory.locator(".kova-project-directory-search").boundingBox();
+      expect(actions!.y - description!.y - description!.height).toBeGreaterThanOrEqual(8);
+      expect(actions!.y - description!.y - description!.height).toBeLessThanOrEqual(24);
+      expect(search!.y - actions!.y - actions!.height).toBeLessThanOrEqual(24);
+    }
     await expect(
       directory.getByRole("heading", { name: "Research notebook", exact: true }),
     ).toHaveCSS("font-family", /sans-serif/);

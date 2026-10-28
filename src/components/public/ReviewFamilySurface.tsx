@@ -2,6 +2,13 @@ import { Link } from "@tanstack/react-router";
 import { Circle, Pause, Waves } from "lucide-react";
 import type { RefObject } from "react";
 import type { ReviewPage } from "@/lib/review-page-content";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type ReviewDraft = {
   title: string;
@@ -121,11 +128,18 @@ export function ReviewFamilySurface({
   const select = (label: string, key: keyof ReviewDraft, options: string[]) => (
     <label>
       {label}
-      <select value={String(draft[key])} onChange={(e) => update(key, e.target.value as never)}>
-        {options.map((value) => (
-          <option key={value}>{value}</option>
-        ))}
-      </select>
+      <Select value={String(draft[key])} onValueChange={(value) => update(key, value as never)}>
+        <SelectTrigger aria-label={label}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((value) => (
+            <SelectItem key={value} value={value}>
+              {value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </label>
   );
   const input = (label: string, key: "title" | "memberLabel" | "retentionDays", type = "text") => (

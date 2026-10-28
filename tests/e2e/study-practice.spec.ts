@@ -45,7 +45,7 @@ test.beforeAll(async () => {
                 ? "export const useServerFn=fn=>fn"
                 : args.path === "fetch"
                   ? String.raw`export async function fetchForPrincipal(owner,url,init){window.fixture.requests.push({owner,body:JSON.parse(init.body)});const card={question:'Two plus two?',choices:['Three','Four'],answer:1,hint:'Count two pairs.',explanation:'Two pairs make four.'};const deck={title:'Arithmetic practice',goal:'Add pairs',cards:[card,{...card,question:'How many items in two pairs?'}]};return new Response('data: '+JSON.stringify({choices:[{delta:{content:JSON.stringify(deck)}}]})+'\n\ndata: [DONE]\n\n');}`
-                  : `export async function listStudySets({data}){window.fixture.calls.push({name:'list',data});return []};export async function getStudySet({data}){window.fixture.calls.push({name:'get',data});throw new Error('Unavailable')};export async function saveStudySet({data}){window.fixture.calls.push({name:'save',data});if(window.fixture.failSave){window.fixture.failSave=false;throw new Error('Save response lost')};if(window.fixture.expireSave){window.fixture.expireSave=false;return {creationExpired:true}};return {id:data.id,creation_token:data.creationToken,owner_id:data.expectedUserId,revision:data.expectedRevision+1,body:data.body,deleted_at:null,updated_at:'2026-09-05'};}`,
+                  : `export async function listStudySets({data}){window.fixture.calls.push({name:'list',data});return []};export async function getStudySet({data}){window.fixture.calls.push({name:'get',data});throw new Error('Unavailable')};export async function saveStudySet({data}){window.fixture.calls.push({name:'save',data});if(window.fixture.failSave){window.fixture.failSave=false;throw new Error('Save response lost')};if(window.fixture.expireSave){window.fixture.expireSave=false;return {creationExpired:true}};return {id:data.id,creation_token:data.creationToken,owner_id:data.expectedUserId,revision:data.expectedRevision+1,body:data.body,deleted_at:data.remove?'2026-09-05':null,updated_at:'2026-09-05'};}`,
           }));
         },
       },
@@ -114,7 +114,8 @@ test("flashcards require reveal before a self-rating and hints never count as in
 }) => {
   await mount(page);
   await page.getByRole("button", { name: "Create practice", exact: true }).click();
-  await page.getByLabel("Practice style").selectOption("flashcard");
+  await page.getByRole("combobox", { name: "Practice style", exact: true }).click();
+  await page.getByRole("option", { name: "Flashcards", exact: true }).click();
   await expect(page.getByRole("button", { name: "I recalled it", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Show a hint", exact: true }).click();
   await page.getByRole("button", { name: "Reveal answer", exact: true }).click();
@@ -136,7 +137,6 @@ test("a deferred practice import blocks new answers until the reviewed replaceme
 }) => {
   await mount(page);
   await page.getByRole("button", { name: "Create practice", exact: true }).click();
-  page.on("dialog", (dialog) => dialog.accept());
   await page.evaluate(() => {
     File.prototype.text = function () {
       return new Promise<string>((resolve) => {
@@ -168,6 +168,9 @@ test("a deferred practice import blocks new answers until the reviewed replaceme
     mimeType: "application/json",
     buffer: Buffer.from("{}"),
   });
+  const replacement = page.getByRole("alertdialog", { name: "Replace unsaved practice?" });
+  await expect(replacement).toBeVisible();
+  await replacement.getByRole("button", { name: "Replace practice", exact: true }).click();
   const answer = page.getByRole("button", { name: "Four", exact: true });
   await expect(answer).toBeDisabled();
   // A native click on the disabled fieldset cannot add an answer that a late import would erase.
@@ -199,4 +202,108 @@ test("an expired first-save identity preserves local practice and permits a fres
   expect(saves).toHaveLength(3);
   expect(saves[0].data).toEqual(saves[1].data);
   expect(saves[2].data.id).not.toBe(saves[0].data.id);
+});
+
+test("replacing unsaved practice uses a cancellable shared dialog and returns focus", async ({
+  page,
+}) => {
+  await mount(page);
+  const create = page.getByRole("button", { name: "Create practice", exact: true });
+  await create.click();
+  await expect(page.getByText("Arithmetic practice", { exact: true })).toBeVisible();
+  await create.click();
+  const confirmation = page.getByRole("alertdialog", { name: "Replace unsaved practice?" });
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText("Export or save it first");
+  await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(confirmation).toBeHidden();
+  await expect(create).toBeFocused();
+  await expect(page.getByText("Arithmetic practice", { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(() => (window as unknown as { fixture: Fixture }).fixture.requests.length),
+  ).toBe(1);
+  await create.click();
+  await confirmation.getByRole("button", { name: "Replace practice", exact: true }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as unknown as { fixture: Fixture }).fixture.requests.length),
+    )
+    .toBe(2);
+});
+
+test("saved-practice deletion requires explicit confirmation and retains the exact owner and revision", async ({
+  page,
+}) => {
+  await mount(page);
+  await page.getByRole("button", { name: "Create practice", exact: true }).click();
+  await page.getByRole("button", { name: "Save progress", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Save response lost");
+  await page.getByRole("button", { name: "Retry unconfirmed save", exact: true }).click();
+  const remove = page.getByRole("button", { name: "Delete saved set", exact: true });
+  await remove.click();
+  const confirmation = page.getByRole("alertdialog", { name: "Delete saved practice?" });
+  await expect(confirmation).toContainText("and its progress");
+  await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(remove).toBeFocused();
+  let saves = await page.evaluate(() =>
+    (window as unknown as { fixture: Fixture }).fixture.calls.filter(
+      (call) => call.name === "save",
+    ),
+  );
+  expect(saves).toHaveLength(2);
+  await remove.click();
+  await confirmation.getByRole("button", { name: "Delete practice", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Saved practice deleted");
+  await expect(page.getByText("Arithmetic practice", { exact: true })).toHaveCount(0);
+  saves = await page.evaluate(() =>
+    (window as unknown as { fixture: Fixture }).fixture.calls.filter(
+      (call) => call.name === "save",
+    ),
+  );
+  expect(saves).toHaveLength(3);
+  expect(saves[2].data).toMatchObject({
+    expectedUserId: owner,
+    id: saves[1].data.id,
+    expectedRevision: 1,
+    remove: true,
+    body: null,
+  });
+});
+
+test("switching accounts closes replacement confirmation without using old practice or source", async ({
+  page,
+}) => {
+  await mount(page);
+  const create = page.getByRole("button", { name: "Create practice", exact: true });
+  await create.click();
+  await create.click();
+  await expect(page.getByRole("alertdialog", { name: "Replace unsaved practice?" })).toBeVisible();
+  await page.evaluate(() => (window as unknown as { fixture: Fixture }).fixture.switchUser());
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(page.getByText("Arithmetic practice", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Notes or an explanation to practice")).toHaveValue("");
+  expect(
+    await page.evaluate(() => (window as unknown as { fixture: Fixture }).fixture.requests.length),
+  ).toBe(1);
+});
+
+test("replacement confirmation rejects a practice revision changed after review", async ({
+  page,
+}) => {
+  await mount(page);
+  const create = page.getByRole("button", { name: "Create practice", exact: true });
+  await create.click();
+  await create.click();
+  const confirmation = page.getByRole("alertdialog", { name: "Replace unsaved practice?" });
+  await expect(confirmation).toBeVisible();
+  // A late local state update cannot reuse confirmation for a different revision.
+  await page
+    .getByRole("button", { name: "Four", exact: true, includeHidden: true })
+    .evaluate((button: HTMLElement) => button.click());
+  await confirmation.getByRole("button", { name: "Replace practice", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Practice changed");
+  await expect(page.getByText(/1 of 2 cards practiced/)).toBeVisible();
+  expect(
+    await page.evaluate(() => (window as unknown as { fixture: Fixture }).fixture.requests.length),
+  ).toBe(1);
 });

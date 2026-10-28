@@ -84,6 +84,12 @@ function fixture(options = {}) {
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": { ChevronDown: "svg", Globe2: "svg", Monitor: "svg" },
     "./work-browser-preview.css": {},
+    "@/components/ui/select": Object.fromEntries(
+      ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"].map((name) => [
+        name,
+        name,
+      ]),
+    ),
     "@/lib/work-view-lifetime.mjs": {
       createWorkViewLifetime(owner, callback) {
         assert.equal(owner, ownerId);
@@ -314,12 +320,12 @@ test("hiding controls clears unsubmitted private entries without ending the sess
   await f.flush();
   await f.click("Open browser controls");
   await f.click("Read current page");
-  f.find("select", () => true).props.onChange({ target: { value: targetId } });
+  f.find("Select", () => true).props.onValueChange(targetId);
   await f.flush();
   await f.input("password", "ephemeral-owner-password");
   await f.click("Hide browser controls");
   await f.click("Open browser controls");
-  assert.equal(f.find("select", () => true).props.value, "");
+  assert.equal(f.find("Select", () => true).props.value, "no-page-control");
   assert.equal(
     nodes(f.tree).some((node) => node.type === "input" && node.props.type === "password"),
     false,

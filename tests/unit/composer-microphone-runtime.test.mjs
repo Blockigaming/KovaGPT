@@ -165,6 +165,7 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
   for (const [module, names] of [
     ["dialog", ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription"]],
     ["popover", ["Popover", "PopoverContent", "PopoverTrigger"]],
+    ["select", ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"]],
   ])
     modules[`@/components/ui/${module}`] = Object.fromEntries(names.map((name) => [name, name]));
   const { ChatInput } = loadUiModule("src/components/ChatInput.tsx", modules, {

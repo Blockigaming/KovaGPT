@@ -287,10 +287,15 @@ test("Project and Work dynamic pickers retain ids, disabled state, placeholders 
   assert.equal(history.props.options[0].label, "Do work · awaiting approval");
   history.props.onValueChange("run-id");
   assert.deepEqual(changes, ["actual-project", "run-id", ""]);
-  assert.equal(
-    (source("src/components/WorkExecutionPanel.tsx").match(/<select\b/g) ?? []).length,
-    2,
-    "fixed mode and effort selects stay native",
+  const execution = source("src/components/WorkExecutionPanel.tsx");
+  assert.doesNotMatch(execution, /<select\b/);
+  assert.equal((execution.match(/<SelectTrigger\b/g) ?? []).length, 2);
+  assert.match(execution, /disabled=\{locked \|\| !modelOptions\.length\}/);
+  assert.match(execution, /disabled=\{!option\.available\}/);
+  assert.match(execution, /setMode\(value as WorkModelMode\);\s*setReasoningEffort\(null\)/);
+  assert.match(
+    execution,
+    /locked \|\| !selectedModel\?\.available \|\| !selectedModel\.reasoningEfforts\.length/,
   );
 });
 

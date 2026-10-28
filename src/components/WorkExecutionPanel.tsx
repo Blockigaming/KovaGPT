@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SearchablePicker } from "@/components/ui/searchable-picker";
 import type {
   WorkModelMode,
@@ -218,47 +225,51 @@ export function WorkExecutionPanel({
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="text-sm">
           Work model mode
-          <select
-            className="mt-1 block min-h-11 w-full max-w-full rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
+          <Select
             value={mode}
             disabled={locked || !modelOptions.length}
-            onChange={(event) => {
-              setMode(event.target.value as WorkModelMode);
+            onValueChange={(value) => {
+              setMode(value as WorkModelMode);
               setReasoningEffort(null);
             }}
           >
-            {!modelOptions.length && (
-              <option value="normal">Normal · configuration unavailable</option>
-            )}
-            {modelOptions.map((option) => (
-              <option key={option.mode} value={option.mode} disabled={!option.available}>
-                {option.label} · {option.model ?? "unconfigured"}
-                {option.reason ? ` · ${option.reason}` : ""}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger aria-label="Work model mode" className="mt-1 text-base sm:text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {!modelOptions.length && (
+                <SelectItem value="normal">Normal · configuration unavailable</SelectItem>
+              )}
+              {modelOptions.map((option) => (
+                <SelectItem key={option.mode} value={option.mode} disabled={!option.available}>
+                  {option.label} · {option.model ?? "unconfigured"}
+                  {option.reason ? ` · ${option.reason}` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
         <label className="text-sm">
           Reasoning effort
-          <select
-            className="mt-1 block min-h-11 w-full max-w-full rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
+          <Select
             value={reasoningEffort ?? "default"}
             disabled={locked || !selectedModel?.available || !selectedModel.reasoningEfforts.length}
-            onChange={(event) =>
-              setReasoningEffort(
-                event.target.value === "default"
-                  ? null
-                  : (event.target.value as WorkReasoningEffort),
-              )
+            onValueChange={(value) =>
+              setReasoningEffort(value === "default" ? null : (value as WorkReasoningEffort))
             }
           >
-            <option value="default">Provider default</option>
-            {selectedModel?.reasoningEfforts.map((effort) => (
-              <option key={effort} value={effort}>
-                {effort === "none" ? "No reasoning" : effort}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger aria-label="Reasoning effort" className="mt-1 text-base sm:text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Provider default</SelectItem>
+              {selectedModel?.reasoningEfforts.map((effort) => (
+                <SelectItem key={effort} value={effort}>
+                  {effort === "none" ? "No reasoning" : effort}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">

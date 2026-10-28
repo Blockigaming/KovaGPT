@@ -86,25 +86,37 @@ test("Settings select controls expose stable accessible names", () => {
     parsed,
     (node) =>
       ts.isJsxElement(node) &&
-      node.openingElement.tagName.getText(parsed) === "select" &&
+      node.openingElement.tagName.getText(parsed) === "Select" &&
       attribute(node.openingElement, "value")?.initializer?.expression?.getText(parsed) ===
         "settings.responseTone",
   );
   assert.equal(toneControls.length, 1);
   const tone = toneControls[0];
   assert.ok(ts.isJsxElement(tone.parent));
-  assert.equal(tone.parent.openingElement.tagName.getText(parsed), "label");
+  assert.equal(tone.parent.openingElement.tagName.getText(parsed), "div");
+  const trigger = matching(
+    tone,
+    (node) => ts.isJsxOpeningElement(node) && node.tagName.getText(parsed) === "SelectTrigger",
+  );
+  assert.equal(trigger.length, 1);
+  const triggerId = attribute(trigger[0], "id").initializer.text;
+  const label = tone.parent.children.find(
+    (node) => ts.isJsxElement(node) && node.openingElement.tagName.getText(parsed) === "label",
+  );
+  assert.ok(label, "The shared select retains a visible, associated label");
+  assert.equal(attribute(label.openingElement, "htmlFor").initializer.text, triggerId);
   assert.equal(
-    tone.parent.children
+    label.children
       .filter(ts.isJsxText)
       .map((node) => node.text)
       .join("")
       .trim(),
     "Tone",
-    "The native select must retain its actual visible, enclosing accessible label",
   );
-  const options = tone.children.filter(ts.isJsxElement).map((node) => {
-    assert.equal(node.openingElement.tagName.getText(parsed), "option");
+  const options = matching(
+    tone,
+    (node) => ts.isJsxElement(node) && node.openingElement.tagName.getText(parsed) === "SelectItem",
+  ).map((node) => {
     return [
       attribute(node.openingElement, "value").initializer.text,
       node.children
@@ -126,10 +138,13 @@ test("Settings select controls expose stable accessible names", () => {
   for (const [value] of options) {
     const settings = { responseTone: "direct", responseLength: "short" };
     let changed;
-    execute(attribute(tone.openingElement, "onChange").initializer.expression.getText(parsed), {
-      settings,
-      onChange: (next) => (changed = next),
-    })({ target: { value } });
+    execute(
+      attribute(tone.openingElement, "onValueChange").initializer.expression.getText(parsed),
+      {
+        settings,
+        onChange: (next) => (changed = next),
+      },
+    )(value);
     assert.deepEqual(changed, { ...settings, responseTone: value });
   }
   assert.doesNotMatch(settingsSource, /aria-label="Language"/);

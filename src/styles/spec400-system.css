@@ -101,10 +101,11 @@ body .prose-chat pre {
   font-size: 0.875rem !important;
   line-height: 1.571429 !important;
 }
+/* Page families own their width and gutters; these are fallback dimensions. */
 body :is(.kova-page, .kova-secondary-page) {
-  max-width: 1200px !important;
+  max-width: var(--page-max, 1200px);
   --page-padding: 32px;
-  padding: 32px !important;
+  padding: var(--page-padding, 32px);
 }
 body :is(.kova-header, .kova-app-header, .kova-chat-header) {
   min-height: 64px;
@@ -221,7 +222,6 @@ body .kova-sidebar .kova-sidebar-footer {
 @media (max-width: 1023px) {
   body :is(.kova-page, .kova-secondary-page) {
     --page-padding: 24px;
-    padding: 24px !important;
   }
   body .kova-sidebar[data-kova-core-sidebar][data-kova-core-sidebar] {
     border-radius: 0;
@@ -257,7 +257,6 @@ body .kova-sidebar .kova-sidebar-footer {
 @media (max-width: 767px) {
   body :is(.kova-page, .kova-secondary-page) {
     --page-padding: 16px;
-    padding: 16px !important;
   }
   body .kova-page h1 {
     font-size: 1.5rem !important;

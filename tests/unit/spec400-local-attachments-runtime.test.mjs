@@ -158,6 +158,7 @@ function fixture(
   for (const [module, names] of [
     ["dialog", ["Dialog", "DialogContent", "DialogHeader", "DialogTitle", "DialogDescription"]],
     ["popover", ["Popover", "PopoverContent", "PopoverTrigger"]],
+    ["select", ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"]],
   ])
     modules[`@/components/ui/${module}`] = Object.fromEntries(names.map((name) => [name, name]));
   const exports = {};

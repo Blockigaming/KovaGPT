@@ -14,6 +14,8 @@ const chatInput = await readFile("src/components/ChatInput.tsx", "utf8");
 const chatRoute = await readFile("src/routes/api/chat.ts", "utf8");
 const chatStore = await readFile("src/lib/chat-store.ts", "utf8");
 const managementStyles = await readFile("src/styles/spec400-management.css", "utf8");
+const projectDetailStyles = await readFile("src/styles/project-detail.css", "utf8");
+const dropdownMenu = await readFile("src/components/ui/dropdown-menu.tsx", "utf8");
 const listPreferences = await readFile("src/lib/management-list-preferences.mjs", "utf8");
 
 test("observable reference documents workspace measurements without private assets", () => {
@@ -49,7 +51,11 @@ test("visual system exposes semantic workspace tokens and reusable classes", () 
 test("projects overview supports real search, sorting, view preference, counts, and permissions", () => {
   assert.match(
     projects,
-    /usePrincipalSessionPreferences\(\s*PROJECT_LIST_STORAGE_BASE,\s*isLoaded \? userKey : undefined,\s*parseProjectListPreferences/,
+    /usePrincipalSessionPreferences\(\s*PROJECT_LIST_STORAGE_BASE,\s*isLoaded \? userKey : undefined,\s*parseProjectDirectoryPreferences/,
+  );
+  assert.match(
+    projects,
+    /function parseProjectDirectoryPreferences\(raw: string \| null\): ProjectListPreferences \{\s*const preferences = parseProjectListPreferences\(raw\);\s*return raw === null \? \{ \.\.\.preferences, view: "list" \} : preferences;/,
   );
   assert.match(listPreferences, /PROJECT_LIST_STORAGE_BASE = "kova-project-list"/);
   assert.match(listPreferences, /view: value\.view === "list" \? "list" : "grid"/);
@@ -73,10 +79,41 @@ test("project detail has instructions autosave states and mobile-safe tabs", () 
   assert.match(projectDetail, /<TabsList aria-label="Project sections">/);
   assert.match(
     projectDetail,
-    /More project tools\s*<select[\s\S]{0,300}setTab\(event\.target\.value\)/,
+    /<DropdownMenuTrigger asChild>[\s\S]{0,180}aria-label="More project tools"/,
+  );
+  assert.match(projectDetail, /<DropdownMenuRadioGroup value=\{tab\} onValueChange=\{setTab\}>/);
+  for (const value of [
+    "overview",
+    "timers",
+    "files",
+    "images",
+    "notes",
+    "tasks",
+    "memory",
+    "members",
+    "collaboration",
+    "settings",
+  ]) {
+    assert.ok(projectDetail.includes(`<DropdownMenuRadioItem value="${value}">`));
+  }
+  assert.match(projectDetail, /\{isOwner \? "Settings" : "Access"\}/);
+  assert.match(
+    projectDetailStyles,
+    /\.kova-project-workspace \.kova-project-tools-trigger\s*\{[^}]*min-height: 44px;/,
   );
   assert.match(managementStyles, /\.spec400-project-navigation\s*\{[^}]*flex-wrap: wrap;/);
-  assert.match(managementStyles, /\.spec400-project-tools select,[^}]*max-width: 100%;/);
+  assert.match(
+    projectDetailStyles,
+    /\.kova-project-workspace \.spec400-project-tools\s*\{[^}]*max-width: 100%;/,
+  );
+  assert.match(
+    projectDetailStyles,
+    /@container project-detail \(max-width: 380px\)\s*\{\s*\.kova-project-workspace \.spec400-project-navigation\s*\{[^}]*flex-wrap: nowrap;/,
+  );
+  assert.match(
+    dropdownMenu,
+    /max-w-\[min\(var\(--radix-dropdown-menu-content-available-width,100vw\),calc\(100vw-1rem\)\)\]/,
+  );
 });
 
 test("project context and RAG remain server-side and scoped to project membership", () => {

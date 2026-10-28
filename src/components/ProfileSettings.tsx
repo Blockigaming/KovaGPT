@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useId, useRef, useState } from "react";
 import { User2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -118,20 +125,27 @@ export function ProfileSettings({
           </label>
           <label className="grid gap-2 text-sm">
             Time format
-            <select
-              className="kova-native-select min-h-11"
+            <Select
               value={timeFormatValue(settings.timeFormat)}
               disabled={!principalResolved || !user?.id}
-              aria-describedby="profile-time-limit"
-              onChange={(event) => {
+              onValueChange={(value) => {
                 if (!principalResolved || !user?.id || currentOwnerRef.current !== user.id) return;
-                onChange({ ...settings, timeFormat: timeFormatValue(event.target.value) });
+                onChange({ ...settings, timeFormat: timeFormatValue(value) });
               }}
             >
-              <option value="system">Device default ({deviceLocale.timeFormat})</option>
-              <option value="12-hour">12-hour (1:00 PM)</option>
-              <option value="24-hour">24-hour (13:00)</option>
-            </select>
+              <SelectTrigger
+                aria-label="Time format"
+                aria-describedby="profile-time-limit"
+                className="min-h-11"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="system">Device default ({deviceLocale.timeFormat})</SelectItem>
+                <SelectItem value="12-hour">12-hour (1:00 PM)</SelectItem>
+                <SelectItem value="24-hour">24-hour (13:00)</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
         </div>
         <p id="profile-time-limit" className="text-xs text-muted-foreground">

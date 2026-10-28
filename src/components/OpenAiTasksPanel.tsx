@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   loadOpenAiTaskAvailability,
@@ -120,23 +127,27 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
             <form onSubmit={(event) => void submit(event)} className="mt-3 space-y-3">
               <label className="block text-sm">
                 Task type
-                <select
-                  className="mt-1 block min-h-11 w-full rounded-lg border bg-background p-2"
+                <Select
                   value={operation}
-                  onChange={(event) => {
-                    setOperation(event.target.value as OpenAiTaskOperation);
+                  onValueChange={(value) => {
+                    setOperation(value as OpenAiTaskOperation);
                     setResult(null);
                     setError("");
                   }}
                   disabled={running}
                 >
-                  <option value="agent" disabled={!availability.agent}>
-                    Hosted Agent
-                  </option>
-                  <option value="browser" disabled={!availability.browser}>
-                    Hosted Browser
-                  </option>
-                </select>
+                  <SelectTrigger aria-label="Task type" className="mt-1 min-h-11 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="agent" disabled={!availability.agent}>
+                      Hosted Agent
+                    </SelectItem>
+                    <SelectItem value="browser" disabled={!availability.browser}>
+                      Hosted Browser
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </label>
               <p className="text-xs text-muted-foreground">
                 {operation === "browser"

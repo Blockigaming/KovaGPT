@@ -461,6 +461,13 @@ function editorFixture() {
         "AlertDialog AlertDialogAction AlertDialogCancel AlertDialogContent AlertDialogDescription AlertDialogFooter AlertDialogHeader AlertDialogTitle",
       ),
       "@/components/TaskGmailEventSource": { TaskGmailEventSource: "TaskGmailEventSource" },
+      "@/components/ui/select": {
+        Select: "Select",
+        SelectContent: "SelectContent",
+        SelectItem: "SelectItem",
+        SelectTrigger: "SelectTrigger",
+        SelectValue: "SelectValue",
+      },
       "@/components/ui/searchable-picker": { SearchablePicker: "SearchablePicker" },
       "@tanstack/react-start": { useServerFn: (fn) => fn },
       "@/lib/dialog-return-focus": f.restore,

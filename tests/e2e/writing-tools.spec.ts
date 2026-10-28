@@ -82,9 +82,14 @@ test("generated rewrites send selected settings and discard stale responses", as
   });
 
   await page.goto("/writing/paragraph-rewriter");
-  await page.getByLabel("Format").selectOption("Email");
-  await page.getByLabel("Tone").selectOption("Casual");
-  await page.getByLabel("Length").selectOption("Brief");
+  for (const [label, value] of [
+    ["Format", "Email"],
+    ["Tone", "Casual"],
+    ["Length", "Brief"],
+  ]) {
+    await page.getByRole("combobox", { name: label, exact: true }).click();
+    await page.getByRole("option", { name: value, exact: true }).click();
+  }
   const input = page.getByLabel("Text for Paragraph rewriter");
   await input.fill("Original paragraph");
   const runButton = page.getByRole("button", { name: "Run Paragraph rewriter" });

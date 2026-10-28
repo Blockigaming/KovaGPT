@@ -1,6 +1,15 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { fetchForPrincipal } from "@/lib/chat-summary-snapshot.mjs";
 import { chatResponseError, consumeChatSse } from "@/lib/chat-sse-client.mjs";
 import {
@@ -71,6 +80,37 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
   const alive = useRef(true);
   const operation = useRef(0);
   const stateRevision = useRef(0);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const confirmInvoker = useRef<{ element: HTMLElement | null; url: string }>({
+    element: null,
+    url: "",
+  });
+  const [confirmation, setConfirmation] = useState<null | {
+    action: "generate" | "open" | "import" | "delete" | "reload";
+    row?: StudyRecord;
+    file?: File;
+    revision: number;
+    operation: number;
+    recordId: string | null;
+    pendingMutationId: string | null;
+  }>(null);
+  function requestConfirmation(
+    action: NonNullable<typeof confirmation>["action"],
+    details: { row?: StudyRecord; file?: File } = {},
+  ) {
+    confirmInvoker.current = {
+      element: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+      url: window.location.href,
+    };
+    setConfirmation({
+      action,
+      ...details,
+      revision: stateRevision.current,
+      operation: operation.current,
+      recordId: record?.id ?? null,
+      pendingMutationId: pendingSave?.mutationId ?? null,
+    });
+  }
   const listFn = useServerFn(listStudySets),
     getFn = useServerFn(getStudySet),
     saveFn = useServerFn(saveStudySet);
@@ -107,14 +147,12 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
         : "Practice is ready. Save it when you want to keep your progress.",
     );
   };
-  const canReplace = () =>
-    !pendingSave &&
-    (!dirty ||
-      window.confirm(
-        "Replace this unsaved practice? Export or save it first if you want to keep it.",
-      ));
-  async function generate() {
-    if (busy || !canReplace()) return;
+  async function generate(confirmed = false) {
+    if (busy || pendingSave) return;
+    if (dirty && !confirmed) {
+      requestConfirmation("generate");
+      return;
+    }
     const token = ++operation.current;
     controller.current?.abort();
     const own = new AbortController();
@@ -199,8 +237,12 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
       if (alive.current && token === operation.current) setBusy(false);
     }
   }
-  async function open(row: StudyRecord) {
-    if (!ownerId || busy || !canReplace()) return;
+  async function open(row: StudyRecord, confirmed = false) {
+    if (!ownerId || busy || pendingSave) return;
+    if (dirty && !confirmed) {
+      requestConfirmation("open", { row });
+      return;
+    }
     const token = ++operation.current;
     setBusy(true);
     try {
@@ -214,10 +256,12 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
       if (alive.current && token === operation.current) setBusy(false);
     }
   }
-  async function save(remove = false) {
+  async function save(remove = false, confirmed = false) {
     if (!ownerId || temporary || busy || !state) return;
-    if (remove && !pendingSave && !window.confirm("Delete this saved practice and its progress?"))
+    if (remove && !pendingSave && !confirmed) {
+      requestConfirmation("delete");
       return;
+    }
     const attempt = pendingSave ?? {
       id: record?.id ?? crypto.randomUUID(),
       expectedRevision: record?.revision ?? 0,
@@ -267,16 +311,12 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
       if (alive.current && token === operation.current) setBusy(false);
     }
   }
-  async function reloadPending() {
-    if (
-      !ownerId ||
-      !pendingSave ||
-      busy ||
-      !window.confirm(
-        "Discard this local practice and reload the saved version? Export first to keep your local answers.",
-      )
-    )
+  async function reloadPending(confirmed = false) {
+    if (!ownerId || !pendingSave || busy) return;
+    if (!confirmed) {
+      requestConfirmation("reload");
       return;
+    }
     const token = ++operation.current;
     setBusy(true);
     setError("");
@@ -295,11 +335,63 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
       if (alive.current && token === operation.current) setBusy(false);
     }
   }
+  function importPractice(file: File, confirmed = false) {
+    if (busy || pendingSave) return;
+    if (dirty && !confirmed) {
+      requestConfirmation("import", { file });
+      return;
+    }
+    if (file.size > 180000) {
+      setError("This practice export is too large.");
+      return;
+    }
+    const token = ++operation.current;
+    const revision = stateRevision.current;
+    setBusy(true);
+    setError("");
+    void file
+      .text()
+      .then((text) => {
+        const value = StudyState.parse(JSON.parse(text));
+        if (alive.current && token === operation.current && revision === stateRevision.current) {
+          adopt(value, null);
+          setDirty(true);
+        }
+      })
+      .catch(() => {
+        if (alive.current && token === operation.current)
+          setError("Choose a valid KovaGPT practice export.");
+      })
+      .finally(() => {
+        if (alive.current && token === operation.current) setBusy(false);
+      });
+  }
+  function confirmAction() {
+    if (!confirmation) return;
+    const requested = confirmation;
+    setConfirmation(null);
+    if (
+      !alive.current ||
+      busy ||
+      requested.revision !== stateRevision.current ||
+      requested.operation !== operation.current ||
+      requested.recordId !== (record?.id ?? null) ||
+      requested.pendingMutationId !== (pendingSave?.mutationId ?? null)
+    ) {
+      setError("Practice changed. Review it before trying this action again.");
+      return;
+    }
+    if (requested.action === "generate") void generate(true);
+    else if (requested.action === "open" && requested.row) void open(requested.row, true);
+    else if (requested.action === "import" && requested.file) importPractice(requested.file, true);
+    else if (requested.action === "delete") void save(true, true);
+    else if (requested.action === "reload") void reloadPending(true);
+  }
   const summary = state ? studySummary(state) : null,
     card = state?.deck.cards[cardIndex];
   const buttonClass = "min-h-11 rounded-lg border px-3 py-2 text-sm";
   return (
-    <section className="space-y-5" aria-label="Study practice">
+    <section ref={sectionRef} tabIndex={-1} className="space-y-5" aria-label="Study practice">
       <div>
         <h2 className="text-xl font-semibold">Practice and flashcards</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -320,15 +412,16 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
         </label>
         <label className="grid gap-1 text-sm">
           Depth
-          <select
-            value={depth}
-            onChange={(event) => setDepth(event.target.value)}
-            className={buttonClass + " bg-background"}
-          >
-            <option value="foundational">Foundational</option>
-            <option value="standard">Standard</option>
-            <option value="advanced">Advanced</option>
-          </select>
+          <Select value={depth} onValueChange={setDepth}>
+            <SelectTrigger aria-label="Depth" className="min-h-11">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="foundational">Foundational</SelectItem>
+              <SelectItem value="standard">Standard</SelectItem>
+              <SelectItem value="advanced">Advanced</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
         <label className="grid gap-1 text-sm">
           Notes or an explanation to practice
@@ -383,15 +476,19 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
           </p>
           <label className="flex flex-wrap items-center gap-2 text-sm">
             Practice style
-            <select
+            <Select
               disabled={answered || revealed}
               value={mode}
-              onChange={(event) => setMode(event.target.value as "quiz" | "flashcard")}
-              className={buttonClass + " bg-background"}
+              onValueChange={(value) => setMode(value as "quiz" | "flashcard")}
             >
-              <option value="quiz">Knowledge check</option>
-              <option value="flashcard">Flashcards</option>
-            </select>
+              <SelectTrigger aria-label="Practice style" className="min-h-11 w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="quiz">Knowledge check</SelectItem>
+                <SelectItem value="flashcard">Flashcards</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
           <fieldset disabled={Boolean(pendingSave) || busy} className="space-y-3">
             <legend className="font-medium">{card.question}</legend>
@@ -548,38 +645,49 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
           onChange={(event) => {
             const file = event.target.files?.[0];
             event.target.value = "";
-            if (!file || !canReplace()) return;
-            if (file.size > 180000) {
-              setError("This practice export is too large.");
-              return;
-            }
-            const token = ++operation.current;
-            const revision = stateRevision.current;
-            setBusy(true);
-            setError("");
-            void file
-              .text()
-              .then((text) => {
-                const value = StudyState.parse(JSON.parse(text));
-                if (
-                  alive.current &&
-                  token === operation.current &&
-                  revision === stateRevision.current
-                ) {
-                  adopt(value, null);
-                  setDirty(true);
-                }
-              })
-              .catch(() => {
-                if (alive.current && token === operation.current)
-                  setError("Choose a valid KovaGPT practice export.");
-              })
-              .finally(() => {
-                if (alive.current && token === operation.current) setBusy(false);
-              });
+            if (file) importPractice(file);
           }}
         />
       </label>
+      <ConfirmActionDialog
+        open={confirmation !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmation(null);
+        }}
+        title={
+          confirmation?.action === "delete"
+            ? "Delete saved practice?"
+            : confirmation?.action === "reload"
+              ? "Reload saved practice?"
+              : "Replace unsaved practice?"
+        }
+        description={
+          confirmation?.action === "delete"
+            ? "Delete this saved practice and its progress?"
+            : confirmation?.action === "reload"
+              ? "Discard this local practice and reload the saved version? Export first to keep your local answers."
+              : "Replace this unsaved practice? Export or save it first if you want to keep it."
+        }
+        confirmLabel={
+          confirmation?.action === "delete"
+            ? "Delete practice"
+            : confirmation?.action === "reload"
+              ? "Reload saved version"
+              : "Replace practice"
+        }
+        destructive={confirmation?.action === "delete"}
+        disabled={busy}
+        onConfirm={confirmAction}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const invoker = confirmInvoker.current;
+          const target =
+            invoker.element?.isConnected && !invoker.element.matches(":disabled")
+              ? invoker.element
+              : sectionRef.current;
+          restoreDialogFocus(target, invoker.url);
+        }}
+      />
     </section>
   );
 }

@@ -46,8 +46,9 @@ export async function coreFixture(
   page: Page,
   theme: "light" | "dark" = "light",
   tier: "free" | "plus" | "pro" = "free",
+  options: { preserveStorageOnReload?: boolean } = {},
 ) {
-  await fixture(page, theme, true, true, tier);
+  await fixture(page, theme, true, true, tier, options);
   // Use a defined returning-user sidebar preference before hydration.
   await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
   await page.route("**/_serverFn/**", (route) => {

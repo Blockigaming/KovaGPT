@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
@@ -226,18 +233,18 @@ function OwnedPricingAdministration({ ownerId }: { ownerId: string }) {
                 </li>
               ))}
             </ul>
-            <label className="block">
-              Proposal type
-              <select
-                className="ml-3 rounded border bg-background p-2"
-                disabled={busy || !!selected}
-                value={kind}
-                onChange={(e) => setKind(e.target.value)}
-              >
-                <option value="pricing">Developer pricing</option>
-                <option value="credit_offer">Prepaid credit offer</option>
-              </select>
-            </label>
+            <div className="grid gap-2">
+              <label htmlFor="pricing-proposal-type">Proposal type</label>
+              <Select disabled={busy || !!selected} value={kind} onValueChange={setKind}>
+                <SelectTrigger id="pricing-proposal-type" className="w-auto max-w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pricing">Developer pricing</SelectItem>
+                  <SelectItem value="credit_offer">Prepaid credit offer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <label className="block" htmlFor="pricing-proposal">
               Proposal JSON
             </label>

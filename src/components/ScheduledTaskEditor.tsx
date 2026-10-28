@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import "@/styles/spec400-management.css";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -718,64 +725,78 @@ function ScheduledTaskEditorBody({
             <h3 className="pt-3 text-base font-semibold">When should it run?</h3>
             <label className="block text-sm">
               Run when
-              <select
-                className={control}
+              <Select
                 value={mode}
-                onChange={(event) => setMode(event.target.value as "time" | "event")}
+                disabled={busy || Boolean(pending.current) || task?.status === "running"}
+                onValueChange={(value) => setMode(value as "time" | "event")}
               >
-                <option value="time">A scheduled time arrives</option>
-                <option value="event">A connected event matches</option>
-              </select>
+                <SelectTrigger aria-label="Run when" className={control}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="time">A scheduled time arrives</SelectItem>
+                  <SelectItem value="event">A connected event matches</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
             {mode === "time" && (
               <>
                 <label className="block text-sm">
                   Frequency
-                  <select
-                    className={control}
+                  <Select
                     value={repeat}
-                    onChange={(event) => setRepeat(event.target.value as ScheduledTask["repeat"])}
+                    disabled={busy || Boolean(pending.current) || task?.status === "running"}
+                    onValueChange={(value) => setRepeat(value as ScheduledTask["repeat"])}
                   >
-                    <option value="none">Once</option>
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
+                    <SelectTrigger aria-label="Frequency" className={control}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Once</SelectItem>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </label>
                 {repeat === "weekly" && (
                   <label className="block text-sm">
                     Weekday
-                    <select
-                      className={control}
-                      value={
-                        localTime ? new Date(`${localTime.slice(0, 10)}T12:00:00Z`).getUTCDay() : 1
-                      }
-                      onChange={(event) => {
+                    <Select
+                      disabled={busy || Boolean(pending.current) || task?.status === "running"}
+                      value={String(
+                        localTime ? new Date(`${localTime.slice(0, 10)}T12:00:00Z`).getUTCDay() : 1,
+                      )}
+                      onValueChange={(value) => {
                         const day = new Date(`${localTime.slice(0, 10)}T12:00:00Z`);
                         if (!Number.isFinite(day.getTime())) return;
                         day.setUTCDate(
-                          day.getUTCDate() +
-                            ((Number(event.target.value) - day.getUTCDay() + 7) % 7),
+                          day.getUTCDate() + ((Number(value) - day.getUTCDay() + 7) % 7),
                         );
                         setLocalTime(
                           `${day.toISOString().slice(0, 10)}T${localTime.slice(11) || "09:00"}`,
                         );
                       }}
                     >
-                      {[
-                        "Sunday",
-                        "Monday",
-                        "Tuesday",
-                        "Wednesday",
-                        "Thursday",
-                        "Friday",
-                        "Saturday",
-                      ].map((day, index) => (
-                        <option key={day} value={index}>
-                          {day}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger aria-label="Weekday" className={control}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          "Sunday",
+                          "Monday",
+                          "Tuesday",
+                          "Wednesday",
+                          "Thursday",
+                          "Friday",
+                          "Saturday",
+                        ].map((day, index) => (
+                          <SelectItem key={day} value={String(index)}>
+                            {day}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </label>
                 )}
                 <div className="spec400-form-row">
@@ -906,19 +927,24 @@ function ScheduledTaskEditorBody({
                 />
               </label>
               <div className="my-2 flex gap-2">
-                <select
-                  className={control}
+                <Select
                   value={kind}
-                  onChange={(event) => {
+                  disabled={busy || Boolean(pending.current) || task?.status === "running"}
+                  onValueChange={(value) => {
                     sourceRead.current++;
-                    setKind(event.target.value as "library" | "project_file");
+                    setKind(value as "library" | "project_file");
                     setOptions([]);
                     setCursor(null);
                   }}
                 >
-                  <option value="library">Library text</option>
-                  <option value="project_file">Project files</option>
-                </select>
+                  <SelectTrigger aria-label="Context source" className={control}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="library">Library text</SelectItem>
+                    <SelectItem value="project_file">Project files</SelectItem>
+                  </SelectContent>
+                </Select>
                 <button type="button" className={button} onClick={() => void loadFiles()}>
                   Browse
                 </button>
@@ -1133,17 +1159,24 @@ function ScheduledTaskEditorBody({
                       </label>
                       <label className="block text-sm">
                         Pull request activity
-                        <select
-                          className={control}
+                        <Select
                           value={activity}
-                          onChange={(event) => setActivity(event.target.value)}
+                          disabled={busy || Boolean(pending.current) || task?.status === "running"}
+                          onValueChange={setActivity}
                         >
-                          {["opened", "synchronize", "closed", "review", "comment", "merged"].map(
-                            (item) => (
-                              <option key={item}>{item}</option>
-                            ),
-                          )}
-                        </select>
+                          <SelectTrigger aria-label="Pull request activity" className={control}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["opened", "synchronize", "closed", "review", "comment", "merged"].map(
+                              (item) => (
+                                <SelectItem key={item} value={item}>
+                                  {item}
+                                </SelectItem>
+                              ),
+                            )}
+                          </SelectContent>
+                        </Select>
                       </label>
                     </>
                   )}

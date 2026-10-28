@@ -59,7 +59,7 @@
 }
 .kova-appearance-preview-prose {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-reading);
   line-height: 1.625;
   overflow-wrap: anywhere;
 }

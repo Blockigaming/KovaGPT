@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Boxes, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { chatStoragePrincipal, loadConversations } from "@/lib/chat-store";
 import { listMyLibrary, type LibraryItem } from "@/lib/library.functions";
@@ -111,11 +113,63 @@ function ContextPacksPage() {
   const draftRef = useRef({ name, description, selected });
   draftRef.current = { name, description, selected };
   const creatingRef = useRef(false);
+  const deletingRef = useRef(false);
+  const [deleting, setDeleting] = useState(false);
+  const savedListHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const completedDeleteRef = useRef<{
+    principal: string;
+    generation: number;
+    url: string;
+  } | null>(null);
+  const deleteTriggerRef = useRef<{
+    element: HTMLButtonElement;
+    principal: string;
+    generation: number;
+    url: string;
+  } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    pack: ContextPack;
+    principal: string;
+    generation: number;
+    url: string;
+  } | null>(null);
+  const restoreDeleteFocus = useCallback((closingDialog?: EventTarget | null) => {
+    const trigger = deleteTriggerRef.current;
+    if (
+      !trigger ||
+      trigger.principal !== principalRef.current ||
+      trigger.generation !== generationRef.current ||
+      trigger.url !== window.location.href
+    )
+      return;
+    const active = document.activeElement;
+    const heading = savedListHeadingRef.current;
+    const focusRemainsInClosingDialog =
+      closingDialog instanceof HTMLElement &&
+      closingDialog.matches('[role="alertdialog"]') &&
+      closingDialog.contains(active);
+    if (
+      active &&
+      active !== document.body &&
+      active !== trigger.element &&
+      active !== heading &&
+      !focusRemainsInClosingDialog
+    )
+      return;
+    const target =
+      trigger.element.isConnected && !trigger.element.disabled ? trigger.element : heading;
+    restoreDialogFocus(target, trigger.url);
+  }, []);
+
   const [dataPrincipal, setDataPrincipal] = useState<string | null>(null);
   const dataReady = principal !== null && dataPrincipal === principal;
   useEffect(() => {
     generationRef.current += 1;
     creatingRef.current = false;
+    deletingRef.current = false;
+    setDeleting(false);
+    completedDeleteRef.current = null;
+    setDeleteTarget(null);
     setCreating(false);
     setName("");
     setDescription("");
@@ -305,6 +359,49 @@ function ContextPacksPage() {
       }
     }
   };
+  useLayoutEffect(() => {
+    const completed = completedDeleteRef.current;
+    if (!completed) return;
+    completedDeleteRef.current = null;
+    if (
+      completed.principal === principalRef.current &&
+      completed.generation === generationRef.current &&
+      completed.url === window.location.href &&
+      !deleteTriggerRef.current?.element.isConnected
+    )
+      restoreDeleteFocus();
+  }, [packs, restoreDeleteFocus]);
+  const confirmDelete = async () => {
+    if (
+      !deleteTarget ||
+      !dataReady ||
+      !isSignedIn ||
+      deletingRef.current ||
+      deleteTarget.generation !== generationRef.current ||
+      deleteTarget.principal !== principalRef.current
+    )
+      return;
+    const { pack, principal: deletePrincipal, generation, url } = deleteTarget;
+    const isCurrent = () =>
+      generation === generationRef.current && principalRef.current === deletePrincipal;
+    deletingRef.current = true;
+    setDeleting(true);
+    setDeleteTarget(null);
+    try {
+      await remove({ data: { id: pack.id } });
+      if (!isCurrent()) return;
+      completedDeleteRef.current = { principal: deletePrincipal, generation, url };
+      setPacks((all) => all.filter((p) => p.id !== pack.id));
+    } catch (e) {
+      if (!isCurrent()) return;
+      toast.error(e instanceof Error ? e.message : "Could not delete");
+    } finally {
+      if (isCurrent()) {
+        deletingRef.current = false;
+        setDeleting(false);
+      }
+    }
+  };
   const attachPack = (pack: ContextPack) => {
     const handoff = writePrincipalHandoff(
       safeBrowserStorage("sessionStorage"),
@@ -419,7 +516,14 @@ function ContextPacksPage() {
               </button>
             </section>
             <section className="min-w-0 [overflow-wrap:anywhere]">
-              <h2 className="font-semibold">Saved packs</h2>
+              <h2 ref={savedListHeadingRef} tabIndex={-1} className="font-semibold">
+                Saved packs
+              </h2>
+              {deleting ? (
+                <p role="status" className="mt-2 text-sm text-muted-foreground">
+                  Deleting context pack…
+                </p>
+              ) : null}
               {packs.length === 0 ? (
                 <div className="mt-3 rounded-2xl border p-8 text-center text-sm text-muted-foreground">
                   Create your first pack from real workspace context.
@@ -491,27 +595,25 @@ function ContextPacksPage() {
                         </button>
                         <button
                           aria-label={`Delete ${pack.name}`}
-                          onClick={async () => {
-                            if (!confirm("Delete this context pack?")) return;
-                            const generation = generationRef.current;
-                            try {
-                              await remove({ data: { id: pack.id } });
-                              if (
-                                generation !== generationRef.current ||
-                                principalRef.current !== principal
-                              )
-                                return;
-                              setPacks((all) => all.filter((p) => p.id !== pack.id));
-                            } catch (e) {
-                              if (
-                                generation !== generationRef.current ||
-                                principalRef.current !== principal
-                              )
-                                return;
-                              toast.error(e instanceof Error ? e.message : "Could not delete");
-                            }
+                          disabled={deleting}
+                          aria-busy={deleting || undefined}
+                          onClick={(event) => {
+                            if (!dataReady || !isSignedIn || !principal || deletingRef.current)
+                              return;
+                            deleteTriggerRef.current = {
+                              element: event.currentTarget,
+                              principal,
+                              generation: generationRef.current,
+                              url: window.location.href,
+                            };
+                            setDeleteTarget({
+                              pack,
+                              principal,
+                              generation: generationRef.current,
+                              url: window.location.href,
+                            });
                           }}
-                          className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                          className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-50"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -523,6 +625,22 @@ function ContextPacksPage() {
             </section>
           </div>
         )}
+        <ConfirmActionDialog
+          open={!!deleteTarget && dataReady && deleteTarget.principal === principal}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+          }}
+          title="Delete context pack?"
+          description={`Delete “${deleteTarget?.pack.name ?? "this context pack"}”? This cannot be undone.`}
+          confirmLabel="Delete pack"
+          destructive
+          disabled={deleting}
+          onConfirm={() => void confirmDelete()}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            restoreDeleteFocus(event.target);
+          }}
+        />
       </main>
     </AppShell>
   );

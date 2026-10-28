@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Bot, Check, Circle, Loader2, Pause, Play, RotateCcw, Square, Users } from "lucide-react";
@@ -265,26 +272,30 @@ export function AgentTeamWorkspace() {
               {tasks.map((item, index) => (
                 <li key={item.key} className="rounded-xl border p-3">
                   <div className="flex gap-2">
-                    <select
-                      aria-label={`Role for ${item.title}`}
+                    <Select
                       value={item.role}
-                      onChange={(event) =>
+                      onValueChange={(role) =>
                         setTasks((all) =>
                           all.map((value, i) =>
-                            i === index
-                              ? { ...value, role: event.target.value as AgentRole }
-                              : value,
+                            i === index ? { ...value, role: role as AgentRole } : value,
                           ),
                         )
                       }
-                      className="h-9 rounded-lg border bg-background px-2 text-xs"
                     >
-                      {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger
+                        aria-label={`Role for ${item.title}`}
+                        className="w-auto text-xs"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <input
                       aria-label={`Title for task ${index + 1}`}
                       value={item.title}
@@ -327,11 +338,9 @@ export function AgentTeamWorkspace() {
                         ? item.dependencies.join(", ")
                         : "Starts immediately"}
                     </span>
-                    <select
-                      aria-label={`Add dependency for ${item.title}`}
+                    <Select
                       value=""
-                      onChange={(event) => {
-                        const dependency = event.target.value;
+                      onValueChange={(dependency) => {
                         if (!dependency) return;
                         setTasks((all) =>
                           all.map((value, i) =>
@@ -341,21 +350,27 @@ export function AgentTeamWorkspace() {
                           ),
                         );
                       }}
-                      className="h-8 rounded-lg border bg-background px-2"
                     >
-                      <option value="">Add dependency</option>
-                      {tasks
-                        .filter(
-                          (candidate) =>
-                            candidate.key !== item.key &&
-                            !item.dependencies.includes(candidate.key),
-                        )
-                        .map((candidate) => (
-                          <option key={candidate.key} value={candidate.key}>
-                            {candidate.key}
-                          </option>
-                        ))}
-                    </select>
+                      <SelectTrigger
+                        aria-label={`Add dependency for ${item.title}`}
+                        className="w-auto text-xs"
+                      >
+                        <SelectValue placeholder="Add dependency" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tasks
+                          .filter(
+                            (candidate) =>
+                              candidate.key !== item.key &&
+                              !item.dependencies.includes(candidate.key),
+                          )
+                          .map((candidate) => (
+                            <SelectItem key={candidate.key} value={candidate.key}>
+                              {candidate.key}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                     {item.dependencies.map((dependency) => (
                       <button
                         key={dependency}

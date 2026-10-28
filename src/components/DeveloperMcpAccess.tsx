@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -253,26 +260,29 @@ export function DeveloperMcpConsentPanel({
           </label>
         ))}
       </fieldset>
-      <label className="block space-y-2">
-        Developer project
-        <select
-          aria-label="Developer project"
-          className="block w-full rounded border bg-background p-2"
-          value={projectId}
+      <div className="grid gap-2">
+        <label htmlFor="mcp-developer-project">Developer project</label>
+        <Select
+          value={projectId || "__none__"}
           disabled={busy}
-          onChange={(event) => {
-            setProjectId(event.target.value);
+          onValueChange={(value) => {
+            setProjectId(value === "__none__" ? "" : value);
             change();
           }}
         >
-          <option value="">Choose a project</option>
-          {details.projects.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name} · {item.currency}
-            </option>
-          ))}
-        </select>
-      </label>
+          <SelectTrigger id="mcp-developer-project" aria-label="Developer project">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Choose a project</SelectItem>
+            {details.projects.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
+                {item.name} · {item.currency}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       {!details.projects.length && (
         <p>
           Configure your developer account, project and spending limits in the{" "}

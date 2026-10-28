@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { AtSign, MessageCircle, Send, Trash2 } from "lucide-react";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -173,18 +180,18 @@ function ProjectCollaborationSession({
             aria-label="Project comment"
           />
           <div className="flex flex-wrap gap-2 border-t pt-3">
-            <select
-              value={anchor}
-              onChange={(e) => setAnchor(e.target.value)}
-              className="h-10 rounded-lg border bg-background px-3 text-sm"
-              aria-label="Comment location"
-            >
-              <option>General</option>
-              <option>Notes</option>
-              <option>Tasks</option>
-              <option>Files</option>
-              <option>Instructions</option>
-            </select>
+            <Select value={anchor} onValueChange={setAnchor}>
+              <SelectTrigger aria-label="Comment location" className="min-h-11 w-auto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="General">General</SelectItem>
+                <SelectItem value="Notes">Notes</SelectItem>
+                <SelectItem value="Tasks">Tasks</SelectItem>
+                <SelectItem value="Files">Files</SelectItem>
+                <SelectItem value="Instructions">Instructions</SelectItem>
+              </SelectContent>
+            </Select>
             <details className="relative">
               <summary className="flex min-h-10 cursor-pointer list-none items-center rounded-lg border px-3 text-sm">
                 <AtSign className="mr-1 h-4 w-4" />

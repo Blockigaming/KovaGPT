@@ -98,6 +98,16 @@ vm.runInNewContext(output, {
     if (id === "@/lib/composer-keyboard.mjs") return { shouldSubmitComposerOnEnter };
     if (id === "@/lib/composer-preferences") return { useSharedSendOnEnter: () => true };
     if (id === "@/lib/modes") return { DAILY_UPLOAD_LIMIT_BY_TIER: { free: 3, plus: 20 } };
+    if (id === "@/components/ui/select") {
+      const select = nativeRequire("@radix-ui/react-select");
+      return {
+        Select: select.Root,
+        SelectContent: select.Content,
+        SelectItem: select.Item,
+        SelectTrigger: select.Trigger,
+        SelectValue: select.Value,
+      };
+    }
     if (id === "@/components/ui/dialog") {
       const dialog = nativeRequire("@radix-ui/react-dialog");
       return { Dialog: dialog.Root, DialogTrigger: dialog.Trigger, DialogContent: empty };
