@@ -13,6 +13,7 @@ import { BrandFooter, BrandHeader, EmailHead, brandColors, styles } from "./_bra
 import type { TemplateEntry } from "./registry";
 
 interface Props {
+  publicOrigin?: string;
   name?: string;
   email?: string;
   topic?: string;
@@ -23,6 +24,7 @@ interface Props {
 }
 
 const Email = ({
+  publicOrigin,
   name = "Unknown",
   email = "unknown@example.com",
   topic = "(no subject)",
@@ -73,7 +75,7 @@ const Email = ({
         <Text className="kova-muted" style={{ ...styles.footerText, wordBreak: "break-all" }}>
           User agent: {userAgent || "—"}
         </Text>
-        <BrandFooter />
+        <BrandFooter publicOrigin={publicOrigin} />
       </Container>
     </Body>
   </Html>
@@ -91,7 +93,7 @@ export const template = {
     topic: "Issue with image generation",
     message: "Hi team, when I try to generate an image …",
     variant: "help",
-    url: "https://kovagpt.com/",
+    url: "https://example.com/",
     userAgent: "Mozilla/5.0",
   },
 } satisfies TemplateEntry;

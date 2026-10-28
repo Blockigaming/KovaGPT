@@ -72,7 +72,12 @@ async function enqueueFixedRecipient(args: {
   if (!entry.to) {
     throw new Error("Public support email templates must define a fixed recipient");
   }
-  const element = React.createElement(entry.component, args.data);
+  // Only the server-configured origin may become a link in queued mail. Never
+  // derive branded links from the submitted URL or forwarded request headers.
+  const element = React.createElement(entry.component, {
+    ...args.data,
+    publicOrigin: process.env.KOVA_AUTH_PUBLIC_ORIGIN,
+  });
   const html = await render(element);
   const plainText = await render(element, { plainText: true });
   const subject = typeof entry.subject === "function" ? entry.subject(args.data) : entry.subject;
