@@ -291,7 +291,7 @@ function LegacyConsentRoute({ context }: { context: LegacyContext }) {
       <Shell>
         <div className="flex flex-col items-center text-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground/[0.04] ring-1 ring-border">
-            <NovaLogo className="h-9 w-9" />
+            <NovaLogo className="h-8 w-8" />
           </div>
           <h1 className="text-[22px] font-semibold tracking-tight">Sign in to continue</h1>
           <p className="mt-2 max-w-[320px] text-sm text-muted-foreground">
@@ -346,7 +346,7 @@ function LegacyConsentRoute({ context }: { context: LegacyContext }) {
     <Shell>
       <div className="flex flex-col items-center text-center">
         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground/[0.04] ring-1 ring-border">
-          <NovaLogo className="h-9 w-9" />
+          <NovaLogo className="h-8 w-8" />
         </div>
         <h1 className="text-[22px] font-semibold tracking-tight">
           Connect {clientName} to KovaGPT

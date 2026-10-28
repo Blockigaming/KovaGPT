@@ -206,7 +206,7 @@ function CheckoutReturn() {
           session_id && (!isLoaded || (isSignedIn && verification.kind === "checking")),
         )}
       >
-        <NovaLogo className="mx-auto mb-4 h-12 w-12" />
+        <NovaLogo className="mx-auto mb-4 h-8 w-8" />
         {status}
         <Link
           to="/"

@@ -117,7 +117,7 @@ test("empty chat offers draft starters and scopes recent work to signed-in histo
   assert.doesNotMatch(starters, /onSubmit|\.submit\(/);
   assert.match(route, /\{isLoaded && isSignedIn && historyConversations\.length > 0 \? \(/);
   assert.match(route, /Continue working/);
-  assert.match(route, /Sign in to attach files and keep your work together/);
+  assert.match(route, /Sign in to save chats and attach files/);
 });
 
 test("signed-in onboarding hands real choices to the authenticated composer", () => {

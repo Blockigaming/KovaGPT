@@ -1,7 +1,7 @@
 /* Assistant menus live in Radix portals outside the workspace element.
    The main route lifts its semantic tokens onto body; keep every overlay on
    those same surfaces without changing Radix placement, focus or scrolling. */
-body:has(.kova-assistant[data-ui="modern"])
+body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   :is(
     .kova-composer-menu,
     .spec400-options-panel,
@@ -23,7 +23,7 @@ body:has(.kova-assistant[data-ui="modern"])
 }
 
 /* A quiet resting edge, with the existing visible keyboard focus retained. */
-body:has(.kova-assistant[data-ui="modern"])
+body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   :is(.spec400-options-panel select, .spec400-expanded-textarea, .kova-header-title-input) {
   min-width: 0;
   max-width: 100%;
@@ -32,7 +32,7 @@ body:has(.kova-assistant[data-ui="modern"])
   color: var(--foreground);
   font-family: var(--font-sans);
 }
-body:has(.kova-assistant[data-ui="modern"])
+body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   :is(
     .spec400-options-panel select,
     .spec400-expanded-textarea,
@@ -41,13 +41,13 @@ body:has(.kova-assistant[data-ui="modern"])
   border-color: var(--ring);
 }
 
-body:has(.kova-assistant[data-ui="modern"]) .spec400-options-panel p {
+body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]) .spec400-options-panel p {
   line-height: 1.55;
 }
 
 /* Menu rows may grow for long labels, localization and larger text. The
    shared menu primitives still own their minimum 44px interaction targets. */
-body:has(.kova-assistant[data-ui="modern"])
+body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   :is(
     .kova-response-menu,
     .kova-sidebar-chat-menu,
@@ -62,7 +62,7 @@ body:has(.kova-assistant[data-ui="modern"])
   font-size: 14px;
   line-height: 1.45;
 }
-body:has(.kova-assistant[data-ui="modern"])
+body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   :is(.kova-composer-action, .kova-composer-plugin)
   > span {
   min-width: 0;
@@ -119,7 +119,7 @@ body:has(.kova-assistant[data-ui="modern"])
   overflow-wrap: anywhere;
 }
 
-body:has(.kova-assistant[data-ui="modern"])
+body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   :is(
     .spec400-options-panel,
     .spec400-context-drawer,

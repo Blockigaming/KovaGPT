@@ -17,7 +17,9 @@ for (const theme of ["dark", "light"] as const) {
     ).toBeVisible();
     await expect(input).toHaveAttribute("placeholder", "Describe what you need…");
     await expect(composer).toHaveCSS("border-radius", "28px");
-    expect((await composer.boundingBox())!.height).toBeGreaterThanOrEqual(160);
+    const restingHeight = (await composer.boundingBox())!.height;
+    expect(restingHeight).toBeGreaterThanOrEqual(128);
+    expect(restingHeight).toBeLessThanOrEqual(136);
     await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
     await expect(page.getByRole("button", { name: "Open voice", exact: true })).toHaveCount(0);
     await expect(page.getByText("Continue working", { exact: true })).toHaveCount(0);

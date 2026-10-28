@@ -20,7 +20,7 @@ export function LoginPromptDialog({
         <div className="relative rounded-3xl border border-border/60 bg-card shadow-2xl p-8 animate-in fade-in-0 zoom-in-95 duration-300">
           <div className="flex flex-col items-center text-center">
             <div className="mb-4 w-14 h-14 rounded-2xl bg-foreground/[0.04] ring-1 ring-border flex items-center justify-center">
-              <NovaLogo className="w-9 h-9" />
+              <NovaLogo className="w-8 h-8" />
             </div>
             <h2 className="text-[22px] leading-tight font-semibold tracking-tight">{title}</h2>
             <p className="mt-2 text-[14px] text-muted-foreground max-w-[320px]">{description}</p>

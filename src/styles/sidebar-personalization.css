@@ -262,14 +262,14 @@
 
 /* Main assistant navigation: the unfilled compose action and quiet history of ChatGPT.
    Width, drawer visibility and scrolling remain owned by the shared sidebar. */
-.kova-assistant[data-ui="modern"] {
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] {
   --chat-nav-surface: #f9f9f9;
   --chat-nav-hover: rgb(0 0 0 / 5%);
   --chat-nav-selected: rgb(0 0 0 / 7%);
   --chat-nav-muted: #676767;
   --chat-nav-line: rgb(0 0 0 / 7%);
 }
-.dark .kova-assistant[data-ui="modern"] {
+.dark :is(.kova-assistant, .kova-app-shell)[data-ui="modern"] {
   --chat-nav-surface: #171717;
   --chat-nav-hover: rgb(255 255 255 / 5%);
   --chat-nav-selected: rgb(255 255 255 / 8%);
@@ -278,7 +278,7 @@
 }
 /* Recover the assistant's type stack from the legacy navigation font override. */
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -289,7 +289,7 @@ body
   font-family: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif) !important;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -298,7 +298,7 @@ body
   font-family: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif) !important;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -310,7 +310,7 @@ body
   stroke-width: 1.7;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -321,7 +321,7 @@ body
   stroke-width: 1.7;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -330,7 +330,7 @@ body
   color: var(--chat-nav-muted);
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -340,7 +340,7 @@ body
   color: var(--foreground);
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -349,7 +349,7 @@ body
   color: var(--foreground);
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -358,7 +358,7 @@ body
   content: none;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -370,7 +370,7 @@ body
   letter-spacing: -0.025em;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -381,7 +381,7 @@ body
   height: 24px;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -391,7 +391,7 @@ body
   gap: 3px;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row {
   gap: 12px !important;
@@ -402,27 +402,27 @@ body
   border-radius: 10px;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row:is(:hover, .is-active) {
   background: var(--chat-nav-hover);
   color: var(--foreground);
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row.is-active {
   background: var(--chat-nav-selected) !important;
   font-weight: 500;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row.is-active::before {
   content: none;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row.kova-new-chat {
   justify-content: flex-start;
@@ -436,7 +436,7 @@ body
   box-shadow: none;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-nav-row.kova-new-chat:hover {
   background: var(--chat-nav-hover);
@@ -444,7 +444,7 @@ body
   filter: none;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-history {
   margin-top: 0;
@@ -452,7 +452,7 @@ body
   border-top: 0;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-history
   h2 {
@@ -463,38 +463,38 @@ body
   text-transform: none !important;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   :is(.kova-sidebar-empty, .kova-account-copy small) {
   color: var(--chat-nav-muted);
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-empty {
   font-size: 12px;
   line-height: 1.65;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-chat-row-main {
   font-size: 13px;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-help {
   padding: 8px 12px 0;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-footer {
   padding-inline: 12px;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -503,7 +503,7 @@ body
   background: var(--chat-nav-hover);
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -512,7 +512,7 @@ body
   background: var(--chat-nav-selected);
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -522,7 +522,7 @@ body
   background: var(--chat-nav-hover);
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -531,7 +531,7 @@ body
   border-color: var(--ring);
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -540,7 +540,7 @@ body
   background: var(--chat-nav-surface);
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
@@ -549,10 +549,10 @@ body
   padding-inline: 16px 6px;
 }
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
 body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
   --sidebar-hover: var(--chat-nav-hover);
   --sidebar-active: var(--chat-nav-selected);
@@ -561,31 +561,31 @@ body
 }
 .dark
   body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
 .dark
   body
-  .kova-assistant[data-ui="modern"]
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
   background: var(--chat-nav-surface) !important;
 }
 
 /* The assistant keeps navigation identity and account actions compact without
    changing the shared drawer's width, visibility or focus ownership. */
-.kova-assistant[data-ui="modern"]
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-header-button[aria-expanded="true"] {
   color: var(--foreground);
   background: var(--chat-nav-selected);
 }
 
-.kova-assistant[data-ui="modern"]
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-brand {
   line-height: 1.2;
 }
 
-.kova-assistant[data-ui="modern"]
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-footer
   .kova-sign-in {
@@ -595,7 +595,7 @@ body
   font-weight: 500;
 }
 
-.kova-assistant[data-ui="modern"] .spec400-mobile-page-title {
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] .spec400-mobile-page-title {
   font-size: 15px;
   line-height: 22px;
   letter-spacing: -0.02em;

@@ -1,7 +1,7 @@
 /* Claude's serif/sans typography, Grok's restrained spacing and surfaces, and
    ChatGPT's pill actions. Shared components retain their existing behavior. */
-body:has(.kova-assistant[data-ui="modern"]),
-.kova-assistant[data-ui="modern"] {
+body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]),
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] {
   --assistant-canvas: #faf9f7;
   --assistant-panel: #f3f3f1;
   --assistant-card: #ffffff;
@@ -47,8 +47,8 @@ body:has(.kova-assistant[data-ui="modern"]),
   -webkit-font-smoothing: antialiased;
 }
 
-.dark body:has(.kova-assistant[data-ui="modern"]),
-.dark .kova-assistant[data-ui="modern"] {
+.dark body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]),
+.dark :is(.kova-assistant, .kova-app-shell)[data-ui="modern"] {
   --assistant-canvas: #212121;
   --assistant-panel: #171717;
   --assistant-card: #2b2b2b;
@@ -68,7 +68,7 @@ body:has(.kova-assistant[data-ui="modern"]),
   background: var(--assistant-canvas);
 }
 
-.kova-assistant[data-ui="modern"] .kova-topbar {
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] .kova-topbar {
   background: var(--assistant-canvas) !important;
   border-bottom: 0 !important;
 }
@@ -79,7 +79,7 @@ body:has(.kova-assistant[data-ui="modern"]),
   padding-inline: 20px;
 }
 
-.kova-assistant[data-ui="modern"]
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-header {
   height: calc(56px + var(--safe-top));
@@ -313,8 +313,22 @@ body:has(.kova-assistant[data-ui="modern"]),
   padding-inline: 12px;
 }
 
-.kova-assistant[data-ui="modern"] :is(.kova-sidebar, .kova-sidebar-rail) {
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] :is(.kova-sidebar, .kova-sidebar-rail) {
   --font-sans: var(--chat-body-font);
+}
+
+/* Shared workspace pages keep their existing columns, density and type sizes.
+   Override the legacy sans token without replacing explicit code editor fonts. */
+.kova-app-shell[data-ui="modern"]
+  :is(.kova-page, .kova-page button, .kova-page input, .kova-page select, .kova-page textarea) {
+  --font-sans: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif);
+}
+
+body .kova-app-shell[data-ui="modern"] .kova-page-header .kova-page-title,
+body .kova-app-shell[data-ui="modern"] .kova-settings-page-header .kova-settings-main-title,
+body .kova-app-shell[data-ui="modern"] .kova-settings-page .kova-settings-content-header h2 {
+  font-family: var(--chat-greeting-font, Georgia, "Times New Roman", serif) !important;
+  font-weight: 400 !important;
 }
 
 @media (max-width: 1023px) {

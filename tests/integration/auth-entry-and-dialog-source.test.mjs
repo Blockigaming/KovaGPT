@@ -34,7 +34,7 @@ test("the valid password step is named, gated, and keeps auth calls unchanged", 
     authRoute,
     /disabled=\{loading \|\| !emailValid \|\| password\.length < minimumPasswordLength\}/u,
   );
-  assert.match(authRoute, /h-11 w-11/u);
+  assert.match(authRoute, /<NovaLogo mark className="mb-6 h-8 w-8 text-foreground"/u);
   assert.match(authRoute, /\{ title: "KovaGPT Account" \}/u);
   assert.doesNotMatch(authRoute, /\{ title: "KovaGPT Sign In" \}/u);
   assert.match(authRoute, /supabase\.auth\.signInWithPassword/u);
@@ -44,7 +44,7 @@ test("the valid password step is named, gated, and keeps auth calls unchanged", 
 
 test("the auth modal has one visible semantic heading and the shared contained close", () => {
   assert.match(authDialog, /DialogDescription/u);
-  assert.match(authDialog, /<DialogTitle className="text-\[26px\]/u);
+  assert.match(authDialog, /<DialogTitle className="kova-auth-dialog-title text-\[28px\]/u);
   assert.doesNotMatch(authDialog, /<DialogTitle className="sr-only"/u);
   assert.doesNotMatch(authDialog, /<h1/u);
   assert.doesNotMatch(authDialog, /\[&>button\.absolute\]:hidden/u);
