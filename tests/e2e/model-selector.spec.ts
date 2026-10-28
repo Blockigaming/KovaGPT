@@ -126,21 +126,33 @@ test.describe("short desktop model picker", () => {
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(1440);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(520);
     const lastOption = picker.getByTestId("model-option-ultra");
-    // On a short viewport the popover itself scrolls. Scrolling only the option
-    // can leave it below the popover's clip while Playwright deems it in view.
-    await picker.evaluate((element) => {
+    const optionScroll = picker.getByTestId("model-option-scroll");
+    // The header stays in place while the options viewport reveals the last
+    // model, even when the popover is bounded by a short browser window.
+    await optionScroll.evaluate((element) => {
       element.scrollTop = element.scrollHeight;
     });
     await expect
       .poll(() =>
         lastOption.evaluate((button) => {
           const box = button.getBoundingClientRect();
-          return button.contains(
-            button.ownerDocument.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+          const hit = button.ownerDocument.elementFromPoint(
+            box.x + box.width / 2,
+            box.y + box.height / 2,
           );
+          const scroll = button.closest('[data-testid="model-option-scroll"]');
+          return {
+            reachable: button.contains(hit),
+            scrollTop: scroll?.scrollTop,
+            scrollHeight: scroll?.scrollHeight,
+            clientHeight: scroll?.clientHeight,
+            optionTop: box.top,
+            optionBottom: box.bottom,
+            hitTarget: hit?.getAttribute("data-testid") ?? hit?.tagName ?? null,
+          };
         }),
       )
-      .toBe(true);
+      .toEqual(expect.objectContaining({ reachable: true }));
 
     await page.keyboard.press("Escape");
     await expect(picker).toHaveCount(0);
