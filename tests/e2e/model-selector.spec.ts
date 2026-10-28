@@ -126,15 +126,21 @@ test.describe("short desktop model picker", () => {
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(1440);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(520);
     const lastOption = picker.getByTestId("model-option-ultra");
-    await lastOption.scrollIntoViewIfNeeded();
-    expect(
-      await lastOption.evaluate((button) => {
-        const box = button.getBoundingClientRect();
-        return button.contains(
-          button.ownerDocument.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
-        );
-      }),
-    ).toBe(true);
+    // On a short viewport the popover itself scrolls. Scrolling only the option
+    // can leave it below the popover's clip while Playwright deems it in view.
+    await picker.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await expect
+      .poll(() =>
+        lastOption.evaluate((button) => {
+          const box = button.getBoundingClientRect();
+          return button.contains(
+            button.ownerDocument.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
+          );
+        }),
+      )
+      .toBe(true);
 
     await page.keyboard.press("Escape");
     await expect(picker).toHaveCount(0);
