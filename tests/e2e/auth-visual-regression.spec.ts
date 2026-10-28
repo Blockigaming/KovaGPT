@@ -127,6 +127,14 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
 
   await page.evaluate(() => document.fonts.ready);
+  const controlFont = await email.evaluate((element) => getComputedStyle(element).fontFamily);
+  await expect(dialog.getByRole("button", { name: "Continue", exact: true })).toHaveCSS(
+    "font-family",
+    controlFont,
+  );
+  await expect(googleButton).toHaveCSS("font-family", controlFont);
+  await expect(logo).toHaveCSS("width", "32px");
+  await expect(logo).toHaveCSS("height", "32px");
   await dialog.evaluate(async (element) => {
     await Promise.all(
       element

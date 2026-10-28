@@ -107,7 +107,7 @@ body:has(.kova-assistant[data-ui="modern"])
 
 .kova-auth-surface[data-kova-auth-dialog] :is(button, input) {
   min-height: 44px;
-  font-family: var(--font-sans);
+  font-family: var(--font-sans) !important;
 }
 
 .kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-body button {
