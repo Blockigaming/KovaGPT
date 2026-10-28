@@ -7,6 +7,11 @@ import {
 // Every price, identity and evidence hash below is a synthetic fixture. No live
 // account, quote, authorization, provider or database is contacted by these tests.
 const SHA = "a".repeat(64);
+// Live route tests need a plan that remains inside one hourly claim bucket.
+// The guard uses this fixture clock; provider admission also checks real expiry.
+export const liveAcceptanceFixtureTime = (wallNow = Date.now()) =>
+  Math.ceil(wallNow / 3_600_000) * 3_600_000 + 10 * 60_000;
+
 export const syntheticAcceptanceBody = () => ({
   model: "gpt-5.6-luna",
   input: [{ role: "user", content: ACCEPTANCE_PROMPT }],
