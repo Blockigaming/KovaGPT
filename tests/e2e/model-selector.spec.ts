@@ -126,7 +126,7 @@ test.describe("short desktop model picker", () => {
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(1440);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(520);
     const lastOption = picker.getByTestId("model-option-ultra");
-    const optionScroll = picker.getByTestId("model-option-scroll");
+    const optionScroll = picker.getByTestId("model-options-scroll");
     // The header stays in place while the options viewport reveals the last
     // model, even when the popover is bounded by a short browser window.
     await optionScroll.evaluate((element) => {
@@ -140,7 +140,7 @@ test.describe("short desktop model picker", () => {
             box.x + box.width / 2,
             box.y + box.height / 2,
           );
-          const scroll = button.closest('[data-testid="model-option-scroll"]');
+          const scroll = button.closest('[data-testid="model-options-scroll"]');
           return {
             reachable: button.contains(hit),
             scrollTop: scroll?.scrollTop,
