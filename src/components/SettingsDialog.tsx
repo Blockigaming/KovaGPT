@@ -937,7 +937,9 @@ export function SettingsDialog({
       });
       if (!billingIsCurrent(epoch)) return;
       setSubSummary(summary);
-      if (summary.billingConflict) {
+      if (summary.billingSetupIncomplete) {
+        toast.error("Billing setup needs operator review before plan changes.");
+      } else if (summary.billingConflict) {
         toast.error("A billing conflict needs support review.");
       } else if (summary.effectiveTier === "free") {
         toast.message("No active subscription found on this account.");
@@ -1777,6 +1779,11 @@ export function SettingsDialog({
                         ) : subscriptionError ? (
                           <div className="kova-billing-copy text-destructive">
                             Billing details unavailable.
+                          </div>
+                        ) : subSummary?.billingSetupIncomplete ? (
+                          <div className="kova-billing-copy text-destructive" role="alert">
+                            Billing setup is incomplete. Plan changes are unavailable until the
+                            billing records and Stripe configuration are verified.
                           </div>
                         ) : subSummary?.billingConflict ? (
                           <div className="kova-billing-copy text-destructive" role="alert">

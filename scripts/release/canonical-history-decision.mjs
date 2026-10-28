@@ -37,6 +37,10 @@ const reviewedForwardMigrations = new Map([
     "20261021130544_production_owned_email_worker.sql",
     "049732b03bb42692eac4f7490c742b71b46f85f7205863b8d2f4d1d07649a0ac",
   ],
+  [
+    "20261028114044_production_billing_catalog_guarded.sql",
+    "7e0045cebc381c27262c7a2a87e5d98cdedbd9f3c4cf3f8666867712ab00b238",
+  ],
 ]);
 const pinnedMigrationTree = "4af43abcf92f5a024ab33274d08855c6efbf3b15";
 const migrationTree = "3b688ddbfaa4b91ae2a85506915a959d66f85cd9";

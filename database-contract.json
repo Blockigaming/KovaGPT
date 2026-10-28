@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 193,
+  "migrationCount": 196,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -422,6 +422,7 @@
     "current_organization_role",
     "current_organization_role",
     "current_subscription_summary",
+    "current_subscription_summary",
     "current_user_plan_tier",
     "custom_kova_owner_current",
     "custom_kova_principal_current",
@@ -568,6 +569,7 @@
     "kova_auth_export_identity",
     "kova_auth_finalize_account_deletion",
     "kova_auth_finish_email_dispatch",
+    "kova_auth_finish_google",
     "kova_auth_finish_google",
     "kova_auth_finish_google",
     "kova_auth_finish_google",
@@ -862,6 +864,7 @@
     "user_plan_tier",
     "user_plan_tier",
     "user_plan_tier",
+    "user_subscription_summary",
     "user_subscription_summary",
     "utf16_code_unit_length",
     "validate_agent_dependency_edge",
@@ -1960,6 +1963,7 @@
     "all on table public.work_sync_mutations to service_role",
     "all privileges on table\n  public.connected_account_audit_log,\n  public.connected_accounts,\n  public.google_oauth_tokens,\n  public.integration_linked_accounts,\n  public.integration_sync_jobs,\n  public.integration_consents,\n  public.integration_action_approvals,\n  public.integration_audit_events,\n  public.integration_deletion_requests,\n  public.github_accounts,\n  public.github_installations,\n  public.github_repositories,\n  public.github_repository_branches,\n  public.github_sync_records,\n  public.github_tool_audit,\n  public.github_webhooks,\n  public.github_coding_selections\nto service_role",
     "all privileges on table public.%I to service_role', table_name)",
+    "an entitlement, or activate Checkout.\n-- A changed production billing baseline needs separate reconciliation.\nbegin",
     "and owner_id=p_owner",
     "and owner_id=v_owner",
     "and owner_id=v_owner for update",
@@ -2059,6 +2063,7 @@
     "execute on function public.create_project_template(uuid,uuid,text,text,jsonb) to service_role",
     "execute on function public.create_trusted_contact_invitation(uuid,text,text,uuid,boolean,text),\n  public.command_trusted_contact(uuid,uuid,bigint,text,uuid,text,boolean),public.unblock_trusted_contact(uuid,uuid,bigint,uuid) to service_role",
     "execute on function public.current_effective_plan_tier()\n  to authenticated, service_role",
+    "execute on function public.current_subscription_summary()\n  to authenticated, service_role",
     "execute on function public.current_subscription_summary()\n  to authenticated, service_role",
     "execute on function public.current_user_plan_tier()\n  to authenticated, service_role",
     "execute on function public.decide_agent_approval(uuid, text, jsonb) to authenticated",
@@ -2262,6 +2267,7 @@
     "execute on function public.upsert_work_saved_record(uuid,uuid,uuid,text,text,jsonb,bigint) to service_role",
     "execute on function public.user_plan_tier(uuid)\n  to authenticated, service_role",
     "execute on function public.user_plan_tier(uuid) to authenticated, service_role",
+    "execute on function public.user_subscription_summary(uuid)\n  to service_role",
     "execute on function public.user_subscription_summary(uuid)\n  to service_role",
     "execute on function public.validate_chat_message_version_branch() to service_role",
     "execute on function public.validate_scheduled_task_connection_grant(uuid,uuid) to service_role",
@@ -3016,6 +3022,7 @@
     "execute on function public.complete_stripe_event(\n  text,\n  text,\n  uuid,\n  bigint,\n  boolean,\n  text,\n  text,\n  text,\n  text,\n  timestamptz,\n  timestamptz,\n  boolean\n) from public, anon, authenticated",
     "execute on function public.current_effective_plan_tier()\n  from public, anon",
     "execute on function public.current_subscription_summary()\n  from public, anon",
+    "execute on function public.current_subscription_summary()\n  from public, anon",
     "execute on function public.current_user_plan_tier()\n  from public, anon",
     "execute on function public.effective_user_plan_tier(uuid)\n  from public, anon, authenticated",
     "execute on function public.fail_scheduled_task_execution(uuid,text,text,text,boolean) from service_role",
@@ -3023,6 +3030,7 @@
     "execute on function public.kovagpt_schema_health() from public,anon,authenticated",
     "execute on function public.reserve_developer_api_credit(uuid,text,uuid,numeric) from service_role",
     "execute on function public.user_plan_tier(uuid)\n  from public, anon",
+    "execute on function public.user_subscription_summary(uuid)\n  from public, anon, authenticated",
     "execute on function public.user_subscription_summary(uuid)\n  from public, anon, authenticated",
     "execute on functions from public, anon, authenticated",
     "execute on functions from public, anon, authenticated",
@@ -3521,5 +3529,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "b66f8697a22e9ee89357927948cab7fda1c43a0ebdf4d994123e0a4e229c2f79"
+  "sha256": "dbc7f8ddec357c4648ee3bdd24c21dca666e44638fc19b6eb31cd7a79c7191f4"
 }
