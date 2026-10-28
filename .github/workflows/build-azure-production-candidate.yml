@@ -16,8 +16,16 @@ on:
       - Dockerfile
   workflow_dispatch:
     inputs:
+      operation:
+        description: Build a candidate, or inspect existing access without submitting a build
+        required: true
+        type: choice
+        default: build
+        options:
+          - build
+          - diagnose-access
       confirmation:
-        description: Type BUILD_ONLY to approve ACR build/push costs, not deployment
+        description: Type BUILD_ONLY for build costs, or READ_ONLY for access diagnostics
         required: true
         type: string
       source_sha:
@@ -93,7 +101,7 @@ jobs:
 
   build-only:
     needs: source-tests
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirmation == 'BUILD_ONLY' && inputs.source_sha == github.sha
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.source_sha == github.sha && ((inputs.operation == 'build' && inputs.confirmation == 'BUILD_ONLY') || (inputs.operation == 'diagnose-access' && inputs.confirmation == 'READ_ONLY'))
     environment:
       name: production
     permissions:
@@ -103,6 +111,7 @@ jobs:
     # Five minutes of source-tests plus this job: at most thirty running minutes.
     timeout-minutes: 25
     env:
+      KOVA_PRODUCTION_OPERATION: ${{ inputs.operation }}
       KOVA_BUILD_CONFIRMATION: ${{ inputs.confirmation }}
       KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
       KOVA_PRODUCTION_BROWSER_INPUT_MODE: ${{ inputs.browser_input_mode }}
@@ -128,9 +137,9 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - name: Validate the selected protected browser inputs before Azure login
+      - name: Validate reviewed operation and selected browser inputs before Azure login
         env:
-          KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ inputs.browser_input_mode != 'narrow-openai' && secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON || '' }}
+          KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ inputs.operation == 'build' && inputs.browser_input_mode != 'narrow-openai' && secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON || '' }}
         run: node scripts/azure/build-production-candidate.mjs --check
       - name: Sign in using the protected production OIDC identity
         uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c # v3
@@ -138,14 +147,18 @@ jobs:
           client-id: ${{ secrets.KOVAGPTPROD_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.KOVAGPTPROD_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.KOVAGPTPROD_AZURE_SUBSCRIPTION_ID }}
+      - name: Diagnose the three production access reads without submitting a build
+        if: inputs.operation == 'diagnose-access'
+        run: node scripts/azure/build-production-candidate.mjs --diagnose-access
       - name: Build exact Git commit in ACR and verify the immutable pulled candidate
+        if: inputs.operation == 'build'
         id: build-candidate
         env:
           KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR: ${{ runner.temp }}/production-candidate
-          KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ inputs.browser_input_mode != 'narrow-openai' && secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON || '' }}
+          KOVA_PRODUCTION_BICEP_PARAMETERS_JSON: ${{ inputs.operation == 'build' && inputs.browser_input_mode != 'narrow-openai' && secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON || '' }}
         run: node scripts/azure/build-production-candidate.mjs --execute
       - name: Preserve verified key-free candidate evidence
-        if: always() && steps.build-candidate.outcome != 'skipped'
+        if: always() && inputs.operation == 'build' && steps.build-candidate.outcome != 'skipped'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: production-candidate-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -153,6 +166,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Record the build-only handoff
+        if: inputs.operation == 'build'
         shell: bash
         run: |
           set -euo pipefail

@@ -160,7 +160,7 @@ test("invalid protected browser values still fail before a build request can be 
 test("workflow retains explicit main approval and includes this regression in source CI", () => {
   assert.match(
     buildJob,
-    /github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main' && inputs\.confirmation == 'BUILD_ONLY' && inputs\.source_sha == github\.sha/u,
+    /github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main' && inputs\.source_sha == github\.sha && \(\(inputs\.operation == 'build' && inputs\.confirmation == 'BUILD_ONLY'\) \|\| \(inputs\.operation == 'diagnose-access' && inputs\.confirmation == 'READ_ONLY'\)\)/u,
   );
   const relativePath = "tests/unit/azure-production-browser-workflow-inputs.test.mjs";
   assert.match(

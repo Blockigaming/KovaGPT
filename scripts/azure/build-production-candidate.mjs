@@ -74,14 +74,19 @@ function browserAuthInputs(env) {
   return { browserAuthMode, browserGoogleAuthEnabled, browserAuthOrigin };
 }
 
-// Only browser-safe values from protected PLAN parameters or explicit narrow inputs.
-// Never pass the parameters document, a server credential, or a vault URI to ACR.
-export function productionCandidateConfig(env) {
+export function productionCandidateOperation(env) {
+  const operation = env.KOVA_PRODUCTION_OPERATION ?? "build";
+  requireCondition(["build", "diagnose-access"].includes(operation), "operation_invalid");
+  return operation;
+}
+
+function productionCandidateTarget(env) {
+  const operation = productionCandidateOperation(env);
   requireCondition(
     env.GITHUB_REPOSITORY === REPOSITORY &&
       env.GITHUB_EVENT_NAME === "workflow_dispatch" &&
       env.GITHUB_REF === "refs/heads/main" &&
-      env.KOVA_BUILD_CONFIRMATION === "BUILD_ONLY",
+      env.KOVA_BUILD_CONFIRMATION === (operation === "build" ? "BUILD_ONLY" : "READ_ONLY"),
     "manual_main_approval_required",
   );
   requireCondition(
@@ -101,6 +106,14 @@ export function productionCandidateConfig(env) {
   ]) {
     requireCondition(env[variable] === APPROVED[field], `target_mismatch:${variable}`);
   }
+  const tag = `production-candidate-${env.GITHUB_SHA}-${env.GITHUB_RUN_ID}-${env.GITHUB_RUN_ATTEMPT}`;
+  return { ...APPROVED, sourceSha: env.GITHUB_SHA, tag };
+}
+
+// Only browser-safe values from protected PLAN parameters or explicit narrow inputs.
+// Never pass the parameters document, a server credential, or a vault URI to ACR.
+export function productionCandidateConfig(env) {
+  const target = productionCandidateTarget(env);
   const inputMode = env.KOVA_PRODUCTION_BROWSER_INPUT_MODE ?? "plan";
   requireCondition(["plan", "narrow-openai"].includes(inputMode), "browser_input_mode_invalid");
   const authInputs = browserAuthInputs(env);
@@ -130,8 +143,7 @@ export function productionCandidateConfig(env) {
     );
     browserInputs = { supabaseUrl, publishableKey, stripeKey };
   }
-  const tag = `production-candidate-${env.GITHUB_SHA}-${env.GITHUB_RUN_ID}-${env.GITHUB_RUN_ATTEMPT}`;
-  return { ...APPROVED, sourceSha: env.GITHUB_SHA, ...browserInputs, ...authInputs, tag };
+  return { ...target, ...browserInputs, ...authInputs };
 }
 
 // Explicit argument allowlist, exact remote Git commit, no local/stale build context.
@@ -241,17 +253,19 @@ function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
 }
 
-export function buildProductionCandidate(env, run) {
-  if (!run) {
-    requireCondition(
-      /^[1-9][0-9]{12}$/u.test(env.KOVA_BUILD_JOB_DEADLINE_MS ?? ""),
-      "workflow_deadline_required",
+// Fixed labels identify failing reads without exposing child output or credentials.
+function readProductionAccess(run, operation, args) {
+  try {
+    return run("az", args);
+  } catch (error) {
+    const deadline = error?.message === "production_candidate_client_deadline_exceeded";
+    throw new Error(
+      `production_candidate_access_failed:${operation}${deadline ? ":client_deadline_exceeded" : ""}`,
     );
-    run = createProductionCandidateCommand({
-      workflowDeadlineMs: Number(env.KOVA_BUILD_JOB_DEADLINE_MS),
-    });
   }
-  const config = productionCandidateConfig(env);
+}
+
+function verifyProductionSource(config, run) {
   requireCondition(run("git", ["rev-parse", "HEAD"]) === config.sourceSha, "checkout_mismatch");
   requireCondition(
     run("git", ["status", "--porcelain=v1", "--untracked-files=all"]) === "",
@@ -262,19 +276,18 @@ export function buildProductionCandidate(env, run) {
   const currentMain = run("git", ["ls-remote", GIT_URL, "refs/heads/main"]);
   requireCondition(currentMain === `${config.sourceSha}\trefs/heads/main`, "main_moved");
   const root = run("git", ["rev-parse", "--show-toplevel"]);
-  const output = resolve(env.KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR ?? ".");
-  const outputRelative = relative(root, output);
-  requireCondition(
-    outputRelative.startsWith("../") || isAbsolute(outputRelative),
-    "output_must_be_external",
-  );
+  return { sourceTree, root };
+}
 
+function inspectProductionRegistry(config, run) {
   const registry = parseJson(
-    run("az", [
+    readProductionAccess(run, "registry_metadata_read", [
       "acr",
       "show",
       "--name",
       config.acrName,
+      "--resource-group",
+      "rg-kovagpt-dev",
       "--query",
       "{id:id,loginServer:loginServer,roleAssignmentMode:roleAssignmentMode}",
       "--output",
@@ -290,7 +303,7 @@ export function buildProductionCandidate(env, run) {
     "registry_permission_mode_unknown",
   );
   const existing = parseJson(
-    run("az", [
+    readProductionAccess(run, "repository_tags_read", [
       "acr",
       "repository",
       "show-tags",
@@ -305,6 +318,68 @@ export function buildProductionCandidate(env, run) {
     ]),
   );
   requireCondition(Array.isArray(existing) && existing.length === 0, "tag_already_exists");
+  return registry;
+}
+
+function readProductionArmToken(run) {
+  const token = readProductionAccess(run, "arm_token_read", [
+    "account",
+    "get-access-token",
+    "--subscription",
+    "ab732127-11c3-46a7-a1cb-6ee8d86594f4",
+    "--resource",
+    "https://management.azure.com/",
+    "--query",
+    "accessToken",
+    "--output",
+    "tsv",
+    "--only-show-errors",
+  ]);
+  requireCondition(typeof token === "string" && token.length > 0, "arm_token_empty");
+  return token;
+}
+
+export function diagnoseProductionCandidateAccess(env, run) {
+  requireCondition(
+    productionCandidateOperation(env) === "diagnose-access",
+    "diagnostic_mode_required",
+  );
+  const config = productionCandidateTarget(env);
+  run ??= createProductionCandidateCommand();
+  verifyProductionSource(config, run);
+  inspectProductionRegistry(config, run);
+  // Acquisition is checked, but the token and all token metadata remain private.
+  readProductionArmToken(run);
+  return {
+    operation: "diagnose-access",
+    sourceSha: config.sourceSha,
+    registryMetadataRead: true,
+    repositoryTagsRead: true,
+    armTokenRead: true,
+    buildSubmitted: false,
+  };
+}
+
+export function buildProductionCandidate(env, run) {
+  requireCondition(productionCandidateOperation(env) === "build", "build_mode_required");
+  if (!run) {
+    requireCondition(
+      /^[1-9][0-9]{12}$/u.test(env.KOVA_BUILD_JOB_DEADLINE_MS ?? ""),
+      "workflow_deadline_required",
+    );
+    run = createProductionCandidateCommand({
+      workflowDeadlineMs: Number(env.KOVA_BUILD_JOB_DEADLINE_MS),
+    });
+  }
+  const config = productionCandidateConfig(env);
+  const { sourceTree, root } = verifyProductionSource(config, run);
+  const output = resolve(env.KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR ?? ".");
+  const outputRelative = relative(root, output);
+  requireCondition(
+    outputRelative.startsWith("../") || isAbsolute(outputRelative),
+    "output_must_be_external",
+  );
+  const registry = inspectProductionRegistry(config, run);
   // Do not overwrite earlier evidence or start paid work after a local path error.
   mkdirSync(output, { mode: 0o700 });
   const submissionBudget = () => {
@@ -320,19 +395,7 @@ export function buildProductionCandidate(env, run) {
   let token;
   let build;
   try {
-    token = run("az", [
-      "account",
-      "get-access-token",
-      "--subscription",
-      "ab732127-11c3-46a7-a1cb-6ee8d86594f4",
-      "--resource",
-      "https://management.azure.com/",
-      "--query",
-      "accessToken",
-      "--output",
-      "tsv",
-      "--only-show-errors",
-    ]);
+    token = readProductionArmToken(run);
     build = parseJson(
       run("node", [resolve("scripts/azure/acr-pinned-quick-build.mjs")], {
         input: JSON.stringify({
@@ -367,7 +430,15 @@ export function buildProductionCandidate(env, run) {
     "tsv",
   ]);
   requireCondition(registryDigest === digest, "registry_digest_mismatch");
-  run("az", ["acr", "login", "--name", config.acrName, "--only-show-errors"]);
+  run("az", [
+    "acr",
+    "login",
+    "--name",
+    config.acrName,
+    "--resource-group",
+    "rg-kovagpt-dev",
+    "--only-show-errors",
+  ]);
   run("docker", ["pull", "--platform", "linux/amd64", imageReference]);
   const image = parseJson(
     run("docker", [
@@ -471,12 +542,19 @@ export function buildProductionCandidate(env, run) {
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
     requireCondition(
-      process.argv.length === 3 && ["--check", "--execute"].includes(process.argv[2]),
+      process.argv.length === 3 &&
+        ["--check", "--execute", "--diagnose-access"].includes(process.argv[2]),
       "mode_required",
     );
     if (process.argv[2] === "--check") {
-      productionCandidateConfig(process.env);
+      if (productionCandidateOperation(process.env) === "diagnose-access")
+        productionCandidateTarget(process.env);
+      else productionCandidateConfig(process.env);
       console.log("PRODUCTION_CANDIDATE_INPUTS=PASS; no build or Azure call performed");
+    } else if (process.argv[2] === "--diagnose-access") {
+      const report = diagnoseProductionCandidateAccess(process.env);
+      console.log(JSON.stringify(report));
+      console.log("PRODUCTION_ACCESS_READS=PASS; no build submitted or deployment performed");
     } else {
       const report = buildProductionCandidate(process.env);
       console.log(`PRODUCTION_CANDIDATE_IMAGE=${report.imageReference}`);
