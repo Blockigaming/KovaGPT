@@ -60,7 +60,16 @@ Requests require a verified session, the current origin, an
 resource identifiers, and server instructions are not client fields. Decisions
 uses its dedicated `gpt-6-luna` model without changing chat model selection.
 Agents uses the configured deep model with a small OpenAI-hosted sandbox,
-disabled networking and subagents disabled. Agents, browser tasks and standalone analysis currently require Plus or Pro.
+disabled networking and subagents disabled. Agents, browser tasks and
+standalone analysis currently require Plus or Pro. For a separately authorized
+operator account, the server can enable these three bounded task operations
+with `KOVA_OPENAI_OPERATOR_ACCESS_ENABLED=true`,
+`KOVA_OPENAI_OPERATOR_ACCOUNT_ID` (the exact authenticated UUID), and
+`KOVA_OPENAI_OPERATOR_EMAIL` (the exact verified account email). All three
+must match the live identity. This exception does not grant a paid plan,
+change Stripe billing, increase upload/chat quotas or rate budgets, or enable
+the separate Work browser runner. It defaults off and requires production
+identity verification before activation.
 Hosted browser tasks enable the desktop and `computer_use` tool. They require
 `KOVA_OPENAI_BROWSER_ALLOWED_DOMAINS_JSON`, an exact server-controlled domain
 allowlist used for both sandbox network restrictions and browser origin approval.

@@ -369,6 +369,8 @@ test("hosted browser requires real browser activity and only approves configured
 
 function fixture({
   tier = "plus",
+  operator = false,
+  browserDomains,
   revalidate = async () => true,
   execute = async () => ({ text: "result" }),
 } = {}) {
@@ -378,6 +380,7 @@ function fixture({
     requireVerifiedUser: async () => ({ userId: "owner", revalidateSession: revalidate }),
     assertNotBanned: async () => null,
     getCallerTier: async () => tier,
+    operatorAccess: typeof operator === "function" ? operator : async () => operator,
     enforceQuota: async () => {
       calls.push("quota");
       return null;
@@ -391,8 +394,12 @@ function fixture({
       return { allowed: true };
     },
     env: (name) =>
-      ({ KOVA_OPENAI_SERVICES_ENABLED: "true", OPENAI_API_KEY: "synthetic-test-key" })[name],
-    services: () => ({ analyze: execute, moderate: execute }),
+      ({
+        KOVA_OPENAI_SERVICES_ENABLED: "true",
+        OPENAI_API_KEY: "synthetic-test-key",
+        KOVA_OPENAI_BROWSER_ALLOWED_DOMAINS_JSON: browserDomains,
+      })[name],
+    services: () => ({ agent: execute, browser: execute, analyze: execute, moderate: execute }),
   });
   const request = (body = { operation: "analysis", input: "Count samples" }, headers = {}) =>
     new Request("https://kovagpt.com/api/ai/services", {
@@ -426,6 +433,62 @@ test("service route rejects cross-origin, stale owner, unverified cost scope and
   const free = fixture({ tier: "free" });
   assert.equal((await free.handle(free.request())).status, 403);
   assert.deepEqual(free.calls, []);
+});
+test("free operator access is limited to bounded OpenAI tasks and never changes the billing tier", async () => {
+  const normal = fixture({ tier: "free" });
+  assert.equal((await normal.handle(normal.request())).status, 403);
+  const operator = fixture({ tier: "free", operator: true });
+  const available = await operator.handle(
+    new Request("https://kovagpt.com/api/ai/services", {
+      headers: { "x-kova-service-owner": "owner" },
+    }),
+  );
+  assert.equal(available.status, 200);
+  const operations = (await available.json()).operations;
+  assert.equal(operations.find((item) => item.operation === "agent").available, true);
+  assert.equal(operations.find((item) => item.operation === "analysis").available, true);
+  assert.equal(operations.find((item) => item.operation === "browser").available, false);
+  assert.equal((await operator.handle(operator.request())).status, 200);
+  assert.equal(operator.calls.filter((name) => name === "rate").length, 4);
+  assert.equal(operator.calls.filter((name) => name === "quota").length, 1);
+  const browser = fixture({
+    tier: "free",
+    operator: true,
+    browserDomains: '["public.example.org"]',
+  });
+  assert.equal(
+    (await browser.handle(browser.request({ operation: "browser", input: "Read public page" })))
+      .status,
+    200,
+  );
+  assert.equal(browser.calls.filter((name) => name === "rate").length, 4);
+});
+test("operator identity loss before compute or reply fails closed", async () => {
+  let lookups = 0;
+  let providerCalls = 0;
+  const before = fixture({
+    tier: "free",
+    operator: async () => ++lookups === 1,
+    execute: async () => {
+      providerCalls++;
+      return { text: "result" };
+    },
+  });
+  assert.equal((await before.handle(before.request())).status, 403);
+  assert.equal(providerCalls, 0);
+  lookups = 0;
+  const after = fixture({
+    tier: "free",
+    operator: async () => ++lookups < 3,
+    execute: async () => {
+      providerCalls++;
+      return { text: "private result" };
+    },
+  });
+  const reply = await after.handle(after.request());
+  assert.equal(reply.status, 403);
+  assert.doesNotMatch(await reply.text(), /private result/);
+  assert.equal(providerCalls, 1);
 });
 test("service route reserves once and never retries a failed billable request", async () => {
   let calls = 0;

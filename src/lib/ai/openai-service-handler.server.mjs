@@ -1,5 +1,6 @@
 import { readBoundedJsonObject } from "../bounded-json.server.mjs";
 import { OpenAiServiceError, normalizeBrowserDomains } from "./openai-services.server.mjs";
+import { hasOpenAiOperatorAccess } from "./openai-operator-access.server.mjs";
 
 const operations = new Set([
   "agent",
@@ -59,6 +60,7 @@ export function createOpenAiServiceHandler({
   requireVerifiedUser,
   assertNotBanned,
   getCallerTier,
+  operatorAccess = hasOpenAiOperatorAccess,
   enforceQuota,
   consumeRateLimit,
   reserveDocuments,
@@ -91,6 +93,9 @@ export function createOpenAiServiceHandler({
         env("KOVA_GENERATION_DISABLED") !== "true" &&
         Boolean(env("OPENAI_API_KEY"));
       const tier = await getCallerTier(auth);
+      // Operator access is an explicit, verified identity exception for these
+      // bounded tasks only. It never changes the billing tier or upload quota.
+      const operator = tier === "free" && (await operatorAccess(auth, env));
       let browserConfigured = false;
       try {
         browserConfigured =
@@ -108,7 +113,7 @@ export function createOpenAiServiceHandler({
             available:
               enabled &&
               (operation !== "browser" || browserConfigured) &&
-              (!heavy.has(operation) || ["plus", "pro"].includes(tier)),
+              (!heavy.has(operation) || operator || ["plus", "pro"].includes(tier)),
           })),
         });
       if (!enabled) return json({ error: "openai_services_unavailable" }, 503);
@@ -117,7 +122,7 @@ export function createOpenAiServiceHandler({
       const input = parseOpenAiServiceTask(
         await readBoundedJsonObject(request, 160 * 1024, request.signal),
       );
-      if (heavy.has(input.operation) && !["plus", "pro"].includes(tier))
+      if (heavy.has(input.operation) && !operator && !["plus", "pro"].includes(tier))
         return json({ error: "subscription_required" }, 403);
       if (input.operation === "browser" && !browserConfigured)
         return json({ error: "browser_domains_not_configured" }, 503);
@@ -178,6 +183,8 @@ export function createOpenAiServiceHandler({
       if (quota) return quota;
       request.signal.throwIfAborted();
       if (!(await current())) return json({ error: "session_expired" }, 401);
+      if (heavy.has(input.operation) && operator && !(await operatorAccess(auth, env)))
+        return json({ error: "subscription_required" }, 403);
       const signal = AbortSignal.any([request.signal, AbortSignal.timeout(90_000)]),
         provider = services();
       let result;
@@ -192,6 +199,8 @@ export function createOpenAiServiceHandler({
         result = await provider.moderate(input.input, { signal });
       request.signal.throwIfAborted();
       if (!(await current())) return json({ error: "session_expired" }, 401);
+      if (heavy.has(input.operation) && operator && !(await operatorAccess(auth, env)))
+        return json({ error: "subscription_required" }, 403);
       const retired = await assertNotBanned(auth);
       if (retired) return retired;
       return json({ operation: input.operation, ...result });

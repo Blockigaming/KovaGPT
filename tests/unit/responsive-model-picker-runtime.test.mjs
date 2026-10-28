@@ -76,7 +76,10 @@ function fixture(initial = {}) {
       f.find("popover").props.onOpenChange(true);
     },
     focusTrigger() {
-      trigger().props.ref.current = { focus: (options) => focused.push(options) };
+      trigger().props.ref.current = {
+        focus: (options) => focused.push(options),
+        closest: () => null,
+      };
     },
     runFrames() {
       for (const callback of frames.splice(0)) callback();

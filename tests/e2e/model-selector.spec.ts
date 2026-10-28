@@ -120,11 +120,6 @@ test.describe("short desktop model picker", () => {
         Boolean(element.closest('[role="dialog"][aria-label="Response options"]')),
       ),
     ).toBe(false);
-    const bounds = (await picker.boundingBox())!;
-    expect(bounds.x).toBeGreaterThanOrEqual(0);
-    expect(bounds.y).toBeGreaterThanOrEqual(0);
-    expect(bounds.x + bounds.width).toBeLessThanOrEqual(1440);
-    expect(bounds.y + bounds.height).toBeLessThanOrEqual(520);
     const lastOption = picker.getByTestId("model-option-ultra");
     const optionScroll = picker.getByTestId("model-options-scroll");
     // The header stays in place while the options viewport reveals the last
@@ -153,6 +148,20 @@ test.describe("short desktop model picker", () => {
         }),
       )
       .toEqual(expect.objectContaining({ reachable: true }));
+
+    // The Options panel can flip sides after the nested menu opens. Check the
+    // settled picker, including the viewport edge, after its scroll correction.
+    await expect
+      .poll(async () => {
+        const bounds = await picker.boundingBox();
+        return bounds ? bounds.y + bounds.height : Number.POSITIVE_INFINITY;
+      })
+      .toBeLessThanOrEqual(520);
+    const bounds = (await picker.boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.y).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(1440);
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(520);
 
     await page.keyboard.press("Escape");
     await expect(picker).toHaveCount(0);
