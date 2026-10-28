@@ -32,8 +32,16 @@ function worker({
     "@/lib/http-security.server": { timingSafeEqualText: (a, b) => a === b },
     "@/lib/runtime-env.server": { runtimeEnv: () => secret },
     "@/integrations/supabase/client.server": { supabaseAdmin: {} },
-    "@/lib/distributed-rate-limit.server": {
-      consumeApplicationRateLimit: async () => ({ allowed, status: "limited" }),
+    "@/lib/ai/openai-admission-runtime.server": {
+      consumeOpenAiApplicationAdmission: async (input) => {
+        assert.deepEqual(JSON.parse(JSON.stringify(input)), {
+          identity: "workspace_index_global",
+          action: "workspace_index_daily",
+          limit: 100,
+          windowSeconds: 86400,
+        });
+        return { allowed, status: "limited" };
+      },
     },
     "@/lib/workspace-search-policy.server.mjs": { processWorkspaceSearchJobs: run },
     "@/lib/workspace-search.server": {
@@ -83,10 +91,14 @@ test("workspace search binds results to the caller RLS client, bounds query inpu
       }),
     },
     "@/lib/distributed-rate-limit.server": {
-      consumeApplicationRateLimit: async (input) => ({
-        allowed: input.action === "workspace_search",
-        status: "limited",
-      }),
+      consumeApplicationRateLimit: async (input) => {
+        assert.equal(input.action, "workspace_search");
+        assert.equal(input.windowSeconds, 60);
+        return { allowed: true, status: "allowed" };
+      },
+    },
+    "@/lib/ai/openai-admission-runtime.server": {
+      consumeOpenAiApplicationAdmission: async () => ({ allowed: false, status: "limited" }),
     },
     "@/lib/endpoint-reliability.mjs": { readUtf8BodyBounded: async (request) => request.text() },
     "@/lib/auth-security.mjs": { isCrossSiteMutation: () => false },
@@ -123,4 +135,80 @@ test("workspace search binds results to the caller RLS client, bounds query inpu
   assert.equal(response.headers.get("cache-control"), "private, no-store");
   assert.equal(searched.query, "launch plan");
   assert.equal(searched.semanticAllowed, false);
+});
+
+test("workspace semantic budgets reach embeddings only after both durable daily admissions", async () => {
+  for (const denied of [null, "workspace_semantic_daily", "workspace_semantic_global_daily"]) {
+    const daily = [];
+    let semanticAllowed;
+    const handler = load("src/routes/api/workspace/search.ts", {
+      "@tanstack/react-router": { createFileRoute: () => (config) => config },
+      "@/lib/api-auth.server": { requireUser: async () => ({ userId: "owner", supabaseUser: {} }) },
+      "@/lib/distributed-rate-limit.server": {
+        consumeApplicationRateLimit: async (input) => {
+          assert.equal(input.action, "workspace_search");
+          assert.equal(input.windowSeconds, 60);
+          return { allowed: true };
+        },
+      },
+      "@/lib/ai/openai-admission-runtime.server": {
+        consumeOpenAiApplicationAdmission: async (input) => {
+          daily.push(JSON.parse(JSON.stringify(input)));
+          return { allowed: input.action !== denied, status: "limited" };
+        },
+      },
+      "@/lib/endpoint-reliability.mjs": { readUtf8BodyBounded: async (request) => request.text() },
+      "@/lib/auth-security.mjs": { isCrossSiteMutation: () => false },
+      "@/lib/workspace-search-policy.server.mjs": {
+        searchWorkspace: async (input) => {
+          semanticAllowed = input.semanticAllowed;
+          return { items: [] };
+        },
+      },
+      "@/lib/workspace-search.server": {
+        workspaceSemanticEnabled: () => true,
+        workspaceEmbeddingModel: () => "m",
+        workspaceRpc: () => () => {},
+        embedWorkspaceText: () => {},
+      },
+    });
+    const response = await handler({
+      request: new Request("https://kova.test/api/workspace/search", {
+        method: "POST",
+        body: JSON.stringify({ query: "launch plan" }),
+      }),
+    });
+    assert.equal(response.status, 200);
+    assert.equal(semanticAllowed, denied === null);
+    assert.deepEqual(daily, [
+      { identity: "owner", action: "workspace_semantic_daily", limit: 60, windowSeconds: 86400 },
+      ...(denied === "workspace_semantic_daily"
+        ? []
+        : [
+            {
+              identity: "workspace_global",
+              action: "workspace_semantic_global_daily",
+              limit: 1000,
+              windowSeconds: 86400,
+            },
+          ]),
+    ]);
+  }
+});
+
+test("workspace indexing uses its durable daily allowance before dispatch", async () => {
+  let calls = 0;
+  const response = await worker({
+    run: async () => {
+      calls++;
+      return { claimed: 1 };
+    },
+  })({
+    request: new Request("https://kova.test/api/internal/workspace-search", {
+      method: "POST",
+      headers: { authorization: "Bearer secret" },
+    }),
+  });
+  assert.equal(response.status, 200);
+  assert.equal(calls, 1);
 });

@@ -1,0 +1,119 @@
+-- Exact non-secret pre-adoption RPC captured read-only on 2026-10-28.
+CREATE OR REPLACE FUNCTION public.kova_auth_finish_google(p_candidate_account_id uuid, p_provider_subject text, p_email text, p_email_verified boolean, p_display_name text, p_handoff_digest_hex text, p_handoff_expires_at timestamp with time zone, p_now timestamp with time zone DEFAULT now())
+ RETURNS TABLE(account_id uuid, candidate_used boolean)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+ SET statement_timeout TO '10s'
+AS $function$
+#variable_conflict use_column
+declare
+  v_email text := lower(btrim(p_email)); v_account_id uuid; v_bound_id uuid; v_legacy_id uuid;
+  v_account kova_private.auth_accounts; v_google kova_private.auth_identities;
+begin
+  if p_candidate_account_id is null or p_email_verified is distinct from true or
+     p_provider_subject is null or char_length(p_provider_subject) not between 1 and 512 or
+     v_email is null or char_length(v_email) not between 3 and 320 or
+     p_now is null or not isfinite(p_now) or p_handoff_expires_at is null or
+     not isfinite(p_handoff_expires_at) or p_handoff_expires_at <= p_now then
+    raise exception 'kova_auth_invalid_google_identity';
+  end if;
+  perform kova_private.require_digest(p_handoff_digest_hex);
+  perform pg_advisory_xact_lock(hashtextextended('kova_auth_email:' || v_email, 0));
+  select * into v_google from kova_private.auth_identities
+   where provider = 'google' and provider_subject = p_provider_subject;
+  if v_google.id is not null then
+    if v_google.disabled_at is not null or v_google.verified_at is null then
+      raise exception 'kova_auth_invalid_google_identity';
+    end if;
+    v_account_id := v_google.account_id;
+  end if;
+  if v_account_id is null then
+    select account_id into v_account_id from kova_private.auth_identities
+     where normalized_email = v_email and verified_at is not null and disabled_at is null
+     order by provider = 'email' desc limit 1;
+  end if;
+  if v_account_id is null then
+    -- A provider-verified mailbox may claim its pending signup, never its
+    -- unverified caller's chosen password. Keep the stable application UUID.
+    select a.id into v_account_id from kova_private.auth_accounts a where a.primary_email = v_email;
+  end if;
+  if v_account_id is not null then
+    select * into v_account from kova_private.auth_accounts where id = v_account_id for update;
+    if v_account.id is null or v_account.deleted_at is not null
+      or (v_account.suspended_until is not null and v_account.suspended_until > p_now) then
+      raise exception 'kova_auth_account_unavailable';
+    end if;
+    -- Recheck provider state after the account lock. Do not revive a disabled
+    -- identity or bind a different subject to an existing Google authority.
+    select * into v_google from kova_private.auth_identities
+     where account_id = v_account_id and provider = 'google' for update;
+    if v_google.id is not null and (v_google.provider_subject <> p_provider_subject
+      or v_google.disabled_at is not null or v_google.verified_at is null) then
+      raise exception 'kova_auth_invalid_google_identity';
+    end if;
+    if v_account.primary_email is distinct from v_email then
+      if v_google.id is null or v_google.provider_subject is distinct from p_provider_subject or
+         exists(select 1 from kova_private.auth_accounts a where a.primary_email=v_email and a.id<>v_account_id) or
+         exists(select 1 from kova_private.auth_identities i where i.normalized_email=v_email and i.account_id<>v_account_id) or
+         exists(select 1 from auth.users u where lower(u.email)=v_email and u.id<>v_account_id) then
+        raise exception 'kova_auth_email_conflict';
+      end if;
+      update kova_private.auth_identities set normalized_email=v_email, provider_subject=v_email,
+        verified_at=p_now, updated_at=p_now where account_id=v_account_id and provider='email'
+        and normalized_email=v_account.primary_email and disabled_at is null;
+      update kova_private.auth_accounts set primary_email=v_email,email_verified_at=p_now,
+        session_epoch=session_epoch+1,updated_at=p_now where id=v_account_id;
+      update kova_private.auth_sessions set revoked_at=coalesce(revoked_at,p_now) where account_id=v_account_id;
+      update kova_private.auth_credentials set revision=revision+1,updated_at=p_now where account_id=v_account_id;
+      update kova_private.auth_password_recoveries set consumed_at=coalesce(consumed_at,p_now) where account_id=v_account_id;
+      update kova_private.auth_email_verifications set consumed_at=coalesce(consumed_at,p_now) where account_id=v_account_id;
+      update kova_private.auth_mfa_login_challenges set consumed_at=coalesce(consumed_at,p_now) where account_id=v_account_id;
+      update kova_private.auth_session_handoffs set consumed_at=coalesce(consumed_at,p_now) where account_id=v_account_id;
+      perform kova_private.retire_legacy_auth(v_account_id,p_now);
+      perform kova_private.audit(v_account_id,null,'google_email_changed','success','{}',p_now);
+    end if;
+    update kova_private.auth_credentials set disabled_at = p_now, updated_at = p_now
+     where account_id = v_account_id and credential_type = 'password'
+       and activated_at is null and disabled_at is null;
+    if found then
+      update kova_private.auth_email_verifications set consumed_at = p_now
+       where account_id = v_account_id and consumed_at is null;
+    end if;
+  end if;
+  if v_account_id is null then
+    select u.id into v_legacy_id from auth.users u
+     where lower(u.email) = v_email and u.email_confirmed_at is not null and u.deleted_at is null
+     order by u.created_at asc nulls last, u.id limit 1;
+    v_account_id := coalesce(v_legacy_id, p_candidate_account_id);
+  end if;
+  insert into kova_private.auth_accounts(
+    id, legacy_supabase_user_id, primary_email, display_name,
+    email_verified_at, mfa_required, created_at, updated_at
+  ) values (
+    v_account_id, v_account_id, v_email, nullif(btrim(p_display_name), ''), p_now,
+    kova_private.legacy_mfa_required(v_account_id),
+    p_now, p_now
+  ) on conflict (id) do update set
+    email_verified_at = coalesce(kova_private.auth_accounts.email_verified_at, excluded.email_verified_at),
+    display_name = coalesce(kova_private.auth_accounts.display_name, excluded.display_name),
+    mfa_required = kova_private.auth_accounts.mfa_required or excluded.mfa_required,
+    updated_at = excluded.updated_at;
+  insert into kova_private.auth_identities(
+    account_id, provider, provider_subject, normalized_email, verified_at, created_at, updated_at
+  ) values (v_account_id, 'google', p_provider_subject, v_email, p_now, p_now, p_now)
+  on conflict (provider, provider_subject) do update set
+    verified_at = coalesce(kova_private.auth_identities.verified_at, excluded.verified_at),
+    normalized_email = excluded.normalized_email, updated_at = excluded.updated_at
+  returning kova_private.auth_identities.account_id into v_bound_id;
+  v_account_id := v_bound_id;
+  insert into kova_private.auth_session_handoffs(
+    account_id, token_digest, assurance_level, expires_at, created_at
+  ) values (
+    v_account_id, kova_private.require_digest(p_handoff_digest_hex), 'aal1',
+    p_handoff_expires_at, p_now
+  );
+  perform kova_private.audit(v_account_id, null, 'google_identity_authenticated', 'success', '{}', p_now);
+  return query select v_account_id, v_account_id = p_candidate_account_id;
+end
+$function$;

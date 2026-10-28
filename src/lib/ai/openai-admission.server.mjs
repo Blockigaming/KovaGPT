@@ -8,6 +8,11 @@ const policies = new Map([
   ["openai_services_daily", { limit: 20, seconds: 86400 }],
   ["openai_services_compute_daily", { limit: 2, seconds: 86400 }],
   ["openai_search_daily", { limit: 100, seconds: 86400 }],
+  ["openai_hosted_chat_global_daily", { limit: 20, seconds: 86400 }],
+  ["openai_hosted_chat_user_daily", { limit: 5, seconds: 86400 }],
+  ["workspace_semantic_daily", { limit: 60, seconds: 86400 }],
+  ["workspace_semantic_global_daily", { limit: 1000, seconds: 86400 }],
+  ["workspace_index_daily", { limit: 100, seconds: 86400 }],
   ["openai_webhook_receipt", { limit: 1, seconds: 604800, receipt: true }],
 ]);
 const columns = "identity_hash,action,window_started_at,request_count,expires_at";

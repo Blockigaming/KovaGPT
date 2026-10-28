@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { timingSafeEqualText } from "@/lib/http-security.server";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { consumeOpenAiApplicationAdmission } from "@/lib/ai/openai-admission-runtime.server";
 import { processWorkspaceSearchJobs } from "@/lib/workspace-search-policy.server.mjs";
 import {
   embedWorkspaceText,
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/internal/workspace-search")({
           return respond({ error: "unauthorized" }, 401);
         if (new URL(request.url).search || request.body)
           return respond({ error: "body_and_query_not_allowed" }, 400);
-        const budget = await consumeApplicationRateLimit({
+        const budget = await consumeOpenAiApplicationAdmission({
           identity: "workspace_index_global",
           action: "workspace_index_daily",
           limit: 100,

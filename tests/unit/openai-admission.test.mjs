@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
+import ts from "typescript";
 import { PGlite } from "@electric-sql/pglite";
 import { consumeOpenAiAdmission } from "../../src/lib/ai/openai-admission.server.mjs";
 import { createOpenAiServiceHandler } from "../../src/lib/ai/openai-service-handler.server.mjs";
@@ -127,6 +129,136 @@ test("search daily budget admits exactly its hundredth request and resets next d
   ]);
   assert.equal(row.rows[0].request_count, 100);
   assert.equal((await f.consume({ ...search, nowMs: midnight + 86400000 })).allowed, true);
+});
+
+test("hosted tools and workspace embeddings retain their exact durable daily budgets", async (t) => {
+  const f = await databaseFixture(t);
+  for (const [action, limit] of [
+    ["openai_hosted_chat_global_daily", 20],
+    ["openai_hosted_chat_user_daily", 5],
+    ["workspace_semantic_daily", 60],
+    ["workspace_semantic_global_daily", 1000],
+    ["workspace_index_daily", 100],
+  ]) {
+    const input = { identity: `synthetic:${action}`, action, limit };
+    assert.equal((await f.consume(input)).allowed, true);
+    await f.db.query("update diagnostic_rate_limits set request_count=$1 where action=$2", [
+      limit - 1,
+      action,
+    ]);
+    const last = await Promise.all(Array.from({ length: 4 }, () => f.consume(input)));
+    assert.equal(last.filter((item) => item.allowed).length, 1, action);
+    assert.equal((await f.consume(input)).status, "limited", action);
+    assert.equal((await f.consume({ ...input, nowMs: midnight + 86400000 })).allowed, true);
+    await assert.rejects(
+      f.consume({ ...input, limit: limit + 1 }),
+      /Invalid OpenAI admission policy/,
+    );
+    await assert.rejects(
+      f.consume({ ...input, windowSeconds: 3600 }),
+      /Invalid OpenAI admission policy/,
+    );
+  }
+});
+
+test("real hosted chat admits durable global and owner budgets before analysis or file search", async (t) => {
+  const f = await databaseFixture(t);
+  const calls = [];
+  let providerCalls = 0;
+  let storageAvailable = true;
+  const env = { KOVA_OPENAI_SERVICES_ENABLED: "true" };
+  const exports = {};
+  const provider = {
+    analyze: async (_input, options) => {
+      assert.ok(options.signal instanceof AbortSignal);
+      providerCalls++;
+      return { text: "Computed 6" };
+    },
+    searchFiles: async (_question, documents) => {
+      assert.equal(documents.length, 1);
+      providerCalls++;
+      return { text: "Found 6" };
+    },
+  };
+  const deps = {
+    "@/lib/runtime-env.server": { runtimeEnv: (name) => env[name] },
+    "./openai-admission-runtime.server": {
+      consumeOpenAiApplicationAdmission: async (input) => {
+        calls.push(input);
+        return f.consume({ ...input, ...(!storageAvailable ? { serviceRoleKey: undefined } : {}) });
+      },
+    },
+    "./openai-service-runtime.server": { openAiServices: () => provider },
+    "./openai-services.server.mjs": {
+      OpenAiServiceError: class extends Error {
+        constructor(code, status) {
+          super(code);
+          this.status = status;
+        }
+      },
+    },
+    "./hosted-chat-result.mjs": { hostedChatResult: (value) => value },
+  };
+  vm.runInNewContext(
+    ts.transpileModule(await readFile("src/lib/ai/hosted-chat.server.ts", "utf8"), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    }).outputText,
+    {
+      exports,
+      require: (name) => {
+        assert.ok(name in deps, `Unexpected import ${name}`);
+        return deps[name];
+      },
+    },
+  );
+  const invoke = (tool = "data_analysis") =>
+    exports.hostedChatCompletion(
+      {
+        model: "synthetic-model",
+        max_completion_tokens: 100,
+        messages: [{ role: "user", content: "Sum 1,2,3" }],
+      },
+      tool,
+      "Find the sum",
+      "owner",
+      new AbortController().signal,
+    );
+  assert.equal((await invoke()).text, "Computed 6");
+  assert.equal((await invoke("file_analysis")).text, "Found 6");
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.slice(0, 2))), [
+    {
+      identity: "openai_hosted_chat_global",
+      action: "openai_hosted_chat_global_daily",
+      limit: 20,
+      windowSeconds: 86400,
+    },
+    {
+      identity: "user:owner",
+      action: "openai_hosted_chat_user_daily",
+      limit: 5,
+      windowSeconds: 86400,
+    },
+  ]);
+  await f.db.query("update diagnostic_rate_limits set request_count=5 where action=$1", [
+    "openai_hosted_chat_user_daily",
+  ]);
+  await assert.rejects(
+    invoke(),
+    (error) => error.message === "hosted_tool_budget_unavailable" && error.status === 429,
+  );
+  assert.equal(providerCalls, 2);
+  await f.db.query("update diagnostic_rate_limits set request_count=20 where action=$1", [
+    "openai_hosted_chat_global_daily",
+  ]);
+  await assert.rejects(invoke(), (error) => error.status === 429);
+  assert.equal(providerCalls, 2);
+  storageAvailable = false;
+  await assert.rejects(invoke(), (error) => error.status === 503);
+  assert.equal(providerCalls, 2);
+  const admitted = calls.length;
+  env.KOVA_REQUEST_CAPTURE_ENABLED = "true";
+  await assert.rejects(invoke(), /hosted_tools_unavailable/);
+  assert.equal(calls.length, admitted);
 });
 
 test("request and webhook receipts survive calendar boundaries and renew once after rolling expiry", async (t) => {

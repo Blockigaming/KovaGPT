@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 196,
-  "latest": "20261028190000_kova_owned_google_verified_subject_adoption.sql",
+  "count": 197,
+  "latest": "20261028213000_kova_owned_google_attachment_guard.sql",
   "migrations": [
     {
       "order": 1,
@@ -4080,6 +4080,24 @@
       "functions": ["kova_auth_finish_google"],
       "destructive": false,
       "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 197,
+      "filename": "20261028213000_kova_owned_google_attachment_guard.sql",
+      "timestamp": "20261028213000",
+      "sha256": "cf431c99922533dc42b5de54ad022a296a80f0f66e681b553f92005865022d17",
+      "tables": [],
+      "functions": [
+        "first_release_google_attachment_matches",
+        "first_release_guard_owned_attachment",
+        "first_release_check_google_attachment"
+      ],
+      "destructive": false,
+      "dataBackfill": false,
       "reversible": false,
       "rls": [],
       "policies": [],
