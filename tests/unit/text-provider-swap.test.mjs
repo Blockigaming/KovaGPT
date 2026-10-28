@@ -194,6 +194,69 @@ test("explicit image selection uses OpenAI without changing text or embedding en
   assert.equal(api.getAiProviderConfig().provider, "azure_openai");
   assert.doesNotMatch(JSON.stringify(api.logs), /openai-fixture|azure-fixture/);
 });
+test("embedding auto preserves Azure, while explicit OpenAI ignores its stale endpoint and alias", async () => {
+  const calls = [];
+  const auto = loadProvider(
+    { ...azure, KOVA_EMBEDDING_PROVIDER: "auto", AZURE_OPENAI_DEPLOYMENT_EMBEDDING: "azure-alias" },
+    async (url, init) => {
+      calls.push({ url, init });
+      return new Response('{"data":[]}');
+    },
+  );
+  await auto.embeddings({ model: "text-embedding-3-small", input: "fixture" });
+  assert.equal(calls[0].url, "https://fixture.openai.azure.com/openai/v1/embeddings");
+  assert.equal(JSON.parse(calls[0].init.body).model, "azure-alias");
+  assert.equal(calls[0].init.headers.get("api-key"), "azure-fixture");
+
+  const autoWithoutAzure = loadProvider(
+    { OPENAI_API_KEY: "openai-fixture", KOVA_EMBEDDING_PROVIDER: "auto" },
+    async (url, init) => {
+      calls.push({ url, init });
+      return new Response('{"data":[]}');
+    },
+  );
+  await autoWithoutAzure.embeddings({ model: "text-embedding-3-small", input: "fixture" });
+  assert.equal(calls[1].url, "https://api.openai.com/v1/embeddings");
+  assert.equal(calls[1].init.headers.get("authorization"), "Bearer openai-fixture");
+
+  const direct = loadProvider(
+    {
+      ...azure,
+      KOVA_EMBEDDING_PROVIDER: "openai",
+      AZURE_OPENAI_ENDPOINT: "stale-invalid-endpoint",
+      AZURE_OPENAI_DEPLOYMENT_EMBEDDING: "azure-alias",
+    },
+    async (url, init) => {
+      calls.push({ url, init });
+      return new Response('{"data":[]}');
+    },
+  );
+  await direct.embeddings({ model: "text-embedding-3-small", input: "fixture" });
+  assert.equal(calls[2].url, "https://api.openai.com/v1/embeddings");
+  assert.equal(JSON.parse(calls[2].init.body).model, "text-embedding-3-small");
+  assert.equal(calls[2].init.headers.get("authorization"), "Bearer openai-fixture");
+  assert.equal(calls[2].init.headers.has("api-key"), false);
+  assert.equal(direct.getAiProviderConfig("embeddings").provider, "openai");
+  assert.doesNotMatch(JSON.stringify(direct.logs), /openai-fixture|azure-fixture/);
+});
+test("invalid or incomplete embedding selection fails closed before network", async () => {
+  let calls = 0;
+  for (const env of [
+    { ...azure, KOVA_EMBEDDING_PROVIDER: "private-invalid-value" },
+    { ...azure, OPENAI_API_KEY: undefined, KOVA_EMBEDDING_PROVIDER: "openai" },
+    { OPENAI_API_KEY: "fixture", KOVA_EMBEDDING_PROVIDER: "azure_openai" },
+  ]) {
+    const api = loadProvider(env, async () => {
+      calls++;
+      return new Response('{"data":[]}');
+    });
+    const failure = api.validateAiProviderConfig("embeddings");
+    assert.equal(failure.status, 503);
+    assert.doesNotMatch(JSON.stringify(failure), /private-invalid-value|fixture/);
+    await assert.rejects(api.embeddings({ model: "text-embedding-3-small", input: "fixture" }));
+  }
+  assert.equal(calls, 0);
+});
 test("invalid or incomplete image selection cannot make provider calls or fall back", async () => {
   let calls = 0;
   for (const env of [
