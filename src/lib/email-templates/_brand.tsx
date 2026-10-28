@@ -1,8 +1,19 @@
 import * as React from "react";
-import { Column, Head, Img, Link, Row, Section, Text } from "@react-email/components";
+import { Column, Head, Link, Row, Section, Text } from "@react-email/components";
 
-export const KOVA_LOGO_URL = "https://kovagpt.com/kova-logo.png";
-export const KOVA_SITE_URL = "https://kovagpt.com";
+// Email clients often block remote images, and the public site may temporarily
+// use the direct Azure origin. Keep the wordmark readable without either host.
+function safePublicOrigin(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && url.origin === value
+      ? value
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 export const brandColors = {
   bg: "#ffffff",
@@ -64,18 +75,24 @@ export function BrandHeader() {
     <Section style={{ padding: "0 0 32px" }}>
       <Row>
         <Column style={{ width: "36px", verticalAlign: "middle" }}>
-          <Img
-            src={KOVA_LOGO_URL}
-            width="30"
-            height="30"
-            alt="KovaGPT"
+          <Text
+            aria-hidden="true"
             style={{
               display: "block",
               width: "30px",
               height: "30px",
+              lineHeight: "30px",
+              textAlign: "center",
               borderRadius: "50%",
+              backgroundColor: brandColors.button,
+              color: brandColors.buttonText,
+              fontFamily: fontStack,
+              fontWeight: 600,
+              margin: 0,
             }}
-          />
+          >
+            K
+          </Text>
         </Column>
         <Column style={{ verticalAlign: "middle" }}>
           <Text
@@ -97,7 +114,8 @@ export function BrandHeader() {
   );
 }
 
-export function BrandFooter() {
+export function BrandFooter({ publicOrigin }: { publicOrigin?: string }) {
+  const origin = safePublicOrigin(publicOrigin);
   return (
     <Section
       className="kova-divider"
@@ -114,14 +132,18 @@ export function BrandFooter() {
         <Link className="kova-link" href="mailto:support@kovagpt.com" style={styles.footerLink}>
           Support
         </Link>
-        {"  ·  "}
-        <Link className="kova-link" href={`${KOVA_SITE_URL}/privacy`} style={styles.footerLink}>
-          Privacy
-        </Link>
-        {"  ·  "}
-        <Link className="kova-link" href={`${KOVA_SITE_URL}/terms`} style={styles.footerLink}>
-          Terms
-        </Link>
+        {origin ? (
+          <>
+            {"  ·  "}
+            <Link className="kova-link" href={`${origin}/privacy`} style={styles.footerLink}>
+              Privacy
+            </Link>
+            {"  ·  "}
+            <Link className="kova-link" href={`${origin}/terms`} style={styles.footerLink}>
+              Terms
+            </Link>
+          </>
+        ) : null}
       </Text>
       <Text className="kova-muted" style={styles.footerText}>
         © KovaGPT

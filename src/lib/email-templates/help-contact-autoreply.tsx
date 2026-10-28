@@ -4,12 +4,13 @@ import { BrandFooter, BrandHeader, EmailHead, styles } from "./_brand";
 import type { TemplateEntry } from "./registry";
 
 interface Props {
+  publicOrigin?: string;
   name?: string;
   topic?: string;
   variant?: "help" | "bug";
 }
 
-const Email = ({ name, topic, variant = "help" }: Props) => (
+const Email = ({ publicOrigin, name, topic, variant = "help" }: Props) => (
   <Html lang="en" dir="ltr">
     <EmailHead />
     <Preview>We received your message and will get back to you soon.</Preview>
@@ -43,7 +44,7 @@ const Email = ({ name, topic, variant = "help" }: Props) => (
         >
           — Kova Support
         </Text>
-        <BrandFooter />
+        <BrandFooter publicOrigin={publicOrigin} />
       </Container>
     </Body>
   </Html>
