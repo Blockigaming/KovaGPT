@@ -407,11 +407,12 @@ for (const theme of ["light", "dark"] as const) {
     );
     await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
     const restingBorder = await composer.evaluate((node) => getComputedStyle(node).borderColor);
+    const restingShadow = await composer.evaluate((node) => getComputedStyle(node).boxShadow);
     await input.click();
     await expect(composer).toHaveAttribute("data-focus-origin", "pointer");
     await expect(composer).toHaveCSS("border-color", restingBorder);
     await expect(composer).toHaveCSS("outline-style", "none");
-    await expect(composer).toHaveCSS("box-shadow", "none");
+    await expect(composer).toHaveCSS("box-shadow", restingShadow);
     await input.fill("Keep this draft while checking my plan");
     await openResponseOptions(page);
     await expect(thinking.getByText("Thinking", { exact: true })).toBeVisible();
