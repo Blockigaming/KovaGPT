@@ -360,8 +360,22 @@ body:has(.kova-assistant[data-ui="modern"]),
    Code, tables and inline UI retain their own existing font declarations. */
 .kova-assistant[data-ui="modern"] .kova-assistant-message .prose-chat {
   font-family: var(--chat-reading-font);
-  font-size: 1.0625rem;
-  line-height: 1.65;
+}
+
+.kova-assistant[data-ui="modern"] .kova-assistant-message .prose-chat :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--chat-greeting-font);
+}
+
+.kova-assistant[data-ui="modern"]
+  :is(
+    .kova-response-output-header,
+    .kova-response-copy-panel,
+    .kova-response-copy-error,
+    .kova-generative-canvas,
+    .prose-chat table,
+    .prose-chat :is(button, input, textarea, select, [role="button"])
+  ) {
+  font-family: var(--chat-body-font);
 }
 
 @media (max-width: 479px) {
