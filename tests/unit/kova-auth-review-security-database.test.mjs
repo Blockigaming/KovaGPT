@@ -362,7 +362,7 @@ test("Google safely claims an expired pending signup without activating its unve
   }
 });
 
-test("Google preserves a verified password and rejects absent mailbox proof or suspended/deleted ownership", async (t) => {
+test("a fresh Google subject cannot claim a verified password account by mailbox alone", async (t) => {
   const db = await authDatabase();
   try {
     await passwordAccount(db, { email });
@@ -389,7 +389,7 @@ test("Google preserves a verified password and rejects absent mailbox proof or s
         }),
       );
     const beforeCredential = (await db.query("select * from kova_private.auth_credentials")).rows;
-    await google(db, { candidate: other });
+    await assert.rejects(google(db, { candidate: other }), { code: "KVA02" });
     assert.deepEqual(
       (await db.query("select * from kova_private.auth_credentials")).rows,
       beforeCredential,

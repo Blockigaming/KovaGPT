@@ -295,9 +295,11 @@ export function BillingPlans({ onNavigate, ...props }: BillingProps & { onNaviga
         {summary?.hasBillingAccount && !summary.billingPortalAvailable
           ? "Plan management is unavailable. Contact support@kovagpt.com. "
           : ""}
-        {summary?.billingConflict
-          ? "Your billing records need support review before a plan change. "
-          : ""}
+        {summary?.billingSetupIncomplete
+          ? "Billing setup needs operator review before plan changes. "
+          : summary?.billingConflict
+            ? "Your billing records need support review before a plan change. "
+            : ""}
         New-customer links open Pricing to review plans and checkout. Changes to an existing
         subscription open the external Stripe billing portal in this tab. Review the actual
         effective date, any proration, and the final charge there before confirming. If Stripe does

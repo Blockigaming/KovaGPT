@@ -131,7 +131,7 @@ for (const kind of ["password", "google", "recovery"])
                   "select public.kova_auth_create_recovery('banned@example.invalid',$1,$2,'{}',$3)",
                   [digest("recover"), expiry, now],
                 );
-      await assert.rejects(operation(), /account_unavailable/);
+      await assert.rejects(operation(), /account_unavailable|adoption_conflict/);
       assert.equal(await scalar(db, "select count(*)::int from kova_private.auth_accounts"), 0);
       assert.equal(await scalar(db, "select count(*)::int from public.test_email_queue"), 0);
     } finally {
@@ -173,6 +173,10 @@ test("a verified Google subject can rename its email without moving UUIDs or rev
       "insert into auth.users(id,email,email_confirmed_at) values($1,'old@example.invalid',$2)",
       [owner, now],
     );
+    await db.query(
+      "insert into auth.identities(id,user_id,provider,provider_id,identity_data) values($1,$2,'google',$3,$4)",
+      ["40000000-0000-4000-8000-000000000004", owner, "same-subject", { sub: "same-subject" }],
+    );
     const google = (email, subject = "same-subject", handoff = "h") =>
       db.query("select * from public.kova_auth_finish_google($1,$2,$3,true,'Owner',$4,$5,$6)", [
         owner,
@@ -209,7 +213,7 @@ test("a verified Google subject can rename its email without moving UUIDs or rev
     assert.deepEqual(await snapshot(db), before);
     await assert.rejects(
       google("new@example.invalid", "different-subject", "h4"),
-      /invalid_google_identity/,
+      /adoption_conflict/,
     );
   } finally {
     await db.close();
