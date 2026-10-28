@@ -99,7 +99,7 @@ for (const desktop of [true, false]) {
       assert.ok(openHtml.includes(`Kova GPT ${modelIdentity.KOVA_MODEL_VERSION}`));
       const options = Array.from(
         openHtml.matchAll(
-          /data-testid="model-option-([^"]+)"[^>]*>[\s\S]*?<span[^>]*>([^<]+)<\/span>/g,
+          /<button\b[^>]*data-testid="model-option-([^"]+)"[^>]*>[\s\S]*?<span[^>]*>([^<]+)<\/span>/g,
         ),
         (match) => [match[1], match[2]],
       );
