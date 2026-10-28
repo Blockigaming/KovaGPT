@@ -106,3 +106,12 @@ The previous main-chat/auth screenshots remain evidence for their recorded
 source only. New screenshot baselines must come from the changed application
 and be inspected before acceptance. Code/preformatted output keeps monospace;
 tables, control chrome, metadata and compact selection rows keep sans type.
+
+Canonical Linux phone screenshots use the reviewed GitHub Actions captures from
+source `ce434be01f34400ccf19aa2668757e33945378bc` (auth artifact `12816691913`;
+quality artifact `12817610103`). That environment installs the pinned Playwright
+browser and its Ubuntu font dependencies. The local environment renders the same
+font stacks with DejaVu Serif/Sans; the CI greeting fits on one line while the
+local greeting wraps to two. Both layouts were inspected for containment and
+control alignment. Only the three affected canonical phone PNGs were accepted;
+snapshot tolerances and interaction assertions remain unchanged.
