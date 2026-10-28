@@ -175,6 +175,7 @@ export type SubscriptionSummary = {
   inherited: boolean;
   activeSubscriptionCount: number;
   billingConflict: boolean;
+  billingSetupIncomplete?: boolean;
   status: string | null;
   priceId: string | null;
   currentPeriodEnd: string | null;
@@ -255,7 +256,38 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       .eq("environment", BILLING_ENV)
       .maybeSingle()
       .abortSignal(AbortSignal.timeout(10_000));
-    if (mappingError) throw new Error("Billing details couldn't be verified.");
+    if (mappingError) {
+      // The production billing baseline can temporarily lack this later policy
+      // table. Expose the outage only when the authoritative summary has no
+      // subscription or paid entitlement; block Checkout and plan changes.
+      if (
+        ["PGRST205", "42P01"].includes(mappingError.code ?? "") &&
+        tier === "free" &&
+        effectiveTier === "free" &&
+        activeSubscriptionCount === 0 &&
+        !billingConflict &&
+        !inherited &&
+        status === null &&
+        priceId === null
+      ) {
+        return {
+          tier: "free",
+          effectiveTier: "free",
+          inherited: false,
+          activeSubscriptionCount: 0,
+          billingConflict: true,
+          billingSetupIncomplete: true,
+          status: null,
+          priceId: null,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+          trialing: false,
+          hasBillingAccount: false,
+          billingPortalAvailable: false,
+        };
+      }
+      throw new Error("Billing details couldn't be verified.");
+    }
 
     const hasBillingAccount = !!mapping?.stripe_customer_id;
     return {

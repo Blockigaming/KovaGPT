@@ -21,7 +21,8 @@ export async function authDatabase({ beforeMigrations = "", beforeMigration } = 
         deleted_at timestamptz, created_at timestamptz default now(), updated_at timestamptz,
         encrypted_password text, banned_until timestamptz, is_anonymous boolean default false,
         raw_app_meta_data jsonb default '{}', raw_user_meta_data jsonb default '{}');
-      create table auth.identities(id uuid primary key, user_id uuid references auth.users(id) on delete cascade);
+      create table auth.identities(id uuid primary key, user_id uuid references auth.users(id) on delete cascade,
+        provider text, provider_id text, identity_data jsonb);
       create table auth.sessions(id uuid primary key, user_id uuid references auth.users(id) on delete cascade);
       create table auth.mfa_factors (id uuid primary key, user_id uuid not null, status text not null);
       create table public.test_email_queue (id bigint generated always as identity primary key,

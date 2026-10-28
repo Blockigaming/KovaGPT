@@ -93,7 +93,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
           Chart type
         </label>
         <Select value={type} onValueChange={(value) => setType(value as ChartType)}>
-          <SelectTrigger id={chartTypeId} className="w-auto">
+          <SelectTrigger id={chartTypeId} className="min-h-11 w-auto">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
