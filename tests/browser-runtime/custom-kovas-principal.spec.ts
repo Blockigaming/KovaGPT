@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
-import path from "node:path";
 const A = "123e4567-e89b-42d3-a456-426614174000",
   B = "223e4567-e89b-42d3-a456-426614174000",
   K = "323e4567-e89b-42d3-a456-426614174000",
@@ -20,6 +19,7 @@ const result = await build({
     resolveDir: root,
     loader: "tsx",
   },
+  alias: { "@": `${root}/src` },
   bundle: true,
   write: false,
   platform: "browser",
@@ -30,9 +30,7 @@ const result = await build({
       name: "bounded-ui-fixtures",
       setup(builder) {
         builder.onResolve({ filter: /^@\// }, (args) =>
-          mocks[args.path]
-            ? { path: args.path, namespace: "fixture" }
-            : { path: path.join(root, "src", args.path.slice(2)) },
+          mocks[args.path] ? { path: args.path, namespace: "fixture" } : undefined,
         );
         builder.onResolve({ filter: /^@tanstack\/react-router$/ }, (args) => ({
           path: args.path,

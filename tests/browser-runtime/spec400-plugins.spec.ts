@@ -135,7 +135,8 @@ test("approved 13-plugin directory supports primary and category filters", async
   await expect(page.getByRole("heading", { name: "Plugins", exact: true })).toBeVisible();
   await expect(page.getByText("Connect tools and sources to Kova", { exact: true })).toBeVisible();
   await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(13);
-  await page.getByRole("combobox", { name: "Category", exact: true }).selectOption("Email");
+  await page.getByRole("combobox", { name: "Category", exact: true }).click();
+  await page.getByRole("option", { name: "Email", exact: true }).click();
   await expect(page.locator("[data-plugin-id]")).toHaveCount(2);
   await page.getByRole("textbox", { name: "Search plugins" }).fill("Gmail");
   await expect(page.locator("[data-plugin-id]")).toHaveCount(1);
