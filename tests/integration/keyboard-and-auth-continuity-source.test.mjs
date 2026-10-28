@@ -66,7 +66,7 @@ test("OAuth callback keeps the fast path visually quiet and retains branded reco
   assert.match(callback, /TRANSITION_REVEAL_DELAY_MS = 400/);
   assert.match(callback, /setShowTransition\(true\)/);
   assert.match(callback, /showTransition \? "scale-100 opacity-100"/);
-  assert.match(callback, /<NovaLogo className="h-11 w-11" animated pulse \/>/);
+  assert.match(callback, /<NovaLogo className="h-8 w-8" animated pulse \/>/);
   assert.doesNotMatch(callback, /Loader2|>Signing you in</);
 
   assert.match(callback, /role="alert"/);

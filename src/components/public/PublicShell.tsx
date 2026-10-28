@@ -118,7 +118,7 @@ export function PublicHeader() {
           to="/"
           className="flex min-h-11 min-w-0 max-w-full shrink-0 items-center gap-2 rounded-lg pr-2 font-semibold tracking-[-0.01em] outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <NovaLogo decorative className="h-7 w-7" />
+          <NovaLogo decorative className="h-6 w-6" />
           <span className="min-w-0">KovaGPT</span>
         </Link>
 

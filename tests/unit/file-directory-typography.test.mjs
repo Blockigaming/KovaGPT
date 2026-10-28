@@ -18,14 +18,14 @@ const projectTitle = block(
   ".kova-core-page.kova-file-directory .kova-project-file-name h3",
 );
 
-test("Library and Projects headings use the owner's IBM Plex Sans token", () => {
+test("directory base styles preserve inherited font tokens", () => {
   assert.match(theme, /--font-sans:\s*"IBM Plex Sans"/);
   assert.match(title, /font-family: var\(--font-sans\) !important;/);
   assert.match(projectTitle, /font-family: var\(--font-sans\);/);
   assert.doesNotMatch(directory, /Georgia|Times New Roman|font-family:[^;]*\bserif\b/);
 });
 
-test("directory headings match the shared medium weight without changing tracking", () => {
+test("directory base weight tokens remain shared without changing tracking", () => {
   assert.match(block(shared, ".kova-directory"), /--page-title-weight: 500;/);
   assert.match(page, /--page-title-weight: 500;/);
   assert.match(projectTitle, /font-weight: 500;/);
@@ -33,7 +33,7 @@ test("directory headings match the shared medium weight without changing trackin
   assert.match(projectTitle, /letter-spacing: -0\.02em;/);
 });
 
-test("sans directory headings preserve desktop, phone, and project title geometry", () => {
+test("directory headings preserve desktop, phone, and project title geometry", () => {
   assert.match(page, /--page-title-size: 32px;/);
   assert.match(page, /--page-title-line: 40px;/);
   assert.match(page, /--surface-card-radius: var\(--kova-radius-card\);/);

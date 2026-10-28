@@ -45,7 +45,7 @@ test("phone composer stays touch-sized and grows for multiline text or attachmen
   assert.match(chatStyles, /\.spec400-attachment-chips\s*\{[^}]*flex-wrap: wrap/);
   assert.match(chatStyles, /env\(safe-area-inset-bottom\)/);
   assert.match(composer, /const limit = isMobileLayout \? 144 : 240/);
-  assert.match(composer, /const minimum = surface === "empty" \? 80 : isMobileLayout \? 40 : 48/);
+  assert.match(composer, /const minimum = isMobileLayout \? 40 : 48/);
   assert.match(composer, /Math\.min\(Math\.max\(el\.scrollHeight, minimum\), limit\)/);
   assert.match(composer, /el\.style\.overflowY = el\.scrollHeight > limit \? "auto" : "hidden"/);
   assert.match(composer, /paddingBottom: `\$\{kbOffset \+ 8\}px`/);

@@ -259,6 +259,7 @@ export function AppShell({
   return (
     <div
       className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
+      data-ui="modern"
       onTouchStart={(e) => {
         const t = e.touches[0];
         // Slightly wider edge zone + require a clear horizontal intent.

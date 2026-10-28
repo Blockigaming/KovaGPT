@@ -21,7 +21,7 @@ export function SignUpPrompt({
       <DialogContent className="max-w-sm rounded-[28px] border-border/70 p-7 shadow-2xl">
         <DialogHeader>
           <div className="flex justify-center mb-2">
-            <NovaLogo className="w-14 h-14" />
+            <NovaLogo className="w-8 h-8" />
           </div>
           <DialogTitle className="text-center">Sign in to continue</DialogTitle>
           <DialogDescription className="text-center">

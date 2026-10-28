@@ -255,9 +255,10 @@ export function AuthDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         aria-modal="true"
+        data-kova-auth-dialog=""
         className={cn(
           "kova-auth-surface gap-0 overflow-y-auto border-border/60 bg-card shadow-xl",
-          "p-7 pb-[calc(1.75rem+env(safe-area-inset-bottom))] sm:max-w-[400px] sm:p-9 sm:pb-9",
+          "p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:max-w-[400px] sm:pb-6",
           "[&>button.absolute]:!h-11 [&>button.absolute]:!w-11",
         )}
         onCloseAutoFocus={(event) => {
@@ -267,19 +268,19 @@ export function AuthDialog({
         }}
       >
         {/* Header */}
-        <div className="flex flex-col items-center text-center">
-          <div className="mb-5 animate-in fade-in-0 duration-100">
-            <NovaLogo mark className="h-11 w-11 text-foreground" />
+        <div className="kova-auth-dialog-heading flex flex-col items-center text-center">
+          <div className="kova-auth-dialog-mark mb-4 animate-in fade-in-0 duration-100">
+            <NovaLogo mark className="h-8 w-8 text-foreground" />
           </div>
 
-          <DialogTitle className="text-[26px] font-semibold leading-tight tracking-tight">
+          <DialogTitle className="kova-auth-dialog-title text-[28px] font-normal leading-tight">
             {step === "magic-sent"
               ? "Sign-in link requested"
               : isSignUp
                 ? "Create your Kova account"
                 : "Log in to Kova"}
           </DialogTitle>
-          <DialogDescription className="mt-2 max-w-[320px] text-[15px]">
+          <DialogDescription className="kova-auth-dialog-description mt-2 max-w-[320px] text-[14px]">
             {step === "magic-sent"
               ? `We asked our email provider to send a sign-in link to ${email}. Delivery can take a few minutes — check your spam folder too.`
               : "Continue with your configured sign-in method."}
@@ -287,7 +288,7 @@ export function AuthDialog({
         </div>
 
         {/* Body */}
-        <div className="mt-7 space-y-3">
+        <div className="kova-auth-dialog-body mt-6 space-y-3">
           {step === "identify" && (
             <>
               <form onSubmit={handleContinueEmail} className="space-y-3">

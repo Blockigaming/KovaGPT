@@ -97,7 +97,8 @@ test("sidebar glyphs retain shared rounded strokes with a scoped modern optical 
   assert.equal(declarations["stroke-linejoin"], "round");
   const modern = rules[1];
   assert.match(modern.selector, /\.kova-assistant/);
-  assert.doesNotMatch(modern.selector, /kova-app-shell/);
+  assert.match(modern.selector, /kova-app-shell/);
+  assert.match(modern.selector, /\[data-ui="modern"\]/);
   const modernDeclarations = Object.fromEntries(
     modern.nodes.filter((node) => node.type === "decl").map(({ prop, value }) => [prop, value]),
   );

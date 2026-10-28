@@ -401,7 +401,7 @@ function AuthPage() {
         className="mx-auto flex w-full max-w-[400px] flex-col px-6 pb-16 pt-6 sm:pt-16"
       >
         <div className="mb-8 flex flex-col items-center text-center">
-          <NovaLogo mark className="mb-6 h-10 w-10 text-foreground" />
+          <NovaLogo mark className="mb-6 h-8 w-8 text-foreground" />
           <h1 className="text-[30px] font-semibold leading-tight tracking-tight">
             {hasMfaChallenge
               ? "Two-factor verification"

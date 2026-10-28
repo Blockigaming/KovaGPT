@@ -44,7 +44,7 @@ export function ProductOverview() {
         <section className="public-workflow-example" aria-labelledby="workflow-example-title">
           <aside className="public-example-sidebar" aria-hidden="true">
             <span className="public-example-sidebar-brand">
-              <NovaLogo decorative className="h-7 w-7" /> KovaGPT
+              <NovaLogo decorative className="h-6 w-6" /> KovaGPT
             </span>
             <span>
               <Plus size={15} /> New chat

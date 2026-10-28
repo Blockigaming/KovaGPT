@@ -83,7 +83,7 @@ function OAuthCallbackPage() {
           role="alert"
           className="flex max-w-sm animate-fade-up flex-col items-center text-center"
         >
-          <NovaLogo className="h-12 w-12" />
+          <NovaLogo className="h-8 w-8" />
           <div className="flex flex-col items-center">
             <h1 id="oauth-callback-error-title" className="mt-5 text-lg font-semibold">
               Sign in could not finish
@@ -105,7 +105,7 @@ function OAuthCallbackPage() {
             showTransition ? "scale-100 opacity-100" : "scale-[0.98] opacity-0"
           }`}
         >
-          <NovaLogo className="h-11 w-11" animated pulse />
+          <NovaLogo className="h-8 w-8" animated pulse />
         </div>
       )}
       {!error ? (

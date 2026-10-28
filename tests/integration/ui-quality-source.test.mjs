@@ -91,12 +91,12 @@ test("core chat surfaces use shared workspace primitives", () => {
   assert.doesNotMatch(styles, /\.kova-logo-mark\s*\{[\s\S]*?mask: url/);
   assert.match(
     sidebar,
-    /<span className="kova-sidebar-brand[^"]*">\s*<NovaLogo decorative className="h-7 w-7" \/>\s*Kova GPT\s*<\/span>/,
+    /<span className="kova-sidebar-brand[^"]*">\s*<NovaLogo decorative className="h-6 w-6" \/>\s*Kova GPT\s*<\/span>/,
   );
   assert.doesNotMatch(home, /<NovaLogo|kova-greeting-mark/);
   assert.match(publicSite, /<PublicShell>/);
   assert.doesNotMatch(publicSite, /<NovaLogo/);
-  assert.match(publicShell, /<NovaLogo decorative className="h-7 w-7" \/>/);
+  assert.match(publicShell, /<NovaLogo decorative className="h-6 w-6" \/>/);
   assert.match(publicFooter, /<NovaLogo decorative mark className="h-6 w-6" \/>/);
   assert.match(seoLanding, /<PublicShell>/);
   assert.doesNotMatch(seoLanding, /<NovaLogo/);

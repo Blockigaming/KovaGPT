@@ -285,7 +285,7 @@ test("every collapsed action is wrapped in the shared pointer-and-keyboard Toolt
   assert.equal(f.tree.type, "TooltipProvider");
 });
 
-test("rail keeps 72px geometry, a 64px header, original 28px logo and 44px expansion target", () => {
+test("rail keeps 72px geometry, a 64px header, 24px logo and 44px expansion target", () => {
   const f = fixture();
   assert.match(f.find("Collapsed navigation").props.className, /w-\[72px\]/);
   const header = all(f.tree).find(
@@ -295,7 +295,7 @@ test("rail keeps 72px geometry, a 64px header, original 28px logo and 44px expan
   assert.equal(controls(header)[0].props["aria-label"], "Expand sidebar");
   const logo = all(header).find(({ type }) => type === "NovaLogo");
   assert.equal(logo.props.decorative, true);
-  assert.equal(logo.props.className, "h-7 w-7");
+  assert.equal(logo.props.className, "h-6 w-6");
   f.find("Expand sidebar").props.onClick({ detail: 1 });
   assert.deepEqual(f.calls, [["toggle"]]);
 });
