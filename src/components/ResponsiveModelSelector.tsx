@@ -50,6 +50,30 @@ export function ResponsiveModelSelector({
     if (mode !== "instant") onChange("instant");
   }, [isLoaded, isSignedIn, mode, onChange, userTier]);
 
+  useEffect(() => {
+    if (!open || topbar || useSheet) return;
+    const trigger = triggerRef.current;
+    const optionsPanel = trigger?.closest<HTMLElement>(".spec400-options-panel");
+    if (!trigger || !optionsPanel) return;
+
+    // A short Options panel can flip below the composer after its nested picker
+    // opens. Its old scroll position then leaves the model trigger offscreen,
+    // and Radix follows that trigger with a clipped menu. Keep the trigger in
+    // the panel's visible viewport whenever either popover moves.
+    const keepTriggerVisible = () => {
+      const anchor = trigger.getBoundingClientRect();
+      const panel = optionsPanel.getBoundingClientRect();
+      const top = Math.max(panel.top, 12);
+      const bottom = Math.min(panel.bottom, window.innerHeight - 12);
+      if (anchor.bottom > bottom) optionsPanel.scrollTop += anchor.bottom - bottom;
+      else if (anchor.top < top) optionsPanel.scrollTop += anchor.top - top;
+    };
+    const observer = new IntersectionObserver(keepTriggerVisible, { threshold: 1 });
+    observer.observe(trigger);
+    keepTriggerVisible();
+    return () => observer.disconnect();
+  }, [open, topbar, useSheet]);
+
   const closeAndRestoreFocus = () => {
     setOpen(false);
     window.requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
