@@ -42,8 +42,8 @@
   font-display: swap;
 }
 :root {
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: var(--font-sans);
+  --font-sans: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  --font-display: var(--font-reading, Georgia, "Times New Roman", serif);
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --kova-icon-stroke: 2;
@@ -69,15 +69,23 @@ html body {
   line-height: 1.466667;
 }
 body :is(h1, h2, h3, h4) {
-  font-family: var(--font-sans);
   letter-spacing: normal !important;
+}
+body :is(h1, h2) {
+  font-family: var(--font-display);
+  font-weight: 400;
 }
 body .kova-page h1 {
   font-size: 1.75rem !important;
   line-height: 2.25rem !important;
-  font-weight: 600 !important;
+  font-weight: 400 !important;
 }
-body :is(.kova-page h2, .kova-settings-section h3) {
+body .kova-page h2 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 400;
+}
+body .kova-settings-section h3 {
   font-size: 1.25rem;
   line-height: 1.75rem;
   font-weight: 600;
@@ -381,9 +389,9 @@ body .kova-sidebar-rail[data-kova-core-rail][data-state="closed"] {
 }
 
 body :is(.kova-assistant, .kova-app-shell, .kova-sidebar, .kova-sidebar-rail, .kova-composer) {
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: var(--font-sans);
-  --chat-body-font: "IBM Plex Sans";
+  --font-sans: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  --font-display: var(--font-reading, Georgia, "Times New Roman", serif);
+  --chat-body-font: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   font-family: var(--font-sans) !important;
 }
 body :is(.kova-sidebar, .kova-sidebar-rail, .kova-composer) :is(button, input, textarea, select) {
@@ -404,7 +412,7 @@ body :is(.kova-assistant, .kova-app-shell) .kova-topbar:not(.kova-desktop-topbar
 }
 body .kova-page,
 body .kova-page :is(button, input, select, textarea) {
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   font-family: var(--font-sans) !important;
 }
 body section.kova-settings-page.kova-settings-dialog .kova-settings-content-header {

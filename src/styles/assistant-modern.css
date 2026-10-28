@@ -1,7 +1,7 @@
 /* Claude's serif/sans typography, Grok's restrained spacing and surfaces, and
    ChatGPT's pill actions. Shared components retain their existing behavior. */
-body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]),
-:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] {
+body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="modern"]),
+:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="modern"] {
   --assistant-canvas: #faf9f7;
   --assistant-panel: #f3f3f1;
   --assistant-card: #ffffff;
@@ -41,14 +41,14 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]),
   --chat-greeting-font: Georgia, "Times New Roman", serif;
   --chat-reading-font: Georgia, "Times New Roman", serif;
   --font-sans: var(--chat-body-font);
-  --font-display: var(--chat-body-font);
+  --font-display: var(--chat-greeting-font);
   font-family: var(--chat-body-font);
   background: var(--assistant-canvas);
   -webkit-font-smoothing: antialiased;
 }
 
-.dark body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]),
-.dark :is(.kova-assistant, .kova-app-shell)[data-ui="modern"] {
+.dark body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="modern"]),
+.dark :is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="modern"] {
   --assistant-canvas: #212121;
   --assistant-panel: #171717;
   --assistant-card: #2b2b2b;
@@ -372,15 +372,18 @@ body .kova-app-shell[data-ui="modern"] .kova-settings-page .kova-settings-conten
 
 /* Claude's serif reading voice is distinct from the compact sans controls.
    Code, tables and inline UI retain their own existing font declarations. */
-.kova-assistant[data-ui="modern"] .kova-assistant-message .prose-chat {
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] .kova-assistant-message .prose-chat {
   font-family: var(--chat-reading-font);
 }
 
-.kova-assistant[data-ui="modern"] .kova-assistant-message .prose-chat :is(h1, h2, h3, h4, h5, h6) {
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
+  .kova-assistant-message
+  .prose-chat
+  :is(h1, h2, h3, h4, h5, h6) {
   font-family: var(--chat-greeting-font);
 }
 
-.kova-assistant[data-ui="modern"]
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
   :is(
     .kova-response-output-header,
     .kova-response-copy-panel,
@@ -417,12 +420,12 @@ body .kova-app-shell[data-ui="modern"] .kova-settings-page .kova-settings-conten
 }
 
 /* ChatGPT's compact gray prompt bubble and unboxed assistant reading column. */
-.kova-assistant[data-ui="modern"] .kova-user-message-group {
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] .kova-user-message-group {
   align-items: flex-end;
   max-width: 100%;
 }
 
-.kova-assistant[data-ui="modern"] .kova-user-message {
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] .kova-user-message {
   width: fit-content;
   max-width: min(88%, 42rem);
   overflow-wrap: anywhere;
@@ -432,17 +435,18 @@ body .kova-app-shell[data-ui="modern"] .kova-settings-page .kova-settings-conten
 
 /* Copyable writing and code use the same raised surface as the composer.
    The existing code font, horizontal scrolling and copy layout remain intact. */
-.kova-assistant[data-ui="modern"] .kova-response-output {
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] .kova-response-output {
   border-color: var(--assistant-line);
   background: var(--assistant-card);
 }
 
-.kova-assistant[data-ui="modern"] :is(.kova-response-output-header, .kova-response-copy-panel) {
+:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
+  :is(.kova-response-output-header, .kova-response-copy-panel) {
   background: var(--muted);
 }
 
 @media (max-width: 767px) {
-  .kova-assistant[data-ui="modern"] .kova-user-message {
+  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"] .kova-user-message {
     max-width: 94%;
   }
 }

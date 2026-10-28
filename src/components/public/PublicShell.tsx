@@ -208,6 +208,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
     <div
       ref={shellRef}
       data-public-shell
+      data-ui="modern"
       className="flex min-h-[100dvh] min-w-0 flex-col bg-background text-foreground"
     >
       <PublicHeader />

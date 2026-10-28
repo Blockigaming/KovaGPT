@@ -62,7 +62,11 @@ test("image surfaces use shared geometry and neutral progress rather than orname
   const source = read("src/routes/images.tsx");
   assert.match(
     source,
-    /text-2xl leading-8 font-semibold tracking-normal sm:text-\[28px\] sm:leading-9/,
+    /id="images-title"\s+className="kova-page-title text-\[30px\] leading-tight font-normal sm:text-\[36px\]"/,
+  );
+  assert.match(
+    source,
+    /className="kova-app-shell kova-images-workspace[^"\n]*"\s+data-ui="modern"/,
   );
   assert.match(source, /spec400-image-prompt[^\n]*rounded-xl/);
   assert.doesNotMatch(

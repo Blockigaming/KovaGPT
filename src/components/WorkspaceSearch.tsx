@@ -78,17 +78,22 @@ export function WorkspaceSearch({ userId }: { userId: string }) {
   }
   return (
     <section
-      className="mt-6 rounded-2xl border bg-card/35 p-4"
+      data-slot="workspace-search"
+      className="mt-6 rounded-[var(--kova-radius-card)] border border-border bg-card p-4 [font-family:var(--font-ui,var(--font-sans))] sm:p-6"
       aria-labelledby="workspace-search-title"
     >
-      <h2 id="workspace-search-title" className="font-semibold">
+      <h2
+        id="workspace-search-title"
+        data-slot="workspace-search-title"
+        className="text-xl font-normal [font-family:var(--font-display,Georgia,serif)]"
+      >
         Search your workspace
       </h2>
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">
         Find saved titles and text in Projects, Library, memory, research, prompts, goals, and
         tasks. Local chats and file contents are outside this search.
       </p>
-      <form onSubmit={search} className="mt-3 flex gap-2">
+      <form onSubmit={search} className="mt-4 flex gap-2">
         <label className="sr-only" htmlFor="workspace-search-query">
           Search your saved workspace
         </label>
@@ -100,12 +105,13 @@ export function WorkspaceSearch({ userId }: { userId: string }) {
           maxLength={500}
           required
           placeholder="Find the launch plan or related work…"
-          className="min-w-0 flex-1 rounded-xl border bg-background px-3 py-2 text-sm"
+          className="min-h-11 min-w-0 flex-1 rounded-[var(--kova-radius-input)] border border-border bg-background px-4 py-2 text-sm"
         />
         <button
           type="submit"
+          data-slot="workspace-search-submit"
           disabled={Boolean(visible?.busy) || query.trim().length < 2}
-          className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm disabled:opacity-50"
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-border px-4 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
         >
           <Search className="h-4 w-4" />
           Search
@@ -130,10 +136,13 @@ export function WorkspaceSearch({ userId }: { userId: string }) {
             · Up to 2,000 recent accessible records
           </p>
           {visible.result.items.length ? (
-            <ul className="mt-2 space-y-1">
+            <ul className="mt-4 space-y-1">
               {visible.result.items.map((item) => (
                 <li key={`${item.source_table}:${item.source_id}`}>
-                  <Link to={item.href} className="block rounded-xl p-3 hover:bg-accent">
+                  <Link
+                    to={item.href}
+                    className="block rounded-[var(--kova-radius-compact)] p-3 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
                     <span className="text-sm font-medium">{item.title}</span>
                     <span className="ml-2 text-xs capitalize text-muted-foreground">
                       {item.kind.replaceAll("_", " ")}

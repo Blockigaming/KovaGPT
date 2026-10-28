@@ -169,7 +169,8 @@ for (const theme of ["light", "dark"] as const) {
     await expect(control).toHaveAttribute("aria-checked", initial === "true" ? "false" : "true");
     const rightGap = await control.evaluate(
       (node) =>
-        node.parentElement!.getBoundingClientRect().right - node.getBoundingClientRect().right,
+        node.closest(".kova-settings-reference-group")!.getBoundingClientRect().right -
+        node.getBoundingClientRect().right,
     );
     expect(rightGap).toBe(17);
     await page.screenshot({

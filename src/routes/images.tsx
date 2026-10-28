@@ -837,7 +837,10 @@ function ImagesPage() {
   };
 
   return (
-    <div className="flex h-dvh w-full bg-background text-foreground">
+    <div
+      className="kova-app-shell kova-images-workspace flex h-dvh w-full bg-background text-foreground"
+      data-ui="modern"
+    >
       <Sidebar
         conversations={[]}
         activeId={null}
@@ -891,10 +894,10 @@ function ImagesPage() {
         </header>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
+          <div className="kova-images-content max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
             <h1
               id="images-title"
-              className="text-2xl leading-8 font-semibold tracking-normal sm:text-[28px] sm:leading-9"
+              className="kova-page-title text-[30px] leading-tight font-normal sm:text-[36px]"
             >
               Images
             </h1>
@@ -938,7 +941,7 @@ function ImagesPage() {
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
                   ) : (
-                    <ArrowUp className="h-4 w-4" />
+                    <ArrowUp className="h-5 w-5" />
                   )}
                 </button>
               </div>

@@ -76,11 +76,21 @@ test("Academy highlights grid is exempt from both section-padding rules while ro
   );
 });
 
-test("both existing section rules keep 32px padding for ordinary detail and page sections", () => {
+test("both existing section rules use the shared responsive spacing for ordinary sections", () => {
+  const shell = sheet.nodes.find(
+    (node) => node.type === "rule" && node.selector === "[data-public-shell]",
+  );
+  assert.equal(
+    shell.nodes.find((node) => node.prop === "--public-section-space").value,
+    "clamp(40px, 5vw, 72px)",
+  );
   assert.equal(sectionRules.length, 2);
   for (const rule of sectionRules) {
     assert.match(rule.selector, /:not\(\.public-highlights-grid\)$/);
-    assert.equal(rule.nodes.find((node) => node.prop === "padding-block").value, "32px");
+    assert.equal(
+      rule.nodes.find((node) => node.prop === "padding-block").value,
+      "var(--public-section-space)",
+    );
   }
   const detailMain = elements(detail, (node) => node.type === "main")[0];
   const hero = detailMain.props.children[0];

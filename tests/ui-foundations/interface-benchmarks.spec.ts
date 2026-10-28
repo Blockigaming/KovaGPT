@@ -10,7 +10,12 @@ for (const width of [390, 1440]) {
         theme,
       );
       const hero = page.locator(".public-hero h1");
-      await expect(hero).toHaveCSS("font-weight", "600");
+      await expect(hero).toHaveCSS("font-weight", "400");
+      await expect(hero).toHaveCSS("font-family", /Georgia/);
+      await expect(page.locator(".public-hero .public-action").first()).toHaveCSS(
+        "font-family",
+        /ui-sans-serif|system-ui/,
+      );
       await expect(page.locator('a[href="/overview"]').first()).toHaveAttribute(
         "aria-current",
         "page",
@@ -103,8 +108,13 @@ for (const width of [320, 390, 768, 1440]) {
         (theme) => document.documentElement.classList.toggle("dark", theme === "dark"),
         theme,
       );
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-        "Chat, learn and create in KovaGPT.",
+      const hero = page.getByRole("heading", { level: 1 });
+      await expect(hero).toHaveText("Chat, learn and create in KovaGPT.");
+      await expect(hero).toHaveCSS("font-weight", "400");
+      await expect(hero).toHaveCSS("font-family", /Georgia/);
+      await expect(page.locator(".public-hero .public-action").first()).toHaveCSS(
+        "font-family",
+        /ui-sans-serif|system-ui/,
       );
       const choices = page.getByRole("group", { name: "Choose an example" });
       const answer = page.locator("#workflow-example-content");

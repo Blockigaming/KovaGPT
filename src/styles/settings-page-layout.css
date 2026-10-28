@@ -26,12 +26,26 @@ body
   .kova-core-utilities {
   flex-shrink: 0;
 }
+body
+  .kova-settings-route
+  section.kova-settings-page.kova-settings-dialog.kova-settings-reference
+  .kova-settings-content-header {
+  padding-inline: 0;
+  margin-inline: 24px;
+}
 @container settings (max-width: 959px) {
   body
     .kova-settings-route
-    section.kova-settings-page.kova-settings-dialog
+    section.kova-settings-page.kova-settings-dialog.kova-settings-reference
     .kova-settings-content-header {
     padding-inline: 0;
     margin-inline: 0;
+  }
+  body
+    .kova-settings-route
+    section.kova-settings-page.kova-settings-dialog.kova-settings-reference
+    .kova-settings-content
+    > [role="tabpanel"] {
+    padding: 0 0 max(24px, env(safe-area-inset-bottom)) !important;
   }
 }

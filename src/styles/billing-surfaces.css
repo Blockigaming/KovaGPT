@@ -1,7 +1,7 @@
 /* ChatGPT Account/Payment reference: official Payment_details screenshot linked by
    https://help.openai.com/en/articles/12362718-removing-a-payment-method.
    Kova keeps its own data, entitlement copy and actions; presentation only. */
-[role="dialog"].kova-settings-dialog.kova-settings-reference
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
   .kova-billing-tab-panel
   > :is(.kova-billing-section, .kova-billing-secondary-section) {
   min-width: 0;
@@ -13,13 +13,13 @@
   box-shadow: none;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
   .kova-billing-tab-panel
   > section
   + :is(.kova-billing-section, .kova-billing-secondary-section) {
-  margin-top: 20px;
+  margin-top: 24px;
   border-top: 1px solid var(--border-subtle);
-  padding-top: 20px;
+  padding-top: 24px;
 }
 
 .kova-billing-plan-summary,
@@ -36,7 +36,7 @@
   min-width: 0;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
   .kova-settings-content
   > .kova-billing-details
   h3 {
@@ -226,17 +226,25 @@
   display: flex;
   width: fit-content;
   max-width: 100%;
-  min-height: 50px;
+  min-height: 52px;
   height: auto;
   margin-bottom: 24px;
-  padding: 3px;
+  gap: 4px;
+  padding: 4px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--muted);
+  border-radius: var(--kova-radius-button);
+  background: var(--surface-secondary);
 }
 .kova-billing-tabs [role="tab"] {
   min-height: 44px;
   padding: 8px 16px;
+  border-radius: var(--kova-radius-button);
+  font-weight: 400;
+  box-shadow: none;
+}
+.kova-billing-tabs [role="tab"][data-state="active"] {
+  background: var(--card);
+  color: var(--foreground);
 }
 body .kova-settings-dialog .kova-billing-workspace > [role="tabpanel"].kova-billing-tab-panel {
   min-width: 0;
@@ -273,7 +281,7 @@ body .kova-settings-dialog .kova-billing-workspace > [role="tabpanel"].kova-bill
 .kova-billing-plan-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
   margin-block: 24px;
 }
 .kova-billing-plan-card {
@@ -283,20 +291,25 @@ body .kova-settings-dialog .kova-billing-workspace > [role="tabpanel"].kova-bill
   align-content: start;
   gap: 12px;
   min-width: 0;
-  padding: 16px;
+  padding: 24px;
   border: 1px solid var(--border);
   border-radius: var(--kova-radius-card);
+  background: var(--card);
 }
 .kova-billing-plan-card[data-current-plan="true"] {
   border-color: var(--foreground);
 }
 .kova-billing-plan-card h4 {
-  font-size: 18px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 28px;
 }
 .kova-billing-plan-price strong {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 40px;
+  font-variant-numeric: tabular-nums;
 }
 .kova-billing-plan-price span,
 .kova-billing-plan-tax,
@@ -360,6 +373,7 @@ body .kova-settings-dialog .kova-billing-workspace > [role="tabpanel"].kova-bill
     grid-template-columns: 1fr;
   }
   .kova-billing-plan-card {
+    padding: 20px;
     grid-template-rows: auto;
     grid-row: auto;
   }
@@ -376,6 +390,7 @@ body .kova-settings-dialog .kova-billing-workspace > [role="tabpanel"].kova-bill
     grid-template-columns: 1fr;
   }
   .kova-billing-plan-card {
+    padding: 20px;
     grid-template-rows: auto;
     grid-row: auto;
   }
