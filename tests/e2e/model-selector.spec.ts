@@ -126,15 +126,33 @@ test.describe("short desktop model picker", () => {
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(1440);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(520);
     const lastOption = picker.getByTestId("model-option-ultra");
-    await lastOption.scrollIntoViewIfNeeded();
-    expect(
-      await lastOption.evaluate((button) => {
-        const box = button.getBoundingClientRect();
-        return button.contains(
-          button.ownerDocument.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2),
-        );
-      }),
-    ).toBe(true);
+    const optionScroll = picker.getByTestId("model-options-scroll");
+    // The header stays in place while the options viewport reveals the last
+    // model, even when the popover is bounded by a short browser window.
+    await optionScroll.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await expect
+      .poll(() =>
+        lastOption.evaluate((button) => {
+          const box = button.getBoundingClientRect();
+          const hit = button.ownerDocument.elementFromPoint(
+            box.x + box.width / 2,
+            box.y + box.height / 2,
+          );
+          const scroll = button.closest('[data-testid="model-options-scroll"]');
+          return {
+            reachable: button.contains(hit),
+            scrollTop: scroll?.scrollTop,
+            scrollHeight: scroll?.scrollHeight,
+            clientHeight: scroll?.clientHeight,
+            optionTop: box.top,
+            optionBottom: box.bottom,
+            hitTarget: hit?.getAttribute("data-testid") ?? hit?.tagName ?? null,
+          };
+        }),
+      )
+      .toEqual(expect.objectContaining({ reachable: true }));
 
     await page.keyboard.press("Escape");
     await expect(picker).toHaveCount(0);

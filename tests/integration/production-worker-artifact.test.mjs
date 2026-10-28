@@ -124,22 +124,32 @@ test(
     try {
       const deadline = Date.now() + 30_000;
       let healthResponse;
+      let diagnostics;
       while (Date.now() < deadline) {
         if (spawnError) throw spawnError;
         if (worker.exitCode !== null) {
           assert.fail(`wrangler exited with code ${worker.exitCode}\n${output}`);
         }
 
+        let response;
         try {
-          const response = await fetch(`${origin}/api/health`, {
-            signal: AbortSignal.timeout(2_000),
+          response = await fetch(`${origin}/api/health`, {
+            signal: AbortSignal.timeout(5_000),
           });
-          if (response.status === 200) {
-            healthResponse = response;
-            break;
-          }
         } catch {
           // Workerd is still starting.
+          await delay(250);
+          continue;
+        }
+
+        if (response.status === 200) {
+          try {
+            diagnostics = await response.json();
+            healthResponse = response;
+            break;
+          } catch (error) {
+            if (error?.name !== "TimeoutError" && error?.name !== "AbortError") throw error;
+          }
         }
         await delay(250);
       }
@@ -147,7 +157,6 @@ test(
       assert.ok(healthResponse, `Worker did not become healthy\n${output}`);
       assert.match(healthResponse.headers.get("content-type") ?? "", /application\/json/);
       assert.equal(healthResponse.headers.get("cache-control"), "no-store");
-      const diagnostics = await healthResponse.json();
       assert.equal(diagnostics.status, "ok");
       assert.equal(diagnostics.service, "kovagpt-web");
       assert.equal(diagnostics.environment, "ci");

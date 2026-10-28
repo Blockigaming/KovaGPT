@@ -36,7 +36,21 @@ export async function openCurrentSettings(page: Page) {
   const navigation = await revealSidebar(page);
   const account = navigation.getByRole("button", { name: "Account menu", exact: true });
   if (await account.count()) {
-    await account.click();
+    try {
+      await account.click({ timeout: 4_000 });
+    } catch (error) {
+      // A desktop sidebar can finish restoring its saved state after the
+      // navigation first becomes visible. If it collapses during the click,
+      // use the real Settings control on the newly visible rail.
+      const railSettings = page
+        .getByRole("navigation", { name: "Collapsed navigation", exact: true })
+        .getByRole("button", { name: "Settings", exact: true });
+      if (!(await railSettings.isVisible())) throw error;
+      await railSettings.click();
+      const surface = page.locator(".kova-settings-dialog");
+      await expect(surface).toBeVisible();
+      return surface;
+    }
     await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
   } else {
     await navigation.getByRole("button", { name: "Settings", exact: true }).click();
@@ -83,11 +97,15 @@ export async function chooseSettingsSection(page: Page, section: string) {
       "Safety & security": "Security",
     };
     const button = surface.getByRole("button", { name: names[section] ?? section, exact: true });
-    if (!(await button.isVisible()))
-      await surface
-        .locator("summary")
-        .filter({ hasText: /^More / })
-        .click();
+    const moreDetails = surface.locator("details").filter({
+      has: page.locator("summary").filter({ hasText: /^More / }),
+    });
+    // The section picker can retain an already-open disclosure across a
+    // same-section selection. Button visibility may be temporarily false while
+    // the page swaps content, so toggling on that signal can close it instead.
+    if (!(await moreDetails.evaluate((details) => (details as HTMLDetailsElement).open)))
+      await moreDetails.locator("summary").click();
+    await expect(button).toBeVisible();
     await button.click();
   }
   await expect(surface.getByRole("tabpanel").first()).toBeVisible();

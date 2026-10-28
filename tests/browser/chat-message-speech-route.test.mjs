@@ -10,12 +10,15 @@ import ts from "typescript";
 import { build } from "esbuild";
 import { chromium } from "@playwright/test";
 import * as speech from "../../src/lib/speech.server.mjs";
-import { createAcceptanceFixture } from "../helpers/generation-acceptance.mjs";
+import {
+  createAcceptanceFixture,
+  liveAcceptanceFixtureTime,
+} from "../helpers/generation-acceptance.mjs";
 
 test("full ChatMessage control → actual speech route → ownership → playback and Stop", async (t) => {
   const folder = mkdtempSync(join(tmpdir(), "kova-chat-message-speech-"));
   let browser, server;
-  const acceptance = createAcceptanceFixture({ now: Date.now() });
+  const acceptance = createAcceptanceFixture({ now: liveAcceptanceFixtureTime() });
   const ownerId = acceptance.plan.ownerId,
     chatId = acceptance.plan.chatId;
   const state = {

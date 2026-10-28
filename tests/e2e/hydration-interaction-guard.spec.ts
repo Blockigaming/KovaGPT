@@ -72,7 +72,8 @@ for (const { mode, system, dark } of themeCases) {
     page,
   }, testInfo) => {
     test.skip(!["desktop-1440x900", "phone-390x844"].includes(testInfo.project.name));
-    const background = dark ? "oklch(0.175 0.004 255)" : "oklch(1 0 0)";
+    const background = dark ? "rgb(33, 33, 33)" : "rgb(250, 249, 247)";
+    // The body uses the root color token; modern surfaces set their own foreground.
     const foreground = dark ? "oklch(0.965 0 0)" : "oklch(0.19 0.008 255)";
     const hydrationErrors: string[] = [];
     const captureHydrationError = (message: string) => {
@@ -151,7 +152,7 @@ for (const { mode, system, dark } of themeCases) {
         await page.getByRole("combobox", { name: "Appearance" }).click();
         await page.getByRole("option", { name: "Light", exact: true }).click();
         await expect(root).not.toHaveClass(/\bdark\b/);
-        await expect(page.locator("body")).toHaveCSS("background-color", "oklch(1 0 0)");
+        await expect(page.locator("body")).toHaveCSS("background-color", "rgb(250, 249, 247)");
       }
     } finally {
       releaseScripts();

@@ -7,7 +7,10 @@ import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { consumeChatSse, chatResponseError } from "../../src/lib/chat-sse-client.mjs";
 import { withResponsePresentation } from "../../src/lib/spec400-response-preferences.mjs";
-import { createAcceptanceFixture } from "../helpers/generation-acceptance.mjs";
+import {
+  createAcceptanceFixture,
+  liveAcceptanceFixtureTime,
+} from "../helpers/generation-acceptance.mjs";
 import {
   ACCEPTANCE_PROMPT,
   acceptanceDigest,
@@ -603,7 +606,7 @@ test("actual application guard clamps final output and permits only one quoted O
   capture.finish();
   await capturing;
   const a = createAcceptanceFixture({
-    now: Date.now(),
+    now: liveAcceptanceFixtureTime(),
     providerBody: capture.providerBody,
     maximumInputUtf8Bytes: 32768,
   });
