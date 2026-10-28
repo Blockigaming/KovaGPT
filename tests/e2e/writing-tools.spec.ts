@@ -11,31 +11,30 @@ test("writing hub exposes all 21 focused tools", async ({ page }) => {
 test("writing tool exposes recovered controls and local word count", async ({ page }) => {
   await page.goto("/writing/ai-text-generator");
   await expect(page.getByRole("heading", { name: "AI text generator" })).toBeVisible();
-  await expect(page.getByLabel("Format")).toHaveValue("Text");
-  await expect(page.getByLabel("Tone")).toHaveValue("Neutral");
-  await expect(page.getByLabel("Length")).toHaveValue("Standard");
-  await expect(page.getByLabel("Format").locator("option")).toHaveText([
-    "Text",
-    "Email",
-    "Caption",
-    "Article",
-    "Social post",
-  ]);
-  await expect(page.getByLabel("Tone").locator("option")).toHaveText([
-    "Friendly",
-    "Neutral",
-    "Professional",
-    "Natural",
-    "Concise",
-    "Kind",
-    "Casual",
-  ]);
-  await expect(page.getByLabel("Length").locator("option")).toHaveText([
-    "Brief",
-    "Standard",
-    "Detailed",
-    "Comprehensive",
-  ]);
+  for (const [label, selected, options] of [
+    ["Format", "Text", ["Text", "Email", "Caption", "Article", "Social post"]],
+    [
+      "Tone",
+      "Neutral",
+      ["Friendly", "Neutral", "Professional", "Natural", "Concise", "Kind", "Casual"],
+    ],
+    ["Length", "Standard", ["Brief", "Standard", "Detailed", "Comprehensive"]],
+  ] as const) {
+    const trigger = page.getByRole("combobox", { name: label, exact: true });
+    await expect(trigger).toHaveText(selected);
+    await trigger.click();
+    const listbox = page.getByRole("listbox");
+    await expect(listbox).toBeVisible();
+    await expect(listbox.getByRole("option")).toHaveText([...options]);
+    await expect(listbox.getByRole("option", { name: selected, exact: true })).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await page.keyboard.press("Escape");
+    await expect(listbox).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toHaveText(selected);
+  }
 
   const input = page.getByLabel("Text for AI text generator");
   await input.fill("Kova counts these four words.");
