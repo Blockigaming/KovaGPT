@@ -1597,7 +1597,7 @@ function ChatsTab({
                 <Link
                   to="/projects/$projectId/chat/$chatId"
                   params={{ projectId, chatId: c.id }}
-                  className="kova-project-resource-link"
+                  className="kova-project-resource-link min-h-11"
                 >
                   <span className="kova-project-resource-icon" aria-hidden="true">
                     <MessageCircle className="h-5 w-5" />
@@ -2177,7 +2177,7 @@ function FilesTab({
               >
                 <button
                   type="button"
-                  className="kova-project-resource-link"
+                  className="kova-project-resource-link min-h-11"
                   onClick={() => void openFile(f)}
                   disabled={downloadingId === f.id}
                 >

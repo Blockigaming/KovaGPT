@@ -198,7 +198,7 @@ test("Project inline controls have explicit 44px minimum touch targets", () => {
     ts.forEachChild(node, visit);
   }
   visit(parsed);
-  assert.equal(buttons.length, 5);
+  assert.equal(buttons.length, 6);
   for (const button of buttons) assert.match(button, /min-h-11/);
   assert.equal(memberRoleTriggers.length, 1);
   assert.ok(memberRoleTriggers[0].includes("min-h-11"));
