@@ -1,5 +1,6 @@
 import { replaceControlCharacters } from "@/lib/sanitize-text";
 import { runtimeEnv } from "@/lib/runtime-env.server";
+import { classifySearchProviderError } from "@/lib/ai/search-policy.mjs";
 import {
   createCitationMap,
   dedupeKovaSources,
@@ -148,7 +149,7 @@ export function shouldRunWebSearch(text: string, userWantsWebSearch?: boolean): 
 
 export async function searchWeb(
   query: string,
-  opts: { wantsNews?: boolean; limit?: number; signal?: AbortSignal } = {},
+  opts: { wantsNews?: boolean; limit?: number; signal?: AbortSignal; requestId?: string } = {},
 ): Promise<SearchResponse> {
   const apiKey = runtimeEnv("FIRECRAWL_API_KEY");
   const useOpenAi =
@@ -183,17 +184,20 @@ export async function searchWeb(
   else opts.signal?.addEventListener("abort", abort, { once: true });
   try {
     if (useOpenAi) {
-      const [{ openAiServices }, { consumeApplicationRateLimit }] = await Promise.all([
+      const [{ openAiServices }, { consumeOpenAiApplicationAdmission }] = await Promise.all([
         import("./openai-service-runtime.server"),
-        import("@/lib/distributed-rate-limit.server"),
+        import("@/lib/ai/openai-admission-runtime.server"),
       ]);
-      const budget = await consumeApplicationRateLimit({
+      const budget = await consumeOpenAiApplicationAdmission({
         identity: "openai_search_global",
         action: "openai_search_daily",
         limit: 100,
         windowSeconds: 86400,
       });
-      if (!budget.allowed) throw new Error("search_budget_unavailable");
+      if (!budget.allowed)
+        throw new Error(
+          budget.status === "limited" ? "search_budget_exhausted" : "search_budget_unavailable",
+        );
       const result = await openAiServices().search(safeQuery, {
         signal: controller.signal,
         limit: opts.limit,
@@ -239,6 +243,13 @@ export async function searchWeb(
     };
   } catch (error) {
     const aborted = error instanceof Error && error.name === "AbortError";
+    console.warn("[web-search] execution failure", {
+      ...(typeof opts.requestId === "string" && /^[A-Za-z0-9_-]{8,80}$/.test(opts.requestId)
+        ? { requestId: opts.requestId }
+        : {}),
+      provider: useOpenAi ? "openai" : "firecrawl",
+      ...(aborted ? { status: null, code: "timeout" } : classifySearchProviderError(error)),
+    });
     return {
       status: aborted ? "timeout" : "provider_error",
       query: safeQuery,

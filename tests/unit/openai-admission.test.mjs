@@ -112,6 +112,23 @@ test("daily and heavy budgets remain atomic across concurrent service instances"
   assert.doesNotMatch(JSON.stringify(f.calls), /synthetic-owner|synthetic-admission-secret/);
 });
 
+test("search daily budget admits exactly its hundredth request and resets next day", async (t) => {
+  const f = await databaseFixture(t);
+  const search = { action: "openai_search_daily", limit: 100 };
+  assert.equal((await f.consume(search)).allowed, true);
+  await f.db.query("update diagnostic_rate_limits set request_count=99 where action=$1", [
+    "openai_search_daily",
+  ]);
+  const boundary = await Promise.all([f.consume(search), f.consume(search)]);
+  assert.equal(boundary.filter((item) => item.allowed).length, 1);
+  assert.equal(boundary.filter((item) => item.status === "limited").length, 1);
+  const row = await f.db.query("select request_count from diagnostic_rate_limits where action=$1", [
+    "openai_search_daily",
+  ]);
+  assert.equal(row.rows[0].request_count, 100);
+  assert.equal((await f.consume({ ...search, nowMs: midnight + 86400000 })).allowed, true);
+});
+
 test("request and webhook receipts survive calendar boundaries and renew once after rolling expiry", async (t) => {
   const f = await databaseFixture(t);
   for (const [action, seconds] of [

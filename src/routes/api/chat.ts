@@ -43,6 +43,7 @@ import {
   searchWeb,
   shouldRunWebSearch,
 } from "@/lib/ai/search.server";
+import { isExplicitWebSearchRequest } from "@/lib/ai/search-policy.mjs";
 import { boundedImageProviderPrompt } from "@/lib/ai/image-prompt-policy.mjs";
 import { createToolActivityEvent } from "@/lib/ai/activity.server";
 import type { KovaSource } from "@/lib/ai/sources.server";
@@ -1053,9 +1054,10 @@ export const Route = createFileRoute("/api/chat")({
               hasAssistantHistory: transformed.some((message) => message.role === "assistant"),
             });
 
-            // Live web data is on for everyone by default. Users can still opt
-            // out in settings except for explicit/time-sensitive search asks.
-            // Fast mode skips web search entirely to stay instant.
+            // Instant stays fast for incidental time-sensitive words, but an
+            // explicit request to search must retrieve sources or fail clearly.
+            const explicitWebSearch =
+              clientTool === "web_search" || isExplicitWebSearchRequest(lastText);
             let webBlock = "";
             let webSources: KovaSource[] = [];
             if (
@@ -1063,30 +1065,27 @@ export const Route = createFileRoute("/api/chat")({
               (!customKova || customKova.allows("web")) &&
               lastText &&
               !hasImages &&
-              (m.id !== "instant" || clientTool === "web_search")
+              (m.id !== "instant" || explicitWebSearch)
             ) {
-              if (
-                clientTool === "web_search" ||
-                shouldRunWebSearch(lastText, personalContext?.webSearch)
-              ) {
+              if (explicitWebSearch || shouldRunWebSearch(lastText, personalContext?.webSearch)) {
                 const search = async (signal: AbortSignal) => {
                   await assertSelectedContextsCurrent(signal);
                   return searchWeb(lastText, {
                     wantsNews: NEWS_TRIGGER.test(lastText),
                     signal,
+                    requestId,
                   });
                 };
-                const result =
-                  clientTool === "web_search"
-                    ? await preflight.run("web_search", search, {
-                        required: true,
-                        timeoutMs: 20_000,
-                      })
-                    : await preflight.run("web_search", search, {
-                        required: false,
-                        timeoutMs: 8_000,
-                      });
-                if (clientTool === "web_search" && result?.status !== "ok")
+                const result = explicitWebSearch
+                  ? await preflight.run("web_search", search, {
+                      required: true,
+                      timeoutMs: 20_000,
+                    })
+                  : await preflight.run("web_search", search, {
+                      required: false,
+                      timeoutMs: 8_000,
+                    });
+                if (explicitWebSearch && result?.status !== "ok")
                   return Response.json(
                     {
                       error: "Web search could not be completed. Please try again.",

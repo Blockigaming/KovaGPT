@@ -5,6 +5,9 @@ import vm from "node:vm";
 import ts from "typescript";
 
 import { createChatPreflightRunner } from "../../src/lib/chat-preflight.server.mjs";
+import { hashRateLimitIdentity } from "../../src/lib/distributed-rate-limit.mjs";
+import { consumeOpenAiAdmission } from "../../src/lib/ai/openai-admission.server.mjs";
+import { classifySearchProviderError } from "../../src/lib/ai/search-policy.mjs";
 
 // Execute the real TypeScript modules with isolated, offline provider adapters.
 function loadServerModule(path, dependencies, globals = {}) {
@@ -61,6 +64,7 @@ test("a web-search deadline aborts both outstanding Firecrawl requests", async (
     "src/lib/ai/search.server.ts",
     {
       "@/lib/sanitize-text": { replaceControlCharacters: (value) => value },
+      "@/lib/ai/search-policy.mjs": { classifySearchProviderError },
       "@/lib/ai/sources.server": {},
       "@/lib/runtime-env.server": {
         runtimeEnv: (name) => ({ FIRECRAWL_API_KEY: "offline-test-key" })[name],
@@ -89,6 +93,72 @@ test("a web-search deadline aborts both outstanding Firecrawl requests", async (
   } finally {
     runner.close();
   }
+});
+
+test("OpenAI search uses the durable daily contract before provider work", async () => {
+  const admissions = [];
+  let providerCalls = 0;
+  const hashSecret = "test-only-rate-limit-secret-32-bytes-minimum";
+  const startedAt = Math.floor(Date.now() / 86400000) * 86400000;
+  const identityHash = await hashRateLimitIdentity(
+    "openai_search_global",
+    "openai_search_daily",
+    hashSecret,
+  );
+  const { searchWeb } = loadServerModule("src/lib/ai/search.server.ts", {
+    "@/lib/sanitize-text": { replaceControlCharacters: (value) => value },
+    "@/lib/ai/search-policy.mjs": { classifySearchProviderError },
+    "@/lib/ai/sources.server": {
+      dedupeKovaSources: (sources) => sources,
+      createCitationMap: () => [],
+    },
+    "@/lib/runtime-env.server": {
+      runtimeEnv: (name) =>
+        ({ KOVA_WEB_SEARCH_PROVIDER: "openai", KOVA_TEXT_PROVIDER: "openai" })[name],
+    },
+    "./openai-service-runtime.server": {
+      openAiServices: () => ({
+        search: async () => {
+          providerCalls++;
+          return {
+            sources: [{ title: "Documentation", url: "https://developers.openai.com/docs" }],
+            summary: "Current documentation",
+          };
+        },
+      }),
+    },
+    "@/lib/ai/openai-admission-runtime.server": {
+      consumeOpenAiApplicationAdmission: (input) =>
+        consumeOpenAiAdmission({
+          ...input,
+          backendUrl: "https://project.supabase.co",
+          serviceRoleKey: "test-service-role-key",
+          hashSecret,
+          fetchImpl: async (url, init) => {
+            admissions.push({ url, method: init.method, body: JSON.parse(init.body) });
+            return Response.json([
+              {
+                identity_hash: identityHash,
+                action: "openai_search_daily",
+                window_started_at: new Date(startedAt).toISOString(),
+                request_count: 1,
+                expires_at: new Date(startedAt + 2 * 86400000).toISOString(),
+              },
+            ]);
+          },
+        }),
+    },
+  });
+  const result = await searchWeb("Use live web search for current docs", {
+    requestId: "req_safe_1234",
+  });
+  assert.equal(result.status, "ok");
+  assert.equal(providerCalls, 1);
+  assert.equal(admissions.length, 1);
+  assert.equal(new URL(admissions[0].url).pathname, "/rest/v1/diagnostic_rate_limits");
+  assert.equal(admissions[0].method, "POST");
+  assert.equal(admissions[0].body.action, "openai_search_daily");
+  assert.equal(admissions[0].body.request_count, 1);
 });
 
 test("pre-aborted project retrieval starts neither embeddings nor a database request", async () => {

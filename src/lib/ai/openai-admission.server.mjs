@@ -7,6 +7,7 @@ const policies = new Map([
   ["openai_service_minute", { limit: 2, seconds: 60 }],
   ["openai_services_daily", { limit: 20, seconds: 86400 }],
   ["openai_services_compute_daily", { limit: 2, seconds: 86400 }],
+  ["openai_search_daily", { limit: 100, seconds: 86400 }],
   ["openai_webhook_receipt", { limit: 1, seconds: 604800, receipt: true }],
 ]);
 const columns = "identity_hash,action,window_started_at,request_count,expires_at";
