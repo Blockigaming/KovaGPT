@@ -12,7 +12,7 @@
   --public-page-width: inherit;
 }
 [data-public-shell] :is(main h1, .public-hero h1, .legal-hero h1) {
-  font-family: var(--font-display, Georgia, "Times New Roman", serif);
+  font-family: var(--font-reading, Georgia, "Times New Roman", serif);
   font-size: clamp(32px, 4vw, 48px);
   line-height: 1.15;
   font-weight: 400;
@@ -20,7 +20,7 @@
   text-wrap: balance;
 }
 [data-public-shell] :is(main h2, .public-section-heading h2) {
-  font-family: var(--font-display, Georgia, "Times New Roman", serif);
+  font-family: var(--font-reading, Georgia, "Times New Roman", serif);
   font-size: 26px;
   line-height: 1.25;
   font-weight: 400;

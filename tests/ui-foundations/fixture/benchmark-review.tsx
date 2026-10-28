@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { PublicFixture } from "./public-pages";
 import {
@@ -17,6 +17,18 @@ export function BenchmarkReview({ initialSurface }: { initialSurface: string }) 
   const [surfaceRevision, setSurfaceRevision] = useState(0);
   const [destination, setDestination] = useState<string | null>(null);
   const origin = useRef<HTMLAnchorElement | null>(null);
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const scrollBehavior = root.style.getPropertyValue("scroll-behavior");
+    const scrollPriority = root.style.getPropertyPriority("scroll-behavior");
+    // The standalone review changes surfaces and returns focus in place.
+    // Keep those transitions stable while preserving the application's policy.
+    root.style.setProperty("scroll-behavior", "auto");
+    return () => {
+      if (scrollBehavior) root.style.setProperty("scroll-behavior", scrollBehavior, scrollPriority);
+      else root.style.removeProperty("scroll-behavior");
+    };
+  }, []);
   useEffect(() => {
     // A file URL has an opaque origin. Send only the public surface name.
     if (window.parent !== window)
@@ -56,7 +68,7 @@ export function BenchmarkReview({ initialSurface }: { initialSurface: string }) 
         <DialogContent
           onCloseAutoFocus={(event) => {
             event.preventDefault();
-            origin.current?.focus();
+            origin.current?.focus({ preventScroll: true });
           }}
         >
           <DialogTitle>This destination isn’t in this preview yet</DialogTitle>

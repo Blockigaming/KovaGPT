@@ -47,7 +47,7 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         // Base + animation shared across viewports
-        "font-[family-name:var(--font-ui)] fixed z-50 flex min-w-0 flex-col gap-4 [overflow-wrap:anywhere] border border-border bg-background shadow-xl duration-150 data-[state=closed]:pointer-events-none",
+        "font-[family-name:var(--font-ui)] fixed z-50 flex min-w-0 flex-col gap-4 [overflow-wrap:anywhere] border border-border bg-popover text-popover-foreground shadow-xl duration-150 data-[state=closed]:pointer-events-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         // Mobile (<sm): bottom sheet — cap height and scroll body, respect safe areas
         "inset-x-0 mx-auto bottom-0 top-auto w-full max-w-full rounded-t-[var(--kova-radius-panel)] rounded-b-none border-b-0 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]",
@@ -114,7 +114,7 @@ const DialogTitle = React.forwardRef<
     ref={ref}
     data-slot="dialog-title"
     className={cn(
-      "font-[family-name:var(--font-display)] text-2xl font-normal leading-tight tracking-tight",
+      "font-[family-name:var(--font-ui)] text-xl font-semibold leading-7 tracking-tight",
       className,
     )}
     {...props}

@@ -205,7 +205,7 @@ test("review runtime has no service calls, recording, billing or fake shared lin
     rule.nodes.find((node) => node.type === "decl" && node.prop === property)?.value;
   assert.equal(
     declaration(heading, "font-family"),
-    'var(--font-display, Georgia, "Times New Roman", serif)',
+    'var(--font-reading, Georgia, "Times New Roman", serif)',
   );
   assert.equal(declaration(heading, "font-size"), "clamp(32px, 4vw, 48px)");
   assert.equal(declaration(heading, "line-height"), "1.15");

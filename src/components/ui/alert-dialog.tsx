@@ -35,7 +35,7 @@ const AlertDialogContent = React.forwardRef<
       data-kova-dialog-surface=""
       ref={ref}
       className={cn(
-        "font-[family-name:var(--font-ui)] fixed left-[50%] top-[50%] z-50 grid min-w-0 w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[var(--kova-radius-panel)] border border-border bg-background p-6 shadow-xl duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        "font-[family-name:var(--font-ui)] fixed left-[50%] top-[50%] z-50 grid min-w-0 w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[var(--kova-radius-panel)] border border-border bg-popover p-6 text-popover-foreground shadow-xl duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         "max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem)]",
         className,
       )}
@@ -69,7 +69,7 @@ const AlertDialogTitle = React.forwardRef<
     ref={ref}
     data-slot="alert-dialog-title"
     className={cn(
-      "font-[family-name:var(--font-display)] text-2xl font-normal leading-tight tracking-tight",
+      "font-[family-name:var(--font-ui)] text-xl font-semibold leading-7 tracking-tight",
       className,
     )}
     {...props}

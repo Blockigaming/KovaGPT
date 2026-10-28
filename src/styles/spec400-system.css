@@ -43,7 +43,7 @@
 }
 :root {
   --font-sans: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
-  --font-display: var(--font-reading, Georgia, "Times New Roman", serif);
+  --font-display: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --kova-icon-stroke: 2;
@@ -72,18 +72,18 @@ body :is(h1, h2, h3, h4) {
   letter-spacing: normal !important;
 }
 body :is(h1, h2) {
-  font-family: var(--font-display);
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-weight: 600;
 }
 body .kova-page h1 {
   font-size: 1.75rem !important;
   line-height: 2.25rem !important;
-  font-weight: 400 !important;
+  font-weight: 600 !important;
 }
 body .kova-page h2 {
   font-size: 1.25rem;
   line-height: 1.75rem;
-  font-weight: 400;
+  font-weight: 600;
 }
 body .kova-settings-section h3 {
   font-size: 1.25rem;
@@ -143,11 +143,13 @@ body [data-kova-dialog-surface] {
   border-radius: var(--kova-radius-panel);
   box-shadow: var(--dialog-shadow);
 }
-body [role="tab"] {
+/* Shared tabs own their segmented treatment. Custom page navigation keeps
+   its existing underline style instead of overriding every Radix segment. */
+body [role="tab"]:not([data-slot="tabs-trigger"]) {
   min-height: 44px;
   border-radius: 0;
 }
-body [role="tab"][data-state="active"] {
+body [role="tab"][data-state="active"]:not([data-slot="tabs-trigger"]) {
   border-bottom: 2px solid currentColor;
   font-weight: 600;
 }
@@ -390,7 +392,7 @@ body .kova-sidebar-rail[data-kova-core-rail][data-state="closed"] {
 
 body :is(.kova-assistant, .kova-app-shell, .kova-sidebar, .kova-sidebar-rail, .kova-composer) {
   --font-sans: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
-  --font-display: var(--font-reading, Georgia, "Times New Roman", serif);
+  --font-display: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   --chat-body-font: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   font-family: var(--font-sans) !important;
 }

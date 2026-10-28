@@ -32,7 +32,10 @@ test("shared compatibility styles remain loaded with the owner's authoritative s
     system,
     /--font-sans:\s*var\(--font-ui,\s*ui-sans-serif,\s*system-ui,\s*sans-serif\)/u,
   );
-  assert.match(system, /--font-display:\s*var\(--font-reading,\s*Georgia,/u);
+  assert.match(
+    system,
+    /--font-display:\s*var\(--font-ui,\s*ui-sans-serif,\s*system-ui,\s*sans-serif\)/u,
+  );
   assert.match(tokens, /--font-ui:\s*ui-sans-serif,\s*system-ui,/u);
   assert.match(tokens, /--font-reading:\s*Georgia,\s*"Times New Roman",\s*serif/u);
   assert.doesNotMatch(system, /--font-(?:sans|display):\s*"IBM Plex Sans"/u);

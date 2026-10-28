@@ -101,7 +101,8 @@ test("track and thumb retain semantic colors and keyboard focus stays on the Rad
   assert.ok(tokens(root).includes("group/switch"));
   assert.ok(tokens(track).includes("group-data-[state=checked]/switch:bg-primary"));
   assert.ok(tokens(track).includes("group-data-[state=unchecked]/switch:bg-input"));
-  assert.ok(tokens(thumb).includes("bg-background"));
+  assert.ok(tokens(thumb).includes("bg-white"));
+  assert.ok(tokens(thumb).includes("data-[state=checked]:bg-primary-foreground"));
   for (const token of [
     "focus-visible:ring-2",
     "focus-visible:ring-ring",

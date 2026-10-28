@@ -35,7 +35,7 @@ const CardTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivE
       ref={ref}
       data-slot="card-title"
       className={cn(
-        "font-[family-name:var(--font-display)] font-normal leading-tight tracking-tight",
+        "font-[family-name:var(--font-ui)] font-semibold leading-tight tracking-tight",
         className,
       )}
       {...props}

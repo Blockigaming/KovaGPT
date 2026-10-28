@@ -38,10 +38,12 @@ export const BUNDLE_BASELINE = Object.freeze({
   ]),
   adjustment:
     "The 2026-09-14 final build adds generated four-segment routing and expanded catalog registries. A clean rebuild of the authorized auth PR head b5a09278 on Node 24.19.0 already exceeded the older ceiling at 667,469 raw / 198,845 gzip before the current review fixes. The current source-only review batch measured 667,800 raw / 198,923 gzip on the same Node version and lockfile. The refreshed ceiling gives less than 1% headroom over that complete build while keeping the home route, omega, and chart ceilings unchanged.",
+  voiceReceiptAdjustment:
+    "The 2026-10-27 model-bound ElevenLabs playback adds a server receipt check to the home route. The exact PR head b25e56c5 measured 20,112 gzip bytes in CI and 20,109 locally against the old 20,000 ceiling; the 20,250 ceiling leaves less than 1% headroom while keeping the other chunk ceilings unchanged.",
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 62_500, gzip: 20_000 }),
+  initial: Object.freeze({ raw: 62_500, gzip: 20_250 }),
   main: Object.freeze({ raw: 670_000, gzip: 200_000 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),

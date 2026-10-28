@@ -16,6 +16,7 @@
 @import "./styles/assistant-modern.css";
 @import "./styles/assistant-overlays.css";
 @import "./styles/reference-surfaces.css";
+@import "./styles/workspace-layout.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -58,7 +59,7 @@
   --color-sidebar-active: var(--sidebar-active);
   --color-user-bubble: var(--user-bubble);
   --font-sans: var(--font-ui);
-  --font-display: var(--font-reading);
+  --font-display: var(--font-ui);
 }
 
 @layer components {

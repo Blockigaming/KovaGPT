@@ -98,7 +98,7 @@ test("phone Projects places description before a single primary/templates action
   assert.match(projects, /id="project-sort-explanation" className="sr-only"/);
   assert.match(projects, /aria-describedby="project-sort-explanation"/);
   assert.match(projects, /Last opened \(this device\)/);
-  assert.match(projects, /<option value="opened-help" disabled>/);
+  assert.match(projects, /<SelectItem value="opened-help" disabled>/);
 });
 
 test("Projects loading retains toolbar and uses matching title description metadata structure", () => {

@@ -23,7 +23,7 @@ export function loadOwnedSpeechMessage(
   auth: HttpAuthedCaller,
   input: SpeechInput,
   signal: AbortSignal,
-): Promise<string>;
+): Promise<{ text: string; voiceModelReceipt?: string }>;
 export function createSpeechHandler(deps: {
   authenticate(request: Request): Promise<HttpAuthedCaller | Response>;
   loadMessage?: typeof loadOwnedSpeechMessage;
@@ -38,6 +38,11 @@ export function createSpeechHandler(deps: {
     auth: HttpAuthedCaller,
     input: SpeechInput,
   ): SpeechConfiguration | Promise<SpeechConfiguration>;
+  modelPolicy(): {
+    valid: boolean;
+    models: Set<string>;
+    secret?: string;
+  };
   fetchImpl?: typeof fetch;
   admit?(input: {
     request: Request;

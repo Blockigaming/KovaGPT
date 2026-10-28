@@ -69,8 +69,8 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   overflow-wrap: anywhere;
 }
 
-/* Claude's serif title hierarchy pairs with the shared, quiet pill controls.
-   Explicit hooks keep authentication geometry independent of legacy headings. */
+/* Dialog chrome follows the shared interface type and rounded control roles.
+   Explicit hooks keep authentication geometry independent of page headings. */
 .kova-auth-surface[data-kova-auth-dialog] {
   --font-sans: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif);
   padding: 24px;
@@ -90,9 +90,9 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
 
 .kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-title {
   max-width: 100%;
-  font-family: var(--chat-greeting-font, Georgia, "Times New Roman", serif);
-  font-size: 28px;
-  font-weight: 400;
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: 24px;
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -127,9 +127,9 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
     .spec400-attachment-preview
   )
   h2 {
-  font-family: var(--chat-greeting-font, Georgia, "Times New Roman", serif);
-  font-size: 24px;
-  font-weight: 400;
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: 20px;
+  font-weight: 600;
   line-height: 1.25;
 }
 

@@ -241,20 +241,19 @@ test("project sections and account settings remain navigable and cancel safely",
       "true",
     );
   }
-  for (const view of [
-    "files",
-    "images",
-    "notes",
-    "tasks",
-    "memory",
-    "members",
-    "collaboration",
-    "settings",
-    "overview",
+  for (const name of [
+    "Project files",
+    "Project images",
+    "Notes",
+    "Project tasks",
+    "Memory",
+    "Members",
+    "Collaboration",
+    "Settings",
+    "Activity",
   ]) {
-    await page
-      .getByRole("combobox", { name: "More project tools", exact: true })
-      .selectOption(view);
+    await page.getByRole("button", { name: "More project tools", exact: true }).click();
+    await page.getByRole("menuitemradio", { name, exact: true }).click();
     await expect(page.getByRole("tabpanel")).toBeVisible();
   }
   await capture(page, info, "project-workspace");

@@ -10,6 +10,7 @@ const TabsList = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.List
+    data-slot="tabs-list"
     ref={ref}
     className={cn(
       "font-[family-name:var(--font-ui)] inline-flex min-h-11 max-w-full items-center justify-start gap-1 overflow-x-auto rounded-[var(--kova-radius-button)] bg-muted p-1 text-muted-foreground",
@@ -25,6 +26,7 @@ const TabsTrigger = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Trigger
+    data-slot="tabs-trigger"
     ref={ref}
     className={cn(
       "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[var(--kova-radius-button)] px-4 py-1 text-sm font-medium ring-offset-background cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-none",

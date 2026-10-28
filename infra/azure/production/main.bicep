@@ -73,6 +73,14 @@ param voiceCatalog array = []
 @description('Optional preferred catalog ID. Must exist in the explicit catalog; each account falls back to its first allowed catalog entry.')
 param voiceDefaultId string = ''
 
+@description('Exact OpenAI text model IDs approved for ElevenLabs output. Empty disables model-bound voice output; no model is chosen by the template.')
+@maxLength(32)
+param voiceOpenAiModelIds array = []
+
+@description('Existing versioned Key Vault URI for a separate random voice model receipt signing secret. Never pass the secret directly.')
+@secure()
+param voiceModelProofSecretUri string = ''
+
 @description('Saved-response Read aloud only. Defaults off, is separate from browser voice and microphone permission, and still obeys the generation kill switch. Activate only after existing key/model/voice entitlement is confirmed.')
 param speechEnabled bool = false
 
@@ -363,6 +371,10 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
         name: 'elevenlabs-api-key'
         keyVaultUrl: elevenLabsApiKeySecretUri
         identity: identity.id
+      }] : [], !empty(voiceModelProofSecretUri) ? [{
+        name: 'voice-model-proof-secret'
+        keyVaultUrl: voiceModelProofSecretUri
+        identity: identity.id
       }] : [], useDirectOpenAiApiKey ? [
         {
           name: 'openai-api-key'
@@ -529,6 +541,12 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
           }] : [], !empty(voiceDefaultId) ? [{
             name: 'KOVA_VOICE_DEFAULT_ID'
             value: voiceDefaultId
+          }] : [], !empty(voiceOpenAiModelIds) ? [{
+            name: 'KOVA_VOICE_OPENAI_MODELS_JSON'
+            value: string(voiceOpenAiModelIds)
+          }] : [], !empty(voiceModelProofSecretUri) ? [{
+            name: 'KOVA_VOICE_MODEL_PROOF_SECRET'
+            secretRef: 'voice-model-proof-secret'
           }] : [], !empty(elevenLabsApiKeySecretUri) ? [{
             name: 'ELEVENLABS_API_KEY'
             secretRef: 'elevenlabs-api-key'

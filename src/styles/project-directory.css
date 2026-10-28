@@ -1,0 +1,605 @@
+/* Project organization follows a file browser: one search, a compact tool row,
+   real metadata columns, and folder rows. Scope stays on the directory route. */
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects {
+  --page-max: 1280px;
+  width: 100%;
+  max-width: 1280px;
+  padding: 24px clamp(16px, 3vw, 40px) max(48px, var(--safe-bottom));
+  gap: 24px;
+  container-name: project-directory;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  > .kova-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+  margin: 0;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-page-description {
+  max-width: 58ch;
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  :is(.kova-page-actions, .kova-project-header-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-browser {
+  gap: 24px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-directory-tools {
+  gap: 16px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-directory-search {
+  display: block;
+  width: 100%;
+  max-width: 760px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-directory-search
+  .kova-directory-search {
+  width: 100%;
+  min-width: 0;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-directory-search
+  input {
+  height: 48px;
+  min-height: 48px;
+  padding-inline: 44px 16px;
+  border-color: transparent;
+  border-radius: var(--kova-radius-button);
+  background: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 15px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-directory-search
+  > svg {
+  left: 16px;
+  width: 20px;
+  height: 20px;
+}
+
+.kova-project-directory-toolbar,
+.kova-project-directory-display-options {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.kova-project-directory-toolbar {
+  justify-content: space-between;
+}
+
+.kova-project-directory-display-options {
+  margin-left: auto;
+}
+
+.kova-project-directory-display-options .kova-project-sort {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+  background: var(--background);
+  padding-inline: 14px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-filters {
+  gap: 8px;
+  min-width: 0;
+  overflow: visible;
+  flex-wrap: wrap;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-filters
+  button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-filters
+  [aria-pressed="true"] {
+  border-color: var(--foreground);
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-view-toggle {
+  gap: 0;
+  overflow: visible;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+  padding: 2px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-view-toggle
+  button {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-view-toggle
+  [aria-pressed="true"] {
+  background: var(--surface-selected);
+  color: var(--foreground);
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-section-heading {
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-section-heading
+  h2 {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-directory-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 144px;
+  gap: 12px;
+  padding: 10px 68px 10px 60px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file {
+  min-width: 0;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-row {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  /* The compatibility layer gives every .kova-row an important card surface. */
+  border: 0 !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  border-radius: 0;
+  background: transparent !important;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-row:hover {
+  background: var(--surface-hover) !important;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-link {
+  color: inherit;
+  font-family: var(--font-ui);
+  text-decoration: none;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-row
+  .kova-project-file-link {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 120px 144px;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  padding: 12px 68px 12px 16px;
+  border-radius: 0;
+}
+
+.kova-project-directory .kova-project-folder-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+
+.kova-project-directory .kova-project-folder-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.6;
+}
+
+.kova-project-directory .kova-project-file-summary {
+  min-width: 0;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-name {
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+  padding-right: 0;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file
+  .kova-project-file-name
+  h3 {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  letter-spacing: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-description {
+  -webkit-line-clamp: 1;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  :is(.kova-project-file-stats, .kova-project-file-date) {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 20px;
+  text-align: left;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-row
+  .kova-project-folder-icon {
+  grid-area: 1 / 1;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-row
+  .kova-project-file-summary {
+  grid-area: 1 / 2;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-row
+  .kova-project-file-stats {
+  grid-area: 1 / 3;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-row
+  .kova-project-file-date {
+  grid-area: 1 / 4;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-row
+  .kova-project-date-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-project-file-row
+  .kova-project-file-menu {
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-grid.kova-file-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-grid
+  .kova-project-file {
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-compact);
+  background: var(--card);
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-grid
+  .kova-project-file-link {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-content: start;
+  gap: 8px 12px;
+  min-height: 152px;
+  padding: 16px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-grid
+  .kova-project-file-summary {
+  padding-right: 24px;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-grid
+  :is(.kova-project-file-stats, .kova-project-file-date) {
+  grid-column: 1 / -1;
+}
+
+.kova-app-shell[data-ui="modern"]
+  .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+  .kova-file-grid
+  .kova-project-file-stats {
+  margin-top: 8px;
+}
+
+.kova-project-directory .kova-project-directory-archived {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.kova-project-directory .kova-project-directory-archived > button {
+  align-self: flex-start;
+}
+
+.kova-project-directory-invites {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-card);
+  background: var(--card);
+}
+
+.kova-project-directory-invites h2 {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.kova-project-invite-list {
+  margin-top: 12px;
+}
+
+.kova-project-invite-row,
+.kova-project-invite-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kova-project-invite-row {
+  justify-content: space-between;
+  padding-block: 8px;
+}
+
+.kova-project-invite-row + .kova-project-invite-row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.kova-project-directory :is(.kova-project-file-link, .kova-project-file-menu button):focus-visible {
+  outline-offset: -3px;
+}
+
+@container project-directory (max-width: 700px) {
+  .kova-project-directory-toolbar {
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .kova-project-directory-display-options {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+
+  .kova-project-directory-display-options .kova-project-sort {
+    flex: 0 1 auto;
+    max-width: calc(100% - 110px);
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    .kova-project-directory-columns {
+    display: none;
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    .kova-project-file-row
+    .kova-project-file-link {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 2px 12px;
+    min-height: 76px;
+    padding: 12px 60px 12px 8px;
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    .kova-project-file-row
+    .kova-project-folder-icon {
+    grid-area: 1 / 1 / 3 / 2;
+    width: 28px;
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    .kova-project-file-row
+    .kova-project-file-summary {
+    grid-area: 1 / 2 / 2 / -1;
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    .kova-project-file-row
+    .kova-project-file-stats {
+    grid-area: 2 / 2;
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    .kova-project-file-row
+    .kova-project-file-date {
+    grid-area: 2 / 3;
+    justify-self: end;
+  }
+}
+
+@media (max-width: 767px) {
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects {
+    padding-top: 20px;
+    gap: 20px;
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    #projects-title {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    clip-path: none !important;
+    white-space: normal !important;
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    .kova-page-header
+    > div:first-child {
+    display: block;
+    flex-basis: 100%;
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    .kova-page-header
+    > div:first-child
+    > div {
+    display: block;
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    :is(.kova-project-create, .kova-project-templates) {
+    width: auto;
+    min-width: 0;
+    padding-inline: 16px;
+  }
+
+  .kova-app-shell[data-ui="modern"]
+    .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
+    .kova-project-templates
+    > span {
+    display: inline;
+  }
+
+  .kova-project-directory .kova-project-directory-tools {
+    gap: 12px;
+  }
+}

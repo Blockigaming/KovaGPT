@@ -1,6 +1,15 @@
 import { moveChatToTrash } from "@/lib/chat-trash";
 import { toast } from "sonner";
-import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { settingsSectionForTab } from "@/lib/settings-types";
 import { Sidebar } from "@/components/Sidebar";
@@ -93,7 +102,7 @@ export function AppShell({
     sidebarKeyboardFocusRef.current = false;
     return focusReopenedSidebar();
   }, [sidebarOpen]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
     let saved: string | null = null;
     try {
@@ -313,7 +322,7 @@ export function AppShell({
           onNewChat={handleNew}
         />
         {!utilitiesInHeader && !hideUtilities ? (
-          <div className="flex shrink-0 justify-end px-4 py-2 lg:px-8">{utilities}</div>
+          <div className="kova-workspace-utilities flex shrink-0 justify-end">{utilities}</div>
         ) : null}
         {!sidebarOpen && !user && (
           <button

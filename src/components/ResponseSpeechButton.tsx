@@ -6,6 +6,9 @@ import { PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT } from "@/lib/principal-browser
 
 const errors: Record<string, string> = {
   speech_unauthorized: "Sign in with a verified account to read aloud.",
+  speech_not_eligible: "Read aloud is available for saved replies from approved OpenAI models.",
+  speech_voice_plan_required: "This voice requires a different plan.",
+  speech_forbidden: "Read aloud is not available for this account right now.",
   speech_message_unavailable: "Save this response to your chat history before reading it aloud.",
   speech_message_not_synced: "This response is still syncing. Try again once it is saved.",
   speech_text_too_long: "Read aloud supports responses up to 4,000 characters.",

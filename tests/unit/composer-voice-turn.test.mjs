@@ -22,6 +22,7 @@ const turn = Object.freeze({
   chatId: "chat-a",
   messageId: "reply-a",
   content: "The exact completed reply.\nWith its original whitespace.",
+  voiceModelReceipt: `${"a".repeat(64)}.${"b".repeat(43)}`,
 });
 
 function fixture() {
@@ -29,7 +30,14 @@ function fixture() {
   const conversation = {
     id: turn.chatId,
     title: "Current chat",
-    messages: [{ id: turn.messageId, role: "assistant", content: turn.content }],
+    messages: [
+      {
+        id: turn.messageId,
+        role: "assistant",
+        content: turn.content,
+        voiceModelReceipt: turn.voiceModelReceipt,
+      },
+    ],
   };
   const state = {
     ownerId: turn.ownerId,
@@ -128,6 +136,16 @@ test("speech receipt uses the exact completed identity only after save and serve
     [turn.chatId, "another"],
   );
   assert.equal(f.unsubscribed, 1);
+});
+
+test("a voice turn without a server model receipt never writes or authorizes playback", async () => {
+  const f = fixture();
+  const { voiceModelReceipt: _receipt, ...unproven } = turn;
+  await assert.rejects(
+    awaitSavedComposerVoiceTurn({ ...f.options, turn: unproven }),
+    /voice_reply_unavailable/,
+  );
+  assert.equal(f.saved.length, 0);
 });
 
 test("React's final-token state must actually commit before history is saved", async () => {

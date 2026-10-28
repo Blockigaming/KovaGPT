@@ -27,10 +27,9 @@ test("account menu uses the specified order and a separate destructive group", (
 });
 
 test("sidebar customization remains reachable from expanded More and the rail", () => {
-  const more = source.slice(
-    source.indexOf('<details open={isOn("/work")'),
-    source.indexOf("</nav>", source.indexOf('<details open={isOn("/work")')),
-  );
+  const start = source.indexOf('className="kova-sidebar-more-disclosure"');
+  assert.ok(start >= 0, "expanded navigation retains the More disclosure");
+  const more = source.slice(start, source.indexOf("</details>", start));
   assert.match(
     more,
     /signedIn \? \([\s\S]*?aria-haspopup="dialog"[\s\S]*?openRailPersonalization\(event.currentTarget\)/,

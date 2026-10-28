@@ -31,7 +31,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "font-[family-name:var(--font-ui)] fixed z-50 min-w-0 max-w-full max-h-screen overflow-y-auto overscroll-contain [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-dvh gap-4 border-border/80 bg-background p-6 shadow-[var(--shadow-floating)] transition ease-[var(--ease-spring)] data-[state=closed]:duration-[var(--motion-fast)] data-[state=open]:duration-[var(--motion-menu)] data-[state=open]:animate-in data-[state=closed]:animate-out",
+  "font-[family-name:var(--font-ui)] fixed z-50 min-w-0 max-w-full max-h-screen overflow-y-auto overscroll-contain [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-dvh gap-4 border-border/80 bg-popover p-6 text-popover-foreground shadow-[var(--shadow-floating)] transition ease-[var(--ease-spring)] data-[state=closed]:duration-[var(--motion-fast)] data-[state=open]:duration-[var(--motion-menu)] data-[state=open]:animate-in data-[state=closed]:animate-out",
   {
     variants: {
       side: {
@@ -105,7 +105,7 @@ const SheetTitle = React.forwardRef<
     ref={ref}
     data-slot="sheet-title"
     className={cn(
-      "font-[family-name:var(--font-display)] text-2xl font-normal leading-tight tracking-tight text-foreground",
+      "font-[family-name:var(--font-ui)] text-xl font-semibold leading-7 tracking-tight text-foreground",
       className,
     )}
     {...props}

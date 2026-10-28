@@ -39,7 +39,7 @@ const DrawerContent = React.forwardRef<
       data-slot="drawer-content"
       ref={ref}
       className={cn(
-        "font-[family-name:var(--font-ui)] fixed inset-x-0 bottom-0 z-50 flex h-auto max-h-[92dvh] min-w-0 flex-col overflow-y-auto overscroll-contain rounded-t-[var(--kova-radius-panel)] border border-border bg-background [overflow-wrap:anywhere]",
+        "font-[family-name:var(--font-ui)] fixed inset-x-0 bottom-0 z-50 flex h-auto max-h-[92dvh] min-w-0 flex-col overflow-y-auto overscroll-contain rounded-t-[var(--kova-radius-panel)] border border-border bg-popover text-popover-foreground [overflow-wrap:anywhere]",
         className,
       )}
       {...props}
@@ -78,7 +78,7 @@ const DrawerTitle = React.forwardRef<
     ref={ref}
     data-slot="drawer-title"
     className={cn(
-      "font-[family-name:var(--font-display)] text-2xl font-normal leading-tight tracking-tight",
+      "font-[family-name:var(--font-ui)] text-xl font-semibold leading-7 tracking-tight",
       className,
     )}
     {...props}

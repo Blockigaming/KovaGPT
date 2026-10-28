@@ -18,6 +18,8 @@ const env = {
   ELEVENLABS_API_KEY: "fixture-only-not-a-real-key",
   ELEVENLABS_VOICE_ID: "fixtureVoice",
   KOVA_VOICE_DAILY_REQUEST_LIMIT: "3",
+  KOVA_VOICE_OPENAI_MODELS_JSON: '["fixture-openai-model"]',
+  KOVA_VOICE_MODEL_PROOF_SECRET: "fixture-only-signing-key-with-enough-bytes",
 };
 const config = voiceConfiguration((k) => env[k]);
 const audio = new Blob([encodeVoicePcm([new Float32Array(16000)], 16000)], { type: "audio/wav" });
@@ -284,15 +286,17 @@ function handler(overrides = {}) {
   return { run: createVoiceHandler(deps), events };
 }
 function authenticatedRequest(options = {}) {
+  const form = new FormData();
+  form.set("action", "stt");
+  form.set("audio", audio, "fixture.wav");
   const headers = {
-    "Content-Type": "application/json",
     Origin: "https://kova.invalid",
     "X-Kova-Voice-Owner": "fixture-owner",
     ...options.headers,
   };
   return new Request("https://kova.invalid/api/voice", {
     method: "POST",
-    body: JSON.stringify({ action: "tts", text: "hello" }),
+    body: form,
     ...options,
     headers,
   });
@@ -300,6 +304,23 @@ function authenticatedRequest(options = {}) {
 test("handler performs ordered auth/ban/feature/quota before provider", async () => {
   const { run, events } = handler();
   assert.equal((await run(authenticatedRequest())).status, 200);
+  assert.deepEqual(events, ["auth", "ban", "feature", "quota", "provider"]);
+});
+test("standalone TTS remains available with existing quota and provider controls", async () => {
+  const { run, events } = handler();
+  const response = await run(
+    new Request("https://kova.invalid/api/voice", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://kova.invalid",
+        "X-Kova-Voice-Owner": "fixture-owner",
+      },
+      body: JSON.stringify({ action: "tts", text: "arbitrary text" }),
+    }),
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true });
   assert.deepEqual(events, ["auth", "ban", "feature", "quota", "provider"]);
 });
 test("global kill and qualification modes deny voice before quota or provider", async () => {

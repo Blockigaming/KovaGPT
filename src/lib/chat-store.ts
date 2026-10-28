@@ -106,6 +106,8 @@ export type Message = {
   id: string;
   role: Role;
   content: string;
+  /** Server-signed model provenance for this exact completed reply, verified before speech. */
+  voiceModelReceipt?: string;
   attachments?: Attachment[];
   pendingImage?: boolean;
   /** Identifiers of context provided for this response; never memory bodies. */
@@ -260,6 +262,7 @@ function sanitizeMessageMemorySources(
       followups: rawFollowups,
       generationStatus,
       requestedTool,
+      voiceModelReceipt,
       activities: rawActivities,
       researchProgress: retiredResearchProgress,
       ...rest
@@ -302,6 +305,11 @@ function sanitizeMessageMemorySources(
         ? { generationStatus }
         : {}),
       ...(message.role === "assistant" && isComposerToolId(requestedTool) ? { requestedTool } : {}),
+      ...(message.role === "assistant" &&
+      typeof voiceModelReceipt === "string" &&
+      /^[A-Za-z0-9_-]{1,1800}\.[A-Za-z0-9_-]{43}$/u.test(voiceModelReceipt)
+        ? { voiceModelReceipt }
+        : {}),
     };
   });
 }
@@ -684,6 +692,7 @@ export function branchConversation(source: Conversation, throughMessageId: strin
     messages: source.messages.slice(0, index + 1).map((message) => ({
       ...message,
       id: newId(),
+      voiceModelReceipt: undefined,
       attachments: message.attachments?.map((attachment) => ({ ...attachment })),
       activities: message.activities?.map((activity) => ({ ...activity })),
       sources: message.sources?.map((source) => ({ ...source })),

@@ -87,7 +87,7 @@ body :is(.kova-sidebar, .kova-sidebar-rail) :is(h1, h2, h3, h4),
 }
 
 [data-public-shell] .public-example-answer h3 {
-  font-family: var(--font-display);
+  font-family: var(--font-reading);
   font-size: 24px;
   font-weight: 400;
 }
