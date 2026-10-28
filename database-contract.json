@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 196,
+  "migrationCount": 197,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -483,6 +483,9 @@
     "finalize_stale_project_file_cleanup",
     "finish_developer_billing",
     "finish_work_browser_owner",
+    "first_release_check_google_attachment",
+    "first_release_google_attachment_matches",
+    "first_release_guard_owned_attachment",
     "get_chat_context_bundle",
     "get_chat_workspace_state",
     "get_project_template_version",
@@ -2600,6 +2603,8 @@
     "all on function kova_private.family_owner_of(uuid) from public, anon",
     "all on function kova_private.fence_trusted_contacts() from public,anon,authenticated",
     "all on function kova_private.fence_workspace_search_account() from public,anon,authenticated",
+    "all on function kova_private.first_release_check_google_attachment() from public, anon, authenticated, service_role",
+    "all on function kova_private.first_release_google_attachment_matches(uuid,uuid,text,boolean) from public, anon, authenticated, service_role",
     "all on function kova_private.guard_email_action_proof_window()\n  from public, anon, authenticated, service_role",
     "all on function kova_private.guard_legacy_account_adoption(),\n  kova_private.retire_legacy_password_on_owned_change() from public, anon, authenticated, service_role",
     "all on function kova_private.guard_legacy_adoption() from public, anon, authenticated, service_role",
@@ -3529,5 +3534,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "dbc7f8ddec357c4648ee3bdd24c21dca666e44638fc19b6eb31cd7a79c7191f4"
+  "sha256": "120e7d2cba9e6cab31d48951c122c53310e8b94316775d5da4a2096ea0602d7d"
 }
