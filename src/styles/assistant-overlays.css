@@ -68,3 +68,73 @@ body:has(.kova-assistant[data-ui="modern"])
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Claude's serif title hierarchy pairs with the shared, quiet pill controls.
+   Explicit hooks keep authentication geometry independent of legacy headings. */
+.kova-auth-surface[data-kova-auth-dialog] {
+  --font-sans: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif);
+  padding: 24px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  font-family: var(--font-sans);
+}
+
+.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-heading {
+  min-width: 0;
+  padding-inline: 12px;
+}
+
+.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-mark .kova-logo {
+  width: 32px;
+  height: 32px;
+}
+
+.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-title {
+  max-width: 100%;
+  font-family: var(--chat-greeting-font, Georgia, "Times New Roman", serif);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-description {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-body {
+  margin-top: 24px;
+}
+
+.kova-auth-surface[data-kova-auth-dialog] :is(button, input) {
+  min-height: 44px;
+  font-family: var(--font-sans);
+}
+
+.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-body button {
+  height: auto;
+  min-height: 44px;
+  padding-block: 10px;
+  border-radius: var(--kova-radius-button);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+body:has(.kova-assistant[data-ui="modern"])
+  :is(
+    .spec400-options-panel,
+    .spec400-context-drawer,
+    .spec400-expanded-input,
+    .spec400-attachment-preview
+  )
+  h2 {
+  font-family: var(--chat-greeting-font, Georgia, "Times New Roman", serif);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+@media (min-width: 640px) {
+  .kova-auth-surface[data-kova-auth-dialog] {
+    padding-bottom: 24px;
+  }
+}

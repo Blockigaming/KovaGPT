@@ -276,13 +276,34 @@
   --chat-nav-muted: #a3a3a3;
   --chat-nav-line: rgb(255 255 255 / 6%);
 }
+/* Recover the assistant's type stack from the legacy navigation font override. */
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  ) {
+  --chat-body-font: inherit;
+  --font-sans: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif);
+  --sidebar-icon-slot: 20px;
+  font-family: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif) !important;
+}
 body
   .kova-assistant[data-ui="modern"]
   :is(
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
   )
-  .kova-sidebar-icon
+  :is(.kova-sidebar-brand, button, input, textarea, select, summary, a) {
+  font-family: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif) !important;
+}
+body
+  .kova-assistant[data-ui="modern"]
+  :is(
+    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
+    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
+  )
+  :is(.kova-sidebar-icon, .kova-rail-button, .kova-header-button, .kova-chat-options)
   svg {
   width: 20px;
   height: 20px;
@@ -343,9 +364,10 @@ body
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
   )
   .kova-sidebar-brand {
-  font-size: 18px;
+  gap: 8px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.025em;
 }
 body
   .kova-assistant[data-ui="modern"]
@@ -353,10 +375,10 @@ body
     .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
   )
-  .kova-sidebar-brand
+  :is(.kova-sidebar-brand, .kova-sidebar-toggle)
   > .kova-logo {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
 }
 body
   .kova-assistant[data-ui="modern"]
@@ -365,7 +387,7 @@ body
     .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
   )
   .kova-sidebar-primary {
-  padding: 12px;
+  padding: 8px 12px;
   gap: 3px;
 }
 body
@@ -425,8 +447,8 @@ body
   .kova-assistant[data-ui="modern"]
   .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
   .kova-sidebar-history {
-  margin-top: 8px;
-  padding-inline: 12px;
+  margin-top: 0;
+  padding: 8px 12px 16px;
   border-top: 0;
 }
 body

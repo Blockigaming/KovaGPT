@@ -29,8 +29,8 @@ export function NovaLogo({
     <img
       src="/kova-logo.png"
       alt={decorative ? "" : alt}
-      width={1024}
-      height={1024}
+      width={24}
+      height={24}
       aria-hidden={decorative || undefined}
       aria-label={decorative ? undefined : alt}
       data-logo-variant={mark ? "mark" : "standard"}

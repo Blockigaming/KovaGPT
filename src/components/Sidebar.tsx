@@ -1141,7 +1141,7 @@ export function Sidebar({
                   className="kova-rail-button kova-sidebar-toggle"
                   aria-label="Expand sidebar"
                 >
-                  <NovaLogo decorative className="h-7 w-7" />
+                  <NovaLogo decorative className="h-6 w-6" />
                 </button>
               </RailTooltip>
             </div>
@@ -1243,7 +1243,7 @@ export function Sidebar({
         <div className="kova-sidebar-inner flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
           <header className="kova-sidebar-header">
             <span className="kova-sidebar-brand flex items-center gap-2">
-              <NovaLogo decorative className="h-7 w-7" />
+              <NovaLogo decorative className="h-6 w-6" />
               Kova GPT
             </span>
             <div className="kova-sidebar-header-actions">

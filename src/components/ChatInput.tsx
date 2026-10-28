@@ -526,7 +526,7 @@ export function ChatInput({
     const resize = () => {
       el.style.height = "0px";
       const limit = isMobileLayout ? 144 : 240;
-      const minimum = surface === "empty" ? 80 : isMobileLayout ? 40 : 48;
+      const minimum = isMobileLayout ? 40 : 48;
       const height = Math.min(Math.max(el.scrollHeight, minimum), limit);
       el.style.height = `${height}px`;
       const metrics = window.getComputedStyle(el);

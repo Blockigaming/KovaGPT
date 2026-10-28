@@ -3376,10 +3376,9 @@ function KovaGPT() {
                     </section>
                   ) : isLoaded ? (
                     <p className="spec400-capability-note">
-                      Write drafts, explore ideas, and compare options.{" "}
                       {isSignedIn
                         ? "Attach a file to work with its contents."
-                        : "Sign in to attach files and keep your work together."}
+                        : "Sign in to save chats and attach files."}
                     </p>
                   ) : null}
                 </div>
