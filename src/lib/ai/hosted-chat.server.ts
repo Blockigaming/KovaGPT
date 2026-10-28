@@ -1,5 +1,5 @@
 import { runtimeEnv } from "@/lib/runtime-env.server";
-import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { consumeOpenAiApplicationAdmission } from "./openai-admission-runtime.server";
 import { openAiServices } from "./openai-service-runtime.server";
 import { OpenAiServiceError } from "./openai-services.server.mjs";
 import { hostedChatResult } from "./hosted-chat-result.mjs";
@@ -26,18 +26,18 @@ export async function hostedChatCompletion(
   for (const admission of [
     {
       identity: "openai_hosted_chat_global",
-      action: "openai_hosted_chat_daily",
+      action: "openai_hosted_chat_global_daily",
       limit: 20,
       windowSeconds: 86400,
     },
     {
       identity: `user:${ownerId}`,
-      action: "openai_hosted_chat_daily",
+      action: "openai_hosted_chat_user_daily",
       limit: 5,
       windowSeconds: 86400,
     },
   ]) {
-    const budget = await consumeApplicationRateLimit(admission);
+    const budget = await consumeOpenAiApplicationAdmission(admission);
     if (!budget.allowed)
       throw new OpenAiServiceError(
         "hosted_tool_budget_unavailable",
