@@ -8,6 +8,10 @@ The unconfigured image fallback is `gpt-image-2.5-flare`, replacing the retired
 OpenAI with the existing key. Its default `auto` retains Azure routing when an
 endpoint is configured. An explicit Azure selection requires that endpoint;
 missing credentials or provider errors never trigger an automatic fallback.
+`KOVA_EMBEDDING_PROVIDER=openai` independently routes project RAG and developer
+embedding requests to the direct OpenAI API. Its default `auto` preserves the
+existing Azure endpoint and deployment mapping. An explicit provider missing
+its credential or endpoint fails closed without changing text or image routing.
 The additional server integration uses the pinned OpenAI JavaScript SDK
 7.30.0 and the existing `OPENAI_API_KEY`. No provider credential reaches the
 browser. The SDK base URL is pinned to OpenAI, redirects are refused, and
