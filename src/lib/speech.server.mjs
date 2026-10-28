@@ -5,6 +5,7 @@ import {
   waitForPromiseWithSignal,
 } from "./ai/provider-transport.server.mjs";
 import { readVoiceCatalog, selectCatalogVoice, TTS_MODEL_IDS } from "./voice/catalog.server.mjs";
+import { verifyVoiceModelReceipt } from "./voice/openai-model-eligibility.server.mjs";
 
 export const SPEECH_LIMITS = Object.freeze({
   textChars: 4000,
@@ -76,7 +77,7 @@ export async function loadOwnedSpeechMessage(auth, input, signal) {
   if (message.content.length > SPEECH_LIMITS.textChars) throw fail("speech_text_too_long", 413);
   if (createHash("sha256").update(message.content).digest("hex") !== input.contentSha256)
     throw fail("speech_message_not_synced", 409);
-  return message.content;
+  return { text: message.content, voiceModelReceipt: message.voiceModelReceipt };
 }
 
 // Dependencies are explicit so tests cannot accidentally call a paid provider.
@@ -86,6 +87,7 @@ export function createSpeechHandler({
   rateLimit,
   revalidate,
   config,
+  modelPolicy,
   fetchImpl = fetch,
   admit,
 }) {
@@ -180,10 +182,22 @@ export function createSpeechHandler({
         !TTS_MODEL_IDS.includes(modelId)
       )
         throw fail("speech_not_configured", 503);
-      const text = await wait(loadMessage(auth, input, deadline.signal));
+      const saved = await wait(loadMessage(auth, input, deadline.signal));
+      const text = saved?.text;
       // Keep caps here too: a different release's loader cannot bypass them.
       if (typeof text !== "string" || !text.trim()) throw fail("speech_message_unavailable", 404);
       if (text.length > SPEECH_LIMITS.textChars) throw fail("speech_text_too_long", 413);
+      const policy = modelPolicy?.();
+      if (!policy?.valid) throw fail("speech_model_not_configured", 503);
+      if (
+        !verifyVoiceModelReceipt(policy, saved.voiceModelReceipt, {
+          ownerId: auth.userId,
+          chatId: input.chatId,
+          messageId: input.messageId,
+          content: text,
+        })
+      )
+        throw fail("speech_model_not_eligible", 403);
       for (const bucket of [
         {
           identity: `user:${auth.userId}`,

@@ -31,7 +31,7 @@ import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
 // Leave room for codec finalization beneath the server's hard 60-second limit.
 const MAX_RECORDING_MS = 59_000;
 const MAX_AUDIO_BYTES = 8 * 1024 * 1024;
-const MAX_REPLY_CHARACTERS = 5_000;
+const MAX_REPLY_CHARACTERS = 4_000;
 const REQUEST_TIMEOUT_MS = 60_000;
 
 const VOICE_PREFERENCE_KEY = "kova-voice-selection-v1";
@@ -122,6 +122,7 @@ export interface ComposerVoiceDialogProps {
   mode?: "dictate" | "voice";
   onVoiceSubmit?: (text: string, signal: AbortSignal) => Promise<ComposerVoiceTurn>;
   latestAssistantText?: string;
+  latestAssistantReply?: { chatId: string; messageId: string; content: string };
   isStreaming: boolean;
   conversationModelControl?: ReactNode;
   onCloseAutoFocus?: ComponentPropsWithoutRef<typeof DialogContent>["onCloseAutoFocus"];
@@ -177,6 +178,7 @@ export function ComposerVoiceDialog({
   mode = "dictate",
   onVoiceSubmit,
   latestAssistantText = "",
+  latestAssistantReply,
   isStreaming,
   conversationModelControl,
   onCloseAutoFocus,
@@ -205,6 +207,7 @@ export function ComposerVoiceDialog({
     disabled,
     isStreaming,
     latestAssistantText,
+    latestAssistantReply,
     mode,
     onVoiceSubmit,
     onOpenChange,
@@ -216,6 +219,7 @@ export function ComposerVoiceDialog({
     disabled,
     isStreaming,
     latestAssistantText,
+    latestAssistantReply,
     mode,
     onVoiceSubmit,
     onOpenChange,
@@ -444,18 +448,28 @@ export function ComposerVoiceDialog({
 
   useLayoutEffect(() => {
     if (mode === "voice") return;
-    if (phaseRef.current === "synthesizing") cancelOperation();
+    if (phaseRef.current === "synthesizing" || phaseRef.current === "speaking") cancelOperation();
     else {
       releasePlayback();
       setAudioUrl("");
     }
-  }, [latestAssistantText, mode, cancelOperation, releasePlayback]);
+  }, [
+    latestAssistantText,
+    latestAssistantReply?.chatId,
+    latestAssistantReply?.messageId,
+    mode,
+    cancelOperation,
+    releasePlayback,
+  ]);
 
   const stopReplyPlayback = useCallback(() => {
-    if (phaseRef.current === "synthesizing") {
+    if (phaseRef.current === "synthesizing" || phaseRef.current === "speaking") {
       generation.current += 1;
       request.current?.abort();
       request.current = null;
+      const activePlayback = voicePlayback.current;
+      voicePlayback.current = null;
+      activePlayback?.stop();
       if (requestDeadline.current !== null) clearTimeout(requestDeadline.current);
       requestDeadline.current = null;
       updatePhase("idle");
@@ -580,6 +594,8 @@ export function ComposerVoiceDialog({
             const messages: Record<string, string> = {
               speech_message_not_synced:
                 "The reply is not available in saved history. Use chat to review it before trying Voice again.",
+              speech_not_eligible:
+                "This reply is not from an approved OpenAI model. Your reply remains in chat.",
               speech_text_too_long:
                 "This reply is too long to speak. Read it in chat, then start a new voice turn.",
               speech_unauthorized: "Your voice session ended. Sign in again before starting Voice.",
@@ -620,7 +636,9 @@ export function ComposerVoiceDialog({
           ? "This voice turn timed out. Your conversation remains in chat. Start again when you are ready."
           : code === "voice_reply_too_long"
             ? "This reply is too long to speak. Read it in chat, then start a new voice turn."
-            : "This voice turn could not be completed and saved. Review the conversation in chat before trying again.",
+            : code === "voice_model_not_eligible"
+              ? "This model is not approved for Voice. Your reply remains in chat; choose an approved OpenAI model."
+              : "This voice turn could not be completed and saved. Review the conversation in chat before trying again.",
       );
     } finally {
       if (abortListener) controller.signal.removeEventListener("abort", abortListener);
@@ -819,66 +837,99 @@ export function ComposerVoiceDialog({
   resumeRecording.current = startRecording;
 
   const readLatestReply = async () => {
-    const text = latestAssistantText.trim();
+    const reply = latestAssistantReply;
     const voiceId = selectedVoice.current;
     if (
       !userId ||
+      !reply?.chatId ||
+      !reply.messageId ||
+      !reply.content.trim() ||
+      reply.content !== latestAssistantText ||
       !capabilities?.configured ||
       !capabilities.tts ||
       !voiceCatalog.current.some((voice) => voice.id === voiceId && voice.available) ||
-      phaseRef.current !== "idle" ||
-      !text
+      phaseRef.current !== "idle"
     )
       return;
     const scope = { generation: generation.current, userId, contextKey };
     if (!isCurrent(scope)) return;
-    if (text.length > MAX_REPLY_CHARACTERS) {
+    if (reply.content.length > MAX_REPLY_CHARACTERS) {
       setError(
-        "This reply is too long to read aloud. Voice playback supports replies up to 5,000 characters.",
+        "This reply is too long to read aloud. Voice playback supports replies up to 4,000 characters.",
       );
       return;
     }
-    releasePlayback();
-    setAudioUrl("");
+    stopReplyPlayback();
     setError("");
     updatePhase("synthesizing");
-    const controller = beginRequest();
     try {
-      const response = await authFetch("/api/voice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Kova-Voice-Owner": scope.userId },
-        signal: controller.signal,
-        body: JSON.stringify({ action: "tts", text, voiceId }),
-      });
-      if (!isCurrent(scope)) return;
-      if (!response.ok)
-        throw new Error(await voiceError(response, "This reply could not be read aloud."));
-      const blob = await response.blob();
-      if (!isCurrent(scope)) return;
-      if (!blob.size || !blob.type.startsWith("audio/"))
-        throw new Error("No playable audio was returned. Please try again.");
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(reply.content));
       if (
-        current.current.latestAssistantText.trim() !== text ||
+        !isCurrent(scope) ||
+        current.current.latestAssistantText !== reply.content ||
+        current.current.latestAssistantReply?.chatId !== reply.chatId ||
+        current.current.latestAssistantReply?.messageId !== reply.messageId ||
         selectedVoice.current !== voiceId
-      ) {
-        updatePhase("idle");
+      )
         return;
-      }
-      objectUrl.current = URL.createObjectURL(blob);
-      setAudioUrl(objectUrl.current);
-      updatePhase("idle");
+      const contentSha256 = Array.from(new Uint8Array(digest), (value) =>
+        value.toString(16).padStart(2, "0"),
+      ).join("");
+      let started = false;
+      const playback = createSpeechPlayback({
+        fetchImpl: authFetch,
+        createSink: createBrowserSpeechSink,
+        onEnded: (completed) => {
+          if (
+            !isCurrent(scope) ||
+            voicePlayback.current !== playback ||
+            completed.ownerId !== scope.userId ||
+            completed.chatId !== reply.chatId ||
+            completed.messageId !== reply.messageId ||
+            completed.contentSha256 !== contentSha256
+          )
+            return;
+          voicePlayback.current = null;
+          updatePhase("idle");
+        },
+        onState: (state, code) => {
+          if (!isCurrent(scope) || voicePlayback.current !== playback) return;
+          if (state === "loading") started = true;
+          if (state === "playing") updatePhase("speaking");
+          if (state === "error") {
+            const messages: Record<string, string> = {
+              speech_not_eligible: "This reply is not from an approved OpenAI model.",
+              speech_voice_plan_required: "This voice requires a different plan.",
+              speech_forbidden: "Read aloud is not available for this account right now.",
+              speech_unauthorized: "Sign in again before reading aloud.",
+              speech_message_unavailable: "This reply is no longer available in saved history.",
+              speech_message_not_synced: "This reply is still syncing. Try again once it is saved.",
+              speech_not_available: "Read aloud is not configured. Your reply remains in chat.",
+            };
+            failOperation(messages[code ?? ""] ?? "This reply could not be read aloud. Try again.");
+          } else if (state === "idle" && started) {
+            // Natural ending and failures also emit idle immediately; let their
+            // callbacks settle before handling an external shared Stop.
+            void Promise.resolve().then(() => {
+              if (!isCurrent(scope) || voicePlayback.current !== playback) return;
+              voicePlayback.current = null;
+              updatePhase("idle");
+            });
+          }
+        },
+      });
+      voicePlayback.current = playback;
+      await playback.start({
+        ownerId: scope.userId,
+        chatId: reply.chatId,
+        messageId: reply.messageId,
+        contentSha256,
+        voiceId,
+      });
     } catch (cause) {
       if (isCurrent(scope)) {
-        failOperation(
-          controller.signal.aborted
-            ? "Voice playback timed out. Please try again."
-            : cause instanceof Error
-              ? cause.message
-              : "This reply could not be read aloud.",
-        );
+        failOperation("This browser could not prepare the saved reply for playback.");
       }
-    } finally {
-      finishRequest(controller);
     }
   };
 
@@ -1146,6 +1197,10 @@ export function ComposerVoiceDialog({
                   disabled={
                     busy ||
                     !capabilities.tts ||
+                    !latestAssistantReply?.chatId ||
+                    !latestAssistantReply.messageId ||
+                    !latestAssistantReply.content.trim() ||
+                    latestAssistantReply.content !== latestAssistantText ||
                     !capabilities.voices.some(
                       (voice) => voice.available && voice.id === selectedVoiceId,
                     )
@@ -1153,13 +1208,13 @@ export function ComposerVoiceDialog({
                 >
                   <Volume2 aria-hidden="true" /> Read latest completed reply
                 </Button>
-                {(!capabilities.tts || !selectedVoiceId) && (
+                {(!capabilities.tts || !selectedVoiceId || !latestAssistantReply) && (
                   <p>
                     {capabilities.voices.length === 0
                       ? "No reply voices are configured."
                       : !selectedVoiceId
                         ? "No reply voice is available for your current plan."
-                        : "Reply playback is not configured."}
+                        : "Use Read aloud on a saved reply from an approved OpenAI model."}
                   </p>
                 )}
               </>

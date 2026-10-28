@@ -5,7 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import * as principalStorage from "../../src/lib/principal-browser-storage.mjs";
 import { createSpeechPlayback, stopActiveSpeechPlayback } from "../../src/lib/speech-playback.mjs";
-import { webcrypto } from "node:crypto";
+import { createHash, webcrypto } from "node:crypto";
 import { createHookHarness, elements, loadUiModule, settle } from "../helpers/ui-state-harness.mjs";
 
 const compiled = ts.transpileModule(
@@ -50,6 +50,12 @@ const deferred = () => {
   });
   return { promise, resolve, reject };
 };
+async function waitForRequest(f, count) {
+  const deadline = Date.now() + 5000;
+  while (f.requests.length < count && Date.now() < deadline) await f.flush();
+  assert.equal(f.requests.length, count, `Expected ${count} authenticated request(s)`);
+  return f.requests.at(-1);
+}
 const configured = {
   configured: true,
   stt: true,
@@ -133,6 +139,11 @@ function fixture(initial = {}, options = {}) {
     disabled: false,
     isStreaming: false,
     latestAssistantText: "A completed reply.",
+    latestAssistantReply: {
+      chatId: "chat-a",
+      messageId: "saved-assistant-a",
+      content: "A completed reply.",
+    },
     onTranscript: (value) => submitted.push(value),
     onVoiceSubmit: (value, signal) => {
       const pending = deferred();
@@ -318,6 +329,8 @@ function fixture(initial = {}, options = {}) {
     FormData,
     Error,
     Date,
+    crypto: webcrypto,
+    TextEncoder,
     console,
     window: fakeWindow,
     CustomEvent: class {
@@ -681,51 +694,123 @@ test("unsupported browsers and denied permission fail without a recording or upl
   denied.unmount();
 });
 
-test("TTS is explicit, limited, controlled, and playback is revoked on close/context/account changes", async () => {
+test("Dictate reads only the exact saved model-proven reply and stops playback on scope changes", async () => {
   for (const change of [
     { open: false },
     { contextKey: "new-chat" },
     { userId: "new-owner" },
-    { latestAssistantText: "A newer completed reply." },
+    { latestAssistantText: "A newer completed reply.", latestAssistantReply: undefined },
   ]) {
     const f = fixture();
     await f.ready({ ...configured, stt: false });
     assert.equal(f.requests.length, 1);
     await f.click("Read latest completed reply");
-    const call = f.requests.at(-1);
+    const call = await waitForRequest(f, 2);
+    assert.equal(call.url, "/api/speech");
     assert.deepEqual(JSON.parse(call.init.body), {
-      action: "tts",
-      text: "A completed reply.",
+      ownerId: "owner-a",
+      chatId: "chat-a",
+      messageId: "saved-assistant-a",
+      contentSha256: createHash("sha256").update("A completed reply.").digest("hex"),
       voiceId: "default",
     });
-    call.resolve(new Response(new Blob(["audio"], { type: "audio/mpeg" })));
+    call.resolve(
+      new Response(new Uint8Array([1, 2]), { headers: { "content-type": "audio/mpeg" } }),
+    );
     await f.flush();
-    assert.equal(f.urls.length, 1);
-    assert.equal(f.nodes().find((node) => node.type === "audio").props.controls, true);
+    const sink = f.playbackSinks[0];
+    assert.equal(sink.writes.length, 1);
     await f.update(change);
-    assert.deepEqual(f.revoked, ["blob:voice-0"]);
-    assert.ok(f.player.paused > 0);
+    assert.equal(call.init.signal.aborted, true);
+    assert.ok(sink.disposed > 0);
     f.unmount();
   }
-  const long = fixture({ latestAssistantText: "x".repeat(5001) });
+  const long = fixture({
+    latestAssistantText: "x".repeat(4001),
+    latestAssistantReply: {
+      chatId: "chat-a",
+      messageId: "saved-assistant-a",
+      content: "x".repeat(4001),
+    },
+  });
   await long.ready();
   await long.click("Read latest completed reply");
   assert.equal(long.requests.length, 1);
-  assert.match(long.text(), /5,000 characters/);
+  assert.match(long.text(), /4,000 characters/);
   long.unmount();
 });
 
-test("late TTS after a scope change cannot create an audio URL", async () => {
+test("late saved speech after a scope change cannot play audio", async () => {
   const f = fixture();
   await f.ready();
   await f.click("Read latest completed reply");
-  const call = f.requests.at(-1);
+  const call = await waitForRequest(f, 2);
   await f.update({ contextKey: "elsewhere" });
   assert.equal(call.init.signal.aborted, true);
-  call.resolve(new Response(new Blob(["audio"], { type: "audio/mpeg" })));
+  call.resolve(new Response(new Uint8Array([1]), { headers: { "content-type": "audio/mpeg" } }));
   await f.flush();
-  assert.equal(f.urls.length, 0);
+  assert.equal(f.playbackSinks[0].writes.length, 0);
   f.unmount();
+});
+
+test("Dictate Cancel stops speaking and ignores the ended callback", async () => {
+  const f = fixture();
+  await f.ready();
+  await f.click("Read latest completed reply");
+  const request = await waitForRequest(f, 2);
+  request.resolve(new Response(new Uint8Array([1]), { headers: { "content-type": "audio/mpeg" } }));
+  await f.flush();
+  const sink = f.playbackSinks[0];
+  assert.equal(sink.writes.length, 1);
+  assert.equal(
+    f.nodes().find((node) => node.type === "DialogContent").props["data-voice-phase"],
+    "speaking",
+  );
+  await f.click("Cancel");
+  assert.equal(request.init.signal.aborted, true);
+  assert.equal(sink.disposed, 1);
+  sink.options.onEnded();
+  await f.flush();
+  assert.equal(
+    f.nodes().find((node) => node.type === "DialogContent").props["data-voice-phase"],
+    "idle",
+  );
+  assert.equal(f.requests.length, 2);
+  f.unmount();
+});
+
+test("a different response player stops Dictate speech without leaving it busy", async () => {
+  const f = fixture();
+  await f.ready();
+  await f.click("Read latest completed reply");
+  const request = await waitForRequest(f, 2);
+  request.resolve(new Response(new Uint8Array([1]), { headers: { "content-type": "audio/mpeg" } }));
+  await f.flush();
+  const sink = f.playbackSinks[0];
+  assert.equal(sink.writes.length, 1);
+  stopActiveSpeechPlayback();
+  await f.flush();
+  assert.equal(sink.disposed, 1);
+  assert.equal(
+    f.nodes().find((node) => node.type === "DialogContent").props["data-voice-phase"],
+    "idle",
+  );
+  assert.equal(f.control("Read latest completed reply").disabled, false);
+  f.unmount();
+});
+
+test("Dictate cannot read a reply without matching saved message proof", async () => {
+  for (const latestAssistantReply of [
+    undefined,
+    { chatId: "chat-a", messageId: "saved-assistant-a", content: "Other reply." },
+    { chatId: "chat-a", messageId: "", content: "A completed reply." },
+  ]) {
+    const f = fixture({ latestAssistantReply });
+    await f.ready();
+    assert.equal(f.control("Read latest completed reply").disabled, true);
+    assert.equal(f.requests.length, 1);
+    f.unmount();
+  }
 });
 
 test("normalization failure retains the original recording for explicit retry without a new microphone request", async () => {
@@ -827,8 +912,7 @@ test("repeated recording and TTS clicks are serialized before a rerender", async
   const read = f.control("Read latest completed reply");
   read.onClick();
   read.onClick();
-  await f.flush();
-  assert.equal(f.requests.length, 2);
+  await waitForRequest(f, 2);
   f.unmount();
 });
 
@@ -853,8 +937,9 @@ test("picker renders only server catalog labels and stores available choices per
   assert.equal(f.requests.length, 1);
   assert.equal(f.microphoneRequests.length, 0);
   await f.click("Read latest completed reply");
+  await waitForRequest(f, 2);
   assert.equal(JSON.parse(f.requests.at(-1).init.body).voiceId, "warm");
-  assert.equal(f.requests.at(-1).init.headers["X-Kova-Voice-Owner"], "owner-a");
+  assert.equal(f.requests.at(-1).init.headers["X-Kova-Owner"], "owner-a");
   f.unmount();
 });
 
@@ -909,26 +994,32 @@ test("unknown or locked stored preferences never authorize playback and guest st
   guest.unmount();
 });
 
-test("voice changes cancel pending synthesis, revoke audio and preserve reviewed text", async () => {
+test("voice changes cancel pending speech and preserve reviewed text", async () => {
   const f = fixture();
   await f.ready();
   await f.recordToRequest();
   f.requests.at(-1).resolve(Response.json({ text: "My reviewed draft" }));
   await f.flush();
   await f.click("Read latest completed reply");
-  const stale = f.requests.at(-1);
+  const stale = await waitForRequest(f, 3);
   await f.chooseVoice("warm");
   assert.equal(stale.init.signal.aborted, true);
-  stale.resolve(new Response(new Blob(["old voice"], { type: "audio/mpeg" })));
+  stale.resolve(new Response(new Uint8Array([1]), { headers: { "content-type": "audio/mpeg" } }));
   await f.flush();
   assert.equal(f.urls.length, 0);
   assert.equal(f.nodes().find((node) => node.type === "textarea").props.value, "My reviewed draft");
   await f.click("Read latest completed reply");
-  f.requests.at(-1).resolve(new Response(new Blob(["new voice"], { type: "audio/mpeg" })));
+  await waitForRequest(f, 4);
+  f.requests
+    .at(-1)
+    .resolve(new Response(new Uint8Array([2]), { headers: { "content-type": "audio/mpeg" } }));
+  await f.flush();
+  assert.equal(f.playbackSinks.at(-1).writes.length, 1);
+  f.playbackSinks.at(-1).options.onEnded();
   await f.flush();
   await f.chooseVoice("default");
-  assert.deepEqual(f.revoked, ["blob:voice-0"]);
-  assert.ok(f.player.paused > 0);
+  assert.equal(f.playbackSinks.at(-1).disposed, 1);
+  assert.equal(f.selectedVoice(), "default");
   assert.equal(f.nodes().find((node) => node.type === "textarea").props.value, "My reviewed draft");
   f.unmount();
 });
@@ -991,6 +1082,7 @@ test("storage denial never blocks selecting or using an available voice", async 
     if (options.storageUnavailable || options.storageWriteError)
       assert.match(f.text(), /could not be saved/);
     await f.click("Read latest completed reply");
+    await waitForRequest(f, 2);
     assert.equal(JSON.parse(f.requests.at(-1).init.body).voiceId, "warm");
     f.unmount();
   }
@@ -1002,7 +1094,7 @@ test("account data cleanup resets mounted preference, cancels speech and does no
   await f.chooseVoice("warm");
   const writes = f.storageWrites.length;
   await f.click("Read latest completed reply");
-  const pending = f.requests.at(-1);
+  const pending = await waitForRequest(f, 2);
   f.dispatch({
     type: principalStorage.PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
     detail: { principal: "user:someone-else" },
@@ -1069,10 +1161,11 @@ test("permission denial after selection cannot create playback or reveal provide
   await f.ready();
   await f.chooseVoice("warm");
   await f.click("Read latest completed reply");
-  f.requests.at(-1).resolve(Response.json({ error: "voice_plan_required" }, { status: 403 }));
+  const request = await waitForRequest(f, 2);
+  request.resolve(Response.json({ error: "speech_voice_plan_required" }, { status: 403 }));
   await f.flush();
-  assert.match(f.text(), /not available for your current plan/);
-  assert.doesNotMatch(f.text(), /voice_plan_required/);
+  assert.match(f.text(), /requires a different plan/);
+  assert.doesNotMatch(f.text(), /speech_voice_plan_required/);
   assert.equal(f.urls.length, 0);
   assert.deepEqual(f.submitted, []);
   f.unmount();
@@ -1239,7 +1332,8 @@ test("transcript and playback prioritize their content while inactive voice uses
   const playback = fixture();
   await playback.ready();
   await playback.click("Read latest completed reply");
-  playback.requests.at(-1).resolve(new Response(new Blob(["audio"], { type: "audio/mpeg" })));
+  const request = await waitForRequest(playback, 2);
+  request.resolve(new Response(new Uint8Array([1]), { headers: { "content-type": "audio/mpeg" } }));
   await playback.flush();
   assert.equal(
     playback.nodes().find((node) => node.type === "DialogContent").props[
@@ -1248,7 +1342,8 @@ test("transcript and playback prioritize their content while inactive voice uses
     "true",
   );
   assert.ok(!playback.nodes().some((node) => node.props?.className === "kova-voice-mark"));
-  assert.ok(playback.nodes().some((node) => node.type === "audio"));
+  assert.equal(playback.playbackSinks.at(-1).writes.length, 1);
+  assert.ok(!playback.nodes().some((node) => node.type === "audio"));
   playback.unmount();
 
   const absent = fixture();

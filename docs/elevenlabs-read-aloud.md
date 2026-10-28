@@ -24,11 +24,18 @@ Configure these on the server only, using existing private secret custody:
   back to a different voice or model. No automatic discovery or generation occurs.
 - `KOVA_SPEECH_ENABLED=true`: explicit release activation. It defaults off and
   the existing `KOVA_GENERATION_DISABLED=true` emergency switch also disables it.
+- `KOVA_VOICE_OPENAI_MODELS_JSON`: explicit nonempty JSON array of exact OpenAI
+  text model IDs chosen by the owner for ElevenLabs output. No models are supplied
+  by default; a wrong or malformed entry does not fall back to another model.
+- `KOVA_VOICE_MODEL_PROOF_SECRET`: a separate, random, server-only signing secret
+  of at least 32 UTF-8 bytes. Bind a versioned Key Vault secret through
+  `voiceModelProofSecretUri`; missing or invalid configuration leaves Read aloud
+  unavailable while ordinary chat remains available.
 - Existing authenticated chat-history and distributed-rate-limit dependencies
   remain required. Missing limiter configuration fails closed, without a provider call.
 
 This source work does not authorize secret retrieval, account purchases, paid
-generation, public publication, deployment, or runtime activation. No ElevenLabs
+generation, deployment, or runtime activation. No ElevenLabs
 key, voice availability, balance, or live account entitlement was inspected.
 
 ## Admission, limits and privacy
@@ -42,10 +49,16 @@ exposing audio. Text comes from the saved owned message, never a browser text fi
 The fingerprint rejects a different or stale saved version. Missing history,
 temporary/user/failed/stopped messages and pending images are rejected.
 
-The UI's completion gate follows the existing `streaming`, `generationStatus`
-and `pendingImage` contract. Saved chat snapshots are owner-editable history,
-not cryptographic proof of original model output or server-issued completion.
-This does not add a model-output provenance mechanism.
+The chat server signs a receipt only after a complete response from an eligible
+OpenAI model. The receipt binds the owner, chat, assistant message and exact
+completed text to the concrete model selected server-side. The browser stores
+that receipt with the response. Read aloud verifies it against the current
+allowlist and saved text before reserving quota or contacting ElevenLabs.
+Standalone TTS and speech-to-speech retain their existing plan/catalog/quota
+paths; their arbitrary input is separate from saved assistant Read aloud.
+Old, edited, failed, partial, Azure-routed or unproven replies cannot be spoken.
+Saved chat snapshots are owner-editable, so their model field alone would not
+prove provenance; the server verifies the signature on every request.
 
 - At most 4,000 UTF-16 text units per request, with no silent truncation.
 - Distributed atomic limits: 3 attempts/user/minute, 20/user/hour and 100 globally/hour.

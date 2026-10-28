@@ -7,6 +7,7 @@ export type ComposerVoiceTurn = {
   messageId: string;
   content: string;
   contentSha256: string;
+  voiceModelReceipt: string;
 };
 
 export type ComposerVoiceSubmit = (text: string, signal: AbortSignal) => Promise<ComposerVoiceTurn>;
@@ -45,6 +46,7 @@ function matchesReply(value: unknown, turn: PendingVoiceTurn): boolean {
     message &&
     message.role === "assistant" &&
     message.content === turn.content &&
+    message.voiceModelReceipt === turn.voiceModelReceipt &&
     !message.generationStatus &&
     !message.pendingImage,
   );
@@ -88,7 +90,13 @@ export async function awaitSavedComposerVoiceTurn({
   subscribeHistory,
   timeoutMs = 15_000,
 }: SavedVoiceTurnOptions): Promise<ComposerVoiceTurn> {
-  if (!turn.ownerId || !turn.chatId || !turn.messageId || !turn.content.trim())
+  if (
+    !turn.ownerId ||
+    !turn.chatId ||
+    !turn.messageId ||
+    !turn.content.trim() ||
+    !/^[A-Za-z0-9_-]{1,1800}\.[A-Za-z0-9_-]{43}$/u.test(turn.voiceModelReceipt)
+  )
     throw new Error("voice_reply_unavailable");
 
   const canceled = () => new DOMException("Voice turn cancelled or changed.", "AbortError");

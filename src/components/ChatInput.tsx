@@ -191,6 +191,7 @@ export function ChatInput({
   surface = "conversation",
   attachmentContext,
   latestAssistantText = "",
+  latestAssistantReply,
   voiceMode,
   onVoiceModeChange,
   onVoiceSubmit,
@@ -249,6 +250,8 @@ export function ChatInput({
   attachmentContext?: string;
   /** Completed assistant reply available for explicitly requested speech playback. */
   latestAssistantText?: string;
+  /** Exact saved, model-proven reply; text alone never authorizes playback. */
+  latestAssistantReply?: { chatId: string; messageId: string; content: string };
   /** Controlled by the chat route so opening a new voice chat survives layout changes. */
   voiceMode?: "dictate" | "voice" | null;
   onVoiceModeChange?: (mode: "dictate" | "voice" | null) => void;
@@ -2014,6 +2017,7 @@ export function ChatInput({
         disabled={disabled || !online}
         isStreaming={isStreaming}
         latestAssistantText={latestAssistantText}
+        latestAssistantReply={latestAssistantReply}
         conversationModelControl={
           <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
         }

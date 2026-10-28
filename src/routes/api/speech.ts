@@ -4,6 +4,7 @@ import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { createSpeechHandler, speechConfiguration } from "@/lib/speech.server.mjs";
 import { assertImagePrincipal } from "@/lib/multimodal/image-source.server.mjs";
+import { voiceModelPolicy } from "@/lib/voice/openai-model-eligibility.server.mjs";
 
 // Reuse the existing live-session/deletion-fence check; no new Auth implementation.
 const speechPost = () =>
@@ -22,6 +23,7 @@ const speechPost = () =>
     },
     config: async (auth, input) =>
       speechConfiguration(runtimeEnv, await getCallerTier(auth), input.voiceId),
+    modelPolicy: () => voiceModelPolicy(runtimeEnv),
   });
 
 export const Route = createFileRoute("/api/speech")({

@@ -1234,6 +1234,24 @@ function KovaGPT() {
     () => conversations.find((c) => c.id === activeId) ?? null,
     [conversations, activeId],
   );
+  const latestCompletedAssistant = active?.messages
+    .filter(
+      (message) =>
+        message.role === "assistant" && !message.generationStatus && !message.pendingImage,
+    )
+    .at(-1);
+  const latestAssistantReply =
+    active &&
+    !active.temporary &&
+    latestCompletedAssistant?.voiceModelReceipt &&
+    latestCompletedAssistant.id &&
+    latestCompletedAssistant.content.trim()
+      ? {
+          chatId: active.id,
+          messageId: latestCompletedAssistant.id,
+          content: latestCompletedAssistant.content,
+        }
+      : undefined;
   // Only a newly completed request can shift layout. Historical replies and
   // in-progress local drafts keep their current workspace and focus.
   const pendingCanvasRef = useRef<{ scope: string; messageId: string } | null>(null);
@@ -1363,7 +1381,9 @@ function KovaGPT() {
                 ...conversation,
                 updatedAt: Date.now(),
                 messages: conversation.messages.map((message) =>
-                  message.id === messageId ? { ...message, content: nextContent } : message,
+                  message.id === messageId
+                    ? { ...message, content: nextContent, voiceModelReceipt: undefined }
+                    : message,
                 ),
               },
         ),
@@ -2055,6 +2075,7 @@ function KovaGPT() {
 
       let assembledReply = "";
       let requestSucceeded = false;
+      let receivedVoiceModelReceipt: string | undefined;
       let waitingForConfirmation = false;
 
       try {
@@ -2085,6 +2106,7 @@ function KovaGPT() {
           headers: {
             "Content-Type": "application/json",
             "Idempotency-Key": userMsg.id,
+            "X-Kova-Assistant-Message-Id": assistantMsg.id,
           },
           body: JSON.stringify({
             ...historyPayload,
@@ -2145,6 +2167,17 @@ function KovaGPT() {
               }
             ).choices?.[0]?.delta;
             receiveMemorySources(delta);
+            if (
+              delta?.kind === "voice_model_receipt" &&
+              typeof delta.receipt === "string" &&
+              /^[A-Za-z0-9_-]{1,1800}\.[A-Za-z0-9_-]{43}$/u.test(delta.receipt)
+            ) {
+              receivedVoiceModelReceipt = delta.receipt;
+              updateAssistantMessage((message) => ({
+                ...message,
+                voiceModelReceipt: delta.receipt as string,
+              }));
+            }
             if (delta?.kind === "web_sources") {
               const sources = normalizeResponseSources(delta.sources);
               updateAssistantMessage((message) => ({
@@ -2405,12 +2438,14 @@ function KovaGPT() {
         !voiceRequest.signal.aborted &&
         isCurrentRetryScope()
       ) {
+        if (!receivedVoiceModelReceipt) throw new Error("voice_model_not_eligible");
         // Exact IDs from this request, never a generic latest-assistant lookup.
         return {
           ownerId: userKey,
           chatId: nextConvId,
           messageId: assistantMsg.id,
           content: assembledReply,
+          voiceModelReceipt: receivedVoiceModelReceipt,
         };
       }
     },
@@ -3310,6 +3345,7 @@ function KovaGPT() {
                           )
                           .at(-1)?.content
                       }
+                      latestAssistantReply={latestAssistantReply}
                       disabled={!principalReady}
                       sendDisabled={!historyReady}
                       saveAttachmentsToLibrary={principalReady && !tempChat}
@@ -3477,6 +3513,7 @@ function KovaGPT() {
                         )
                         .at(-1)?.content
                     }
+                    latestAssistantReply={latestAssistantReply}
                     disabled={!principalReady}
                     sendDisabled={!historyReady}
                     saveAttachmentsToLibrary={principalReady && !tempChat}

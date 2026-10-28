@@ -2,6 +2,7 @@
 // Provider documentation: https://elevenlabs.io/docs/api-reference
 import { readVoiceCatalog, publicVoiceCatalog, TTS_MODEL_IDS } from "./catalog.server.mjs";
 import { inspectVoicePcm, MAX_PCM_WAV_BYTES } from "../voice-pcm.mjs";
+import { voiceModelPolicy } from "./openai-model-eligibility.server.mjs";
 export const MAX_AUDIO_BYTES = MAX_PCM_WAV_BYTES;
 export const MAX_TEXT_CHARACTERS = 5000;
 const MAX_REQUEST_BYTES = MAX_AUDIO_BYTES + 64 * 1024;
@@ -35,6 +36,7 @@ export function voiceConfiguration(env, tier = "free") {
     configured && typeof voiceId === "string" && /^[a-zA-Z0-9_-]{1,128}$/.test(voiceId);
   const audioEnabled = env("KOVA_VOICE_AUDIO_ENABLED") === "true";
   const stt = configured && audioEnabled;
+  const modelPolicy = voiceModelPolicy(env);
   return {
     apiKey,
     voiceId,
@@ -47,13 +49,16 @@ export function voiceConfiguration(env, tier = "free") {
     sts: output && audioEnabled,
     // Voice conversations use STT, chat, and saved-message /api/speech output.
     // This signals only known configuration gates, never provider readiness.
-    conversation: stt && output && env("KOVA_SPEECH_ENABLED") === "true",
+    conversation: stt && output && env("KOVA_SPEECH_ENABLED") === "true" && modelPolicy.valid,
   };
 }
 export function publicVoiceConfiguration(config) {
   return {
     configured: config.configured,
     stt: config.stt,
+    // Standalone TTS and STS remain available under their existing plan,
+    // catalog, quota and server-owned provider configuration. Saved assistant
+    // replies use /api/speech for model-bound playback instead.
     tts: config.tts,
     sts: config.sts,
     conversation: config.conversation,

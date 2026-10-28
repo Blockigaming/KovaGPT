@@ -167,6 +167,15 @@ export function normalizeChatHistory(value, ownerId) {
       if (seen.has(id)) throw new Error("chat_history_invalid");
       seen.add(id);
       const item = { id, role: message.role, content: message.content };
+      if (message.voiceModelReceipt !== undefined) {
+        if (
+          message.role !== "assistant" ||
+          typeof message.voiceModelReceipt !== "string" ||
+          !/^[A-Za-z0-9_-]{1,1800}\.[A-Za-z0-9_-]{43}$/u.test(message.voiceModelReceipt)
+        )
+          throw new Error("chat_history_invalid");
+        item.voiceModelReceipt = message.voiceModelReceipt;
+      }
       const followups =
         message.role === "assistant" ? normalizeResponseFollowups(message.followups) : [];
       if (followups.length) item.followups = followups;
