@@ -21,8 +21,9 @@ rehearsal. Do not change migration history or any of the 19 unresolved proofs.
 
 `.github/workflows/build-azure-production-candidate.yml` has a source-test job
 without Azure credentials or a protected environment. Only an explicit
-`workflow_dispatch` on `main`, with `BUILD_ONLY` and an exact matching approved SHA,
-can enter its protected `production` build job.
+`workflow_dispatch` on `main`, with an exact matching reviewed SHA and one of the
+authorized operation/confirmation pairs, can enter its protected `production` job:
+`build` with `BUILD_ONLY`, or `diagnose-access` with `READ_ONLY`.
 
 The builder:
 
@@ -111,6 +112,11 @@ roles automatically. ACR task execution and repository data access are different
 permissions; use the registry's actual RBAC/ABAC mode. ABAC quick builds explicitly
 use `[caller]`; unknown modes or missing permissions stop the build.
 
+The registry metadata read and post-build registry login explicitly select
+`rg-kovagpt-dev`. Repository tag and digest reads retain the Azure CLI's existing
+name-based behavior; this does not establish that those reads avoid subscription
+enumeration or that the identity has the required access.
+
 Before approving a push, verify that no external ACR webhook, task or image watcher
 automatically deploys `production-candidate-*` tags. This workflow never dispatches
 a deployment, but cannot disable or certify unrelated downstream automation.
@@ -118,6 +124,7 @@ a deployment, but cannot disable or certify unrelated downstream automation.
 In GitHub Actions, select **Build Azure production candidate only** and choose
 **Run workflow** on `main`:
 
+- `operation`: `build` (the default);
 - `confirmation`: `BUILD_ONLY`;
 - `source_sha`: the full reviewed current main SHA, matching the workflow revision;
 - `browser_input_mode`: `plan` by default, or the explicitly approved `narrow-openai` mode.
@@ -126,6 +133,23 @@ Approve the protected environment only for this build/push and its authorized
 cost. If main changed while awaiting approval, the builder stops rather than
 silently building a different revision. No Azure command needs to be pasted into
 Cloud Shell for this path.
+
+### Read-only access diagnostics
+
+If a pre-submission Azure CLI command fails, select `operation=diagnose-access`,
+`confirmation=READ_ONLY`, and the exact current main SHA. The same protected OIDC
+identity checks the existing registry metadata, the unique candidate tag, and ARM
+token acquisition. Diagnostics do not read browser inputs or the PLAN parameters
+secret, including when the browser input selection remains at its default. They
+submit no ACR build, pull no image, write no candidate
+artifact, and change no Container App, database, secret, traffic, or role.
+
+Failure output identifies only the fixed operation label
+`registry_metadata_read`, `repository_tags_read`, or `arm_token_read`. Provider
+stdout/stderr, arguments, and token values or token metadata are never printed.
+Success reports only the source SHA, read-result booleans, and `buildSubmitted=false`.
+A diagnostic run does not authorize a later build or repair access permissions.
+Build and diagnostic confirmations cannot be substituted for one another.
 
 After success, retain the artifact and give the Manual chat the run ID, immutable
 image reference, source SHA/tree and provenance hashes. The next separate action

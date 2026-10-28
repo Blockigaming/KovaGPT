@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -7,6 +8,7 @@ import test from "node:test";
 import {
   buildProductionCandidate,
   createProductionCandidateCommand,
+  diagnoseProductionCandidateAccess,
   PRODUCTION_BUILD_TIMEOUT_SECONDS,
   PRODUCTION_CLIENT_BUDGET_MS,
   productionCandidateBuildRequest,
@@ -302,6 +304,21 @@ test("build-only orchestration verifies pulled bytes and emits key-free PLAN evi
   assert.equal(calls.filter(([program]) => program === "node").length, 1);
   assert.ok(!calls.some(([program, , sub]) => program === "az" && sub === "build"));
   assert.ok(calls.some(([program, sub]) => program === "docker" && sub === "rm"));
+  assert.deepEqual(
+    calls.find(
+      ([program, command, sub]) => program === "az" && command === "acr" && sub === "login",
+    ),
+    [
+      "az",
+      "acr",
+      "login",
+      "--name",
+      "kovagptacr",
+      "--resource-group",
+      "rg-kovagpt-dev",
+      "--only-show-errors",
+    ],
+  );
   for (const call of calls) {
     assert.doesNotMatch(
       call.join(" "),
@@ -321,7 +338,11 @@ for (const [name, options, code] of [
     /submission_budget_insufficient/u,
   ],
   ["existing candidate tag", { tagExists: true }, /tag_already_exists/u],
-  ["tag-read authorization failure", { tagLookupFailed: true }, /simulated_authorization_failure/u],
+  [
+    "tag-read authorization failure",
+    { tagLookupFailed: true },
+    /access_failed:repository_tags_read/u,
+  ],
 ]) {
   test(`no build is queued when ${name}`, (t) => {
     const { env, run, calls, output } = harness(t, options);
@@ -361,7 +382,7 @@ test("production writes are isolated from PR validation and never dispatch PLAN 
   );
   assert.match(
     workflow,
-    /inputs\.confirmation == 'BUILD_ONLY' && inputs\.source_sha == github\.sha/u,
+    /inputs\.source_sha == github\.sha && \(\(inputs\.operation == 'build' && inputs\.confirmation == 'BUILD_ONLY'\) \|\| \(inputs\.operation == 'diagnose-access' && inputs\.confirmation == 'READ_ONLY'\)\)/u,
   );
   assert.match(workflow, /needs: source-tests/u);
   assert.doesNotMatch(
@@ -703,7 +724,7 @@ test("browser mode: workflow opts in explicitly and excludes the PLAN secret fro
   for (const [, binding] of planBindings)
     assert.equal(
       binding,
-      "${{ inputs.browser_input_mode != 'narrow-openai' && secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON || '' }}",
+      "${{ inputs.operation == 'build' && inputs.browser_input_mode != 'narrow-openai' && secrets.KOVA_PRODUCTION_BICEP_PARAMETERS_JSON || '' }}",
     );
   const tests = workflow.slice(
     workflow.indexOf("  source-tests:"),
@@ -716,4 +737,229 @@ test("browser mode: workflow opts in explicitly and excludes the PLAN secret fro
     "tests/unit/azure-narrow-openai-browser-inputs.test.mjs",
   ])
     assert.equal(workflow.split(path).length - 1, path.startsWith("tests/") ? 4 : 3);
+});
+
+function diagnosticEnvironment(overrides = {}) {
+  return environment({
+    KOVA_PRODUCTION_OPERATION: "diagnose-access",
+    KOVA_BUILD_CONFIRMATION: "READ_ONLY",
+    ...overrides,
+  });
+}
+
+test("access diagnostics perform only the three existing Azure reads and never create build evidence", (t) => {
+  const { run, calls, output } = harness(t);
+  const report = diagnoseProductionCandidateAccess(diagnosticEnvironment(), run);
+  assert.deepEqual(report, {
+    operation: "diagnose-access",
+    sourceSha,
+    registryMetadataRead: true,
+    repositoryTagsRead: true,
+    armTokenRead: true,
+    buildSubmitted: false,
+  });
+  assert.deepEqual(
+    calls.filter(([program]) => program === "az").map(([, ...args]) => args),
+    [
+      [
+        "acr",
+        "show",
+        "--name",
+        "kovagptacr",
+        "--resource-group",
+        "rg-kovagpt-dev",
+        "--query",
+        "{id:id,loginServer:loginServer,roleAssignmentMode:roleAssignmentMode}",
+        "--output",
+        "json",
+      ],
+      [
+        "acr",
+        "repository",
+        "show-tags",
+        "--name",
+        "kovagptacr",
+        "--repository",
+        "kovagpt-web",
+        "--query",
+        `[?@=='production-candidate-${sourceSha}-12345-1']`,
+        "--output",
+        "json",
+      ],
+      [
+        "account",
+        "get-access-token",
+        "--subscription",
+        "ab732127-11c3-46a7-a1cb-6ee8d86594f4",
+        "--resource",
+        "https://management.azure.com/",
+        "--query",
+        "accessToken",
+        "--output",
+        "tsv",
+        "--only-show-errors",
+      ],
+    ],
+  );
+  assert.ok(calls.every(([program]) => program === "git" || program === "az"));
+  assert.equal(existsSync(output), false);
+  assert.doesNotMatch(
+    JSON.stringify(report),
+    /fixtureToken|sb_publishable_|pk_live_|SERVER_REFERENCE|tokenLength|tokenHash/u,
+  );
+});
+
+test("build and read-only diagnostic authority cannot be interchanged", () => {
+  const noCommands = () => assert.fail("No external command is authorized");
+  for (const env of [
+    diagnosticEnvironment({ KOVA_BUILD_CONFIRMATION: "BUILD_ONLY" }),
+    diagnosticEnvironment({ GITHUB_EVENT_NAME: "pull_request" }),
+    diagnosticEnvironment({ GITHUB_REF: "refs/heads/diagnostic" }),
+    diagnosticEnvironment({ KOVA_APPROVED_SOURCE_SHA: "d".repeat(40) }),
+    diagnosticEnvironment({ GITHUB_REPOSITORY: "other/KovaGPT" }),
+  ])
+    assert.throws(
+      () => diagnoseProductionCandidateAccess(env, noCommands),
+      /production_candidate_/u,
+    );
+  assert.throws(
+    () => buildProductionCandidate(diagnosticEnvironment(), noCommands),
+    /build_mode_required/u,
+  );
+  assert.throws(
+    () => diagnoseProductionCandidateAccess(environment(), noCommands),
+    /diagnostic_mode_required/u,
+  );
+  assert.throws(
+    () =>
+      buildProductionCandidate(environment({ KOVA_BUILD_CONFIRMATION: "READ_ONLY" }), noCommands),
+    /manual_main_approval_required/u,
+  );
+  assert.throws(
+    () =>
+      diagnoseProductionCandidateAccess(
+        diagnosticEnvironment({ KOVA_PRODUCTION_OPERATION: "unknown" }),
+        noCommands,
+      ),
+    /operation_invalid/u,
+  );
+});
+
+for (const [argsPrefix, stage] of [
+  [["acr", "show"], "registry_metadata_read"],
+  [["acr", "repository", "show-tags"], "repository_tags_read"],
+  [["account", "get-access-token"], "arm_token_read"],
+]) {
+  test(`access failures identify ${stage} without exposing provider output or secrets`, (t) => {
+    for (const diagnose of [false, true]) {
+      const { run: successful, calls, output } = harness(t);
+      const secret = "PRIVATE_PROVIDER_SECRET_MUST_NEVER_APPEAR";
+      const run = (program, args, options) => {
+        if (program === "az" && argsPrefix.every((arg, i) => args[i] === arg)) {
+          throw new Error(`${secret}: ${args.join(" ")}`);
+        }
+        return successful(program, args, options);
+      };
+      run.remainingMs = successful.remainingMs;
+      assert.throws(
+        () =>
+          diagnose
+            ? diagnoseProductionCandidateAccess(diagnosticEnvironment(), run)
+            : buildProductionCandidate(
+                environment({ KOVA_PRODUCTION_CANDIDATE_OUTPUT_DIR: output }),
+                run,
+              ),
+        (error) => {
+          assert.equal(error.message, `production_candidate_access_failed:${stage}`);
+          assert.doesNotMatch(
+            error.stack,
+            /PRIVATE_PROVIDER_SECRET|fixtureToken|accessToken|--query/u,
+          );
+          return true;
+        },
+      );
+      assert.ok(!calls.some(([program]) => program === "node" || program === "docker"));
+      assert.equal(existsSync(`${output}/candidate.json`), false);
+    }
+  });
+}
+
+test("diagnostic workflow cannot fall through to a build, artifact, or handoff", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/build-azure-production-candidate.yml", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    workflow,
+    /operation:\n[\s\S]*?default: build\n[\s\S]*?- build\n[\s\S]*?- diagnose-access/u,
+  );
+  const diagnostic = workflow.slice(
+    workflow.indexOf("      - name: Diagnose the three"),
+    workflow.indexOf("      - name: Build exact"),
+  );
+  assert.match(diagnostic, /if: inputs\.operation == 'diagnose-access'/u);
+  assert.match(diagnostic, /--diagnose-access/u);
+  assert.doesNotMatch(diagnostic, /--execute|upload-artifact|acr-pinned|docker|PLAN/u);
+  for (const name of [
+    "Build exact Git commit",
+    "Preserve verified key-free",
+    "Record the build-only",
+  ]) {
+    const step = workflow
+      .slice(workflow.indexOf(`      - name: ${name}`))
+      .split("      - name: ")
+      .slice(0, 2)
+      .join("      - name: ");
+    assert.match(step, /if: (?:always\(\) && )?inputs\.operation == 'build'/u);
+  }
+});
+
+test("default PLAN selection in read-only diagnostics never reads browser parameters or keys", (t) => {
+  const { run, output } = harness(t);
+  const env = diagnosticEnvironment({ KOVA_PRODUCTION_BROWSER_INPUT_MODE: "plan" });
+  for (const name of [
+    "KOVA_PRODUCTION_BICEP_PARAMETERS_JSON",
+    "KOVA_PRODUCTION_SUPABASE_URL",
+    "KOVA_PRODUCTION_SUPABASE_PUBLISHABLE_KEY",
+    "KOVA_PRODUCTION_STRIPE_PUBLISHABLE_KEY",
+    "VITE_KOVA_AUTH_MODE",
+    "VITE_KOVA_GOOGLE_AUTH_ENABLED",
+    "VITE_KOVA_AUTH_ORIGIN",
+  ])
+    Object.defineProperty(env, name, {
+      get() {
+        assert.fail("Diagnostics must not read browser inputs or the PLAN secret");
+      },
+    });
+  assert.equal(diagnoseProductionCandidateAccess(env, run).buildSubmitted, false);
+  assert.equal(existsSync(output), false);
+});
+
+test("the diagnostic CLI suppresses real failed child stdout and stderr", (t) => {
+  const directory = mkdtempSync(resolve(tmpdir(), "kova-access-cli-test-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const bin = `${directory}/bin`;
+  mkdirSync(bin);
+  writeFileSync(
+    `${bin}/git`,
+    `#!${process.execPath}\nconst args=process.argv.slice(2);if(args[0]==="status")process.exit(0);if(args[0]==="ls-remote")console.log("${sourceSha}\\trefs/heads/main");else console.log(({HEAD:"${sourceSha}","HEAD^{tree}":"${sourceTree}","--show-toplevel":${JSON.stringify(directory)}})[args[1]]);\n`,
+    { mode: 0o700 },
+  );
+  writeFileSync(
+    `${bin}/az`,
+    `#!${process.execPath}\nconst args=process.argv.slice(2);if(args[1]==="show"){console.log(${JSON.stringify(JSON.stringify({ id: ACR_RESOURCE_ID, loginServer, roleAssignmentMode: "LegacyRegistryPermissions" }))});}else{console.log("PRIVATE_CHILD_STDOUT_SENTINEL");console.error("PRIVATE_CHILD_STDERR_SENTINEL");process.exitCode=1;}\n`,
+    { mode: 0o700 },
+  );
+  const result = spawnSync(
+    process.execPath,
+    [resolve("scripts/azure/build-production-candidate.mjs"), "--diagnose-access"],
+    { env: { ...diagnosticEnvironment(), PATH: bin }, encoding: "utf8", timeout: 5000 },
+  );
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
+  assert.equal(result.stderr, "production_candidate_access_failed:repository_tags_read\n");
+  assert.doesNotMatch(
+    result.stdout + result.stderr,
+    /PRIVATE_CHILD_|sb_publishable_|SERVER_REFERENCE/u,
+  );
 });
