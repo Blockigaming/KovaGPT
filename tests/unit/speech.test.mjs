@@ -7,11 +7,30 @@ import {
   SPEECH_LIMITS,
 } from "../../src/lib/speech.server.mjs";
 import { createSpeechPlayback } from "../../src/lib/speech-playback.mjs";
+import {
+  issueVoiceModelReceipt,
+  voiceModelPolicy,
+} from "../../src/lib/voice/openai-model-eligibility.server.mjs";
 
 const owner = "11111111-1111-4111-8111-111111111111";
 const text = "A completed Kova response.";
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 const input = { ownerId: owner, chatId: "chat-1", messageId: "msg-1", contentSha256: digest(text) };
+const policy = voiceModelPolicy(
+  (key) =>
+    ({
+      KOVA_VOICE_OPENAI_MODELS_JSON: '["fixture-openai-model"]',
+      KOVA_VOICE_MODEL_PROOF_SECRET: "fixture-only-signing-key-with-enough-bytes",
+    })[key],
+);
+const modelReceipt = issueVoiceModelReceipt(policy, {
+  ownerId: owner,
+  chatId: input.chatId,
+  messageId: input.messageId,
+  content: text,
+  provider: "openai",
+  modelId: "fixture-openai-model",
+});
 const request = (data = input, options = {}) =>
   new Request("https://kova.test/api/speech", {
     method: "POST",
@@ -25,7 +44,12 @@ function fixture(overrides = {}) {
     owner_id: owner,
     id: "chat-1",
     deleted_at: null,
-    payload: { id: "chat-1", messages: [{ id: "msg-1", role: "assistant", content: text }] },
+    payload: {
+      id: "chat-1",
+      messages: [
+        { id: "msg-1", role: "assistant", content: text, voiceModelReceipt: modelReceipt },
+      ],
+    },
   };
   const chain = {
     select() {
@@ -64,6 +88,7 @@ function fixture(overrides = {}) {
       calls.principal++;
     },
     config: () => ({ enabled: true, apiKey: "mock-key-never-live", voiceId: "mockVoice" }),
+    modelPolicy: () => policy,
     fetchImpl: async (...args) => {
       calls.provider.push(args);
       return new Response(new Uint8Array([73, 68, 51]), {
@@ -100,6 +125,42 @@ test("owned stored assistant text streams once with server-only key and fail-clo
   assert.equal(init.redirect, "error");
   assert.equal(response.headers.get("Cache-Control"), "private, no-store");
   assert.doesNotMatch(JSON.stringify([...response.headers]), /mock-key/);
+});
+
+test("saved speech rejects unproven, edited or revoked-model replies before quota and provider", async () => {
+  for (const mutate of [
+    (f) => {
+      f.row.payload.messages[0].voiceModelReceipt = undefined;
+    },
+    (f) => {
+      f.row.payload.messages[0].voiceModelReceipt = `${modelReceipt}a`;
+    },
+    (f) => {
+      f.row.payload.messages[0].content = `${text} edited`;
+    },
+  ]) {
+    const f = fixture();
+    mutate(f);
+    const response = await f.handler(request());
+    assert.ok([403, 409].includes(response.status));
+    assert.equal(f.calls.limits.length, 0);
+    assert.equal(f.calls.provider.length, 0);
+  }
+  const revoked = fixture({
+    modelPolicy: () =>
+      voiceModelPolicy(
+        (key) =>
+          ({
+            KOVA_VOICE_OPENAI_MODELS_JSON: '["different-model"]',
+            KOVA_VOICE_MODEL_PROOF_SECRET: "fixture-only-signing-key-with-enough-bytes",
+          })[key],
+      ),
+  });
+  const response = await revoked.handler(request());
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), { error: "speech_model_not_eligible" });
+  assert.equal(revoked.calls.limits.length, 0);
+  assert.equal(revoked.calls.provider.length, 0);
 });
 
 const catalog = [

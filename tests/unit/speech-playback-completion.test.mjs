@@ -119,6 +119,42 @@ test("playback errors and later ended events cannot resume a conversation", asyn
   assert.deepEqual(f.states.at(-1), ["error", "speech_playback_failed"]);
 });
 
+test("403 only identifies a model or voice-plan denial when the exact server code is present", async () => {
+  for (const [response, expected] of [
+    [Response.json({ error: "speech_model_not_eligible" }, { status: 403 }), "speech_not_eligible"],
+    [
+      Response.json({ error: "speech_voice_plan_required" }, { status: 403 }),
+      "speech_voice_plan_required",
+    ],
+    [Response.json({ error: "email_verification_required" }, { status: 403 }), "speech_forbidden"],
+    [new Response("<html>Forbidden</html>", { status: 403 }), "speech_forbidden"],
+    [new Response(null, { status: 403 }), "speech_forbidden"],
+  ]) {
+    const f = fixture({ fetchImpl: async () => response });
+    await f.player.start(input());
+    assert.deepEqual(f.states.at(-1), ["error", expected]);
+    assert.deepEqual(f.completed, []);
+    assert.equal(f.sinks[0].disposed, 1);
+  }
+});
+
+test("Stop cancels an unfinished 403 body before an error verdict", async () => {
+  let cancelled = 0;
+  const body = new ReadableStream({
+    cancel() {
+      cancelled++;
+    },
+  });
+  const f = fixture({ fetchImpl: async () => new Response(body, { status: 403 }) });
+  const pending = f.player.start(input());
+  await new Promise(setImmediate);
+  f.player.stop();
+  await pending;
+  assert.equal(cancelled, 1);
+  assert.deepEqual(f.completed, []);
+  assert.deepEqual(f.states.at(-1), ["idle"]);
+});
+
 test("Stop during natural-end idle notification invalidates the completion callback", async () => {
   let armed = false;
   const f = fixture({

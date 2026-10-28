@@ -33,6 +33,50 @@ function eventOnce(target, event, signal) {
   });
 }
 
+async function speechFailureCode(response, run) {
+  if (response.status === 403) {
+    if (!response.body) return "speech_forbidden";
+    const reader = response.body.getReader();
+    run.reader = reader;
+    let size = 0;
+    const chunks = [];
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > 1024) {
+          void reader.cancel().catch(() => undefined);
+          return "speech_forbidden";
+        }
+        chunks.push(value);
+      }
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      const code = JSON.parse(new TextDecoder().decode(bytes))?.error;
+      if (code === "speech_model_not_eligible") return "speech_not_eligible";
+      if (code === "speech_voice_plan_required") return "speech_voice_plan_required";
+    } catch {
+      // Unknown upstream errors must never be described as a model verdict.
+    }
+    return "speech_forbidden";
+  }
+  void response.body?.cancel().catch(() => undefined);
+  const codes = {
+    401: "speech_unauthorized",
+    404: "speech_message_unavailable",
+    409: "speech_message_not_synced",
+    413: "speech_text_too_long",
+    429: "speech_limit_reached",
+    503: "speech_not_available",
+  };
+  return codes[response.status] ?? "speech_unavailable";
+}
+
 // MP3 MediaSource plays while bytes arrive. Browsers without it use a bounded
 // Blob fallback; Stop cancels either path. No audio or response text is persisted.
 export function createBrowserSpeechSink({ signal, onPlaying, onEnded, onError }) {
@@ -170,18 +214,8 @@ export function createSpeechPlayback({
         return;
       }
       if (!response.ok) {
-        // Never reflect an upstream body or arbitrary error string into the UI.
-        const codes = {
-          401: "speech_unauthorized",
-          403: "speech_unauthorized",
-          404: "speech_message_unavailable",
-          409: "speech_message_not_synced",
-          413: "speech_text_too_long",
-          429: "speech_limit_reached",
-          503: "speech_not_available",
-        };
-        void response.body?.cancel().catch(() => undefined);
-        throw new Error(codes[response.status] ?? "speech_unavailable");
+        // Only exact server codes identify a model or plan denial.
+        throw new Error(await speechFailureCode(response, run));
       }
       if (!response.body || response.headers.get("content-type")?.split(";", 1)[0] !== "audio/mpeg")
         throw new Error("speech_unavailable");
@@ -203,6 +237,9 @@ export function createSpeechPlayback({
     } catch (error) {
       const allowed = new Set([
         "speech_unauthorized",
+        "speech_not_eligible",
+        "speech_voice_plan_required",
+        "speech_forbidden",
         "speech_message_unavailable",
         "speech_message_not_synced",
         "speech_text_too_long",

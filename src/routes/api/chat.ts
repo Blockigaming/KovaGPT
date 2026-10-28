@@ -92,6 +92,11 @@ import {
 import { kovaChatOptionsForTier, parseKovaChatSelection } from "@/lib/kova-chat-policy.mjs";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import {
+  eligibleVoiceModel,
+  voiceModelPolicy,
+} from "@/lib/voice/openai-model-eligibility.server.mjs";
+import { relayEligibleVoiceChat } from "@/lib/voice/chat-model-receipt.server.mjs";
+import {
   RequestCaptureError,
   readRequestCapturePlan,
   authorizeRequestCapture,
@@ -2195,7 +2200,27 @@ export const Route = createFileRoute("/api/chat")({
                 }
               ).__pending ?? [];
             const enc = new TextEncoder();
-            const upstreamReader = boundedUpstreamBody.getReader();
+            let upstreamReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+            const voiceRelayCancellation = new AbortController();
+            const voicePolicy = voiceModelPolicy(runtimeEnv);
+            const voiceMessageId = request.headers.get("x-kova-assistant-message-id");
+            const voiceIdentity =
+              auth &&
+              !temporary &&
+              chatId &&
+              voiceMessageId &&
+              eligibleVoiceModel(voicePolicy, {
+                provider: getAiProviderConfig().provider,
+                modelId: model,
+              })
+                ? {
+                    ownerId: auth.userId,
+                    chatId,
+                    messageId: voiceMessageId,
+                    provider: "openai",
+                    modelId: model,
+                  }
+                : null;
             let usageBuffer = "";
             let usageFinalized = false;
             const finalizeUsage = async (
@@ -2280,11 +2305,29 @@ export const Route = createFileRoute("/api/chat")({
                   );
                 }
                 try {
-                  while (true) {
-                    const { done, value } = await upstreamReader.read();
-                    if (done) break;
-                    usageBuffer += new TextDecoder().decode(value, { stream: true });
-                    controller.enqueue(value);
+                  if (voiceIdentity) {
+                    const receipt = await relayEligibleVoiceChat(boundedUpstreamBody, {
+                      signal: AbortSignal.any([request.signal, voiceRelayCancellation.signal]),
+                      policy: voicePolicy,
+                      identity: voiceIdentity,
+                      emit(frame) {
+                        usageBuffer += frame;
+                        controller.enqueue(enc.encode(frame));
+                      },
+                    });
+                    if (receipt && !request.signal.aborted)
+                      controller.enqueue(
+                        enc.encode(sseEvent({ kind: "voice_model_receipt", receipt })),
+                      );
+                    controller.enqueue(enc.encode(sseDone()));
+                  } else {
+                    upstreamReader = boundedUpstreamBody.getReader();
+                    while (true) {
+                      const { done, value } = await upstreamReader.read();
+                      if (done) break;
+                      usageBuffer += new TextDecoder().decode(value, { stream: true });
+                      controller.enqueue(value);
+                    }
                   }
                   await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
                 } catch (error) {
@@ -2339,7 +2382,8 @@ export const Route = createFileRoute("/api/chat")({
                 }
               },
               async cancel(reason) {
-                await upstreamReader.cancel(reason).catch(() => undefined);
+                voiceRelayCancellation.abort(reason);
+                await upstreamReader?.cancel(reason).catch(() => undefined);
                 await finalizeUsage("client_disconnected", "client_disconnected");
               },
             });

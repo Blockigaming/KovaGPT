@@ -96,6 +96,29 @@ test("legacy migration requires an explicit choice and Temporary chats have no o
 test("legacy Pro history is accepted and normalized to Max", () => {
   assert.equal(normalizeChatHistory({ ...chat(), mode: "pro" }, OWNER).mode, "max");
 });
+test("history carries only bounded assistant voice receipts; speech must still verify their signature", () => {
+  const receipt = `${"a".repeat(64)}.${"b".repeat(43)}`;
+  const response = { id: "reply", role: "assistant", content: "hello", voiceModelReceipt: receipt };
+  const value = { ...chat(), messages: [chat().messages[0], response] };
+  assert.equal(normalizeChatHistory(value, OWNER).messages[1].voiceModelReceipt, receipt);
+  for (const invalid of ["", "not-a-receipt", `${"a".repeat(1801)}.${"b".repeat(43)}`])
+    assert.throws(
+      () =>
+        normalizeChatHistory(
+          { ...value, messages: [value.messages[0], { ...response, voiceModelReceipt: invalid }] },
+          OWNER,
+        ),
+      /invalid/,
+    );
+  assert.throws(
+    () =>
+      normalizeChatHistory(
+        { ...chat(), messages: [{ ...chat().messages[0], voiceModelReceipt: receipt }] },
+        OWNER,
+      ),
+    /invalid/,
+  );
+});
 test("durable history preserves only the exact workflow skill selection tuple", () => {
   const skill = {
     installationId: "423e4567-e89b-42d3-a456-426614174000",

@@ -77,6 +77,7 @@ function fixture({
   disabled = false,
   acceptance = null,
   prompt = "Say hello.",
+  now = Date.now,
 } = {}) {
   const ownerId = acceptance?.plan.ownerId ?? "owner-a";
   const chatId = acceptance?.plan.chatId ?? "123e4567-e89b-42d3-a456-426614174000";
@@ -177,6 +178,14 @@ function fixture({
     Uint8Array,
     Error,
     DOMException,
+    Date: class extends Date {
+      constructor(...args) {
+        super(...(args.length ? args : [now()]));
+      }
+      static now() {
+        return now();
+      }
+    },
     crypto,
     setTimeout,
     clearTimeout,
@@ -599,18 +608,20 @@ test("partial provider failure retains visible output, exits loading and require
 });
 
 test("actual application guard clamps final output and permits only one quoted OpenAI request", async () => {
-  const capture = fixture({ prompt: ACCEPTANCE_PROMPT }),
+  // The guard and provider adapter must share a fixed clock away from the bucket edge.
+  const now = () => Date.UTC(2026, 9, 20, 0, 10);
+  const capture = fixture({ prompt: ACCEPTANCE_PROMPT, now }),
     captureUi = composer(capture);
   const capturing = captureUi.send();
   await waitForPartialOutput(captureUi);
   capture.finish();
   await capturing;
   const a = createAcceptanceFixture({
-    now: liveAcceptanceFixtureTime(),
+    now: now(),
     providerBody: capture.providerBody,
     maximumInputUtf8Bytes: 32768,
   });
-  const f = fixture({ acceptance: a, prompt: ACCEPTANCE_PROMPT }),
+  const f = fixture({ acceptance: a, prompt: ACCEPTANCE_PROMPT, now }),
     ui = composer(f);
   const sending = ui.send();
   await waitForPartialOutput(ui);

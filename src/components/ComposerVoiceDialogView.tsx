@@ -75,7 +75,12 @@ export function ComposerVoiceDialogView({
   const ready = availability === "ready";
   const processing = ready && phase !== "idle" && phase !== "recording";
   const hasError = Boolean(error);
-  const contentFirst = hasTranscript || Boolean(audioPlayer) || Boolean(voiceReply) || hasError;
+  const contentFirst =
+    hasTranscript ||
+    Boolean(audioPlayer) ||
+    Boolean(voiceReply) ||
+    phase === "speaking" ||
+    hasError;
   const compact = !ready || (hasError && !hasTranscript && !audioPlayer && !voiceReply);
   const title = hasError
     ? "Voice needs attention"

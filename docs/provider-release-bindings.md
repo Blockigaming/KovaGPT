@@ -34,6 +34,8 @@ one missing binding; Monitoring must preserve unrelated live configuration.
 | `KOVA_VOICE_AUDIO_ENABLED`       | `voiceAudioEnabled`                 | `true` for Dictate and recorded voice-turn transcription; default remains off                                                            |
 | `KOVA_VOICE_DAILY_REQUEST_LIMIT` | `voiceDailyRequestLimit`            | Owner-selected positive safe integer; zero leaves `/api/voice` unavailable                                                               |
 | `KOVA_SPEECH_ENABLED`            | `speechEnabled`                     | `true` for saved-response Read aloud and spoken conversation replies; independent of the other voice gates                               |
+| `KOVA_VOICE_OPENAI_MODELS_JSON`  | `voiceOpenAiModelIds`               | Explicit exact OpenAI text model IDs eligible for ElevenLabs output; empty disables output                                               |
+| `KOVA_VOICE_MODEL_PROOF_SECRET`  | `voiceModelProofSecretUri`          | Versioned Key Vault URI for the independent model receipt signing key; missing leaves output disabled                                    |
 | `KOVA_GENERATION_DISABLED`       | `generationEnabled` (inverted)      | `false` only at Monitoring's authorized runtime activation; `true` blocks generation and speech                                          |
 
 `generationEnabled` also emits `AI_GENERATION_ENABLED`; set it consistently to

@@ -50,6 +50,9 @@ test("public catalog exposes only safe metadata and explicit visible locked opti
     { id: "premium", label: "Fixture Premium", available: false },
   ]);
   const serialized = JSON.stringify(publicVoiceConfiguration(voiceConfiguration(env(), "free")));
+  const capabilities = publicVoiceConfiguration(voiceConfiguration(env(), "free"));
+  assert.equal(capabilities.tts, true);
+  assert.equal(capabilities.sts, true);
   assert.ok(!serialized.includes("providerFixture"));
   assert.ok(!serialized.includes("fixture-only"));
   assert.ok(!serialized.includes("allowedPlans"));
@@ -161,7 +164,9 @@ test("handler uses verified tier, denies paidvoice before quota and ignores clie
   assert.equal(free.charged, 0);
   assert.deepEqual(free.executed, []);
   const plus = fixture("plus");
-  assert.equal((await plus.run(request("premium", "free"))).status, 200);
+  const response = await plus.run(request("premium", "free"));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true });
   assert.equal(plus.charged, 1);
   assert.deepEqual(plus.executed, ["providerFixtureB"]);
 });

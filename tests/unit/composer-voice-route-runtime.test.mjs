@@ -106,11 +106,23 @@ test("voice uses actual chat submission and returns only its exact successful as
   await settle();
   assert.equal(f.requests.length, 1);
   assert.equal(f.requests[0].url, "/api/chat");
-  await f.respond();
+  // This UI fixture does not sign receipts: it simulates the authenticated
+  // chat route emitting a receipt alongside the streamed assistant answer.
+  const receipt = `${"a".repeat(16)}.${"b".repeat(43)}`;
+  f.requests[0].resolve({ ok: true, body: { cancel: async () => {} } });
+  await settle();
+  const stream = f.streams.at(-1);
+  stream.args.onEvent({ choices: [{ delta: { content: "Synthetic answer" } }] });
+  stream.args.onEvent({
+    choices: [{ delta: { kind: "voice_model_receipt", receipt } }],
+  });
+  stream.resolve();
+  await settle();
   const turn = await pending;
   assert.equal(turn.ownerId, "owner-a");
   assert.equal(turn.chatId, "chat-a");
   assert.equal(turn.content, "Synthetic answer");
+  assert.equal(turn.voiceModelReceipt, receipt);
   const assistant = f.context.conversations[0].messages.find(
     (message) => message.id === turn.messageId,
   );
