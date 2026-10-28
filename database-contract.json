@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 193,
+  "migrationCount": 194,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -421,6 +421,7 @@
     "current_effective_plan_tier",
     "current_organization_role",
     "current_organization_role",
+    "current_subscription_summary",
     "current_subscription_summary",
     "current_user_plan_tier",
     "custom_kova_owner_current",
@@ -862,6 +863,7 @@
     "user_plan_tier",
     "user_plan_tier",
     "user_plan_tier",
+    "user_subscription_summary",
     "user_subscription_summary",
     "utf16_code_unit_length",
     "validate_agent_dependency_edge",
@@ -2060,6 +2062,7 @@
     "execute on function public.create_trusted_contact_invitation(uuid,text,text,uuid,boolean,text),\n  public.command_trusted_contact(uuid,uuid,bigint,text,uuid,text,boolean),public.unblock_trusted_contact(uuid,uuid,bigint,uuid) to service_role",
     "execute on function public.current_effective_plan_tier()\n  to authenticated, service_role",
     "execute on function public.current_subscription_summary()\n  to authenticated, service_role",
+    "execute on function public.current_subscription_summary()\n  to authenticated, service_role",
     "execute on function public.current_user_plan_tier()\n  to authenticated, service_role",
     "execute on function public.decide_agent_approval(uuid, text, jsonb) to authenticated",
     "execute on function public.decide_agent_approval(uuid, text, jsonb) to authenticated, service_role",
@@ -2262,6 +2265,7 @@
     "execute on function public.upsert_work_saved_record(uuid,uuid,uuid,text,text,jsonb,bigint) to service_role",
     "execute on function public.user_plan_tier(uuid)\n  to authenticated, service_role",
     "execute on function public.user_plan_tier(uuid) to authenticated, service_role",
+    "execute on function public.user_subscription_summary(uuid)\n  to service_role",
     "execute on function public.user_subscription_summary(uuid)\n  to service_role",
     "execute on function public.validate_chat_message_version_branch() to service_role",
     "execute on function public.validate_scheduled_task_connection_grant(uuid,uuid) to service_role",
@@ -3016,6 +3020,7 @@
     "execute on function public.complete_stripe_event(\n  text,\n  text,\n  uuid,\n  bigint,\n  boolean,\n  text,\n  text,\n  text,\n  text,\n  timestamptz,\n  timestamptz,\n  boolean\n) from public, anon, authenticated",
     "execute on function public.current_effective_plan_tier()\n  from public, anon",
     "execute on function public.current_subscription_summary()\n  from public, anon",
+    "execute on function public.current_subscription_summary()\n  from public, anon",
     "execute on function public.current_user_plan_tier()\n  from public, anon",
     "execute on function public.effective_user_plan_tier(uuid)\n  from public, anon, authenticated",
     "execute on function public.fail_scheduled_task_execution(uuid,text,text,text,boolean) from service_role",
@@ -3023,6 +3028,7 @@
     "execute on function public.kovagpt_schema_health() from public,anon,authenticated",
     "execute on function public.reserve_developer_api_credit(uuid,text,uuid,numeric) from service_role",
     "execute on function public.user_plan_tier(uuid)\n  from public, anon",
+    "execute on function public.user_subscription_summary(uuid)\n  from public, anon, authenticated",
     "execute on function public.user_subscription_summary(uuid)\n  from public, anon, authenticated",
     "execute on functions from public, anon, authenticated",
     "execute on functions from public, anon, authenticated",
@@ -3521,5 +3527,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "b66f8697a22e9ee89357927948cab7fda1c43a0ebdf4d994123e0a4e229c2f79"
+  "sha256": "a60bebb81443fe8681eadbef540686880769197ec288d3d5dd98c04c77225562"
 }
