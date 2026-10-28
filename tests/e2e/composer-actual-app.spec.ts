@@ -244,9 +244,8 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
 
   await page.goto("/projects/33333333-3333-4333-8333-333333333333");
   await waitForKovaHydration(page);
-  await page
-    .getByRole("combobox", { name: "More project tools", exact: true })
-    .selectOption("timers");
+  await page.getByRole("button", { name: "More project tools", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Timers", exact: true }).click();
   const timer = page.getByRole("button", { name: "Timers", exact: true });
   await timer.click();
   const timerPanel = page.getByRole("region", { name: "Timer controls", exact: true });

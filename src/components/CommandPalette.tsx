@@ -464,7 +464,8 @@ export function CommandPalette({
     <div
       ref={dialogRef}
       data-kova-shell-overlay=""
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))]"
+      data-slot="command-palette-overlay"
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-[var(--surface-scrim)] px-[max(1rem,var(--safe-left),var(--safe-right))] pb-[max(1rem,var(--safe-bottom))] pt-[max(12vh,var(--safe-top))] [font-family:var(--font-ui,var(--font-sans))]"
       role="dialog"
       aria-modal="true"
       aria-label="Search workspace, chats, and actions"
@@ -519,8 +520,15 @@ export function CommandPalette({
         }
       }}
     >
-      <div className="min-w-0 w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100">
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+      <div
+        data-slot="command-palette-content"
+        className="flex min-w-0 w-full max-w-[720px] flex-col overflow-hidden rounded-[var(--kova-radius-panel)] border border-border bg-popover text-popover-foreground shadow-[var(--shadow-floating)] animate-in fade-in duration-100"
+        style={{
+          maxHeight:
+            "min(80dvh, calc(100dvh - max(12vh, var(--safe-top)) - max(1rem, var(--safe-bottom))))",
+        }}
+      >
+        <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3 sm:px-6">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
             ref={searchInputRef}
@@ -532,7 +540,7 @@ export function CommandPalette({
             aria-controls="command-palette-results"
             aria-activedescendant={`command-option-${activeIndex}`}
             aria-label="Search workspace, commands, and chats"
-            className="h-10 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+            className="h-11 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
           <button
             type="button"
@@ -540,7 +548,7 @@ export function CommandPalette({
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Close command palette"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -548,7 +556,7 @@ export function CommandPalette({
           id="command-palette-results"
           role="listbox"
           aria-label="Command palette results"
-          className="max-h-[60vh] overflow-y-auto p-2"
+          className="min-h-0 flex-1 max-h-[60dvh] overflow-y-auto overscroll-contain p-2"
         >
           <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Actions</div>
           <button
@@ -560,7 +568,7 @@ export function CommandPalette({
             id="command-option-0"
             role="option"
             aria-selected={activeIndex === 0}
-            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
           >
             <SquarePen className="h-4 w-4 text-muted-foreground" />
             <span>Start a new chat</span>
@@ -578,7 +586,7 @@ export function CommandPalette({
             id="command-option-1"
             role="option"
             aria-selected={activeIndex === 1}
-            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
           >
             <Settings className="h-4 w-4 text-muted-foreground" />
             <span>Open settings</span>
@@ -586,16 +594,18 @@ export function CommandPalette({
           {visibleActions.map((action, actionIndex) => {
             const Icon = action.icon;
             const index = actionIndex + 2;
-            const className = `flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
+            const className = `flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
             const content = (
               <>
                 <Icon className="h-4 w-4 text-muted-foreground" />
-                <span>{action.label}</span>
+                <span className="min-w-0 flex-1 break-words">{action.label}</span>
                 {pinnedCommands.includes(action.href ?? action.action ?? "") ? (
                   <Star className="ml-auto h-3.5 w-3.5 fill-current" aria-label="Pinned command" />
                 ) : null}
                 {action.disabledReason ? (
-                  <span className="text-[11px]">{action.disabledReason}</span>
+                  <span className="max-w-[45%] text-right text-[11px]">
+                    {action.disabledReason}
+                  </span>
                 ) : null}
               </>
             );
@@ -676,7 +686,7 @@ export function CommandPalette({
           {workspaceStatus === "error" ? (
             <div
               role="alert"
-              className="flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-destructive"
+              className="flex min-h-11 items-center justify-between gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2 text-sm text-destructive"
             >
               <span>Workspace results are unavailable.</span>
               {retryWorkspaceSearch ? (
@@ -715,7 +725,7 @@ export function CommandPalette({
                   });
                   closePalette();
                 }}
-                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""}`}
+                className={`flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""}`}
               >
                 <Boxes className="h-4 w-4 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">{item.title}</span>
@@ -748,7 +758,7 @@ export function CommandPalette({
                 id={`command-option-${chatStartIndex + chatIndex}`}
                 role="option"
                 aria-selected={activeIndex === chatStartIndex + chatIndex}
-                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === chatStartIndex + chatIndex ? "bg-accent" : ""}`}
+                className={`flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === chatStartIndex + chatIndex ? "bg-accent" : ""}`}
               >
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
                 <span className="min-w-0 flex-1 truncate">{chat.title}</span>

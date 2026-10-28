@@ -1,6 +1,13 @@
 import { useId, useRef, useState } from "react";
 import { validateGenerativeWidget, type GenerativeWidget } from "@/lib/generative-ui.mjs";
 import { resultRevisionDiff } from "@/lib/result-revision-diff.mjs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import "./generative-canvas.css";
 
 export type GenerativeCanvasProps = {
@@ -193,11 +200,9 @@ export function GenerativeCanvas({
                       </label>
                       <label>
                         Status
-                        <select
+                        <Select
                           value={item.status}
-                          aria-label={`Status for milestone ${index + 1}`}
-                          onChange={(event) => {
-                            const value = event.target.value;
+                          onValueChange={(value) => {
                             if (value !== "planned" && value !== "doing" && value !== "done")
                               return;
                             update({
@@ -208,10 +213,15 @@ export function GenerativeCanvas({
                             });
                           }}
                         >
-                          <option value="planned">Planned</option>
-                          <option value="doing">In progress</option>
-                          <option value="done">Done</option>
-                        </select>
+                          <SelectTrigger aria-label={`Status for milestone ${index + 1}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="planned">Planned</SelectItem>
+                            <SelectItem value="doing">In progress</SelectItem>
+                            <SelectItem value="done">Done</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </label>
                     </div>
                     <button
@@ -303,11 +313,9 @@ export function GenerativeCanvas({
                           }
                         />
                         <label htmlFor={`${fieldId}-${card.id}-column`}>Move to</label>
-                        <select
-                          id={`${fieldId}-${card.id}-column`}
+                        <Select
                           value={card.columnId}
-                          onChange={(event) => {
-                            const columnId = event.target.value;
+                          onValueChange={(columnId) => {
                             if (draft.columns.some((entry) => entry.id === columnId))
                               update({
                                 ...draft,
@@ -317,12 +325,17 @@ export function GenerativeCanvas({
                               });
                           }}
                         >
-                          {draft.columns.map((entry) => (
-                            <option key={entry.id} value={entry.id}>
-                              {entry.title}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger id={`${fieldId}-${card.id}-column`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {draft.columns.map((entry) => (
+                              <SelectItem key={entry.id} value={entry.id}>
+                                {entry.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <div className="kova-generative-card-actions">
                           {([-1, 1] as const).map((direction) => (
                             <button

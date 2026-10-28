@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { Check, FileText, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Settings } from "@/components/SettingsDialog";
 import { appearanceValues, resetAppearance } from "@/lib/appearance-preferences.mjs";
 import { applyThemeMode } from "@/lib/theme";
@@ -69,57 +76,73 @@ export function AppearanceSettings({
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="grid gap-2 text-sm">
           Density
-          <select
-            className="kova-native-select"
+          <Select
             value={values.density}
-            onChange={(event) => change({ density: event.target.value as Settings["density"] })}
+            onValueChange={(value) => change({ density: value as Settings["density"] })}
           >
-            <option value="comfortable">Comfortable (default)</option>
-            <option value="compact">Compact</option>
-          </select>
+            <SelectTrigger aria-label="Density">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="comfortable">Comfortable (default)</SelectItem>
+              <SelectItem value="compact">Compact</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
         <label className="grid gap-2 text-sm">
           Reading size
-          <select
-            className="kova-native-select"
-            value={values.readingSize}
-            onChange={(event) =>
-              change({ readingSize: Number(event.target.value) as Settings["readingSize"] })
+          <Select
+            value={String(values.readingSize)}
+            onValueChange={(value) =>
+              change({ readingSize: Number(value) as Settings["readingSize"] })
             }
           >
-            {[16, 18, 20].map((size) => (
-              <option key={size} value={size}>
-                {size}px{size === 16 ? " (default)" : ""}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger aria-label="Reading size">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[16, 18, 20].map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}px{size === 16 ? " (default)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
         <label className="grid gap-2 text-sm">
           Reading width
-          <select
-            className="kova-native-select"
-            value={values.readingWidth}
-            onChange={(event) =>
-              change({ readingWidth: Number(event.target.value) as Settings["readingWidth"] })
+          <Select
+            value={String(values.readingWidth)}
+            onValueChange={(value) =>
+              change({ readingWidth: Number(value) as Settings["readingWidth"] })
             }
           >
-            {[680, 760, 900].map((width) => (
-              <option key={width} value={width}>
-                {width}px{width === 760 ? " (default)" : ""}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger aria-label="Reading width">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[680, 760, 900].map((width) => (
+                <SelectItem key={width} value={String(width)}>
+                  {width}px{width === 760 ? " (default)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
         <label className="grid gap-2 text-sm">
           Motion
-          <select
-            className="kova-native-select"
+          <Select
             value={values.motion}
-            onChange={(event) => change({ motion: event.target.value as Settings["motion"] })}
+            onValueChange={(value) => change({ motion: value as Settings["motion"] })}
           >
-            <option value="full">Full (default)</option>
-            <option value="reduced">Reduced</option>
-          </select>
+            <SelectTrigger aria-label="Motion">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="full">Full (default)</SelectItem>
+              <SelectItem value="reduced">Reduced</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
       </div>
       <p className="text-xs text-muted-foreground">

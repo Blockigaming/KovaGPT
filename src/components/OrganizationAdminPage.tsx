@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Building2, Download, RefreshCw } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -63,7 +70,7 @@ function OrganizationContent({ userId }: { userId: string }) {
     readEpoch = useRef(0);
   const readStatus = useRef<HTMLDivElement>(null),
     readRetry = useRef<HTMLButtonElement>(null),
-    organizationSelect = useRef<HTMLSelectElement>(null),
+    organizationSelect = useRef<HTMLButtonElement>(null),
     unavailablePanel = useRef<HTMLElement>(null),
     readFocus = useRef<{
       epoch: number;
@@ -351,25 +358,34 @@ function OrganizationContent({ userId }: { userId: string }) {
           <section className="flex flex-wrap items-end gap-3">
             <label className="min-w-0 flex-1 text-sm">
               Organization
-              <select
-                ref={organizationSelect}
-                aria-label="Choose organization"
+              <Select
                 value={selected ?? ""}
                 disabled={busy}
-                onChange={(event) => {
+                onValueChange={(value) => {
                   setWorkspace(null);
                   setRetry(null);
-                  void refresh(event.target.value || null, event.currentTarget);
+                  void refresh(
+                    value === "__choose_organization__" ? null : value || null,
+                    organizationSelect.current ?? undefined,
+                  );
                 }}
-                className="mt-1 h-11 w-full rounded-lg border bg-background px-3"
               >
-                <option value="">Choose an organization</option>
-                {index.organizations?.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} · {item.role}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  ref={organizationSelect}
+                  aria-label="Choose organization"
+                  className="mt-1 min-h-11 w-full"
+                >
+                  <SelectValue placeholder="Choose an organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__choose_organization__">Choose an organization</SelectItem>
+                  {index.organizations?.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name} · {item.role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
             <Button
               variant="outline"
@@ -507,22 +523,28 @@ function OrganizationContent({ userId }: { userId: string }) {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {owner && (
-                          <select
-                            aria-label={`Role for ${member.user_id}`}
+                          <Select
                             value={member.role}
                             disabled={busy}
-                            onChange={(event) =>
+                            onValueChange={(value) =>
                               void mutate("setRole", {
                                 userId: member.user_id,
-                                role: event.target.value,
+                                role: value,
                               })
                             }
-                            className="h-9 rounded-lg border bg-background px-2 text-sm"
                           >
-                            <option value="member">Member</option>
-                            <option value="admin">Admin</option>
-                            <option value="owner">Owner</option>
-                          </select>
+                            <SelectTrigger
+                              aria-label={`Role for ${member.user_id}`}
+                              className="min-h-11 w-auto"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="member">Member</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="owner">Owner</SelectItem>
+                            </SelectContent>
+                          </Select>
                         )}
                         {admin &&
                           member.user_id !== userId &&
@@ -574,20 +596,23 @@ function OrganizationContent({ userId }: { userId: string }) {
                       onChange={(event) => setEmail(event.target.value)}
                       className="min-w-40 flex-1"
                     />
-                    <select
-                      aria-label="Invitation role"
+                    <Select
                       value={inviteRole}
-                      onChange={(event) => setInviteRole(event.target.value as OrganizationRole)}
-                      className="h-10 rounded-lg border bg-background px-2"
+                      onValueChange={(value) => setInviteRole(value as OrganizationRole)}
                     >
-                      <option value="member">Member</option>
-                      {owner && (
-                        <>
-                          <option value="admin">Admin</option>
-                          <option value="owner">Owner</option>
-                        </>
-                      )}
-                    </select>
+                      <SelectTrigger aria-label="Invitation role" className="min-h-11 w-auto">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="member">Member</SelectItem>
+                        {owner && (
+                          <>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="owner">Owner</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
                     <Button disabled={busy}>Create invitation</Button>
                   </form>
                   <ul className="mt-3 divide-y">

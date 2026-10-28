@@ -33,26 +33,30 @@ export function DeveloperConsole() {
   const errors = validateCapabilityRegistry();
   return (
     <aside
-      className="fixed inset-y-3 right-3 z-[100] flex w-[min(94vw,34rem)] flex-col overflow-hidden rounded-2xl border bg-background/95 shadow-2xl backdrop-blur"
+      data-slot="developer-console"
+      className="fixed inset-y-3 right-3 z-[100] flex w-[min(94vw,34rem)] flex-col overflow-hidden rounded-[var(--kova-radius-panel)] border border-border bg-popover text-popover-foreground shadow-[var(--shadow-floating)] [font-family:var(--font-ui,var(--font-sans))]"
       role="dialog"
       aria-modal="true"
       aria-label="KovaGPT developer console"
     >
-      <header className="flex items-center gap-2 border-b p-3">
-        <Activity className="h-4 w-4" />
-        <h2 className="font-semibold">Platform Inspector</h2>
-        <span className="rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-700">
+      <header className="grid shrink-0 grid-cols-[20px_minmax(0,1fr)_44px] items-start gap-x-3 gap-y-2 border-b border-border p-4 sm:p-6">
+        <Activity className="mt-1 h-5 w-5" />
+        <h2 className="min-w-0 text-2xl font-normal leading-tight [font-family:var(--font-display,Georgia,serif)]">
+          Platform Inspector
+        </h2>
+        <span className="col-start-2 row-start-2 justify-self-start rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
           Development only
         </span>
         <button
-          className="ml-auto rounded-lg p-2 hover:bg-accent"
+          type="button"
+          className="col-start-3 row-start-1 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           onClick={() => setOpen(false)}
           aria-label="Close developer console"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </button>
       </header>
-      <div className="grid flex-1 gap-4 overflow-y-auto p-4 sm:grid-cols-2">
+      <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto overscroll-contain p-4 sm:grid-cols-2 sm:p-6">
         <section>
           <h3 className="flex items-center gap-2 font-medium">
             <Boxes className="h-4 w-4" />
@@ -63,7 +67,10 @@ export function DeveloperConsole() {
           </p>
           <ul className="mt-2 space-y-1 text-xs">
             {CAPABILITIES.map((item) => (
-              <li key={item.id} className="rounded-lg border p-2">
+              <li
+                key={item.id}
+                className="rounded-[var(--kova-radius-compact)] border border-border p-3"
+              >
                 <strong>{item.label}</strong>
                 <span className="block text-muted-foreground">
                   {item.route} · {item.requiredPlan} · {item.permission}
@@ -72,7 +79,7 @@ export function DeveloperConsole() {
             ))}
           </ul>
         </section>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-6">
           <section>
             <h3 className="flex items-center gap-2 font-medium">
               <Flag className="h-4 w-4" />
@@ -80,7 +87,10 @@ export function DeveloperConsole() {
             </h3>
             <ul className="mt-2 space-y-1 text-xs">
               {FEATURE_FLAGS.map((flag) => (
-                <li key={flag.id} className="flex justify-between rounded-lg border p-2">
+                <li
+                  key={flag.id}
+                  className="flex min-w-0 justify-between gap-3 break-words rounded-[var(--kova-radius-compact)] border border-border p-3"
+                >
                   <span>{flag.id}</span>
                   <span>{flag.killSwitch ? "killed" : flag.defaultEnabled ? "on" : "off"}</span>
                 </li>
@@ -103,7 +113,7 @@ export function DeveloperConsole() {
                 metrics.map((metric, index) => (
                   <li
                     key={`${metric.timestamp}-${index}`}
-                    className="flex justify-between rounded-lg border p-2"
+                    className="flex min-w-0 justify-between gap-3 break-words rounded-[var(--kova-radius-compact)] border border-border p-3"
                   >
                     <span>{metric.name}</span>
                     <span>{metric.durationMs.toFixed(1)} ms</span>
@@ -121,7 +131,10 @@ export function DeveloperConsole() {
                 .slice(-20)
                 .reverse()
                 .map((event) => (
-                  <li key={event.id} className="rounded-lg border p-2">
+                  <li
+                    key={event.id}
+                    className="rounded-[var(--kova-radius-compact)] border border-border p-3"
+                  >
                     <span>
                       {event.domain}.{event.name}
                     </span>

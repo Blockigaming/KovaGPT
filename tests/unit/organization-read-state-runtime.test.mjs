@@ -73,6 +73,13 @@ function fixture() {
       "@/components/WorkspacePageHeader": { WorkspacePageHeader: "WorkspacePageHeader" },
       "@/components/auth/ClerkSafe": { useUser: () => account, SignInButton: "SignInButton" },
       "@/components/ui/button": { Button: "Button" },
+      "@/components/ui/select": {
+        Select: "Select",
+        SelectContent: "SelectContent",
+        SelectItem: "SelectItem",
+        SelectTrigger: "SelectTrigger",
+        SelectValue: "SelectValue",
+      },
       "@/components/ui/input": { Input: "Input" },
       "@/components/OrganizationScimControls": { OrganizationScimControls: "ScimControls" },
       "@/lib/dialog-return-focus": loadUiModule("src/lib/dialog-return-focus.ts", {}, { window }),
@@ -134,11 +141,11 @@ function fixture() {
     render();
   }
   function select(id) {
-    const select = find("select");
+    const select = find("Select");
     assert.ok(select, "Missing organization selector");
     const target = nodes.get("Choose organization");
     document.activeElement = target;
-    select.props.onChange({ target: { value: id }, currentTarget: target });
+    select.props.onValueChange(id);
     render();
   }
   render();
@@ -213,15 +220,15 @@ test("initial GET failure ends loading and offers an actual read-only Retry to a
 test("available data, failed Refresh, and successful Retry have distinct states and safe focus", async () => {
   const f = fixture();
   await f.resolve(available);
-  assert.ok(f.find("select"));
+  assert.ok(f.find("Select"));
   assert.equal(f.focuses.length, 0);
   f.click("Refresh");
-  assert.equal(f.find("select"), undefined, "Stale administrative controls must not remain active");
+  assert.equal(f.find("Select"), undefined, "Stale administrative controls must not remain active");
   await f.reject(new f.client.OrganizationRequestError(503, "service_unavailable"));
   assert.deepEqual(f.focuses, ["Organization access", retryLabel]);
   f.click(retryLabel);
   await f.resolve(available);
-  assert.ok(f.find("select"));
+  assert.ok(f.find("Select"));
   assert.deepEqual(f.focuses, [
     "Organization access",
     retryLabel,
@@ -262,7 +269,7 @@ test("detail failure offers GET-only Retry for the selected organization and res
   assert.equal(f.calls.at(-1).path, `/api/organizations?organizationId=${first.id}`);
   await f.resolve(detail());
   assert.match(text(f.render()), /Your role:.*owner/);
-  assert.equal(f.find("select").props.value, first.id);
+  assert.equal(f.find("Select").props.value, first.id);
   assert.deepEqual(f.focuses, [
     "Organization access",
     retryLabel,
@@ -279,7 +286,7 @@ test("configuration turning unavailable between index and detail produces unavai
   await f.resolve(available);
   await f.resolve(unavailable);
   assert.match(text(f.render()), /Organization administration is not available yet/);
-  assert.equal(f.find("select"), undefined);
+  assert.equal(f.find("Select"), undefined);
   assert.equal(f.find("Button", "Leave organization"), undefined);
   assertReadOnly(f.calls);
 });
@@ -303,19 +310,19 @@ for (const lateResult of ["success", "error"])
   test(`newer reads win when an older detail finishes with ${lateResult}`, async () => {
     const f = fixture();
     await f.resolve(available);
-    const selector = f.find("select");
+    const selector = f.find("Select");
     const trigger = f.nodes.get("Choose organization");
     f.select(first.id);
     await f.resolve(available);
     const oldDetail = f.calls.at(-1);
-    selector.props.onChange({ target: { value: second.id }, currentTarget: trigger });
+    selector.props.onValueChange(second.id);
     f.render();
     await f.resolve(available);
     await f.resolve(detail(second));
     const focusCount = f.focuses.length;
     if (lateResult === "success") await f.resolve(detail(first), oldDetail);
     else await f.reject(Error("Old detail failure"), oldDetail);
-    assert.equal(f.find("select").props.value, second.id);
+    assert.equal(f.find("Select").props.value, second.id);
     assert.match(text(f.render()), /Your role:.*member/);
     assert.doesNotMatch(text(f.render()), /could not be loaded|Your role:.*owner/);
     assert.equal(f.focuses.length, focusCount);
@@ -339,7 +346,7 @@ for (const interruption of ["later focus", "navigation", "hidden target", "unmou
     assert.deepEqual(f.focuses, ["Organization access"]);
     if (interruption === "unmount") {
       assert.equal(f.calls.at(-1).signal.aborted, true);
-      assert.equal(f.find("select"), undefined);
+      assert.equal(f.find("Select"), undefined);
     }
     assertReadOnly(f.calls);
   });
@@ -361,7 +368,7 @@ test("account replacement aborts the captured lifetime and late old-account read
   await f.resolve(unavailable);
   await f.resolve(available, oldRead);
   assert.match(text(f.render()), /Organization administration is not available yet/);
-  assert.equal(f.find("select"), undefined);
+  assert.equal(f.find("Select"), undefined);
   assert.deepEqual(f.focuses, ["Organization access"]);
   assertReadOnly(f.calls);
 });
@@ -375,7 +382,7 @@ test("removed organization selection is cleared by Retry without fetching stale 
   const callsBeforeResult = f.calls.length;
   await f.resolve({ ...available, organizations: [second] });
   assert.equal(f.calls.length, callsBeforeResult);
-  assert.equal(f.find("select").props.value, "");
+  assert.equal(f.find("Select").props.value, "");
   assert.equal(f.find("Button", "Leave organization"), undefined);
   assertReadOnly(f.calls);
 });
@@ -410,5 +417,5 @@ test("mutation retries preserve the original body and a failed post-save GET use
   f.click(retryLabel);
   await f.resolve(available);
   assert.equal(f.calls.filter((call) => call.body).length, 2);
-  assert.equal(f.find("select").props.value, "");
+  assert.equal(f.find("Select").props.value, "");
 });

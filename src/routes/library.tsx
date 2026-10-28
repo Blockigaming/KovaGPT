@@ -26,6 +26,13 @@ import { useTimeFormatPreference } from "@/hooks/use-time-format-preference";
 import { formatDisplayDateTime } from "@/lib/time-format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import {
   libraryDetailKey,
@@ -2087,32 +2094,36 @@ function LibraryPage() {
                 >
                   <p className="font-medium">Filter loaded items</p>
                   <div className="spec400-library-metadata-filters">
-                    <label>
-                      Source
-                      <select
-                        value={sourceFilter}
-                        onChange={(event) => setSourceFilter(event.target.value)}
-                      >
-                        <option value="all">All sources</option>
-                        <option value="upload">Uploads</option>
-                        <option value="chat">Chat</option>
-                        <option value="images">Images</option>
-                        <option value="manual">Manual</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </label>
-                    <label>
-                      Date saved
-                      <select
-                        value={dateFilter}
-                        onChange={(event) => setDateFilter(event.target.value)}
-                      >
-                        <option value="all">Any time</option>
-                        <option value="7">Last 7 days</option>
-                        <option value="30">Last 30 days</option>
-                        <option value="90">Last 90 days</option>
-                      </select>
-                    </label>
+                    <div className="spec400-library-metadata-field">
+                      <label htmlFor="library-source-filter">Source</label>
+                      <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                        <SelectTrigger id="library-source-filter">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All sources</SelectItem>
+                          <SelectItem value="upload">Uploads</SelectItem>
+                          <SelectItem value="chat">Chat</SelectItem>
+                          <SelectItem value="images">Images</SelectItem>
+                          <SelectItem value="manual">Manual</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="spec400-library-metadata-field">
+                      <label htmlFor="library-date-filter">Date saved</label>
+                      <Select value={dateFilter} onValueChange={setDateFilter}>
+                        <SelectTrigger id="library-date-filter">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Any time</SelectItem>
+                          <SelectItem value="7">Last 7 days</SelectItem>
+                          <SelectItem value="30">Last 30 days</SelectItem>
+                          <SelectItem value="90">Last 90 days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <p className="spec400-supporting">
@@ -2132,17 +2143,17 @@ function LibraryPage() {
                 >
                   <Star className={`h-4 w-4 ${filter === "favorites" ? "fill-current" : ""}`} />
                 </Button>
-                <select
-                  value={sort}
-                  onChange={(event) => setSort(event.target.value as SortId)}
-                  className="kova-select min-h-11"
-                  aria-label="Sort Library"
-                >
-                  <option value="newest">Date saved, newest first</option>
-                  <option value="oldest">Date saved, oldest first</option>
-                  <option value="name">Name</option>
-                  <option value="size">Size</option>
-                </select>
+                <Select value={sort} onValueChange={(value) => setSort(value as SortId)}>
+                  <SelectTrigger className="kova-library-sort min-h-11" aria-label="Sort Library">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Date saved, newest first</SelectItem>
+                    <SelectItem value="oldest">Date saved, oldest first</SelectItem>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="size">Size</SelectItem>
+                  </SelectContent>
+                </Select>
                 <div className="kova-file-view-toggle" role="group" aria-label="Library view">
                   <button
                     type="button"

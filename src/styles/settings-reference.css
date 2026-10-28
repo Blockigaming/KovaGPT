@@ -1,27 +1,35 @@
-/* Observed ChatGPT public Settings, 2026-10-16: quiet rounded row groups,
-   regular headings, thin separators and right-aligned values. Scoped to
-   Settings only; the existing Kova modal, focus and phone navigation remain. */
-[role="dialog"].kova-settings-dialog.kova-settings-reference .kova-settings-content-header {
+/* ChatGPT-style grouped preferences and actions share one presentation across
+   the modal and routable Settings page. Claude-style section titles sit above
+   Grok-style quiet surfaces; existing focus and phone navigation remain. */
+.kova-settings-reference {
+  font-family: var(--font-ui, var(--font-sans));
+}
+
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
+  .kova-settings-content-header {
   min-height: 76px;
   margin-inline: 24px;
   border-bottom: 0;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference .kova-settings-content-header h2 {
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
+  .kova-settings-content-header
+  h2 {
+  font-family: var(--font-display);
   font-size: 24px;
   font-weight: 400;
   line-height: 32px;
-  letter-spacing: 0;
+  letter-spacing: -0.025em;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
   .kova-settings-content
   > [role="tabpanel"] {
   padding: 0 24px 28px !important;
   overscroll-behavior: contain;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
   :is(.kova-settings-content > [role="tabpanel"], .kova-settings-guest-content)
   h3 {
   font-size: 16px;
@@ -30,7 +38,7 @@
   letter-spacing: 0;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
   .kova-settings-content
   > [role="tabpanel"]:not(.kova-billing-details)
   > section
@@ -40,7 +48,7 @@
   padding-top: 0;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
   .kova-settings-nav-item[aria-selected="true"] {
   border-radius: var(--kova-radius-sidebar);
   background: var(--accent);
@@ -49,15 +57,16 @@
   box-shadow: none;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference .kova-settings-reference-group {
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
+  .kova-settings-reference-group {
   min-width: 0;
   border: 1px solid var(--border-subtle);
   border-radius: var(--kova-radius-card);
   padding-inline: 16px;
-  background: transparent;
+  background: var(--surface-raised);
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
   :is(.kova-settings-row, .kova-settings-reference-row) {
   display: flex;
   min-width: 0;
@@ -71,7 +80,7 @@
   background: transparent;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
   .kova-settings-reference-group
   > *
   + * {
@@ -79,12 +88,15 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference .kova-settings-row label {
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
+  .kova-settings-row
+  label {
   font-weight: 400;
   line-height: 20px;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference .kova-settings-reference-select {
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
+  .kova-settings-reference-select {
   width: auto;
   min-width: 112px;
   min-height: 44px;
@@ -97,7 +109,8 @@
   box-shadow: none;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference .kova-settings-usage-summary {
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
+  .kova-settings-usage-summary {
   margin-top: 16px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--kova-radius-card);
@@ -138,35 +151,79 @@
   font-variant-numeric: tabular-nums;
 }
 
-[role="dialog"].kova-settings-dialog.kova-settings-reference
+:is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
   :is(button, a, [role="combobox"]):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
 
+/* Navigation uses the same 20px optical icon grid and 44px targets as chat. */
+.kova-settings-reference .kova-settings-nav-item {
+  min-height: 44px;
+  gap: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 20px;
+  transition:
+    color 120ms ease,
+    background-color 120ms ease;
+}
+.kova-settings-reference .kova-settings-nav-item:active {
+  transform: none;
+}
+.kova-settings-reference .kova-settings-nav-item svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.7;
+}
+.kova-settings-reference .kova-settings-nav-group {
+  padding-inline: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+.kova-settings-reference .kova-settings-search {
+  height: 44px;
+  margin-bottom: 16px;
+}
+.kova-settings-reference .kova-settings-search input {
+  padding-inline: 40px 12px;
+  background: var(--surface-input);
+  font-size: 14px;
+}
+.kova-settings-reference .kova-settings-search > svg {
+  left: 12px;
+  width: 20px;
+  height: 20px;
+}
+
 @media (max-width: 767px) {
-  [role="dialog"].kova-settings-dialog.kova-settings-reference .kova-settings-content-header {
+  :is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
+    .kova-settings-content-header {
     margin-inline: 16px;
     min-height: 78px;
   }
 
-  [role="dialog"].kova-settings-dialog.kova-settings-reference
+  :is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
     .kova-settings-content
     > [role="tabpanel"] {
     padding: 0 16px max(24px, env(safe-area-inset-bottom)) !important;
   }
 
-  [role="dialog"].kova-settings-dialog.kova-settings-reference .kova-settings-reference-row {
+  :is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
+    .kova-settings-reference-row {
     flex-wrap: wrap;
     gap: 8px 16px;
   }
 
-  [role="dialog"].kova-settings-dialog.kova-settings-reference .kova-settings-reference-select {
+  :is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
+    .kova-settings-reference-select {
     margin-left: auto;
     max-width: 100%;
   }
 
-  [role="dialog"].kova-settings-dialog.kova-settings-reference
+  :is([role="dialog"], .kova-settings-page).kova-settings-dialog.kova-settings-reference
     .kova-settings-guest-content
     :is(button, a) {
     min-height: 44px;

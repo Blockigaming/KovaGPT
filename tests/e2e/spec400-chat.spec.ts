@@ -60,9 +60,17 @@ for (const theme of ["dark", "light"] as const) {
     await page.getByRole("button", { name: "Options", exact: true }).click();
     const options = page.getByRole("dialog", { name: "Response options", exact: true });
     await expect(options).toBeVisible();
-    await options.getByLabel("Length", { exact: true }).selectOption("long");
-    await options.getByLabel("Tone", { exact: true }).selectOption("formal");
-    await options.getByLabel("Format", { exact: true }).selectOption("plain");
+    for (const [label, choice] of [
+      ["Length", "Detailed"],
+      ["Tone", "Formal"],
+      ["Format", "Plain text"],
+    ]) {
+      const trigger = options.getByRole("combobox", { name: label, exact: true });
+      await trigger.click();
+      await page.getByRole("option", { name: choice, exact: true }).click();
+      await expect(trigger).toContainText(choice);
+      await expect(trigger).toBeFocused();
+    }
     await page.keyboard.press("Escape");
     await expect(input).toHaveValue("Keep the original requirement.\nAdd this detail.");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(

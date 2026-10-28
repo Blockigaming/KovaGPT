@@ -1317,40 +1317,48 @@ export function SettingsDialog({
                     the current chat take precedence over default length, tone, and format.
                   </p>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="grid gap-2">
-                      Format
-                      <select
-                        className="kova-native-select"
+                    <div className="grid gap-2">
+                      <label htmlFor="settings-response-format">Format</label>
+                      <Select
                         value={settings.responseFormat}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           onChange({
                             ...settings,
-                            responseFormat: e.target.value as Settings["responseFormat"],
+                            responseFormat: value as Settings["responseFormat"],
                           })
                         }
                       >
-                        <option value="automatic">Automatic</option>
-                        <option value="plain">Plain text</option>
-                        <option value="markdown">Markdown</option>
-                      </select>
-                    </label>
-                    <label className="grid gap-2">
-                      Tone
-                      <select
-                        className="kova-native-select"
+                        <SelectTrigger id="settings-response-format">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="automatic">Automatic</SelectItem>
+                          <SelectItem value="plain">Plain text</SelectItem>
+                          <SelectItem value="markdown">Markdown</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <label htmlFor="settings-response-tone">Tone</label>
+                      <Select
                         value={settings.responseTone}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           onChange({
                             ...settings,
-                            responseTone: e.target.value as Settings["responseTone"],
+                            responseTone: value as Settings["responseTone"],
                           })
                         }
                       >
-                        <option value="direct">Direct</option>
-                        <option value="formal">Formal</option>
-                        <option value="conversational">Conversational</option>
-                      </select>
-                    </label>
+                        <SelectTrigger id="settings-response-tone">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="direct">Direct</SelectItem>
+                          <SelectItem value="formal">Formal</SelectItem>
+                          <SelectItem value="conversational">Conversational</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="kova-settings-reference-group">
                     <ToggleRow
@@ -2740,18 +2748,23 @@ function WorkspaceDefaults({
         </p>
       </div>
       {fields.map(([key, label, options]) => (
-        <label key={key} className="block text-xs text-muted-foreground">
-          {label}
-          <select
-            value={defaults[key]}
-            onChange={(event) => update(key, event.target.value)}
-            className="kova-workspace-action mt-1.5 h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground"
-          >
-            {options.map((option) => (
-              <option key={option}>{option}</option>
-            ))}
-          </select>
-        </label>
+        <div key={key} className="grid gap-1.5">
+          <label htmlFor={`workspace-default-${key}`} className="text-xs text-muted-foreground">
+            {label}
+          </label>
+          <Select value={defaults[key]} onValueChange={(value) => update(key, value)}>
+            <SelectTrigger id={`workspace-default-${key}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       ))}
     </section>
   );

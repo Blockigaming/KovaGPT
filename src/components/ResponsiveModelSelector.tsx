@@ -80,14 +80,14 @@ export function ResponsiveModelSelector({
   };
 
   const triggerClass =
-    "kova-model-trigger inline-flex items-center gap-1 font-medium transition-colors duration-100 " +
+    "kova-model-trigger inline-flex min-h-11 max-w-full items-center gap-2 py-2 font-medium transition-colors duration-100 [font-family:var(--font-ui,var(--font-sans))] " +
     (topbar
       ? useSheet
-        ? "h-11 max-w-full rounded-lg bg-transparent px-2 text-[15px] active:bg-accent"
-        : "h-10 rounded-lg bg-transparent px-2.5 text-[15px] hover:bg-accent"
-      : "rounded-lg bg-transparent " +
+        ? "rounded-full bg-transparent px-3 text-[15px] active:bg-accent"
+        : "rounded-full bg-transparent px-3 text-[15px] hover:bg-accent"
+      : "rounded-full bg-transparent " +
         (useSheet ? "active:bg-accent " : "hover:bg-accent ") +
-        (compact ? "h-8 px-3.5 text-sm" : "h-9 px-4 text-[15px]"));
+        (compact ? "px-3 text-sm" : "px-4 text-[15px]"));
 
   const renderOption = (availableMode: (typeof MODES)[number]) => {
     const selected = availableMode.id === mode;
@@ -95,22 +95,22 @@ export function ResponsiveModelSelector({
       <button
         key={availableMode.id}
         type="button"
+        data-slot="model-selector-option"
+        data-kova-button-shape="preserve"
         aria-pressed={selected}
         onClick={() => {
           onChange(availableMode.id);
           closeAndRestoreFocus();
         }}
-        className={
-          useSheet ? "w-full" : "w-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        }
+        className="min-h-11 w-full rounded-[var(--kova-radius-compact)] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring [font-family:var(--font-ui,var(--font-sans))]"
         data-testid={"model-option-" + availableMode.id}
       >
         <div
           className={
             useSheet
-              ? "flex min-h-11 w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left " +
+              ? "flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-4 py-3 text-left " +
                 (selected ? "bg-accent" : "hover:bg-accent/60 active:bg-accent")
-              : "flex h-10 w-full items-center gap-2 rounded-lg px-3 text-left transition-colors duration-100 " +
+              : "flex min-h-11 w-full items-center gap-2 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left transition-colors duration-100 " +
                 (selected ? "bg-accent" : "hover:bg-accent/60")
           }
         >
@@ -127,7 +127,7 @@ export function ResponsiveModelSelector({
   };
 
   const options = groups.map((group) => (
-    <div key={group.id} className="pb-1">
+    <div key={group.id} className="pb-2">
       <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
         {group.label.replace(/^KovaGPT(?=\s|$)/u, "Kova GPT")}
       </div>
@@ -138,7 +138,10 @@ export function ResponsiveModelSelector({
   // Guests and Free users see the brand label in the same position, but no switchable menu.
   if (locked)
     return (
-      <span className="kova-model-static inline-flex h-10 min-w-0 select-none items-center gap-2 px-2.5 text-[15px] font-semibold tracking-[-0.015em] text-foreground">
+      <span
+        data-slot="model-selector-label"
+        className="kova-model-static inline-flex min-h-11 min-w-0 select-none items-center gap-2 px-3 text-[15px] font-semibold tracking-[-0.015em] text-foreground [font-family:var(--font-ui,var(--font-sans))]"
+      >
         <NovaLogo decorative className="h-6 w-6" />
         <span className="truncate leading-none">Kova GPT</span>
       </span>
@@ -164,6 +167,7 @@ export function ResponsiveModelSelector({
             aria-expanded={open}
             aria-controls={!useSheet && open ? menuId : undefined}
             data-testid="model-selector-trigger"
+            data-slot="model-selector-trigger"
             className={triggerClass}
           >
             {topbar ? <NovaLogo decorative className="h-6 w-6" /> : null}
@@ -204,11 +208,12 @@ export function ResponsiveModelSelector({
             id={menuId}
             role="dialog"
             aria-label="Choose model"
+            data-slot="model-selector-content"
             side={topbar ? "bottom" : "top"}
             align="start"
             sideOffset={8}
             collisionPadding={12}
-            className="kova-model-menu flex w-64 flex-col rounded-xl border border-border bg-popover p-1.5 shadow-lg"
+            className="kova-model-menu flex w-72 max-w-[calc(100vw-24px)] flex-col rounded-[var(--kova-radius-menu)] border border-border bg-popover p-2 shadow-[var(--shadow-floating)] [font-family:var(--font-ui,var(--font-sans))]"
             style={{
               overflow: "hidden",
               // A composer trigger sits near mid-screen. Keep this menu short

@@ -70,6 +70,13 @@ import type { ComposerToolId, Conversation } from "@/lib/chat-store";
 
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -1803,51 +1810,63 @@ export function ChatInput({
                   <>
                     <label>
                       Format
-                      <select
-                        aria-label="Format"
+                      <Select
                         value={responseSettings.responseFormat ?? "automatic"}
-                        onChange={(event) =>
+                        onValueChange={(value) =>
                           onResponseSettingsChange({
-                            responseFormat: event.target.value as Settings["responseFormat"],
+                            responseFormat: value as Settings["responseFormat"],
                           })
                         }
                       >
-                        <option value="automatic">Automatic</option>
-                        <option value="plain">Plain text</option>
-                        <option value="markdown">Markdown</option>
-                      </select>
+                        <SelectTrigger aria-label="Format" className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="automatic">Automatic</SelectItem>
+                          <SelectItem value="plain">Plain text</SelectItem>
+                          <SelectItem value="markdown">Markdown</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </label>
                     <label>
                       Length
-                      <select
-                        aria-label="Length"
+                      <Select
                         value={responseSettings.responseLength}
-                        onChange={(event) =>
+                        onValueChange={(value) =>
                           onResponseSettingsChange({
-                            responseLength: event.target.value as Settings["responseLength"],
+                            responseLength: value as Settings["responseLength"],
                           })
                         }
                       >
-                        <option value="short">Concise</option>
-                        <option value="medium">Standard</option>
-                        <option value="long">Detailed</option>
-                      </select>
+                        <SelectTrigger aria-label="Length" className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="short">Concise</SelectItem>
+                          <SelectItem value="medium">Standard</SelectItem>
+                          <SelectItem value="long">Detailed</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </label>
                     <label>
                       Tone
-                      <select
-                        aria-label="Tone"
+                      <Select
                         value={responseSettings.responseTone ?? "direct"}
-                        onChange={(event) =>
+                        onValueChange={(value) =>
                           onResponseSettingsChange({
-                            responseTone: event.target.value as Settings["responseTone"],
+                            responseTone: value as Settings["responseTone"],
                           })
                         }
                       >
-                        <option value="direct">Direct</option>
-                        <option value="formal">Formal</option>
-                        <option value="conversational">Conversational</option>
-                      </select>
+                        <SelectTrigger aria-label="Tone" className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="direct">Direct</SelectItem>
+                          <SelectItem value="formal">Formal</SelectItem>
+                          <SelectItem value="conversational">Conversational</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </label>
                     <p>
                       {responseSettings.responseTone === "formal"

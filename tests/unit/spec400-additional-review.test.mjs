@@ -1,14 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import postcss from "postcss";
 import { Circle, Pause, Waves } from "lucide-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createHookHarness, loadUiModule, elements, text } from "../helpers/ui-state-harness.mjs";
 const voiceIcons = { Circle, Pause, Waves };
+const selectComponents = Object.fromEntries(
+  ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"].map((name) => [
+    name,
+    name,
+  ]),
+);
 const familySurface = loadUiModule("src/components/public/ReviewFamilySurface.tsx", {
   "@tanstack/react-router": { Link: "Link" },
   "lucide-react": voiceIcons,
+  "@/components/ui/select": selectComponents,
 });
 const registry = loadUiModule("src/lib/review-page-content.ts", {});
 const button = (tree, label) => elements(tree, (n) => n.type === "button" && text(n) === label)[0];
@@ -17,7 +25,11 @@ function harness(slug, principal = "owner-a", saved = new Map(), globals = {}) {
   const surface = Object.keys(globals).length
     ? loadUiModule(
         "src/components/public/ReviewFamilySurface.tsx",
-        { "@tanstack/react-router": { Link: "Link" }, "lucide-react": voiceIcons },
+        {
+          "@tanstack/react-router": { Link: "Link" },
+          "lucide-react": voiceIcons,
+          "@/components/ui/select": selectComponents,
+        },
         globals,
       )
     : familySurface;
@@ -195,8 +207,30 @@ test("review runtime has no service calls, recording, billing or fake shared lin
   assert.match(source, /serviceConnected:false|serviceConnected: false/);
   const css = readFileSync("src/components/public/spec400-public.css", "utf8");
   assert.doesNotMatch(css, /#(?:[a-fA-F0-9]{3,8})\b/);
-  assert.match(css, /font-size: 28px/);
-  assert.match(css, /line-height: 36px/);
+  const sheet = postcss.parse(css);
+  const headingSelector = "[data-public-shell] :is(main h1, .public-hero h1, .legal-hero h1)";
+  const heading = sheet.nodes.find(
+    (node) => node.type === "rule" && node.selector === headingSelector,
+  );
+  const declaration = (rule, property) =>
+    rule.nodes.find((node) => node.type === "decl" && node.prop === property)?.value;
+  assert.equal(
+    declaration(heading, "font-family"),
+    'var(--font-reading, Georgia, "Times New Roman", serif)',
+  );
+  assert.equal(declaration(heading, "font-size"), "clamp(32px, 4vw, 48px)");
+  assert.equal(declaration(heading, "line-height"), "1.15");
+  assert.equal(declaration(heading, "font-weight"), "400");
+  const phoneHeading = sheet.nodes
+    .filter(
+      (node) =>
+        node.type === "atrule" && node.name === "media" && node.params === "(max-width: 639px)",
+    )
+    .flatMap((node) => node.nodes)
+    .find((node) => node.type === "rule" && node.selector.includes(headingSelector));
+  assert.ok(phoneHeading, "public headings have an explicit narrow-phone rule");
+  assert.equal(declaration(phoneHeading, "font-size"), "32px");
+  assert.equal(declaration(phoneHeading, "line-height"), "38px");
 });
 
 test("saved review drafts are principal-scoped and never restored into another account", () => {
@@ -273,9 +307,7 @@ test("team retention exposes specific fields and an accurate local proposal summ
   elements(tree, (n) => n.type === "input" && n.props.type === "number")[0].props.onChange({
     target: { value: "45" },
   });
-  elements(tree, (n) => n.type === "select")[0].props.onChange({
-    target: { value: "Files proposal" },
-  });
+  elements(tree, (n) => n.type === "Select")[0].props.onValueChange("Files proposal");
   tree = h.render();
   assert.match(text(tree), /45 days proposed/);
   assert.match(text(tree), /Files proposal/);
@@ -342,7 +374,21 @@ test("review headings keep one service boundary and compact empty media geometry
   assert.equal(empty.props.style, undefined);
   const css = readFileSync("src/components/public/spec400-public.css", "utf8");
   assert.match(css, /data-empty="true"[^}]*height: 96px;/s);
-  assert.match(css, /font-size: 24px;\s*line-height: 32px;/);
+  const phoneHeading = postcss
+    .parse(css)
+    .nodes.filter(
+      (node) =>
+        node.type === "atrule" && node.name === "media" && node.params === "(max-width: 639px)",
+    )
+    .flatMap((node) => node.nodes)
+    .find(
+      (node) =>
+        node.type === "rule" &&
+        node.selector.includes("[data-public-shell] :is(main h1, .public-hero h1, .legal-hero h1)"),
+    );
+  assert.ok(phoneHeading, "review headings inherit the shared phone hierarchy");
+  assert.equal(phoneHeading.nodes.find((node) => node.prop === "font-size").value, "32px");
+  assert.equal(phoneHeading.nodes.find((node) => node.prop === "line-height").value, "38px");
   const overview = readFileSync("src/components/public/ProductOverview.tsx", "utf8");
   assert.doesNotMatch(overview, /✧/);
 });

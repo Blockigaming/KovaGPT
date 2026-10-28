@@ -1,25 +1,33 @@
-/* Spec400 public family geometry. Existing public light/dark palette is authoritative. */
+/* Grok's editorial spacing and Claude's display hierarchy, with shared pill actions. */
 [data-public-shell] {
-  font-family: "IBM Plex Sans", var(--font-sans), sans-serif;
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   font-size: 15px;
   line-height: 22px;
-  --public-section-space: 32px;
-  --public-page-width: 1200px;
+  --public-section-space: clamp(40px, 5vw, 72px);
+  --public-page-width: 1120px;
+  --kova-public-header-height: 72px;
+}
+[data-public-shell] .public-overview {
+  --public-section-space: inherit;
+  --public-page-width: inherit;
 }
 [data-public-shell] :is(main h1, .public-hero h1, .legal-hero h1) {
-  font-family: inherit;
-  font-size: 28px;
-  line-height: 36px;
-  font-weight: 600;
-  letter-spacing: normal;
+  font-family: var(--font-reading, Georgia, "Times New Roman", serif);
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.15;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 [data-public-shell] :is(main h2, .public-section-heading h2) {
-  font-size: 20px;
-  line-height: 28px;
-  font-weight: 600;
-  letter-spacing: normal;
+  font-family: var(--font-reading, Georgia, "Times New Roman", serif);
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 400;
+  letter-spacing: -0.02em;
 }
 [data-public-shell] :is(main h3) {
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   font-size: 16px;
   line-height: 24px;
   font-weight: 600;
@@ -54,18 +62,19 @@
   transition-duration: 120ms;
 }
 [data-public-shell] main > section > .max-w-7xl:not(.public-highlights-grid) {
-  padding-block: 32px;
+  padding-block: var(--public-section-space);
 }
 [data-public-shell] main > section.bg-muted\/25 > div:not(.public-highlights-grid) {
-  padding-block: 32px;
+  padding-block: var(--public-section-space);
 }
 [data-public-shell] .public-overview .public-hero {
-  padding-block: 32px;
+  padding-block: var(--public-section-space);
   text-align: start;
 }
 [data-public-shell] .public-overview .public-hero h1 {
   max-width: 760px;
   margin-inline: 0;
+  letter-spacing: -0.025em;
 }
 [data-public-shell] .public-overview .public-hero .public-actions {
   justify-content: start;
@@ -79,7 +88,7 @@
   border: 1px solid var(--border);
 }
 [data-public-shell] .public-overview :is(.public-use-cases, .public-control-section) {
-  padding-block: 32px;
+  padding-block: var(--public-section-space);
 }
 [data-public-shell] .public-section-heading {
   margin-bottom: 24px;
@@ -399,8 +408,8 @@
 @media (max-width: 639px) {
   [data-public-shell] :is(main h1, .public-hero h1, .legal-hero h1),
   [data-public-shell] .public-overview .public-hero h1 {
-    font-size: 24px;
-    line-height: 32px;
-    letter-spacing: normal;
+    font-size: 32px;
+    line-height: 38px;
+    letter-spacing: -0.025em;
   }
 }

@@ -1,9 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, FlaskConical, Heart, History, Play, Plus, Search, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { restoreDialogFocus } from "@/lib/dialog-return-focus";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
@@ -39,6 +48,7 @@ const variables = (body: string) => [
   ...new Set([...body.matchAll(/{{\s*([\w -]{1,60})\s*}}/g)].map((match) => match[1].trim())),
 ];
 const PROMPT_DRAFT_KEY_BASE = "kova-prompt-studio-draft";
+const NO_ASSOCIATION = "__no_association__";
 function PromptStudio() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
@@ -50,6 +60,54 @@ function PromptStudio() {
   const dialogTriggerRef = useRef<HTMLButtonElement | null>(null);
   const inspectionRequestRef = useRef(0);
   const creatingRef = useRef(false);
+  const deletingRef = useRef(false);
+  const [deleting, setDeleting] = useState(false);
+  const savedListHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const completedDeleteRef = useRef<{
+    principal: string;
+    generation: number;
+    url: string;
+  } | null>(null);
+  const deleteTriggerRef = useRef<{
+    element: HTMLButtonElement;
+    principal: string;
+    generation: number;
+    url: string;
+  } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    item: PromptTemplate;
+    principal: string;
+    generation: number;
+    url: string;
+  } | null>(null);
+  const restoreDeleteFocus = useCallback((closingDialog?: EventTarget | null) => {
+    const trigger = deleteTriggerRef.current;
+    if (
+      !trigger ||
+      trigger.principal !== principalRef.current ||
+      trigger.generation !== generationRef.current ||
+      trigger.url !== window.location.href
+    )
+      return;
+    const active = document.activeElement;
+    const heading = savedListHeadingRef.current;
+    const focusRemainsInClosingDialog =
+      closingDialog instanceof HTMLElement &&
+      closingDialog.matches('[role="alertdialog"]') &&
+      closingDialog.contains(active);
+    if (
+      active &&
+      active !== document.body &&
+      active !== trigger.element &&
+      active !== heading &&
+      !focusRemainsInClosingDialog
+    )
+      return;
+    const target =
+      trigger.element.isConnected && !trigger.element.disabled ? trigger.element : heading;
+    restoreDialogFocus(target, trigger.url);
+  }, []);
+
   const testingRequestRef = useRef(0);
   const launchingRef = useRef<number | null>(null);
   useEffect(
@@ -103,6 +161,10 @@ function PromptStudio() {
   draftRef.current = { name, category, folder, body, projectId, packId };
   useEffect(() => {
     creatingRef.current = false;
+    deletingRef.current = false;
+    setDeleting(false);
+    completedDeleteRef.current = null;
+    setDeleteTarget(null);
     setCreating(false);
     const generation = generationRef.current + 1;
     generationRef.current = generation;
@@ -205,6 +267,10 @@ function PromptStudio() {
       setProjectId("");
       setPackId("");
       creatingRef.current = false;
+      deletingRef.current = false;
+      setDeleting(false);
+      completedDeleteRef.current = null;
+      setDeleteTarget(null);
       setCreating(false);
       setTesting(null);
       setLaunching(false);
@@ -252,6 +318,49 @@ function PromptStudio() {
         ),
     [items, favorites, folderFilter, query],
   );
+  useLayoutEffect(() => {
+    const completed = completedDeleteRef.current;
+    if (!completed) return;
+    completedDeleteRef.current = null;
+    if (
+      completed.principal === principalRef.current &&
+      completed.generation === generationRef.current &&
+      completed.url === window.location.href &&
+      !deleteTriggerRef.current?.element.isConnected
+    )
+      restoreDeleteFocus();
+  }, [items, restoreDeleteFocus]);
+  const confirmDelete = async () => {
+    if (
+      !deleteTarget ||
+      !dataReady ||
+      !isSignedIn ||
+      deletingRef.current ||
+      deleteTarget.generation !== generationRef.current ||
+      deleteTarget.principal !== principalRef.current
+    )
+      return;
+    const { item, principal: deletePrincipal, generation, url } = deleteTarget;
+    const isCurrent = () =>
+      generation === generationRef.current && principalRef.current === deletePrincipal;
+    deletingRef.current = true;
+    setDeleting(true);
+    setDeleteTarget(null);
+    try {
+      await remove({ data: { id: item.id } });
+      if (!isCurrent()) return;
+      completedDeleteRef.current = { principal: deletePrincipal, generation, url };
+      setItems((all) => all.filter((value) => value.id !== item.id));
+    } catch (reason) {
+      if (!isCurrent()) return;
+      toast.error(reason instanceof Error ? reason.message : "Prompt could not be deleted");
+    } finally {
+      if (isCurrent()) {
+        deletingRef.current = false;
+        setDeleting(false);
+      }
+    }
+  };
   const create = async () => {
     if (
       creatingRef.current ||
@@ -423,32 +532,38 @@ function PromptStudio() {
                     Variables found:{" "}
                     {variables(body).join(", ") || "None. Use {{variable}} syntax."}
                   </div>
-                  <select
-                    value={projectId}
-                    onChange={(e) => setProjectId(e.target.value)}
-                    className="h-11 rounded-xl border bg-background px-3"
-                    aria-label="Associate Project"
+                  <Select
+                    value={projectId || NO_ASSOCIATION}
+                    onValueChange={(value) => setProjectId(value === NO_ASSOCIATION ? "" : value)}
                   >
-                    <option value="">No Project</option>
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={packId}
-                    onChange={(e) => setPackId(e.target.value)}
-                    className="h-11 rounded-xl border bg-background px-3"
-                    aria-label="Attach Context Pack"
+                    <SelectTrigger aria-label="Associate Project" className="h-11 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_ASSOCIATION}>No Project</SelectItem>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={packId || NO_ASSOCIATION}
+                    onValueChange={(value) => setPackId(value === NO_ASSOCIATION ? "" : value)}
                   >
-                    <option value="">No Context Pack</option>
-                    {packs.map((pack) => (
-                      <option key={pack.id} value={pack.id}>
-                        {pack.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger aria-label="Attach Context Pack" className="h-11 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_ASSOCIATION}>No Context Pack</SelectItem>
+                      {packs.map((pack) => (
+                        <SelectItem key={pack.id} value={pack.id}>
+                          {pack.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <button
                     disabled={creating || !name.trim() || !body.trim()}
                     onClick={create}
@@ -457,22 +572,30 @@ function PromptStudio() {
                     <Plus className="h-4 w-4" />
                     {creating ? "Saving…" : "Save prompt"}
                   </button>
-                  <select
-                    value={folderFilter}
-                    onChange={(event) => setFolderFilter(event.target.value)}
-                    className="h-10 rounded-xl border bg-background px-3 text-sm"
-                    aria-label="Filter prompt folder"
-                  >
-                    <option value="all">All folders</option>
-                    {[...new Set(items.map((item) => item.folder))].sort().map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={folderFilter} onValueChange={setFolderFilter}>
+                    <SelectTrigger aria-label="Filter prompt folder" className="h-11 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All folders</SelectItem>
+                      {[...new Set(items.map((item) => item.folder))].sort().map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </section>
               <section>
+                <h2 ref={savedListHeadingRef} tabIndex={-1} className="mb-3 font-semibold">
+                  Saved prompts
+                </h2>
+                {deleting ? (
+                  <p role="status" className="mb-2 text-sm text-muted-foreground">
+                    Deleting prompt…
+                  </p>
+                ) : null}
                 <div className="flex gap-2">
                   <label className="relative flex-1">
                     <span className="sr-only">Search prompts</span>
@@ -563,31 +686,25 @@ function PromptStudio() {
                           </button>
                           <button
                             aria-label={`Delete ${item.name}`}
-                            onClick={async () => {
-                              if (!confirm("Delete this prompt?")) return;
-                              const generation = generationRef.current;
-                              try {
-                                await remove({ data: { id: item.id } });
-                                if (
-                                  generation !== generationRef.current ||
-                                  principalRef.current !== principal
-                                )
-                                  return;
-                                setItems((all) => all.filter((value) => value.id !== item.id));
-                              } catch (reason) {
-                                if (
-                                  generation !== generationRef.current ||
-                                  principalRef.current !== principal
-                                )
-                                  return;
-                                toast.error(
-                                  reason instanceof Error
-                                    ? reason.message
-                                    : "Prompt could not be deleted",
-                                );
-                              }
+                            disabled={deleting}
+                            aria-busy={deleting || undefined}
+                            onClick={(event) => {
+                              if (!dataReady || !isSignedIn || !principal || deletingRef.current)
+                                return;
+                              deleteTriggerRef.current = {
+                                element: event.currentTarget,
+                                principal,
+                                generation: generationRef.current,
+                                url: window.location.href,
+                              };
+                              setDeleteTarget({
+                                item,
+                                principal,
+                                generation: generationRef.current,
+                                url: window.location.href,
+                              });
                             }}
-                            className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                            className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-50"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -930,6 +1047,22 @@ function PromptStudio() {
             </DialogContent>
           </Dialog>
         ) : null}
+        <ConfirmActionDialog
+          open={!!deleteTarget && dataReady && deleteTarget.principal === principal}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+          }}
+          title="Delete prompt?"
+          description={`Delete “${deleteTarget?.item.name ?? "this prompt"}”? This cannot be undone.`}
+          confirmLabel="Delete prompt"
+          destructive
+          disabled={deleting}
+          onConfirm={() => void confirmDelete()}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            restoreDeleteFocus(event.target);
+          }}
+        />
       </main>
     </AppShell>
   );

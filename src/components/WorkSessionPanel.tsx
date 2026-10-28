@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useWorkStoreRevision } from "@/hooks/use-work-store-revision";
@@ -141,21 +148,25 @@ export function WorkSessionPanel({
       {sessions.length > 0 && (
         <label className="mt-3 block text-sm">
           Saved session
-          <select
-            className="ml-2 max-w-full rounded-lg border bg-background p-2"
-            value={selectedId ?? ""}
-            onChange={(event) => {
-              setSelectedId(event.target.value || null);
+          <Select
+            value={selectedId ?? "no-saved-session"}
+            onValueChange={(value) => {
+              setSelectedId(value === "no-saved-session" ? null : value);
               setEdit(null);
             }}
           >
-            <option value="">Choose a session</option>
-            {sessions.map((session) => (
-              <option key={session.id} value={session.id}>
-                {session.objective.slice(0, 100)}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger aria-label="Saved session" className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="no-saved-session">Choose a session</SelectItem>
+              {sessions.map((session) => (
+                <SelectItem key={session.id} value={session.id}>
+                  {session.objective.slice(0, 100)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
       )}
       {selected && (

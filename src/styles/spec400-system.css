@@ -42,8 +42,8 @@
   font-display: swap;
 }
 :root {
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: var(--font-sans);
+  --font-sans: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  --font-display: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --kova-icon-stroke: 2;
@@ -69,15 +69,23 @@ html body {
   line-height: 1.466667;
 }
 body :is(h1, h2, h3, h4) {
-  font-family: var(--font-sans);
   letter-spacing: normal !important;
+}
+body :is(h1, h2) {
+  font-family: var(--font-sans);
+  font-weight: 600;
 }
 body .kova-page h1 {
   font-size: 1.75rem !important;
   line-height: 2.25rem !important;
   font-weight: 600 !important;
 }
-body :is(.kova-page h2, .kova-settings-section h3) {
+body .kova-page h2 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+body .kova-settings-section h3 {
   font-size: 1.25rem;
   line-height: 1.75rem;
   font-weight: 600;
@@ -93,10 +101,11 @@ body .prose-chat pre {
   font-size: 0.875rem !important;
   line-height: 1.571429 !important;
 }
+/* Page families own their width and gutters; these are fallback dimensions. */
 body :is(.kova-page, .kova-secondary-page) {
-  max-width: 1200px !important;
+  max-width: var(--page-max, 1200px);
   --page-padding: 32px;
-  padding: 32px !important;
+  padding: var(--page-padding, 32px);
 }
 body :is(.kova-header, .kova-app-header, .kova-chat-header) {
   min-height: 64px;
@@ -135,11 +144,13 @@ body [data-kova-dialog-surface] {
   border-radius: var(--kova-radius-panel);
   box-shadow: var(--dialog-shadow);
 }
-body [role="tab"] {
+/* Shared tabs own their segmented treatment. Custom page navigation keeps
+   its existing underline style instead of overriding every Radix segment. */
+body [role="tab"]:not([data-slot="tabs-trigger"]) {
   min-height: 44px;
   border-radius: 0;
 }
-body [role="tab"][data-state="active"] {
+body [role="tab"][data-state="active"]:not([data-slot="tabs-trigger"]) {
   border-bottom: 2px solid currentColor;
   font-weight: 600;
 }
@@ -211,7 +222,6 @@ body .kova-sidebar .kova-sidebar-footer {
 @media (max-width: 1023px) {
   body :is(.kova-page, .kova-secondary-page) {
     --page-padding: 24px;
-    padding: 24px !important;
   }
   body .kova-sidebar[data-kova-core-sidebar][data-kova-core-sidebar] {
     border-radius: 0;
@@ -247,7 +257,6 @@ body .kova-sidebar .kova-sidebar-footer {
 @media (max-width: 767px) {
   body :is(.kova-page, .kova-secondary-page) {
     --page-padding: 16px;
-    padding: 16px !important;
   }
   body .kova-page h1 {
     font-size: 1.5rem !important;
@@ -381,9 +390,9 @@ body .kova-sidebar-rail[data-kova-core-rail][data-state="closed"] {
 }
 
 body :is(.kova-assistant, .kova-app-shell, .kova-sidebar, .kova-sidebar-rail, .kova-composer) {
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: var(--font-sans);
-  --chat-body-font: "IBM Plex Sans";
+  --font-sans: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  --font-display: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  --chat-body-font: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   font-family: var(--font-sans) !important;
 }
 body :is(.kova-sidebar, .kova-sidebar-rail, .kova-composer) :is(button, input, textarea, select) {
@@ -404,7 +413,7 @@ body :is(.kova-assistant, .kova-app-shell) .kova-topbar:not(.kova-desktop-topbar
 }
 body .kova-page,
 body .kova-page :is(button, input, select, textarea) {
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   font-family: var(--font-sans) !important;
 }
 body section.kova-settings-page.kova-settings-dialog .kova-settings-content-header {

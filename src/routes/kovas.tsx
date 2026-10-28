@@ -2,6 +2,23 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   KOVA_MODES,
   KOVA_TOOLS,
@@ -83,6 +100,17 @@ type Mutation = {
   action: string;
   payload: Record<string, unknown>;
 };
+type Confirmation = {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  epoch: number;
+  selectedId: string | null;
+  view: KovaView;
+  config: KovaConfig;
+  run: () => void;
+};
 function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?: string }) {
   const navigate = useNavigate();
   const [cards, setCards] = useState<KovaCard[]>([]),
@@ -105,6 +133,16 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
   const [library, setLibrary] = useState<{ id: string; title: string; characters: number }[]>([]),
     [libraryAfter, setLibraryAfter] = useState<string | null>(null),
     [knowledgeOpen, setKnowledgeOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const confirmationRef = useRef<Confirmation | null>(null);
+  const confirmationOpener = useRef<HTMLButtonElement | null>(null);
+  const [reportReview, setReportReview] = useState<Pick<
+    Confirmation,
+    "epoch" | "selectedId" | "view"
+  > | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const reportRef = useRef<typeof reportReview>(null);
+  const reportOpener = useRef<HTMLButtonElement | null>(null);
   const lifetime = useRef(new AbortController()),
     generation = useRef(0),
     selection = useRef(initialId ?? null);
@@ -128,6 +166,11 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
       setLink("");
       setPreview(false);
       setInspected(null);
+      confirmationRef.current = null;
+      setConfirmation(null);
+      reportRef.current = null;
+      setReportReview(null);
+      setReportReason("");
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
     return () => {
@@ -352,6 +395,74 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
       if (alive(epoch)) setBusy(false);
     }
   }
+  function askConfirmation(
+    opener: HTMLButtonElement | null,
+    options: Pick<Confirmation, "title" | "description" | "confirmLabel" | "destructive" | "run">,
+  ) {
+    if (!ownerId || closed || busy || retry || !view || confirmationRef.current) return;
+    const request = {
+      ...options,
+      epoch: generation.current,
+      selectedId: selection.current,
+      view,
+      config,
+    };
+    confirmationOpener.current = opener;
+    confirmationRef.current = request;
+    setConfirmation(request);
+  }
+  function closeConfirmation() {
+    confirmationRef.current = null;
+    setConfirmation(null);
+  }
+  function confirmAction() {
+    const request = confirmationRef.current;
+    closeConfirmation();
+    if (
+      !request ||
+      !ownerId ||
+      closed ||
+      busy ||
+      retry ||
+      !alive(request.epoch) ||
+      selection.current !== request.selectedId ||
+      view !== request.view ||
+      config !== request.config
+    )
+      return;
+    request.run();
+  }
+  function openReport(opener: HTMLButtonElement) {
+    if (!ownerId || closed || busy || retry || !view?.publicationVersion || reportRef.current)
+      return;
+    const request = { epoch: generation.current, selectedId: selection.current, view };
+    reportOpener.current = opener;
+    reportRef.current = request;
+    setReportReview(request);
+    setReportReason("");
+  }
+  function closeReport() {
+    reportRef.current = null;
+    setReportReview(null);
+    setReportReason("");
+  }
+  function submitReport() {
+    const request = reportRef.current;
+    if (!reportReason.trim()) return;
+    closeReport();
+    if (
+      !request ||
+      !ownerId ||
+      closed ||
+      busy ||
+      retry ||
+      !alive(request.epoch) ||
+      selection.current !== request.selectedId ||
+      view !== request.view
+    )
+      return;
+    void submit("report", { reason: reportReason.slice(0, 2000) });
+  }
   if (closed) return <p role="status">Device data was cleared. Reload to open Kovas again.</p>;
   const disabled = busy || Boolean(retry);
   const filtered = cards.filter((c) =>
@@ -526,16 +637,18 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
             <button
               className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
               disabled={disabled || view.blocked || (!view.owned && !view.config.allowFork)}
-              onClick={() => {
-                if (
-                  window.confirm(
+              onClick={(event) =>
+                askConfirmation(event.currentTarget, {
+                  title: "Create a private copy?",
+                  description:
                     "Create a private copy of this Kova and its shared knowledge in your account?",
-                  )
-                )
-                  void submit("fork", {
-                    consent: view.owned ? view.versionId : view.publicationVersion,
-                  });
-              }}
+                  confirmLabel: "Create copy",
+                  run: () =>
+                    void submit("fork", {
+                      consent: view.owned ? view.versionId : view.publicationVersion,
+                    }),
+                })
+              }
             >
               Create a private copy
             </button>
@@ -543,12 +656,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
               <button
                 className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
                 disabled={disabled}
-                onClick={() => {
-                  const reason = window.prompt(
-                    "What should moderators review? Do not include sensitive personal data.",
-                  );
-                  if (reason?.trim()) void submit("report", { reason: reason.slice(0, 2000) });
-                }}
+                onClick={(event) => openReport(event.currentTarget)}
               >
                 Report
               </button>
@@ -613,23 +721,30 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                     }
                   />
                 </label>
-                <label className="block text-sm">
-                  Model mode
-                  <select
-                    className="ml-2 rounded border bg-background p-2"
+                <div className="space-y-2 text-sm">
+                  <label htmlFor="kova-model-mode">Model mode</label>
+                  <Select
+                    disabled={disabled}
                     value={config.mode}
-                    onChange={(e) =>
-                      change({ ...config, mode: e.target.value as KovaConfig["mode"] })
+                    onValueChange={(value) =>
+                      change({ ...config, mode: value as KovaConfig["mode"] })
                     }
                   >
-                    {KOVA_MODES.map((mode) => (
-                      <option key={mode}>{mode}</option>
-                    ))}
-                  </select>
-                  <span className="ml-2 text-muted-foreground">
+                    <SelectTrigger id="kova-model-mode" aria-describedby="kova-model-mode-hint">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KOVA_MODES.map((mode) => (
+                        <SelectItem key={mode} value={mode}>
+                          {mode}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p id="kova-model-mode-hint" className="text-muted-foreground">
                     Each caller’s plan must support this mode.
-                  </span>
-                </label>
+                  </p>
+                </div>
                 <div className="flex flex-wrap gap-4">
                   {KOVA_TOOLS.map((tool) => (
                     <label key={tool} className="text-sm">
@@ -821,12 +936,16 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                   <button
                     className="underline"
                     disabled={disabled}
-                    onClick={() => {
-                      if (
-                        !dirty ||
-                        window.confirm("Discard unsaved changes and reload the saved version?")
-                      )
-                        void select(view.id);
+                    onClick={(event) => {
+                      if (!dirty) void select(view.id);
+                      else
+                        askConfirmation(event.currentTarget, {
+                          title: "Discard draft?",
+                          description: "Discard unsaved changes and reload the saved version?",
+                          confirmLabel: "Discard draft",
+                          destructive: true,
+                          run: () => void select(view.id),
+                        });
                     }}
                   >
                     Discard draft
@@ -848,14 +967,16 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                 <button
                   className="underline text-destructive"
                   disabled={disabled}
-                  onClick={() => {
-                    if (
-                      window.confirm(
+                  onClick={(event) =>
+                    askConfirmation(event.currentTarget, {
+                      title: "Delete Kova?",
+                      description:
                         "Delete this Kova, all its versions, and all public or link access?",
-                      )
-                    )
-                      void submit("delete", {});
-                  }}
+                      confirmLabel: "Delete Kova",
+                      destructive: true,
+                      run: () => void submit("delete", {}),
+                    })
+                  }
                 >
                   Delete Kova
                 </button>
@@ -945,14 +1066,14 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                       <button
                         className="underline"
                         disabled={disabled || version.id === view.versionId}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Restore version ${version.version} as a new private version?`,
-                            )
-                          )
-                            void submit("restore", { versionId: version.id });
-                        }}
+                        onClick={(event) =>
+                          askConfirmation(event.currentTarget, {
+                            title: "Restore version?",
+                            description: `Restore version ${version.version} as a new private version?`,
+                            confirmLabel: "Restore copy",
+                            run: () => void submit("restore", { versionId: version.id }),
+                          })
+                        }
                       >
                         Restore copy
                       </button>
@@ -963,10 +1084,15 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                           version.id === view.versionId ||
                           version.id === view.publicationVersion
                         }
-                        onClick={() => {
-                          if (window.confirm(`Permanently delete version ${version.version}?`))
-                            void submit("deleteVersion", { versionId: version.id });
-                        }}
+                        onClick={(event) =>
+                          askConfirmation(event.currentTarget, {
+                            title: "Delete old version?",
+                            description: `Permanently delete version ${version.version}?`,
+                            confirmLabel: "Delete version",
+                            destructive: true,
+                            run: () => void submit("deleteVersion", { versionId: version.id }),
+                          })
+                        }
                       >
                         Delete old version
                       </button>
@@ -1010,6 +1136,70 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
           Moderation
         </Link>
       </p>
+      <ConfirmActionDialog
+        open={confirmation !== null}
+        onOpenChange={(open) => {
+          if (!open) closeConfirmation();
+        }}
+        title={confirmation?.title ?? "Confirm action"}
+        description={confirmation?.description ?? ""}
+        confirmLabel={confirmation?.confirmLabel ?? "Confirm"}
+        destructive={confirmation?.destructive}
+        disabled={disabled}
+        onConfirm={confirmAction}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (confirmationOpener.current?.isConnected)
+            confirmationOpener.current.focus({ preventScroll: true });
+        }}
+      />
+      <Dialog
+        open={reportReview !== null}
+        onOpenChange={(open) => {
+          if (!open) closeReport();
+        }}
+      >
+        <DialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (reportOpener.current?.isConnected)
+              reportOpener.current.focus({ preventScroll: true });
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Report Kova</DialogTitle>
+            <DialogDescription>
+              What should moderators review? Do not include sensitive personal data.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitReport();
+            }}
+          >
+            <label className="grid gap-2 text-sm" htmlFor="kova-report-reason">
+              Reason for report
+              <textarea
+                id="kova-report-reason"
+                className="min-h-32 w-full rounded-[var(--kova-radius-input)] border border-input bg-background p-3 text-sm"
+                maxLength={2000}
+                value={reportReason}
+                onChange={(event) => setReportReason(event.target.value)}
+              />
+            </label>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeReport}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={disabled || !reportReason.trim()}>
+                Submit report
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

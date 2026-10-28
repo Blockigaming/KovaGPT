@@ -47,14 +47,14 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         // Base + animation shared across viewports
-        "fixed z-50 flex min-w-0 flex-col gap-4 [overflow-wrap:anywhere] border border-border bg-background shadow-xl duration-150 data-[state=closed]:pointer-events-none",
+        "font-[family-name:var(--font-ui)] fixed z-50 flex min-w-0 flex-col gap-4 [overflow-wrap:anywhere] border border-border bg-popover text-popover-foreground shadow-xl duration-150 data-[state=closed]:pointer-events-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         // Mobile (<sm): bottom sheet — cap height and scroll body, respect safe areas
-        "inset-x-0 mx-auto bottom-0 top-auto w-full max-w-full rounded-t-2xl rounded-b-none border-b-0 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]",
+        "inset-x-0 mx-auto bottom-0 top-auto w-full max-w-full rounded-t-[var(--kova-radius-panel)] rounded-b-none border-b-0 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]",
         "max-h-[92dvh] overflow-y-auto overscroll-contain",
         "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         // sm+ (tablet/desktop/preview iframe): centered modal
-        "sm:mx-0 sm:inset-auto sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:w-[min(92vw,560px)] sm:max-w-[92vw] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border-b sm:p-6 sm:pb-6 sm:max-h-[88dvh]",
+        "sm:mx-0 sm:inset-auto sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:w-[min(92vw,560px)] sm:max-w-[92vw] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-[var(--kova-radius-panel)] sm:border-b sm:p-6 sm:pb-6 sm:max-h-[88dvh]",
         "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0",
         className,
       )}
@@ -63,7 +63,7 @@ const DialogContent = React.forwardRef<
       {/* Mobile/tablet drag handle affordance */}
       <div
         aria-hidden
-        className="mx-auto mb-1 h-1.5 w-10 rounded-full bg-muted-foreground/30 sm:hidden"
+        className="mx-auto mb-1 h-1 w-10 rounded-full bg-muted-foreground/30 sm:hidden"
       />
       {children}
       <DialogPrimitive.Close
@@ -112,7 +112,11 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold leading-tight tracking-tight", className)}
+    data-slot="dialog-title"
+    className={cn(
+      "font-[family-name:var(--font-ui)] text-xl font-semibold leading-7 tracking-tight",
+      className,
+    )}
     {...props}
   />
 ));
@@ -124,7 +128,8 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    data-slot="dialog-description"
+    className={cn("text-sm leading-relaxed text-muted-foreground", className)}
     {...props}
   />
 ));

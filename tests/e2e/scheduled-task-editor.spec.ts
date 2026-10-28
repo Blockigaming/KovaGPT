@@ -93,6 +93,8 @@ test("Tasks retries the exact captured mutation and pins the rendered account", 
   await page.getByRole("button", { name: "Save schedule", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Response interrupted");
   await expect(page.getByLabel("Title", { exact: true })).toBeDisabled();
+  await expect(page.getByRole("combobox", { name: "Run when", exact: true })).toBeDisabled();
+  await expect(page.getByRole("combobox", { name: "Frequency", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Retry the same request" }).click();
   const calls = await page.evaluate(() =>
     (window as unknown as TaskBrowserWindow).fixture.calls.filter(
@@ -160,7 +162,8 @@ test("selected Gmail event controls capture the approved account and disappear o
     });
   });
   await mount(page);
-  await page.getByLabel("Run when").selectOption("event");
+  await page.getByRole("combobox", { name: "Run when", exact: true }).click();
+  await page.getByRole("option", { name: "A connected event matches", exact: true }).click();
   await page
     .getByLabel("Task background approval")
     .selectOption("cccccccc-cccc-4ccc-8ccc-cccccccccccc");

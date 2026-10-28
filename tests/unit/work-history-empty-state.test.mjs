@@ -36,16 +36,17 @@ const deps = {
   X: "X",
   statusTone: {},
 };
-function component(name) {
+function component(name, overrides = {}) {
   const node = file.statements.find(
     (node) => ts.isFunctionDeclaration(node) && node.name?.text === name,
   );
+  const environment = { ...deps, ...overrides };
   return new Function(
-    ...Object.keys(deps),
+    ...Object.keys(environment),
     ts.transpileModule(`${node.getText(file)}\nreturn ${name};`, {
       compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React },
     }).outputText,
-  )(...Object.values(deps));
+  )(...Object.values(environment));
 }
 const Graph = component("DependencyGraph"),
   Timeline = component("Timeline");
@@ -114,4 +115,50 @@ test("terminal specialist tasks remain visible even when they have no recorded a
   assert.match(text(tree), /Research/);
   assert.match(text(tree), /0\s+recorded action/);
   assert.doesNotMatch(text(tree), /Waiting|No specialist tasks/);
+});
+
+test("Work evidence keeps zero/single-event timelines static and changes the bounded multi-event cursor", () => {
+  const changes = [];
+  let stateIndex = 0;
+  const Evidence = component("Evidence", {
+    useState: (initial) => {
+      const index = stateIndex++;
+      return [initial, (value) => changes.push([index, value])];
+    },
+    Search: "Search",
+    Globe: "Globe",
+    Download: "Download",
+    EmptyState: "EmptyState",
+    SearchablePicker: "SearchablePicker",
+    Select: "Select",
+    SelectTrigger: "SelectTrigger",
+    SelectValue: "SelectValue",
+    SelectContent: "SelectContent",
+    SelectItem: "SelectItem",
+    Slider: "Slider",
+  });
+  for (const count of [0, 1, 2, 5]) {
+    stateIndex = 0;
+    const events = Array.from({ length: count }, (_, index) => ({
+      id: index + 1,
+      type: "evidence",
+      payload: {},
+      createdAt: "2026-10-19T00:00:00Z",
+    }));
+    const tree = Evidence({ detail: detail("completed", events) });
+    const sliders = all(tree).filter(({ type }) => type === "Slider");
+    assert.match(text(tree), /Timeline through/);
+    assert.doesNotMatch(text(tree), /NaN|Infinity/);
+    assert.equal(sliders.length, count > 1 ? 1 : 0);
+    if (count > 1) {
+      const slider = sliders[0];
+      assert.equal(slider.props.min, 0);
+      assert.equal(slider.props.max, count - 1);
+      assert.equal(slider.props.step, 1);
+      assert.deepEqual(slider.props.value, [count - 1]);
+      assert.equal(slider.props.thumbProps["aria-label"], "Timeline through");
+      slider.props.onValueChange([0]);
+      assert.deepEqual(changes.at(-1), [3, 0]);
+    }
+  }
 });

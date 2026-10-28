@@ -15,6 +15,8 @@
 @import "./styles/control-geometry.css";
 @import "./styles/assistant-modern.css";
 @import "./styles/assistant-overlays.css";
+@import "./styles/reference-surfaces.css";
+@import "./styles/workspace-layout.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -56,23 +58,23 @@
   --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-active: var(--sidebar-active);
   --color-user-bubble: var(--user-bubble);
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-ui);
 }
 
 @layer components {
   .work-action {
-    @apply inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50;
+    @apply inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50;
   }
   .work-action svg,
   .work-small svg {
     @apply h-4 w-4;
   }
   .work-small {
-    @apply inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50;
+    @apply inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-3 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50;
   }
   .work-icon {
-    @apply grid h-10 w-10 place-items-center rounded-full border border-border text-lg hover:bg-muted;
+    @apply grid h-11 w-11 place-items-center rounded-full border border-border text-lg hover:bg-muted;
   }
 }
 
@@ -2900,9 +2902,10 @@ body {
   margin: 0;
   color: var(--foreground);
   font-size: clamp(1.6rem, 4vw, 2rem);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 400;
   letter-spacing: -0.035em;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
 .kova-state-panel > p:not(.kova-state-eyebrow) {

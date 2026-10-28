@@ -19,6 +19,13 @@ test("hosted task availability and execution use the authenticated browser trans
         crypto: { randomUUID: () => "task_12345678" },
       },
       modules: {
+        "@/components/ui/select": {
+          Select: "Select",
+          SelectContent: "SelectContent",
+          SelectItem: "SelectItem",
+          SelectTrigger: "SelectTrigger",
+          SelectValue: "SelectValue",
+        },
         "@/lib/auth-fetch": { authFetch: authenticatedFetch },
         "@/lib/openai-task-client.mjs": {
           loadOpenAiTaskAvailability: async (owner, options) => {

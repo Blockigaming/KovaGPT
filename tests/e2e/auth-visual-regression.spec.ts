@@ -128,6 +128,10 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
 
   await page.evaluate(() => document.fonts.ready);
   const controlFont = await email.evaluate((element) => getComputedStyle(element).fontFamily);
+  await expect(dialog.getByRole("heading", { name: "Log in to Kova", exact: true })).toHaveCSS(
+    "font-family",
+    controlFont,
+  );
   await expect(dialog.getByRole("button", { name: "Continue", exact: true })).toHaveCSS(
     "font-family",
     controlFont,

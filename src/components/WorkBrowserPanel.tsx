@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Globe2, Monitor } from "lucide-react";
 import "./work-browser-preview.css";
@@ -375,19 +382,23 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
                   </pre>
                   <label className="block text-sm">
                     Page control
-                    <select
-                      value={target}
-                      onChange={(e) => setTarget(e.target.value)}
-                      className="mt-1 block w-full rounded border bg-background p-2"
+                    <Select
+                      value={target || "no-page-control"}
+                      onValueChange={(value) => setTarget(value === "no-page-control" ? "" : value)}
                     >
-                      <option value="">Select a control</option>
-                      {view.nodes?.map((node) => (
-                        <option key={node.id} value={node.id} disabled={node.disabled}>
-                          {node.label || node.kind}{" "}
-                          {node.inputType === "password" ? "(password)" : ""}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger aria-label="Page control" className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no-page-control">Select a control</SelectItem>
+                        {view.nodes?.map((node) => (
+                          <SelectItem key={node.id} value={node.id} disabled={node.disabled}>
+                            {node.label || node.kind}{" "}
+                            {node.inputType === "password" ? "(password)" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </label>
                   {view.nodes?.find((node) => node.id === target)?.editable && (
                     <label className="block text-sm">

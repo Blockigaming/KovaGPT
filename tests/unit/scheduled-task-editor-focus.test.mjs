@@ -157,6 +157,13 @@ function fixture({
       },
       "@tanstack/react-start": { useServerFn: (fn) => fn },
       "@/components/TaskGmailEventSource": { TaskGmailEventSource: "gmail-source" },
+      "@/components/ui/select": {
+        Select: "Select",
+        SelectContent: "SelectContent",
+        SelectItem: "SelectItem",
+        SelectTrigger: "SelectTrigger",
+        SelectValue: "SelectValue",
+      },
       "@/components/ui/searchable-picker": { SearchablePicker: "searchable-picker" },
       "@/lib/scheduled-tasks.functions": services,
       "@/lib/scheduled-task-draft-validation": loadUiModule(

@@ -187,7 +187,7 @@
   padding-bottom: 8px;
 }
 .spec400-project-tools select,
-.spec400-library-metadata-filters select {
+.spec400-library-metadata-filters [data-slot="select-trigger"] {
   min-height: 44px;
   border: 1px solid var(--border);
   border-radius: var(--kova-radius-input);
@@ -303,7 +303,7 @@
   flex-wrap: wrap;
   gap: 16px;
 }
-.spec400-library-metadata-filters label {
+.spec400-library-metadata-filters .spec400-library-metadata-field {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -496,7 +496,7 @@
   .spec400-form-actions button {
     flex: 1;
   }
-  .spec400-library-metadata-filters label {
+  .spec400-library-metadata-filters .spec400-library-metadata-field {
     flex: 1;
     align-items: stretch;
     flex-direction: column;
@@ -542,6 +542,16 @@
 /* Content-first Library: utilities stay quiet and metadata filters are on demand. */
 .kova-core-page.kova-file-directory.spec400-library {
   gap: 12px;
+}
+@media (max-width: 1023px) {
+  .kova-core-page.kova-file-directory.spec400-library {
+    --page-padding: 24px;
+  }
+}
+@media (max-width: 767px) {
+  .kova-core-page.kova-file-directory.spec400-library {
+    --page-padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+  }
 }
 .kova-core-page.kova-file-directory.spec400-library > .kova-page-header {
   margin-bottom: 0;
@@ -599,7 +609,9 @@
   gap: 8px;
   min-width: 0;
 }
-.kova-core-page.kova-file-directory.spec400-library .spec400-library-display-controls select {
+.kova-core-page.kova-file-directory.spec400-library
+  .spec400-library-display-controls
+  .kova-library-sort {
   flex: 1;
   width: 0;
   min-width: 0;
@@ -609,7 +621,9 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
   }
-  .kova-core-page.kova-file-directory.spec400-library .spec400-library-display-controls select {
+  .kova-core-page.kova-file-directory.spec400-library
+    .spec400-library-display-controls
+    .kova-library-sort {
     grid-column: 1 / -1;
     grid-row: 1;
     width: 100%;
@@ -624,7 +638,7 @@
   gap: 12px;
   margin-block: 16px;
 }
-.spec400-library-filter-panel .spec400-library-metadata-filters label {
+.spec400-library-filter-panel .spec400-library-metadata-filters .spec400-library-metadata-field {
   flex-direction: column;
   align-items: stretch;
   gap: 4px;
@@ -660,7 +674,9 @@ html[data-kova-density="compact"]
   .spec400-library-display-controls {
     grid-column: auto;
   }
-  .kova-core-page.kova-file-directory.spec400-library .spec400-library-display-controls select {
+  .kova-core-page.kova-file-directory.spec400-library
+    .spec400-library-display-controls
+    .kova-library-sort {
     width: auto;
   }
 }

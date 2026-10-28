@@ -114,7 +114,11 @@ async function mount(page: Page, { defer = false } = {}) {
   return state;
 }
 async function choices(page: Page) {
-  await page.getByLabel("Developer project", { exact: true }).selectOption(projectId);
+  await page.getByRole("combobox", { name: "Developer project", exact: true }).click();
+  await page.getByRole("option", { name: "Private developer project · USD", exact: true }).click();
+  await expect(
+    page.getByRole("combobox", { name: "Developer project", exact: true }),
+  ).toContainText("Private developer project · USD");
   for (const [field, value] of Object.entries({
     request: "1",
     daily: "10",
@@ -146,6 +150,16 @@ test("consent requires explicit reviewed limits and hashes the selected scope su
     { exact: true },
   );
   await expect(approve).toBeDisabled();
+  await review.check();
+  const project = page.getByRole("combobox", { name: "Developer project", exact: true });
+  await project.click();
+  await page.getByRole("option", { name: "Choose a project", exact: true }).click();
+  await expect(project).toContainText("Choose a project");
+  await expect(review).not.toBeChecked();
+  await expect(approve).toBeDisabled();
+  await project.click();
+  await page.getByRole("option", { name: "Private developer project · USD", exact: true }).click();
+  await expect(project).toBeFocused();
   await review.check();
   await page.getByLabel("daily", { exact: true }).fill("11");
   await expect(review).not.toBeChecked();
@@ -182,12 +196,17 @@ test("switching request during a pending decision resets busy choices and discar
     .check();
   await page.getByRole("button", { name: "Approve connection", exact: true }).click();
   await expect.poll(() => state.calls.length).toBe(1);
+  await expect(
+    page.getByRole("combobox", { name: "Developer project", exact: true }),
+  ).toBeDisabled();
   await action(page, "switchRequest");
   await expect(
     page.getByText("Allow Next client to use developer credit?", { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Deny", exact: true })).toBeEnabled();
-  await expect(page.getByLabel("Developer project", { exact: true })).toHaveValue("");
+  await expect(
+    page.getByRole("combobox", { name: "Developer project", exact: true }),
+  ).toContainText("Choose a project");
   await state.release?.();
   await expect(page).toHaveURL("https://kova.example/");
   await choices(page);
@@ -218,7 +237,9 @@ test("an account switch unmounts pending consent and never reuses its selected p
   await page.getByRole("button", { name: "Deny", exact: true }).click();
   await expect.poll(() => state.calls.length).toBe(1);
   await action(page, "switchUser");
-  await expect(page.getByLabel("Developer project", { exact: true })).toHaveValue("");
+  await expect(
+    page.getByRole("combobox", { name: "Developer project", exact: true }),
+  ).toContainText("Choose a project");
   await expect(page.getByRole("button", { name: "Deny", exact: true })).toBeEnabled();
   await state.release?.();
   await expect(page).toHaveURL("https://kova.example/");

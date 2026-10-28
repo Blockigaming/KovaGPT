@@ -5,6 +5,8 @@ import test from "node:test";
 const styles = readFileSync("src/styles.css", "utf8");
 const runtime = readFileSync("src/components/PlatformRuntime.tsx", "utf8");
 const parity = readFileSync("src/styles/chatgpt-final-parity.css", "utf8");
+const system = readFileSync("src/styles/spec400-system.css", "utf8");
+const tokens = readFileSync("src/styles/visual-tokens.css", "utf8");
 const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
 const mobileTopBar = readFileSync("src/components/MobileTopBar.tsx", "utf8");
 
@@ -21,9 +23,26 @@ test("shared compatibility styles remain loaded with the owner's authoritative s
       styles.indexOf('@import "./styles/chatgpt-final-parity.css"'),
   );
   assert.match(styles, /@import "\.\/styles\/spec400-chat\.css"/u);
+  assert.ok(
+    styles.indexOf('@import "./styles/reference-surfaces.css"') >
+      styles.indexOf('@import "./styles/spec400-system.css"'),
+    "the current reference layer must follow legacy compatibility styles",
+  );
   assert.match(
-    readFileSync("src/styles/spec400-system.css", "utf8"),
-    /--font-sans:\s*"IBM Plex Sans"/u,
+    system,
+    /--font-sans:\s*var\(--font-ui,\s*ui-sans-serif,\s*system-ui,\s*sans-serif\)/u,
+  );
+  assert.match(
+    system,
+    /--font-display:\s*var\(--font-ui,\s*ui-sans-serif,\s*system-ui,\s*sans-serif\)/u,
+  );
+  assert.match(tokens, /--font-ui:\s*ui-sans-serif,\s*system-ui,/u);
+  assert.match(tokens, /--font-reading:\s*Georgia,\s*"Times New Roman",\s*serif/u);
+  assert.doesNotMatch(system, /--font-(?:sans|display):\s*"IBM Plex Sans"/u);
+  assert.match(system, /--font-mono:\s*"IBM Plex Mono",\s*ui-monospace,\s*monospace/u);
+  assert.match(
+    system,
+    /body \.kova-page textarea\.font-mono,[\s\S]*?font-family: "IBM Plex Mono", ui-monospace, monospace !important;/u,
   );
   assert.doesNotMatch(runtime, /chatgpt-final-parity\.css/u);
   assert.match(parity, /\.kova-composer:focus-within[\s\S]*outline: 2px solid/u);

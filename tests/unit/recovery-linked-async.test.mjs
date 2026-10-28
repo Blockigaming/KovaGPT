@@ -51,7 +51,7 @@ function contextSetup() {
   const execute = handler(
     read("context-packs"),
     "  const submit = async () => {",
-    "  const attachPack =",
+    "  useLayoutEffect(() => {",
     environment,
   );
   return { environment, calls, pending, execute };

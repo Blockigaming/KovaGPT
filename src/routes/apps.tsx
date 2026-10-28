@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
@@ -1709,17 +1716,22 @@ function AppsPage() {
                     placeholder="Search plugins"
                   />
                 </label>
-                <label className="spec400-plugin-category-filter">
-                  <span>Category</span>
-                  <select value={category} onChange={(event) => setCategory(event.target.value)}>
-                    <option value="all">All categories</option>
-                    {PLUGIN_CATEGORIES.map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="spec400-plugin-category-filter">
+                  <label htmlFor="plugin-category-filter">Category</label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger id="plugin-category-filter" className="w-auto min-w-44">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All categories</SelectItem>
+                      {PLUGIN_CATEGORIES.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <TabsContent value={connectionFilter} className="spec400-plugin-results">
                 <p className="spec400-plugin-result-count" role="status">

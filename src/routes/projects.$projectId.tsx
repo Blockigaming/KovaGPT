@@ -1,4 +1,5 @@
 import "@/styles/spec400-management.css";
+import "@/styles/project-detail.css";
 import {
   createFileRoute,
   Link,
@@ -17,6 +18,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { CollaborativeProjectNotes } from "@/components/CollaborativeProjectNotes";
 import { ProjectCollaboration } from "@/components/ProjectCollaboration";
@@ -72,6 +75,7 @@ import {
   Calendar,
   StickyNote,
   X,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PROJECT_CHAT_DELETE_UNAVAILABLE } from "@/lib/project-chat-deletion";
@@ -589,12 +593,13 @@ function ProjectDetailPage() {
 
   return (
     <AppShell hideUtilities>
-      <main id="main-content" tabIndex={-1} className="spec400-management spec400-project-detail">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 sm:flex-nowrap">
-          <nav
-            aria-label="Breadcrumb"
-            className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm"
-          >
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="spec400-management spec400-project-detail kova-project-workspace"
+      >
+        <header className="kova-project-header">
+          <nav aria-label="Breadcrumb" className="kova-project-breadcrumb">
             <Link
               to="/projects"
               className="min-h-11 text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
@@ -603,150 +608,173 @@ function ProjectDetailPage() {
               Projects
             </Link>
             <span aria-hidden="true">/</span>
-            <span className="min-w-0 break-words" aria-current="page">
+            <span className="kova-project-breadcrumb-current" aria-current="page">
               {project.name}
             </span>
           </nav>
-        </div>
 
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-semibold truncate">{project.name}</h1>
-              {archived && (
-                <span className="text-xs uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/15 text-amber-600">
-                  Archived
-                </span>
+          <div className="kova-project-heading">
+            <div className="min-w-0">
+              <div className="kova-project-title-line">
+                <h1 className="kova-project-title">{project.name}</h1>
+                {archived && <span className="kova-project-status">Archived</span>}
+              </div>
+              {project.description && (
+                <p className="kova-project-description">{project.description}</p>
               )}
-            </div>
-            {project.description && (
-              <p className="text-muted-foreground mt-1">{project.description}</p>
-            )}
-            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-              <span className="uppercase tracking-wider px-2 py-0.5 rounded bg-muted">
-                {project.role}
-              </span>
-              <span className="flex items-center gap-1">
-                <Users className="w-3.5 h-3.5" />
-                {members.length} member{members.length === 1 ? "" : "s"}
-              </span>
+              <div className="kova-project-access">
+                <span className="kova-project-role">{project.role}</span>
+                <span className="flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5" aria-hidden="true" />
+                  {members.length} member{members.length === 1 ? "" : "s"}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <p className="mb-4 text-sm text-muted-foreground">
-          {archived
-            ? "This project is archived and read-only. Its content is retained. Restore it to make changes."
-            : "Project members can see conversations created in this project."}
-        </p>
-        <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Project actions">
-          {archived && isOwner && (
-            <Button onClick={() => void toggleArchive()} disabled={archiveBusy}>
-              <ArchiveRestore aria-hidden="true" />
-              {archiveBusy ? "Restoring…" : "Restore project"}
-            </Button>
-          )}
-          {canEdit && (
-            <Button onClick={() => void newChatInProject()} disabled={creatingProjectChat}>
-              <Plus aria-hidden="true" />
-              {creatingProjectChat ? "Creating…" : "New chat in project"}
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Search this project"
-            title="Search this project"
-            onClick={() => setSearchOpen(true)}
-          >
-            <Search className="h-4 w-4" aria-hidden="true" />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                ref={projectMoreRef}
-                aria-label="More project actions"
-                title="More project actions"
-              >
-                <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          <p className="kova-project-sharing-note">
+            {archived
+              ? "This project is archived and read-only. Its content is retained. Restore it to make changes."
+              : "Project members can see conversations created in this project."}
+          </p>
+          <div className="kova-project-actions" aria-label="Project actions">
+            {archived && isOwner && (
+              <Button onClick={() => void toggleArchive()} disabled={archiveBusy}>
+                <ArchiveRestore aria-hidden="true" />
+                {archiveBusy ? "Restoring…" : "Restore project"}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setTab("members")}>
-                <Users aria-hidden="true" />
-                {isOwner && !archived ? "Share project" : "People"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setTab("timers")}>
-                <Clock aria-hidden="true" />
-                Timers
-              </DropdownMenuItem>
-              {isOwner && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem disabled={archiveBusy} onSelect={() => void toggleArchive()}>
-                    {archived ? (
-                      <ArchiveRestore aria-hidden="true" />
-                    ) : (
-                      <Archive aria-hidden="true" />
-                    )}
-                    {archiveBusy
-                      ? archived
-                        ? "Restoring…"
-                        : "Archiving…"
-                      : archived
-                        ? "Restore project"
-                        : "Archive project"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => openProjectDelete()}>
-                    <Trash2 className="text-destructive" aria-hidden="true" />
-                    Delete project
-                  </DropdownMenuItem>
-                </>
-              )}
-              {!isOwner && (
-                <DropdownMenuItem
-                  onSelect={() => {
-                    projectActionUrlRef.current = window.location.href;
-                    projectActionTriggerRef.current = projectMoreRef.current;
-                    setLeaveOpen(true);
-                  }}
+            )}
+            {canEdit && (
+              <Button
+                aria-label="New chat in project"
+                onClick={() => void newChatInProject()}
+                disabled={creatingProjectChat}
+              >
+                <Plus aria-hidden="true" />
+                {creatingProjectChat ? "Creating…" : "New chat"}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              aria-label={isOwner && !archived ? "Share project" : "People"}
+              onClick={() => setTab("members")}
+            >
+              <Users aria-hidden="true" />
+              {isOwner && !archived ? "Share" : "People"}
+            </Button>
+            <Button
+              className="kova-project-search-action"
+              variant="outline"
+              size="icon"
+              aria-label="Search this project"
+              title="Search this project"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="h-4 w-4" aria-hidden="true" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  ref={projectMoreRef}
+                  aria-label="More project actions"
+                  title="More project actions"
                 >
-                  Leave project
+                  <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setSearchOpen(true)}>
+                  <Search aria-hidden="true" />
+                  Search this project
                 </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                <DropdownMenuItem onSelect={() => setTab("members")}>
+                  <Users aria-hidden="true" />
+                  {isOwner && !archived ? "Share project" : "People"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setTab("timers")}>
+                  <Clock aria-hidden="true" />
+                  Timers
+                </DropdownMenuItem>
+                {isOwner && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem disabled={archiveBusy} onSelect={() => void toggleArchive()}>
+                      {archived ? (
+                        <ArchiveRestore aria-hidden="true" />
+                      ) : (
+                        <Archive aria-hidden="true" />
+                      )}
+                      {archiveBusy
+                        ? archived
+                          ? "Restoring…"
+                          : "Archiving…"
+                        : archived
+                          ? "Restore project"
+                          : "Archive project"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => openProjectDelete()}>
+                      <Trash2 className="text-destructive" aria-hidden="true" />
+                      Delete project
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {!isOwner && (
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      projectActionUrlRef.current = window.location.href;
+                      projectActionTriggerRef.current = projectMoreRef.current;
+                      setLeaveOpen(true);
+                    }}
+                  >
+                    Leave project
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
 
-        <Tabs value={tab} onValueChange={setTab}>
+        <Tabs value={tab} onValueChange={setTab} className="kova-project-content">
           <div className="spec400-project-navigation">
             <TabsList aria-label="Project sections">
               <TabsTrigger value="chats">Chats</TabsTrigger>
+              <TabsTrigger value="files">Files</TabsTrigger>
               <TabsTrigger value="context">Context</TabsTrigger>
             </TabsList>
-            <label className="spec400-project-tools">
-              More project tools
-              <select
-                value={["chats", "context"].includes(tab) ? "" : tab}
-                onChange={(event) => {
-                  if (event.target.value) setTab(event.target.value);
-                }}
-              >
-                <option value="">Choose a view</option>
-                <option value="overview">Activity</option>
-                <option value="timers">Timers</option>
-                <option value="files">Project files</option>
-                <option value="images">Project images</option>
-                <option value="notes">Notes</option>
-                <option value="tasks">Project tasks</option>
-                <option value="memory">Memory</option>
-                <option value="members">Members</option>
-                <option value="collaboration">Collaboration</option>
-                <option value="settings">{isOwner ? "Settings" : "Access"}</option>
-              </select>
-            </label>
+            <div className="spec400-project-tools">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="kova-project-tools-trigger"
+                    aria-label="More project tools"
+                  >
+                    More
+                    <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[220px]">
+                  <DropdownMenuRadioGroup value={tab} onValueChange={setTab}>
+                    <DropdownMenuRadioItem value="overview">Activity</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="timers">Timers</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="files">Project files</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="images">Project images</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="notes">Notes</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="tasks">Project tasks</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="memory">Memory</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="members">Members</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="collaboration">
+                      Collaboration
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="settings">
+                      {isOwner ? "Settings" : "Access"}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           <TabsContent value="timers" className="mt-4">
@@ -783,10 +811,9 @@ function ProjectDetailPage() {
               }}
             />
             <section className="spec400-context-files">
-              <h2>Project files</h2>
               <p className="spec400-supporting">
-                These existing project files are scoped to this project. Shared Library references
-                are not supported by the current project storage service.
+                Keep the files and instructions for this project together. Manage other saved items
+                in Library.
               </p>
               <Link to="/library" className="underline">
                 Open Library
@@ -1506,10 +1533,14 @@ function ChatsTab({
       tabIndex={-1}
       role="region"
       aria-label="Project chats"
+      className="kova-project-collection"
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-sm text-muted-foreground">
-          {chats.length} chat{chats.length === 1 ? "" : "s"}
+      <div className="kova-project-collection-toolbar">
+        <div>
+          <h2>Chats</h2>
+          <p className="kova-project-collection-summary">
+            {chats.length} chat{chats.length === 1 ? "" : "s"} in this project
+          </p>
         </div>
         {canEdit && (
           <Button size="sm" onClick={() => setCreating(true)}>
@@ -1521,7 +1552,7 @@ function ChatsTab({
       {canEdit && chats.length > 0 && (
         <p
           id="project-chat-delete-unavailable"
-          className="mb-3 text-xs text-muted-foreground"
+          className="kova-project-collection-note"
           role="note"
         >
           {PROJECT_CHAT_DELETE_UNAVAILABLE}
@@ -1534,64 +1565,83 @@ function ChatsTab({
           hint="Chats you create here are visible to everyone in this project."
         />
       ) : (
-        <div className="border rounded-xl divide-y">
-          {chats.map((c) => (
-            <div
-              key={c.id}
-              draggable={canEdit && !moving}
-              onDragStart={(event) => {
-                if (!canEdit || moveOperationRef.current) {
-                  event.preventDefault();
-                  return;
+        <div className="kova-project-resource-list" data-editable={canEdit}>
+          <div
+            className="kova-project-chat-columns kova-project-resource-columns"
+            aria-hidden="true"
+          >
+            <span>Name</span>
+            <span>Last updated</span>
+            {canEdit && <span className="sr-only">Actions</span>}
+          </div>
+          <div role="list" aria-label="Project conversations">
+            {chats.map((c) => (
+              <div
+                key={c.id}
+                role="listitem"
+                draggable={canEdit && !moving}
+                onDragStart={(event) => {
+                  if (!canEdit || moveOperationRef.current) {
+                    event.preventDefault();
+                    return;
+                  }
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData("application/x-kova-project-chat", c.id);
+                  event.dataTransfer.setData("text/plain", c.title);
+                }}
+                className="kova-project-resource-row kova-project-chat-columns"
+                title={
+                  canEdit ? "Use Move to project or drag this chat onto another project" : undefined
                 }
-                event.dataTransfer.effectAllowed = "move";
-                event.dataTransfer.setData("application/x-kova-project-chat", c.id);
-                event.dataTransfer.setData("text/plain", c.title);
-              }}
-              className="flex items-center justify-between p-3 hover:bg-accent/50 transition"
-              title={
-                canEdit ? "Use Move to project or drag this chat onto another project" : undefined
-              }
-            >
-              <Link
-                to="/projects/$projectId/chat/$chatId"
-                params={{ projectId, chatId: c.id }}
-                className="flex-1 min-w-0"
               >
-                <div className="font-medium truncate">{c.title}</div>
-                <div className="text-xs text-muted-foreground">
-                  Updated {new Date(c.updated_at).toLocaleString()}
-                </div>
-              </Link>
-              {canEdit && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 shrink-0"
-                  disabled={moving}
-                  aria-label={`Move ${c.title} to project`}
-                  title="Move to project"
-                  onClick={(event) => openMove(c, event.currentTarget)}
+                <Link
+                  to="/projects/$projectId/chat/$chatId"
+                  params={{ projectId, chatId: c.id }}
+                  className="kova-project-resource-link min-h-11"
                 >
-                  <FolderInput className="h-4 w-4" aria-hidden="true" />
-                </Button>
-              )}
-              {canEdit && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-11 w-11 shrink-0"
-                  disabled
-                  aria-label={`Delete ${c.title} unavailable`}
-                  aria-describedby="project-chat-delete-unavailable"
-                  title={PROJECT_CHAT_DELETE_UNAVAILABLE}
+                  <span className="kova-project-resource-icon" aria-hidden="true">
+                    <MessageCircle className="h-5 w-5" />
+                  </span>
+                  <span className="kova-project-resource-name">{c.title}</span>
+                </Link>
+                <time
+                  className="kova-project-resource-date"
+                  dateTime={c.updated_at}
+                  title={new Date(c.updated_at).toLocaleString()}
                 >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          ))}
+                  <span className="kova-project-mobile-label">Updated </span>
+                  {new Date(c.updated_at).toLocaleDateString()}
+                </time>
+                {canEdit && (
+                  <div className="kova-project-resource-actions">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 shrink-0"
+                      disabled={moving}
+                      aria-label={`Move ${c.title} to project`}
+                      title="Move to project"
+                      onClick={(event) => openMove(c, event.currentTarget)}
+                    >
+                      <FolderInput className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 shrink-0"
+                      disabled
+                      aria-label={`Delete ${c.title} unavailable`}
+                      aria-describedby="project-chat-delete-unavailable"
+                      title={PROJECT_CHAT_DELETE_UNAVAILABLE}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1981,11 +2031,14 @@ function FilesTab({
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-sm text-muted-foreground">
-          {items.length} {kind === "image" ? "image" : "file"}
-          {items.length === 1 ? "" : "s"}
+    <div className="kova-project-collection">
+      <div className="kova-project-collection-toolbar">
+        <div>
+          <h2>{kind === "image" ? "Images" : "Files"}</h2>
+          <p className="kova-project-collection-summary">
+            {items.length} {kind === "image" ? "image" : "file"}
+            {items.length === 1 ? "" : "s"} in this project
+          </p>
         </div>
         {canEdit && (
           <div>
@@ -2033,7 +2086,8 @@ function FilesTab({
             setDragOver(false);
             handleFiles(e.dataTransfer.files);
           }}
-          className={`mb-4 border-2 border-dashed rounded-xl p-4 text-center text-sm transition ${dragOver ? "border-primary bg-primary/5" : "border-border text-muted-foreground"}`}
+          className="kova-project-upload-zone"
+          data-drag-over={dragOver}
         >
           Drag {kind === "image" ? "images" : "files"} here to upload
         </div>
@@ -2068,7 +2122,7 @@ function FilesTab({
           }
         />
       ) : kind === "image" ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <div className="kova-project-image-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {items.map((f) => (
             <div
               key={f.id}
@@ -2104,45 +2158,74 @@ function FilesTab({
           ))}
         </div>
       ) : (
-        <div className="border rounded-xl divide-y">
-          {items.map((f) => (
-            <div key={f.id} className="flex items-center justify-between p-3 gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="font-medium truncate">{f.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {humanBytes(f.size_bytes)} · {new Date(f.created_at).toLocaleDateString()}
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button
+        <div className="kova-project-resource-list" data-editable={canEdit}>
+          <div
+            className="kova-project-file-columns kova-project-resource-columns"
+            aria-hidden="true"
+          >
+            <span>Name</span>
+            <span>File size</span>
+            <span>Added</span>
+            <span className="sr-only">Actions</span>
+          </div>
+          <div role="list" aria-label="Project files">
+            {items.map((f) => (
+              <div
+                key={f.id}
+                role="listitem"
+                className="kova-project-resource-row kova-project-file-columns"
+              >
+                <button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="min-h-11 min-w-11"
+                  className="kova-project-resource-link min-h-11"
                   onClick={() => void openFile(f)}
                   disabled={downloadingId === f.id}
-                  aria-label={`Open ${f.name}`}
                 >
-                  {downloadingId === f.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                </Button>
-                {canEdit && (
+                  <span className="kova-project-resource-icon" aria-hidden="true">
+                    <FileText className="h-5 w-5" />
+                  </span>
+                  <span className="kova-project-resource-name">{f.name}</span>
+                </button>
+                <span className="kova-project-resource-size">{humanBytes(f.size_bytes)}</span>
+                <time
+                  className="kova-project-resource-date"
+                  dateTime={f.created_at}
+                  title={new Date(f.created_at).toLocaleString()}
+                >
+                  <span className="kova-project-mobile-label">Added </span>
+                  {new Date(f.created_at).toLocaleDateString()}
+                </time>
+                <div className="kova-project-resource-actions">
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => setConfirmId(f.id)}
                     className="min-h-11 min-w-11"
-                    aria-label={`Delete ${f.name}`}
+                    onClick={() => void openFile(f)}
+                    disabled={downloadingId === f.id}
+                    aria-label={`Open ${f.name}`}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {downloadingId === f.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
                   </Button>
-                )}
+                  {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setConfirmId(f.id)}
+                      className="min-h-11 min-w-11"
+                      aria-label={`Delete ${f.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
@@ -2234,7 +2317,7 @@ function ProjectInstructionsTab({
   }
 
   return (
-    <section className="kova-card p-4" aria-labelledby="project-instructions-title">
+    <section className="kova-project-instructions" aria-labelledby="project-instructions-title">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 id="project-instructions-title" className="text-base font-semibold">
@@ -3504,10 +3587,12 @@ function SettingsTab({
 // ===================== SHARED HELPERS =====================
 function EmptyState({ icon, title, hint }: { icon: React.ReactNode; title: string; hint: string }) {
   return (
-    <div className="text-center py-12 border-2 border-dashed rounded-2xl">
-      <div className="mx-auto mb-3 text-muted-foreground flex justify-center">{icon}</div>
-      <div className="font-medium mb-1">{title}</div>
-      <p className="text-sm text-muted-foreground">{hint}</p>
+    <div className="kova-project-empty-state">
+      <div className="kova-project-empty-icon" aria-hidden="true">
+        {icon}
+      </div>
+      <h3>{title}</h3>
+      <p>{hint}</p>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import "@/styles/file-directories.css";
 import "@/styles/spec400-management.css";
+import "@/styles/project-directory.css";
 import { createFileRoute, Link, Outlet, useMatch, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
@@ -9,6 +10,13 @@ import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +45,7 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import {
   FolderKanban,
+  Folder,
   LayoutTemplate,
   Grid2X2,
   List,
@@ -102,6 +111,13 @@ export const Route = createFileRoute("/projects")({
     ],
   }),
 });
+
+// New directories open in list view. A stored preference, including a migrated
+// grid selection, remains authoritative for its principal.
+function parseProjectDirectoryPreferences(raw: string | null): ProjectListPreferences {
+  const preferences = parseProjectListPreferences(raw);
+  return raw === null ? { ...preferences, view: "list" } : preferences;
+}
 
 function ProjectsRoute() {
   const projectMatch = useMatch({
@@ -263,7 +279,7 @@ function ProjectsPage() {
     usePrincipalSessionPreferences(
       PROJECT_LIST_STORAGE_BASE,
       isLoaded ? userKey : undefined,
-      parseProjectListPreferences,
+      parseProjectDirectoryPreferences,
     );
   const setQuery = (query: string) => setListPreferences({ query });
   const setSortBy = (sort: ProjectListPreferences["sort"]) => setListPreferences({ sort });
@@ -852,7 +868,8 @@ function ProjectsPage() {
         tabIndex={-1}
         aria-labelledby="projects-title"
         aria-busy={isLoading || undefined}
-        className="kova-page kova-secondary-page kova-core-page kova-directory kova-file-directory kova-projects-page spec400-management spec400-projects pb-24 lg:pb-8"
+        className="kova-page kova-secondary-page kova-core-page kova-directory kova-file-directory kova-projects-page kova-project-directory spec400-management spec400-projects pb-24 lg:pb-8"
+        data-project-view={view}
       >
         <WorkspacePageHeader
           icon={FolderKanban}
@@ -893,23 +910,20 @@ function ProjectsPage() {
 
         {!isLoading && isSignedIn && invites.length > 0 && (
           <section
-            className="mb-6 rounded-xl border bg-accent/30 p-4"
+            className="kova-project-directory-invites"
             aria-labelledby="project-invitations-title"
           >
-            <h2 id="project-invitations-title" className="mb-3 text-sm font-medium">
+            <h2 id="project-invitations-title" className="text-sm font-medium">
               Pending invitations
             </h2>
-            <div className="space-y-2">
+            <div className="kova-project-invite-list">
               {invites.map((inv) => (
-                <div
-                  key={inv.invite_id}
-                  className="flex items-center justify-between gap-2 bg-background rounded-lg px-3 py-2"
-                >
-                  <div>
-                    <div className="font-medium">{inv.project_name}</div>
+                <div key={inv.invite_id} className="kova-project-invite-row">
+                  <div className="min-w-0">
+                    <div className="break-words text-sm font-medium">{inv.project_name}</div>
                     <div className="text-xs text-muted-foreground">Role: {inv.role}</div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="kova-project-invite-actions">
                     <Button
                       size="sm"
                       className="min-h-11"
@@ -935,12 +949,12 @@ function ProjectsPage() {
         )}
 
         {isSignedIn && (isLoading || projects.length > 0) && (
-          <div className="kova-project-file-browser">
+          <div className="kova-project-file-browser kova-project-directory-tools">
             <p id="project-sort-explanation" className="sr-only">
               Last opened uses project visits on this device. Projects not opened here fall back to
               last activity.
             </p>
-            <div className="kova-toolbar kova-file-toolbar">
+            <div className="kova-toolbar kova-file-toolbar kova-project-directory-search">
               <div className="kova-directory-search kova-directory-search-with-icon relative flex-1">
                 <SearchIcon className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <Input
@@ -953,67 +967,74 @@ function ProjectsPage() {
                   className="h-11 pl-9"
                 />
               </div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="h-11 rounded-md border border-input bg-background px-3 text-sm"
-                aria-label="Sort projects"
-                aria-describedby="project-sort-explanation"
-              >
-                <option value="opened">Last opened (this device)</option>
-                <option value="opened-help" disabled>
-                  Unvisited projects use last activity
-                </option>
-                <option value="name">Name</option>
-                <option value="updated">Last updated</option>
-              </select>
-              <div className="kova-file-view-toggle" role="group" aria-label="Projects view">
-                <button
-                  type="button"
-                  className={`kova-icon-button min-h-11 ${view === "grid" ? "bg-[var(--surface-selected)]" : ""}`}
-                  onClick={() => setView("grid")}
-                  aria-label="Grid view"
-                  aria-pressed={view === "grid"}
-                >
-                  <Grid2X2 className="h-4 w-4" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  className={`kova-icon-button min-h-11 ${view === "list" ? "bg-[var(--surface-selected)]" : ""}`}
-                  onClick={() => setView("list")}
-                  aria-label="List view"
-                  aria-pressed={view === "list"}
-                >
-                  <List className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
             </div>
-            <div
-              className="kova-file-filters kova-project-filters"
-              role="group"
-              aria-label="Filter projects"
-            >
-              {(
-                [
-                  ["all", "All"],
-                  ["owned", "My projects"],
-                  ["shared", "Shared with me"],
-                ] as const
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setScope(value)}
-                  aria-pressed={scope === value}
-                  className={`min-h-11 shrink-0 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                    scope === value
-                      ? "bg-[var(--surface-selected)] text-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="kova-project-directory-toolbar">
+              <div
+                className="kova-file-filters kova-project-filters"
+                role="group"
+                aria-label="Filter projects"
+              >
+                {(
+                  [
+                    ["all", "All projects"],
+                    ["owned", "My projects"],
+                    ["shared", "Shared with me"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setScope(value)}
+                    aria-pressed={scope === value}
+                    className={`min-h-11 shrink-0 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      scope === value
+                        ? "bg-[var(--surface-selected)] text-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="kova-project-directory-display-options">
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                  <SelectTrigger
+                    className="kova-project-sort"
+                    aria-label="Sort projects"
+                    aria-describedby="project-sort-explanation"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="opened">Last opened (this device)</SelectItem>
+                    <SelectItem value="opened-help" disabled>
+                      Unvisited projects use last activity
+                    </SelectItem>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="updated">Last modified</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="kova-file-view-toggle" role="group" aria-label="Projects view">
+                  <button
+                    type="button"
+                    className={`kova-icon-button min-h-11 ${view === "list" ? "bg-[var(--surface-selected)]" : ""}`}
+                    onClick={() => setView("list")}
+                    aria-label="List view"
+                    aria-pressed={view === "list"}
+                  >
+                    <List className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className={`kova-icon-button min-h-11 ${view === "grid" ? "bg-[var(--surface-selected)]" : ""}`}
+                    onClick={() => setView("grid")}
+                    aria-label="Grid view"
+                    aria-pressed={view === "grid"}
+                  >
+                    <Grid2X2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -1039,8 +1060,16 @@ function ProjectsPage() {
                   }
                 >
                   <div className="kova-project-file-link spec400-project-skeleton-content">
-                    <SkeletonLine className="w-1/2" />
-                    <SkeletonLine className="w-4/5" />
+                    <span className="kova-project-folder-icon" aria-hidden="true">
+                      <Folder />
+                    </span>
+                    <div className="kova-project-file-summary">
+                      <SkeletonLine className="w-1/2" />
+                      <SkeletonLine className="mt-2 w-4/5" />
+                    </div>
+                    <div className="kova-project-file-stats">
+                      <SkeletonLine className="w-2/3" />
+                    </div>
                     <div className="kova-project-file-date">
                       <SkeletonLine className="w-1/3" />
                     </div>
@@ -1202,41 +1231,47 @@ function ProjectsPage() {
                     }
                   }}
                 >
-                  <div className="kova-project-file-name">
-                    <h3 title={p.name}>{p.name}</h3>
-                    {p.pinned_at && (
-                      <Pin className="kova-project-pin h-4 w-4" aria-label="Pinned" />
+                  <span className="kova-project-folder-icon" aria-hidden="true">
+                    <Folder />
+                  </span>
+                  <div className="kova-project-file-summary">
+                    <div className="kova-project-file-name">
+                      <h3 title={p.name}>{p.name}</h3>
+                      {p.pinned_at && (
+                        <Pin className="kova-project-pin h-4 w-4" aria-label="Pinned" />
+                      )}
+                    </div>
+                    {(p.deletion_requested_at || deletingProjectIds.has(p.id)) && (
+                      <p
+                        role="status"
+                        aria-live="polite"
+                        className="kova-project-file-status mt-1 flex items-center gap-1.5 text-xs font-medium text-destructive"
+                      >
+                        {deletingProjectIds.has(p.id) ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                            Deleting stored files…
+                          </>
+                        ) : (
+                          "Deletion incomplete — retry cleanup"
+                        )}
+                      </p>
+                    )}
+                    {(p.description || p.instructions_preview) && (
+                      <p className="kova-project-file-description">
+                        {p.description || p.instructions_preview}
+                      </p>
                     )}
                   </div>
-                  {(p.deletion_requested_at || deletingProjectIds.has(p.id)) && (
-                    <p
-                      role="status"
-                      aria-live="polite"
-                      className="kova-project-file-status mt-1 flex items-center gap-1.5 text-xs font-medium text-destructive"
-                    >
-                      {deletingProjectIds.has(p.id) ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                          Deleting stored files…
-                        </>
-                      ) : (
-                        "Deletion incomplete — retry cleanup"
-                      )}
-                    </p>
-                  )}
-                  {(p.description || p.instructions_preview) && (
-                    <p className="kova-project-file-description">
-                      {p.description || p.instructions_preview}
-                    </p>
-                  )}
                   <div className="kova-project-file-stats">
+                    <span className="sr-only">Access: </span>
                     <span className="kova-project-role">
                       {p.role === "owner" ? "Owner" : p.role === "editor" ? "Editor" : "Viewer"}
                     </span>
                   </div>
                   <div className="kova-project-file-date">
-                    Last activity{" "}
-                    <time dateTime={p.updated_at}>
+                    <span className="kova-project-date-label">Modified </span>
+                    <time dateTime={p.updated_at} title={new Date(p.updated_at).toLocaleString()}>
                       {new Date(p.updated_at).toLocaleDateString()}
                     </time>
                   </div>
@@ -1250,7 +1285,8 @@ function ProjectsPage() {
                           else projectMenuTriggers.current.delete(p.id);
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex h-11 w-11 items-center justify-center rounded-md opacity-70 transition hover:bg-background/70 hover:opacity-100 data-[state=open]:opacity-100"
+                        type="button"
+                        className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-foreground"
                         aria-label={`Options for ${p.name}`}
                       >
                         <MoreHorizontal className="w-4 h-4" />
@@ -1332,7 +1368,10 @@ function ProjectsPage() {
 
             const Section = ({ title, items }: { title: string; items: ProjectSummary[] }) =>
               items.length === 0 ? null : (
-                <section className="kova-file-collection mb-6" aria-label={title}>
+                <section
+                  className="kova-file-collection kova-project-directory-collection"
+                  aria-label={title}
+                >
                   <div className="kova-file-section-heading">
                     <h2>{title}</h2>
                     <span>
@@ -1340,9 +1379,13 @@ function ProjectsPage() {
                     </span>
                   </div>
                   {view === "list" ? (
-                    <div className="kova-project-list-heading" aria-hidden="true">
-                      <span>Project</span>
-                      <span>Updated</span>
+                    <div
+                      className="kova-project-list-heading kova-project-directory-columns"
+                      aria-hidden="true"
+                    >
+                      <span>Name</span>
+                      <span>Access</span>
+                      <span>Last modified</span>
                     </div>
                   ) : null}
                   <div
@@ -1401,13 +1444,13 @@ function ProjectsPage() {
                       items={active}
                     />
                     {archived.length > 0 && (
-                      <section className="mb-6">
+                      <section className="kova-project-directory-archived">
                         <button
                           type="button"
                           onClick={() => setListPreferences({ archived: !showArchived })}
                           aria-expanded={showArchived}
                           aria-controls="archived-projects"
-                          className="mb-2 flex min-h-11 items-center gap-1.5 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                          className="flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           {showArchived ? (
                             <ChevronDown className="w-3.5 h-3.5" />

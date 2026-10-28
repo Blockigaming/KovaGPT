@@ -48,8 +48,11 @@ test("metadata fields live in the closed-by-default Filters popover while active
   assert.equal(hasAncestor(chips, popover), false);
   assert.equal(popover.openingElement.attributes.properties.length, 0);
   assert.match(panel.getText(parsed), /Source and date filters apply to loaded items/);
-  assert.match(metadata.getText(parsed), /setSourceFilter\(event.target.value\)/);
-  assert.match(metadata.getText(parsed), /setDateFilter\(event.target.value\)/);
+  assert.match(
+    metadata.getText(parsed),
+    /value=\{sourceFilter\} onValueChange=\{setSourceFilter\}/,
+  );
+  assert.match(metadata.getText(parsed), /value=\{dateFilter\} onValueChange=\{setDateFilter\}/);
   for (const reset of ['setSourceFilter("all")', 'setDateFilter("all")', 'setQuery("")'])
     assert.ok(chips.getText(parsed).includes(reset));
 });

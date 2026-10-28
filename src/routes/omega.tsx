@@ -47,6 +47,13 @@ import {
 } from "@/lib/agent-portability";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   canTransitionAgent,
   simulatePipeline,
   type AgentRunState,
@@ -285,17 +292,21 @@ function EnterprisePanel({ scope }: { scope: string }) {
         </label>
         <label className="text-sm">
           Default role
-          <select
+          <Select
             value={draft.defaultRole}
-            onChange={(e) =>
-              setDraft({ ...draft, defaultRole: e.target.value as EnterpriseDraft["defaultRole"] })
+            onValueChange={(value) =>
+              setDraft({ ...draft, defaultRole: value as EnterpriseDraft["defaultRole"] })
             }
-            className="mt-1 h-10 w-full rounded-lg border bg-background px-3"
           >
-            <option>viewer</option>
-            <option>editor</option>
-            <option>admin</option>
-          </select>
+            <SelectTrigger aria-label="Default role" className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="viewer">viewer</SelectItem>
+              <SelectItem value="editor">editor</SelectItem>
+              <SelectItem value="admin">admin</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
         <label className="text-sm">
           Retention days

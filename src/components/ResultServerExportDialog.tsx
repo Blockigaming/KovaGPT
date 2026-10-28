@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useId, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import {
@@ -120,22 +127,25 @@ export function ResultServerExportDialog({
         <label htmlFor={formatId} className="text-sm font-medium">
           File format
         </label>
-        <select
-          id={formatId}
+        <Select
           value={format}
-          className="min-h-11 rounded-lg border bg-background px-3"
-          onChange={(event) => setFormat(event.target.value as DocumentDeliveryFormat)}
+          onValueChange={(value) => setFormat(value as DocumentDeliveryFormat)}
         >
-          <option value={kind === "writing" ? "md" : kind === "website" ? "html" : "txt"}>
-            {kind === "writing" ? "Markdown" : kind === "website" ? "HTML" : "Text"}
-          </option>
-          {kind === "writing" &&
-            ["pdf", "docx", "xlsx", "pptx"].map((value) => (
-              <option key={value} value={value}>
-                {value.toUpperCase()}
-              </option>
-            ))}
-        </select>
+          <SelectTrigger id={formatId} className="min-h-11">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={kind === "writing" ? "md" : kind === "website" ? "html" : "txt"}>
+              {kind === "writing" ? "Markdown" : kind === "website" ? "HTML" : "Text"}
+            </SelectItem>
+            {kind === "writing" &&
+              ["pdf", "docx", "xlsx", "pptx"].map((value) => (
+                <SelectItem key={value} value={value}>
+                  {value.toUpperCase()}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
         <button
           type="button"
           className="min-h-11 rounded-lg border px-4"

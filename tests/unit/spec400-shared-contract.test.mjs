@@ -67,7 +67,12 @@ test("expanded navigation does not retain a hidden rail width and fonts are scop
     css,
     /\.kova-sidebar-rail\[data-kova-core-rail\]\[data-state="closed"\] \{\s*display: none !important/,
   );
-  assert.match(css, /--chat-body-font: "IBM Plex Sans"/);
+  assert.match(css, /--chat-body-font: var\(--font-ui, ui-sans-serif, system-ui, sans-serif\)/);
+  assert.match(css, /--font-sans: var\(--font-ui, ui-sans-serif, system-ui, sans-serif\)/);
+  assert.match(
+    read("src/styles/visual-tokens.css"),
+    /--font-ui: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif/,
+  );
   assert.match(
     read("src/components/Sidebar.tsx"),
     /navLink\("\/scheduled-tasks", "Scheduled tasks"/,

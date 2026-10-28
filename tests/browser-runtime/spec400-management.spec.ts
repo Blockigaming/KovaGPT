@@ -173,7 +173,8 @@ test("selected Gmail event controls capture the approved account and disappear o
     });
   });
   await mount(page);
-  await page.getByLabel("Run when").selectOption("event");
+  await page.getByRole("combobox", { name: "Run when", exact: true }).click();
+  await page.getByRole("option", { name: "A connected event matches", exact: true }).click();
   await page
     .getByLabel("Task background approval")
     .selectOption("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
@@ -193,15 +194,17 @@ test("spec400 uses labeled schedule fields and does not fabricate a run preview"
 }) => {
   await mount(page);
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Frequency", exact: true })).toHaveValue("daily");
+  await expect(page.getByRole("combobox", { name: "Frequency", exact: true })).toHaveText("Daily");
   await expect(page.getByLabel("Time", { exact: true })).toHaveValue("09:00");
   await expect(page.getByRole("combobox", { name: "Timezone", exact: true })).toBeVisible();
   await expect(
     page.getByText("A three-run preview is not available", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("combobox", { name: "Frequency", exact: true }).selectOption("weekly");
+  await page.getByRole("combobox", { name: "Frequency", exact: true }).click();
+  await page.getByRole("option", { name: "Weekly", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Weekday", exact: true })).toBeVisible();
-  await page.getByRole("combobox", { name: "Weekday", exact: true }).selectOption("1");
+  await page.getByRole("combobox", { name: "Weekday", exact: true }).click();
+  await page.getByRole("option", { name: "Monday", exact: true }).click();
   await expect(page.getByLabel("Start date", { exact: true })).toHaveValue("2027-01-04");
   await page.getByRole("button", { name: "Save schedule", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText(

@@ -33,6 +33,13 @@ import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
@@ -837,7 +844,10 @@ function ImagesPage() {
   };
 
   return (
-    <div className="flex h-dvh w-full bg-background text-foreground">
+    <div
+      className="kova-app-shell kova-images-workspace flex h-dvh w-full bg-background text-foreground"
+      data-ui="modern"
+    >
       <Sidebar
         conversations={[]}
         activeId={null}
@@ -891,10 +901,10 @@ function ImagesPage() {
         </header>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
+          <div className="kova-images-content max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
             <h1
               id="images-title"
-              className="text-2xl leading-8 font-semibold tracking-normal sm:text-[28px] sm:leading-9"
+              className="kova-page-title text-[30px] leading-tight font-normal sm:text-[36px]"
             >
               Images
             </h1>
@@ -938,7 +948,7 @@ function ImagesPage() {
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
                   ) : (
-                    <ArrowUp className="h-4 w-4" />
+                    <ArrowUp className="h-5 w-5" />
                   )}
                 </button>
               </div>
@@ -954,20 +964,27 @@ function ImagesPage() {
                   : "The image could not be generated. Your prompt is kept here. Please try again."}
               </div>
             )}
-            <label className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-              Output shape
-              <select
-                aria-label="Output image shape"
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+              <label htmlFor="output-image-shape">Output shape</label>
+              <Select
                 value={aspectRatio}
-                onChange={(event) => setAspectRatio(event.target.value as typeof aspectRatio)}
+                onValueChange={(value) => setAspectRatio(value as typeof aspectRatio)}
                 disabled={loading}
-                className="min-h-11 max-w-full rounded-lg border border-border bg-background px-3 py-2"
               >
-                <option value="1:1">Square 1:1</option>
-                <option value="2:3">Portrait 2:3</option>
-                <option value="3:2">Landscape 3:2</option>
-              </select>
-            </label>
+                <SelectTrigger
+                  id="output-image-shape"
+                  aria-label="Output image shape"
+                  className="min-h-11 w-auto max-w-full"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1:1">Square 1:1</SelectItem>
+                  <SelectItem value="2:3">Portrait 2:3</SelectItem>
+                  <SelectItem value="3:2">Landscape 3:2</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {isSignedIn && userKey && (
               <ImageEditControls
                 key={userKey}

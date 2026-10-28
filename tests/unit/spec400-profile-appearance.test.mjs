@@ -84,6 +84,12 @@ function appearanceFixture(settings = original) {
         "@/lib/appearance-preferences.mjs": appearance,
         "@/lib/theme": { applyThemeMode: (mode) => modes.push(mode) },
         "@/styles/appearance-settings.css": {},
+        "@/components/ui/select": Object.fromEntries(
+          ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"].map((name) => [
+            name,
+            name,
+          ]),
+        ),
       },
     },
   );
@@ -92,7 +98,7 @@ function appearanceFixture(settings = original) {
 }
 const labeledSelect = (f, label) =>
   nodes(f.find("label", (node) => text(node).startsWith(label))).find(
-    (node) => node.type === "select",
+    (node) => node.type === "Select" || node.type === "select",
   );
 
 test("live appearance preview uses selected reading size, capped width, density, button state and motion", async () => {
@@ -119,7 +125,7 @@ test("live appearance preview uses selected reading size, capped width, density,
     ["Density", "comfortable", "density"],
     ["Motion", "full", "motion"],
   ]) {
-    labeledSelect(f, label).props.onChange({ target: { value } });
+    labeledSelect(f, label).props.onValueChange(value);
     await f.flush();
     assert.equal(
       f.props.settings[key],
@@ -206,6 +212,13 @@ function profileFixture(component = "ProfileSettings") {
     {
       sourceSuffix: "\nexport { PreferredNameForm };",
       modules: {
+        "@/components/ui/select": {
+          Select: "Select",
+          SelectContent: "SelectContent",
+          SelectItem: "SelectItem",
+          SelectTrigger: "SelectTrigger",
+          SelectValue: "SelectValue",
+        },
         "@/components/ui/avatar": {
           Avatar: "avatar",
           AvatarFallback: "avatar-fallback",
@@ -332,17 +345,19 @@ test("Profile time format changes only the display preference through the existi
   await f.flush();
   let select = labeledSelect(f, "Time format");
   assert.equal(select.props.value, "system");
-  assert.match(select.props.className, /min-h-11/);
-  assert.equal(select.props["aria-describedby"], "profile-time-limit");
+  const trigger = nodes(select).find((node) => node.type === "SelectTrigger");
+  assert.match(trigger.props.className, /min-h-11/);
+  assert.equal(trigger.props["aria-describedby"], "profile-time-limit");
+  assert.equal(trigger.props["aria-label"], "Time format");
   assert.equal(select.props.disabled, false);
   assert.deepEqual(
     nodes(select)
-      .filter((node) => node.type === "option")
+      .filter((node) => node.type === "SelectItem")
       .map((node) => node.props.value),
     ["system", "12-hour", "24-hour"],
   );
   for (const value of ["24-hour", "12-hour", "system"]) {
-    select.props.onChange({ target: { value } });
+    select.props.onValueChange(value);
     await f.flush();
     select = labeledSelect(f, "Time format");
     assert.equal(select.props.value, value);
@@ -360,10 +375,10 @@ test("Profile time format changes only the display preference through the existi
 test("Profile blocks stale account callbacks, unresolved auth and signed-out time-format changes", async () => {
   const f = profileFixture();
   await f.flush();
-  const oldChange = labeledSelect(f, "Time format").props.onChange;
+  const oldChange = labeledSelect(f, "Time format").props.onValueChange;
   f.props.user = { ...f.props.user, id: "owner-b" };
   await f.flush();
-  oldChange({ target: { value: "24-hour" } });
+  oldChange("24-hour");
   assert.equal(f.changes.length, 0);
   for (const state of ["loading", "signed-out"]) {
     f.props.principalResolved = state !== "loading";
@@ -371,7 +386,7 @@ test("Profile blocks stale account callbacks, unresolved auth and signed-out tim
     await f.flush();
     const select = labeledSelect(f, "Time format");
     assert.equal(select.props.disabled, true);
-    select.props.onChange({ target: { value: "12-hour" } });
+    select.props.onValueChange("12-hour");
     assert.equal(f.changes.length, 0);
   }
 });

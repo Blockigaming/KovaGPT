@@ -1,4 +1,11 @@
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -117,19 +124,24 @@ export function EnterpriseContactDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="enterprise-team-size">Team size</Label>
-              <select
-                id="enterprise-team-size"
+              <Select
                 required
-                className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
                 value={teamSize}
-                onChange={(e) => setTeamSize(e.target.value)}
+                onValueChange={(value) =>
+                  setTeamSize(value === "__choose_team_size__" ? "" : value)
+                }
               >
-                <option value="">Select a range</option>
-                <option value="2-49">2-49</option>
-                <option value="50-249">50-249</option>
-                <option value="250-999">250-999</option>
-                <option value="1000+">1,000+</option>
-              </select>
+                <SelectTrigger id="enterprise-team-size" className="min-h-11 w-full">
+                  <SelectValue placeholder="Select a range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__choose_team_size__">Select a range</SelectItem>
+                  <SelectItem value="2-49">2-49</SelectItem>
+                  <SelectItem value="50-249">50-249</SelectItem>
+                  <SelectItem value="250-999">250-999</SelectItem>
+                  <SelectItem value="1000+">1,000+</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-1.5">

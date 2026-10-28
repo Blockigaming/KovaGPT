@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Archive, Copy, FileStack, Loader2, Plus, RefreshCw, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -487,20 +494,25 @@ export function ProjectTemplatesDialog({
                     </label>
                     <label className="block text-sm">
                       Project color
-                      <select
-                        className="mt-1 min-h-11 w-full rounded-md border bg-background px-3 text-sm"
+                      <Select
                         value={draft.color}
-                        onChange={(event) => setDraft({ ...draft, color: event.target.value })}
+                        disabled={locked}
+                        onValueChange={(value) => setDraft({ ...draft, color: value })}
                       >
-                        {!colors.includes(draft.color) && (
-                          <option value={draft.color}>{draft.color}</option>
-                        )}
-                        {colors.map((color) => (
-                          <option key={color} value={color}>
-                            {color}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger aria-label="Project color" className="mt-1 min-h-11 w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {!colors.includes(draft.color) && (
+                            <SelectItem value={draft.color}>{draft.color}</SelectItem>
+                          )}
+                          {colors.map((color) => (
+                            <SelectItem key={color} value={color}>
+                              {color}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </label>
                     <div className="flex flex-wrap gap-2">
                       <Button

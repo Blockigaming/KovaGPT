@@ -62,7 +62,11 @@ test("image surfaces use shared geometry and neutral progress rather than orname
   const source = read("src/routes/images.tsx");
   assert.match(
     source,
-    /text-2xl leading-8 font-semibold tracking-normal sm:text-\[28px\] sm:leading-9/,
+    /id="images-title"\s+className="kova-page-title text-\[30px\] leading-tight font-normal sm:text-\[36px\]"/,
+  );
+  assert.match(
+    source,
+    /className="kova-app-shell kova-images-workspace[^"\n]*"\s+data-ui="modern"/,
   );
   assert.match(source, /spec400-image-prompt[^\n]*rounded-xl/);
   assert.doesNotMatch(
@@ -94,7 +98,7 @@ test("phone Projects places description before a single primary/templates action
   assert.match(projects, /id="project-sort-explanation" className="sr-only"/);
   assert.match(projects, /aria-describedby="project-sort-explanation"/);
   assert.match(projects, /Last opened \(this device\)/);
-  assert.match(projects, /<option value="opened-help" disabled>/);
+  assert.match(projects, /<SelectItem value="opened-help" disabled>/);
 });
 
 test("Projects loading retains toolbar and uses matching title description metadata structure", () => {

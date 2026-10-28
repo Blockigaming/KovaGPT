@@ -2,7 +2,7 @@ import { NovaLogo } from "@/components/NovaLogo";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { PublicAction, PublicHero } from "@/components/public/PublicSections";
-import { FileText, MessageSquare, Plus, Search } from "lucide-react";
+import { ArrowUp, FileText, MessageSquare, Plus, Search } from "lucide-react";
 
 const examples = [
   {
@@ -97,9 +97,13 @@ export function ProductOverview() {
               </div>
             </div>
             <div className="public-example-composer" aria-hidden="true">
-              <span>＋</span>
+              <span>
+                <Plus size={20} />
+              </span>
               <span>Ask a follow-up…</span>
-              <span>↑</span>
+              <span>
+                <ArrowUp size={20} />
+              </span>
             </div>
             <p className="public-example-caption">
               Illustrative conversation. Open KovaGPT to start your own.

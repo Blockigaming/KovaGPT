@@ -101,7 +101,11 @@ test("sidebar search and all main destinations keep honest service states", asyn
   ).toBeVisible();
   const imagePrompt = page.getByRole("textbox", { name: "Describe the image to generate" });
   await imagePrompt.fill("A rounded paper sculpture in morning light");
-  await page.getByLabel("Output image shape").selectOption("2:3");
+  await page.getByRole("combobox", { name: "Output image shape", exact: true }).click();
+  await page.getByRole("option", { name: "Portrait 2:3", exact: true }).click();
+  await expect(
+    page.getByRole("combobox", { name: "Output image shape", exact: true }),
+  ).toContainText("Portrait 2:3");
   await page.getByRole("button", { name: "Generate", exact: true }).click();
   await expect(
     page.getByRole("alert").filter({ hasText: "Image generation is temporarily unavailable" }),
@@ -241,20 +245,19 @@ test("project sections and account settings remain navigable and cancel safely",
       "true",
     );
   }
-  for (const view of [
-    "files",
-    "images",
-    "notes",
-    "tasks",
-    "memory",
-    "members",
-    "collaboration",
-    "settings",
-    "overview",
+  for (const name of [
+    "Project files",
+    "Project images",
+    "Notes",
+    "Project tasks",
+    "Memory",
+    "Members",
+    "Collaboration",
+    "Settings",
+    "Activity",
   ]) {
-    await page
-      .getByRole("combobox", { name: "More project tools", exact: true })
-      .selectOption(view);
+    await page.getByRole("button", { name: "More project tools", exact: true }).click();
+    await page.getByRole("menuitemradio", { name, exact: true }).click();
     await expect(page.getByRole("tabpanel")).toBeVisible();
   }
   await capture(page, info, "project-workspace");

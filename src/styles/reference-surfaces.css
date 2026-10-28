@@ -1,0 +1,134 @@
+/* Shared reference roles: Claude display/reading type, Grok's quiet workspace
+   rhythm and ChatGPT pill actions. Media cards retain image-first browsing. Component
+   geometry stays scoped: full-screen image viewers and navigation drawers are
+   intentionally distinct from floating dialogs. */
+body :is(.kova-sidebar, .kova-sidebar-rail) :is(h1, h2, h3, h4),
+[data-public-shell] footer :is(h2, h3, h4) {
+  font-family: var(--font-ui);
+}
+
+.kova-app-shell[data-ui="modern"] .kova-page-header {
+  gap: 16px;
+}
+
+.kova-app-shell[data-ui="modern"] .kova-page-description {
+  max-width: 64ch;
+  margin-top: 8px;
+  color: var(--muted-foreground);
+  font-family: var(--font-ui);
+  line-height: 1.6;
+}
+
+.kova-app-shell[data-ui="modern"] .kova-empty-state {
+  padding: clamp(32px, 6vh, 64px) 16px;
+}
+
+.kova-app-shell[data-ui="modern"] .kova-empty-state h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.kova-app-shell[data-ui="modern"] .kova-empty-state p {
+  max-width: 48ch;
+  margin-inline: auto;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.kova-images-workspace .spec400-images > header {
+  min-height: 56px;
+  padding-inline: 20px;
+}
+
+.kova-images-workspace .kova-images-content {
+  width: 100%;
+  max-width: 1120px;
+  padding-top: 32px;
+}
+
+.kova-images-workspace :is(#images-title, #image-result-title) {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.025em !important;
+}
+
+.kova-images-workspace .spec400-images h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.kova-images-workspace .spec400-image-prompt {
+  min-height: 68px;
+  padding: 12px;
+  gap: 12px;
+  border-radius: var(--kova-radius-composer);
+  background: var(--surface-input);
+  box-shadow: none;
+}
+
+.kova-images-workspace .spec400-image-prompt input {
+  font-family: var(--font-ui);
+  line-height: 1.5;
+}
+
+.kova-images-workspace .spec400-image-prompt button {
+  border-radius: var(--kova-radius-button);
+}
+
+/* Preview output is reading text; its toolbar, tables and code remain UI/data. */
+[data-public-shell] .public-example-answer {
+  font-family: var(--font-reading);
+}
+
+[data-public-shell] .public-example-answer h3 {
+  font-family: var(--font-reading);
+  font-size: 24px;
+  font-weight: 400;
+}
+
+[data-public-shell]
+  :is(
+    .public-example-toolbar h2,
+    .public-example-answer .public-eyebrow,
+    table,
+    input,
+    textarea,
+    select
+  ) {
+  font-family: var(--font-ui);
+}
+
+[data-public-shell] .public-example-toolbar h2 {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+[data-public-shell] :is(pre, code, textarea.font-mono) {
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.kova-state-panel {
+  border-radius: var(--kova-radius-panel);
+  box-shadow: none;
+}
+
+.kova-state-panel h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+@media (max-width: 639px) {
+  .kova-images-workspace .spec400-images > header {
+    padding-inline: 12px;
+  }
+  .kova-images-workspace .kova-images-content {
+    padding-top: 24px;
+  }
+}

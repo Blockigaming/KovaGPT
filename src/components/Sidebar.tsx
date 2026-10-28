@@ -1331,12 +1331,24 @@ export function Sidebar({
                 </button>
               ) : null}
               {navLink("/", "Chat", MessageSquare)}
-              {signedIn ? navLink("/projects", "Projects", ProjectsGlyph) : null}
-              {canSchedule ? navLink("/scheduled-tasks", "Scheduled tasks", TasksGlyph) : null}
-              {signedIn ? navLink("/library", "Library", LibraryGlyph) : null}
-              {navLink("/apps", "Plugins", PluginsGlyph)}
               {navLink("/images", "Images", ImagesGlyph)}
-              <details open={isOn("/work") || isOn("/discovery") || undefined}>
+              {navLink("/apps", "Plugins", PluginsGlyph)}
+              {signedIn ? (
+                <div
+                  className="kova-sidebar-workspace"
+                  role="group"
+                  aria-label="Workspace destinations"
+                >
+                  <p className="kova-sidebar-section-label">Workspace</p>
+                  {navLink("/projects", "Projects", ProjectsGlyph)}
+                  {navLink("/library", "Library", LibraryGlyph)}
+                  {canSchedule ? navLink("/scheduled-tasks", "Scheduled tasks", TasksGlyph) : null}
+                </div>
+              ) : null}
+              <details
+                className="kova-sidebar-more-disclosure"
+                open={isOn("/work") || isOn("/discovery") || undefined}
+              >
                 <summary className="kova-nav-row cursor-pointer">
                   {icon(MoreGlyph)}
                   <span>More</span>

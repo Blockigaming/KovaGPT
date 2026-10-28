@@ -35,6 +35,13 @@ function fixture({ kind = "writing", prepare } = {}) {
     "src/components/ResultServerExportDialog.tsx",
     {
       react: hooks.react,
+      "@/components/ui/select": {
+        Select: "Select",
+        SelectContent: "SelectContent",
+        SelectItem: "SelectItem",
+        SelectTrigger: "SelectTrigger",
+        SelectValue: "SelectValue",
+      },
       "./ui/dialog": primitives,
       "@/lib/document-export-policy.mjs": policy,
       "@/lib/writing-export/server-delivery": {
@@ -159,7 +166,7 @@ test("real native POST is separate from preparation, retains Origin, and clears 
 
 test("PDF selection uses the existing real-byte generation seam without automatic delivery", async () => {
   const f = fixture();
-  f.find((node) => node.type === "select").props.onChange({ target: { value: "pdf" } });
+  f.find((node) => node.type === "Select").props.onValueChange("pdf");
   f.render();
   await f.prepareFile();
   assert.deepEqual(
@@ -176,8 +183,7 @@ test("editing or changing format invalidates prepared fields and stale form hand
     const f = fixture();
     await f.prepareFile();
     const old = f.form();
-    if (change === "format")
-      f.find((node) => node.type === "select").props.onChange({ target: { value: "pdf" } });
+    if (change === "format") f.find((node) => node.type === "Select").props.onValueChange("pdf");
     else f.props[change] += " changed";
     f.render();
     f.render();

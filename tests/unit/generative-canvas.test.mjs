@@ -28,6 +28,12 @@ function fixture(widget, overrides = {}) {
             validateGenerativeWidget(JSON.parse(JSON.stringify(value))),
         },
         "@/lib/result-revision-diff.mjs": { resultRevisionDiff },
+        "@/components/ui/select": Object.fromEntries(
+          ["Select", "SelectContent", "SelectItem", "SelectTrigger", "SelectValue"].map((name) => [
+            name,
+            name,
+          ]),
+        ),
       },
     },
   );
@@ -37,7 +43,9 @@ function fixture(widget, overrides = {}) {
     opened,
     workspaces,
     async change(type, predicate, value) {
-      rendered.find(type, predicate).props.onChange({ target: { value } });
+      const field = rendered.find(type, predicate);
+      if (type === "Select") field.props.onValueChange(value);
+      else field.props.onChange({ target: { value } });
       await rendered.flush();
     },
   };
@@ -128,7 +136,7 @@ test("timeline status reflects actual edits, invalid ranges cannot apply, and mi
   });
   await f.flush();
   assert.match(f.text(), /0 of 1 milestones complete/);
-  await f.change("select", () => true, "done");
+  await f.change("Select", () => true, "done");
   assert.match(f.text(), /1 of 1 milestones complete/);
   await f.change(
     "input",
@@ -168,7 +176,11 @@ test("board cards move by keyboard controls, reorder and add without any externa
   const f = fixture(board);
   await f.flush();
   await f.click("Move Second up");
-  await f.change("select", (n) => n.props.id.endsWith("-first-column"), "chosen");
+  await f.change(
+    "Select",
+    (n) => n.props.children.some((child) => child.props.id?.endsWith("-first-column")),
+    "chosen",
+  );
   await f.click("Add idea to Chosen");
   assert.equal(f.applied.length, 0);
   await f.click("Apply draft");

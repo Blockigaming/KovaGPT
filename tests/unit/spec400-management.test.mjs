@@ -117,19 +117,85 @@ test("schedule save is explicit, modal, busy-guarded, and preserves uncertain re
   assert.match(editor, /Couldn’t confirm task creation/);
   assert.match(css, /spec400-schedule-footer[\s\S]*?position: sticky/);
 });
-test("project list has real sorting and simplified truthful cards", () => {
+test("project directory keeps real sorting, access metadata and principal-scoped view preferences", () => {
   assert.equal(parseProjectListPreferences(null).sort, "opened");
-  assert.match(projects, /usePrincipalSessionPreferences\([\s\S]*?parseProjectListPreferences/);
+  assert.match(
+    projects,
+    /usePrincipalSessionPreferences\([\s\S]*?parseProjectDirectoryPreferences/,
+  );
   assert.match(projects, /Last opened/);
-  assert.match(projects, /Last updated/);
-  assert.match(projects, /Last activity/);
+  assert.match(projects, /<SelectItem value="updated">Last modified<\/SelectItem>/);
+  assert.match(projects, /<SelectItem value="opened-help" disabled>/);
+  assert.match(projects, /onValueChange=\{\(value\) => setSortBy\(value as typeof sortBy\)\}/);
+  assert.match(
+    projects,
+    /<SelectTrigger\s+className="kova-project-sort"\s+aria-label="Sort projects"\s+aria-describedby="project-sort-explanation"/,
+  );
+  assert.match(projects, /<span>Name<\/span>\s*<span>Access<\/span>\s*<span>Last modified<\/span>/);
+  assert.match(
+    projects,
+    /p\.role === "owner" \? "Owner" : p\.role === "editor" \? "Editor" : "Viewer"/,
+  );
+  assert.match(projects, /<time dateTime=\{p\.updated_at\}/);
   assert.match(projects, /kova-project-opened/);
   assert.match(projects, /createBusyRef.current/);
   assert.doesNotMatch(projects, /\bp\.(?:chat_count|file_count)\b/);
 });
+test("new project directories default to list without overriding saved or migrated views", () => {
+  const tree = ts.createSourceFile(
+    "projects.tsx",
+    projects,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const declaration = tree.statements.find(
+    (node) =>
+      ts.isFunctionDeclaration(node) && node.name?.text === "parseProjectDirectoryPreferences",
+  );
+  assert.ok(declaration);
+  const code = ts.transpileModule(`return (${declaration.getText(tree)});`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const parse = new Function("parseProjectListPreferences", code)(parseProjectListPreferences);
+  assert.deepEqual(parse(null), { ...parseProjectListPreferences(null), view: "list" });
+  for (const view of ["grid", "list"]) {
+    const saved = { query: "Private project", sort: "name", scope: "owned", archived: true, view };
+    assert.deepEqual(parse(JSON.stringify(saved)), saved);
+  }
+  // Existing legacy/canonical records without a view preserve the shared parser's default.
+  const migrated = JSON.stringify({ query: "Existing", sort: "updated", scope: "shared" });
+  assert.deepEqual(parse(migrated), parseProjectListPreferences(migrated));
+});
 test("project details retain association and explicitly save instructions", () => {
-  assert.match(project, /TabsTrigger value="chats">Chats/);
-  assert.match(project, /TabsTrigger value="context">Context/);
+  const primaryTabs = [
+    '<TabsTrigger value="chats">Chats</TabsTrigger>',
+    '<TabsTrigger value="files">Files</TabsTrigger>',
+    '<TabsTrigger value="context">Context</TabsTrigger>',
+  ].map((tab) => project.indexOf(tab));
+  assert.ok(primaryTabs.every((offset) => offset >= 0));
+  assert.ok(primaryTabs[0] < primaryTabs[1] && primaryTabs[1] < primaryTabs[2]);
+  assert.match(project, /aria-label="More project tools"/);
+  const tools = project.match(
+    /<DropdownMenuRadioGroup value=\{tab\} onValueChange=\{setTab\}>([\s\S]*?)<\/DropdownMenuRadioGroup>/,
+  );
+  assert.ok(tools);
+  assert.deepEqual(
+    [...tools[1].matchAll(/<DropdownMenuRadioItem value="([^"]+)"/g)].map((match) => match[1]),
+    [
+      "overview",
+      "timers",
+      "files",
+      "images",
+      "notes",
+      "tasks",
+      "memory",
+      "members",
+      "collaboration",
+      "settings",
+    ],
+  );
+  assert.match(tools[1], /isOwner \? "Settings" : "Access"/);
   assert.match(project, /New chat in project/);
   assert.match(project, /project_id: projectId, title: "New chat", messages: \[\]/);
   assert.match(project, /Save changes/);

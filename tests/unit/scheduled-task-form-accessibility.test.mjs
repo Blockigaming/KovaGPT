@@ -28,7 +28,11 @@ test("scheduled task fields are named by their persistent wrapping labels", () =
   for (const name of ["Title", "Prompt", "Frequency", "Weekday", "Time", "Timezone"]) {
     const label = labelFor(name);
     assert.ok(label, `Missing visible ${name} label`);
-    assert.match(label.getText(parsed), /<(?:input|textarea|select)\b/);
+    if (name === "Frequency" || name === "Weekday") {
+      assert.ok(
+        label.getText(parsed).includes(`<SelectTrigger aria-label="${name}" className={control}>`),
+      );
+    } else assert.match(label.getText(parsed), /<(?:input|textarea|select)\b/);
   }
 });
 test("modal controls retain 44px minimum targets and 120px prompt", () => {
@@ -46,7 +50,17 @@ test("visible labels preserve draft bindings and deliberate consent-gated save",
   ]) {
     const control = labelFor(name).getText(parsed);
     assert.ok(control.includes(`value={${field}}`));
-    assert.ok(control.includes(`${setter}(event.target.value`));
+    if (field === "repeat") {
+      assert.match(
+        control,
+        /onValueChange=\{\(value\) => setRepeat\(value as ScheduledTask\["repeat"\]\)/,
+      );
+      assert.match(control, /<SelectTrigger aria-label="Frequency" className=\{control\}/);
+      assert.match(
+        control,
+        /disabled=\{busy \|\| Boolean\(pending.current\) \|\| task\?\.status === "running"\}/,
+      );
+    } else assert.ok(control.includes(`${setter}(event.target.value`));
   }
   assert.match(source, /onSubmit=\{\(event\) => \{\s*event.preventDefault\(\);/);
   assert.match(

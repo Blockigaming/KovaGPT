@@ -20,13 +20,13 @@ export function WorkspacePageHeader({
   const utilities = useContext(WorkspacePageUtilities);
   return (
     <header className="kova-page-header" aria-labelledby={titleId}>
-      <div className="flex min-w-0 flex-1 min-[641px]:basis-80 items-start gap-3">
+      <div className="kova-page-identity flex min-w-0 flex-1 min-[641px]:basis-80 items-start gap-3">
         {Icon ? (
           <span
-            className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-muted/45 text-foreground"
+            className="kova-page-icon mt-1 grid h-6 w-6 shrink-0 place-items-center text-muted-foreground"
             aria-hidden="true"
           >
-            <Icon className="h-4.5 w-4.5" />
+            <Icon className="h-5 w-5" />
           </span>
         ) : null}
         <div className="min-w-0">

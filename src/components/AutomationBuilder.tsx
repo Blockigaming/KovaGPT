@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useMemo, useState } from "react";
 import { formatDisplayDateTime, type TimeFormatPreference } from "@/lib/time-format";
 import { ArrowLeft, ArrowRight, Check, WandSparkles } from "lucide-react";
@@ -136,16 +143,20 @@ export function AutomationBuilder({
             </label>
             <label className="block text-sm font-medium">
               Recurrence
-              <select
+              <Select
                 value={repeat}
-                onChange={(event) => setRepeat(event.target.value as AutomationDraft["repeat"])}
-                className="mt-1.5 h-11 w-full rounded-xl border border-border bg-background px-3"
+                onValueChange={(value) => setRepeat(value as AutomationDraft["repeat"])}
               >
-                <option value="none">Run once</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
+                <SelectTrigger aria-label="Recurrence" className="mt-1.5 min-h-11 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Run once</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
             <div className="rounded-xl border border-border p-3 text-sm">
               <strong>Destination:</strong> Scheduled Task history. A completed result is never

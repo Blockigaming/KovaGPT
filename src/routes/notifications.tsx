@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Bell, Check, CheckCheck, Loader2, Search, Trash2 } from "lucide-react";
@@ -176,18 +183,18 @@ function NotificationsRoute() {
                 className="min-h-11 w-full rounded-xl border bg-background pl-10 pr-3"
               />
             </label>
-            <select
-              aria-label="Filter notifications"
-              value={filter}
-              onChange={(event) => setFilter(event.target.value as Filter)}
-              className="min-h-11 rounded-xl border bg-background px-3"
-            >
-              <option value="all">All</option>
-              <option value="unread">Unread</option>
-              <option value="agent">Agents</option>
-              <option value="connector">Connectors</option>
-              <option value="scheduled">Task history</option>
-            </select>
+            <Select value={filter} onValueChange={(value) => setFilter(value as Filter)}>
+              <SelectTrigger aria-label="Filter notifications" className="sm:w-auto sm:min-w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="unread">Unread</SelectItem>
+                <SelectItem value="agent">Agents</SelectItem>
+                <SelectItem value="connector">Connectors</SelectItem>
+                <SelectItem value="scheduled">Task history</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </section>
         {principalPending || loading ? (

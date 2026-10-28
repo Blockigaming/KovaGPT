@@ -18,8 +18,11 @@ const projectTitle = block(
   ".kova-core-page.kova-file-directory .kova-project-file-name h3",
 );
 
-test("directory base styles preserve inherited font tokens", () => {
-  assert.match(theme, /--font-sans:\s*"IBM Plex Sans"/);
+test("directory labels inherit the shared UI role while display type remains a separate token", () => {
+  assert.match(theme, /--font-sans:\s*var\(--font-ui\)/);
+  assert.match(tokens, /--font-ui:\s*ui-sans-serif,\s*system-ui,/);
+  assert.match(tokens, /--font-reading:\s*Georgia,\s*"Times New Roman",\s*serif/);
+  assert.match(tokens, /--font-display:\s*var\(--font-ui\)/);
   assert.match(title, /font-family: var\(--font-sans\) !important;/);
   assert.match(projectTitle, /font-family: var\(--font-sans\);/);
   assert.doesNotMatch(directory, /Georgia|Times New Roman|font-family:[^;]*\bserif\b/);

@@ -14,6 +14,13 @@ import {
 import { ReviewDirectory, ReviewWorkspace } from "@/components/public/ReviewWorkspace";
 import { findReviewPage } from "@/lib/review-page-content";
 import { ArrowRight } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const PAGE_ACTIONS = new Map([
   ["voice", { primaryAction: { label: "Review text-only voice preview", to: "/review/voice" } }],
@@ -462,17 +469,22 @@ function SourceLocaleHome({
           <span lang="en" className="sr-only">
             Language
           </span>
-          <select
+          <Select
+            dir={direction}
             value={routeLocale}
-            onChange={(event) => location.assign(`/${event.target.value}`)}
-            className="min-h-11 rounded-lg border bg-background px-3"
+            onValueChange={(value) => location.assign(`/${value}`)}
           >
-            {SOURCE_LOCALE_PATHS.map(({ path }) => (
-              <option key={path} value={path}>
-                {path}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger aria-label="Language" className="w-auto">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SOURCE_LOCALE_PATHS.map(({ path }) => (
+                <SelectItem key={path} value={path}>
+                  {path}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </label>
       </main>
     </PublicSite>
