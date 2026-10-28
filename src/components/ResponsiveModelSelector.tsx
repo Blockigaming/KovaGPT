@@ -184,7 +184,15 @@ export function ResponsiveModelSelector({
             align="start"
             sideOffset={8}
             collisionPadding={12}
-            className="kova-model-menu w-64 rounded-xl border border-border bg-popover p-1.5 shadow-lg"
+            className="kova-model-menu flex w-64 flex-col rounded-xl border border-border bg-popover p-1.5 shadow-lg"
+            style={{
+              overflow: "hidden",
+              // A composer trigger sits near mid-screen. Keep this menu short
+              // enough for either side so Radix does not flip it after scrolling.
+              maxHeight: topbar
+                ? undefined
+                : "min(36dvh, var(--radix-popover-content-available-height, 36dvh))",
+            }}
             onOpenAutoFocus={(event) => {
               // The menu is portalled out of the Options scroll container.
               // Begin at the selected option without replacing the trigger.
@@ -195,11 +203,15 @@ export function ResponsiveModelSelector({
               selected.focus({ preventScroll: true });
             }}
           >
-            <div className="px-3 pb-1.5 pt-2 text-xs font-medium text-muted-foreground">
+            <div className="shrink-0 px-3 pb-1.5 pt-2 text-xs font-medium text-muted-foreground">
               Intelligence
             </div>
-
-            {options}
+            <div
+              data-testid="model-options-scroll"
+              className="min-h-0 overflow-y-auto overscroll-contain"
+            >
+              {options}
+            </div>
           </PopoverContent>
         )}
       </div>

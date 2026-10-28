@@ -145,7 +145,7 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]),
   min-height: 128px;
 }
 
-.kova-assistant[data-ui="modern"] .spec400-composer:focus-within {
+.kova-assistant[data-ui="modern"] .spec400-composer[data-focus-origin="keyboard"]:focus-within {
   border-color: color-mix(in srgb, var(--foreground) 28%, var(--assistant-line));
 }
 

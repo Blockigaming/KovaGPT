@@ -83,11 +83,15 @@ export async function chooseSettingsSection(page: Page, section: string) {
       "Safety & security": "Security",
     };
     const button = surface.getByRole("button", { name: names[section] ?? section, exact: true });
-    if (!(await button.isVisible()))
-      await surface
-        .locator("summary")
-        .filter({ hasText: /^More / })
-        .click();
+    const moreDetails = surface.locator("details").filter({
+      has: page.locator("summary").filter({ hasText: /^More / }),
+    });
+    // The section picker can retain an already-open disclosure across a
+    // same-section selection. Button visibility may be temporarily false while
+    // the page swaps content, so toggling on that signal can close it instead.
+    if (!(await moreDetails.evaluate((details) => (details as HTMLDetailsElement).open)))
+      await moreDetails.locator("summary").click();
+    await expect(button).toBeVisible();
     await button.click();
   }
   await expect(surface.getByRole("tabpanel").first()).toBeVisible();
