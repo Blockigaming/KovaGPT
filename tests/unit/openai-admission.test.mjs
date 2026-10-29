@@ -131,6 +131,38 @@ test("search daily budget admits exactly its hundredth request and resets next d
   assert.equal((await f.consume({ ...search, nowMs: midnight + 86400000 })).allowed, true);
 });
 
+test("developer authentication and ingress retain atomic 120-request minute limits", async (t) => {
+  const f = await databaseFixture(t);
+  for (const action of ["developer_authentication", "developer_ingress"]) {
+    const input = { identity: `synthetic:${action}`, action, limit: 120, windowSeconds: 60 };
+    assert.equal((await f.consume(input)).allowed, true);
+    await f.db.query("update diagnostic_rate_limits set request_count=119 where action=$1", [
+      action,
+    ]);
+    const boundary = await Promise.all(Array.from({ length: 8 }, () => f.consume(input)));
+    assert.equal(boundary.filter((value) => value.allowed).length, 1);
+    assert.ok(boundary.every((value) => ["allowed", "limited"].includes(value.status)));
+    assert.equal((await f.consume(input)).status, "limited");
+    assert.equal((await f.consume({ ...input, nowMs: midnight + 60000 })).allowed, true);
+    assert.equal(
+      (
+        await f.db.query(
+          "select request_count from diagnostic_rate_limits where action=$1 order by window_started_at",
+          [action],
+        )
+      ).rows[0].request_count,
+      120,
+    );
+    for (const invalid of [
+      { limit: 119 },
+      { limit: 121 },
+      { windowSeconds: 30 },
+      { windowSeconds: 86400 },
+    ])
+      await assert.rejects(f.consume({ ...input, ...invalid }), /Invalid OpenAI admission policy/);
+  }
+});
+
 test("hosted tools and workspace embeddings retain their exact durable daily budgets", async (t) => {
   const f = await databaseFixture(t);
   for (const [action, limit] of [

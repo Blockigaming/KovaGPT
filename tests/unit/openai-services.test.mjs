@@ -64,7 +64,158 @@ test("web search requires a completed search and keeps only actual safe citation
   assert.equal(sent.store, false);
   assert.equal(sent.tool_choice, "required");
   assert.equal(sent.tools[0].type, "web_search");
+  assert.deepEqual(sent.include, ["web_search_call.action.sources"]);
   assert.equal(result.sources.length, 1);
+});
+
+test("web search uses completed action sources when a short answer has no inline citations", async () => {
+  const response = completed([
+    {
+      type: "web_search_call",
+      status: "completed",
+      action: {
+        type: "search",
+        sources: [
+          { type: "url", url: "https://developers.openai.com/api/docs/#overview" },
+          { type: "url", url: "https://developers.openai.com/api/docs/" },
+        ],
+      },
+    },
+  ]);
+  const expected = [
+    { url: "https://developers.openai.com/api/docs/", title: "developers.openai.com" },
+  ];
+  let calls = 0;
+  const result = await services({
+    responses: {
+      create: async (body) => {
+        calls++;
+        assert.deepEqual(body.include, ["web_search_call.action.sources"]);
+        return response;
+      },
+    },
+  }).search("Return only the official API documentation URL.");
+  assert.equal(calls, 1);
+  assert.deepEqual(result.sources, expected);
+  assert.deepEqual(result.usage, response.usage);
+});
+
+test("web search preserves annotated source titles and order before considering action sources", () => {
+  const response = completed([
+    {
+      type: "web_search_call",
+      status: "completed",
+      action: {
+        type: "search",
+        sources: [
+          { type: "url", url: "https://example.com/cited" },
+          { type: "url", url: "https://example.com/not-cited" },
+        ],
+      },
+    },
+    {
+      type: "message",
+      content: [
+        {
+          type: "output_text",
+          annotations: [
+            { type: "url_citation", url: "https://example.com/cited#section", title: "Citation" },
+          ],
+        },
+      ],
+    },
+  ]);
+  assert.deepEqual(webSearchSources(response), [
+    { url: "https://example.com/cited", title: "Citation" },
+  ]);
+});
+
+test("web search rejects unsafe and malformed fallback sources and respects the result cap", () => {
+  const response = completed([
+    null,
+    {
+      type: "web_search_call",
+      status: "completed",
+      action: {
+        type: "search",
+        sources: [
+          null,
+          { type: "input_url", url: "https://example.com/untrusted" },
+          ...[
+            undefined,
+            null,
+            {},
+            [],
+            17,
+            "",
+            "not a URL",
+            "/relative",
+            "https://",
+            "javascript:alert(1)",
+            "data:text/plain,private",
+            "file:///private",
+            "ftp://example.com/private",
+            "https://user:password@example.com/private",
+            "https://%75ser@example.com/private",
+          ].map((url) => ({ type: "url", url })),
+          { type: "url", url: "https://example.com/one#fragment" },
+          { type: "url", url: "https://example.com/one" },
+          { type: "url", url: "https://example.com/two" },
+        ],
+      },
+    },
+    { type: "message", content: [{ type: "output_text", annotations: {} }] },
+  ]);
+  assert.deepEqual(webSearchSources(response, 1), [
+    { url: "https://example.com/one", title: "example.com" },
+  ]);
+});
+
+test("web search never adopts failed, non-search, or caller-like source objects", () => {
+  const response = completed([
+    { type: "web_search_call", status: "completed", action: { type: "search", sources: {} } },
+    {
+      type: "web_search_call",
+      status: "failed",
+      action: { type: "search", sources: [{ type: "url", url: "https://example.com/failed" }] },
+    },
+    {
+      type: "web_search_call",
+      status: "completed",
+      action: { type: "open_page", sources: [{ type: "url", url: "https://example.com/other" }] },
+    },
+    { type: "user", sources: [{ type: "url", url: "https://example.com/input" }] },
+  ]);
+  assert.deepEqual(webSearchSources(response), []);
+  assert.throws(
+    () => webSearchSources(completed(response.output.slice(1, 2))),
+    /search_not_completed/,
+  );
+  assert.throws(
+    () => webSearchSources({ ...response, status: "failed" }),
+    /incomplete_provider_response/,
+  );
+  assert.throws(
+    () => webSearchSources({ ...response, error: { code: "provider_error" } }),
+    /incomplete_provider_response/,
+  );
+});
+
+test("web search propagates provider rejection without retries or fabricated sources", async () => {
+  const rejection = new Error("permission_denied");
+  let calls = 0;
+  await assert.rejects(
+    services({
+      responses: {
+        create: async () => {
+          calls++;
+          throw rejection;
+        },
+      },
+    }).search("Find evidence"),
+    (error) => error === rejection,
+  );
+  assert.equal(calls, 1);
 });
 
 test("analysis rejects invalid inputs before compute and deletes only its own container after failure", async () => {
