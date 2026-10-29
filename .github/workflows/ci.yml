@@ -279,9 +279,9 @@ jobs:
     name: Browser (${{ matrix.id }})
     needs: [verify, public-surface]
     runs-on: ubuntu-latest
-    # The phone group covers five viewports and more than 1,100 cases.
-    # Keep the complete matrix and per-test limits within this wall-clock budget.
-    timeout-minutes: 45
+    # The five-viewport phone group is projected to need about 54 minutes.
+    # Preserve every test and the other groups' 45-minute budget.
+    timeout-minutes: ${{ matrix.id == 'phone' && 60 || 45 }}
     env:
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "core"
