@@ -350,7 +350,7 @@ jobs:
             specs: mobile-quality
           - id: landscape-844
             project: phone-landscape-844x390
-            specs: workspace-select-controls composer-actual-app
+            specs: workspace-select-controls composer-actual-app core-app-review
           - id: phone-375
             project: phone-375x812
             specs: work-model-controls
@@ -411,7 +411,10 @@ jobs:
             ["desktop-1280x800", desktopSpecs],
             ["desktop-1440x900", desktopSpecs],
             ["tablet-768x1024", new Set(["mobile-quality"])],
-            ["phone-landscape-844x390", new Set(["workspace-select-controls", "composer-actual-app"])],
+            [
+              "phone-landscape-844x390",
+              new Set(["workspace-select-controls", "composer-actual-app", "core-app-review"]),
+            ],
             ["phone-375x812", new Set(["work-model-controls"])],
             ["phone-390x844", new Set(["production-audit"])],
           ]);

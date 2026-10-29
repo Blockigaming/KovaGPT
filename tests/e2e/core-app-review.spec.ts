@@ -227,6 +227,8 @@ test("dark task filter keeps a readable selected label", async ({ page }, info) 
 test("project sections and account settings remain navigable and cancel safely", async ({
   page,
 }, info) => {
+  // This compound journey uses the same budget as the dedicated core review lane.
+  test.setTimeout(60_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await coreFixture(page, "dark");
