@@ -1,3 +1,6 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Bot, CheckCircle2, Globe2, LockKeyhole, Play, RotateCcw } from "lucide-react";
@@ -251,12 +254,13 @@ export function AgentWorkspace() {
             Saved agent plans and reusable context are available on paid plans. Background execution
             remains unavailable.
           </p>
-          <button
+          <Button
+            variant="outline"
             onClick={() => navigate({ to: "/pricing" })}
-            className="mt-3 min-h-10 rounded-lg border px-3 text-sm"
+            className="mt-3 border text-sm"
           >
             View plans
-          </button>
+          </Button>
         </div>
       ) : !principalReady ? (
         <p className="mt-4 text-sm text-muted-foreground" role="status">
@@ -265,39 +269,39 @@ export function AgentWorkspace() {
       ) : (
         <>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <input
+            <Input
               aria-label="Agent name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="h-10 rounded-lg border bg-background px-3"
+              className="border bg-background"
               placeholder="Agent name"
             />
-            <input
+            <Input
               aria-label="Agent project"
               value={project}
               onChange={(e) => setProject(e.target.value)}
-              className="h-10 rounded-lg border bg-background px-3"
+              className="border bg-background"
               placeholder="Project (optional)"
             />
-            <textarea
+            <Textarea
               aria-label="Agent objective"
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
-              className="min-h-24 rounded-lg border bg-background p-3 sm:col-span-2"
+              className="min-h-24 border bg-background sm:col-span-2"
               placeholder="What should this agent accomplish?"
             />
-            <textarea
+            <Textarea
               aria-label="Agent instructions"
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              className="min-h-24 rounded-lg border bg-background p-3"
+              className="min-h-24 border bg-background"
               placeholder="Guardrails and output requirements"
             />
-            <textarea
+            <Textarea
               aria-label="Agent context references"
               value={context}
               onChange={(e) => setContext(e.target.value)}
-              className="min-h-24 rounded-lg border bg-background p-3"
+              className="min-h-24 border bg-background"
               placeholder={
                 "One authorized reference per line\nfile: quarterly-plan.pdf\ncontext-pack: launch"
               }
@@ -312,6 +316,8 @@ export function AgentWorkspace() {
                   className="flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm"
                 >
                   <input
+                    className="kova-native-check"
+                    data-ui-reference="chatgpt.checkbox"
                     type="checkbox"
                     checked={tools.includes(tool)}
                     onChange={() =>
@@ -329,16 +335,18 @@ export function AgentWorkspace() {
           <div className="mt-3 space-y-2" aria-label="Agent execution plan">
             {steps.map((step, index) => (
               <div key={index} className="flex flex-wrap gap-2">
-                <input
+                <Input
                   aria-label={`Agent step ${index + 1}`}
                   value={step}
                   onChange={(e) =>
                     setSteps((all) => all.map((value, i) => (i === index ? e.target.value : value)))
                   }
-                  className="h-10 min-w-0 flex-1 rounded-lg border bg-background px-3"
+                  className="min-w-0 flex-1 border bg-background"
                 />
                 <label className="flex min-h-10 items-center gap-2 text-xs">
                   <input
+                    className="kova-native-check"
+                    data-ui-reference="chatgpt.checkbox"
                     type="checkbox"
                     checked={approvalSteps.includes(index)}
                     onChange={() =>
@@ -355,24 +363,26 @@ export function AgentWorkspace() {
             ))}
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button onClick={validate} className="min-h-10 rounded-lg border px-3 text-sm">
+            <Button variant="outline" onClick={validate} className="border text-sm">
               Test configuration
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="default"
               disabled={!canSave}
               onClick={createRun}
-              className="min-h-10 rounded-lg bg-foreground px-3 text-sm text-background disabled:opacity-50"
+              className="bg-foreground text-sm text-background disabled:opacity-50"
             >
               Save plan
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
               type="button"
               disabled
               aria-describedby="browser-run-unavailable"
-              className="min-h-10 rounded-lg border px-3 text-sm disabled:opacity-50"
+              className="border text-sm disabled:opacity-50"
             >
               Secure browser runs unavailable
-            </button>
+            </Button>
           </div>
           <p id="browser-run-unavailable" className="mt-3 text-sm text-muted-foreground">
             Browser automation is unavailable while its isolated execution service is being rebuilt.
@@ -413,23 +423,26 @@ export function AgentWorkspace() {
                     ))}
                   </ol>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button
+                    <Button
+                      variant="default"
                       onClick={() => handoff(run)}
-                      className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-foreground px-3 text-sm text-background"
+                      className="inline-flex items-center gap-1 bg-foreground text-sm text-background"
                     >
                       <Play className="h-3 w-3" />
                       Continue in Chat
-                    </button>
+                    </Button>
                     {run.status === "failed" || run.status === "paused" ? (
-                      <button
+                      <Button
+                        variant="outline"
                         onClick={() => update(run.id, "ready", "Run reset to ready by the user.")}
-                        className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-sm"
+                        className="inline-flex items-center gap-1 border text-sm"
                       >
                         <RotateCcw className="h-3 w-3" />
                         Reset plan
-                      </button>
+                      </Button>
                     ) : null}
-                    <button
+                    <Button
+                      variant="outline"
                       onClick={() => {
                         const result = writePrincipalHandoff(
                           safeBrowserStorage("sessionStorage"),
@@ -449,18 +462,19 @@ export function AgentWorkspace() {
                         }
                         navigate({ to: "/scheduled-tasks" });
                       }}
-                      className="min-h-10 rounded-lg border px-3 text-sm"
+                      className="border text-sm"
                     >
                       Review scheduling
-                    </button>
+                    </Button>
                     {run.status === "handed_off" && (
-                      <button
+                      <Button
+                        variant="outline"
                         onClick={() => update(run.id, "completed", "Marked complete by the user.")}
-                        className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-sm"
+                        className="inline-flex items-center gap-1 border text-sm"
                       >
                         <CheckCircle2 className="h-3 w-3" />
                         Complete
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </li>

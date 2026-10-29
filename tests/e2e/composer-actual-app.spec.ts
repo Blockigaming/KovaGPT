@@ -3,6 +3,7 @@ import { waitForKovaHydration } from "./hydration";
 import { coreFixture } from "./core-app-fixture";
 import { openResponseOptions, revealSidebar } from "./current-ui";
 import { fixture, origin, functionNames } from "./actual-app-fixture";
+import { choosePickerValue } from "./select-control";
 
 async function geometry(page: Page) {
   const composer = page.locator(".spec400-composer");
@@ -215,9 +216,11 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
   await expect(
     projectDialog.getByRole("button", { name: "Add to project", exact: true }),
   ).toBeDisabled();
-  await projectDialog
-    .getByLabel("Project", { exact: true })
-    .selectOption("33333333-3333-4333-8333-333333333333");
+  await choosePickerValue(
+    page,
+    projectDialog.getByLabel("Project", { exact: true }),
+    "33333333-3333-4333-8333-333333333333",
+  );
   await projectDialog.getByRole("button", { name: "Add to project", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Chat added", exact: true })).toBeVisible();
   expect(copied).toHaveLength(1);

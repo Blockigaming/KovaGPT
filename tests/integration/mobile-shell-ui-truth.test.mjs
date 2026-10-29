@@ -93,20 +93,17 @@ test("narrow-phone constraints are scoped to real modal surfaces", async () => {
     )
       narrowSurfaces.push(rule);
   });
-  assert.equal(narrowSurfaces.length, 1);
-  const dimensions = Object.fromEntries(
-    narrowSurfaces[0].nodes.filter((node) => node.type === "decl").map((node) => [node.prop, node]),
-  );
-  assert.equal(dimensions["max-width"].value, "calc(100vw - 1rem)");
-  assert.equal(dimensions["max-width"].important, true);
-  assert.equal(
-    dimensions["max-height"].value,
-    "calc(100dvh - var(--safe-top) - var(--safe-bottom) - 1rem)",
-  );
-  assert.equal(dimensions["max-height"].important, true);
-  assert.match(dialog, /max-h-\[92dvh\] overflow-y-auto overscroll-contain/);
-  assert.match(alertDialog, /max-h-\[calc\(100vh-2rem\)\] overflow-y-auto overscroll-contain/);
-  assert.match(alertDialog, /100dvh-env\(safe-area-inset-top\)-env\(safe-area-inset-bottom\)-2rem/);
+  assert.equal(narrowSurfaces.length, 0, "the global phone stylesheet must not resize every modal");
+  for (const primitive of [dialog, alertDialog]) {
+    assert.ok(primitive.includes("w-[calc(100%-2rem)]"));
+    assert.ok(primitive.includes("max-w-[450px]"));
+    assert.ok(primitive.includes("bg-popover p-5 text-popover-foreground"));
+    assert.ok(primitive.includes("max-h-[calc(100vh-2rem)]"));
+    assert.ok(
+      primitive.includes("100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem"),
+    );
+    assert.ok(primitive.includes("overflow-y-auto overscroll-contain"));
+  }
   assert.doesNotMatch(
     styles,
     /:where\(\[role="dialog"\]\):not\(\[data-side\]\):not\(\[data-image-lightbox\]\)/,
@@ -114,10 +111,23 @@ test("narrow-phone constraints are scoped to real modal surfaces", async () => {
   // Inspect declarations in the same CSS rule. A following media query is not
   // a size declaration on the preceding radius-only dialog selector.
   assert.deepEqual(roleDialogSizeRules(styles), []);
-  assert.match(
-    styles,
-    /\.kova-sidebar \.kova-chat-options \{[^}]*min-width: var\(--kova-touch\);[^}]*height: var\(--kova-touch\)/,
-  );
+  const sidebarStyles = postcss.parse(await read("src/styles/sidebar-core.css"));
+  const coarseOptions = [];
+  sidebarStyles.walkRules(".kova-sidebar .kova-chat-options", (rule) => {
+    if (
+      rule.parent.type === "atrule" &&
+      rule.parent.name === "media" &&
+      rule.parent.params === "(pointer: coarse), (max-width: 1023px)"
+    )
+      coarseOptions.push(
+        Object.fromEntries(
+          rule.nodes.filter((node) => node.type === "decl").map((node) => [node.prop, node.value]),
+        ),
+      );
+  });
+  assert.equal(coarseOptions.length, 1);
+  for (const dimension of ["width", "min-width", "height", "min-height"])
+    assert.equal(coarseOptions[0][dimension], "44px");
 });
 
 test("command palette traps and restores focus with safe-area and reduced-motion support", async () => {
@@ -150,7 +160,12 @@ test("command palette traps and restores focus with safe-area and reduced-motion
   assert.match(palette, /data-kova-shell-overlay=""/);
   assert.match(palette, /var\(--safe-top\)/);
   assert.match(palette, /var\(--safe-bottom\)/);
-  assert.match(palette, /h-11 w-11 shrink-0/);
+  assert.match(palette, /<Button[\s\S]*?size="icon"/);
+  const button = await read("src/components/ui/button.tsx");
+  assert.match(button, /icon: "h-9 w-9/);
+  assert.match(button, /pointer:coarse/);
+  assert.match(button, /min-h-11/);
+  assert.match(button, /min-w-11/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 

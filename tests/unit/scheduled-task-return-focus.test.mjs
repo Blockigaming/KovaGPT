@@ -98,7 +98,7 @@ function fixture() {
     },
     restoreDialogFocus: compile(
       readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace(
-        "export function",
+        /^export function/gm,
         "function",
       ) + "; return restoreDialogFocus;",
       { window },
@@ -142,7 +142,7 @@ function fixture() {
     openButton(kind) {
       run(
         attribute(
-          "button",
+          kind === "title" ? "button" : "Button",
           "onClick",
           {
             title: "spec400-task-title",

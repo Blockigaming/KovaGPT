@@ -29,27 +29,32 @@ test("workspace palette has a touch reachable sidebar entry", () => {
   assert.match(read("src/components/Sidebar.tsx"), /onOpenWorkspaceSearch\(\)/);
   assert.match(read("src/routes/index.tsx"), /onOpenWorkspaceSearch=\{openCommandPalette\}/);
 });
-test("mobile modal geometry centers capped sheets and leaves full viewport scrims square", () => {
-  assert.match(read("src/components/ui/dialog.tsx"), /inset-x-0 mx-auto/);
-  const sheet = postcss.parse(read("src/styles.css"));
-  const scrim = sheet.nodes.find(
-    (node) =>
-      node.type === "rule" &&
-      node.selector === ":is(.kova-assistant, .kova-app-shell) button.kova-sidebar-scrim",
+test("mobile modals remain centered and capped while full viewport scrims stay square", () => {
+  const dialog = read("src/components/ui/dialog.tsx");
+  for (const token of [
+    "fixed left-1/2 top-1/2",
+    "max-w-[450px]",
+    "-translate-x-1/2 -translate-y-1/2",
+    "w-[calc(100%-2rem)]",
+    "overflow-y-auto",
+    "supports-[height:100dvh]:max-h-",
+  ])
+    assert.ok(dialog.includes(token), token);
+  const sidebar = postcss.parse(read("src/styles/sidebar-core.css"));
+  const scrim = sidebar.nodes.find(
+    (node) => node.type === "rule" && node.selector === "button.kova-sidebar-scrim",
   );
-  assert.ok(scrim, "Square scrims are scoped to the actual application roots");
+  assert.ok(scrim, "The actual sidebar owns its full viewport scrim shape");
   assert.equal(scrim.parent.type, "root");
   const radius = scrim.nodes.find((node) => node.type === "decl" && node.prop === "border-radius");
   assert.equal(radius.value, "0");
-  assert.ok(!radius.important, "Scrims retain square geometry without an important override");
+  assert.ok(!radius.important);
   const geometry = postcss.parse(read("src/styles/control-geometry.css"));
-  const policy = geometry.nodes.find(
-    (node) => node.type === "rule" && node.selector.startsWith("body"),
-  );
-  const exclusions = policy.selector.match(/:not\(\s*:where\(([\s\S]+)\)\s*\)$/)?.[1];
-  assert.ok(exclusions);
-  assert.ok(
-    postcss.list.comma(exclusions).includes(".kova-sidebar-scrim"),
-    "The pill default must exclude full-viewport scrims",
-  );
+  geometry.walkRules((rule) => {
+    if (rule.selector.includes("button"))
+      assert.ok(
+        !rule.nodes.some((node) => node.type === "decl" && node.prop === "border-radius"),
+        "No blanket button shape overrides a full viewport scrim",
+      );
+  });
 });

@@ -1,0 +1,55 @@
+/* CG-SETTINGS Memory: flat, divided records and standard SDK actions/forms. */
+.kova-memory-page {
+  --page-max: 960px;
+  --page-padding: 32px clamp(16px, 3vw, 32px) 48px;
+  min-width: 0;
+  gap: 24px;
+  overflow-wrap: anywhere;
+}
+.kova-memory-page > ul {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  list-style: none;
+}
+.kova-memory-page > ul > li {
+  margin: 0;
+  padding: 20px;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+}
+.kova-memory-page > ul > li:last-child {
+  border-bottom: 0;
+}
+.kova-memory-page > ul > li h2 {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.kova-memory-page .kova-memory-selection {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  cursor: pointer;
+}
+.kova-memory-page [aria-label="Filter memories by source"] [aria-pressed="true"] {
+  background: var(--surface-selected);
+  color: var(--foreground);
+}
+.kova-memory-page :is(input, textarea) {
+  font-family: var(--font-ui);
+}
+@media (max-width: 639px) {
+  .kova-memory-page {
+    --page-padding: 24px 16px 40px;
+  }
+  .kova-memory-page > ul > li {
+    padding: 16px;
+  }
+}

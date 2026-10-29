@@ -29,7 +29,14 @@ function fixture(initialPair = pair) {
     copies = [];
   const pickerModule = loadUiModule("src/components/ui/searchable-picker.tsx", {
     react: new Proxy({}, { get: (_target, key) => activePickerHooks.react[key] }),
-    "lucide-react": primitives(["Check", "ChevronDown"]),
+    "./reference-icons": primitives(["Check", "ChevronDown"]),
+    "./select": primitives([
+      "Select",
+      "SelectContent",
+      "SelectItem",
+      "SelectTrigger",
+      "SelectValue",
+    ]),
     "./command": primitives([
       "Command",
       "CommandEmpty",
@@ -44,6 +51,9 @@ function fixture(initialPair = pair) {
     sourcePath,
     {
       react: hooks.react,
+      "@/components/ui/button": { Button: "button" },
+      "@/components/ui/input": { Input: "input" },
+      "@/components/ui/textarea": { Textarea: "textarea" },
       "lucide-react": primitives([
         "ArrowLeftRight",
         "Check",
@@ -317,15 +327,26 @@ test("the actual workspace uses specified heading, surface, control and icon geo
   const structural = readFileSync("src/styles/spec400-system.css", "utf8");
   assert.match(theme, /--radius-lg: var\(--kova-radius-control\)/);
   assert.match(theme, /--radius-xl: var\(--kova-radius-card\)/);
-  assert.match(tokens, /:root\s*\{[^}]*--kova-radius-control: 14px;/s);
-  assert.match(tokens, /:root\s*\{[^}]*--kova-radius-card: 20px;/s);
+  assert.match(tokens, /:root\s*\{[^}]*--kova-radius-control: 10px;/s);
+  assert.match(tokens, /:root\s*\{[^}]*--kova-radius-card: 16px;/s);
   assert.doesNotMatch(structural, /:root:root|--(?:radius|kova-radius-[a-z-]+)\s*:/);
   for (const control of elements(f.render(), (node) => node.type === "button")) {
-    assert.match(control.props.className, /\brounded-lg\b/);
-    assert.match(control.props.className, /\b(?:min-h-11|h-11|min-h-20)\b/);
+    assert.ok(["outline", "default"].includes(control.props.variant));
+    if (control.props["data-kova-button-shape"] === "preserve") {
+      assert.equal(control.props["data-ui-reference"], "gemini.canvas.refinement-card");
+      assert.match(control.props.className, /min-h-20/);
+      assert.match(control.props.className, /rounded-\[var\(--kova-radius-card\)\]/);
+      assert.match(control.props.className, /whitespace-normal/);
+    } else {
+      assert.doesNotMatch(
+        control.props.className,
+        /(?:^|\s)(?:min-h-|h-|rounded-)/,
+        "Translation actions delegate geometry to the shared Button",
+      );
+    }
   }
   for (const label of ["Source language", "Target language"]) {
-    assert.match(f.picker(label).props.className, /\bmin-h-11\b.*\brounded-lg\b/);
+    assert.doesNotMatch(f.picker(label).props.className, /(?:^|\s)(?:min-h-|h-|rounded-)/);
     assert.ok(f.picker(label).props.className.includes("[&>svg]:h-5 [&>svg]:w-5"));
   }
   for (const icon of elements(f.render(), (node) =>

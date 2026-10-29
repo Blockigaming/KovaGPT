@@ -65,11 +65,11 @@ export function AppShell({
         library: "Library",
         projects: "Projects",
         "scheduled-tasks": "Scheduled tasks",
-        apps: "Plugins",
+        apps: "Connections",
         settings: "Settings",
         images: "Images",
         profile: "Profile",
-        billing: "Billing",
+        billing: "Subscriptions",
         help: "Help",
       } as Record<string, string>
     )[pathname.split("/")[1]] ?? "KovaGPT";
@@ -305,7 +305,6 @@ export function AppShell({
         onDelete={handleDelete}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
-        onOpenWorkspaceSearch={() => window.dispatchEvent(new CustomEvent("kova-open-search"))}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}

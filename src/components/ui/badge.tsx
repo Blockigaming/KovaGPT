@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "font-[family-name:var(--font-ui)] inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "font-[family-name:var(--font-ui)] inline-flex h-[22px] items-center rounded-[4px] border px-1.5 py-0 text-sm leading-5 font-semibold transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
@@ -27,7 +27,14 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
 
 function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+  return (
+    <div
+      data-slot="badge"
+      data-ui-reference="chatgpt.badge"
+      className={cn(badgeVariants({ variant }), className)}
+      {...props}
+    />
+  );
 }
 
 export { Badge, badgeVariants };

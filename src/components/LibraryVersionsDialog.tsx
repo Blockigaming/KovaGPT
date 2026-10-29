@@ -1,3 +1,5 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -251,6 +253,7 @@ export function LibraryVersionsDialog({
       }}
     >
       <DialogContent
+        data-ui-reference="chatgpt.library-file-details.dialogcontent"
         ref={contentRef}
         className="spec400-library-inspector"
         closeLabel="Close versions"
@@ -308,8 +311,9 @@ export function LibraryVersionsDialog({
                     <div className="flex flex-wrap gap-2">
                       {version.kind === "text" && (
                         <Button
+                          data-ui-reference="chatgpt.library-file-details.control"
                           size="sm"
-                          className="min-h-11"
+                          className=""
                           aria-label={`Read version ${version.revision}`}
                           variant="outline"
                           disabled={busy}
@@ -319,8 +323,9 @@ export function LibraryVersionsDialog({
                         </Button>
                       )}
                       <Button
+                        data-ui-reference="chatgpt.library-file-details.control"
                         size="sm"
-                        className="min-h-11"
+                        className=""
                         aria-label={`Download version ${version.revision}`}
                         variant="outline"
                         disabled={busy}
@@ -335,7 +340,8 @@ export function LibraryVersionsDialog({
               {item.original_generation ? (
                 <label className="grid gap-2 text-sm">
                   Replace original document
-                  <input
+                  <Input
+                    data-ui-reference="chatgpt.library-file-details.file-input"
                     type="file"
                     accept=".pdf,.docx,.xlsx,.pptx"
                     disabled={busy}
@@ -360,8 +366,9 @@ export function LibraryVersionsDialog({
               ) : (
                 <label className="grid gap-2 text-sm">
                   Text from version {selected}
-                  <textarea
-                    className="min-h-60 w-full rounded-xl border bg-background p-3 font-mono"
+                  <Textarea
+                    data-ui-reference="chatgpt.library-file-details.textarea"
+                    className="min-h-60 w-full  border bg-background  font-mono"
                     value={draft}
                     onChange={(event) => {
                       if (
@@ -383,6 +390,7 @@ export function LibraryVersionsDialog({
                 </label>
               )}
               <Button
+                data-ui-reference="chatgpt.library-file-details.control"
                 disabled={busy || versions.length === 0 || (!!item.original_generation && !file)}
                 onClick={save}
               >

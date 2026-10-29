@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useId, useRef, useState } from "react";
 import { useScopedActionFeedback } from "@/lib/use-scoped-action-feedback";
 import {
@@ -75,13 +77,13 @@ export function CanvasComments({
           <label htmlFor={commentFieldId} className="mt-3 block text-sm font-medium">
             Comment
           </label>
-          <textarea
+          <Textarea
             ref={commentInputRef}
             id={commentFieldId}
             value={draft}
             maxLength={4000}
             onChange={(event) => setDraft(event.target.value)}
-            className="mt-3 min-h-20 w-full rounded-lg border bg-background p-2 text-xs"
+            className="mt-3 min-h-20 w-full border bg-background text-xs"
             placeholder="Comment on the document or selected text"
             aria-label="Artifact comment"
           />
@@ -90,7 +92,8 @@ export function CanvasComments({
               Save or resolve your draft before anchoring a comment.
             </p>
           )}
-          <button
+          <Button
+            variant="default"
             disabled={pending || dirty || !draft.trim()}
             onClick={() => {
               // Focus a retained input before Add becomes disabled or its draft clears.
@@ -115,7 +118,7 @@ export function CanvasComments({
                 attempt.current = null;
               });
             }}
-            className="mt-2 min-h-11 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
+            className="mt-2 bg-foreground text-xs text-background disabled:opacity-50"
           >
             {pending ? (
               <span className="spec400-loading-label">
@@ -125,7 +128,7 @@ export function CanvasComments({
             ) : (
               "Add comment"
             )}
-          </button>
+          </Button>
         </>
       )}
       {!snapshot.comments.length ? (
@@ -146,12 +149,13 @@ export function CanvasComments({
                         Selection changed or removed
                       </p>
                     ) : (
-                      <button
+                      <Button
+                        variant="link"
                         className="mb-2 underline"
                         onClick={() => onSelect(anchor.start!, anchor.end!)}
                       >
                         {anchor.state === "moved" ? "Find moved selection" : "Find selection"}
-                      </button>
+                      </Button>
                     )}
                   </>
                 )}
@@ -160,7 +164,8 @@ export function CanvasComments({
                   {new Date(comment.created_at).toLocaleString()}
                 </time>
                 {(comment.author_id === actorId || snapshot.canManageComments) && (
-                  <button
+                  <Button
+                    variant="ghost"
                     disabled={pending}
                     onClick={(event) =>
                       setDeleteTarget({
@@ -171,10 +176,10 @@ export function CanvasComments({
                         url: window.location.href,
                       })
                     }
-                    className="mt-2 min-h-11 text-destructive"
+                    className="mt-2 text-destructive"
                   >
                     Delete comment
-                  </button>
+                  </Button>
                 )}
               </li>
             );
@@ -200,17 +205,18 @@ export function CanvasComments({
         }}
       />
       {snapshot.comments.length >= 100 && snapshot.comments.length % 100 === 0 && (
-        <button
+        <Button
+          variant="link"
           disabled={pending}
           onClick={() => {
             // A page read can remove this button when the final page arrives.
             commentsHeadingRef.current?.focus({ preventScroll: true });
             void run(onOlder, "older");
           }}
-          className="mt-3 min-h-11 text-xs underline"
+          className="mt-3 text-xs underline"
         >
           Load older comments
-        </button>
+        </Button>
       )}
     </>
   );

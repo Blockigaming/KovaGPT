@@ -214,12 +214,13 @@ export function ComposerProjectPicker({
             <ul className="max-h-[50dvh] space-y-2 overflow-y-auto">
               {visible.projects.map((project) => (
                 <li key={project.id}>
-                  <button
+                  <Button
                     data-kova-button-shape="preserve"
                     type="button"
+                    variant="ghost"
                     disabled={navigationBlocked || navigating !== null}
                     onClick={() => void chooseProject(project.id)}
-                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-auto min-h-11 w-full justify-between gap-3 whitespace-normal rounded-xl border px-3 py-2 text-left"
                     aria-label={`Open project ${project.name}`}
                   >
                     <span className="min-w-0 [overflow-wrap:anywhere]">{project.name}</span>
@@ -230,7 +231,7 @@ export function ComposerProjectPicker({
                           ? "View only"
                           : "Open"}
                     </span>
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>

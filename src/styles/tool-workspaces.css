@@ -1,0 +1,210 @@
+/* Exact control tokens come from OpenAI Apps SDK UI 0f00143c7a639906f1621fe58e1b6be7b5bea46d.
+ Page composition follows the named reference on each surface; uncaptured states
+ remain documented as visual-review gaps in DESIGN.md. */
+.kova-tool-page.kova-tool-page {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 64rem;
+  margin-inline: auto;
+  padding: 32px 24px 48px;
+  color: var(--foreground);
+}
+
+.kova-tool-page[data-ui-reference^="chatgpt.workspace"],
+.kova-tool-page[data-ui-reference^="chatgpt.safety"],
+.kova-tool-page[data-ui-reference^="chatgpt.shared"] {
+  max-width: 56rem;
+}
+
+.kova-tool-page :where(h1) {
+  font-family: var(--font-ui);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 38px;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.kova-tool-page[data-ui-reference^="claude"] :where(h1) {
+  font-family: var(--font-reading, Georgia, serif);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.kova-tool-page :where(h2) {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
+  letter-spacing: -0.01em;
+}
+
+.kova-tool-heading.kova-tool-heading {
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+.kova-tool-heading :where(p) {
+  max-width: 42rem;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.kova-tool-panel.kova-tool-panel {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.kova-tool-list.kova-tool-list {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: transparent;
+}
+
+.kova-tool-list > :where(li) {
+  padding: 16px;
+}
+
+.kova-tool-tabs.kova-tool-tabs {
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+.kova-tool-tabs > [role="tab"] {
+  border-color: transparent;
+  border-radius: 8px;
+}
+
+.kova-tool-tabs > [aria-selected="true"] {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.kova-tool-page :where(details > summary) {
+  min-height: 36px;
+  align-content: center;
+  font-size: 14px;
+  line-height: 20px;
+  border-radius: 8px;
+}
+
+.kova-tool-page :where([data-ui-reference="chatgpt.button.pill"]) {
+  max-width: 100%;
+}
+
+.kova-tool-page :where([data-variant="outline"], [data-variant="secondary"]) {
+  box-shadow: none;
+}
+
+.kova-tool-card-action.kova-tool-card-action {
+  display: flex;
+  height: auto;
+  min-height: 64px;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px;
+  border-radius: var(--kova-radius-card);
+  white-space: normal;
+  text-align: start;
+}
+
+.kova-tool-answer-option.kova-tool-answer-option,
+.kova-tool-row-action.kova-tool-row-action {
+  height: auto;
+  min-height: 44px;
+  justify-content: flex-start;
+  padding: 10px 14px;
+  border-radius: 12px;
+  white-space: normal;
+  text-align: start;
+}
+
+.kova-tool-search-entry.kova-tool-search-entry {
+  height: 52px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 26px;
+  box-shadow: none;
+}
+
+.kova-tool-page [data-ui-reference="chatgpt.conversation.row"] {
+  height: 36px;
+  justify-content: flex-start;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.kova-tool-page :where([role="alert"]) {
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.kova-tool-page :where([role="status"]) {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.kova-tool-page :where(pre) {
+  overflow-x: auto;
+}
+
+.kova-tool-map .kova-map-search {
+  border-radius: 26px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 8%);
+  backdrop-filter: none;
+}
+
+.kova-tool-map .kova-map-search form {
+  min-height: 36px;
+  gap: 8px;
+}
+
+.kova-tool-map .kova-map-search input {
+  height: 36px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .kova-tool-page.kova-tool-page {
+    padding: 24px 16px 40px;
+  }
+
+  .kova-tool-page :where(h1) {
+    font-size: 24px;
+    line-height: 28px;
+  }
+
+  .kova-tool-heading.kova-tool-heading {
+    gap: 12px;
+    margin-bottom: 0;
+  }
+
+  .kova-tool-panel.kova-tool-panel {
+    padding: 16px;
+  }
+}
+
+@media (pointer: coarse) {
+  .kova-tool-page :where(details > summary) {
+    min-height: 44px;
+  }
+}

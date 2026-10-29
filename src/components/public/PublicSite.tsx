@@ -29,6 +29,7 @@ export function PublicPageView({
   review,
   primaryAction = { label: "Try KovaGPT", to: "/" },
   secondaryAction,
+  reference = "grok-editorial-page",
 }: {
   eyebrow: string;
   title: string;
@@ -37,10 +38,16 @@ export function PublicPageView({
   review?: "legal" | "admin";
   primaryAction?: { label: string; to: string };
   secondaryAction?: { label: string; to: string };
+  reference?: "grok-editorial-page" | "claude-documentation" | "chatgpt-settings-form";
 }) {
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="min-w-0 [overflow-wrap:anywhere]">
+      <main
+        data-ui-reference={reference}
+        id="main-content"
+        tabIndex={-1}
+        className="min-w-0 [overflow-wrap:anywhere]"
+      >
         <section className="relative overflow-hidden border-b border-border/70">
           <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:px-6 sm:pb-24 sm:pt-24">
             <p className="text-sm font-semibold text-muted-foreground">{eyebrow}</p>
@@ -99,7 +106,12 @@ export function PublicDetailPageView({ item }: { item: PublicDetailPage }) {
     } as const);
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="min-w-0 [overflow-wrap:anywhere]">
+      <main
+        data-ui-reference="grok-editorial-page"
+        id="main-content"
+        tabIndex={-1}
+        className="min-w-0 [overflow-wrap:anywhere]"
+      >
         <section className="relative overflow-hidden border-b border-border/70">
           <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
             <nav

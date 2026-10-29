@@ -35,7 +35,12 @@ export const Route = createFileRoute("/modes")({
 function ModesPage() {
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
+      <main
+        data-ui-reference="grok.capabilities.directory"
+        id="main-content"
+        tabIndex={-1}
+        className={"kova-tool-page " + "mx-auto w-full max-w-3xl flex-1 px-6 py-16"}
+      >
         <h1 className="text-4xl font-bold tracking-tight mb-3">KovaGPT AI Modes</h1>
         <p className="text-muted-foreground mb-10">
           Choose how much speed and reasoning you want. Mode access follows your current plan;
@@ -58,7 +63,9 @@ function ModesPage() {
             </div>
           ))}
         </div>
-        <section className="mt-10 rounded-xl border border-border bg-card p-5">
+        <section
+          className={"kova-tool-panel " + "mt-10 rounded-xl border border-border bg-card p-5"}
+        >
           <h2 className="font-semibold">Modes by plan</h2>
           <dl className="mt-3 space-y-3 text-sm">
             {(["free", "plus", "pro"] as const).map((tier) => (

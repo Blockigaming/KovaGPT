@@ -10,8 +10,10 @@ const Avatar = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Root
+    data-slot="avatar"
+    data-ui-reference="chatgpt.avatar"
     ref={ref}
-    className={cn("relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full", className)}
+    className={cn("relative flex h-7 w-7 shrink-0 overflow-hidden rounded-full", className)}
     {...props}
   />
 ));

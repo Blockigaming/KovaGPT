@@ -48,11 +48,21 @@ export default defineConfig(({ mode }) => {
       noExternal: ["h3-v2", "rou3"],
     },
     resolve: {
-      alias: {
-        "entities/lib/decode.js": path.resolve(configDir, "node_modules/entities/lib/decode.js"),
-        "entities/lib/encode.js": path.resolve(configDir, "node_modules/entities/lib/encode.js"),
-        entities: path.resolve(configDir, "node_modules/entities"),
-      },
+      alias: [
+        {
+          find: /^lucide-react$/,
+          replacement: path.resolve(configDir, "src/components/ui/product-icons.tsx"),
+        },
+        {
+          find: "entities/lib/decode.js",
+          replacement: path.resolve(configDir, "node_modules/entities/lib/decode.js"),
+        },
+        {
+          find: "entities/lib/encode.js",
+          replacement: path.resolve(configDir, "node_modules/entities/lib/encode.js"),
+        },
+        { find: "entities", replacement: path.resolve(configDir, "node_modules/entities") },
+      ],
     },
     worker: { format: "es" },
     build: {
@@ -60,6 +70,20 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
+            // The pinned SDK adapter replaces lucide-react at its exact entry alias.
+            // Keep its glyphs in the existing icon vendor cache chunk as well.
+            const normalizedId = id.replaceAll("\\", "/").split("?")[0];
+            const referenceIconRoot = path
+              .resolve(configDir, "src/components/ui/product-icons")
+              .replaceAll("\\", "/");
+            if (
+              normalizedId === `${referenceIconRoot}.tsx` ||
+              (normalizedId.startsWith(`${referenceIconRoot}/`) &&
+                /^(?:factory|(?:glyphs|icons)\/[^/]+)\.tsx$/.test(
+                  normalizedId.slice(referenceIconRoot.length + 1),
+                ))
+            )
+              return "vendor-icons";
             if (!id.includes("node_modules")) return;
             if (
               id.includes("/react-markdown/") ||

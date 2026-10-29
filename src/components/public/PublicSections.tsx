@@ -12,7 +12,11 @@ export function PublicAction({
   secondary?: boolean;
 }) {
   return (
-    <Link to={to as never} className={`public-action ${secondary ? "is-secondary" : ""}`}>
+    <Link
+      data-ui-reference="chatgpt-button"
+      to={to as never}
+      className={`public-action ${secondary ? "is-secondary" : ""}`}
+    >
       {children}
       <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
     </Link>
@@ -31,7 +35,11 @@ export function PublicHero({
   children: ReactNode;
 }) {
   return (
-    <section className="public-hero" aria-labelledby="public-hero-title">
+    <section
+      data-ui-reference="grok-editorial-hero"
+      className="public-hero"
+      aria-labelledby="public-hero-title"
+    >
       {eyebrow ? <p className="public-eyebrow">{eyebrow}</p> : null}
       <h1 id="public-hero-title">{title}</h1>
       {description ? <p className="public-hero-description">{description}</p> : null}
@@ -52,7 +60,11 @@ export function PublicSection({
   children: ReactNode;
 }) {
   return (
-    <section className="public-editorial-section" aria-labelledby={`${id}-title`}>
+    <section
+      data-ui-reference="grok-editorial-section"
+      className="public-editorial-section"
+      aria-labelledby={`${id}-title`}
+    >
       <div>
         {eyebrow ? <p className="public-eyebrow">{eyebrow}</p> : null}
         <h2 id={`${id}-title`}>{title}</h2>

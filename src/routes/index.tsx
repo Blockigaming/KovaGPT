@@ -18,7 +18,7 @@ import type { ComposerVoiceTurn } from "@/lib/composer-voice-turn";
 import { loadChatHistoryDevice } from "@/lib/chat-history-idb.mjs";
 
 import type { WorkspaceResultDescriptor } from "@/components/WorkspaceResultContent";
-import { restoreDialogFocus } from "@/lib/dialog-return-focus";
+import { restoreDialogFocus, scheduleDialogFocusReturn } from "@/lib/dialog-return-focus";
 import {
   beginChatEdit,
   restoreChatEditDraft,
@@ -48,7 +48,8 @@ import {
   useState,
   type SetStateAction,
 } from "react";
-import { PanelLeft } from "lucide-react";
+import { PanelLeft, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/Sidebar";
 import { focusReopenedSidebar } from "@/lib/sidebar-keyboard-focus";
 
@@ -322,6 +323,7 @@ function KovaGPT() {
     ownerId: string | null;
     scope: NextPromptScope;
     generation: number;
+    openedUrl: string;
   } | null>(null);
   const voiceConversationsRef = useRef(conversations);
   voiceConversationsRef.current = conversations;
@@ -1492,12 +1494,31 @@ function KovaGPT() {
     !editingMessage &&
     !active?.temporary &&
     !hasPendingChatAttachments(attachments) &&
+    historyReady &&
     canWriteChatHistory(userKey),
   );
   const changeComposerVoiceMode = (next: "dictate" | "voice" | null) => {
     if (next === null) {
+      const closing = composerVoiceSessionRef.current;
       composerVoiceSessionRef.current = null;
       setComposerVoiceMode(null);
+      if (closing && active?.messages.length === 0)
+        scheduleDialogFocusReturn(
+          () =>
+            workspaceRef.current?.querySelector<HTMLElement>(
+              '[data-testid="voice-button"]:not([hidden]):not(:disabled)',
+            ) ??
+            workspaceRef.current?.querySelector<HTMLTextAreaElement>(
+              'textarea[aria-label="Message KovaGPT"]',
+            ),
+          closing.openedUrl,
+          () =>
+            nextPromptMountedRef.current &&
+            !composerVoiceSessionRef.current &&
+            closing.generation === storageGenerationRef.current &&
+            closing.scope.principal === storagePrincipalRef.current &&
+            sameNextPromptScope(closing.scope, nextPromptScopeRef.current),
+        );
       return;
     }
     if (!principalReady) return;
@@ -1543,6 +1564,7 @@ function KovaGPT() {
       ownerId: userKey,
       scope,
       generation: storageGenerationRef.current,
+      openedUrl: window.location.href,
     };
     setComposerVoiceMode(next);
   };
@@ -2697,10 +2719,11 @@ function KovaGPT() {
             </p>
           )}
           <SignInButton mode="modal">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               type="button"
               disabled={hasPendingMessage || Boolean(nextPromptRef.current)}
-              className="min-h-11 rounded-lg border px-3 font-medium disabled:opacity-50"
               onClick={(event) => {
                 if (
                   !nextPromptMountedRef.current ||
@@ -2717,7 +2740,7 @@ function KovaGPT() {
               }}
             >
               Sign in
-            </button>
+            </Button>
           </SignInButton>
         </>
       </section>
@@ -2761,9 +2784,10 @@ function KovaGPT() {
           "Only this version will be sent after the current response finishes. Later edits stay in your draft. Kept in this tab only."}
       </p>
       <div className="flex flex-wrap gap-2">
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           type="button"
-          className="min-h-11 rounded-md border px-3"
           data-next-prompt-cancel
           onClick={(event) => {
             if (
@@ -2776,11 +2800,12 @@ function KovaGPT() {
           }}
         >
           Cancel next message
-        </button>
+        </Button>
         {nextPromptInCurrentChat ? (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
-            className="min-h-11 rounded-md border px-3 disabled:opacity-50"
             disabled={!canEditNextPrompt}
             onClick={() => {
               if (
@@ -2796,11 +2821,12 @@ function KovaGPT() {
             }}
           >
             Edit next message
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
-            className="min-h-11 rounded-md border px-3"
             onClick={() => {
               if (
                 storagePrincipalRef.current === visibleNextPrompt.scope.principal &&
@@ -2811,7 +2837,7 @@ function KovaGPT() {
             }}
           >
             Open original chat
-          </button>
+          </Button>
         )}
       </div>
       {nextPromptInCurrentChat && !canEditNextPrompt && (
@@ -2835,9 +2861,10 @@ function KovaGPT() {
       <Suspense fallback={null}>
         <QuotaRejectedDraftPreview draft={draft} />
       </Suspense>
-      <button
+      <Button
+        variant="outline"
+        size="sm"
         type="button"
-        className="min-h-11 rounded-md border px-3 disabled:opacity-50"
         disabled={Boolean(
           input || attachments.length || selectedTool || isStreaming || editingMessage,
         )}
@@ -2865,10 +2892,11 @@ function KovaGPT() {
         }}
       >
         Restore message
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
         type="button"
-        className="min-h-11 rounded-md border px-3"
         onClick={(event) => {
           if (
             !nextPromptMountedRef.current ||
@@ -2884,7 +2912,7 @@ function KovaGPT() {
         }}
       >
         Discard kept version
-      </button>
+      </Button>
     </section>
   ));
 
@@ -3099,6 +3127,7 @@ function KovaGPT() {
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
         onOpenWorkspaceSearch={openCommandPalette}
+        hideGuestLogin
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
         onShare={(id) => {
           if (!isSignedIn) {
@@ -3190,16 +3219,19 @@ function KovaGPT() {
               {chatStarted ? active?.title || "Chat" : sidebarOpen ? "" : "Kova GPT"}
             </div>
             {selectedWorkflowSkill ? (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 type="button"
                 onClick={clearWorkflowSkill}
                 disabled={isStreaming}
-                className="ml-2 max-w-56 truncate rounded-full border px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                className="ml-2 max-w-56 text-muted-foreground"
                 aria-label={`Clear workflow skill ${selectedWorkflowSkill.name}`}
                 title="Clear skill"
               >
-                {selectedWorkflowSkill.name} ×
-              </button>
+                <span className="truncate">{selectedWorkflowSkill.name}</span>
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+              </Button>
             ) : null}
           </div>
 
@@ -3309,10 +3341,14 @@ function KovaGPT() {
             {!active || (active.messages.length === 0 && composerVoiceMode !== "voice") ? (
               <section
                 className="kova-empty-chat flex flex-1 flex-col overflow-y-auto px-3 lg:px-6"
+                data-ui-reference="grok.prompt-first-home"
                 aria-labelledby="chat-greeting"
               >
                 <div className="kova-empty-chat-content flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
-                  <div className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6">
+                  <div
+                    data-ui-reference="claude.greeting"
+                    className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6"
+                  >
                     <h1
                       id="chat-greeting"
                       className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
@@ -3443,7 +3479,9 @@ function KovaGPT() {
                 </Suspense>
                 <div className="spec400-composer-dock relative shrink-0 lg:pb-2 lg:pt-2">
                   {showJumpToLatest && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       type="button"
                       onClick={() => {
                         const el = scrollRef.current;
@@ -3453,11 +3491,11 @@ function KovaGPT() {
                         el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
                         setShowJumpToLatest(false);
                       }}
-                      className="absolute bottom-full left-1/2 z-20 mb-2 min-h-11 -translate-x-1/2 whitespace-nowrap rounded-full border border-border bg-card px-3 py-2 text-sm font-medium shadow-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                      className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 border border-border bg-card shadow-sm"
                       aria-label="Jump to latest message"
                     >
                       Jump to latest
-                    </button>
+                    </Button>
                   )}
                   {editingMessage?.conversationId === active.id && (
                     <div
@@ -3465,9 +3503,11 @@ function KovaGPT() {
                       role="status"
                     >
                       <span className="min-w-0 truncate">Editing a previous prompt</span>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         type="button"
-                        className="shrink-0 rounded-md px-2 py-1 font-medium text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                        className="text-muted-foreground hover:text-foreground"
                         onClick={() => {
                           const restored = restoreChatEditDraft(
                             editingMessage,
@@ -3487,7 +3527,7 @@ function KovaGPT() {
                         }}
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   )}
                   <ChatInput

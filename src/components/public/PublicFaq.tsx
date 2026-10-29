@@ -13,13 +13,17 @@ export function PublicFaq({
   const headingId = useId();
   if (!items.length) return null;
   return (
-    <section aria-labelledby={headingId} className="min-w-0 [overflow-wrap:anywhere]">
+    <section
+      data-ui-reference="chatgpt-disclosure-list"
+      aria-labelledby={headingId}
+      className="min-w-0 [overflow-wrap:anywhere]"
+    >
       <h2 id={headingId} className="mb-4 text-xl font-semibold tracking-tight">
         {title}
       </h2>
-      <div className="divide-y divide-border rounded-2xl border border-border bg-card">
+      <div className="divide-y divide-border border-y border-border">
         {items.map((item) => (
-          <details key={item.q} className="group min-w-0 px-4 py-3 sm:px-6">
+          <details key={item.q} className="group min-w-0 py-3">
             <summary className="flex min-h-11 min-w-0 cursor-pointer list-none items-center justify-between gap-3 rounded-sm py-2 font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <span className="min-w-0">{item.q}</span>
               <span

@@ -17,7 +17,12 @@ function DiscoveryPage() {
   const { mode } = Route.useSearch();
   return (
     <AppShell>
-      <main id="main-content" tabIndex={-1} className="min-h-full overflow-y-auto bg-background">
+      <main
+        data-ui-reference="grok.search.results"
+        id="main-content"
+        tabIndex={-1}
+        className={"kova-tool-page " + "min-h-full overflow-y-auto bg-background"}
+      >
         <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-8">
           <h1 className="text-3xl font-semibold">Search and discovery</h1>
           <DiscoveryWorkspace initialMode={mode ?? "web"} />

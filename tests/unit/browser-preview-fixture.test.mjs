@@ -17,22 +17,34 @@ test("ending is terminal for all subsequent control actions", () => {
     assert.equal(move("ended", a), "ended");
 });
 
-test("rectangular browser previews are excluded from pill-button overrides", () => {
+test("rectangular browser previews own their shape without a blanket pill override", () => {
   assert.match(
     readFileSync("src/styles.css", "utf8"),
     /@import "\.\/styles\/control-geometry\.css"/,
   );
-  const sheet = postcss.parse(readFileSync("src/styles/control-geometry.css", "utf8"));
-  const policy = sheet.nodes.find(
-    (node) => node.type === "rule" && node.selector.startsWith("body"),
-  );
-  assert.ok(policy, "The shared action geometry policy is present");
-  const exclusions = policy.selector.match(/:not\(\s*:where\(([\s\S]+)\)\s*\)$/)?.[1];
-  assert.ok(exclusions, "Surface exclusions remain inside the policy's negation");
-  const excludedSelectors = new Set(postcss.list.comma(exclusions));
-  for (const selector of [".kova-sidebar-scrim", ".kova-browser-card", ".work-browser-preview"])
-    assert.ok(excludedSelectors.has(selector), `${selector} is excluded from pill geometry`);
-  const radius = policy.nodes.find((node) => node.type === "decl" && node.prop === "border-radius");
-  assert.equal(radius.value, "var(--kova-radius-button)");
-  assert.ok(!radius.important, "Shared geometry must not override surface-specific radii");
+  const geometry = postcss.parse(readFileSync("src/styles/control-geometry.css", "utf8"));
+  geometry.walkRules((rule) => {
+    if (rule.selector.includes("button"))
+      assert.ok(
+        !rule.nodes.some((node) => node.type === "decl" && node.prop === "border-radius"),
+        "Shared native field and focus styles cannot reshape arbitrary button surfaces",
+      );
+  });
+  for (const [path, selector] of [
+    ["src/components/conversation-header.css", ".kova-browser-card"],
+    ["src/components/work-browser-preview.css", ".work-browser-preview"],
+  ]) {
+    const sheet = postcss.parse(readFileSync(path, "utf8"));
+    const rules = [];
+    sheet.walkRules(selector, (rule) => rules.push(rule));
+    assert.ok(rules.length, `${selector} owns its surface`);
+    assert.ok(
+      rules.some((rule) =>
+        rule.nodes.some(
+          (node) => node.prop === "border-radius" && node.value !== "var(--kova-radius-button)",
+        ),
+      ),
+      `${selector} retains its rectangular preview radius`,
+    );
+  }
 });

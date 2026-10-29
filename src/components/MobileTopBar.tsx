@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import { PanelLeft, MessageCircleOff, Sliders, SquarePen } from "lucide-react";
 import { useUser, SignInButton, SignUpButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import type { ModeId, Tier } from "@/lib/modes";
@@ -9,7 +10,7 @@ import type { ModeId, Tier } from "@/lib/modes";
  * brand identity, and a quick "new chat" action. Signed-out users see a
  * compact login and signup actions instead of the new-chat icon so they can always
  * reach auth from the top bar. Honors safe-area-inset-top and uses
- * translucent blur so content underneath eases through as it scrolls.
+ * an opaque ChatGPT-style action bar with consistent 44px touch targets.
  */
 export function MobileTopBar({
   onOpenSidebar,
@@ -42,9 +43,13 @@ export function MobileTopBar({
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
 
   return (
-    <header className="kova-topbar sticky top-0 z-30 lg:hidden">
+    <header
+      data-ui-reference="chatgpt-mobile-topbar"
+      className="kova-topbar sticky top-0 z-30 lg:hidden"
+    >
       <div className="kova-topbar-inner grid min-h-14 grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-1 px-2 pb-1">
-        <button
+        <Button
+          variant="ghost"
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
@@ -53,7 +58,7 @@ export function MobileTopBar({
           className="kova-action kova-sidebar-toggle w-11 h-11 text-foreground"
         >
           <PanelLeft className="w-5 h-5" aria-hidden="true" />
-        </button>
+        </Button>
         <div className="flex min-w-0 items-center justify-start gap-1 pl-1">
           <span
             role="heading"
@@ -61,10 +66,11 @@ export function MobileTopBar({
             data-kova-navigation-heading=""
             className="spec400-mobile-page-title min-w-0 truncate text-sm font-medium"
           >
-            {title || "Kova GPT"}
+            {title || "KovaGPT"}
           </span>
           {skill ? (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               onClick={skill.clear}
               disabled={skill.disabled}
@@ -73,48 +79,52 @@ export function MobileTopBar({
               title="Clear skill"
             >
               {skill.name} ×
-            </button>
+            </Button>
           ) : null}
         </div>
         {showAuth && !chatStarted ? (
           <div className="flex items-center justify-end gap-1">
             <SignInButton mode="modal">
-              <button
+              <Button
+                variant="ghost"
                 type="button"
-                className="kova-auth-primary min-h-11 whitespace-nowrap rounded-full bg-foreground px-3 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 active:opacity-80"
+                className="kova-auth-primary min-h-11 whitespace-nowrap rounded-full bg-foreground px-3 text-sm font-medium text-background transition-opacity hover:opacity-90 active:opacity-80"
               >
                 Log in
-              </button>
+              </Button>
             </SignInButton>
             <SignUpButton mode="modal">
-              <button
+              <Button
+                variant="ghost"
                 type="button"
-                className="kova-auth-sign-up min-h-11 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold transition-opacity hover:opacity-90 active:opacity-80"
+                className="kova-auth-sign-up min-h-11 whitespace-nowrap rounded-full px-3 text-sm font-medium transition-opacity hover:opacity-90 active:opacity-80"
               >
                 Sign up
-              </button>
+              </Button>
             </SignUpButton>
           </div>
         ) : (
           <div className="flex items-center justify-end gap-0.5">
             {conversationActions}
             {!conversationActions && onOpenChatSettings ? (
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 onClick={(event) => onOpenChatSettings(event.currentTarget)}
                 aria-label={chatRulesActive ? "Chat settings, rules active" : "Chat settings"}
                 title="Chat settings"
                 className={`kova-action flex h-11 w-11 items-center justify-center rounded-xl ${
                   chatRulesActive
-                    ? "bg-primary/15 text-primary"
+                    ? "bg-muted text-foreground"
                     : "text-foreground hover:bg-accent/70 active:bg-accent"
                 }`}
               >
                 <Sliders className="h-5 w-5" strokeWidth={1.75} />
-              </button>
+              </Button>
             ) : null}
             {isSignedIn && !chatStarted && onTemporaryChatChange ? (
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 onClick={(event) => onTemporaryChatChange(!temporaryChat, event.currentTarget)}
                 aria-label={temporaryChat ? "Turn off temporary chat" : "Start temporary chat"}
@@ -123,22 +133,23 @@ export function MobileTopBar({
                 data-state={temporaryChat ? "on" : "off"}
                 className={`kova-action flex h-11 w-11 items-center justify-center rounded-xl ${
                   temporaryChat
-                    ? "bg-primary/15 text-primary"
+                    ? "bg-muted text-foreground"
                     : "text-foreground hover:bg-accent/70 active:bg-accent"
                 }`}
               >
                 <MessageCircleOff className="h-5 w-5" aria-hidden="true" />
-              </button>
+              </Button>
             ) : null}
 
-            <button
+            <Button
+              variant="ghost"
               type="button"
               onClick={onNewChat}
               aria-label="New chat"
               className="kova-action flex h-11 w-11 items-center justify-center rounded-xl text-foreground hover:bg-accent/70 active:bg-accent"
             >
               <SquarePen className="h-5 w-5" strokeWidth={1.75} />
-            </button>
+            </Button>
           </div>
         )}
       </div>

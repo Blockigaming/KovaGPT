@@ -9,9 +9,8 @@ const scheduled = await readFile("src/lib/scheduled-tasks.functions.ts", "utf8")
 
 test("sidebar preserves the reference navigation hierarchy and canonical routes", () => {
   const ordered = [
-    'navLink("/", "Chat", MessageSquare)',
     'navLink("/images", "Images", ImagesGlyph)',
-    'navLink("/apps", "Plugins", PluginsGlyph)',
+    'navLink("/apps", "Connections", PluginsGlyph)',
     'aria-label="Workspace destinations"',
     'navLink("/projects", "Projects", ProjectsGlyph)',
     'navLink("/library", "Library", LibraryGlyph)',
@@ -43,14 +42,15 @@ test("sidebar interaction and layout contracts are accessible and responsive", (
   assert.match(sidebar, /aria-label="Expand sidebar"/);
   assert.match(
     sidebar,
-    /<details\s+className="kova-sidebar-more-disclosure"\s+open=\{isOn\("\/work"\) \|\| isOn\("\/discovery"\) \|\| undefined\}\s*>/,
+    /<details\s+className="kova-sidebar-more-disclosure"\s+data-ui-reference="gemini-sidebar-disclosure"\s+open=\{isOn\("\/work"\) \|\| isOn\("\/discovery"\) \|\| isOn\("\/maps"\) \|\| undefined\}\s*>/,
   );
   assert.match(sidebar, /<summary className="kova-nav-row cursor-pointer">/);
   assert.match(sidebar, /event\.key === "Escape"/);
-  assert.match(sidebar, /const EXPANDED_WIDTH = 248/);
+  assert.match(sidebar, /const EXPANDED_WIDTH = 260/);
+  assert.match(sidebarStyles, /--sidebar-row-height: 36px/);
   assert.match(sidebarStyles, /--sidebar-row-height: 44px/);
   assert.match(sidebarStyles, /--sidebar-icon-slot: 20px/);
-  assert.match(styles, /max\(0\.8rem, var\(--safe-bottom\)\)/);
+  assert.match(sidebarStyles, /max\(8px, var\(--safe-bottom, 0px\)\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 

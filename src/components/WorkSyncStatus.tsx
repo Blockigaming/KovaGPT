@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { useWorkStoreRevision } from "@/hooks/use-work-store-revision";
@@ -108,9 +109,14 @@ export function WorkSyncStatus() {
             : "Sync covers planning sessions, saved tasks, templates, agent drafts, and recent-work preferences.")}
       </p>
       {["unavailable", "offline", "conflict"].includes(status.phase) && (
-        <button className="mt-2 min-h-10 rounded-lg border px-3 text-xs" onClick={retryWorkSync}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-2 h-auto min-h-8 max-w-full whitespace-normal"
+          onClick={retryWorkSync}
+        >
           Retry sync
-        </button>
+        </Button>
       )}
       {records.length > 0 && (
         <details className="mt-2">
@@ -160,12 +166,14 @@ export function WorkSyncStatus() {
             ))}
           </ul>
           {records.length > limit && (
-            <button
-              className="mt-2 min-h-10 rounded-lg border px-3 text-xs"
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 h-auto min-h-8 max-w-full whitespace-normal"
               onClick={() => setLimit((value) => value + 20)}
             >
               Show more saved work
-            </button>
+            </Button>
           )}
         </details>
       )}
@@ -181,10 +189,12 @@ export function WorkSyncStatus() {
                   {saved?.records[recent.resourceId]?.title || "Work run"}
                 </span>
                 {([recent.pinnedAt ? "unpin" : "pin", "forget"] as const).map((operation) => (
-                  <button
+                  <Button
+                    variant="outline"
+                    size="sm"
                     key={operation}
                     disabled={status.phase === "other-tab" || Boolean(saved?.pending[key])}
-                    className="min-h-10 rounded-lg border px-3 text-xs capitalize disabled:opacity-50"
+                    className="h-auto min-h-8 max-w-full whitespace-normal capitalize"
                     onClick={() => {
                       try {
                         recordWorkRecent(
@@ -199,18 +209,20 @@ export function WorkSyncStatus() {
                     }}
                   >
                     {operation}
-                  </button>
+                  </Button>
                 ))}
               </li>
             ))}
           </ul>
           {recents.length > limit && (
-            <button
-              className="mt-2 min-h-10 rounded-lg border px-3 text-xs"
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 h-auto min-h-8 max-w-full whitespace-normal"
               onClick={() => setLimit((value) => value + 20)}
             >
               Show more recent work
-            </button>
+            </Button>
           )}
         </details>
       )}
@@ -255,9 +267,11 @@ export function WorkSyncStatus() {
                 ] as const)
               : (["device", "account"] as const)
             ).map((choice) => (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 key={choice}
-                className="min-h-10 rounded-lg border px-3 text-xs"
+                className="h-auto min-h-8 max-w-full whitespace-normal"
                 onClick={() =>
                   window.dispatchEvent(
                     new CustomEvent("kova:work-sync-resolve", {
@@ -271,7 +285,7 @@ export function WorkSyncStatus() {
                   : choice === "device"
                     ? "Keep this device’s change"
                     : "Use the account copy"}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

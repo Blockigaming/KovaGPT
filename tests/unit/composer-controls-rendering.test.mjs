@@ -295,7 +295,7 @@ test("new and populated chats retain the approved Attach, Context, Options toolb
   }
 });
 
-test("phone chat keeps one primary Send action and effort inside Options", () => {
+test("phone chat keeps one growing input and effort inside Options", () => {
   for (const userTier of ["free", "plus", "pro"]) {
     const html = render(
       { showAddMenu: true, surface: "conversation", userTier, showModelStatus: true },
@@ -309,8 +309,32 @@ test("phone chat keeps one primary Send action and effort inside Options", () =>
     assert.doesNotMatch(html, /data-testid="stop-button"/);
     assertMicrophoneControls(html);
     assert.doesNotMatch(html, /data-testid="thinking-upgrade-button"|data-testid="model-status"/);
-    assert.match(html, /rows="2"/);
+    assert.match(html, /rows="1"/);
     assert.match(html, /enterKeyHint="enter"/i);
+  }
+});
+
+test("the primary composer action switches from Voice to Send without changing its guards", () => {
+  for (const viewport of [desktopLayout, phoneLayout]) {
+    for (const [value, attachments, primary] of [
+      ["", [], "voice"],
+      ["   ", [], "voice"],
+      ["Keep this draft", [], "send"],
+      ["", [{ kind: "text_file", name: "Notes.txt", dataUrl: "", status: "uploading" }], "send"],
+    ]) {
+      const html = render({ value, attachments }, signedInAccount, viewport);
+      const voice = html.match(/<button\b[^>]*data-testid="voice-button"[^>]*>/)?.[0];
+      const send = html.match(/<button\b[^>]*data-testid="send-button"[^>]*>/)?.[0];
+      assert.ok(voice);
+      assert.ok(send);
+      assert.equal(/\bhidden=""/.test(voice), primary !== "voice");
+      assert.equal(/\bhidden=""/.test(send), primary !== "send");
+    }
+    const streaming = render({ isStreaming: true, value: "" }, signedInAccount, viewport);
+    const stop = streaming.match(/<button\b[^>]*data-testid="stop-button"[^>]*>/)?.[0];
+    assert.ok(stop);
+    assert.doesNotMatch(stop, /\bhidden=""/);
+    assert.doesNotMatch(streaming, /data-testid="send-button"/);
   }
 });
 

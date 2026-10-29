@@ -1,3 +1,5 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -147,10 +149,15 @@ function NotificationsRoute() {
   return (
     <AppShell>
       <main
-        className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 sm:px-6"
+        data-ui-reference="chatgpt.activity.notifications"
+        className={
+          "kova-tool-page " + "mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 sm:px-6"
+        }
         aria-labelledby="notifications-title"
       >
-        <section className="rounded-xl border border-border bg-card/40 p-4 sm:p-5">
+        <section
+          className={"kova-tool-panel " + "rounded-xl border border-border bg-card/40 p-4 sm:p-5"}
+        >
           <WorkspacePageHeader
             titleId="notifications-title"
             title="Notifications"
@@ -161,26 +168,27 @@ function NotificationsRoute() {
               </span>
             }
             actions={
-              <button
+              <Button
+                variant="outline"
                 type="button"
                 disabled={!unread || busy !== null}
                 onClick={() => void read()}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm disabled:opacity-50"
+                className="inline-flex  items-center gap-2  border  text-sm disabled:opacity-50"
               >
                 <CheckCheck className="h-4 w-4" />
                 Mark all read
-              </button>
+              </Button>
             }
           />
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <label className="relative flex-1">
               <span className="sr-only">Search notifications</span>
               <Search className="pointer-events-none absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-              <input
+              <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search notifications"
-                className="min-h-11 w-full rounded-xl border bg-background pl-10 pr-3"
+                className=" w-full  border bg-background pl-10 pr-3"
               />
             </label>
             <Select value={filter} onValueChange={(value) => setFilter(value as Filter)}>
@@ -225,7 +233,7 @@ function NotificationsRoute() {
             }
           />
         ) : (
-          <ul className="divide-y rounded-3xl border bg-card">
+          <ul className={"kova-tool-list " + "divide-y rounded-3xl border bg-card"}>
             {visible.map((item) => (
               <li
                 key={`${item.source}-${item.id}`}
@@ -254,24 +262,26 @@ function NotificationsRoute() {
                         </Link>
                       )}
                       {!item.readAt && (
-                        <button
+                        <Button
+                          variant="outline"
                           onClick={() => void read(item)}
                           disabled={busy === item.id}
-                          className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-sm"
+                          className="inline-flex items-center gap-1  border   text-sm"
                         >
                           <Check className="h-4 w-4" />
                           Mark read
-                        </button>
+                        </Button>
                       )}
-                      <button
+                      <Button
+                        variant="outline"
                         onClick={() => void discard(item)}
                         disabled={busy === item.id}
                         aria-label={`Delete ${item.title}`}
-                        className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-sm text-destructive"
+                        className="inline-flex items-center gap-1  border   text-sm text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>

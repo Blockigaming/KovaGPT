@@ -4,6 +4,7 @@ import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import { DAILY_UPLOAD_LIMIT_BY_TIER } from "@/lib/modes";
 
 import { useTier } from "@/hooks/useTier";
+import { Button } from "@/components/ui/button";
 type Snapshot = { owner: string; status: "loading" | "ready" | "error"; data?: DailyUsageDto };
 
 /** Read on opening Attach; limits still remain enforced by the server. */
@@ -59,13 +60,14 @@ export function ComposerUploadAllowance({ ownerId }: { ownerId: string | null })
     return (
       <span className="block">
         Today’s remaining allowance is unavailable. Your files and draft are unchanged.{" "}
-        <button
+        <Button
           type="button"
-          className="min-h-11 underline"
+          variant="link"
+          size="sm"
           onClick={() => setVersion((value) => value + 1)}
         >
           Retry allowance
-        </button>
+        </Button>
       </span>
     );
   if (planStatus === "loading")

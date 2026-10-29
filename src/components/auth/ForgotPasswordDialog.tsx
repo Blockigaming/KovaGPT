@@ -9,9 +9,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { NovaLogo } from "@/components/NovaLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, KeyRound, Mail } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import { browserKovaAuthEnabled, kovaPublicAuthJson } from "@/lib/kova-auth-browser";
 
 export function ForgotPasswordDialog({
@@ -100,7 +101,8 @@ export function ForgotPasswordDialog({
       }}
     >
       <DialogContent
-        className="sm:max-w-md"
+        data-ui-reference="chatgpt-auth-recovery"
+        className="kova-auth-surface p-5 sm:max-w-[450px]"
         onOpenAutoFocus={(event) => {
           returnFocusRef.current =
             document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -115,11 +117,11 @@ export function ForgotPasswordDialog({
       >
         <DialogHeader className="text-center">
           <div className="flex justify-center mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center">
-              <KeyRound className="w-6 h-6" />
-            </div>
+            <NovaLogo mark className="h-8 w-8" />
           </div>
-          <DialogTitle className="text-center text-xl">Reset your password</DialogTitle>
+          <DialogTitle className="text-center text-[32px] font-medium leading-[38px]">
+            Reset your password
+          </DialogTitle>
           <DialogDescription className="text-center">
             {sent
               ? "If an account exists for this email, you’ll receive recovery instructions. Open any received link on this device."
@@ -138,10 +140,16 @@ export function ForgotPasswordDialog({
                 </p>
               </div>
             </div>
-            <Button className="w-full" onClick={close}>
+            <Button
+              data-ui-reference="chatgpt.auth.recovery.action"
+              className="w-full"
+              onClick={close}
+            >
               Done
             </Button>
-            <button
+            <Button
+              data-ui-reference="chatgpt.auth.recovery.action"
+              variant="ghost"
               type="button"
               className="w-full text-xs text-muted-foreground hover:text-foreground"
               onClick={() => {
@@ -150,7 +158,7 @@ export function ForgotPasswordDialog({
               }}
             >
               Use a different email
-            </button>
+            </Button>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3">
@@ -168,11 +176,22 @@ export function ForgotPasswordDialog({
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              data-ui-reference="chatgpt.auth.recovery.action"
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Send reset link
             </Button>
-            <Button type="button" variant="ghost" className="w-full" onClick={close}>
+            <Button
+              data-ui-reference="chatgpt.auth.recovery.action"
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={close}
+            >
               Cancel
             </Button>
             <p className="text-[11px] text-center text-muted-foreground">

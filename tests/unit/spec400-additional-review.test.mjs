@@ -175,16 +175,18 @@ test("voice preview can start, pause, resume and stop without audio access", () 
   assert.equal(elements(tree, (node) => node.props.className === "spec400-transcript").length, 0);
 });
 
-test("voice indicator retains its existing centered surface geometry and color tokens", () => {
+test("voice indicator uses the centered circular ChatGPT voice preview and color tokens", () => {
   const css = readFileSync("src/components/public/spec400-public.css", "utf8");
   const indicator = css.match(/\[data-public-shell\] \.spec400-call-indicator\s*\{([^}]+)\}/)[1];
   for (const declaration of [
     "display: grid;",
     "place-items: center;",
-    "min-height: 160px;",
+    "width: 128px;",
+    "height: 128px;",
+    "min-height: 128px;",
     "background: var(--muted);",
-    "border-radius: var(--kova-radius-card);",
-    "margin-block: 24px;",
+    "border-radius: 50%;",
+    "margin: 24px auto;",
   ])
     assert.ok(indicator.includes(declaration), declaration);
 });
@@ -216,10 +218,10 @@ test("review runtime has no service calls, recording, billing or fake shared lin
     rule.nodes.find((node) => node.type === "decl" && node.prop === property)?.value;
   assert.equal(
     declaration(heading, "font-family"),
-    'var(--font-reading, Georgia, "Times New Roman", serif)',
+    "var(--font-ui, ui-sans-serif, system-ui, sans-serif)",
   );
-  assert.equal(declaration(heading, "font-size"), "clamp(32px, 4vw, 48px)");
-  assert.equal(declaration(heading, "line-height"), "1.15");
+  assert.equal(declaration(heading, "font-size"), "clamp(36px, 5vw, 60px)");
+  assert.equal(declaration(heading, "line-height"), "1.1");
   assert.equal(declaration(heading, "font-weight"), "400");
   const phoneHeading = sheet.nodes
     .filter(

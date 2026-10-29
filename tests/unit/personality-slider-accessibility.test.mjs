@@ -29,6 +29,7 @@ const { Slider } = load("src/components/ui/slider.tsx", {
 });
 const { PersonalitySliders } = load("src/components/PersonalitySliders.tsx", {
   "@/components/ui/slider": { Slider },
+  "@/components/ui/button": { Button: "button" },
   "@/components/ui/switch": { Switch: "button" },
   "@tanstack/react-router": { Link: "a" },
   "@/hooks/useTier": { useTier: () => ({ tier: "plus" }), tierRank: () => 1 },

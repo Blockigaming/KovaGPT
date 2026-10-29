@@ -79,7 +79,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     ).toBe(0);
   });
 
-  test("signed-in desktop navigation keeps Chat and Work reachable from the sidebar", async ({
+  test("signed-in desktop navigation keeps New chat and Work reachable from the sidebar", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -94,10 +94,10 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await revealSidebar(page);
     const chatNavigation = page.getByRole("navigation", { name: "KovaGPT features" });
     await expect(chatNavigation).toBeVisible();
-    await expect(chatNavigation.getByRole("link", { name: "Chat" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    await expect(
+      chatNavigation.getByRole("button", { name: "New chat", exact: true }),
+    ).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
 
     if (!(await chatNavigation.getByRole("link", { name: "Work", exact: true }).isVisible())) {
       await chatNavigation.locator("summary").filter({ hasText: "More" }).click();
@@ -113,7 +113,7 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
       "page",
     );
 
-    await workNavigation.getByRole("link", { name: "Chat" }).click();
+    await workNavigation.getByRole("button", { name: "New chat", exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
   });
 

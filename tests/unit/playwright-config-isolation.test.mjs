@@ -29,8 +29,29 @@ test("general browser checks share the origin allowed by private application fix
     readRootFile("playwright.rounded.config.ts"),
   ]);
   const config = evaluateGeneralConfig(generalSource);
-  const fixtureOrigin = fixtureSource.match(/export const origin = "([^"]+)"/u)?.[1];
-  assert.ok(fixtureOrigin);
+  const boundary = fixtureSource.slice(
+    fixtureSource.indexOf("const applicationUrl"),
+    fixtureSource.indexOf("export const owner"),
+  );
+  const evaluateOrigin = (baseURL) => {
+    const exports = {};
+    vm.runInNewContext(
+      ts.transpileModule(boundary, {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+      }).outputText,
+      {
+        exports,
+        URL,
+        process: { env: baseURL === undefined ? {} : { PLAYWRIGHT_BASE_URL: baseURL } },
+      },
+    );
+    return exports.origin;
+  };
+  const fixtureOrigin = evaluateOrigin();
+  assert.equal(fixtureOrigin, "http://127.0.0.1:4189");
+  assert.equal(evaluateOrigin("http://127.0.0.1:4199/review"), "http://127.0.0.1:4199");
+  assert.throws(() => evaluateOrigin("file:///tmp/review"), /must use HTTP or HTTPS/);
+  assert.throws(() => evaluateOrigin("not-a-url"), /Invalid URL/);
   assert.equal(config.use.baseURL, fixtureOrigin);
   assert.equal(new URL(config.webServer.url).origin, fixtureOrigin);
   assert.equal(evaluateGeneralConfig(roundedSource).use.baseURL, fixtureOrigin);

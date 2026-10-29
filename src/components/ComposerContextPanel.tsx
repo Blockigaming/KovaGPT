@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
 
 /** Only explicitly selected material is included; this is not an account-wide search. */
@@ -29,13 +30,19 @@ export function ComposerContextPanel({
 }) {
   return (
     <div className="spec400-context-sections">
-      <section aria-labelledby="context-project-heading">
+      <section
+        data-ui-reference="claude.project-instructions.section"
+        aria-labelledby="context-project-heading"
+      >
         <h3 id="context-project-heading">Project instructions</h3>
         <p>
           This chat has no project association. Open a project to use its instructions and files.
         </p>
       </section>
-      <section aria-labelledby="context-files-heading">
+      <section
+        data-ui-reference="claude.project-instructions.section"
+        aria-labelledby="context-files-heading"
+      >
         <h3 id="context-files-heading">
           Files <span>({attachments.length}/2)</span>
         </h3>
@@ -43,9 +50,11 @@ export function ComposerContextPanel({
           <ul className="spec400-context-files">
             {attachments.map((file, index) => (
               <li key={`${file.name}:${index}`}>
-                <button
+                <Button
+                  data-ui-reference="claude.project-instructions.control"
+                  variant="ghost"
                   type="button"
-                  className="spec400-context-inspect"
+                  className="h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 spec400-context-inspect"
                   onClick={() => onInspect?.(index)}
                 >
                   <strong>{file.name}</strong>
@@ -69,8 +78,10 @@ export function ComposerContextPanel({
                   </span>
                   {file.error && <span className="text-destructive">{file.error}</span>}
                   {file.extractionNote && <span>{file.extractionNote}</span>}
-                </button>
-                <button
+                </Button>
+                <Button
+                  data-ui-reference="claude.project-instructions.control"
+                  variant="ghost"
                   type="button"
                   className="spec400-toolbar-button"
                   disabled={disabled}
@@ -78,7 +89,7 @@ export function ComposerContextPanel({
                   onClick={() => onRemove(index)}
                 >
                   Remove
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -86,12 +97,18 @@ export function ComposerContextPanel({
           <p>No files attached to this message.</p>
         )}
       </section>
-      <section aria-labelledby="context-results-heading">
+      <section
+        data-ui-reference="claude.project-instructions.section"
+        aria-labelledby="context-results-heading"
+      >
         <h3 id="context-results-heading">Saved results</h3>
         <p>Choose material from Library to include it. Files are never attached automatically.</p>
         {library}
       </section>
-      <section aria-labelledby="context-conversation-heading">
+      <section
+        data-ui-reference="claude.project-instructions.section"
+        aria-labelledby="context-conversation-heading"
+      >
         <h3 id="context-conversation-heading">Conversation context</h3>
         <p>
           {chatRulesActive
@@ -100,14 +117,16 @@ export function ComposerContextPanel({
         </p>
         {selectedTool && <p>Selected tool: {selectedTool}</p>}
         {onOpenChatContext ? (
-          <button
+          <Button
+            data-ui-reference="claude.project-instructions.control"
+            variant="ghost"
             type="button"
             disabled={disabled}
             onClick={onOpenChatContext}
             className="spec400-toolbar-button"
           >
             Chat rules and pinned files
-          </button>
+          </Button>
         ) : (
           <p>Chat rules and pinned files become available after you create a chat.</p>
         )}

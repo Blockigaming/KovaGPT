@@ -1,3 +1,5 @@
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -40,6 +42,7 @@ function PricingAdministration() {
   if (isSignedIn && user?.id) return <OwnedPricingAdministration key={user.id} ownerId={user.id} />;
   return (
     <PublicPageView
+      reference="chatgpt-settings-form"
       eyebrow="Administration"
       title="Pricing administration"
       summary="Review developer pricing and credit offers."
@@ -179,6 +182,7 @@ function OwnedPricingAdministration({ ownerId }: { ownerId: string }) {
       })();
   return (
     <PublicPageView
+      reference="chatgpt-settings-form"
       eyebrow="Administration"
       title="Pricing administration"
       summary="Save a proposal, review its exact terms, then approve it explicitly. Only configured administrators have access."
@@ -248,9 +252,9 @@ function OwnedPricingAdministration({ ownerId }: { ownerId: string }) {
             <label className="block" htmlFor="pricing-proposal">
               Proposal JSON
             </label>
-            <textarea
+            <Textarea
               id="pricing-proposal"
-              className="min-h-80 w-full rounded border bg-background p-3 font-mono text-sm"
+              className="min-h-80 w-full font-mono text-sm"
               maxLength={131072}
               disabled={busy || (!!selected && selected.status !== "draft")}
               value={input}
@@ -301,8 +305,8 @@ function OwnedPricingAdministration({ ownerId }: { ownerId: string }) {
                   <>
                     <label className="block">
                       Retirement reason
-                      <input
-                        className="mt-1 w-full rounded border bg-background p-2"
+                      <Input
+                        className="mt-1 w-full"
                         value={reason}
                         maxLength={500}
                         onChange={(e) => setReason(e.target.value)}

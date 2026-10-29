@@ -29,6 +29,7 @@ function fixture() {
   const list = () => new Promise((resolve, reject) => requests.push({ resolve, reject }));
   const dependencies = {
     React: { createElement: (type, props, ...children) => ({ type, props, children }) },
+    Button: "button",
     useUser: () => auth,
     chatStoragePrincipal: (key) => (key ? `user:${key}` : "guest"),
     useServerFn: () => list,

@@ -189,10 +189,7 @@ function StreamingStatus({
       aria-atomic="true"
       data-wait-stage={waitStage}
     >
-      <ol
-        className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
-        aria-label="Response progress"
-      >
+      <ol className="sr-only" aria-label="Response progress">
         <li className="inline-flex items-center gap-1">
           <Check className="h-3.5 w-3.5" aria-hidden="true" /> Request started
         </li>
@@ -887,12 +884,13 @@ function ChatMessageInner({
       id={`message-${message.id}`}
       data-message-id={message.id}
       data-message-role={message.role}
+      data-ui-reference="chatgpt-message"
       className="kova-message group w-full px-4 py-3 text-base leading-[26px] sm:px-6 lg:px-8"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
-        <div className="mx-auto flex w-full kova-message-reading-column justify-start">
-          <div className="kova-user-message-group flex w-full min-w-0 flex-col items-start">
+        <div className="mx-auto flex w-full kova-message-reading-column justify-end">
+          <div className="kova-user-message-group flex min-w-0 flex-col items-end">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
@@ -938,7 +936,7 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="kova-user-message prose-chat w-full whitespace-pre-wrap break-words rounded-xl border border-border bg-[var(--surface-secondary)] p-4 text-foreground">
+              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words bg-[var(--surface-secondary)] px-4 py-3 text-foreground">
                 {message.content}
               </div>
             )}
@@ -949,7 +947,7 @@ function ChatMessageInner({
                   <button
                     type="button"
                     onClick={onEdit}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                     aria-label="Edit message"
                     title="Edit message"
                   >
@@ -960,7 +958,7 @@ function ChatMessageInner({
                   <button
                     type="button"
                     onClick={onBranch}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                     aria-label="Branch from this message in a new chat"
                     title="Branch in new chat"
                   >
@@ -974,9 +972,6 @@ function ChatMessageInner({
       ) : (
         <div className="kova-assistant-message mx-auto flex kova-message-reading-column items-start justify-start">
           <div className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text">
-            <div className="mb-3 text-[13px] font-medium leading-[18px] text-muted-foreground">
-              Kova
-            </div>
             {message.activities
               ?.filter((activity) => activity.tool === "scheduled_task")
               .map((activity, index) => (
@@ -1409,7 +1404,7 @@ function ChatMessageInner({
                   onClick={(event) => {
                     openResult("edit", event.currentTarget);
                   }}
-                  className="kova-open-result-action inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-accent/80"
+                  className="kova-open-result-action inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-accent/80 [@media(pointer:coarse)]:min-h-11"
                   aria-label={artifactKind === "code" ? "Open code result" : "Open writing result"}
                   title={artifactKind === "code" ? "Open code result" : "Open writing result"}
                 >
@@ -1428,7 +1423,7 @@ function ChatMessageInner({
                     setCompareVersions(true);
                     setVersionsOpen(true);
                   }}
-                  className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                  className="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground [@media(pointer:coarse)]:min-h-11"
                   aria-label="Compare response versions"
                 >
                   <History className="h-3.5 w-3.5" aria-hidden="true" /> Compare versions

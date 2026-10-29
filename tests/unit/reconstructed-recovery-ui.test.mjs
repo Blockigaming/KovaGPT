@@ -18,6 +18,7 @@ function recoveryFixture(request = async () => ({ ok: true })) {
       }),
     {
       modules: {
+        "@/components/NovaLogo": { NovaLogo: "NovaLogo" },
         "@/components/ui/dialog": {
           Dialog: "dialog",
           DialogContent: "dialog-content",

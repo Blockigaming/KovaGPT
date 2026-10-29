@@ -15,8 +15,10 @@ const AlertDialogOverlay = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Overlay
+    data-slot="alert-dialog-overlay"
+    data-ui-reference="chatgpt.dialog.backdrop"
     className={cn(
-      "fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/30 dark:bg-black/50 duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className,
     )}
     {...props}
@@ -32,10 +34,12 @@ const AlertDialogContent = React.forwardRef<
   <AlertDialogPortal>
     <AlertDialogOverlay />
     <AlertDialogPrimitive.Content
+      data-slot="alert-dialog-content"
+      data-ui-reference="chatgpt.dialog.confirmation"
       data-kova-dialog-surface=""
       ref={ref}
       className={cn(
-        "font-[family-name:var(--font-ui)] fixed left-[50%] top-[50%] z-50 grid min-w-0 w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[var(--kova-radius-panel)] border border-border bg-popover p-6 text-popover-foreground shadow-xl duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        "font-[family-name:var(--font-ui)] fixed left-1/2 top-1/2 z-50 grid min-w-0 w-[calc(100%-2rem)] max-w-[450px] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[var(--kova-radius-panel)] border border-border bg-popover p-5 text-popover-foreground shadow-[var(--shadow-floating)] duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem)]",
         className,
       )}
@@ -69,7 +73,7 @@ const AlertDialogTitle = React.forwardRef<
     ref={ref}
     data-slot="alert-dialog-title"
     className={cn(
-      "font-[family-name:var(--font-ui)] text-xl font-semibold leading-7 tracking-tight",
+      "font-[family-name:var(--font-ui)] text-lg font-semibold leading-6 tracking-normal",
       className,
     )}
     {...props}
@@ -83,7 +87,7 @@ const AlertDialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm leading-relaxed text-muted-foreground", className)}
+    className={cn("text-sm leading-5 text-muted-foreground", className)}
     {...props}
   />
 ));
@@ -94,10 +98,12 @@ const AlertDialogAction = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Action
+    data-slot="button"
+    data-ui-reference="chatgpt.button.pill"
     ref={ref}
     className={cn(
       buttonVariants(),
-      "h-auto min-h-11 min-w-0 max-w-full whitespace-normal text-center",
+      "h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center [@media(pointer:coarse)]:min-h-11",
       className,
     )}
     {...props}
@@ -110,10 +116,12 @@ const AlertDialogCancel = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel>
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Cancel
+    data-slot="button"
+    data-ui-reference="chatgpt.button.pill"
     ref={ref}
     className={cn(
       buttonVariants({ variant: "outline" }),
-      "h-auto min-h-11 min-w-0 max-w-full whitespace-normal text-center",
+      "h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center [@media(pointer:coarse)]:min-h-11",
       className,
     )}
     {...props}

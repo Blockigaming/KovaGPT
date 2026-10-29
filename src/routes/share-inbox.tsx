@@ -21,7 +21,10 @@ function ShareInbox() {
   const ownerId = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   return (
     <AppShell>
-      <main className="mx-auto max-w-3xl space-y-4 p-6">
+      <main
+        data-ui-reference="chatgpt.shared.chat-review"
+        className={"kova-tool-page " + "mx-auto max-w-3xl space-y-4 p-6"}
+      >
         <h1 className="text-2xl font-semibold">Review shared text</h1>
         {!isLoaded ? (
           <p>Loading your account…</p>
@@ -29,9 +32,9 @@ function ShareInbox() {
           <p>
             Sign in to review this share. It expires after five minutes.{" "}
             <SignInButton>
-              <button type="button" className="underline">
+              <Button variant="link" type="button" className="underline">
                 Sign in
-              </button>
+              </Button>
             </SignInButton>
           </p>
         ) : (

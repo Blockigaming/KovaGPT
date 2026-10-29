@@ -1,3 +1,5 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { createFileRoute, Link, Outlet, useMatch } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -75,15 +77,16 @@ function DirectoryPage() {
         tabIndex={-1}
         role="region"
         aria-label="Assistant directory"
+        data-ui-reference="chatgpt.gpts.directory"
         className="col-span-full"
       >
         <label className="relative block">
           <span className="sr-only">Search loaded Kovas</span>
-          <Search className="pointer-events-none absolute left-4 top-3.5 h-5 w-5 text-muted-foreground" />
-          <input
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="min-h-12 w-full rounded-xl border bg-background pl-12 pr-4"
+            className="w-full pl-9"
             placeholder="Search loaded Kovas"
           />
         </label>
@@ -118,16 +121,17 @@ function DirectoryPage() {
       {error && (
         <div role="alert" className="col-span-full">
           <p>{error}</p>
-          <button
+          <Button
+            variant="outline"
             disabled={busy}
-            className="mt-2 min-h-11 rounded-lg border px-4"
+            className="mt-2"
             onClick={() => {
               directoryRef.current?.focus({ preventScroll: true });
               setRequestVersion((current) => current + 1);
             }}
           >
             Retry directory
-          </button>
+          </Button>
         </div>
       )}
       {busy && (
@@ -136,9 +140,10 @@ function DirectoryPage() {
         </p>
       )}
       {after && (
-        <button
+        <Button
+          variant="outline"
           disabled={busy}
-          className="col-span-full min-h-11 rounded-lg border px-4"
+          className="col-span-full justify-self-center"
           onClick={() => {
             directoryRef.current?.focus({ preventScroll: true });
             setPage(after);
@@ -146,7 +151,7 @@ function DirectoryPage() {
           }}
         >
           Load more Kovas
-        </button>
+        </Button>
       )}
       <Link className="col-span-full underline" to={"/kovas" as never}>
         Create or manage your Kovas

@@ -401,7 +401,9 @@ export function LibraryFolderOrganizer({
       .filter((folder) => folder.parentId === parentId)
       .map((folder) => (
         <div key={folder.id}>
-          <button
+          <Button
+            data-ui-reference="chatgpt.library-folders.control"
+            variant="ghost"
             type="button"
             ref={(node) => {
               if (node) folderButtonsRef.current.set(folder.id, node);
@@ -409,7 +411,7 @@ export function LibraryFolderOrganizer({
             }}
             aria-current={scope === folder.id ? "page" : undefined}
             onClick={() => onScopeChange(folder.id)}
-            className={`flex min-h-11 w-full items-center gap-2 rounded-lg pr-3 text-left text-sm hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring ${
+            className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-2  pr-3 text-left text-sm hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring ${
               scope === folder.id ? "bg-[var(--surface-selected)] font-medium" : ""
             }`}
             style={{
@@ -418,7 +420,7 @@ export function LibraryFolderOrganizer({
           >
             <Folder className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="truncate">{folder.name}</span>
-          </button>
+          </Button>
           {renderFolders(folder.id, depth + 1)}
         </div>
       ));
@@ -426,7 +428,11 @@ export function LibraryFolderOrganizer({
   if (!enabled) return null;
 
   return (
-    <section className="kova-card space-y-3 p-3 sm:p-4" aria-labelledby="library-folders-title">
+    <section
+      data-ui-reference="chatgpt.library-folders.section"
+      className="kova-card space-y-3 p-3 sm:p-4"
+      aria-labelledby="library-folders-title"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="library-folders-title" className="text-sm font-medium">
@@ -438,9 +444,10 @@ export function LibraryFolderOrganizer({
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
+            data-ui-reference="chatgpt.library-folders.control"
             size="sm"
             variant="outline"
-            className="min-h-11"
+            className=""
             disabled={Boolean(busy) || folderStateUnavailable || !canCreateChild}
             onClick={(event) => {
               editorReturnRef.current = {
@@ -460,9 +467,10 @@ export function LibraryFolderOrganizer({
           {activeFolder ? (
             <>
               <Button
+                data-ui-reference="chatgpt.library-folders.control"
                 size="sm"
                 variant="outline"
-                className="min-h-11"
+                className=""
                 disabled={Boolean(busy) || folderStateUnavailable}
                 onClick={(event) => {
                   editorReturnRef.current = {
@@ -480,9 +488,10 @@ export function LibraryFolderOrganizer({
                 Rename
               </Button>
               <Button
+                data-ui-reference="chatgpt.library-folders.control"
                 size="sm"
                 variant="outline"
-                className="min-h-11 text-destructive"
+                className=" text-destructive"
                 disabled={Boolean(busy) || folderStateUnavailable || itemStateUnavailable}
                 onClick={(event) => {
                   deleteReturnRef.current = {
@@ -509,38 +518,52 @@ export function LibraryFolderOrganizer({
           className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 p-3"
         >
           <p className="text-sm text-destructive">{error}</p>
-          <Button size="sm" variant="outline" className="min-h-11" onClick={onRefresh}>
+          <Button
+            data-ui-reference="chatgpt.library-folders.control"
+            size="sm"
+            variant="outline"
+            className=""
+            onClick={onRefresh}
+          >
             <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
             Retry
           </Button>
         </div>
       ) : null}
 
-      <nav aria-label="Library folders" className="max-h-64 overflow-y-auto rounded-xl border p-1">
-        <button
+      <nav
+        data-ui-reference="chatgpt.library-folders.nav"
+        aria-label="Library folders"
+        className="max-h-64 overflow-y-auto rounded-xl border p-1"
+      >
+        <Button
+          data-ui-reference="chatgpt.library-folders.control"
+          variant="ghost"
           type="button"
           ref={allItemsButtonRef}
           aria-current={scope === "all" ? "page" : undefined}
           onClick={() => onScopeChange("all")}
-          className={`flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring ${
+          className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-2   text-left text-sm hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring ${
             scope === "all" ? "bg-[var(--surface-selected)] font-medium" : ""
           }`}
         >
           <FolderOpen className="h-4 w-4" aria-hidden="true" />
           All items
-        </button>
-        <button
+        </Button>
+        <Button
+          data-ui-reference="chatgpt.library-folders.control"
+          variant="ghost"
           type="button"
           ref={unfiledButtonRef}
           aria-current={scope === "unfiled" ? "page" : undefined}
           onClick={() => onScopeChange("unfiled")}
-          className={`flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring ${
+          className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-2   text-left text-sm hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring ${
             scope === "unfiled" ? "bg-[var(--surface-selected)] font-medium" : ""
           }`}
         >
           <Folder className="h-4 w-4" aria-hidden="true" />
           Unfiled
-        </button>
+        </Button>
         {loading && folders.length === 0 ? (
           <p
             role="status"
@@ -591,7 +614,8 @@ export function LibraryFolderOrganizer({
             />
           </label>
           <Button
-            className="min-h-11"
+            data-ui-reference="chatgpt.library-folders.control"
+            className=""
             size="sm"
             disabled={
               Boolean(busy) ||
@@ -624,6 +648,7 @@ export function LibraryFolderOrganizer({
       >
         {editor ? (
           <DialogContent
+            data-ui-reference="chatgpt.library-folders.dialogcontent"
             ref={editorContentRef}
             onCloseAutoFocus={(event) => {
               event.preventDefault();
@@ -664,8 +689,9 @@ export function LibraryFolderOrganizer({
               <label className="block text-sm font-medium">
                 Folder name
                 <Input
+                  data-ui-reference="chatgpt.library-folders.input"
                   autoFocus
-                  className="mt-1 h-11"
+                  className="mt-1 "
                   maxLength={120}
                   value={folderName}
                   onChange={(event) => setFolderName(event.target.value)}
@@ -678,17 +704,19 @@ export function LibraryFolderOrganizer({
               ) : null}
               <div className="flex justify-end gap-2">
                 <Button
+                  data-ui-reference="chatgpt.library-folders.control"
                   type="button"
                   variant="ghost"
-                  className="min-h-11"
+                  className=""
                   disabled={Boolean(busy)}
                   onClick={() => setEditor(null)}
                 >
                   Cancel
                 </Button>
                 <Button
+                  data-ui-reference="chatgpt.library-folders.control"
                   type="submit"
-                  className="min-h-11"
+                  className=""
                   disabled={!folderName.trim() || Boolean(busy)}
                 >
                   {busy ? (

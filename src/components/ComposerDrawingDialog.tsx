@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useCallback, useRef, useState, type PointerEvent } from "react";
 import {
   Dialog,
@@ -86,6 +87,7 @@ export function ComposerDrawingDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        data-ui-reference="chatgpt.attachment-drawing.dialogcontent"
         className="kova-drawing-dialog sm:max-w-xl"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
@@ -108,9 +110,15 @@ export function ComposerDrawingDialog({
               onChange={(event) => setInk(event.target.value)}
             />
           </label>
-          <button type="button" onClick={() => clear()} disabled={busy}>
+          <Button
+            data-ui-reference="chatgpt.attachment-drawing.action"
+            variant="ghost"
+            type="button"
+            onClick={() => clear()}
+            disabled={busy}
+          >
             Clear drawing
-          </button>
+          </Button>
         </div>
         <canvas
           ref={assignCanvas}
@@ -155,17 +163,25 @@ export function ComposerDrawingDialog({
           </p>
         ) : null}
         <div className="kova-drawing-actions">
-          <button type="button" onClick={() => onOpenChange(false)} disabled={busy}>
+          <Button
+            data-ui-reference="chatgpt.attachment-drawing.action"
+            variant="ghost"
+            type="button"
+            onClick={() => onOpenChange(false)}
+            disabled={busy}
+          >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            data-ui-reference="chatgpt.attachment-drawing.action"
+            variant="ghost"
             type="button"
             className="kova-drawing-attach"
             onClick={() => void attach()}
             disabled={busy}
           >
             {busy ? "Attaching…" : "Attach drawing"}
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

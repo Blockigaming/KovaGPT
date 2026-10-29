@@ -217,8 +217,12 @@ function routeFixture(initialTasks = [task]) {
   const route = loadUiModule(
     "src/routes/scheduled-tasks.tsx",
     {
+      "@/components/ui/tabs": primitives("Tabs TabsContent TabsList TabsTrigger"),
       react: f.hooks.react,
       "@/styles/spec400-management.css": {},
+      "@/components/ui/button": { Button: "button" },
+      "@/components/ui/input": { Input: "input" },
+      "@/components/ui/textarea": { Textarea: "textarea" },
       "@tanstack/react-router": {
         createFileRoute: () => (config) => ({ ...config, useSearch: () => ({}) }),
         Link: "Link",
@@ -456,6 +460,9 @@ function editorFixture() {
     {
       react: f.hooks.react,
       "@/styles/spec400-management.css": {},
+      "@/components/ui/button": { Button: "button" },
+      "@/components/ui/input": { Input: "input" },
+      "@/components/ui/textarea": { Textarea: "textarea" },
       "@/components/ui/dialog": primitives("Dialog DialogContent DialogTitle DialogDescription"),
       "@/components/ui/alert-dialog": primitives(
         "AlertDialog AlertDialogAction AlertDialogCancel AlertDialogContent AlertDialogDescription AlertDialogFooter AlertDialogHeader AlertDialogTitle",
@@ -609,16 +616,10 @@ test("a fast failure retains status focus when the menu portal closes after requ
 
 test("resume and failed-run recovery preserve the complete captured action and identity", async () => {
   for (const [status, filter, action, retryLabel, expected] of [
-    [
-      "paused",
-      "paused 1",
-      "Resume",
-      "Retry resume for “Morning briefing”",
-      { status: "scheduled" },
-    ],
+    ["paused", "paused", "Resume", "Retry resume for “Morning briefing”", { status: "scheduled" }],
     [
       "failed",
-      "all 1",
+      "all",
       "Retry failed run",
       "Retry failed run for “Morning briefing”",
       { status: "scheduled", retry: true },
@@ -626,7 +627,14 @@ test("resume and failed-run recovery preserve the complete captured action and i
   ]) {
     const f = routeFixture([{ ...task, status }]);
     await f.ready();
-    f.click("button", filter);
+    const trigger = elements(
+      f.tree(),
+      (element) => element.type === "TabsTrigger" && element.props.value === filter,
+    )[0];
+    assert.ok(trigger, `The ${filter} task filter remains available`);
+    f.find("Tabs").props.onValueChange(trigger.props.value);
+    f.render();
+    assert.equal(f.find("Tabs").props.value, filter);
     f.select(action);
     await f.finish(true);
     f.click("button", retryLabel);

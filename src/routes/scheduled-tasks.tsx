@@ -1,3 +1,6 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import "@/styles/spec400-management.css";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -679,6 +682,7 @@ function ScheduledTasksPage() {
         <main
           id="main-content"
           className="kova-page kova-secondary-page spec400-management spec400-schedules"
+          data-ui-reference="chatgpt.tasks.manager"
           aria-labelledby="scheduled-tasks-title"
         >
           <header className="spec400-page-header">
@@ -690,15 +694,17 @@ function ScheduledTasksPage() {
             </div>
             {visibleAccess === "eligible" && (
               <div className="flex flex-wrap items-center gap-2">
-                <button
+                <Button
+                  variant="ghost"
                   type="button"
                   className="spec400-primary"
                   disabled={!executionAvailable}
                   onClick={(event) => openTaskEditor("new", "settings", event.currentTarget)}
                 >
                   <Plus aria-hidden="true" /> New scheduled task
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
                   type="button"
                   ref={refreshButtonRef}
                   onClick={() => {
@@ -706,23 +712,24 @@ function ScheduledTasksPage() {
                   }}
                   aria-disabled={loading}
                   aria-busy={loading}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3 text-sm hover:bg-accent aria-disabled:opacity-50"
+                  className="inline-flex items-center gap-2 border border-border text-sm hover:bg-accent aria-disabled:opacity-50"
                 >
                   <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
-                </button>
+                </Button>
               </div>
             )}
           </header>
 
           {createdTask && (
             <div role="status" className="mb-4">
-              <button
+              <Button
+                variant="ghost"
                 className="spec400-created-receipt"
                 onClick={(event) => openTaskEditor(createdTask, "settings", event.currentTarget)}
               >
                 <Check className="text-green-600" aria-hidden="true" />
                 Scheduled task created
-              </button>
+              </Button>
             </div>
           )}
           {taskLinkError && (
@@ -775,18 +782,19 @@ function ScheduledTasksPage() {
                 KovaGPT could not safely verify account access to Scheduled Tasks. Try again to
                 check availability.
               </p>
-              <button
+              <Button
+                variant="outline"
                 type="button"
                 onClick={() => window.location.reload()}
-                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium"
+                className="inline-flex items-center justify-center border border-border text-sm font-medium"
               >
                 Try again
-              </button>
+              </Button>
             </div>
           )}
 
           {visibleAccess === "eligible" && (
-            <>
+            <Tabs value={filter} onValueChange={(value) => setFilter(value as TaskFilter)}>
               {!executionAvailable ? (
                 <div
                   className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"
@@ -971,28 +979,17 @@ function ScheduledTasksPage() {
                 <label className="relative min-w-0 flex-1">
                   <span className="sr-only">Search scheduled tasks</span>
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
+                  <Input
                     value={query}
                     maxLength={MAX_MANAGEMENT_QUERY_LENGTH}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search tasks"
-                    className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm"
+                    className="w-full border border-border bg-background pl-9 pr-3 text-sm"
                   />
                 </label>
-                <div
-                  className="flex gap-1 overflow-x-auto"
-                  role="tablist"
-                  aria-label="Task filters"
-                >
+                <TabsList aria-label="Task filters">
                   {(["active", "paused", "all"] as TaskFilter[]).map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      role="tab"
-                      aria-selected={filter === value}
-                      onClick={() => setFilter(value)}
-                      className={`min-h-10 shrink-0 rounded-lg px-3 text-sm capitalize ${filter === value ? "bg-foreground text-background" : "bg-accent/50 hover:bg-accent"}`}
-                    >
+                    <TabsTrigger key={value} value={value} className="shrink-0 capitalize">
                       {value}{" "}
                       <span className="spec400-count">
                         {
@@ -1005,313 +1002,324 @@ function ScheduledTasksPage() {
                           ).length
                         }
                       </span>
-                    </button>
+                    </TabsTrigger>
                   ))}
-                </div>
+                </TabsList>
               </div>
-              {loadError ? (
-                <div
-                  className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
-                  role="alert"
-                >
-                  <div className="font-medium">This page couldn’t load</div>
-                  <p className="mt-1 text-muted-foreground">{loadError}</p>
-                  <button
-                    type="button"
-                    className="mt-3 min-h-11 rounded-lg border border-border px-3 py-2 font-medium aria-disabled:opacity-50"
-                    onClick={retryLoadTasks}
-                    aria-disabled={loading}
-                    aria-busy={loading}
+              <TabsContent value={filter} className="mt-0">
+                {loadError ? (
+                  <div
+                    className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
+                    role="alert"
                   >
-                    {loading ? "Trying again…" : "Try again"}
-                  </button>
-                </div>
-              ) : null}
-              {Object.values(taskFeedback).map((feedback) => (
-                <section
-                  key={feedback.task.id}
-                  ref={(element) => {
-                    if (element) taskFeedbackRefs.current.set(feedback.task.id, element);
-                    else taskFeedbackRefs.current.delete(feedback.task.id);
-                  }}
-                  tabIndex={-1}
-                  aria-label={`Action status for ${feedback.task.title}`}
-                  aria-busy={feedback.state === "pending"}
-                  className="mb-4 rounded-xl border border-border p-4 text-sm"
-                >
-                  <p
-                    role={feedback.state === "error" ? "alert" : "status"}
-                    aria-live={deleteTask?.id === feedback.task.id ? "off" : undefined}
-                  >
-                    {feedback.message}
-                  </p>
-                  {feedback.state === "error" && (
-                    <>
-                      <p className="mt-1 text-muted-foreground">
-                        Retry the same request to check the outcome.
-                      </p>
-                      <button
-                        type="button"
-                        className="mt-3 min-h-11 rounded-lg border border-border px-3 py-2 font-medium"
-                        onClick={(event) => {
-                          if (feedback.action === "delete")
-                            openDelete(feedback.task, event.currentTarget);
-                          else
-                            void runTaskAction(
-                              feedback.task,
-                              feedback.action,
-                              event.currentTarget,
-                              feedback.request,
-                            );
-                        }}
-                      >
-                        Retry{" "}
-                        {feedback.action === "retry"
-                          ? "failed run"
-                          : taskActionLabels[feedback.action]}{" "}
-                        for “{feedback.task.title}”
-                      </button>
-                    </>
-                  )}
-                  {feedback.state === "success" && (
-                    <button
+                    <div className="font-medium">This page couldn’t load</div>
+                    <p className="mt-1 text-muted-foreground">{loadError}</p>
+                    <Button
+                      variant="outline"
                       type="button"
-                      className="mt-3 min-h-11 rounded-lg border border-border px-3 py-2 font-medium"
-                      onClick={(event) => {
-                        const trigger = event.currentTarget;
-                        const hadFocus = document.activeElement === trigger;
-                        const url = window.location.href;
-                        const generation = generationRef.current;
-                        setTaskFeedback((current) => {
-                          const next = { ...current };
-                          delete next[feedback.task.id];
-                          return next;
-                        });
-                        window.requestAnimationFrame(() => {
-                          restoreDialogFocus(
-                            taskActionButtonsRef.current.get(feedback.task.id) ??
-                              refreshButtonRef.current,
-                            url,
-                            !hadFocus ||
-                              document.activeElement !== document.body ||
-                              principalRef.current !== principal ||
-                              generationRef.current !== generation,
-                          );
-                        });
-                      }}
+                      className="mt-3 border border-border font-medium aria-disabled:opacity-50"
+                      onClick={retryLoadTasks}
+                      aria-disabled={loading}
+                      aria-busy={loading}
                     >
-                      Dismiss result for “{feedback.task.title}”
-                    </button>
-                  )}
-                </section>
-              ))}
-              {loading && tasks.length === 0 ? (
-                <ul className="flex flex-col gap-2" aria-hidden>
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <li key={i} className="rounded-xl border border-border p-4">
-                      <div className="h-4 w-1/3 rounded bg-muted animate-pulse mb-2" />
-                      <div className="h-3 w-2/3 rounded bg-muted animate-pulse mb-3" />
-                      <div className="h-3 w-full rounded bg-muted animate-pulse" />
-                    </li>
-                  ))}
-                </ul>
-              ) : tasks.length === 0 && loadError ? null : tasks.length === 0 ? (
-                <div className="kova-empty-state">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Calendar className="w-5 h-5 text-muted-foreground" />
+                      {loading ? "Trying again…" : "Try again"}
+                    </Button>
                   </div>
-                  <div className="text-base font-medium mb-1">Nothing scheduled yet</div>
-                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    {executionAvailable
-                      ? "Create a scheduled task to run a prompt once or on a repeating schedule."
-                      : "No historical task records are available for this account."}
-                  </p>
-                </div>
-              ) : visibleTasks.length === 0 ? (
-                <div className="kova-empty-state">
-                  <div className="font-medium">No matching tasks</div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Try another search or filter.
-                  </p>
-                </div>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {visibleTasks.map((t) => (
-                    <li
-                      key={t.id}
-                      className="kova-row flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4"
+                ) : null}
+                {Object.values(taskFeedback).map((feedback) => (
+                  <section
+                    key={feedback.task.id}
+                    ref={(element) => {
+                      if (element) taskFeedbackRefs.current.set(feedback.task.id, element);
+                      else taskFeedbackRefs.current.delete(feedback.task.id);
+                    }}
+                    tabIndex={-1}
+                    aria-label={`Action status for ${feedback.task.title}`}
+                    aria-busy={feedback.state === "pending"}
+                    className="mb-4 rounded-xl border border-border p-4 text-sm"
+                  >
+                    <p
+                      role={feedback.state === "error" ? "alert" : "status"}
+                      aria-live={deleteTask?.id === feedback.task.id ? "off" : undefined}
                     >
-                      <div className="flex-1 min-w-0">
-                        <button
-                          type="button"
-                          className="spec400-task-title"
-                          onClick={(event) => openTaskEditor(t, "settings", event.currentTarget)}
-                        >
-                          {t.title}
-                        </button>
-                        <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5 mt-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          {t.next_run_at
-                            ? `Next ${formatDisplayDateTime(t.next_run_at, timeFormat)}`
-                            : `Originally ${formatDisplayDateTime(t.run_at, timeFormat)}`}{" "}
-                          ·{" "}
-                          {t.trigger_mode === "event"
-                            ? "Matching connected events"
-                            : t.repeat === "none"
-                              ? "Once"
-                              : t.repeat}{" "}
-                          · Schedule zone: {t.timezone}
-                          <span className="ml-1 px-1.5 py-0.5 rounded bg-accent/60">
-                            {t.status}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                          {t.prompt}
+                      {feedback.message}
+                    </p>
+                    {feedback.state === "error" && (
+                      <>
+                        <p className="mt-1 text-muted-foreground">
+                          Retry the same request to check the outcome.
                         </p>
-                        <ScheduledTaskLastRun
-                          preview={runPreviews[t.id]}
-                          timeFormat={timeFormat}
-                          lastRunAt={t.last_run_at}
-                          lastResult={t.last_result}
-                        />
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            type="button"
-                            ref={(element) => {
-                              if (element) taskActionButtonsRef.current.set(t.id, element);
-                              else taskActionButtonsRef.current.delete(t.id);
-                            }}
-                            className="spec400-icon-button"
-                            aria-label={`More actions for ${t.title}`}
-                            disabled={pendingTaskIds.has(t.id)}
-                          >
-                            <MoreHorizontal aria-hidden="true" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          onCloseAutoFocus={(event) => {
-                            const origin = editorReturnRef.current;
-                            // A fast response can finish before Radix closes its
-                            // portal. Consume this intent separately from the request.
-                            const actionClosed = taskMenuActionsRef.current.delete(t.id);
-                            if (
-                              (origin &&
-                                origin.trigger === taskActionButtonsRef.current.get(t.id)) ||
-                              deleteReturnRef.current?.trigger ===
-                                taskActionButtonsRef.current.get(t.id) ||
-                              actionClosed ||
-                              actionFocusRef.current.has(t.id)
-                            )
-                              event.preventDefault();
+                        <Button
+                          variant="outline"
+                          type="button"
+                          className="mt-3 border border-border font-medium"
+                          onClick={(event) => {
+                            if (feedback.action === "delete")
+                              openDelete(feedback.task, event.currentTarget);
+                            else
+                              void runTaskAction(
+                                feedback.task,
+                                feedback.action,
+                                event.currentTarget,
+                                feedback.request,
+                              );
                           }}
                         >
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              openTaskEditor(
-                                t,
-                                "settings",
-                                taskActionButtonsRef.current.get(t.id) ?? null,
-                              );
-                            }}
-                          >
-                            Open
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              openTaskEditor(
-                                t,
-                                "settings",
-                                taskActionButtonsRef.current.get(t.id) ?? null,
-                              );
-                            }}
-                          >
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              openTaskEditor(
-                                t,
-                                "history",
-                                taskActionButtonsRef.current.get(t.id) ?? null,
-                              );
-                            }}
-                          >
-                            View runs
-                          </DropdownMenuItem>
-                          {["scheduled", "running", "paused"].includes(t.status) && (
-                            <DropdownMenuItem
-                              disabled={
-                                (t.status === "paused" && !executionAvailable) ||
-                                taskFeedback[t.id]?.state === "error"
-                              }
-                              onSelect={() => void togglePause(t)}
-                            >
-                              {t.status === "paused" ? "Resume" : "Pause"}
-                            </DropdownMenuItem>
-                          )}
-                          {t.status === "failed" && (
-                            <DropdownMenuItem
-                              disabled={
-                                !executionAvailable || taskFeedback[t.id]?.state === "error"
-                              }
-                              onSelect={() => void retry(t)}
-                            >
-                              Retry failed run
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            disabled={
-                              taskFeedback[t.id]?.state === "error" &&
-                              taskFeedback[t.id]?.action !== "delete"
-                            }
-                            onSelect={() => openDelete(t)}
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {filteredTasks.length > 0 && (
-                <nav
-                  aria-label="Scheduled task pages"
-                  className="mt-4 flex flex-wrap items-center justify-between gap-2"
-                >
-                  <p className="text-xs text-muted-foreground" role="status">
-                    Page {pageIndex + 1} of {pageCount} · {filteredTasks.length} matching tasks
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="min-h-11 rounded-lg border border-border px-3 text-sm aria-disabled:opacity-50"
-                      aria-disabled={pageIndex === 0}
-                      onClick={() => {
-                        if (pageIndex > 0) setTaskPage({ scope: pageScope, index: pageIndex - 1 });
-                      }}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      type="button"
-                      className="min-h-11 rounded-lg border border-border px-3 text-sm aria-disabled:opacity-50"
-                      aria-disabled={pageIndex + 1 >= pageCount}
-                      onClick={() => {
-                        if (pageIndex + 1 < pageCount)
-                          setTaskPage({ scope: pageScope, index: pageIndex + 1 });
-                      }}
-                    >
-                      Next
-                    </button>
+                          Retry{" "}
+                          {feedback.action === "retry"
+                            ? "failed run"
+                            : taskActionLabels[feedback.action]}{" "}
+                          for “{feedback.task.title}”
+                        </Button>
+                      </>
+                    )}
+                    {feedback.state === "success" && (
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="mt-3 border border-border font-medium"
+                        onClick={(event) => {
+                          const trigger = event.currentTarget;
+                          const hadFocus = document.activeElement === trigger;
+                          const url = window.location.href;
+                          const generation = generationRef.current;
+                          setTaskFeedback((current) => {
+                            const next = { ...current };
+                            delete next[feedback.task.id];
+                            return next;
+                          });
+                          window.requestAnimationFrame(() => {
+                            restoreDialogFocus(
+                              taskActionButtonsRef.current.get(feedback.task.id) ??
+                                refreshButtonRef.current,
+                              url,
+                              !hadFocus ||
+                                document.activeElement !== document.body ||
+                                principalRef.current !== principal ||
+                                generationRef.current !== generation,
+                            );
+                          });
+                        }}
+                      >
+                        Dismiss result for “{feedback.task.title}”
+                      </Button>
+                    )}
+                  </section>
+                ))}
+                {loading && tasks.length === 0 ? (
+                  <ul className="flex flex-col gap-2" aria-hidden>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <li key={i} className="rounded-xl border border-border p-4">
+                        <div className="h-4 w-1/3 rounded bg-muted animate-pulse mb-2" />
+                        <div className="h-3 w-2/3 rounded bg-muted animate-pulse mb-3" />
+                        <div className="h-3 w-full rounded bg-muted animate-pulse" />
+                      </li>
+                    ))}
+                  </ul>
+                ) : tasks.length === 0 && loadError ? null : tasks.length === 0 ? (
+                  <div className="kova-empty-state">
+                    <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                      <Calendar className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div className="text-base font-medium mb-1">Nothing scheduled yet</div>
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                      {executionAvailable
+                        ? "Create a scheduled task to run a prompt once or on a repeating schedule."
+                        : "No historical task records are available for this account."}
+                    </p>
                   </div>
-                </nav>
-              )}
+                ) : visibleTasks.length === 0 ? (
+                  <div className="kova-empty-state">
+                    <div className="font-medium">No matching tasks</div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Try another search or filter.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {visibleTasks.map((t) => (
+                      <li
+                        key={t.id}
+                        className="kova-row flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <button
+                            type="button"
+                            className="spec400-task-title"
+                            data-ui-reference="chatgpt.tasks.task-name"
+                            onClick={(event) => openTaskEditor(t, "settings", event.currentTarget)}
+                          >
+                            {t.title}
+                          </button>
+                          <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5 mt-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            {t.next_run_at
+                              ? `Next ${formatDisplayDateTime(t.next_run_at, timeFormat)}`
+                              : `Originally ${formatDisplayDateTime(t.run_at, timeFormat)}`}{" "}
+                            ·{" "}
+                            {t.trigger_mode === "event"
+                              ? "Matching connected events"
+                              : t.repeat === "none"
+                                ? "Once"
+                                : t.repeat}{" "}
+                            · Schedule zone: {t.timezone}
+                            <span className="ml-1 px-1.5 py-0.5 rounded bg-accent/60">
+                              {t.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                            {t.prompt}
+                          </p>
+                          <ScheduledTaskLastRun
+                            preview={runPreviews[t.id]}
+                            timeFormat={timeFormat}
+                            lastRunAt={t.last_run_at}
+                            lastResult={t.last_result}
+                          />
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              ref={(element) => {
+                                if (element) taskActionButtonsRef.current.set(t.id, element);
+                                else taskActionButtonsRef.current.delete(t.id);
+                              }}
+                              className="spec400-icon-button"
+                              aria-label={`More actions for ${t.title}`}
+                              disabled={pendingTaskIds.has(t.id)}
+                            >
+                              <MoreHorizontal aria-hidden="true" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            onCloseAutoFocus={(event) => {
+                              const origin = editorReturnRef.current;
+                              // A fast response can finish before Radix closes its
+                              // portal. Consume this intent separately from the request.
+                              const actionClosed = taskMenuActionsRef.current.delete(t.id);
+                              if (
+                                (origin &&
+                                  origin.trigger === taskActionButtonsRef.current.get(t.id)) ||
+                                deleteReturnRef.current?.trigger ===
+                                  taskActionButtonsRef.current.get(t.id) ||
+                                actionClosed ||
+                                actionFocusRef.current.has(t.id)
+                              )
+                                event.preventDefault();
+                            }}
+                          >
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                openTaskEditor(
+                                  t,
+                                  "settings",
+                                  taskActionButtonsRef.current.get(t.id) ?? null,
+                                );
+                              }}
+                            >
+                              Open
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                openTaskEditor(
+                                  t,
+                                  "settings",
+                                  taskActionButtonsRef.current.get(t.id) ?? null,
+                                );
+                              }}
+                            >
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                openTaskEditor(
+                                  t,
+                                  "history",
+                                  taskActionButtonsRef.current.get(t.id) ?? null,
+                                );
+                              }}
+                            >
+                              View runs
+                            </DropdownMenuItem>
+                            {["scheduled", "running", "paused"].includes(t.status) && (
+                              <DropdownMenuItem
+                                disabled={
+                                  (t.status === "paused" && !executionAvailable) ||
+                                  taskFeedback[t.id]?.state === "error"
+                                }
+                                onSelect={() => void togglePause(t)}
+                              >
+                                {t.status === "paused" ? "Resume" : "Pause"}
+                              </DropdownMenuItem>
+                            )}
+                            {t.status === "failed" && (
+                              <DropdownMenuItem
+                                disabled={
+                                  !executionAvailable || taskFeedback[t.id]?.state === "error"
+                                }
+                                onSelect={() => void retry(t)}
+                              >
+                                Retry failed run
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              disabled={
+                                taskFeedback[t.id]?.state === "error" &&
+                                taskFeedback[t.id]?.action !== "delete"
+                              }
+                              onSelect={() => openDelete(t)}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {filteredTasks.length > 0 && (
+                  <nav
+                    aria-label="Scheduled task pages"
+                    className="mt-4 flex flex-wrap items-center justify-between gap-2"
+                  >
+                    <p className="text-xs text-muted-foreground" role="status">
+                      Page {pageIndex + 1} of {pageCount} · {filteredTasks.length} matching tasks
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="border border-border text-sm aria-disabled:opacity-50"
+                        aria-disabled={pageIndex === 0}
+                        onClick={() => {
+                          if (pageIndex > 0)
+                            setTaskPage({ scope: pageScope, index: pageIndex - 1 });
+                        }}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="border border-border text-sm aria-disabled:opacity-50"
+                        aria-disabled={pageIndex + 1 >= pageCount}
+                        onClick={() => {
+                          if (pageIndex + 1 < pageCount)
+                            setTaskPage({ scope: pageScope, index: pageIndex + 1 });
+                        }}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </nav>
+                )}
+              </TabsContent>
               <details
                 className="mt-6 rounded-xl border border-border"
                 open={relatedWorkspaceOpen}
@@ -1333,7 +1341,7 @@ function ScheduledTasksPage() {
                   </div>
                 )}
               </details>
-            </>
+            </Tabs>
           )}
         </main>
       </div>

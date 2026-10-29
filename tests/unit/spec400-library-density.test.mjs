@@ -93,7 +93,7 @@ test("Library preview combines title and metadata in one minimum 44px target wit
   );
 });
 
-test("Library has 56px comfortable and 48px compact rows while selection and action targets stay 44px", () => {
+test("Library keeps comfortable/compact rows, 44px selection targets, and shared icon actions with focus return", () => {
   assert.match(
     css,
     /\.spec400-library\s+\.kova-file-row\s*\{[^}]*min-height: 56px;[^}]*padding: 5px 12px;/,
@@ -103,7 +103,22 @@ test("Library has 56px comfortable and 48px compact rows while selection and act
     /html\[data-kova-density="compact"\][^{]*\.spec400-library\s+\.kova-file-row\s*\{[^}]*min-height: 48px;[^}]*padding-block: 1px;/,
   );
   assert.match(sharedCss, /\.kova-file-selection-spacer\s*\{[^}]*width: 44px;[^}]*height: 44px;/);
-  assert.match(library, /className="flex h-11 w-11[^"\n]*"\s*aria-label=\{`Actions for/);
+  const actions = elements.find(
+    (node) =>
+      tag(node) === "Button" &&
+      node.openingElement.attributes.properties.some(
+        (attribute) =>
+          ts.isJsxAttribute(attribute) &&
+          attribute.name.getText(parsed) === "aria-label" &&
+          attribute.initializer?.getText(parsed).includes("Actions for"),
+      ),
+  );
+  assert.ok(actions, "File actions use the shared icon button");
+  const actionProps = actions.openingElement.getText(parsed);
+  assert.match(actionProps, /size="icon"/);
+  assert.match(actionProps, /deleteActionButtonsRef\.current/);
+  assert.match(actionProps, /onFocus=/);
+  assert.match(actionProps, /onPointerDown=/);
   assert.match(
     css,
     /\.spec400-library \.kova-file-toolbar\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\) auto;/,

@@ -75,58 +75,34 @@ test("portal menu keyboard activation and cleanup preserve explicit modality", (
   dispose();
   assert.equal(f.mode(), "pointer");
 });
-test("pointer row overrides are root-scoped and preserve shared keyboard focus", () => {
+test("active focus rules use native focus-visible and retain visible keyboard outlines", () => {
   const sheet = postcss.parse(readFileSync("src/styles.css", "utf8"));
   const pointerRules = [];
   sheet.walkRules((rule) => {
     if (rule.selector.includes('data-kova-input-modality="pointer"')) pointerRules.push(rule);
   });
-  assert.equal(pointerRules.length, 2);
-  for (const rule of pointerRules) {
-    assert.match(rule.selector, /^html\[data-kova-input-modality="pointer"\]\s+\.kova-chat-row/);
-    assert.doesNotMatch(rule.selector, /modality="keyboard"/);
-    for (const node of rule.nodes)
-      if (node.type === "decl")
-        assert.ok(
-          !/^(?:outline(?:-.+)?|box-shadow|--tw-ring-.+)$/.test(node.prop),
-          `Pointer row handling must not suppress keyboard focus: ${node}`,
-        );
-  }
-  assert.ok(
-    pointerRules[0].nodes.some(
-      (node) => node.prop === "background-color" && node.value === "var(--accent)",
-    ),
-  );
-  assert.ok(
-    pointerRules[1].nodes.some(
-      (node) => node.prop === "background" && node.value === "transparent" && node.important,
-    ),
+  assert.equal(
+    pointerRules.length,
+    0,
+    "Removed compatibility selectors must not override native focus-visible",
   );
   const geometry = postcss.parse(readFileSync("src/styles/control-geometry.css", "utf8"));
-  const fieldFocus = geometry.nodes.find(
-    (node) => node.type === "rule" && node.selector.endsWith(":focus-visible"),
-  );
-  assert.ok(fieldFocus);
-  assert.ok(
-    fieldFocus.nodes.some(
-      (node) => node.prop === "outline" && node.value === "2px solid var(--ring)",
-    ),
-    "Shared keyboard field outlines remain visible",
-  );
-  const parity = postcss.parse(readFileSync("src/styles/chatgpt-parity.css", "utf8"));
-  const actionFocus = parity.nodes.find(
-    (node) =>
-      node.type === "rule" &&
-      node.selector.startsWith(":where(button, a, input, textarea, select,") &&
-      node.selector.endsWith(":focus-visible"),
-  );
-  assert.ok(actionFocus);
-  assert.ok(
-    actionFocus.nodes.some(
-      (node) => node.prop === "outline" && node.value === "2px solid var(--parity-focus)",
-    ),
-    "Shared keyboard action outlines remain visible",
-  );
+  const focusRules = [];
+  geometry.walkRules((rule) => {
+    if (rule.selector.includes(":focus-visible")) focusRules.push(rule);
+  });
+  assert.ok(focusRules.some((rule) => rule.selector.includes("input")));
+  assert.ok(focusRules.some((rule) => rule.selector.includes("button")));
+  for (const rule of focusRules) {
+    assert.ok(
+      rule.nodes.some((node) => node.prop === "outline" && node.value === "2px solid var(--ring)"),
+    );
+    assert.ok(rule.nodes.some((node) => node.prop === "outline-offset" && node.value === "2px"));
+    assert.ok(
+      !rule.nodes.some((node) => /^(?:background|background-color)$/.test(node.prop)),
+      "Keyboard focus must not recolor ordinary dialog actions",
+    );
+  }
   assert.match(
     readFileSync("src/components/conversation-header.css", "utf8"),
     /button:focus-visible/,
@@ -134,11 +110,13 @@ test("pointer row overrides are root-scoped and preserve shared keyboard focus",
   assert.match(readFileSync("src/routes/__root.tsx", "utf8"), /installInputModality\(document\)/);
 });
 
-test("pointer chat focus uses one full-row surface rather than a shorter title capsule", () => {
-  const css = readFileSync("src/styles.css", "utf8");
-  assert.match(css, /\.kova-chat-row:has\(\.kova-chat-row-main:is\(:focus,\s*:active\)\)/);
-  assert.match(
-    css,
-    /\.kova-chat-row\s*>\s*\.kova-chat-row-main:is\(:focus,\s*:active,\s*:hover\)\s*\{\s*background: transparent !important;/,
+test("chat focus highlights the full row while its title control stays transparent", () => {
+  const css = readFileSync("src/styles/sidebar-core.css", "utf8");
+  assert.match(css, /\.kova-sidebar \.kova-chat-row:is\([^)]*:focus-within[^)]*\)/);
+  const sheet = postcss.parse(css);
+  const title = sheet.nodes.find(
+    (node) => node.type === "rule" && node.selector === ".kova-sidebar .kova-chat-row-main",
   );
+  assert.ok(title);
+  assert.ok(title.nodes.some((node) => node.prop === "background" && node.value === "transparent"));
 });

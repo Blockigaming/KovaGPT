@@ -32,7 +32,7 @@ test("scheduled task fields are named by their persistent wrapping labels", () =
       assert.ok(
         label.getText(parsed).includes(`<SelectTrigger aria-label="${name}" className={control}>`),
       );
-    } else assert.match(label.getText(parsed), /<(?:input|textarea|select)\b/);
+    } else assert.match(label.getText(parsed), /<(?:input|textarea|select|Input|Textarea)\b/);
   }
 });
 test("modal controls retain 44px minimum targets and 120px prompt", () => {

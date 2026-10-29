@@ -10,7 +10,7 @@ const { Toaster } = loadUiModule("src/components/ui/sonner.tsx", {
   sonner: { Toaster: "Sonner" },
   "@/hooks/use-mobile": { useIsMobile: () => mobile },
 });
-const styles = postcss.parse(read("src/styles.css"));
+const styles = postcss.parse(read("src/styles/visual-tokens.css"));
 const native = read("node_modules/sonner/dist/styles.css");
 
 // Component/source inspection only: no DOM, browser or screenshots.

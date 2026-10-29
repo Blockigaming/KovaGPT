@@ -44,12 +44,14 @@ test("the valid password step is named, gated, and keeps auth calls unchanged", 
 
 test("the auth modal has one visible semantic heading and the shared contained close", () => {
   assert.match(authDialog, /DialogDescription/u);
-  assert.match(authDialog, /<DialogTitle className="kova-auth-dialog-title text-\[28px\]/u);
+  assert.match(authDialog, /<DialogTitle className="kova-auth-dialog-title text-\[32px\]/u);
   assert.doesNotMatch(authDialog, /<DialogTitle className="sr-only"/u);
   assert.doesNotMatch(authDialog, /<h1/u);
   assert.doesNotMatch(authDialog, /\[&>button\.absolute\]:hidden/u);
   assert.doesNotMatch(authDialog, /absolute -top-3 -right-3/u);
   assert.match(authDialog, /\[&>button\.absolute\]:!h-11/u);
+  assert.match(authDialog, /sm:max-w-\[450px\]/u);
+  assert.match(authDialog, /p-5 pb-\[calc\(1\.25rem\+env\(safe-area-inset-bottom\)\)\]/u);
   assert.match(authDialog, /aria-modal="true"/u);
   assert.match(authDialog, /Checking Google availability…/u);
   assert.match(authDialog, /role="status"/u);

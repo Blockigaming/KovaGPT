@@ -59,7 +59,7 @@ function fixture() {
     dispatch: (action) => actions.push(action),
   };
   deps.restoreDialogFocus = compile(
-    `${readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace("export function", "function")}; return restoreDialogFocus;`,
+    `${readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace(/^export function/gm, "function")}; return restoreDialogFocus;`,
     { window },
   );
   return {

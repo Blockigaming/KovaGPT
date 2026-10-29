@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import postcss from "postcss";
 const read = (path) => readFileSync(path, "utf8");
-test("inspectors override centered dialog caps and separate title from actions", () => {
+test("library inspector keeps its viewport drawer and Connections uses a bounded centered dialog", () => {
   const management = read("src/styles/spec400-management.css");
   const plugins = read("src/styles/spec400-plugins.css");
   const tokens = [];
@@ -13,10 +13,7 @@ test("inspectors override centered dialog caps and separate title from actions",
       tokens.push({ scope: decl.parent.selector, value: decl.value }),
     );
   assert.deepEqual(tokens, [{ scope: ":root", value: "24px" }]);
-  for (const [css, name] of [
-    [management, "library"],
-    [plugins, "plugin"],
-  ]) {
+  for (const [css, name] of [[management, "library"]]) {
     const kind = name === "library" ? "library-inspector" : "plugin-detail";
     const selector = `body .spec400-${kind}[data-kova-dialog-surface]`;
     const sheet = postcss.parse(css);
@@ -54,6 +51,40 @@ test("inspectors override centered dialog caps and separate title from actions",
       `${name} retains a full-width phone inspector`,
     );
   }
+  const pluginSheet = postcss.parse(plugins);
+  const pluginSelector = ".spec400-plugin-detail[data-kova-dialog-surface]";
+  const pluginDialog = pluginSheet.nodes.find(
+    (node) => node.type === "rule" && node.selector === pluginSelector,
+  );
+  assert.ok(pluginDialog);
+  const pluginDeclarations = Object.fromEntries(
+    pluginDialog.nodes.filter((node) => node.type === "decl").map((node) => [node.prop, node]),
+  );
+  for (const [property, value] of Object.entries({
+    inset: "50% auto auto 50%",
+    width: "min(600px, calc(100vw - 32px))",
+    "max-width": "600px",
+    height: "auto",
+    "max-height": "calc(100dvh - 48px)",
+    "border-radius": "var(--kova-radius-panel)",
+    transform: "translate(-50%, -50%)",
+    "overflow-y": "auto",
+  })) {
+    assert.equal(pluginDeclarations[property].value, value);
+    assert.ok(!pluginDeclarations[property].important);
+  }
+  const pluginPhone = [];
+  pluginSheet.walkRules(pluginSelector, (node) => {
+    if (node.parent.type === "atrule" && node.parent.params === "(max-width: 639px)")
+      pluginPhone.push(node);
+  });
+  assert.equal(pluginPhone.length, 1);
+  for (const [property, value] of Object.entries({
+    width: "calc(100vw - 24px)",
+    "max-height": "calc(100dvh - 24px)",
+    padding: "20px",
+  }))
+    assert.ok(pluginPhone[0].nodes.some((node) => node.prop === property && node.value === value));
   const source = read("src/routes/library.tsx");
   assert.match(source, /spec400-library-inspector-title/);
   assert.match(source, /spec400-library-inspector-actions/);
@@ -75,15 +106,23 @@ test("image surfaces use shared geometry and neutral progress rather than orname
   );
   assert.match(source, /id="image-generating-label"/);
 });
-test("settings keeps its760px content cap below sidebar breakpoint and Work controls remain44px", () => {
-  const css = read("src/styles/spec400-system.css");
+test("settings keeps its760px content cap below sidebar breakpoint and Work uses shared coarse44px controls", () => {
+  const css = read("src/styles/settings-page-layout.css");
   assert.match(
     css,
-    /@container settings \(max-width:959px\) \{\s*body \.kova-settings-page \.kova-settings-content \{\s*max-width: 760px/,
+    /\.kova-settings-route \.kova-settings-page \.kova-settings-content \{\s*max-width: 760px/,
   );
+  assert.match(css, /@container settings \(max-width: 959px\)/);
+  const caps = [];
+  postcss.parse(css).walkDecls("max-width", (declaration) => {
+    if (declaration.parent.selector?.includes(".kova-settings-content"))
+      caps.push(declaration.value);
+  });
+  assert.deepEqual(caps, ["760px"], "The narrow layout inherits the same content cap");
   const source = read("src/components/WorkExecutionPanel.tsx");
   assert.doesNotMatch(source, /ml-2 rounded border bg-background p-1/);
-  assert.match(source, /min-h-11 rounded-lg border border-border px-3 text-sm/);
+  assert.match(source, /import \{ Button \} from "@\/components\/ui\/button"/);
+  assert.match(read("src/components/ui/button.tsx"), /\[@media\(pointer:coarse\)\]:min-h-11/);
 });
 
 test("phone Projects places description before a single primary/templates action row", () => {

@@ -1,0 +1,11 @@
+// Literal pinned SDK glyph; see ../../reference-icons.LICENSE.
+import type { SVGProps } from "react";
+
+export const GlyphGrid = (props: SVGProps<SVGSVGElement>) => (
+  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <g data-sdk-geometry="Grid" fill="currentColor" stroke="none">
+      <path d="M6.75 4.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM2.5 6.75a4.25 4.25 0 1 1 8.5 0 4.25 4.25 0 0 1-8.5 0ZM17.25 4.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM13 6.75a4.25 4.25 0 1 1 8.5 0 4.25 4.25 0 0 1-8.5 0ZM6.75 15a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM2.5 17.25a4.25 4.25 0 1 1 8.5 0 4.25 4.25 0 0 1-8.5 0ZM17.25 15a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5ZM13 17.25a4.25 4.25 0 1 1 8.5 0 4.25 4.25 0 0 1-8.5 0Z" />
+    </g>
+    {props.children}
+  </svg>
+);

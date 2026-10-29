@@ -1,12 +1,12 @@
-/* File directories use the app's shared sans typography, thin bordered content,
-   and filename/recency knowledge rows.
-   Grid is an alternate layout of the same content, never a simulated preview. */
+/* CG-LIBRARY: search, file categories, real saved-file previews and item actions.
+   CG-SDK supplies type/control geometry. Uncaptured collection layout values
+   are adaptations; the list and grid always expose the same authorized items. */
 .kova-core-page.kova-file-directory {
-  --page-max: 1080px;
-  --page-padding: 36px clamp(20px, 4vw, 48px) 64px;
+  --page-max: 1120px;
+  --page-padding: 32px clamp(20px, 4vw, 40px) 48px;
   --page-title-size: 32px;
-  --page-title-line: 40px;
-  --page-title-weight: 500;
+  --page-title-line: 38px;
+  --page-title-weight: 600;
   --surface-card-radius: var(--kova-radius-card);
   --directory-toolbar-gap: 8px;
   gap: 24px;
@@ -17,8 +17,8 @@
   margin: 0 0 4px;
 }
 .kova-core-page.kova-file-directory .kova-page-title {
-  font-family: var(--font-sans) !important;
-  letter-spacing: -0.035em !important;
+  font-family: var(--font-ui);
+  letter-spacing: -0.025em;
 }
 .kova-core-page.kova-file-directory .kova-page-header > div:first-child > span[aria-hidden] {
   display: none;
@@ -45,8 +45,8 @@
   max-width: none;
 }
 .kova-core-page.kova-file-directory .kova-file-toolbar .kova-directory-search input {
-  height: 44px;
-  min-height: 44px;
+  height: 36px;
+  min-height: 36px;
   padding-inline: 40px 12px;
   border: 1px solid var(--border);
   border-radius: var(--kova-radius-input);
@@ -74,9 +74,9 @@
   gap: 2px;
 }
 .kova-core-page.kova-file-directory .kova-file-view-toggle button {
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: 999px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 8px;
 }
 .kova-core-page.kova-file-directory .kova-file-view-toggle [aria-pressed="true"] {
   background: var(--surface-selected);
@@ -84,7 +84,7 @@
 }
 .kova-core-page.kova-file-directory .kova-file-filters {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   max-width: 100%;
   overflow-x: auto;
   padding: 0;
@@ -93,8 +93,8 @@
 }
 .kova-core-page.kova-file-directory .kova-file-filters button {
   flex-shrink: 0;
-  min-height: 44px;
-  padding: 10px 14px;
+  min-height: 36px;
+  padding: 8px 12px;
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
@@ -107,8 +107,8 @@
   color: var(--foreground);
 }
 .kova-core-page.kova-file-directory .kova-file-filters [aria-pressed="true"] {
-  border-color: var(--border);
-  background: transparent;
+  border-color: var(--border-subtle);
+  background: var(--surface-selected);
   color: var(--foreground);
 }
 .kova-core-page.kova-file-directory .kova-project-file-browser {
@@ -154,7 +154,7 @@
   margin: 0;
 }
 .kova-core-page.kova-file-directory .kova-grid.kova-file-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   align-items: stretch;
   gap: 16px;
 }
@@ -172,29 +172,44 @@
   text-align: left;
   border-radius: var(--kova-radius-card) var(--kova-radius-card) 0 0;
 }
+.kova-core-page.kova-file-directory .kova-file-preview {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  place-items: center;
+  overflow: hidden;
+  background: var(--surface-secondary);
+  color: var(--muted-foreground);
+}
+.kova-core-page.kova-file-directory .kova-file-preview > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .kova-core-page.kova-file-directory .kova-file-title-line {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 76px;
-  padding: 18px var(--space-4) 10px;
+  min-height: 56px;
+  padding: 12px var(--space-4);
 }
 .kova-core-page.kova-file-directory .kova-file-type-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 36px;
-  width: 36px;
-  height: 40px;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 32px;
   overflow: hidden;
   border-radius: 4px;
   color: var(--muted-foreground);
   background: transparent;
 }
 .kova-core-page.kova-file-directory .kova-file-type-icon svg {
-  width: 28px;
-  height: 32px;
-  stroke-width: 1.3;
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.8;
 }
 .kova-core-page.kova-file-directory .kova-file-title {
   display: -webkit-box;
@@ -202,8 +217,8 @@
   -webkit-line-clamp: 2;
   overflow: hidden;
   overflow-wrap: anywhere;
-  font-size: 15px;
-  line-height: 22px;
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 500;
 }
 .kova-core-page.kova-file-directory .kova-file-card-footer {
@@ -249,7 +264,8 @@
   --card: var(--surface-selected);
   background: var(--surface-selected) !important;
 }
-.kova-core-page.kova-file-directory :is(.kova-file-card, .kova-project-file, .kova-file-row):hover {
+.kova-core-page.kova-file-directory
+  :is(.kova-file-card, .kova-project-file, .kova-file-row):hover:not([data-selected="true"]) {
   background: var(--surface-hover) !important;
 }
 .kova-core-page.kova-file-directory :is(button, a, summary):focus-visible {
@@ -261,20 +277,25 @@
   outline-offset: -3px;
 }
 .kova-core-page.kova-file-directory .kova-file-list {
-  gap: 8px;
+  overflow: hidden;
+  background: var(--card);
+  gap: 0;
   padding: 0;
-  border: 0;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--kova-radius-card);
 }
 .kova-core-page.kova-file-directory .kova-file-row {
   display: flex;
-  min-height: 80px;
+  min-height: 56px;
   align-items: center;
   gap: 12px;
-  padding: 8px 10px;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--kova-radius-card);
-  background: var(--card) !important;
+  padding: 5px 12px;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+}
+.kova-core-page.kova-file-directory .kova-file-row + .kova-file-row {
+  border-top: 1px solid var(--border-subtle) !important;
 }
 .kova-core-page.kova-file-directory .kova-file-row-name {
   flex: 1;
@@ -284,11 +305,11 @@
   display: block;
   width: 100%;
   min-height: 44px;
-  padding-block: 10px 4px;
+  padding-block: 0;
   text-align: left;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 22px;
+  line-height: 20px;
   overflow-wrap: anywhere;
 }
 .kova-core-page.kova-file-directory .kova-file-row-type {
@@ -298,6 +319,10 @@
   font-size: 12px;
   line-height: 18px;
   text-transform: capitalize;
+}
+html[data-kova-density="compact"] .kova-core-page.kova-file-directory .kova-file-row {
+  min-height: 48px;
+  padding-block: 1px;
 }
 .kova-core-page.kova-file-directory .kova-file-favorite {
   display: flex;
@@ -475,8 +500,8 @@
 @media (max-width: 767px) {
   .kova-core-page.kova-file-directory {
     --page-padding: 16px 20px 40px;
-    --page-title-size: 28px;
-    --page-title-line: 36px;
+    --page-title-size: 24px;
+    --page-title-line: 28px;
     gap: 12px;
   }
   /* Keep the title and 44px utility controls together without stacking a
@@ -659,106 +684,13 @@
   }
 }
 
-/* Owner feedback 2026-10-16: visibly rounder action buttons, without returning
-   to decorative covers or changing compact file metadata and touch targets. */
-.kova-core-page.kova-file-directory .kova-page-actions :is(button, a),
-.kova-core-page.kova-file-directory .kova-file-toolbar button,
-.kova-core-page.kova-file-directory .kova-file-row > button {
-  border-radius: var(--kova-radius-button);
-}
-
-/* Modern workspace treatment: ChatGPT filter pills, Grok's single quiet list
-   surface, and Claude-style project titles. Data labels stay in the UI face. */
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-management
-  .kova-file-filters {
-  gap: 8px;
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-management
-  .kova-file-filters
-  button {
-  border: 1px solid transparent;
-  border-radius: var(--kova-radius-button);
-  padding-inline: 16px;
-  font-weight: 400;
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-management
-  .kova-file-filters
-  [aria-pressed="true"] {
-  border-color: var(--foreground);
-  background: var(--foreground);
-  color: var(--background);
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-library
-  .kova-file-list {
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--kova-radius-card);
-  background: var(--card);
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-library
-  .kova-file-row {
-  border: 0 !important;
-  border-radius: 0;
-  background: transparent !important;
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-library
-  .kova-file-row
-  + .kova-file-row {
-  border-top: 1px solid var(--border-subtle) !important;
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-library
-  .kova-file-row[data-selected="true"] {
-  background: var(--surface-selected) !important;
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-library
-  .kova-file-row:hover:not([data-selected="true"]) {
-  background: var(--surface-hover) !important;
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-library
-  .kova-file-row
-  button:focus-visible {
-  outline-offset: -3px;
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-projects
-  .kova-file-grid
-  .kova-project-file-link {
-  padding: 24px;
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-projects
-  .kova-project-file-name
-  h3 {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 400;
-  line-height: 28px;
-}
-.kova-app-shell[data-ui="modern"]
-  .kova-core-page.kova-file-directory.spec400-projects
-  .kova-project-file-row
-  .kova-project-file-name
-  h3 {
-  font-size: 18px;
-  line-height: 24px;
-}
-@media (max-width: 767px) {
-  .kova-app-shell[data-ui="modern"]
-    .kova-core-page.kova-file-directory.spec400-projects
-    .kova-file-grid
-    .kova-project-file-link {
-    padding: 20px;
+@media (pointer: coarse) {
+  .kova-core-page.kova-file-directory .kova-file-filters button,
+  .kova-core-page.kova-file-directory .kova-file-view-toggle button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .kova-core-page.kova-file-directory .kova-directory-search input {
+    min-height: 44px;
   }
 }

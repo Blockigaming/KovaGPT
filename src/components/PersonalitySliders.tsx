@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useEffect, useId, useRef, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -254,12 +255,14 @@ export function PersonalitySliders({
           Personality
         </h3>
         {unlocked && (
-          <button
+          <Button
+            data-ui-reference="chatgpt.customization-preferences.control"
+            variant="ghost"
             onClick={reset}
             className="text-xs text-muted-foreground hover:text-foreground transition"
           >
             Reset
-          </button>
+          </Button>
         )}
       </div>
       <p className="text-xs text-muted-foreground mb-4">
@@ -270,14 +273,16 @@ export function PersonalitySliders({
       <div className={`mb-4 ${unlocked ? "" : "pointer-events-none opacity-70"}`}>
         <div className="flex flex-wrap gap-1.5 mb-3">
           {PERSONALITY_PRESETS.map((preset) => (
-            <button
+            <Button
+              data-ui-reference="chatgpt.customization-preferences.control"
+              variant="outline"
               key={preset.id}
               onClick={() => applyPreset(preset.values)}
-              className="text-xs px-2.5 py-1 rounded-full border border-border bg-background/60 hover:bg-accent transition"
+              className="text-xs px-2.5   border border-border bg-background/60 hover:bg-accent transition"
               title={preset.hint}
             >
               {preset.label}
-            </button>
+            </Button>
           ))}
         </div>
         <label className="flex min-h-11 items-center gap-3 text-sm text-muted-foreground cursor-pointer select-none">
@@ -313,6 +318,7 @@ export function PersonalitySliders({
               </span>
             </div>
             <Slider
+              data-ui-reference="chatgpt.customization-preferences.slider"
               thumbProps={{
                 "aria-labelledby": `${sliderId}-${t.key}-label`,
                 "aria-describedby": `${sliderId}-${t.key}-hint`,

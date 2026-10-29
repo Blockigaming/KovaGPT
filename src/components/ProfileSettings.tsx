@@ -46,7 +46,7 @@ export function ProfileSettings({
     }
   }, []);
   return (
-    <div className="space-y-6">
+    <div className="kova-profile-settings space-y-6" data-ui-reference="chatgpt.settings.profile">
       <section className="space-y-4" aria-label="Account details">
         <div className="flex flex-wrap items-center gap-4">
           <Avatar className="h-16 w-16" aria-label="Account photo">

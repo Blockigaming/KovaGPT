@@ -1,164 +1,441 @@
-/* Checkpoint 1b sidebar: one width owner, semantic rows and 44px targets. */
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] {
-  --sidebar-gutter: 16px;
-  --sidebar-row-height: 44px;
+/* ChatGPT navigation geometry. This file is the only sidebar/rail size owner.
+   Colors and the 4px spacing scale come from the pinned Apps SDK token layer. */
+.kova-sidebar[data-kova-core-sidebar],
+.kova-sidebar-rail[data-kova-core-rail] {
+  --sidebar-row-height: 36px;
   --sidebar-icon-slot: 20px;
+  --sidebar-button-size: 32px;
+  color: var(--sidebar-foreground, var(--foreground));
+  background: var(--sidebar);
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: 14px;
+  line-height: 20px;
+  box-shadow: none;
+}
+.kova-sidebar[data-kova-core-sidebar] {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  width: var(--sidebar-expanded, var(--kova-sidebar-width, 260px));
+  min-width: var(--sidebar-expanded, var(--kova-sidebar-width, 260px));
+  height: 100dvh;
+  flex: 0 0 auto;
+  flex-direction: column;
+  overflow: hidden;
+  border: 0;
   border-radius: 0;
-  border-right: 1px solid var(--border);
-  background: #fcfcfc;
   transition:
     width 180ms ease,
-    translate 180ms ease,
+    min-width 180ms ease,
     transform 180ms ease,
     visibility 0ms;
 }
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-state="closed"] {
+.kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
+  width: 0;
+  min-width: 0;
   visibility: hidden;
   pointer-events: none;
   transition:
     width 180ms ease,
-    translate 180ms ease,
+    min-width 180ms ease,
     transform 180ms ease,
     visibility 0ms 180ms;
 }
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-inner {
-  opacity: 1;
-  transition: none;
+.kova-sidebar-inner {
+  display: flex;
+  width: var(--sidebar-expanded, var(--kova-sidebar-width, 260px));
+  min-width: var(--sidebar-expanded, var(--kova-sidebar-width, 260px));
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  background: inherit;
 }
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-header {
-  min-height: calc(56px + var(--safe-top));
-  flex-shrink: 0;
-  padding: calc(6px + var(--safe-top)) 6px 6px 16px;
+.kova-sidebar-header {
+  display: flex;
+  min-height: calc(56px + var(--safe-top, 0px));
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: calc(8px + var(--safe-top, 0px)) 8px 8px 16px;
+  background: inherit;
 }
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-brand {
-  font-family: var(--font-sans);
+.kova-sidebar-brand {
+  min-width: 0;
+  color: var(--foreground);
   font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.025em;
+  font-weight: 500;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-primary {
+.kova-sidebar-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
   gap: 4px;
-  flex-shrink: 0;
-  padding: 4px var(--sidebar-gutter) 8px;
 }
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-nav-row {
-  width: 100%;
-  min-height: var(--sidebar-row-height) !important;
-  height: var(--sidebar-row-height);
-  flex: 0 0 var(--sidebar-row-height);
-  justify-content: flex-start;
-  gap: 6px;
-  margin: 0;
-  padding: 0 10px !important;
+.kova-sidebar-header .kova-header-button {
+  width: var(--sidebar-button-size);
+  min-width: var(--sidebar-button-size);
+  height: var(--sidebar-button-size);
+  min-height: var(--sidebar-button-size);
+  flex: 0 0 var(--sidebar-button-size);
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border: 0;
-  border-radius: var(--kova-radius-sidebar);
+  border-radius: 8px;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+.kova-sidebar-scroll {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+.kova-sidebar-primary {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+}
+.kova-sidebar .kova-nav-row {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: var(--sidebar-row-height);
+  min-height: var(--sidebar-row-height);
+  flex: 0 0 var(--sidebar-row-height);
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
   background: transparent;
   color: var(--foreground);
-  box-shadow: none;
-  filter: none;
-  transform: none;
-  font-size: 16px !important;
+  font-family: inherit;
+  font-size: 14px;
   font-weight: 400;
+  line-height: 20px;
+  text-align: left;
+  text-decoration: none;
+  box-shadow: none;
+  cursor: pointer;
 }
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar[data-kova-core-sidebar]
-  .kova-nav-row.is-active {
-  font-weight: 500;
+.kova-sidebar .kova-sidebar-icon {
+  display: inline-flex;
+  width: var(--sidebar-icon-slot);
+  height: var(--sidebar-icon-slot);
+  flex: 0 0 var(--sidebar-icon-slot);
+  align-items: center;
+  justify-content: center;
 }
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-nav-row:hover {
-  background: color-mix(in srgb, var(--foreground) 5%, transparent);
-}
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-icon svg {
-  width: 22px;
-  height: 22px;
-  stroke-width: var(--kova-icon-stroke, 2);
-}
-/* Softer controls share a radius; the logo and circular account avatar keep
-   their original geometry. Lucide strokes stay rounded at every scale. */
-:is(.kova-assistant, .kova-app-shell)
-  :is(.kova-sidebar[data-kova-core-sidebar], .kova-sidebar-rail[data-kova-core-rail])
-  svg.lucide {
-  stroke-width: var(--kova-icon-stroke, 2);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-history {
-  margin: 0;
-  padding: 20px var(--sidebar-gutter) 16px;
-}
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar[data-kova-core-sidebar]
-  .kova-sidebar-history
-  h2 {
-  margin-bottom: 8px;
-  padding: 0 12px;
-  color: var(--muted-foreground);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-}
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-empty {
-  padding: 12px;
-  color: var(--muted-foreground);
-  font-size: 13px;
-  line-height: 1.6;
-}
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-chat-row {
-  height: 44px;
-  border-radius: var(--kova-radius-sidebar);
-}
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-chat-row-main {
-  min-height: 44px;
-  padding-left: 12px;
-  font-size: 14px;
-}
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-footer {
-  min-height: 76px;
+.kova-sidebar :is(.kova-sidebar-icon, .kova-header-button, .kova-chat-options) svg,
+.kova-sidebar-rail svg {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
-  padding: 12px 16px max(12px, var(--safe-bottom));
-  border-top: 0 !important;
 }
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar[data-kova-core-sidebar]
-  .kova-account-copy
-  strong {
-  font-size: 14px;
+[data-kova-navigation-glyph] {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar[data-kova-core-sidebar]
-  .kova-account-copy
-  small {
+.kova-sidebar-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kova-sidebar-badge {
+  margin-left: auto;
+  color: var(--muted-foreground);
   font-size: 12px;
 }
-:is(.kova-assistant, .kova-app-shell) .kova-guest-account-options {
-  display: grid;
-  gap: 4px;
-  margin-bottom: 12px;
+.kova-sidebar :is(.kova-nav-row, .kova-header-button, .kova-account-main):hover,
+.kova-sidebar .kova-chat-row:hover {
+  background: var(--sidebar-hover);
 }
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-kova-core-rail] {
-  padding-inline: 10px;
+.kova-sidebar .kova-nav-row:is([aria-current="page"], .is-active),
+.kova-sidebar .kova-chat-row.is-active {
+  background: var(--sidebar-active);
+}
+.kova-sidebar-workspace {
+  margin-top: 12px;
+}
+.kova-sidebar-section-label {
+  margin: 0 10px 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.kova-sidebar-more-disclosure > summary {
+  list-style: none;
+}
+.kova-sidebar-more-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.kova-sidebar-more-disclosure > summary .kova-sidebar-icon {
+  transition: transform 150ms ease;
+}
+.kova-sidebar-more-disclosure[open] > summary .kova-sidebar-icon {
+  transform: rotate(180deg);
+}
+.kova-sidebar-history {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 8px;
+  scroll-padding-block: 8px;
+  scrollbar-width: thin;
+}
+.kova-sidebar-history h2 {
+  margin: 0 10px 8px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.kova-sidebar-history .kova-recents-heading {
+  margin-top: 16px;
+}
+.kova-sidebar-empty {
+  margin: 0;
+  padding: 0 10px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.kova-sidebar .kova-chat-row {
+  display: flex;
+  min-width: 0;
+  height: var(--sidebar-row-height);
+  min-height: var(--sidebar-row-height);
+  align-items: center;
+  border-radius: 8px;
+}
+.kova-sidebar .kova-chat-row-main {
+  display: flex;
+  min-width: 0;
+  height: var(--sidebar-row-height);
+  min-height: var(--sidebar-row-height);
+  flex: 1 1 auto;
+  align-items: center;
   overflow: hidden;
-  border-radius: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  text-align: left;
+}
+.kova-sidebar .kova-chat-options {
+  display: grid;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  margin-right: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--muted-foreground);
+  background: transparent;
+  opacity: 0;
+}
+.kova-sidebar .kova-chat-row:is(:hover, :focus-within, .is-active) .kova-chat-options {
+  opacity: 1;
+}
+.kova-sidebar-search-wrap {
+  flex: 0 0 auto;
+  padding: 0 8px 8px;
+}
+.kova-sidebar-search {
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 20px;
+}
+.kova-sidebar-help {
+  flex: 0 0 auto;
+  padding: 0 8px 4px;
+}
+.kova-sidebar-footer {
+  min-width: 0;
+  flex: 0 0 auto;
+  padding: 8px 8px max(8px, var(--safe-bottom, 0px));
+  background: inherit;
+}
+.kova-account-main {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--foreground);
+  background: transparent;
+  text-align: left;
+}
+.kova-account-avatar,
+.kova-rail-account {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--muted);
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+.kova-account-avatar img,
+.kova-rail-account img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.kova-account-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+.kova-account-copy :is(strong, small) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kova-account-copy strong {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.kova-account-copy small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+}
+.kova-guest-account-options {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.kova-sidebar-footer .kova-sign-in {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 14px;
+  font-weight: 500;
+}
+.kova-sidebar-rail[data-kova-core-rail] {
+  display: none;
+  width: var(--kova-sidebar-rail-width, 56px);
+  min-width: var(--kova-sidebar-rail-width, 56px);
+  height: 100dvh;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  padding: 0 8px 12px;
+  border: 0;
   transition:
     width 180ms ease,
+    min-width 180ms ease,
     padding 180ms ease,
     visibility 0ms;
 }
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-state="closed"] {
+.kova-sidebar-rail[data-kova-core-rail][data-state="closed"] {
+  width: 0;
+  min-width: 0;
   padding-inline: 0;
-  border-right: 0;
   visibility: hidden;
   pointer-events: none;
   transition:
     width 180ms ease,
+    min-width 180ms ease,
     padding 180ms ease,
     visibility 0ms 180ms;
 }
-.kova-sidebar-scrim[data-state] {
-  opacity: 1;
-  visibility: visible;
-  animation: none;
+.kova-rail-shortcuts {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.kova-sidebar-rail .kova-rail-button {
+  display: grid;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+}
+.kova-sidebar-rail .kova-rail-button:is(:hover, [aria-current="page"]) {
+  background: var(--sidebar-active);
+  color: var(--foreground);
+}
+.kova-rail-account {
+  margin-top: 8px;
+}
+.kova-sidebar-chat-menu {
+  width: 208px;
+  max-width: min(var(--radix-dropdown-menu-content-available-width, 100vw), calc(100vw - 24px));
+}
+.kova-sidebar :is(button, input, summary, a):focus-visible,
+.kova-sidebar-rail :is(button, a):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+button.kova-sidebar-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: #0008;
   transition:
     opacity 180ms ease,
     visibility 0ms;
@@ -171,143 +448,161 @@
     opacity 180ms ease,
     visibility 0ms 180ms;
 }
-.kova-rename-dialog {
-  width: min(384px, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  overflow: auto;
+/* ChatGPT mobile chrome keeps the page label and actions on one opaque bar. */
+.kova-topbar:not(.kova-desktop-topbar) {
+  min-height: calc(56px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  background: var(--background);
+}
+.kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner {
+  min-height: 56px;
+}
+.kova-topbar:not(.kova-desktop-topbar) .spec400-mobile-page-title {
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+@media (min-width: 1024px) {
+  .kova-sidebar-rail[data-kova-core-rail] {
+    display: flex;
+  }
+  .kova-sidebar-scrim {
+    display: none;
+  }
 }
 @media (max-width: 1023px) {
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] {
-    --sidebar-row-height: 44px;
+  .kova-sidebar[data-kova-core-sidebar] {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
+    min-width: 0;
+    max-width: calc(100vw - 24px);
     border-radius: 0 24px 24px 0;
   }
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-header-button {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
-    flex: 0 0 44px;
+  .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
+    width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
+    transform: translateX(-100%);
   }
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-inner {
+  .kova-sidebar-inner {
     width: 100%;
     min-width: 0;
   }
+  .kova-sidebar-search {
+    height: 44px;
+    min-height: 44px;
+    font-size: 16px;
+  }
 }
-/* Touch history rows must accommodate both the title and options hit areas. */
-@media (max-width: 1023px), (pointer: coarse) {
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] {
+@media (pointer: coarse), (max-width: 1023px) {
+  .kova-sidebar[data-kova-core-sidebar],
+  .kova-sidebar-rail[data-kova-core-rail] {
     --sidebar-row-height: 44px;
+    --sidebar-button-size: 44px;
   }
-
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-chat-row {
-    height: 44px;
-    min-height: 44px;
-  }
-  :is(.kova-assistant, .kova-app-shell)
-    .kova-sidebar[data-kova-core-sidebar]
-    .kova-chat-row
-    > button {
-    height: 44px;
-    min-height: 44px;
-  }
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-chat-options {
+  .kova-sidebar .kova-chat-options {
     width: 44px;
     min-width: 44px;
+    height: 44px;
+    min-height: 44px;
     flex-basis: 44px;
+    margin-right: 0;
+    opacity: 1;
+  }
+  .kova-sidebar-rail[data-kova-core-rail] {
+    padding-inline: 6px;
+  }
+  .kova-sidebar-rail .kova-rail-button,
+  .kova-rail-account,
+  .kova-sidebar-footer .kova-sign-in {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
-/* At short heights the fixed header, search and account area cannot leave a
-   usable navigation viewport. Let the complete sidebar flow and scroll. */
+@media (max-width: 1023px) and (min-height: 421px) {
+  .kova-sidebar-primary {
+    min-height: 0;
+    flex-shrink: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: 8px;
+  }
+  .kova-sidebar-history {
+    flex: 1 1 160px;
+    min-height: min(160px, 50%);
+    scroll-padding-block: 8px;
+    mask-image: none;
+  }
+  .kova-sidebar :is(.kova-nav-row, .kova-chat-row > button, .kova-sidebar-history h2) {
+    scroll-margin-block: 4px;
+  }
+}
 @media (max-height: 420px) {
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-inner {
+  .kova-sidebar-inner {
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] .kova-sidebar-scroll {
+  .kova-sidebar-scroll {
     flex: none;
     overflow: visible;
   }
-  :is(.kova-assistant, .kova-app-shell)
-    .kova-sidebar[data-kova-core-sidebar]
-    .kova-sidebar-search-wrap {
-    flex-shrink: 0;
+  .kova-sidebar-primary,
+  .kova-sidebar-history {
+    flex: none;
+    overflow: visible;
   }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar],
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-kova-core-rail],
-  .kova-sidebar-scrim[data-state] {
-    transition: none !important;
-    animation: none !important;
+  .kova-sidebar[data-kova-core-sidebar],
+  .kova-sidebar-rail[data-kova-core-rail],
+  .kova-sidebar-scrim[data-state],
+  .kova-sidebar-more-disclosure > summary .kova-sidebar-icon {
+    transition: none;
+    animation: none;
   }
 }
 
-/* Observed neutral sidebar surfaces, independent of the surrounding route. */
-.dark :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] {
+/* Grok public header: outlined sign-in and black sign-up, equal 40px geometry. */
+.kova-topbar button.kova-auth-primary,
+.kova-desktop-topbar button.kova-auth-primary,
+button.kova-auth-sign-up {
+  display: inline-flex;
+  height: 40px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.kova-topbar button.kova-auth-primary,
+.kova-desktop-topbar button.kova-auth-primary {
+  background: transparent;
+  color: var(--foreground);
+  border-color: var(--input);
+}
+.kova-topbar button.kova-auth-primary:hover,
+.kova-desktop-topbar button.kova-auth-primary:hover {
+  background: var(--accent);
+}
+button.kova-auth-sign-up {
   background: #000;
+  color: #fff;
 }
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar[data-kova-core-sidebar]
-  :is(.kova-sidebar-inner, .kova-sidebar-header, .kova-sidebar-footer) {
-  background: inherit;
+button.kova-auth-sign-up:hover {
+  background: #000;
+  color: #fff;
+  opacity: 0.85;
 }
-
-/* Active navigation keeps the selected-chat surface after pointer focus moves. */
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar[data-kova-core-sidebar]
-  .kova-nav-row:is([aria-current="page"], .is-active) {
-  background: var(--sidebar-hover, var(--accent));
-}
-
-/* Wider chat actions keep the existing vertical rhythm and phone edge clearance. */
-.kova-sidebar-chat-menu {
-  width: 208px;
-  max-width: min(var(--radix-dropdown-menu-content-available-width, 100vw), calc(100vw - 24px));
-}
-.kova-sidebar-chat-menu [role="menuitem"] {
-  padding-inline: 12px;
-}
-
-/* Widths live here rather than competing route/parity declarations. */
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar] {
-  width: var(--kova-sidebar-width);
-  min-width: var(--kova-sidebar-width);
-}
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-state="closed"] {
-  width: 0;
-  min-width: 0;
-}
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-kova-core-rail] {
-  width: var(--kova-sidebar-rail-width);
-  min-width: var(--kova-sidebar-rail-width);
-  padding-inline: 14px;
-}
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-state="closed"] {
-  width: 0;
-  min-width: 0;
-  padding-inline: 0;
-}
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar[data-kova-core-sidebar]
-  .kova-nav-row.kova-new-chat {
-  border-radius: var(--kova-radius-button);
-}
-/* Rail navigation remains a 14px row control. Square action buttons are circles. */
-:is(.kova-assistant, .kova-app-shell) .kova-sidebar-rail[data-kova-core-rail] .kova-rail-button {
-  border-radius: var(--kova-radius-control);
-}
-@media (max-width: 1023px) {
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar],
-  :is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-state="closed"] {
-    width: var(--kova-sidebar-drawer-width);
-    min-width: 0;
-    max-width: calc(100vw - 24px);
+@media (pointer: coarse) {
+  .kova-topbar button.kova-auth-primary,
+  .kova-desktop-topbar button.kova-auth-primary,
+  button.kova-auth-sign-up {
+    height: 44px;
+    min-height: 44px;
   }
-}
-/* Creation and customization are actions, not destination rows. */
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar-rail[data-kova-core-rail]
-  :is(.kova-rail-button.kova-new-chat, .kova-rail-customize) {
-  border-radius: var(--kova-radius-button);
 }

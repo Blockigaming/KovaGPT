@@ -2,6 +2,7 @@ import { lazy, type RefObject, type SetStateAction } from "react";
 import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import type { ResultDescriptor } from "@/components/ArtifactEditor";
 import type { GenerativeWidget } from "@/lib/generative-ui.mjs";
+import { Button } from "@/components/ui/button";
 
 export type WorkspaceResultDescriptor = ResultDescriptor & {
   widget?: GenerativeWidget;
@@ -87,13 +88,9 @@ export function WorkspaceResultContent({
         <div className="flex h-full min-h-0 flex-col overflow-y-auto p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="font-semibold">{result.title}</h2>
-            <button
-              type="button"
-              className="min-h-11 rounded-full border border-border px-4 text-sm hover:bg-accent"
-              onClick={closeResult}
-            >
+            <Button type="button" variant="outline" onClick={closeResult}>
               Close Canvas
-            </button>
+            </Button>
           </div>
           <GenerativeCanvas
             expanded

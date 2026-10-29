@@ -1,26 +1,6 @@
 /* Assistant menus live in Radix portals outside the workspace element.
    The main route lifts its semantic tokens onto body; keep every overlay on
    those same surfaces without changing Radix placement, focus or scrolling. */
-body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
-  :is(
-    .kova-composer-menu,
-    .spec400-options-panel,
-    .spec400-context-drawer,
-    .spec400-expanded-input,
-    .spec400-attachment-preview,
-    .kova-response-menu,
-    .kova-sidebar-chat-menu,
-    .kova-profile-menu,
-    .kova-conversation-menu,
-    .kova-conversation-submenu,
-    .kova-conversation-outputs,
-    .kova-sources-inspector
-  ) {
-  background: var(--popover);
-  color: var(--popover-foreground);
-  border-color: var(--border);
-  font-family: var(--font-sans);
-}
 
 /* A quiet resting edge, with the existing visible keyboard focus retained. */
 body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
@@ -48,21 +28,6 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]) .spec400-optio
 /* Menu rows may grow for long labels, localization and larger text. The
    shared menu primitives still own their minimum 44px interaction targets. */
 body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
-  :is(
-    .kova-response-menu,
-    .kova-sidebar-chat-menu,
-    .kova-profile-menu,
-    .kova-conversation-menu,
-    .kova-conversation-submenu
-  )
-  [role="menuitem"] {
-  min-width: 0;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  font-size: 14px;
-  line-height: 1.45;
-}
-body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   :is(.kova-composer-action, .kova-composer-plugin)
   > span {
   min-width: 0;
@@ -71,53 +36,6 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
 
 /* Dialog chrome follows the shared interface type and rounded control roles.
    Explicit hooks keep authentication geometry independent of page headings. */
-.kova-auth-surface[data-kova-auth-dialog] {
-  --font-sans: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif);
-  padding: 24px;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom));
-  font-family: var(--font-sans);
-}
-
-.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-heading {
-  min-width: 0;
-  padding-inline: 12px;
-}
-
-.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-mark .kova-logo {
-  width: 32px;
-  height: 32px;
-}
-
-.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-title {
-  max-width: 100%;
-  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-description {
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-body {
-  margin-top: 24px;
-}
-
-.kova-auth-surface[data-kova-auth-dialog] :is(button, input) {
-  min-height: 44px;
-  font-family: var(--font-sans) !important;
-}
-
-.kova-auth-surface[data-kova-auth-dialog] .kova-auth-dialog-body button {
-  height: auto;
-  min-height: 44px;
-  padding-block: 10px;
-  border-radius: var(--kova-radius-button);
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
 
 body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   :is(
@@ -131,10 +49,4 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   font-size: 20px;
   font-weight: 600;
   line-height: 1.25;
-}
-
-@media (min-width: 640px) {
-  .kova-auth-surface[data-kova-auth-dialog] {
-    padding-bottom: 24px;
-  }
 }

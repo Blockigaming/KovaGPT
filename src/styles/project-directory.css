@@ -1,13 +1,13 @@
-/* Project organization follows a file browser: one search, a compact tool row,
-   real metadata columns, and folder rows. Scope stays on the directory route. */
+/* CL-PROJECT directory header and cards. Search/filter/list controls use the
+   CG-LIBRARY structure with CG-SDK geometry; list dimensions are an adaptation. */
 .kova-app-shell[data-ui="modern"]
   .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects {
-  --page-max: 1280px;
-  --page-padding: 24px clamp(16px, 3vw, 40px) max(48px, var(--safe-bottom));
+  --page-max: 1040px;
+  --page-padding: 32px clamp(16px, 3vw, 32px) max(48px, var(--safe-bottom));
   width: 100%;
-  max-width: 1280px;
+  max-width: 1040px;
   padding: var(--page-padding);
-  gap: 24px;
+  gap: 32px;
   container-name: project-directory;
 }
 
@@ -73,14 +73,14 @@
   .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
   .kova-project-directory-search
   input {
-  height: 48px;
-  min-height: 48px;
+  height: 40px;
+  min-height: 40px;
   padding-inline: 44px 16px;
   border-color: transparent;
   border-radius: var(--kova-radius-button);
   background: var(--muted);
   font-family: var(--font-ui);
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .kova-app-shell[data-ui="modern"]
@@ -113,7 +113,7 @@
   width: auto;
   min-width: 0;
   max-width: 100%;
-  min-height: 44px;
+  min-height: 36px;
   border: 1px solid var(--border);
   border-radius: var(--kova-radius-button);
   background: var(--background);
@@ -135,9 +135,9 @@
   .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
   .kova-project-filters
   button {
-  min-height: 44px;
-  padding: 8px 14px;
-  border: 1px solid var(--border);
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--muted-foreground);
   font-size: 13px;
@@ -148,9 +148,9 @@
   .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
   .kova-project-filters
   [aria-pressed="true"] {
-  border-color: var(--foreground);
-  background: var(--foreground);
-  color: var(--background);
+  border-color: var(--border-subtle);
+  background: var(--surface-selected);
+  color: var(--foreground);
 }
 
 .kova-app-shell[data-ui="modern"]
@@ -159,7 +159,7 @@
   gap: 0;
   overflow: visible;
   border: 1px solid var(--border);
-  border-radius: var(--kova-radius-button);
+  border-radius: 8px;
   padding: 2px;
 }
 
@@ -167,9 +167,9 @@
   .kova-project-directory.kova-core-page.kova-file-directory.spec400-projects
   .kova-file-view-toggle
   button {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
   border: 0;
   background: transparent;
   color: var(--muted-foreground);
@@ -267,8 +267,8 @@
   grid-template-columns: 32px minmax(0, 1fr) 120px 144px;
   align-items: center;
   gap: 12px;
-  min-height: 76px;
-  padding: 12px 68px 12px 16px;
+  min-height: 64px;
+  padding: 8px 60px 8px 12px;
   border-radius: 0;
 }
 
@@ -399,7 +399,7 @@
   .kova-file-grid
   .kova-project-file {
   border: 1px solid var(--border);
-  border-radius: var(--kova-radius-compact);
+  border-radius: 16px;
   background: var(--card);
 }
 
@@ -411,7 +411,7 @@
   grid-template-columns: 32px minmax(0, 1fr);
   align-content: start;
   gap: 8px 12px;
-  min-height: 152px;
+  min-height: 160px;
   padding: 16px;
 }
 
@@ -611,5 +611,20 @@
 
   .kova-project-directory .kova-project-directory-tools {
     gap: 12px;
+  }
+}
+
+@media (pointer: coarse) {
+  .kova-project-directory-display-options .kova-project-sort,
+  .kova-project-directory .kova-project-filters button,
+  .kova-project-directory .kova-file-view-toggle button {
+    min-height: 44px;
+  }
+  .kova-project-directory .kova-file-view-toggle button {
+    width: 44px;
+    min-width: 44px;
+  }
+  .kova-project-directory .kova-project-directory-search input {
+    min-height: 44px;
   }
 }

@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import "@/styles/images-collection.css";
 import { imageApiRequest } from "@/lib/image-api-client";
 import ImageEditControls, { type ImageEditSelection } from "@/components/ImageEditControls";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -866,16 +867,19 @@ function ImagesPage() {
         tabIndex={-1}
         aria-labelledby="images-title"
         className="spec400-images flex min-w-0 flex-1 flex-col"
+        data-ui-reference="chatgpt.images.gallery"
       >
         <header className="h-14 flex items-center px-3 shrink-0">
           {!sidebarOpen && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setSidebarOpen((v) => !v)}
-              className="mr-1 flex h-11 w-11 items-center justify-center rounded-lg transition hover:bg-accent"
+              className="mr-1 flex items-center justify-center transition hover:bg-accent"
               aria-label="Toggle sidebar"
             >
               <PanelLeft className="w-5 h-5" />
-            </button>
+            </Button>
           )}
           <div className="ml-auto flex items-center gap-2">
             {!isLoaded ? (
@@ -886,14 +890,12 @@ function ImagesPage() {
             ) : isSignedIn ? null : (
               <>
                 <SignInButton mode="modal">
-                  <button className="min-h-11 rounded-lg bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90">
-                    Log in
-                  </button>
+                  <Button variant="outline">Log in</Button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="min-h-11 whitespace-nowrap rounded-lg bg-muted px-3 text-sm font-medium text-foreground transition hover:bg-accent sm:px-4">
+                  <Button className="whitespace-nowrap bg-black text-white hover:bg-black/90 dark:bg-black dark:text-white">
                     Sign up for free
-                  </button>
+                  </Button>
                 </SignUpButton>
               </>
             )}
@@ -939,10 +941,12 @@ function ImagesPage() {
                   autoComplete="off"
                   className="min-w-0 flex-1 border-0 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0"
                 />
-                <button
+                <Button
+                  variant="default"
+                  size="icon"
                   type="submit"
                   disabled={!prompt.trim() || loading}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
+                  className="flex shrink-0 items-center justify-center bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
                   aria-label={editSelection ? "Create edited image" : "Generate"}
                 >
                   {loading ? (
@@ -950,7 +954,7 @@ function ImagesPage() {
                   ) : (
                     <ArrowUp className="h-5 w-5" />
                   )}
-                </button>
+                </Button>
               </div>
             </form>
             {error && (
@@ -1000,22 +1004,26 @@ function ImagesPage() {
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="text-xl leading-7 font-semibold tracking-normal">Create an image</h2>
                 <div className="hidden items-center gap-2 sm:flex">
-                  <button
+                  <Button
+                    variant="outline"
+                    size="icon"
                     type="button"
                     onClick={() => scrollPresets(-1)}
-                    className="flex h-11 w-11 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    className="flex items-center justify-center border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
                     aria-label="Scroll styles left"
                   >
                     <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
                     type="button"
                     onClick={() => scrollPresets(1)}
-                    className="flex h-11 w-11 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    className="flex items-center justify-center border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
                     aria-label="Scroll styles right"
                   >
                     <ChevronRight className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div
@@ -1026,6 +1034,7 @@ function ImagesPage() {
                   {PRESETS.map((p) => (
                     <button
                       data-kova-button-shape="preserve"
+                      data-ui-reference="chatgpt.images.preset-card"
                       key={p.label}
                       type="button"
                       onClick={() => applyPreset(p)}
@@ -1091,32 +1100,35 @@ function ImagesPage() {
                       className="w-full rounded-xl ring-1 ring-border"
                     />
                     <div className="flex justify-center mt-3 gap-2 flex-wrap">
-                      <button
+                      <Button
+                        variant="outline"
                         type="button"
                         onClick={() =>
                           saveGeneratedImage({ prompt: resultPrompt, imageUrl: result })
                         }
                         disabled={savingImage}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
+                        className="inline-flex items-center gap-2 border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
                         <Bookmark className="h-4 w-4" />{" "}
                         {savingImage ? "Saving…" : "Save to Library"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="outline"
                         type="button"
                         onClick={() => generate(resultPrompt)}
                         disabled={loading}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
+                        className="inline-flex items-center gap-2 border border-border px-4 text-sm transition hover:bg-accent disabled:opacity-50"
                       >
                         <RefreshCw className="h-4 w-4" /> Generate again
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="outline"
                         type="button"
                         onClick={() => copyGeneratedImage(result)}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm transition hover:bg-accent"
+                        className="inline-flex items-center gap-2 border border-border px-4 text-sm transition hover:bg-accent"
                       >
                         <Copy className="h-4 w-4" /> Copy image
-                      </button>
+                      </Button>
                       <a
                         href={result}
                         download="kovagpt-image.png"
@@ -1159,7 +1171,7 @@ function ImagesPage() {
                     sessions. Save images to Library to use them on other devices.
                   </p>
                   <SignInButton mode="modal">
-                    <Button className="mt-5 min-h-11">Sign in</Button>
+                    <Button className="mt-5">Sign in</Button>
                   </SignInButton>
                 </div>
               ) : history.length === 0 ? (
@@ -1172,7 +1184,7 @@ function ImagesPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                <div className="kova-image-history-grid" data-ui-reference="chatgpt.images.history">
                   {history.map((h) => (
                     <article
                       key={h.id}
@@ -1180,6 +1192,8 @@ function ImagesPage() {
                     >
                       <button
                         type="button"
+                        data-kova-button-shape="preserve"
+                        data-ui-reference="chatgpt.images.image-tile"
                         onClick={(event) => {
                           lightboxReturnFocusRef.current = event.currentTarget;
                           setLightbox(h);
@@ -1192,7 +1206,7 @@ function ImagesPage() {
                           alt=""
                           loading="lazy"
                           decoding="async"
-                          className="absolute inset-0 h-full w-full object-cover "
+                          className="absolute inset-0 h-full w-full object-cover"
                         />
                       </button>
                       <div className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-1.5 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-2 opacity-100 transition md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
@@ -1200,17 +1214,18 @@ function ImagesPage() {
                           {h.prompt}
                         </p>
                         <div className="pointer-events-auto relative z-10 flex items-center gap-1">
-                          <button
+                          <Button
+                            variant="default"
                             type="button"
                             onClick={() => {
                               setPrompt(h.prompt);
                               inputRef.current?.focus();
                             }}
-                            className="min-h-11 flex-1 rounded-lg bg-white px-2 text-[11px] font-medium text-black hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            className="flex-1 bg-white px-2 text-[11px] font-medium text-black hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             aria-label={`Reuse prompt: ${h.prompt}`}
                           >
                             Reuse
-                          </button>
+                          </Button>
                           <a
                             href={h.imageUrl}
                             download={`kovagpt-${h.id}.png`}
@@ -1219,14 +1234,16 @@ function ImagesPage() {
                           >
                             <Download className="h-3.5 w-3.5" />
                           </a>
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             type="button"
                             onClick={() => removeFromHistory(h.id)}
-                            className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/15 text-white hover:bg-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            className="flex items-center justify-center bg-white/15 text-white hover:bg-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             aria-label={`Remove image: ${h.prompt}`}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </article>
@@ -1272,7 +1289,7 @@ function ImagesPage() {
           <DialogContent
             constrainToViewport={false}
             data-image-lightbox
-            className="image-lightbox left-0 right-0 top-0 bottom-0 h-dvh w-screen max-h-none max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-none border-0 bg-black/85 p-4 pb-4 text-white shadow-none  sm:inset-0 sm:h-dvh sm:w-screen sm:max-h-none sm:max-w-none sm:translate-x-0 sm:translate-y-0 sm:rounded-none sm:border-0 sm:p-8 sm:pb-8"
+            className="image-lightbox left-0 right-0 top-0 bottom-0 h-dvh w-screen max-h-none max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-none border-0 bg-black/85 p-4 pb-4 text-white shadow-none sm:inset-0 sm:h-dvh sm:w-screen sm:max-h-none sm:max-w-none sm:translate-x-0 sm:translate-y-0 sm:rounded-none sm:border-0 sm:p-8 sm:pb-8"
             onOpenAutoFocus={(event) => {
               event.preventDefault();
               lightboxInitialFocusRef.current?.focus();
@@ -1299,34 +1316,37 @@ function ImagesPage() {
                 {lightbox.prompt}
               </DialogDescription>
               <div className="flex flex-wrap items-center justify-center gap-2">
-                <button
+                <Button
+                  variant="default"
                   ref={lightboxInitialFocusRef}
                   onClick={() => {
                     lightboxReturnToPromptRef.current = true;
                     setPrompt(lightbox.prompt);
                     setLightbox(null);
                   }}
-                  className="kova-image-lightbox-primary inline-flex min-h-11 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-black transition hover:opacity-90"
+                  className="kova-image-lightbox-primary inline-flex items-center gap-2 bg-white px-4 text-sm font-medium text-black transition hover:opacity-90"
                 >
                   <ImageIcon className="w-4 h-4" /> Reuse prompt
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   onClick={() => {
                     const item = lightbox;
                     setLightbox(null);
                     void generate(item.prompt, lightboxReturnFocusRef.current ?? inputRef.current);
                   }}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm text-white transition hover:bg-white/20"
+                  className="inline-flex items-center gap-2 bg-white/10 px-4 text-sm text-white transition hover:bg-white/20"
                 >
                   <RefreshCw className="h-4 w-4" /> Generate again
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   onClick={() => saveGeneratedImage(lightbox)}
                   disabled={savingImage}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 bg-white/10 px-4 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
                 >
                   <Bookmark className="h-4 w-4" /> Save
-                </button>
+                </Button>
                 <a
                   href={lightbox.imageUrl}
                   download={`kovagpt-${lightbox.id}.png`}
@@ -1334,15 +1354,16 @@ function ImagesPage() {
                 >
                   <Download className="w-4 h-4" /> Download
                 </a>
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => {
                     removeFromHistory(lightbox.id);
                     setLightbox(null);
                   }}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-white/10 px-4 text-sm text-white transition hover:bg-destructive"
+                  className="inline-flex items-center gap-2 bg-white/10 px-4 text-sm text-white transition hover:bg-destructive"
                 >
                   <Trash2 className="w-4 h-4" /> Remove
-                </button>
+                </Button>
               </div>
             </div>
           </DialogContent>

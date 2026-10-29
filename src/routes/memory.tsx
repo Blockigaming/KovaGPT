@@ -1,3 +1,4 @@
+import { Textarea } from "@/components/ui/textarea";
 import { MEMORY_SOURCES_CHANGED_EVENT } from "@/lib/memory-sources.mjs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -16,6 +17,8 @@ import {
 import { toast } from "sonner";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import "@/styles/memory-reference.css";
 export const Route = createFileRoute("/memory")({
   component: MemoryPage,
   head: () => ({
@@ -178,22 +181,23 @@ function MemoryPage() {
         id="main-content"
         tabIndex={-1}
         aria-busy={isLoading || undefined}
-        className="mx-auto w-full min-w-0 max-w-4xl px-4 py-7 sm:px-6 [overflow-wrap:anywhere]"
+        className="kova-page kova-secondary-page kova-core-page kova-memory-page"
+        data-ui-reference="chatgpt.settings.memory"
       >
         <WorkspacePageHeader
           icon={Brain}
-          title="Memory Center"
+          title="Memory"
           description="Review saved account memories and project context. Temporary chats are never stored here."
         />
         {isSignedIn && !isLoading && !error ? (
           <div className="my-6 grid gap-3 sm:grid-cols-[1fr_auto]">
             <label className="relative">
               <span className="sr-only">Search memories</span>
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <input
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="h-10 w-full rounded-xl border bg-background pl-9"
+                className="w-full pl-9"
                 placeholder="Search memories"
               />
             </label>
@@ -203,15 +207,17 @@ function MemoryPage() {
               className="flex flex-wrap gap-1"
             >
               {(["all", "conversation", "project"] as const).map((value) => (
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   key={value}
                   type="button"
                   aria-pressed={source === value}
                   onClick={() => setSource(value)}
-                  className={`min-h-10 rounded-lg px-3 text-sm capitalize ${source === value ? "bg-foreground text-background" : "hover:bg-accent"}`}
+                  className={`  px-3 text-sm capitalize ${source === value ? "bg-foreground text-background" : "hover:bg-accent"}`}
                 >
                   {value}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -219,13 +225,15 @@ function MemoryPage() {
         {isSignedIn && !isLoading && !error && selected.length > 0 ? (
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/60 p-3 text-sm">
             <span>{selected.length} selected</span>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               type="button"
               onClick={merge}
-              className="min-h-10 rounded-lg border bg-background px-3"
+              className="border bg-background px-3"
             >
               Merge duplicates
-            </button>
+            </Button>
           </div>
         ) : null}
         {isLoading ? (
@@ -303,20 +311,23 @@ function MemoryPage() {
             {visible.map((item) => (
               <li key={`${item.source}:${item.id}`} className="rounded-2xl border bg-card/40 p-4">
                 <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4"
-                    aria-label={`Select ${item.title} for merging`}
-                    checked={selected.includes(memoryRecordKey(item))}
-                    onChange={() =>
-                      setSelected((all) => {
-                        const key = memoryRecordKey(item);
-                        return all.includes(key)
-                          ? all.filter((value) => value !== key)
-                          : [...all, key];
-                      })
-                    }
-                  />
+                  <label className="kova-memory-selection">
+                    <input
+                      data-ui-reference="chatgpt.checkbox"
+                      type="checkbox"
+                      className="mt-1 kova-native-check"
+                      aria-label={`Select ${item.title} for merging`}
+                      checked={selected.includes(memoryRecordKey(item))}
+                      onChange={() =>
+                        setSelected((all) => {
+                          const key = memoryRecordKey(item);
+                          return all.includes(key)
+                            ? all.filter((value) => value !== key)
+                            : [...all, key];
+                        })
+                      }
+                    />
+                  </label>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-medium">{item.title}</h2>
@@ -328,19 +339,21 @@ function MemoryPage() {
                       {item.source} source · Updated {new Date(item.updatedAt).toLocaleString()}
                     </p>
                     {editing === memoryRecordKey(item) ? (
-                      <textarea
+                      <Textarea
                         autoFocus
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
                         aria-label={`Memory content for ${item.title}`}
-                        className="mt-3 min-h-28 w-full rounded-xl border bg-background p-3"
+                        className="mt-3 min-h-28 w-full"
                       />
                     ) : (
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{item.content}</p>
                     )}
                   </div>
                   <div className="col-start-2 flex min-w-0 flex-wrap gap-1 sm:col-start-auto sm:max-w-64 sm:justify-end">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() =>
                         openInWork(
                           {
@@ -352,11 +365,13 @@ function MemoryPage() {
                           userKey,
                         )
                       }
-                      className="min-h-11 rounded-lg px-2 text-xs hover:bg-accent"
+                      className="px-2 text-xs hover:bg-accent"
                     >
                       Work
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() =>
                         continueInChat(
                           {
@@ -368,11 +383,13 @@ function MemoryPage() {
                           userKey,
                         )
                       }
-                      className="min-h-11 rounded-lg px-2 text-xs hover:bg-accent"
+                      className="px-2 text-xs hover:bg-accent"
                     >
                       Ask Kova
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() =>
                         addToContextPack(
                           {
@@ -384,52 +401,60 @@ function MemoryPage() {
                           userKey,
                         )
                       }
-                      className="min-h-11 rounded-lg px-2 text-xs hover:bg-accent"
+                      className="px-2 text-xs hover:bg-accent"
                     >
                       Context
-                    </button>
+                    </Button>
                     {editing === memoryRecordKey(item) ? (
                       <>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           type="button"
                           onClick={() => save(item)}
                           disabled={!draft.trim()}
-                          className="min-h-11 rounded-lg px-3 text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                          className="px-3 text-sm font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Save
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           type="button"
                           onClick={() => {
                             setEditing(null);
                             setDraft("");
                           }}
-                          className="min-h-11 rounded-lg px-3 text-sm hover:bg-accent"
+                          className="px-3 text-sm hover:bg-accent"
                         >
                           Cancel
-                        </button>
+                        </Button>
                       </>
                     ) : (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         type="button"
                         onClick={() => {
                           setEditing(memoryRecordKey(item));
                           setDraft(item.content);
                         }}
                         aria-label={`Edit ${item.title}`}
-                        className="grid min-h-11 min-w-11 place-items-center rounded-lg hover:bg-accent"
+                        className="grid place-items-center hover:bg-accent"
                       >
                         <Pencil className="h-4 w-4" />
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       type="button"
                       onClick={() => setDeleting(item)}
                       aria-label={`Delete ${item.title}`}
-                      className="grid min-h-11 min-w-11 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                      className="grid place-items-center text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </li>

@@ -129,7 +129,10 @@ export function DeveloperFundingPanel({
     }
   };
   return (
-    <section className="space-y-3 rounded-xl border p-5">
+    <section
+      data-ui-reference="chatgpt-settings-form"
+      className="space-y-3 rounded-2xl border border-border p-5"
+    >
       <h2 className="text-lg font-semibold">Prepaid API credit</h2>
       {error && (
         <p role="alert" className="text-sm text-destructive">

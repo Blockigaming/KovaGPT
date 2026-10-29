@@ -70,7 +70,8 @@ test("Memory Center navigation only dismisses Settings and leaves routing and se
 test("the destination is the existing Memory Center route and dirty review gains no bypass link", () => {
   const route = readFileSync("src/routes/memory.tsx", "utf8");
   assert.match(route, /createFileRoute\("\/memory"\)/);
-  assert.match(route, /title="Memory Center"/);
+  assert.match(route, /title="Memory"/);
+  assert.match(route, /data-ui-reference="chatgpt\.settings\.memory"/);
   const dialog = readFileSync("src/components/ReviewedMemoryDialog.tsx", "utf8");
   assert.doesNotMatch(dialog, /(?:to|href)="\/memory"/);
   assert.match(dialog, /Discard this memory draft/);

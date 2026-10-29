@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -99,6 +100,7 @@ export function MemorySourcesDialog({
       }}
     >
       <DialogContent
+        data-ui-reference="chatgpt.memory-sources.dialogcontent"
         onCloseAutoFocus={onCloseAutoFocus}
         className="min-w-0 max-h-[85dvh] overflow-y-auto [&>*]:shrink-0"
       >
@@ -141,27 +143,33 @@ export function MemorySourcesDialog({
           </ul>
         )}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm [&>button]:min-h-11 [&>button]:px-2">
-          <button
+          <Button
+            data-ui-reference="chatgpt.memory-sources.control"
+            variant="ghost"
             type="button"
             disabled={page === 0}
             onClick={() => setPage((value) => value - 1)}
             className="disabled:opacity-40"
           >
             Previous
-          </button>
+          </Button>
           <span>
             Page {page + 1} of{" "}
             {Math.max(1, Math.ceil((permitted?.sources.length ?? 0) / PAGE_SIZE))}
           </span>
-          <button
+          <Button
+            data-ui-reference="chatgpt.memory-sources.control"
+            variant="ghost"
             type="button"
             disabled={(page + 1) * PAGE_SIZE >= (permitted?.sources.length ?? 0)}
             onClick={() => setPage((value) => value + 1)}
             className="disabled:opacity-40"
           >
             Next
-          </button>
-          <button
+          </Button>
+          <Button
+            data-ui-reference="chatgpt.memory-sources.control"
+            variant="ghost"
             type="button"
             onClick={() => {
               loader.invalidate();
@@ -170,7 +178,7 @@ export function MemorySourcesDialog({
             }}
           >
             Refresh
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

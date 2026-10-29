@@ -403,6 +403,8 @@ function timersFixture(permission, { due = false } = {}) {
     timersSource,
     "TimersWidget",
     {
+      "@/components/ui/button": { Button: "button" },
+      "@/components/ui/input": { Input: "input" },
       "lucide-react": {},
       sonner: {
         toast: {

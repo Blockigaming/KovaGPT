@@ -1,3 +1,6 @@
+import "@/styles/spec400-management.css";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
@@ -469,17 +472,21 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
     `${c.config.name} ${c.config.description}`.toLowerCase().includes(query.toLowerCase()),
   );
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-5 overflow-y-auto p-4 sm:p-6">
-      <header className="flex flex-wrap items-center gap-2">
+    <div
+      className="kova-page kova-secondary-page kova-assistants-page"
+      data-ui-reference="chatgpt.gpts.directory"
+    >
+      <header className="kova-page-header">
         <div className="mr-auto">
-          <h1 className="text-2xl font-semibold">Custom Kovas</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="kova-page-title">Custom Kovas</h1>
+          <p className="kova-page-description">
             Your instructions, selected knowledge, and tools. Private until you publish.
           </p>
         </div>
         {ownerId ? (
-          <button
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] bg-primary px-3 py-2 text-primary-foreground"
+          <Button
+            variant="default"
+            className="inline-flex items-center justify-center bg-primary text-primary-foreground"
             disabled={disabled}
             onClick={() => {
               generation.current++;
@@ -495,12 +502,12 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
             }}
           >
             Create a Kova
-          </button>
+          </Button>
         ) : (
           <SignInButton mode="modal">
-            <button className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] border px-3 py-2">
+            <Button variant="outline" className="inline-flex items-center justify-center border">
               Sign in to create or chat
-            </button>
+            </Button>
           </SignInButton>
         )}
       </header>
@@ -512,15 +519,17 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
       {retry && (
         <p className="rounded border p-3 text-sm">
           The last request’s outcome is uncertain.{" "}
-          <button
+          <Button
+            variant="link"
             className="underline"
             disabled={busy}
             onClick={() => void submit(retry.action, retry.payload, retry)}
           >
             Retry the same action
-          </button>{" "}
+          </Button>{" "}
           or{" "}
-          <button
+          <Button
+            variant="link"
             className="underline"
             disabled={busy}
             onClick={() => {
@@ -530,49 +539,52 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
             }}
           >
             refresh account state
-          </button>{" "}
+          </Button>{" "}
           before editing.
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
+      <div className="kova-assistant-tabs" role="group" aria-label="Custom Kova collection">
+        <Button
+          variant={scope === "owned" ? "secondary" : "ghost"}
+          aria-pressed={scope === "owned"}
           disabled={disabled || !ownerId}
           onClick={() => setScope("owned")}
         >
           My Kovas
-        </button>
-        <button
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
+        </Button>
+        <Button
+          variant={scope === "directory" ? "secondary" : "ghost"}
+          aria-pressed={scope === "directory"}
           disabled={disabled}
           onClick={() => setScope("directory")}
         >
           Community directory
-        </button>
+        </Button>
         <label className="ml-auto flex max-w-full flex-wrap items-center gap-2 text-sm">
           Search loaded Kovas
-          <input
-            className="min-h-11 min-w-11 max-w-full rounded-[var(--kova-radius-input)] border bg-background px-3 py-2"
+          <Input
+            className="min-h-11 min-w-11 max-w-full border bg-background"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="kova-assistant-grid">
         {filtered.map((card) => (
           <button
             data-kova-button-shape="preserve"
+            data-ui-reference="chatgpt.gpts.card"
             key={card.id}
-            className="rounded-xl border p-4 text-left"
+            className="kova-assistant-card"
             disabled={disabled || !ownerId}
             onClick={() => void select(card.id)}
           >
-            <span aria-hidden="true" className="text-xl">
+            <span aria-hidden="true" className="kova-assistant-avatar">
               {card.config.icon}
             </span>
-            <strong className="ml-2">{card.config.name}</strong>
-            <p className="mt-2 text-sm text-muted-foreground">{card.config.description}</p>
-            <p className="mt-2 text-xs">
+            <strong className="kova-assistant-name">{card.config.name}</strong>
+            <p className="kova-assistant-description">{card.config.description}</p>
+            <p className="kova-assistant-metadata">
               {card.owned ? "Yours · " : ""}
               {card.visibility}
               {card.blocked ? " · Removed by moderation" : ""}
@@ -588,9 +600,14 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
         </p>
       )}
       {next && (
-        <button className="underline" disabled={disabled} onClick={() => void list(scope, next)}>
+        <Button
+          variant="link"
+          className="underline"
+          disabled={disabled}
+          onClick={() => void list(scope, next)}
+        >
           Load more Kovas
-        </button>
+        </Button>
       )}
       {view && !editing && (
         <section className="space-y-3 rounded-xl border p-4">
@@ -608,34 +625,38 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            <button
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] bg-primary px-3 py-2 text-primary-foreground"
+            <Button
+              variant="default"
+              className="inline-flex items-center justify-center bg-primary text-primary-foreground"
               disabled={disabled || view.blocked}
               onClick={() => void startChat()}
             >
               Start a chat
-            </button>
+            </Button>
             {view.config.starters.map((s, i) => (
-              <button
+              <Button
+                variant="outline"
                 key={i}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] border px-3 py-2 text-sm"
+                className="inline-flex items-center justify-center border text-sm"
                 disabled={disabled || view.blocked}
                 onClick={() => void startChat(s)}
               >
                 {s}
-              </button>
+              </Button>
             ))}
             {view.owned && (
-              <button
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
+              <Button
+                variant="link"
+                className="inline-flex items-center justify-center underline"
                 disabled={disabled}
                 onClick={() => setEditing(true)}
               >
                 Edit Kova
-              </button>
+              </Button>
             )}
-            <button
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
+            <Button
+              variant="link"
+              className="inline-flex items-center justify-center underline"
               disabled={disabled || view.blocked || (!view.owned && !view.config.allowFork)}
               onClick={(event) =>
                 askConfirmation(event.currentTarget, {
@@ -651,21 +672,22 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
               }
             >
               Create a private copy
-            </button>
+            </Button>
             {view.publicationVersion && (
-              <button
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--kova-radius-compact)] px-3 py-2 underline"
+              <Button
+                variant="link"
+                className="inline-flex items-center justify-center underline"
                 disabled={disabled}
                 onClick={(event) => openReport(event.currentTarget)}
               >
                 Report
-              </button>
+              </Button>
             )}
           </div>
         </section>
       )}
       {(editing || view?.owned) && (
-        <section className="space-y-4 rounded-xl border p-4">
+        <section className="kova-assistant-editor" data-ui-reference="chatgpt.gpts.configure">
           {editing && (
             <>
               <h2 className="text-xl font-semibold">
@@ -675,8 +697,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                 <div className="grid gap-3 sm:grid-cols-[5rem_1fr]">
                   <label className="text-sm">
                     Icon
-                    <input
-                      className="w-full rounded border bg-background p-2"
+                    <Input
+                      className="w-full border bg-background"
                       maxLength={16}
                       value={config.icon}
                       onChange={(e) => change({ ...config, icon: e.target.value })}
@@ -684,8 +706,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                   </label>
                   <label className="text-sm">
                     Name
-                    <input
-                      className="w-full rounded border bg-background p-2"
+                    <Input
+                      className="w-full border bg-background"
                       maxLength={120}
                       value={config.name}
                       onChange={(e) => change({ ...config, name: e.target.value })}
@@ -694,8 +716,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                 </div>
                 <label className="block text-sm">
                   Description
-                  <textarea
-                    className="w-full rounded border bg-background p-2"
+                  <Textarea
+                    className="w-full border bg-background"
                     maxLength={500}
                     value={config.description}
                     onChange={(e) => change({ ...config, description: e.target.value })}
@@ -703,8 +725,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                 </label>
                 <label className="block text-sm">
                   Instructions
-                  <textarea
-                    className="min-h-40 w-full rounded border bg-background p-2"
+                  <Textarea
+                    className="min-h-40 w-full border bg-background"
                     maxLength={12000}
                     value={config.instructions}
                     onChange={(e) => change({ ...config, instructions: e.target.value })}
@@ -712,8 +734,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                 </label>
                 <label className="block text-sm">
                   Conversation starters, one per line (up to six)
-                  <textarea
-                    className="w-full rounded border bg-background p-2"
+                  <Textarea
+                    className="w-full border bg-background"
                     value={config.starters.join("\n")}
                     maxLength={3005}
                     onChange={(e) =>
@@ -749,6 +771,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                   {KOVA_TOOLS.map((tool) => (
                     <label key={tool} className="text-sm">
                       <input
+                        className="kova-native-check"
+                        data-ui-reference="chatgpt.checkbox"
                         type="checkbox"
                         checked={config.tools.includes(tool)}
                         onChange={(e) =>
@@ -768,6 +792,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                   {KOVA_APPS.map((app) => (
                     <label key={app} className="text-sm">
                       <input
+                        className="kova-native-check"
+                        data-ui-reference="chatgpt.checkbox"
                         type="checkbox"
                         checked={config.apps.includes(app)}
                         onChange={(e) =>
@@ -789,6 +815,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                 </p>
                 <label className="block text-sm">
                   <input
+                    className="kova-native-check"
+                    data-ui-reference="chatgpt.checkbox"
                     type="checkbox"
                     checked={config.allowFork}
                     onChange={(e) => change({ ...config, allowFork: e.target.checked })}
@@ -810,9 +838,9 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                       </p>
                     ) : (
                       <>
-                        <input
+                        <Input
                           aria-label={`Knowledge ${i + 1} title`}
-                          className="w-full rounded border bg-background p-2"
+                          className="w-full border bg-background"
                           maxLength={200}
                           value={entry.title}
                           onChange={(e) =>
@@ -824,9 +852,9 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                             })
                           }
                         />
-                        <textarea
+                        <Textarea
                           aria-label={`Knowledge ${i + 1} excerpt`}
-                          className="min-h-24 w-full rounded border bg-background p-2"
+                          className="min-h-24 w-full border bg-background"
                           maxLength={30000}
                           value={entry.content}
                           onChange={(e) =>
@@ -840,18 +868,20 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                         />
                       </>
                     )}
-                    <button
+                    <Button
+                      variant="link"
                       className="underline text-sm"
                       onClick={() =>
                         change({ ...config, knowledge: config.knowledge.filter((_, j) => j !== i) })
                       }
                     >
                       Remove knowledge
-                    </button>
+                    </Button>
                   </div>
                 ))}
                 <div className="flex gap-3">
-                  <button
+                  <Button
+                    variant="link"
                     className="underline"
                     disabled={config.knowledge.length >= 10}
                     onClick={() =>
@@ -865,19 +895,21 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                     }
                   >
                     Add text excerpt
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="link"
                     className="underline"
                     disabled={config.knowledge.length >= 10}
                     onClick={() => void loadKnowledge()}
                   >
                     Choose Library file
-                  </button>
+                  </Button>
                 </div>
                 {knowledgeOpen && (
                   <div className="space-y-2 rounded border p-3">
                     {library.map((file) => (
-                      <button
+                      <Button
+                        variant="link"
                         key={file.id}
                         className="block text-left text-sm underline"
                         disabled={
@@ -895,25 +927,31 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                       >
                         {file.title} · {file.characters.toLocaleString()} characters
                         {file.characters > 30000 ? " · Paste an excerpt instead" : ""}
-                      </button>
+                      </Button>
                     ))}
                     {libraryAfter && (
-                      <button
+                      <Button
+                        variant="link"
                         className="underline"
                         onClick={() => void loadKnowledge(libraryAfter)}
                       >
                         Load more files
-                      </button>
+                      </Button>
                     )}
-                    <button className="underline" onClick={() => setKnowledgeOpen(false)}>
+                    <Button
+                      variant="link"
+                      className="underline"
+                      onClick={() => setKnowledgeOpen(false)}
+                    >
                       Close files
-                    </button>
+                    </Button>
                   </div>
                 )}
               </fieldset>
               <div className="flex gap-3">
-                <button
-                  className="rounded bg-primary px-3 py-2 text-primary-foreground"
+                <Button
+                  variant="default"
+                  className="bg-primary text-primary-foreground"
                   disabled={disabled}
                   onClick={() => {
                     try {
@@ -931,9 +969,10 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                   }}
                 >
                   Save private version
-                </button>
+                </Button>
                 {view && (
-                  <button
+                  <Button
+                    variant="link"
                     className="underline"
                     disabled={disabled}
                     onClick={(event) => {
@@ -949,7 +988,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                     }}
                   >
                     Discard draft
-                  </button>
+                  </Button>
                 )}
               </div>
             </>
@@ -957,14 +996,16 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
           {view?.owned && (
             <>
               <div className="flex flex-wrap gap-3">
-                <button
+                <Button
+                  variant="link"
                   className="underline"
                   disabled={disabled || dirty || view.blocked}
                   onClick={() => setPreview((v) => !v)}
                 >
                   {preview ? "Close preview" : "Preview saved version"}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="link"
                   className="underline text-destructive"
                   disabled={disabled}
                   onClick={(event) =>
@@ -979,7 +1020,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                   }
                 >
                   Delete Kova
-                </button>
+                </Button>
               </div>
               <div className="space-y-2 rounded border p-3">
                 <h3 className="font-semibold">Publication</h3>
@@ -989,6 +1030,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                 </p>
                 <label className="flex gap-2 text-sm">
                   <input
+                    className="kova-native-check"
+                    data-ui-reference="chatgpt.checkbox"
                     type="checkbox"
                     checked={consent}
                     disabled={disabled || dirty}
@@ -999,7 +1042,8 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                   credentials or secrets.
                 </label>
                 <div className="flex flex-wrap gap-3">
-                  <button
+                  <Button
+                    variant="link"
                     className="underline"
                     disabled={disabled || dirty || !consent || view.blocked}
                     onClick={() =>
@@ -1012,8 +1056,9 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                     }
                   >
                     Publish with an unlisted link
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="link"
                     className="underline"
                     disabled={disabled || dirty || !consent || view.blocked}
                     onClick={() =>
@@ -1025,20 +1070,21 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                     }
                   >
                     Publish in community directory
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="link"
                     className="underline"
                     disabled={disabled || view.visibility === "private"}
                     onClick={() => void submit("unpublish", {})}
                   >
                     Make private
-                  </button>
+                  </Button>
                 </div>
                 {link && (
                   <label className="block text-sm">
                     Share link. Publishing a new link revokes older links.
-                    <input
-                      className="w-full rounded border bg-background p-2"
+                    <Input
+                      className="w-full border bg-background"
                       value={link}
                       readOnly
                       onFocus={(e) => e.target.select()}
@@ -1056,14 +1102,16 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                         {version.id === view.versionId ? " · Current" : ""}
                         {version.id === view.publicationVersion ? " · Published" : ""}
                       </span>
-                      <button
+                      <Button
+                        variant="link"
                         className="underline"
                         disabled={disabled}
                         onClick={() => void inspectVersion(version.id)}
                       >
                         Inspect version
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="link"
                         className="underline"
                         disabled={disabled || version.id === view.versionId}
                         onClick={(event) =>
@@ -1076,8 +1124,9 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                         }
                       >
                         Restore copy
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="link"
                         className="underline"
                         disabled={
                           disabled ||
@@ -1095,7 +1144,7 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
                         }
                       >
                         Delete old version
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -1114,9 +1163,9 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
               <pre className="whitespace-pre-wrap text-sm">{k.content}</pre>
             </details>
           ))}
-          <button className="underline" onClick={() => setInspected(null)}>
+          <Button variant="link" className="underline" onClick={() => setInspected(null)}>
             Close inspection
-          </button>
+          </Button>
         </section>
       )}
       {preview && ownerId && view?.owned && (
@@ -1181,9 +1230,9 @@ function Workspace({ ownerId, initialId }: { ownerId: string | null; initialId?:
           >
             <label className="grid gap-2 text-sm" htmlFor="kova-report-reason">
               Reason for report
-              <textarea
+              <Textarea
                 id="kova-report-reason"
-                className="min-h-32 w-full rounded-[var(--kova-radius-input)] border border-input bg-background p-3 text-sm"
+                className="min-h-32 w-full border border-input bg-background text-sm"
                 maxLength={2000}
                 value={reportReason}
                 onChange={(event) => setReportReason(event.target.value)}

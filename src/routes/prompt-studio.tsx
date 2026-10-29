@@ -1,3 +1,6 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -455,7 +458,10 @@ function PromptStudio() {
   };
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
+      <main
+        data-ui-reference="claude.project.instructions"
+        className={"kova-tool-page " + "mx-auto w-full max-w-6xl px-4 py-7 sm:px-6"}
+      >
         <WorkspacePageHeader
           icon={FlaskConical}
           title="Prompt Studio"
@@ -471,12 +477,13 @@ function PromptStudio() {
         ) : error ? (
           <div role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4">
             <p>{error}</p>
-            <button
+            <Button
+              variant="outline"
               onClick={() => location.reload()}
-              className="mt-3 min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
+              className="mt-3   border  text-sm hover:bg-accent"
             >
               Retry
-            </button>
+            </Button>
           </div>
         ) : (
           <>
@@ -497,34 +504,34 @@ function PromptStudio() {
               ))}
             </section>
             <div className="mt-6 grid gap-6 lg:grid-cols-[.85fr_1.15fr]">
-              <section className="rounded-2xl border p-4">
+              <section className={"kova-tool-panel " + "rounded-2xl border p-4"}>
                 <h2 className="font-semibold">New prompt</h2>
                 <div className="mt-3 grid gap-3">
-                  <input
+                  <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="h-11 rounded-xl border bg-background px-3"
+                    className="  border bg-background "
                     placeholder="Prompt name"
                     aria-label="Prompt name"
                   />
-                  <input
+                  <Input
                     value={folder}
                     onChange={(e) => setFolder(e.target.value)}
-                    className="h-11 rounded-xl border bg-background px-3"
+                    className="  border bg-background "
                     placeholder="Folder"
                     aria-label="Prompt folder"
                   />
-                  <input
+                  <Input
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="h-11 rounded-xl border bg-background px-3"
+                    className="  border bg-background "
                     placeholder="Category"
                     aria-label="Prompt category"
                   />
-                  <textarea
+                  <Textarea
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
-                    className="min-h-40 rounded-xl border bg-background p-3"
+                    className="min-h-40  border bg-background "
                     placeholder="Draft a brief for {{audience}} about {{topic}}"
                     aria-label="Prompt template"
                   />
@@ -536,7 +543,7 @@ function PromptStudio() {
                     value={projectId || NO_ASSOCIATION}
                     onValueChange={(value) => setProjectId(value === NO_ASSOCIATION ? "" : value)}
                   >
-                    <SelectTrigger aria-label="Associate Project" className="h-11 rounded-xl">
+                    <SelectTrigger aria-label="Associate Project" className=" ">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -552,7 +559,7 @@ function PromptStudio() {
                     value={packId || NO_ASSOCIATION}
                     onValueChange={(value) => setPackId(value === NO_ASSOCIATION ? "" : value)}
                   >
-                    <SelectTrigger aria-label="Attach Context Pack" className="h-11 rounded-xl">
+                    <SelectTrigger aria-label="Attach Context Pack" className=" ">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -564,16 +571,17 @@ function PromptStudio() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <button
+                  <Button
+                    variant="default"
                     disabled={creating || !name.trim() || !body.trim()}
                     onClick={create}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-foreground px-4 text-background disabled:opacity-50"
+                    className="inline-flex  items-center justify-center gap-2  bg-foreground  text-background disabled:opacity-50"
                   >
                     <Plus className="h-4 w-4" />
                     {creating ? "Saving…" : "Save prompt"}
-                  </button>
+                  </Button>
                   <Select value={folderFilter} onValueChange={setFolderFilter}>
-                    <SelectTrigger aria-label="Filter prompt folder" className="h-11 rounded-xl">
+                    <SelectTrigger aria-label="Filter prompt folder" className=" ">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -600,36 +608,38 @@ function PromptStudio() {
                   <label className="relative flex-1">
                     <span className="sr-only">Search prompts</span>
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <input
+                    <Input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      className="h-10 w-full rounded-xl border bg-background pl-9"
+                      className=" w-full  border bg-background pl-9"
                       placeholder="Search prompts"
                     />
                   </label>
-                  <button
+                  <Button
+                    variant="ghost"
                     aria-pressed={favorites}
                     onClick={() => setFavorites((v) => !v)}
-                    className={`min-h-10 rounded-xl border px-3 ${favorites ? "bg-foreground text-background" : ""}`}
+                    className={`  border  ${favorites ? "bg-foreground text-background" : ""}`}
                   >
                     <Heart className="h-4 w-4" />
                     <span className="sr-only">Favorites only</span>
-                  </button>
+                  </Button>
                 </div>
                 {visible.length === 0 ? (
                   <div className="mt-3 rounded-2xl border p-10 text-center text-sm text-muted-foreground">
                     <p>No prompts match. Create a reusable prompt to begin.</p>
                     {query || favorites || folderFilter !== "all" ? (
-                      <button
+                      <Button
+                        variant="outline"
                         onClick={() => {
                           setQuery("");
                           setFavorites(false);
                           setFolderFilter("all");
                         }}
-                        className="mt-3 min-h-10 rounded-lg border px-3 text-sm text-foreground hover:bg-accent"
+                        className="mt-3   border  text-sm text-foreground hover:bg-accent"
                       >
                         Clear filters
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 ) : (
@@ -649,7 +659,9 @@ function PromptStudio() {
                               {item.body}
                             </p>
                           </div>
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             aria-label={`${item.favorite ? "Unfavorite" : "Favorite"} ${item.name}`}
                             onClick={async () => {
                               const generation = generationRef.current;
@@ -680,11 +692,13 @@ function PromptStudio() {
                                 );
                               }
                             }}
-                            className="grid min-h-10 min-w-10 place-items-center rounded-lg hover:bg-accent"
+                            className="grid   place-items-center  hover:bg-accent"
                           >
                             <Heart className={`h-4 w-4 ${item.favorite ? "fill-current" : ""}`} />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
                             aria-label={`Delete ${item.name}`}
                             disabled={deleting}
                             aria-busy={deleting || undefined}
@@ -704,12 +718,13 @@ function PromptStudio() {
                                 url: window.location.href,
                               });
                             }}
-                            className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-50"
+                            className="grid   place-items-center  text-destructive hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-50"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </div>
-                        <button
+                        <Button
+                          variant="default"
                           onClick={(event) => {
                             dialogTriggerRef.current = event.currentTarget;
                             testingRequestRef.current += 1;
@@ -717,12 +732,13 @@ function PromptStudio() {
                             setTesting(item);
                             setValues({});
                           }}
-                          className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-foreground px-3 text-sm text-background"
+                          className="mt-3 inline-flex  items-center gap-2  bg-foreground  text-sm text-background"
                         >
                           <Play className="h-4 w-4" />
                           Test in chat
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="outline"
                           onClick={async (event) => {
                             dialogTriggerRef.current = event.currentTarget;
                             const request = ++inspectionRequestRef.current;
@@ -765,10 +781,10 @@ function PromptStudio() {
                               }
                             }
                           }}
-                          className="mt-3 ml-2 inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm hover:bg-accent"
+                          className="mt-3 ml-2 inline-flex  items-center gap-2  border  text-sm hover:bg-accent"
                         >
                           <History className="h-4 w-4" /> Versions & evaluation
-                        </button>
+                        </Button>
                       </li>
                     ))}
                   </ul>
@@ -801,12 +817,12 @@ function PromptStudio() {
                   {testing.variables.map((variable) => (
                     <label key={variable} className="block text-sm font-medium">
                       {variable}
-                      <input
+                      <Input
                         value={values[variable] ?? ""}
                         onChange={(e) =>
                           setValues((all) => ({ ...all, [variable]: e.target.value }))
                         }
-                        className="mt-1 h-11 w-full rounded-xl border bg-background px-3"
+                        className="mt-1  w-full  border bg-background "
                       />
                     </label>
                   ))}
@@ -815,22 +831,24 @@ function PromptStudio() {
                 <p className="mt-2 text-sm text-muted-foreground">This prompt has no variables.</p>
               )}
               <div className="mt-5 flex justify-end gap-2">
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => {
                     testingRequestRef.current += 1;
                     setTesting(null);
                   }}
-                  className="min-h-11 rounded-xl px-4 hover:bg-accent"
+                  className="   hover:bg-accent"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="default"
                   disabled={launching}
                   onClick={() => launch(testing)}
-                  className="min-h-11 rounded-xl bg-foreground px-4 text-background"
+                  className="  bg-foreground  text-background"
                 >
                   {launching ? "Preparing…" : "Launch new chat"}
-                </button>
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -859,15 +877,16 @@ function PromptStudio() {
                     Edit with automatic revision capture and evaluate actual prompt use.
                   </DialogDescription>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => {
                     inspectionRequestRef.current += 1;
                     setInspecting(null);
                   }}
-                  className="min-h-10 rounded-lg px-3 hover:bg-accent"
+                  className="   hover:bg-accent"
                 >
                   Close
-                </button>
+                </Button>
               </div>
               {historyLoading ? (
                 <div
@@ -879,13 +898,14 @@ function PromptStudio() {
                 <div className="mt-5 grid gap-5 md:grid-cols-2">
                   <section>
                     <h3 className="text-sm font-semibold">Current prompt</h3>
-                    <textarea
+                    <Textarea
                       aria-label="Current prompt"
                       value={editBody}
                       onChange={(e) => setEditBody(e.target.value)}
-                      className="mt-2 min-h-56 w-full rounded-xl border bg-background p-3"
+                      className="mt-2 min-h-56 w-full  border bg-background "
                     />
-                    <button
+                    <Button
+                      variant="default"
                       disabled={!editBody.trim() || editBody === inspecting.body}
                       onClick={async () => {
                         const generation = generationRef.current;
@@ -936,10 +956,10 @@ function PromptStudio() {
                           );
                         }
                       }}
-                      className="mt-2 min-h-10 rounded-lg bg-foreground px-3 text-sm text-background disabled:opacity-50"
+                      className="mt-2   bg-foreground  text-sm text-background disabled:opacity-50"
                     >
                       Save revision
-                    </button>
+                    </Button>
                     <h3 className="mt-5 text-sm font-semibold">Previous versions</h3>
                     {versions.length ? (
                       <ul className="mt-2 space-y-2">
@@ -952,12 +972,13 @@ function PromptStudio() {
                             <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-muted-foreground">
                               {version.body}
                             </p>
-                            <button
+                            <Button
+                              variant="link"
                               onClick={() => setEditBody(version.body)}
                               className="mt-2 text-xs font-medium hover:underline"
                             >
                               Restore into editor
-                            </button>
+                            </Button>
                           </li>
                         ))}
                       </ul>
@@ -971,26 +992,28 @@ function PromptStudio() {
                     <h3 className="text-sm font-semibold">Evaluate this prompt</h3>
                     <div className="mt-2 flex gap-1" role="radiogroup" aria-label="Prompt rating">
                       {[1, 2, 3, 4, 5].map((value) => (
-                        <button
+                        <Button
+                          variant="ghost"
                           key={value}
                           role="radio"
                           aria-checked={rating === value}
                           onClick={() => setRating(value)}
-                          className={`grid h-10 w-10 place-items-center rounded-lg border ${rating === value ? "bg-foreground text-background" : ""}`}
+                          className={`grid   place-items-center  border ${rating === value ? "bg-foreground text-background" : ""}`}
                         >
                           {value}
-                        </button>
+                        </Button>
                       ))}
                     </div>
-                    <textarea
+                    <Textarea
                       aria-label="Evaluation notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       maxLength={2000}
                       placeholder="What worked? What should change?"
-                      className="mt-2 min-h-24 w-full rounded-xl border bg-background p-3"
+                      className="mt-2 min-h-24 w-full  border bg-background "
                     />
-                    <button
+                    <Button
+                      variant="outline"
                       onClick={async () => {
                         const generation = generationRef.current;
                         const request = inspectionRequestRef.current;
@@ -1021,11 +1044,11 @@ function PromptStudio() {
                           );
                         }
                       }}
-                      className="mt-2 inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm"
+                      className="mt-2 inline-flex  items-center gap-2  border  text-sm"
                     >
                       <BarChart3 className="h-4 w-4" />
                       Save evaluation
-                    </button>
+                    </Button>
                     <h3 className="mt-5 text-sm font-semibold">Evaluation history</h3>
                     {evaluations.length ? (
                       <ul className="mt-2 space-y-2">

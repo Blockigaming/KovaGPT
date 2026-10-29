@@ -220,7 +220,11 @@ const TAB_GROUPS: TabGroup[] = [
 
 function SettingsPageContent({ children, className }: ComponentProps<typeof DialogContent>) {
   return (
-    <section className={`kova-settings-page ${className ?? ""}`} aria-label="Settings">
+    <section
+      className={`kova-settings-page ${className ?? ""}`}
+      aria-label="Settings"
+      data-ui-reference="chatgpt.settings"
+    >
       {children}
     </section>
   );
@@ -1082,6 +1086,7 @@ export function SettingsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <Surface
         closeLabel="Close settings"
+        data-ui-reference="chatgpt.settings"
         className={`kova-settings-dialog kova-settings-reference ${loggedIn ? "is-authenticated" : "is-guest"} bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border overflow-hidden flex flex-col gap-0 p-0`}
         onOpenAutoFocus={() => {
           // Capture once per opening, before the dialog moves focus. Navigating
@@ -1141,9 +1146,11 @@ export function SettingsDialog({
           // its visible menu opener. Both fallbacks use the same focus guards.
           if (
             !restore(previous) &&
-            !restore(document.querySelector<HTMLElement>('[aria-label="Account menu"]'))
+            !restore(document.querySelector<HTMLElement>('[aria-label="Account menu"]')) &&
+            !restore(document.querySelector<HTMLElement>('[aria-label="Open menu"]')) &&
+            !restore(document.querySelector<HTMLElement>('[aria-label="Toggle sidebar"]'))
           )
-            restore(document.querySelector<HTMLElement>('[aria-label="Open menu"]'));
+            restore(document.querySelector<HTMLElement>('[aria-label="Open sidebar"]'));
         }}
       >
         <DialogHeader
@@ -1151,8 +1158,11 @@ export function SettingsDialog({
         >
           <div className="flex items-center justify-between gap-3">
             <div>
-              <DialogTitle className="kova-settings-main-title text-xl font-semibold tracking-tight font-display">
-                Settings
+              <DialogTitle
+                asChild={page}
+                className="kova-settings-main-title text-xl font-semibold tracking-tight font-display"
+              >
+                {page ? <h1>Settings</h1> : "Settings"}
               </DialogTitle>
               <p className="text-xs text-muted-foreground mt-1">
                 {loggedIn
@@ -1597,7 +1607,7 @@ export function SettingsDialog({
                       onClick={() => setClearMemoryConfirmOpen(true)}
                       disabled={clearMemoryBusy || !isSignedIn}
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash2 className="w-4 h-4" />
                       {clearMemoryBusy ? "Deleting…" : "Delete saved memory"}
                     </Button>
                   </div>
@@ -1620,7 +1630,7 @@ export function SettingsDialog({
                         verified from the server-backed Apps page.
                       </p>
                     </div>
-                    <Button asChild variant="outline" className="min-h-11">
+                    <Button asChild variant="outline">
                       <Link to="/apps" onClick={() => onOpenChange(false)}>
                         Manage apps and permissions
                       </Link>
@@ -1968,7 +1978,7 @@ export function SettingsDialog({
                         }
                         aria-describedby="billing-management-status"
                       >
-                        <ExternalLink className="w-4 h-4 mr-2" aria-hidden="true" />
+                        <ExternalLink className="w-4 h-4" aria-hidden="true" />
                         {portalLoading ? "Opening…" : "Manage subscription"}
                       </Button>
                     </div>
@@ -1982,7 +1992,7 @@ export function SettingsDialog({
                         aria-disabled={subscriptionLoading || portalLoading}
                         aria-busy={subscriptionLoading}
                       >
-                        <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
+                        <RefreshCw className="w-4 h-4" aria-hidden="true" />
                         {subscriptionLoading ? "Checking…" : "Refresh billing status"}
                       </Button>
                     </div>
@@ -2338,7 +2348,7 @@ export function SettingsDialog({
                     disabled={localResetBusy || deleteAccountOpen || !isLoaded}
                     onClick={openLocalResetConfirmation}
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
+                    <Trash2 className="w-4 h-4" />
                     {localResetBusy ? "Resetting…" : "Reset this profile's local data"}
                   </Button>
                 </div>
@@ -2364,7 +2374,7 @@ export function SettingsDialog({
                 </p>
                 <Button size="sm" asChild className="kova-settings-support-link">
                   <Link to="/help" hash="support-form" onClick={() => onOpenChange(false)}>
-                    <Bug className="w-4 h-4 mr-2" />
+                    <Bug className="w-4 h-4" />
                     Open bug report form
                   </Link>
                 </Button>
@@ -2381,7 +2391,7 @@ export function SettingsDialog({
                 </p>
                 <Button size="sm" asChild className="kova-settings-support-link">
                   <Link to="/help" onClick={() => onOpenChange(false)}>
-                    <LifeBuoy className="w-4 h-4 mr-2" />
+                    <LifeBuoy className="w-4 h-4" />
                     Open help center
                   </Link>
                 </Button>
@@ -2421,7 +2431,7 @@ export function SettingsDialog({
                   You'll be signed out of KovaGPT on this device.
                 </p>
                 <Button variant="destructive" size="sm" onClick={() => setLogoutConfirmOpen(true)}>
-                  <LogOut className="w-4 h-4 mr-2" />
+                  <LogOut className="w-4 h-4" />
                   Log out
                 </Button>
               </TabsContent>
@@ -2621,8 +2631,8 @@ function SecurityRow({
 }) {
   return (
     <div
-      className={`flex flex-wrap items-start justify-between gap-3 rounded-lg border p-4 transition-colors ${
-        danger ? "border-destructive/40 bg-destructive/5" : "border-border"
+      className={`kova-settings-reference-row flex flex-wrap items-start justify-between gap-3 py-4 transition-colors ${
+        danger ? "kova-settings-danger-row" : ""
       }`}
     >
       <div className="min-w-0 flex-1 basis-48">
@@ -3019,7 +3029,7 @@ function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
             <p className="text-sm font-medium text-destructive">Library data is unavailable</p>
             <p className="mt-1 text-xs text-muted-foreground">{loadError}</p>
             <Button size="sm" variant="outline" onClick={load} className="mt-3">
-              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
+              <RefreshCw className="h-3.5 w-3.5" /> Retry
             </Button>
           </div>
         ) : filtered.length === 0 ? (
@@ -3556,7 +3566,7 @@ function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-11 w-11 rounded-full text-muted-foreground hover:text-destructive"
+                className="rounded-full text-muted-foreground hover:text-destructive"
                 disabled={pending}
                 aria-label={`Delete archived chat ${chat.title}`}
                 onClick={(event) => reviewDelete(chat, event.currentTarget)}
@@ -3947,7 +3957,7 @@ function ShortcutsEditor({
         <Button
           size="sm"
           variant="outline"
-          className="min-h-11"
+
           disabled={!ready || pending}
           onClick={() => void perform({ kind: "reset" })}
         >

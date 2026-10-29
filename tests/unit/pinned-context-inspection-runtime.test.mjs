@@ -121,6 +121,7 @@ function fixture(initialProps = {}, initialAccount = {}) {
         message: (...args) => calls.toasts.push(args),
       },
     },
+    "@/components/ui/checkbox": { Checkbox: "input" },
     "@/components/ui/dialog": Object.fromEntries(
       ["Dialog", "DialogContent", "DialogDescription", "DialogHeader", "DialogTitle"].map(
         (name) => [name, name],

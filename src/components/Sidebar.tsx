@@ -14,7 +14,6 @@ import {
 } from "@/components/SidebarIcons";
 import {
   Archive,
-  MessageSquare,
   ChevronDown,
   BarChart3,
   LogOut,
@@ -48,6 +47,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTier } from "@/hooks/useTier";
@@ -70,7 +70,7 @@ import {
 import "@/styles/sidebar-personalization.css";
 import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
 
-const EXPANDED_WIDTH = 248;
+const EXPANDED_WIDTH = 260;
 const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   images: ImagesGlyph,
   library: LibraryGlyph,
@@ -116,6 +116,7 @@ export function Sidebar({
   onOpenSettings,
   onOpenHelp,
   onOpenWorkspaceSearch,
+  hideGuestLogin = false,
   mapsReleaseApproved = false,
 }: {
   conversations: Conversation[];
@@ -133,6 +134,7 @@ export function Sidebar({
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
   onOpenWorkspaceSearch?: () => void;
+  hideGuestLogin?: boolean;
   mapsReleaseApproved?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
@@ -865,6 +867,7 @@ export function Sidebar({
         <dialog
           ref={railDialogRef}
           className="kova-sidebar-personalization"
+          data-ui-reference="chatgpt-settings-dialog"
           aria-labelledby="sidebar-personalization-title"
           aria-describedby="sidebar-personalization-description"
           aria-modal="true"
@@ -886,17 +889,19 @@ export function Sidebar({
         >
           <div className="kova-sidebar-personalization-heading">
             <h2 id="sidebar-personalization-title">Customize sidebar</h2>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               type="button"
               aria-label="Close sidebar customization"
               onClick={closeRailPersonalization}
             >
               <X aria-hidden="true" />
-            </button>
+            </Button>
           </div>
           <p id="sidebar-personalization-description">
-            Choose additional shortcuts for your collapsed desktop sidebar. New chat, Search, Chat,
-            Projects, Scheduled tasks, Library, Plugins, and your account stay available.
+            Choose additional shortcuts for your collapsed desktop sidebar. New chat, Search,
+            Projects, Scheduled tasks, Library, Connections, and your account stay available.
           </p>
           <fieldset>
             <legend>Additional shortcuts</legend>
@@ -930,7 +935,8 @@ export function Sidebar({
             </p>
           ) : null}
           <div className="kova-sidebar-personalization-actions">
-            <button
+            <Button
+              variant="outline"
               type="button"
               onClick={() => {
                 setRailPreferences({ owner: railOwner, shortcuts: DEFAULT_SIDEBAR_SHORTCUTS });
@@ -942,10 +948,10 @@ export function Sidebar({
               }}
             >
               Reset to default
-            </button>
-            <button type="button" onClick={closeRailPersonalization}>
+            </Button>
+            <Button type="button" onClick={closeRailPersonalization}>
               Done
-            </button>
+            </Button>
           </div>
         </dialog>
       ) : null}
@@ -964,9 +970,10 @@ export function Sidebar({
         <dialog
           ref={renameDialogRef}
           data-kova-dialog-surface
+          data-ui-reference="chatgpt-rename-dialog"
           aria-labelledby="rename-chat-title"
           aria-modal="true"
-          className="kova-rename-dialog m-auto rounded-2xl border border-border bg-background p-5 text-foreground shadow-xl backdrop:bg-black/50"
+          className="kova-rename-dialog"
           onCancel={(event) => {
             event.preventDefault();
             if (renameDiscard) keepRename();
@@ -997,17 +1004,23 @@ export function Sidebar({
                 The saved name for “{renameChat.title}” will stay unchanged.
               </p>
               <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <button
+                <Button
+                  variant="outline"
                   ref={keepRenameRef}
                   type="button"
                   className="min-h-11 px-4"
                   onClick={keepRename}
                 >
                   Keep editing
-                </button>
-                <button type="button" className="min-h-11 px-4" onClick={closeRename}>
+                </Button>
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="min-h-11 px-4"
+                  onClick={closeRename}
+                >
                   Discard changes
-                </button>
+                </Button>
               </div>
             </section>
           )}
@@ -1044,7 +1057,9 @@ export function Sidebar({
               <h2 id="rename-chat-title" className="text-lg font-semibold">
                 Rename chat
               </h2>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 type="button"
                 aria-label="Close rename chat"
                 disabled={renamePending}
@@ -1052,7 +1067,7 @@ export function Sidebar({
                 onClick={requestCloseRename}
               >
                 <X className="size-5" aria-hidden="true" />
-              </button>
+              </Button>
             </div>
             <label className="mt-4 block text-sm" htmlFor="rename-chat-name">
               Chat name
@@ -1075,15 +1090,16 @@ export function Sidebar({
               </p>
             ) : null}
             <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <button
+              <Button
+                variant="outline"
                 type="button"
                 disabled={renamePending}
                 onClick={requestCloseRename}
                 className="min-h-11 rounded-full px-4"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={renamePending || !renameTitle.trim()}
                 className="min-h-11 rounded-full bg-foreground px-4 text-background disabled:opacity-50"
@@ -1096,7 +1112,7 @@ export function Sidebar({
                 ) : (
                   "Rename"
                 )}
-              </button>
+              </Button>
             </div>
           </form>
         </dialog>
@@ -1115,7 +1131,8 @@ export function Sidebar({
       {signedIn ? (
         <TooltipProvider>
           <nav
-            className="kova-sidebar-rail hidden h-[100dvh] w-[72px] shrink-0 flex-col items-center bg-sidebar lg:flex"
+            className="kova-sidebar-rail"
+            data-ui-reference="chatgpt-collapsed-sidebar"
             aria-label="Collapsed navigation"
             data-kova-core-rail=""
             data-kova-refined-sidebar=""
@@ -1177,11 +1194,10 @@ export function Sidebar({
                     <SearchGlyph aria-hidden="true" />
                   </button>
                 </RailTooltip>
-                {railLink("/", "Chat", MessageSquare)}
                 {signedIn ? railLink("/projects", "Projects", ProjectsGlyph) : null}
                 {canSchedule ? railLink("/scheduled-tasks", "Scheduled tasks", TasksGlyph) : null}
                 {signedIn ? railLink("/library", "Library", LibraryGlyph) : null}
-                {railLink("/apps", "Plugins", PluginsGlyph)}
+                {railLink("/apps", "Connections", PluginsGlyph)}
               </div>
               {railShortcuts.some((id) => availableShortcuts.some((item) => item.id === id)) ? (
                 <div
@@ -1232,7 +1248,8 @@ export function Sidebar({
         data-kova-core-sidebar=""
         data-kova-refined-sidebar=""
         style={{ "--sidebar-expanded": `${EXPANDED_WIDTH}px` } as React.CSSProperties}
-        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 lg:w-[var(--sidebar-expanded)] ${collapsed ? "lg:!w-0" : ""} max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] ${open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"}`}
+        className="kova-sidebar"
+        data-ui-reference="chatgpt-sidebar"
         aria-label="Primary navigation"
         data-state={open ? "open" : "closed"}
         aria-modal={open && mobileViewport ? true : undefined}
@@ -1240,19 +1257,22 @@ export function Sidebar({
         inert={collapsed ? true : undefined}
         role={open && mobileViewport ? "dialog" : "navigation"}
       >
-        <div className="kova-sidebar-inner flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
+        <div className="kova-sidebar-inner">
           <header className="kova-sidebar-header">
-            <span className="kova-sidebar-brand flex items-center gap-2">
-              <NovaLogo decorative className="h-6 w-6" />
-              Kova GPT
-            </span>
+            <span className="kova-sidebar-brand">KovaGPT</span>
             <div className="kova-sidebar-header-actions">
               <button
                 type="button"
                 className="kova-header-button flex"
-                onClick={() => setSearchOpen((value) => !value)}
+                onClick={() => {
+                  if (onOpenWorkspaceSearch) {
+                    closeAfterMobileNavigation();
+                    onOpenWorkspaceSearch();
+                  } else setSearchOpen((value) => !value);
+                }}
                 aria-label="Search chats"
-                aria-expanded={searchOpen}
+                aria-haspopup={onOpenWorkspaceSearch ? "dialog" : undefined}
+                aria-expanded={onOpenWorkspaceSearch ? undefined : searchOpen}
                 title="Search chats"
               >
                 <SearchGlyph />
@@ -1317,22 +1337,8 @@ export function Sidebar({
                 {icon(NewChatGlyph)}
                 <span>New chat</span>
               </button>
-              {onOpenWorkspaceSearch ? (
-                <button
-                  type="button"
-                  className="kova-nav-row"
-                  onClick={() => {
-                    closeAfterMobileNavigation();
-                    onOpenWorkspaceSearch();
-                  }}
-                >
-                  {icon(SearchGlyph)}
-                  <span>Search</span>
-                </button>
-              ) : null}
-              {navLink("/", "Chat", MessageSquare)}
               {navLink("/images", "Images", ImagesGlyph)}
-              {navLink("/apps", "Plugins", PluginsGlyph)}
+              {navLink("/apps", "Connections", PluginsGlyph)}
               {signedIn ? (
                 <div
                   className="kova-sidebar-workspace"
@@ -1347,7 +1353,8 @@ export function Sidebar({
               ) : null}
               <details
                 className="kova-sidebar-more-disclosure"
-                open={isOn("/work") || isOn("/discovery") || undefined}
+                data-ui-reference="gemini-sidebar-disclosure"
+                open={isOn("/work") || isOn("/discovery") || isOn("/maps") || undefined}
               >
                 <summary className="kova-nav-row cursor-pointer">
                   {icon(MoreGlyph)}
@@ -1463,7 +1470,7 @@ export function Sidebar({
                         onOpenSettings("personalization");
                       }}
                     >
-                      <MessageSquare className="mr-2 h-4 w-4" />
+                      <UserRound className="mr-2 h-4 w-4" />
                       Profile
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -1490,7 +1497,7 @@ export function Sidebar({
                       }}
                     >
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Billing
+                      Subscriptions
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() => {
@@ -1541,13 +1548,15 @@ export function Sidebar({
                     <span>Settings</span>
                   </button>
                 </nav>
-                <div className="flex items-center gap-2">
-                  <SignInButton mode="modal">
-                    <button type="button" className="kova-sign-in min-w-0 flex-1">
-                      Log in
-                    </button>
-                  </SignInButton>
-                </div>
+                {!hideGuestLogin ? (
+                  <div className="flex items-center gap-2">
+                    <SignInButton mode="modal">
+                      <button type="button" className="kova-sign-in min-w-0 flex-1">
+                        Log in
+                      </button>
+                    </SignInButton>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <p role="status" className="text-sm text-muted-foreground">

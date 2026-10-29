@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -131,8 +133,11 @@ function KnowledgeGraph() {
   };
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6">
-        <header>
+      <main
+        data-ui-reference="gemini.canvas.knowledge"
+        className={"kova-tool-page " + "mx-auto w-full max-w-7xl px-4 py-7 sm:px-6"}
+      >
+        <header className="kova-tool-heading">
           <div className="flex items-center gap-2">
             <Network className="h-5 w-5" />
             <h1 className="text-2xl font-semibold">Knowledge Graph</h1>
@@ -146,32 +151,35 @@ function KnowledgeGraph() {
           <label className="relative flex-1">
             <span className="sr-only">Search knowledge graph</span>
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <input
+            <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-10 w-full rounded-xl border bg-background pl-9"
+              className=" w-full  border bg-background pl-9"
               placeholder="Search graph"
             />
           </label>
           <div className="flex gap-1 overflow-x-auto" aria-label="Knowledge types">
-            <button
+            <Button
+              variant="ghost"
               onClick={() => setMode("graph")}
               aria-pressed={mode === "graph"}
-              className={`min-h-10 rounded-lg border px-3 text-sm ${mode === "graph" ? "bg-foreground text-background" : ""}`}
+              className={`  border  text-sm ${mode === "graph" ? "bg-foreground text-background" : ""}`}
             >
               <Network className="mr-1 inline h-4 w-4" />
               Graph
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => setMode("timeline")}
               aria-pressed={mode === "timeline"}
-              className={`min-h-10 rounded-lg border px-3 text-sm ${mode === "timeline" ? "bg-foreground text-background" : ""}`}
+              className={`  border  text-sm ${mode === "timeline" ? "bg-foreground text-background" : ""}`}
             >
               <Clock3 className="mr-1 inline h-4 w-4" />
               Timeline
-            </button>
+            </Button>
             {Object.keys(colors).map((kind) => (
-              <button
+              <Button
+                variant="ghost"
                 key={kind}
                 aria-pressed={kinds.includes(kind as KnowledgeNode["kind"])}
                 onClick={() =>
@@ -181,10 +189,10 @@ function KnowledgeGraph() {
                       : [...all, kind as KnowledgeNode["kind"]],
                   )
                 }
-                className={`min-h-10 shrink-0 rounded-lg border px-3 text-sm capitalize ${kinds.includes(kind as KnowledgeNode["kind"]) ? "bg-foreground text-background" : ""}`}
+                className={` shrink-0  border  text-sm capitalize ${kinds.includes(kind as KnowledgeNode["kind"]) ? "bg-foreground text-background" : ""}`}
               >
                 {kind}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -200,12 +208,13 @@ function KnowledgeGraph() {
         ) : error ? (
           <div role="alert" className="rounded-xl border border-destructive/40 p-4">
             <p>{error}</p>
-            <button
+            <Button
+              variant="outline"
               onClick={() => location.reload()}
-              className="mt-3 min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
+              className="mt-3   border  text-sm hover:bg-accent"
             >
               Retry
-            </button>
+            </Button>
           </div>
         ) : visible.length === 0 ? (
           <div className="rounded-2xl border p-10 text-center">
@@ -215,15 +224,16 @@ function KnowledgeGraph() {
               Adjust filters or add Projects, files, memories, and Context Packs.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <button
+              <Button
+                variant="outline"
                 onClick={() => {
                   setQuery("");
                   setKinds(Object.keys(colors) as KnowledgeNode["kind"][]);
                 }}
-                className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
+                className="  border  text-sm hover:bg-accent"
               >
                 Reset filters
-              </button>
+              </Button>
               <Link
                 to="/projects"
                 className="kova-button min-h-10 rounded-lg bg-foreground px-3 py-2 text-sm text-background"
@@ -234,7 +244,10 @@ function KnowledgeGraph() {
           </div>
         ) : mode === "timeline" ? (
           <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-            <ol className="divide-y rounded-2xl border bg-card/30" aria-label="Knowledge timeline">
+            <ol
+              className={"kova-tool-list " + "divide-y rounded-2xl border bg-card/30"}
+              aria-label="Knowledge timeline"
+            >
               {[...visible]
                 .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
                 .map((node) => {
@@ -267,7 +280,7 @@ function KnowledgeGraph() {
                   );
                 })}
             </ol>
-            <aside className="rounded-2xl border p-4">
+            <aside className={"kova-tool-panel " + "rounded-2xl border p-4"}>
               <h2 className="font-semibold">Relationship clusters</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Clusters use explicit Project membership and Context Pack inclusion only.
@@ -361,7 +374,7 @@ function KnowledgeGraph() {
                 ))}
               </svg>
             </div>
-            <aside className="rounded-2xl border p-4">
+            <aside className={"kova-tool-panel " + "rounded-2xl border p-4"}>
               <h2 className="font-semibold">Selected knowledge</h2>
               {selected && positions.get(selected) ? (
                 <div className="mt-3">

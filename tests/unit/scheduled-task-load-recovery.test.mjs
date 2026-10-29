@@ -43,6 +43,7 @@ function renderList(state = {}) {
     formatDisplayDateTime,
     timeFormat: "system",
     React: { createElement: (type, props, ...children) => ({ type, props, children }) },
+    Button: "button",
     loading: false,
     tasks: [],
     visibleTasks: [],
@@ -132,7 +133,7 @@ function focusFixture() {
   const generationRef = { current: 1 },
     principalRef = { current: "owner" };
   const restoreSource = readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace(
-    "export function",
+    /^export function/gm,
     "function",
   );
   const restoreDialogFocus = compile(`${restoreSource}; return restoreDialogFocus;`, { window });

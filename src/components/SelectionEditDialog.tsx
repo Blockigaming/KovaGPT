@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Pencil, Wand2 } from "lucide-react";
 import { toast } from "sonner";
@@ -267,7 +269,7 @@ export function SelectionEditDialog({
               >
                 How should it change?
               </label>
-              <textarea
+              <Textarea
                 id="selection-edit-instruction"
                 value={instruction}
                 onChange={(event) =>
@@ -275,17 +277,18 @@ export function SelectionEditDialog({
                 }
                 rows={2}
                 placeholder="Make it shorter and less formal"
-                className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/30"
+                className="w-full resize-y border border-border bg-background text-sm outline-none focus:border-foreground/30"
               />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
+              <Button
+                variant="default"
                 type="button"
                 onClick={() => void generate()}
                 disabled={busy || applying}
                 aria-busy={busy}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
+                className="inline-flex items-center gap-2 bg-foreground text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
               >
                 {busy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -293,24 +296,26 @@ export function SelectionEditDialog({
                   <Pencil className="h-4 w-4" />
                 )}
                 {draft === null ? "Rewrite with Kova" : "Retry"}
-              </button>
+              </Button>
               {busy && (
-                <button
+                <Button
+                  variant="outline"
                   type="button"
                   onClick={() => abortRef.current?.abort()}
-                  className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-accent"
+                  className="inline-flex items-center border border-border text-sm font-medium hover:bg-accent"
                 >
                   Stop
-                </button>
+                </Button>
               )}
               {draft !== null && !busy && (
-                <button
+                <Button
+                  variant="outline"
                   type="button"
                   onClick={() => setDraft(null)}
-                  className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-accent"
+                  className="inline-flex items-center border border-border text-sm font-medium hover:bg-accent"
                 >
                   Reject changes
-                </button>
+                </Button>
               )}
             </div>
 
@@ -330,6 +335,8 @@ export function SelectionEditDialog({
                     <div key={index} className="my-3 rounded-lg border border-border p-3">
                       <label className="mb-2 flex min-h-11 items-center gap-2 text-sm">
                         <input
+                          className="kova-native-check"
+                          data-ui-reference="chatgpt.checkbox"
                           type="checkbox"
                           checked={!rejectedChanges.includes(index)}
                           onChange={(event) =>
@@ -364,11 +371,11 @@ export function SelectionEditDialog({
                 <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Wand2 className="h-3.5 w-3.5" /> Proposed replacement (editable)
                 </p>
-                <textarea
+                <Textarea
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                   rows={Math.min(14, Math.max(4, draft.split("\n").length + 1))}
-                  className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/30"
+                  className="w-full resize-y border border-border bg-background text-sm outline-none focus:border-foreground/30"
                   aria-label="Proposed replacement text"
                   aria-describedby="selection-proposal-guidance"
                 />
@@ -388,7 +395,8 @@ export function SelectionEditDialog({
             )}
 
             {draft === null && (
-              <button
+              <Button
+                variant="link"
                 type="button"
                 onClick={() => {
                   setDraftOrigin("user");
@@ -397,7 +405,7 @@ export function SelectionEditDialog({
                 className="self-start text-xs font-medium text-muted-foreground underline hover:text-foreground"
               >
                 Edit the passage by hand instead
-              </button>
+              </Button>
             )}
 
             <p className="text-xs text-muted-foreground">
@@ -419,23 +427,25 @@ export function SelectionEditDialog({
         )}
 
         <DialogFooter>
-          <button
+          <Button
+            variant="outline"
             type="button"
             onClick={() => onOpenChange(false)}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-accent"
+            className="inline-flex items-center justify-center border border-border text-sm font-medium hover:bg-accent"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="default"
             type="button"
             onClick={() => void accept()}
             disabled={draft === null || applying || Boolean(invalid)}
             aria-busy={applying}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 bg-foreground text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
           >
             {applying && <Loader2 className="h-4 w-4 animate-spin" />}
             Accept changes
-          </button>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

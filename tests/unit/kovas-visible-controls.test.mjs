@@ -73,7 +73,10 @@ function fixture({ ownerId = OWNER, initialId } = {}) {
       },
       "@/components/AppShell": { AppShell: "AppShell" },
       "@/components/ConfirmActionDialog": { ConfirmActionDialog: "ConfirmActionDialog" },
-      "@/components/ui/button": { Button: "Button" },
+      "@/components/ui/button": { Button: "button" },
+      "@/components/ui/input": { Input: "input" },
+      "@/components/ui/textarea": { Textarea: "textarea" },
+      "@/styles/spec400-management.css": {},
       "@/components/ui/dialog": Object.fromEntries(
         [
           "Dialog",
@@ -139,16 +142,16 @@ function fixture({ ownerId = OWNER, initialId } = {}) {
 
 function target(node, input = false) {
   assert.ok(node, "The intended control is rendered");
-  const tokens = node.props.className.split(/\s+/);
-  for (const token of [
-    "min-h-11",
-    "min-w-11",
-    `rounded-[var(--kova-radius-${input ? "input" : "compact"})]`,
-    "px-3",
-    "py-2",
-  ])
-    assert.ok(tokens.includes(token), `${label(node) || "Search"}: ${token}`);
-  assert.equal(tokens.includes("h-11"), false, "Long labels can grow above the minimum height");
+  assert.equal(node.type, input ? "input" : "button");
+  if (input || node.props.onClick !== undefined)
+    assert.equal(typeof node.props[input ? "onChange" : "onClick"], "function");
+  if (!input)
+    assert.ok(
+      ["default", "secondary", "outline", "ghost", "link", "destructive"].includes(
+        node.props.variant,
+      ),
+      "Actions use a shared reference button variant; geometry is verified in the primitive/browser suites",
+    );
 }
 
 async function openDetail(t, view = detail(), versions = []) {
@@ -170,7 +173,7 @@ async function openDetail(t, view = detail(), versions = []) {
   return h;
 }
 
-test("Kovas header, scope buttons and labelled search use 44px minimums and semantic tokens", (t) => {
+test("Kovas header, scope buttons and labelled search use shared controls without changing access", (t) => {
   for (const ownerId of [OWNER, null]) {
     const h = fixture({ ownerId });
     t.after(h.unmount);
@@ -188,12 +191,12 @@ test("Kovas header, scope buttons and labelled search use 44px minimums and sema
     assert.ok(searchLabel.props.className.includes("max-w-full"));
     assert.ok(search(tree).props.className.includes("max-w-full"));
     const header = elements(tree, (node) => node.type === "header")[0];
-    assert.equal(header.props.className, "flex flex-wrap items-center gap-2");
+    assert.equal(header.props.className, "kova-page-header");
     const scopes = elements(
       tree,
       (node) => node.type === "div" && node.props.children?.includes?.(button(tree, "My Kovas")),
     )[0];
-    assert.equal(scopes.props.className, "flex flex-wrap items-center gap-2");
+    assert.equal(scopes.props.className, "kova-assistant-tabs");
     const moderation = elements(tree, (node) => node.type === "Link")[0];
     assert.equal(moderation.props.to, "/admin/kovas");
     assert.equal(moderation.props.className, "underline", "Prose links retain their text styling");
@@ -206,12 +209,12 @@ test("Kovas header, scope buttons and labelled search use 44px minimums and sema
     }
   }
   const css = readFileSync("src/styles/visual-tokens.css", "utf8");
-  assert.match(css, /:root\s*\{[^}]*--kova-radius-compact:\s*10px;/);
-  assert.match(css, /:root\s*\{[^}]*--kova-radius-input:\s*14px;/);
+  assert.match(css, /:root\s*\{[^}]*--kova-radius-compact:\s*6px;/);
+  assert.match(css, /:root\s*\{[^}]*--kova-radius-input:\s*10px;/);
 });
 
 for (const owned of [false, true]) {
-  test(`read-only ${owned ? "owned" : "community"} detail retains actions with full-size targets`, async (t) => {
+  test(`read-only ${owned ? "owned" : "community"} detail retains shared actions`, async (t) => {
     const h = await openDetail(t, detail({ owned }));
     const tree = h.render();
     const section = elements(tree, (node) => node.type === "section")[0];
@@ -261,7 +264,7 @@ test("scope and loaded search keep their read-only filtering and detail selectio
     tree,
     (node) => node.type === "button" && /Writing Kova/.test(label(node)),
   )[0];
-  assert.equal(card.props.className, "rounded-xl border p-4 text-left");
+  assert.equal(card.props.className, "kova-assistant-card");
   card.props.onClick();
   tree = h.render();
   for (const name of ["Create a Kova", "My Kovas", "Community directory"])

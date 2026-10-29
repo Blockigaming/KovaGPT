@@ -48,6 +48,7 @@ import {
   ArrowLeft,
   ArrowUp,
   ArrowDown,
+  ChevronRight,
   FolderInput,
   MoreHorizontal,
   Clock,
@@ -524,7 +525,7 @@ function ProjectDetailPage() {
               {isOwner ? (
                 <Button
                   variant="destructive"
-                  className="min-h-11"
+
                   disabled={deletionBusy}
                   onClick={async () => {
                     const operationRequestKey = requestKey;
@@ -562,7 +563,7 @@ function ProjectDetailPage() {
                   )}
                 </Button>
               ) : null}
-              <Button variant="outline" className="min-h-11" asChild>
+              <Button variant="outline" asChild>
                 <Link to="/projects">Back to projects</Link>
               </Button>
             </div>
@@ -597,6 +598,7 @@ function ProjectDetailPage() {
         id="main-content"
         tabIndex={-1}
         className="spec400-management spec400-project-detail kova-project-workspace"
+        data-ui-reference="claude.projects.workspace"
       >
         <header className="kova-project-header">
           <nav aria-label="Breadcrumb" className="kova-project-breadcrumb">
@@ -785,13 +787,55 @@ function ProjectDetailPage() {
             <OverviewTab projectId={projectId} onJump={(k) => setTab(k)} />
           </TabsContent>
           <TabsContent value="chats" className="mt-4">
-            <ChatsTab
-              projectId={projectId}
-              chats={chats}
-              canEdit={canEdit}
-              onRefresh={refresh}
-              onMoveFocusRequest={beginChatMoveFocus}
-            />
+            <div className="kova-project-chat-layout">
+              <div className="min-w-0">
+                <ChatsTab
+                  projectId={projectId}
+                  chats={chats}
+                  canEdit={canEdit}
+                  onRefresh={refresh}
+                  onMoveFocusRequest={beginChatMoveFocus}
+                />
+              </div>
+              <aside
+                className="kova-project-knowledge"
+                aria-labelledby="project-knowledge-title"
+                data-ui-reference="claude.projects.knowledge"
+              >
+                <h2 id="project-knowledge-title">Project knowledge</h2>
+                <p>Instructions and files used across conversations in this project.</p>
+                <button
+                  type="button"
+                  className="kova-project-knowledge-row"
+                  data-kova-button-shape="preserve"
+                  onClick={() => setTab("context")}
+                >
+                  <Brain className="h-4 w-4" aria-hidden="true" />
+                  <span>
+                    <strong>Project instructions</strong>
+                    <small>
+                      {project.system_prompt?.trim()
+                        ? "Review the instructions for this project"
+                        : "Set the context for every conversation"}
+                    </small>
+                  </span>
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="kova-project-knowledge-row"
+                  data-kova-button-shape="preserve"
+                  onClick={() => setTab("files")}
+                >
+                  <FileText className="h-4 w-4" aria-hidden="true" />
+                  <span>
+                    <strong>Project files</strong>
+                    <small>Browse the sources available in this project</small>
+                  </span>
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </aside>
+            </div>
           </TabsContent>
           <TabsContent value="files" className="mt-4">
             <FilesTab projectId={projectId} canEdit={canEdit} kind="file" />
@@ -799,7 +843,11 @@ function ProjectDetailPage() {
           <TabsContent value="images" className="mt-4">
             <FilesTab projectId={projectId} canEdit={canEdit} kind="image" />
           </TabsContent>
-          <TabsContent value="context" className="mt-4 space-y-6">
+          <TabsContent
+            value="context"
+            className="mt-4 space-y-6"
+            data-ui-reference="claude.projects.instructions"
+          >
             <ProjectInstructionsTab
               project={project}
               canEdit={isOwner && !archived}
@@ -1544,7 +1592,7 @@ function ChatsTab({
         </div>
         {canEdit && (
           <Button size="sm" onClick={() => setCreating(true)}>
-            <Plus className="w-4 h-4 mr-1.5" />
+            <Plus className="w-4 h-4" />
             New chat
           </Button>
         )}
@@ -1618,7 +1666,7 @@ function ChatsTab({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-11 w-11 shrink-0"
+                      className="shrink-0"
                       disabled={moving}
                       aria-label={`Move ${c.title} to project`}
                       title="Move to project"
@@ -1629,7 +1677,7 @@ function ChatsTab({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-11 w-11 shrink-0"
+                      className="shrink-0"
                       disabled
                       aria-label={`Delete ${c.title} unavailable`}
                       aria-describedby="project-chat-delete-unavailable"
@@ -2064,9 +2112,9 @@ function FilesTab({
               className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
             >
               {uploading ? (
-                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Upload className="w-4 h-4 mr-1.5" />
+                <Upload className="w-4 h-4" />
               )}
               Upload
             </Button>
@@ -2101,7 +2149,7 @@ function FilesTab({
       ) : loadError ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4" role="alert">
           <p className="text-sm text-foreground">Files could not be loaded. Try again.</p>
-          <Button className="mt-3 min-h-11" variant="outline" onClick={() => void refresh()}>
+          <Button className="mt-3" variant="outline" onClick={() => void refresh()}>
             Retry
           </Button>
         </div>
@@ -2200,7 +2248,7 @@ function FilesTab({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="min-h-11 min-w-11"
+
                     onClick={() => void openFile(f)}
                     disabled={downloadingId === f.id}
                     aria-label={`Open ${f.name}`}
@@ -2216,7 +2264,7 @@ function FilesTab({
                       variant="ghost"
                       size="icon"
                       onClick={() => setConfirmId(f.id)}
-                      className="min-h-11 min-w-11"
+
                       aria-label={`Delete ${f.name}`}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -2767,7 +2815,7 @@ function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  <Plus className="w-4 h-4 mr-1.5" />
+                  <Plus className="w-4 h-4" />
                   Add
                 </>
               )}
@@ -2838,7 +2886,7 @@ function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-11 w-11"
+
                           aria-label={`Move ${t.title} up`}
                           title="Move up"
                           disabled={position === 0 || busy || loading || reordering || !!loadError}
@@ -2853,7 +2901,7 @@ function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-11 w-11"
+
                           aria-label={`Move ${t.title} down`}
                           title="Move down"
                           disabled={
@@ -3107,7 +3155,7 @@ function MemoryTab({ projectId, canEdit }: { projectId: string; canEdit: boolean
               </>
             ) : (
               <>
-                <Plus className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                <Plus className="w-4 h-4" aria-hidden="true" />
                 Add
               </>
             )}
@@ -3413,7 +3461,7 @@ function MembersTab({
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  <Send className="w-4 h-4 mr-1.5" />
+                  <Send className="w-4 h-4" />
                   Invite
                 </>
               )}
@@ -3442,7 +3490,7 @@ function MembersTab({
                   >
                     <SelectTrigger
                       aria-label={`Role for ${m.email ?? m.user_id.slice(0, 8)}`}
-                      className="w-28 min-h-11"
+                      className="w-28"
                     >
                       <SelectValue />
                     </SelectTrigger>
@@ -3560,7 +3608,7 @@ function SettingsTab({
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <>
-                <Save className="w-4 h-4 mr-1.5" />
+                <Save className="w-4 h-4" />
                 Save changes
               </>
             )}
@@ -3576,7 +3624,7 @@ function SettingsTab({
           comments). Interrupted cleanup stays retryable.
         </p>
         <Button variant="destructive" size="sm" onClick={(event) => onDelete(event.currentTarget)}>
-          <Trash2 className="w-4 h-4 mr-1.5" />
+          <Trash2 className="w-4 h-4" />
           Delete project
         </Button>
       </div>

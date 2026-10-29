@@ -285,16 +285,6 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-.kova-core-page .kova-library-select input[type="checkbox"] {
-  appearance: auto;
-  inline-size: 16px;
-  block-size: 16px;
-  min-inline-size: 16px;
-  min-block-size: 16px;
-  margin: 0;
-  padding: 0;
-  accent-color: var(--foreground);
-}
 /* Closed utilities share a row; expanded contents reclaim the full width. */
 .kova-library-utilities {
   display: flex;

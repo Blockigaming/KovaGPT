@@ -13,7 +13,8 @@ test("context search filters the display without discarding hidden selections on
   );
   assert.match(text, /visibleCandidates\.map\(\(item\)/);
   assert.match(text, /all\.findIndex\(\(candidate\) => candidate\.key === item\.key\) === index/);
-  assert.match(text, /min-w-0 w-full h-11/);
+  assert.match(text, /import \{ Input \} from "@\/components\/ui\/input"/);
+  assert.match(text, /<Input[\s\S]*?className="[^"]*min-w-0 w-full/);
   assert.match(text, /context items selected/);
 });
 

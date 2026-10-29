@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const css = readFileSync("src/components/response-output-blocks.css", "utf8");
 const source = readFileSync("src/components/ResponseMarkdown.tsx", "utf8");
-test("blue response accent is scoped to inline code, with both theme contrasts", () => {
+test("inline code follows the neutral theme instead of a separate blue palette", () => {
   assert.match(css, /body \.prose-chat :not\(pre\) > code/);
-  assert.match(css, /html\.dark body \.prose-chat :not\(pre\) > code/);
-  assert.match(css, /#1555a5/);
-  assert.match(css, /#8cbeff/);
+  const inline = css.match(/body \.prose-chat :not\(pre\) > code\s*\{([^}]+)\}/)?.[1];
+  assert.ok(inline);
+  assert.match(inline, /color: var\(--foreground\)/);
+  assert.match(inline, /background: var\(--surface-secondary\)/);
+  assert.doesNotMatch(inline, /#[\da-f]{3,8}/i);
 });
 test("table stays semantic and independently scrollable with horizontal separators", () => {
   assert.match(source, /<table ref=\{table\}>\{children\}<\/table>/);

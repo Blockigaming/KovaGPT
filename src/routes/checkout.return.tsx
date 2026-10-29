@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CircleAlert, Clock3, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -114,13 +115,15 @@ function CheckoutReturn() {
             KovaGPT only checks subscription status for the signed-in account. The checkout session
             ID alone never grants access.
           </p>
-          <button
+          <Button
+            data-ui-reference="chatgpt.billing.return.action"
+            variant="default"
             type="button"
             onClick={openSignIn}
-            className="mb-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
+            className="mb-6 inline-flex  items-center justify-center  bg-foreground   text-sm font-medium text-background transition hover:opacity-90"
           >
             Sign in to verify
-          </button>
+          </Button>
         </>
       );
     }
@@ -165,13 +168,15 @@ function CheckoutReturn() {
             A paid plan has not yet been confirmed for this account. Provider updates can take a
             moment, and this page never grants access on its own.
           </p>
-          <button
+          <Button
+            data-ui-reference="chatgpt.billing.return.action"
+            variant="outline"
             type="button"
             onClick={() => setAttempt((current) => current + 1)}
-            className="mb-6 inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+            className="mb-6 inline-flex  items-center justify-center  border border-border   text-sm font-medium transition hover:bg-accent"
           >
             Check again
-          </button>
+          </Button>
         </>
       );
     }
@@ -186,13 +191,15 @@ function CheckoutReturn() {
           KovaGPT could not verify this account's billing status. No access was changed. Try again
           or refresh billing status from Settings → Subscription.
         </p>
-        <button
+        <Button
+          data-ui-reference="chatgpt.billing.return.action"
+          variant="outline"
           type="button"
           onClick={() => setAttempt((current) => current + 1)}
-          className="mb-6 inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
+          className="mb-6 inline-flex  items-center justify-center  border border-border   text-sm font-medium transition hover:bg-accent"
         >
           Try again
-        </button>
+        </Button>
       </>
     );
   })();
@@ -208,12 +215,9 @@ function CheckoutReturn() {
       >
         <NovaLogo className="mx-auto mb-4 h-8 w-8" />
         {status}
-        <Link
-          to="/"
-          className="kova-button inline-flex min-h-11 items-center justify-center rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
-        >
-          Back to KovaGPT
-        </Link>
+        <Button asChild data-ui-reference="chatgpt.billing.return-home">
+          <Link to="/">Back to KovaGPT</Link>
+        </Button>
       </main>
     </div>
   );

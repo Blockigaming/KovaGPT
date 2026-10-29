@@ -13,7 +13,10 @@ const ast = ts.createSourceFile(
 );
 const buttons = new Map();
 function visit(node) {
-  if (ts.isJsxElement(node) && node.openingElement.tagName.getText(ast) === "button") {
+  if (
+    ts.isJsxElement(node) &&
+    ["button", "Button"].includes(node.openingElement.tagName.getText(ast))
+  ) {
     const label = node.children
       .filter(ts.isJsxText)
       .map((child) => child.text.trim())
@@ -21,6 +24,10 @@ function visit(node) {
     if (["Copy my draft", "Load current version", "Reconnect"].includes(label)) {
       const attributes = node.openingElement.attributes.properties;
       buttons.set(label, {
+        element: node.openingElement.tagName.getText(ast),
+        variant: attributes.find((attr) => attr.name?.getText(ast) === "variant")?.initializer
+          ?.text,
+        size: attributes.find((attr) => attr.name?.getText(ast) === "size")?.initializer?.text,
         classes: attributes.find((attr) => attr.name?.getText(ast) === "className")?.initializer
           ?.text,
         action: attributes
@@ -33,14 +40,19 @@ function visit(node) {
 }
 visit(ast);
 
-test("Result conflict recovery controls keep 44px targets, 8px corners and 16px inline padding", () => {
+test("Result recovery uses the shared 36px desktop and 44px touch Button geometry", () => {
   assert.equal(buttons.size, 3);
-  for (const [label, { classes }] of buttons) {
-    assert.match(classes, /\bmin-h-11\b/, label);
-    assert.match(classes, /\brounded-lg\b/, label);
-    assert.match(classes, /\bpx-4\b/, label);
-    assert.doesNotMatch(classes, /\b(?:min-h-9|px-3)\b/, label);
+  for (const [label, { element, variant, size, classes }] of buttons) {
+    assert.equal(element, "Button", label);
+    assert.equal(variant, "outline", label);
+    assert.equal(size, undefined, label);
+    assert.doesNotMatch(classes ?? "", /\b(?:min-h-|h-|rounded-|px-)/, label);
   }
+  assert.match(source, /import \{ Button \} from "@\/components\/ui\/button"/);
+  const primitive = readFileSync("src/components/ui/button.tsx", "utf8");
+  assert.match(primitive, /default: "h-9 /);
+  assert.ok(primitive.includes("[@media(pointer:coarse)]:min-h-11"));
+  assert.match(primitive, /rounded-full/);
 });
 
 test("recovery buttons retain explicit copy, adopt and reconnect handlers", () => {

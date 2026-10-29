@@ -27,10 +27,12 @@ const TooltipContent = React.forwardRef<
 >(({ className, sideOffset = 4, ...props }, ref) => (
   <TooltipPrimitive.Portal>
     <TooltipPrimitive.Content
+      data-slot="tooltip-content"
+      data-ui-reference="chatgpt.tooltip"
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "font-[family-name:var(--font-ui)] z-50 max-w-[240px] overflow-hidden rounded-[var(--kova-radius-compact)] border border-white/10 bg-neutral-900 px-2.5 py-1.5 text-xs leading-snug text-white shadow-sm animate-in fade-in-0 zoom-in-[.98] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 origin-(--radix-tooltip-content-transform-origin)",
+        "font-[family-name:var(--font-ui)] z-50 max-w-[300px] overflow-hidden rounded-[8px] border border-border bg-popover px-3 py-2 text-sm leading-[1.45] text-popover-foreground shadow-[var(--shadow-floating)] animate-in fade-in-0 duration-150 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 origin-(--radix-tooltip-content-transform-origin)",
         className,
       )}
       {...props}

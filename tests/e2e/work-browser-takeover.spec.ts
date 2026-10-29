@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { choosePickerValue } from "./select-control";
 const owner = "22222222-2222-4222-8222-222222222222",
   runId = "33333333-3333-4333-8333-333333333333",
   sessionId = "44444444-4444-4444-8444-444444444444",
@@ -108,7 +109,7 @@ async function fixture(page: Page, { delayFill = false } = {}) {
       .catch(() => {});
   });
   await page.goto("/work");
-  await page.getByLabel("Execution history").selectOption(runId);
+  await choosePickerValue(page, page.getByLabel("Execution history"), runId);
   const panel = page.getByRole("region", { name: "Private Work browser", exact: true });
   await expect(panel).toBeVisible();
   await panel.getByRole("button", { name: "Open browser controls", exact: true }).click();

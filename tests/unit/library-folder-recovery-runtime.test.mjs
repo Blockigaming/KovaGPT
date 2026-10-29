@@ -148,7 +148,7 @@ function fixture() {
     tree = hooks.render(component, props);
     const all = elements(
       tree,
-      (node) => node.type === "button" && text(node).trim() === "All items",
+      (node) => node.type === "Button" && text(node).trim() === "All items",
     )[0];
     if (all?.props.ref) all.props.ref.current = allItems;
     return tree;
@@ -235,7 +235,7 @@ test("folder deletion error keeps folders and has explicit feedback with safe cl
   await settle();
   f.render();
   assert.match(text(f.render()), /Folder service unavailable/);
-  assert.ok(f.find("button", "Research"));
+  assert.ok(f.find("Button", "Research"));
   assert.ok(!f.calls.some(([kind]) => kind === "deleted" || kind === "success"));
   f.find("ConfirmActionDialog").props.onCloseAutoFocus({
     preventDefault() {},

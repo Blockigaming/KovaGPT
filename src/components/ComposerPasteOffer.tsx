@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 export default function ComposerPasteOffer({
   text,
   attached,
@@ -24,16 +26,16 @@ export default function ComposerPasteOffer({
       </p>
       <div className="mt-2 flex flex-wrap gap-3">
         {!attached && text.length > 10_000 && (
-          <button type="button" className="underline" onClick={onAttach}>
+          <Button type="button" variant="link" size="sm" onClick={onAttach}>
             Attach full text
-          </button>
+          </Button>
         )}
-        <button type="button" className="underline" onClick={onPaste}>
+        <Button type="button" variant="link" size="sm" onClick={onPaste}>
           {attached ? "Revert to message text" : "Paste into message"}
-        </button>
-        <button type="button" className="underline" onClick={onCancel}>
+        </Button>
+        <Button type="button" variant="link" size="sm" onClick={onCancel}>
           {attached ? "Dismiss" : "Cancel"}
-        </button>
+        </Button>
       </div>
     </div>
   );

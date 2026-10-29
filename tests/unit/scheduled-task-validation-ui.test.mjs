@@ -104,6 +104,9 @@ function fixture({ task, draft, createResult, executionAvailable = true } = {}) 
     {
       react,
       "@/styles/spec400-management.css": {},
+      "@/components/ui/button": { Button: "button" },
+      "@/components/ui/input": { Input: "input" },
+      "@/components/ui/textarea": { Textarea: "textarea" },
       "@/lib/time-format": timeFormat,
       "@/lib/dialog-return-focus": loadUiModule("src/lib/dialog-return-focus.ts", {}, { window }),
       "@/components/ui/dialog": {
