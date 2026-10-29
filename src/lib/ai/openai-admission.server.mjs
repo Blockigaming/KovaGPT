@@ -5,6 +5,8 @@ import { readResponseBytesBounded } from "../endpoint-reliability.mjs";
 const policies = new Map([
   ["openai_service_request", { limit: 1, seconds: 86400, receipt: true }],
   ["openai_service_minute", { limit: 2, seconds: 60 }],
+  ["developer_authentication", { limit: 120, seconds: 60 }],
+  ["developer_ingress", { limit: 120, seconds: 60 }],
   ["openai_services_daily", { limit: 20, seconds: 86400 }],
   ["openai_services_compute_daily", { limit: 2, seconds: 86400 }],
   ["openai_search_daily", { limit: 100, seconds: 86400 }],
