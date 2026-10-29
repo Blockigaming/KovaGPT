@@ -150,12 +150,12 @@ test("the SVG foreignObject loader visibly paints like the independent pinned SD
   const actual = pixels(
     await page
       .locator("#actual-paint")
-      .screenshot({ path: info.outputPath("actual-sdk-loader.png") }),
+      .screenshot({ path: info.outputPath("actual-sdk-loader.png"), scale: "css" }),
   );
   const reference = pixels(
     await page
       .locator("#reference-paint")
-      .screenshot({ path: info.outputPath("upstream-sdk-loader.png") }),
+      .screenshot({ path: info.outputPath("upstream-sdk-loader.png"), scale: "css" }),
   );
   expect(actual.width).toBe(24);
   expect(actual.height).toBe(24);
