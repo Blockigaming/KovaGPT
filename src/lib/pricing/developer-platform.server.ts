@@ -3,6 +3,7 @@ import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { runtimeEnv } from "@/lib/runtime-env.server";
 import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
+import { consumeOpenAiApplicationAdmission } from "@/lib/ai/openai-admission-runtime.server";
 import { readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
@@ -89,7 +90,7 @@ export async function authenticateDeveloper(request: Request) {
   if (request.headers.has("origin") && isCrossSiteMutation(request))
     throw new Error("developer_origin_invalid");
   const credential = parseDeveloperCredential(request.headers.get("authorization"));
-  const rate = await consumeApplicationRateLimit({
+  const rate = await consumeOpenAiApplicationAdmission({
     identity: `developer-auth:${createHash("sha256").update(resolveAnonymousClientKey(request.headers)).digest("hex")}`,
     action: "developer_authentication",
     limit: 120,
@@ -115,7 +116,7 @@ export async function authenticateDeveloper(request: Request) {
     !equal(result.data.secret_digest ?? "", digest("key", credential.token))
   )
     throw new Error("developer_unauthorized");
-  const authenticatedRate = await consumeApplicationRateLimit({
+  const authenticatedRate = await consumeOpenAiApplicationAdmission({
     identity: `developer:${credential.keyId}`,
     action: "developer_ingress",
     limit: 120,
