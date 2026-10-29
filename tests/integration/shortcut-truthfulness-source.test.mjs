@@ -91,11 +91,21 @@ test("Settings commits shortcut state only after persistence succeeds", () => {
   assert.match(shortcutPanel, /Shortcuts stay in this browser when storage is available/);
 });
 
-test("shortcut controls expose loading state and 44px touch targets", () => {
+test("shortcut controls expose loading state and canonical coarse 44px touch targets", async () => {
   assert.match(shortcutPanel, /aria-busy=\{!ready \|\| pending\}/);
   assert.match(shortcutPanel, /<p role="status"[\s\S]*?Loading shortcuts…/);
   assert.match(shortcutPanel, /disabled=\{!ready \|\| pending\}/);
-  assert.ok((shortcutPanel.match(/min-h-11/g) ?? []).length >= 2);
+  assert.match(
+    shortcutPanel,
+    /<Button\s+size="sm"\s+variant="outline"\s+disabled=\{!ready \|\| pending\}\s+onClick=\{\(\) => void perform\(\{ kind: "reset" \}\)\}/,
+  );
+  const buttonSource = await readFile(
+    new URL("../../src/components/ui/button.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(buttonSource, /sm: "h-8 /);
+  assert.match(buttonSource, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(shortcutPanel, /className=\{`min-h-11 text-xs[^`]*`\}/);
   assert.match(shortcutPanel, /aria-label=/);
   assert.match(shortcutPanel, /Stop recording/);
 });

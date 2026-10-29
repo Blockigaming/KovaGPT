@@ -456,6 +456,8 @@ button.kova-sidebar-scrim {
 }
 .kova-topbar:not(.kova-desktop-topbar) .kova-topbar-inner {
   min-height: 56px;
+  padding-left: max(0.5rem, var(--safe-left, 0px));
+  padding-right: max(0.5rem, var(--safe-right, 0px));
 }
 .kova-topbar:not(.kova-desktop-topbar) .spec400-mobile-page-title {
   font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);

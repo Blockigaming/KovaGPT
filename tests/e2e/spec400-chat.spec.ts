@@ -143,3 +143,81 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
     animations: "disabled",
   });
 });
+
+test("landscape topbar keeps navigation and actions inside lateral safe areas", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await fixture(page, "dark", true);
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const topbar = page.locator('[data-ui-reference="chatgpt-mobile-topbar"]');
+  const content = topbar.locator(".kova-topbar-inner");
+  const title = topbar.locator("[data-kova-navigation-heading]");
+  await expect(topbar).toBeVisible();
+  await expect(title).toHaveText("KovaGPT");
+  await expect(topbar.getByRole("button", { name: "Open menu", exact: true })).toBeVisible();
+  await expect(topbar.getByRole("button", { name: "New chat", exact: true })).toBeVisible();
+  await expect(
+    topbar.getByRole("button", { name: "Start temporary chat", exact: true }),
+  ).toBeVisible();
+  const original = await page.evaluate(() => {
+    const root = document.documentElement;
+    const properties = ["--safe-left", "--safe-right", "font-size"].map((name) => ({
+      name,
+      value: root.style.getPropertyValue(name),
+      priority: root.style.getPropertyPriority(name),
+    }));
+    // Synthetic notch dimensions affect this test context only.
+    root.style.setProperty("--safe-left", "31px");
+    root.style.setProperty("--safe-right", "47px");
+    return properties;
+  });
+  try {
+    await expect(content).toHaveCSS("padding-left", "31px");
+    await expect(content).toHaveCSS("padding-right", "47px");
+    const headerBox = (await topbar.boundingBox())!;
+    expect(headerBox.x).toBe(0);
+    expect(headerBox.width).toBe(844);
+    const insideSafeArea = (box: { x: number; width: number }) => {
+      expect(box.x).toBeGreaterThanOrEqual(31);
+      expect(box.x + box.width).toBeLessThanOrEqual(844 - 47);
+    };
+    for (const child of await content.locator(":scope > *").all()) {
+      if (await child.isVisible()) insideSafeArea((await child.boundingBox())!);
+    }
+    const actions = topbar.getByRole("button").filter({ visible: true });
+    expect(await actions.count()).toBeGreaterThanOrEqual(3);
+    for (const action of await actions.all()) {
+      const box = (await action.boundingBox())!;
+      insideSafeArea(box);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    await expect(title).toBeVisible();
+    insideSafeArea((await title.boundingBox())!);
+    expect(await title.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+
+    // The original px-2 spacing scales with root text when there is no notch.
+    await page.evaluate(() => {
+      const root = document.documentElement;
+      root.style.setProperty("--safe-left", "0px");
+      root.style.setProperty("--safe-right", "0px");
+      root.style.setProperty("font-size", "32px");
+    });
+    await expect(content).toHaveCSS("padding-left", "16px");
+    await expect(content).toHaveCSS("padding-right", "16px");
+  } finally {
+    await page.evaluate((properties) => {
+      for (const { name, value, priority } of properties) {
+        if (value) document.documentElement.style.setProperty(name, value, priority);
+        else document.documentElement.style.removeProperty(name);
+      }
+    }, original);
+  }
+});

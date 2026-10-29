@@ -11,6 +11,7 @@ const taskEditor = await readFile("src/components/ScheduledTaskEditor.tsx", "utf
 const pricing = await readFile("src/routes/pricing.tsx", "utf8");
 const reset = await readFile("src/routes/reset-password.tsx", "utf8");
 const auth = await readFile("src/components/auth/AuthDialog.tsx", "utf8");
+const button = await readFile("src/components/ui/button.tsx", "utf8");
 
 test("secondary routes share page, form, plan, plugin, and auth primitives", () => {
   assert.match(apps, /kova-secondary-page/);
@@ -39,7 +40,14 @@ test("secondary primitives include focus, touch, safe-area, and reduced-motion b
   assert.match(styles, /\.kova-secondary-page :is\(input, textarea, select\):focus-visible/);
   assert.match(styles, /\.kova-secondary-page button/);
   assert.match(styles, /var\(--safe-bottom\)/);
-  assert.match(pluginStyles, /\.spec400-plugin-card-action \{\s*min-height: 44px/);
+  assert.match(
+    apps,
+    /<Button\s+type="button"\s+variant="outline"[\s\S]*?className="spec400-plugin-card-action"/,
+  );
+  assert.match(button, /data-ui-reference="chatgpt\.button\.pill"/);
+  assert.match(button, /default: "h-9 px-\[15\.96px\] py-0"/);
+  assert.match(button, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(button, /focus-visible:ring-2 focus-visible:ring-ring/);
   assert.match(pluginStyles, /\.spec400-plugins button:active,[\s\S]*?transform: none/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });

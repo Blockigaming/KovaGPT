@@ -8,11 +8,11 @@ test("guest sign-in invitation waits for three prompts in the current tab", asyn
   assert.match(source, /_retryAttempt === 0 && !isSignedIn/);
   assert.doesNotMatch(source, /userMsgCount >= 4/);
 });
-test("Apps navigation and composer connector entry are truthful and reachable", async () => {
+test("Connections navigation and composer connector entry are truthful and reachable", async () => {
   const sidebar = await read("src/components/Sidebar.tsx");
   const composer = await read("src/components/ChatInput.tsx");
   const palette = await read("src/components/CommandPalette.tsx");
-  assert.match(sidebar, /navLink\("\/apps", "Plugins", PluginsGlyph\)/);
+  assert.match(sidebar, /navLink\("\/apps", "Connections", PluginsGlyph\)/);
   assert.match(composer, /<ComposerPluginList/);
   const plugins = await read("src/components/ComposerPluginList.tsx");
   assert.match(plugins, /to="\/apps"/);
@@ -26,6 +26,8 @@ test("chat interaction primitives retain bounded input, Stop, copy and focus fee
   const markdown = await read("src/components/ResponseMarkdown.tsx");
   const styles = await read("src/styles.css");
   const composerStyles = await read("src/styles/spec400-chat.css");
+  const menuStyles = await read("src/styles/composer-core.css");
+  const coreStyles = await read("src/styles/core-system.css");
   assert.match(input, /const limit = isMobileLayout \? 144 : 240/);
   assert.match(input, /el\.style\.overflowY = el\.scrollHeight > limit \? "auto" : "hidden"/);
   assert.match(input, /onClick=\{onStop\}[\s\S]*?aria-label="Stop generating"/);
@@ -40,8 +42,15 @@ test("chat interaction primitives retain bounded input, Stop, copy and focus fee
   assert.match(markdown, /`Copy \$\{kind\}`/);
   assert.match(markdown, /await writeClipboard\(text\)/);
   assert.match(styles, /kova-nav-icon/);
-  assert.match(styles, /background: var\(--popover\)/);
-  assert.match(styles, /backdrop-filter: none/);
+  assert.match(styles, /@import "\.\/styles\/composer-core\.css";/);
+  const menuSurface = menuStyles.match(/\.kova-composer-menu\s*\{([^}]*)\}/)?.[1];
+  assert.ok(menuSurface, "the imported composer stylesheet owns the menu surface");
+  assert.match(menuSurface, /background: var\(--popover\);/);
+  assert.doesNotMatch(menuSurface, /backdrop-filter:|background: (?:transparent|color-mix)/);
+  assert.match(
+    coreStyles,
+    /@media \(prefers-reduced-transparency: reduce\)[\s\S]*?\.kova-composer-menu\)[\s\S]*?background: var\(--background\) !important;/,
+  );
 });
 test("assistant response contract covers implicit formatting and honest correction", async () => {
   const modes = await read("src/lib/modes.ts");
