@@ -79,6 +79,7 @@ const SelectContent = React.forwardRef<
       )}
       position={position}
       collisionPadding={collisionPadding}
+      {...(position === "popper" ? { updatePositionStrategy: "always" as const } : {})}
       {...props}
     >
       <SelectScrollUpButton />
