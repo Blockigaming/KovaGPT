@@ -9,6 +9,22 @@ on:
       - playwright.rounded.config.ts
       - playwright.config.ts
       - playwright.auth-visual.config.ts
+      - tests/e2e/work-model-controls.spec.ts
+      - tests/e2e/production-audit.spec.ts
+      - tests/e2e/mobile-quality.spec.ts
+      - tests/e2e/workspace-select-controls.spec.ts
+      - tests/e2e/auth-entry-and-dialog.spec.ts
+      - tests/e2e/chatgpt-shell-parity.spec.ts
+      - tests/e2e/composer-actual-app.spec.ts
+      - tests/e2e/core-app-review.spec.ts
+      - tests/e2e/recovery-shell.spec.ts
+      - tests/e2e/rounded-actual-app.spec.ts
+      - tests/e2e/settings-theme-transition.spec.ts
+      - tests/e2e/work-browser-takeover.spec.ts
+      - tests/e2e/core-app-fixture.ts
+      - tests/e2e/select-control.ts
+      - src/lib/dialog-return-focus.ts
+      - src/routes/**
       - tests/e2e/spec400-chat.spec.ts
       - tests/e2e/model-selector.spec.ts
       - tests/e2e/ui-quality.spec.ts
@@ -309,5 +325,156 @@ jobs:
           path: |
             test-results/assistant-quality/
             tests/e2e/ui-quality.spec.ts-snapshots/
+          if-no-files-found: error
+          retention-days: 7
+
+  core-regressions:
+    name: Assistant early core regressions (${{ matrix.id }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: desktop-1280
+            project: desktop-1280x800
+            specs: >-
+              auth-entry-and-dialog chatgpt-shell-parity composer-actual-app core-app-review recovery-shell rounded-actual-app settings-theme-transition work-browser-takeover
+          - id: desktop-1440
+            project: desktop-1440x900
+            specs: >-
+              auth-entry-and-dialog chatgpt-shell-parity composer-actual-app core-app-review recovery-shell rounded-actual-app settings-theme-transition work-browser-takeover
+          - id: tablet-768
+            project: tablet-768x1024
+            specs: mobile-quality
+          - id: landscape-844
+            project: phone-landscape-844x390
+            specs: workspace-select-controls composer-actual-app
+          - id: phone-375
+            project: phone-375x812
+            specs: work-model-controls
+          - id: phone-390
+            project: phone-390x844
+            specs: production-audit
+    env:
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+      KOVA_BROWSER_SUITE: "core"
+      KOVA_EARLY_UI_PROJECT: ${{ matrix.project }}
+    steps:
+      - name: Checkout exact candidate without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build the actual Node application
+        run: npm run build:azure
+      - name: Install pinned Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The Azure mirror stalled two runners before browser tests could run.
+          # Keep Ubuntu's signed archives and every browser/check unchanged.
+          if [[ -f /etc/apt/apt-mirrors.txt ]]; then
+            printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          fi
+          npx --no-install playwright install --with-deps chromium
+      - name: Select existing core regressions and isolated preview
+        run: |
+          mkdir -p test-results/assistant-core-regressions
+          cat > test-results/assistant-core-regressions.generated.config.ts <<'CONFIG'
+          import path from "node:path";
+          import { defineConfig } from "@playwright/test";
+          import core from "../playwright.config";
+          import actualApp from "../playwright.rounded.config";
+
+          const root = process.cwd();
+          const desktopSpecs = new Set([
+            "auth-entry-and-dialog",
+            "chatgpt-shell-parity",
+            "composer-actual-app",
+            "core-app-review",
+            "recovery-shell",
+            "rounded-actual-app",
+            "settings-theme-transition",
+            "work-browser-takeover",
+          ]);
+          const selections = new Map([
+            ["desktop-1280x800", desktopSpecs],
+            ["desktop-1440x900", desktopSpecs],
+            ["tablet-768x1024", new Set(["mobile-quality"])],
+            ["phone-landscape-844x390", new Set(["workspace-select-controls", "composer-actual-app"])],
+            ["phone-375x812", new Set(["work-model-controls"])],
+            ["phone-390x844", new Set(["production-audit"])],
+          ]);
+          const spec = process.env.KOVA_EARLY_UI_SPEC ?? "";
+          const project = process.env.KOVA_EARLY_UI_PROJECT ?? "";
+          if (!selections.get(project)?.has(spec)) {
+            throw new Error("Unknown early core regression selection");
+          }
+          const selectedProjects = core.projects?.filter((entry) => entry.name === project) ?? [];
+          if (selectedProjects.length !== 1) {
+            throw new Error("Early core regression requires one native project");
+          }
+          const output = path.join(root, "test-results/assistant-core-regressions");
+          export default defineConfig({
+            ...core,
+            testDir: path.join(root, "tests/e2e"),
+            testMatch: `${spec}.spec.ts`,
+            outputDir: path.join(output, project, spec, "results"),
+            reporter: [["list"], ["json", { outputFile: path.join(output, project, `${spec}.json`) }]],
+            webServer: { ...actualApp.webServer, cwd: root },
+            use: {
+              ...core.use,
+              serviceWorkers: "block",
+              launchOptions: {
+                ...core.use?.launchOptions,
+                args: ["--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost"],
+              },
+            },
+            projects: selectedProjects,
+          });
+          CONFIG
+      - name: Exercise existing regressions in the selected native project
+        shell: bash
+        env:
+          EARLY_SPECS: ${{ matrix.specs }}
+        run: |
+          set -euo pipefail
+          failed=0
+          # A fresh guarded preview for each distinct spec/project stays within
+          # the existing runner's 180-second lifetime. No failed case is retried.
+          for spec in $EARLY_SPECS; do
+            if ! KOVA_EARLY_UI_SPEC="$spec" npx --no-install playwright test --config test-results/assistant-core-regressions.generated.config.ts --project="$KOVA_EARLY_UI_PROJECT" --workers=2; then
+              failed=1
+            fi
+          done
+          exit "$failed"
+      - name: Record exact source provenance
+        if: always()
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          mkdir -p test-results/assistant-core-regressions
+          printf '%s\n' "$SOURCE_SHA" > test-results/assistant-core-regressions/commit.txt
+          git rev-parse 'HEAD^{tree}' > test-results/assistant-core-regressions/tree.txt
+          sha256sum package-lock.json > test-results/assistant-core-regressions/lock.sha256
+      - name: Preserve early core regression screenshots and results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: assistant-core-regressions-${{ matrix.id }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: test-results/assistant-core-regressions/
           if-no-files-found: error
           retention-days: 7

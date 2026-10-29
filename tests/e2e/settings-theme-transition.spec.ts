@@ -120,37 +120,51 @@ async function sampleSettingsSurfaces(page: Page) {
     const frames: Array<{ outer: string; inner: string }> = [];
     for (let frame = 0; frame < 12; frame += 1) {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      const outer = document.querySelector<HTMLElement>(".kova-settings-dialog");
-      const inner = document.querySelector<HTMLElement>(".kova-settings-surface");
+      const outer = document.querySelector<HTMLElement>(".kova-settings-surface");
+      const inner = document.querySelector<HTMLElement>(".kova-settings-guest-content");
       if (!outer || !inner) throw new Error("Settings surfaces were not rendered");
+      // The full-page Settings section is transparent. Compare the painted guest
+      // panel with the content's visible backing, including any child override.
+      let backing: HTMLElement | null = inner;
+      while (
+        backing &&
+        ["transparent", "rgba(0, 0, 0, 0)"].includes(getComputedStyle(backing).backgroundColor)
+      )
+        backing = backing.parentElement;
+      if (!backing) throw new Error("Settings content has no painted backing");
       frames.push({
         outer: getComputedStyle(outer).backgroundColor,
-        inner: getComputedStyle(inner).backgroundColor,
+        inner: getComputedStyle(backing).backgroundColor,
       });
     }
     return frames;
   });
 }
 
-function expectAtomicSurfaceChange(frames: Array<{ outer: string; inner: string }>) {
+function expectAtomicSurfaceChange(
+  frames: Array<{ outer: string; inner: string }>,
+  expectedColor: string,
+) {
   expect(frames).toHaveLength(12);
   expect(new Set(frames.map(({ outer }) => outer)).size).toBe(1);
-  for (const frame of frames) expect(frame.outer).toBe(frame.inner);
+  for (const frame of frames) {
+    expect(frame.outer).toBe(expectedColor);
+    expect(frame.outer).toBe(frame.inner);
+  }
 }
 
-test("guest Settings changes themes without a split two-tone dialog", async ({ page }) => {
-  const dialog = await openGuestSettings(page);
-  const inner = page.locator(".kova-settings-surface");
+test("guest Settings changes themes without split surface colors", async ({ page }) => {
+  const settings = await openGuestSettings(page);
+  const surface = page.locator(".kova-settings-surface");
   const appearance = page.getByRole("combobox", { name: "Appearance" });
 
   await expect(appearance).toBeVisible();
   await expect(page.locator("html")).not.toHaveClass(/(?:^|\s)dark(?:\s|$)/);
-  await expect(dialog).toHaveCSS(
-    "background-color",
-    await inner.evaluate((element) => getComputedStyle(element).backgroundColor),
-  );
+  await expect(settings).toHaveClass(/(?:^|\s)kova-settings-page(?:\s|$)/);
+  await expect(surface).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  expectAtomicSurfaceChange(await sampleSettingsSurfaces(page), "rgb(255, 255, 255)");
 
-  const transitionProperties = await dialog.evaluate((element) =>
+  const transitionProperties = await settings.evaluate((element) =>
     getComputedStyle(element)
       .transitionProperty.split(",")
       .map((property) => property.trim()),
@@ -159,11 +173,11 @@ test("guest Settings changes themes without a split two-tone dialog", async ({ p
 
   await chooseAppearance(page, "Dark");
   await expect(page.locator("html")).toHaveClass(/(?:^|\s)dark(?:\s|$)/);
-  expectAtomicSurfaceChange(await sampleSettingsSurfaces(page));
+  expectAtomicSurfaceChange(await sampleSettingsSurfaces(page), "rgb(47, 47, 47)");
 
   await chooseAppearance(page, "Light");
   await expect(page.locator("html")).not.toHaveClass(/(?:^|\s)dark(?:\s|$)/);
-  expectAtomicSurfaceChange(await sampleSettingsSurfaces(page));
+  expectAtomicSurfaceChange(await sampleSettingsSurfaces(page), "rgb(255, 255, 255)");
 });
 
 test("signed-in mobile settings list keeps every option at least 44px tall", async ({

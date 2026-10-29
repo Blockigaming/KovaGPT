@@ -72,7 +72,7 @@ const SelectContent = React.forwardRef<
       data-ui-reference="chatgpt.menu.select"
       ref={ref}
       className={cn(
-        "font-[family-name:var(--font-ui)] relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-[var(--kova-radius-menu)] border border-border bg-popover text-popover-foreground shadow-[var(--shadow-floating)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:duration-[350ms] data-[state=closed]:duration-200 origin-(--radix-select-content-transform-origin)",
+        "font-[family-name:var(--font-ui)] relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-[var(--kova-radius-menu)] border border-border bg-popover text-popover-foreground shadow-[var(--shadow-floating)] transition-[opacity,transform] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:duration-[350ms] data-[state=closed]:duration-200 origin-(--radix-select-content-transform-origin)",
         position === "popper" &&
           "min-w-[min(var(--radix-select-trigger-width,8rem),var(--radix-select-content-available-width,100vw),calc(100vw-1rem))] max-w-[min(var(--radix-select-content-available-width,100vw),calc(100vw-1rem))] data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className,

@@ -1589,6 +1589,15 @@ function KovaGPT() {
     setPendingWorkflowSkill(null);
   }, [setConversations, setInput, setAttachments]);
 
+  const startNewChat = useCallback(() => {
+    newChat();
+    // A destination URL can update while this chat shell is still rendering.
+    // A new-chat action must cancel that pending navigation as well as reset chat.
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      void navigate({ to: "/" });
+    }
+  }, [newChat, navigate]);
+
   useEffect(() => {
     if (!settingsReady || !userKey) return;
     const handoff = consumeOnboardingHandoff(userKey);
@@ -1757,7 +1766,7 @@ function KovaGPT() {
       }
       if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === "o") {
         event.preventDefault();
-        newChat();
+        startNewChat();
       }
     };
     window.addEventListener("keydown", onPendingPaletteEscape, true);
@@ -1766,7 +1775,7 @@ function KovaGPT() {
       window.removeEventListener("keydown", onPendingPaletteEscape, true);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [commandOpen, newChat, openCommandPalette]);
+  }, [commandOpen, startNewChat, openCommandPalette]);
 
   const historyAction = useCallback(
     async (kind: "delete" | "archive" | "restore" | "title", item: string | Conversation) => {
@@ -3116,7 +3125,7 @@ function KovaGPT() {
         conversations={historyConversations}
         activeId={activeId}
         onSelect={setActiveId}
-        onNew={newChat}
+        onNew={startNewChat}
         onDelete={deleteChat}
         onRename={renameChat}
         open={sidebarOpen}
@@ -3170,7 +3179,7 @@ function KovaGPT() {
             readingAnchorControllerRef.current?.capture();
             setSidebarOpen(true);
           }}
-          onNewChat={newChat}
+          onNewChat={startNewChat}
           title={active?.title}
           mode={mode}
           onModeChange={active?.kova ? undefined : setMode}
@@ -3766,7 +3775,7 @@ function KovaGPT() {
             workspaceStatus={workspaceStatus}
             retryWorkspaceSearch={retryWorkspaceSearch}
             onClose={() => setCommandOpen(false)}
-            onNewChat={newChat}
+            onNewChat={startNewChat}
             onSelectChat={setActiveId}
             onSelectArchived={(conversation) => historyAction("restore", conversation)}
             onOpenSettings={() => openSettings("general")}

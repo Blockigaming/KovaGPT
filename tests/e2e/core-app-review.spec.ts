@@ -13,12 +13,13 @@ async function openSidebar(page: Page) {
   const navigation = page
     .getByRole("navigation", { name: "Primary navigation", exact: true })
     .or(page.getByRole("dialog", { name: "Primary navigation", exact: true }));
-  if (await navigation.isVisible()) return;
+  if (await navigation.isVisible()) return navigation;
   const opener = page
     .getByRole("button", { name: /^(Open menu|Open sidebar|Expand sidebar|Toggle sidebar)$/ })
     .filter({ visible: true });
   if (await opener.count()) await opener.first().click();
   await expect(navigation).toBeVisible();
+  return navigation;
 }
 
 async function expectReadableFilter(tab: Locator) {
@@ -72,11 +73,8 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await openResponseOptions(page);
   await expect(page.getByTestId("model-selector-trigger").filter({ visible: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await openSidebar(page);
-  await page
-    .getByRole("navigation", { name: "KovaGPT features", exact: true })
-    .getByRole("button", { name: "Search", exact: true })
-    .click();
+  const sidebar = await openSidebar(page);
+  await sidebar.getByRole("button", { name: "Search chats", exact: true }).click();
   const search = page.getByRole("combobox", {
     name: "Search workspace, commands, and chats",
     exact: true,
@@ -310,11 +308,12 @@ test("project sections and account settings remain navigable and cancel safely",
     await expect(page.getByRole("option", { name: "Responses", exact: true })).toHaveCount(0);
     await page.keyboard.press("Escape");
   }
-  await openSidebar(page);
-  await page
-    .getByRole("navigation", { name: "KovaGPT features" })
-    .getByRole("link", { name: "Chat", exact: true })
+  const sidebar = await openSidebar(page);
+  await sidebar
+    .getByRole("navigation", { name: "KovaGPT features", exact: true })
+    .getByRole("button", { name: "New chat", exact: true })
     .click();
+  await expect(page).toHaveURL(/\/$/u);
   await expect(settings).toBeHidden();
   expect(errors).toEqual([]);
 });

@@ -67,13 +67,26 @@ test("guest Add menu uses one scroll region in a short desktop viewport", async 
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await input.fill("Keep this guest draft");
 
+  async function expectViewportBounds() {
+    const box = await menu.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.y).toBeGreaterThanOrEqual(12);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(745);
+  }
+
   for (let opening = 0; opening < 2; opening++) {
     await trigger.click();
     await expect(menu).toBeVisible();
     await expect(menu).toHaveAttribute("data-side", /^(top|bottom)$/);
-    const box = await menu.boundingBox();
-    expect(box!.y).toBeGreaterThanOrEqual(12);
-    expect(box!.y + box!.height).toBeLessThanOrEqual(745);
+    await expectViewportBounds();
+    await expect
+      .poll(() =>
+        menu.evaluate((element) =>
+          element.getAnimations().every((animation) => animation.playState !== "running"),
+        ),
+      )
+      .toBe(true);
+    await expectViewportBounds();
     expect(
       await menu.evaluate((element) =>
         [element, ...element.querySelectorAll<HTMLElement>("*")]

@@ -94,6 +94,8 @@ type PickerProps = Pick<
   emptyText?: string;
   /** Settings moves focus to its new section; Escape still returns to the trigger. */
   restoreFocusOnSelect?: boolean;
+  /** Radix placement for short lists; searchable lists use their existing popover. */
+  position?: ComponentPropsWithoutRef<typeof SelectContent>["position"];
 };
 
 /** A themed select for short lists; add in-menu search above seven real choices. */
@@ -105,6 +107,7 @@ export function SearchablePicker({
   searchLabel,
   emptyText,
   restoreFocusOnSelect = true,
+  position = "popper",
   className,
   disabled,
   dir,
@@ -136,6 +139,7 @@ export function SearchablePicker({
         </SelectTrigger>
         <SelectContent
           dir={dir}
+          position={position}
           onCloseAutoFocus={(event) => {
             if (selectedOnClose.current && !restoreFocusOnSelect) event.preventDefault();
           }}

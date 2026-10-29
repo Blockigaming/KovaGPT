@@ -240,7 +240,7 @@ export function WorkExecutionPanel({
             <SelectTrigger aria-label="Work model mode" className="mt-1 text-base sm:text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               {!modelOptions.length && (
                 <SelectItem value="normal">Normal · configuration unavailable</SelectItem>
               )}
@@ -265,7 +265,7 @@ export function WorkExecutionPanel({
             <SelectTrigger aria-label="Reasoning effort" className="mt-1 text-base sm:text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               <SelectItem value="default">Provider default</SelectItem>
               {selectedModel?.reasoningEfforts.map((effort) => (
                 <SelectItem key={effort} value={effort}>
@@ -322,8 +322,10 @@ export function WorkExecutionPanel({
       {Boolean(snapshot?.runs.length) && (
         <label className="mt-4 block text-sm">
           Execution history
+          {/* Keep choices inside the viewport when sync feedback moves this trigger. */}
           <SearchablePicker
             className="mt-1 flex min-h-11 w-full max-w-full rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
+            position="item-aligned"
             value={selected ?? ""}
             onValueChange={(value) => {
               setSelected(value);

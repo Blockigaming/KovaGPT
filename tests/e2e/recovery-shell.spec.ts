@@ -36,10 +36,7 @@ test("workspace search is reachable by touch and restores usable chat", async ({
   const account = sidebar.getByRole("button", { name: "Account menu", exact: true });
   await expect(account).toBeVisible();
   await expect(account).toContainText("Shell Parity");
-  await sidebar
-    .getByRole("navigation", { name: "KovaGPT features" })
-    .getByRole("button", { name: "Search", exact: true })
-    .click();
+  await sidebar.getByRole("button", { name: "Search chats", exact: true }).click();
 
   const search = page.getByRole("dialog", {
     name: "Search workspace, chats, and actions",

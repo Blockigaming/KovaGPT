@@ -337,6 +337,10 @@
   overflow-y: auto;
   border-radius: var(--kova-radius-menu);
 }
+/* Radix rounds its fixed position; keep the collision edge inside that pixel. */
+.kova-composer-menu.spec400-attach-menu {
+  max-height: min(70dvh, calc(var(--radix-popover-content-available-height, 70dvh) - 1px));
+}
 .spec400-options-panel {
   width: min(320px, calc(100vw - 32px));
   max-height: min(75dvh, var(--radix-popover-content-available-height, 75dvh));
