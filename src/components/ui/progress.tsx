@@ -12,11 +12,15 @@ const Progress = React.forwardRef<
   <ProgressPrimitive.Root
     ref={ref}
     value={value}
-    className={cn("relative h-2 w-full overflow-hidden rounded-full bg-primary/20", className)}
+    data-ui-reference="chatgpt.slider.track-as-meter"
+    className={cn(
+      "relative h-1 w-full overflow-hidden rounded-[2px] bg-[#dfdfdf] dark:bg-[#414141]",
+      className,
+    )}
     {...props}
   >
     <ProgressPrimitive.Indicator
-      className="h-full w-full flex-1 bg-primary transition-all"
+      className="h-full w-full flex-1 rounded-[2px] bg-[#767676] transition-transform motion-reduce:transition-none dark:bg-[#8f8f8f]"
       style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
     />
   </ProgressPrimitive.Root>

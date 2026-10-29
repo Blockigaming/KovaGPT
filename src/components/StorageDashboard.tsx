@@ -107,7 +107,7 @@ function AccountStorageDashboard({ ownerId }: { ownerId: string | null }) {
                 value={Math.min(100, Math.max(0, percent))}
                 aria-label="Cloud storage used"
                 aria-valuetext={`${formatStorageBytes(remote.bytesUsed)} of ${formatStorageBytes(cap)}`}
-                className="h-2"
+                className="h-1"
               />
             ) : null}
             {percent !== null && percent >= 100 ? (

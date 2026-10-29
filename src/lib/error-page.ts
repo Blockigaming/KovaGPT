@@ -6,14 +6,22 @@ export function renderErrorPage(): string {
     <title>This page didn't load</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      body { font: 15px/1.5 system-ui, -apple-system, sans-serif; background: #fafafa; color: #111; display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 1.5rem; }
-      .card { max-width: 28rem; width: 100%; text-align: center; padding: 2rem; }
-      h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
-      p { color: #4b5563; margin: 0 0 1.5rem; }
-      .actions { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
-      a, button { padding: 0.5rem 1rem; border-radius: 0.375rem; font: inherit; cursor: pointer; text-decoration: none; border: 1px solid transparent; }
-      .primary { background: #111; color: #fff; }
-      .secondary { background: #fff; color: #111; border-color: #d1d5db; }
+      :root { color-scheme: light dark; --background: #ffffff; --foreground: #0d0d0d; --muted-foreground: #5d5d5d; --border: #00000014; --primary: #0d0d0d; --primary-foreground: #ffffff; --ring: #0285ff; }
+      * { box-sizing: border-box; }
+      body { font: 16px/1.5 ui-sans-serif, -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; background: var(--background); color: var(--foreground); display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; margin: 0; padding: 24px 16px; }
+      .card { max-width: 28rem; width: 100%; text-align: center; padding: 32px; border: 1px solid var(--border); border-radius: 24px; overflow-wrap: anywhere; }
+      h1 { font-size: 32px; font-weight: 600; line-height: 38px; letter-spacing: -0.02em; margin: 0; }
+      p { color: var(--muted-foreground); font-size: 14px; line-height: 20px; margin: 12px 0 24px; }
+      .actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+      a, button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; max-width: 100%; min-height: 48px; padding: 12px 16px; border-radius: 9999px; font: inherit; font-size: 14px; font-weight: 500; line-height: 20px; cursor: pointer; text-decoration: none; border: 1px solid transparent; overflow-wrap: anywhere; transition: background-color 150ms ease; }
+      a:focus-visible, button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+      .primary { background: var(--primary); color: var(--primary-foreground); }
+      .primary:hover { background: color-mix(in srgb, var(--primary) 90%, transparent); }
+      .secondary { background: transparent; color: var(--foreground); border-color: var(--border); }
+      .secondary:hover { background: color-mix(in srgb, var(--foreground) 5%, transparent); }
+      @media (prefers-color-scheme: dark) { :root { --background: #212121; --foreground: #ffffff; --muted-foreground: #afafaf; --border: #ffffff1f; --primary: #ffffff; --primary-foreground: #0d0d0d; --ring: #339cff; } }
+      @media (max-width: 480px) { .card { padding: 24px; } h1 { font-size: 28px; line-height: 34px; } }
+      @media (prefers-reduced-motion: reduce) { a, button { transition: none; } }
     </style>
   </head>
   <body>

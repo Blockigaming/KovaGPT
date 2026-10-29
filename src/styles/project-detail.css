@@ -53,9 +53,9 @@
 .kova-project-workspace .kova-project-title {
   min-width: 0;
   margin: 0;
-  font-family: var(--font-reading, Georgia, serif);
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
   font-size: 32px;
-  font-weight: 400;
+  font-weight: 600;
   line-height: 38px;
   overflow-wrap: anywhere;
 }

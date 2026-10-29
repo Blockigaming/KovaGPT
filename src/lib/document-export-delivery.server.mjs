@@ -25,13 +25,23 @@ const MESSAGES = {
   503: "Download protection is temporarily unavailable. Return to your result and try again later.",
   504: "The download request timed out. Return to your result and prepare the file again.",
 };
+// Standalone ChatGPT-style neutral surface. Only these fixed CSS bytes are allowed.
+const FAILURE_STYLE = `:root{color-scheme:light dark;--background:#ffffff;--foreground:#0d0d0d;--muted-foreground:#5d5d5d;--border:#00000014}*{box-sizing:border-box}body{font:16px/1.5 ui-sans-serif,-apple-system,system-ui,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;background:var(--background);color:var(--foreground);margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px}main{width:100%;max-width:448px;padding:32px;border:1px solid var(--border);border-radius:24px;overflow-wrap:anywhere}h1{margin:0;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-0.02em}p{margin:12px 0 0;color:var(--muted-foreground);font-size:14px;line-height:20px}@media(prefers-color-scheme:dark){:root{--background:#212121;--foreground:#ffffff;--muted-foreground:#afafaf;--border:#ffffff1f}}@media(max-width:480px){main{padding:24px}h1{font-size:28px;line-height:34px}}`;
+const FAILURE_STYLE_CSP =
+  "default-src 'none'; sandbox; style-src 'sha256-Ymxsnjh0D7BXP4qSLySpND6HkjMdFJDNCeMO2Yasqy4='";
+
 function failure(status, extra = {}) {
   // Only fixed text is rendered. Never reflect document bytes, names, or request fields.
   return new Response(
-    `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Download unavailable</title><main><h1>Download unavailable</h1><p>${MESSAGES[status]}</p><p>Your original result is still open in its tab. This request did not save a copy to your account.</p></main></html>`,
+    `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Download unavailable</title><style>${FAILURE_STYLE}</style><main><h1>Download unavailable</h1><p>${MESSAGES[status]}</p><p>Your original result is still open in its tab. This request did not save a copy to your account.</p></main></html>`,
     {
       status,
-      headers: { ...HEADERS, "Content-Type": "text/html;charset=utf-8", ...extra },
+      headers: {
+        ...HEADERS,
+        "Content-Security-Policy": FAILURE_STYLE_CSP,
+        "Content-Type": "text/html;charset=utf-8",
+        ...extra,
+      },
     },
   );
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle, MailMinus } from "lucide-react";
 import { z } from "zod";
 
@@ -87,19 +88,20 @@ function UnsubscribePage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-6 py-16">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
-        <div className="mx-auto w-12 h-12 rounded-2xl bg-foreground/5 flex items-center justify-center mb-4">
-          <MailMinus className="w-6 h-6" />
-        </div>
+    <main
+      className="min-h-[80vh] flex items-center justify-center px-6 py-16"
+      data-ui-reference="chatgpt.auth.status"
+    >
+      <Card className="w-full max-w-md p-8 text-center">
         {status.kind === "loading" && (
           <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
             Checking your unsubscribe link…
           </div>
         )}
         {status.kind === "ready" && (
           <>
+            <MailMinus className="mx-auto w-5 h-5 mb-4" aria-hidden="true" />
             <h1 className="text-xl font-semibold mb-2">Unsubscribe from KovaGPT emails</h1>
             <p className="text-sm text-muted-foreground mb-6">
               You'll stop receiving non-essential emails from KovaGPT. Account and security messages
@@ -112,13 +114,13 @@ function UnsubscribePage() {
         )}
         {status.kind === "submitting" && (
           <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
             Unsubscribing…
           </div>
         )}
         {status.kind === "done" && (
           <>
-            <CheckCircle2 className="mx-auto w-8 h-8 text-foreground mb-2" />
+            <CheckCircle2 className="mx-auto w-5 h-5 text-foreground mb-2" aria-hidden="true" />
             <h1 className="text-xl font-semibold mb-2">You're unsubscribed</h1>
             <p className="text-sm text-muted-foreground">
               We won't email you again. If this was a mistake, contact support@kovagpt.com.
@@ -127,14 +129,14 @@ function UnsubscribePage() {
         )}
         {status.kind === "already" && (
           <>
-            <CheckCircle2 className="mx-auto w-8 h-8 text-foreground mb-2" />
+            <CheckCircle2 className="mx-auto w-5 h-5 text-foreground mb-2" aria-hidden="true" />
             <h1 className="text-xl font-semibold mb-2">Already unsubscribed</h1>
             <p className="text-sm text-muted-foreground">This address is already opted out.</p>
           </>
         )}
         {status.kind === "invalid" && (
           <>
-            <XCircle className="mx-auto w-8 h-8 text-muted-foreground mb-2" />
+            <XCircle className="mx-auto w-5 h-5 text-muted-foreground mb-2" aria-hidden="true" />
             <h1 className="text-xl font-semibold mb-2">Link not valid</h1>
             <p className="text-sm text-muted-foreground">
               This unsubscribe link is invalid or has expired. Please use the link from the latest
@@ -144,12 +146,12 @@ function UnsubscribePage() {
         )}
         {status.kind === "error" && (
           <>
-            <XCircle className="mx-auto w-8 h-8 text-muted-foreground mb-2" />
+            <XCircle className="mx-auto w-5 h-5 text-muted-foreground mb-2" aria-hidden="true" />
             <h1 className="text-xl font-semibold mb-2">Something went wrong</h1>
             <p className="text-sm text-muted-foreground">{status.message}</p>
           </>
         )}
-      </div>
-    </div>
+      </Card>
+    </main>
   );
 }

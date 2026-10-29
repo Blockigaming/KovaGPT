@@ -26,12 +26,6 @@
   text-wrap: balance;
 }
 
-.kova-tool-page[data-ui-reference^="claude"] :where(h1) {
-  font-family: var(--font-reading, Georgia, serif);
-  font-weight: 400;
-  letter-spacing: -0.02em;
-}
-
 .kova-tool-page :where(h2) {
   font-size: 18px;
   font-weight: 600;

@@ -20,7 +20,7 @@ test("native toast color and radius variables resolve through the existing appli
     "--normal-bg": "var(--popover)",
     "--normal-text": "var(--popover-foreground)",
     "--normal-border": "var(--border)",
-    "--border-radius": "var(--kova-radius-card)",
+    "--border-radius": "0.75rem",
   };
   for (const [key, value] of Object.entries(expected)) {
     assert.equal(toast.props.style[key], value);
@@ -44,7 +44,10 @@ test("native close, hover and loading colors follow the application palette", ()
   for (const key of ["--gray2", "--normal-bg-hover"]) assert.equal(style[key], "var(--accent)");
   assert.equal(style["--gray12"], "var(--popover-foreground)");
   assert.equal(style["--gray11"], "var(--muted-foreground)");
-  assert.equal(toastOptions.classNames.description, "!text-muted-foreground");
+  assert.equal(
+    toastOptions.classNames.description,
+    "!text-popover-foreground group-[.toast]:!mt-[2px] group-[.toast]:!leading-5 [text-wrap:pretty]",
+  );
   assert.match(native, /\[data-description\][\s\S]*?color: #3f3f3f/);
 });
 
