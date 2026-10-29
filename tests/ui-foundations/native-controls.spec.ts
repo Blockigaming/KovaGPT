@@ -62,6 +62,23 @@ function bitmap(png: Buffer) {
       Array.from(decoded.subarray((y * width + x) * channels, (y * width + x) * channels + 3)),
   };
 }
+async function settlePaintTranslation(control: Locator) {
+  await control.evaluate(async (input: HTMLElement) => {
+    // Reduced-motion CSS still gives native inputs a short transition. Flush
+    // layout and await the actual translate transition before reading its box.
+    input.getBoundingClientRect();
+    await Promise.all(
+      input
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation instanceof CSSTransition && animation.transitionProperty === "translate",
+        )
+        .map((animation) => animation.finished),
+    );
+  });
+}
+
 // A locator screenshot rounds fractional layout edges outwards: an 18px
 // control at y=100.5 can otherwise produce a 19px PNG. Align only the isolated
 // fixture control's paint origin, preserving its exact DOM size and CSS glyph.
@@ -83,6 +100,7 @@ async function paintedControl(control: Locator, expectedSize: 16 | 18, path?: st
     return original;
   });
   try {
+    await settlePaintTranslation(control);
     const aligned = (await control.boundingBox())!;
     expect([aligned.width, aligned.height]).toEqual([expectedSize, expectedSize]);
     expect([aligned.x, aligned.y]).toEqual([Math.round(aligned.x), Math.round(aligned.y)]);
@@ -90,15 +108,13 @@ async function paintedControl(control: Locator, expectedSize: 16 | 18, path?: st
     expect([pixels.width, pixels.height]).toEqual([expectedSize, expectedSize]);
     return pixels;
   } finally {
-    await control.evaluate(
-      (input: HTMLElement, original) => {
-        if (original.value) input.style.setProperty("translate", original.value, original.priority);
-        else input.style.removeProperty("translate");
-      },
-      original,
-    );
+    await control.evaluate((input: HTMLElement, original) => {
+      if (original.value) input.style.setProperty("translate", original.value, original.priority);
+      else input.style.removeProperty("translate");
+    }, original);
+    await settlePaintTranslation(control);
     const restored = (await control.boundingBox())!;
-    expect([restored.width, restored.height]).toEqual([expectedSize, expectedSize]);
+    expect(restored).toEqual(before);
   }
 }
 
@@ -280,7 +296,11 @@ for (const pointer of ["fine", "coarse"] as const) {
         const list = page.getByRole("radio", { name: "List", exact: true });
         const grid = page.getByRole("radio", { name: "Grid", exact: true });
         await expect(list).toHaveCSS("appearance", "auto");
-        const unselectedRadio = await paintedControl(grid, 16);
+        const unselectedRadio = await paintedControl(
+          grid,
+          16,
+          info.outputPath(`native-radio-unselected-forced-${theme}.png`),
+        );
         await list.focus();
         await list.press("ArrowRight");
         await expect(grid).toBeChecked();
@@ -293,9 +313,27 @@ for (const pointer of ["fine", "coarse"] as const) {
           16,
           info.outputPath(`native-radio-forced-${theme}.png`),
         );
-        // Native high-contrast radio geometry belongs to the browser. Compare
-        // the same center before/after selection rather than assuming a ring inset.
-        expect(contrast(radio.at(8, 8), unselectedRadio.at(8, 8))).toBeGreaterThanOrEqual(4.5);
+        // Native selection can invert the fill while leaving the center a
+        // similar color. Check the glyph inside the border, then require a
+        // visible change across multiple matching pixels in the two states.
+        let radioDarkest = [255, 255, 255],
+          radioLightest = [0, 0, 0],
+          changedPixels = 0;
+        for (let y = 3; y < radio.height - 3; y++)
+          for (let x = 3; x < radio.width - 3; x++) {
+            const value = radio.at(x, y);
+            if (luminance(value) < luminance(radioDarkest)) radioDarkest = value;
+            if (luminance(value) > luminance(radioLightest)) radioLightest = value;
+            if (contrast(value, unselectedRadio.at(x, y)) >= 4.5) changedPixels++;
+          }
+        expect(
+          contrast(radioDarkest, radioLightest),
+          "The native selected dot must contrast with its surrounding fill",
+        ).toBeGreaterThanOrEqual(4.5);
+        expect(
+          changedPixels,
+          "Selection must visibly change at least four interior pixels at 4.5:1 contrast",
+        ).toBeGreaterThanOrEqual(4);
         const form = await page
           .getByTestId("native-form")
           .evaluate((element: HTMLFormElement) => Array.from(new FormData(element).entries()));
