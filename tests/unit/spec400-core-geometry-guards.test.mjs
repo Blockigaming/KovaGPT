@@ -67,12 +67,20 @@ test("library inspector keeps its viewport drawer and Connections uses a bounded
     height: "auto",
     "max-height": "calc(100dvh - 48px)",
     "border-radius": "var(--kova-radius-panel)",
-    transform: "translate(-50%, -50%)",
+    transform: "none",
     "overflow-y": "auto",
   })) {
     assert.equal(pluginDeclarations[property].value, value);
     assert.ok(!pluginDeclarations[property].important);
   }
+  const sharedDialog = read("src/components/ui/dialog.tsx");
+  assert.match(sharedDialog, /left-1\/2 top-1\/2/);
+  assert.match(sharedDialog, /-translate-x-1\/2 -translate-y-1\/2/);
+  assert.equal(
+    pluginDeclarations.translate,
+    undefined,
+    "Connections inherits the shared individual translation without applying a second offset",
+  );
   const pluginPhone = [];
   pluginSheet.walkRules(pluginSelector, (node) => {
     if (node.parent.type === "atrule" && node.parent.params === "(max-width: 639px)")
