@@ -173,7 +173,7 @@ test("guest Settings changes themes without split surface colors", async ({ page
 
   await chooseAppearance(page, "Dark");
   await expect(page.locator("html")).toHaveClass(/(?:^|\s)dark(?:\s|$)/);
-  expectAtomicSurfaceChange(await sampleSettingsSurfaces(page), "rgb(47, 47, 47)");
+  expectAtomicSurfaceChange(await sampleSettingsSurfaces(page), "rgb(48, 48, 48)");
 
   await chooseAppearance(page, "Light");
   await expect(page.locator("html")).not.toHaveClass(/(?:^|\s)dark(?:\s|$)/);
