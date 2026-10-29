@@ -67,7 +67,8 @@ test.describe("mobile shell UI truth", () => {
     const close = page.getByRole("button", { name: "Close command palette" });
     const closeBox = await close.boundingBox();
     expect(closeBox?.width).toBeGreaterThanOrEqual(44);
-    expect(closeBox?.height).toBeGreaterThanOrEqual(44);
+    const coarsePointer = await page.evaluate(() => matchMedia("(pointer: coarse)").matches);
+    expect(closeBox?.height).toBe(coarsePointer ? 44 : 36);
 
     const panel = palette.locator(":scope > div").first();
     const animationDuration = await panel.evaluate(

@@ -151,20 +151,20 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await capture(page, info, "tasks");
 
   await openSidebar(page);
-  await page.getByRole("link", { name: "Plugins", exact: true }).click();
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
   await expect(
-    page.getByRole("main").getByRole("heading", { name: "Plugins", exact: true }),
+    page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("main").getByRole("heading", { name: "Plugins", exact: true }),
+    page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
-  await page.getByPlaceholder("Search plugins").fill("Gmail");
+  await page.getByPlaceholder("Search connections").fill("Gmail");
   await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
   const plugin = page.getByRole("dialog", { name: "Gmail", exact: true });
   await expect(plugin).toContainText("Capabilities and permissions");
   await capture(page, info, "plugins-details");
   await page.keyboard.press("Escape");
-  await page.getByPlaceholder("Search plugins").fill("");
+  await page.getByPlaceholder("Search connections").fill("");
   await capture(page, info, "plugins");
 
   await openSidebar(page);
@@ -198,7 +198,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
 
   await openSidebar(page);
   await page.getByRole("button", { name: "Account menu", exact: true }).click();
-  await expect(page.getByRole("menuitem", { name: "Billing", exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Subscriptions", exact: true })).toBeVisible();
   await page.getByRole("menuitem", { name: "Help", exact: true }).click();
   await expect(
     page.getByRole("main").getByRole("heading", { name: "How can we help?" }),

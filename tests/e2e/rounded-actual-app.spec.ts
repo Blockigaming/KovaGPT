@@ -109,10 +109,12 @@ for (const theme of ["light", "dark"] as const) {
       }),
     );
     expect(metadata.every((difference) => difference < 1)).toBe(true);
-    await page.getByRole("checkbox", { name: "Select Release notes", exact: true }).check();
-    await expect(
-      page.getByRole("checkbox", { name: "Select Release notes", exact: true }),
-    ).toHaveCSS("appearance", "auto");
+    const selection = page.getByRole("checkbox", { name: "Select Release notes", exact: true });
+    await selection.check();
+    await expect(selection).toBeVisible();
+    await expect(selection).toBeChecked();
+    await expect(selection).toHaveCSS("appearance", "none");
+    await expect(selection).not.toHaveCSS("background-image", "none");
     await expect(page.getByRole("region", { name: "Selected Library actions" })).toBeVisible();
     await fitsViewport(page);
     await page.screenshot({
@@ -167,12 +169,22 @@ for (const theme of ["light", "dark"] as const) {
     const initial = await control.getAttribute("aria-checked");
     await control.click();
     await expect(control).toHaveAttribute("aria-checked", initial === "true" ? "false" : "true");
-    const rightGap = await control.evaluate(
-      (node) =>
-        node.closest(".kova-settings-reference-group")!.getBoundingClientRect().right -
-        node.getBoundingClientRect().right,
-    );
-    expect(rightGap).toBe(17);
+    const alignment = await control.evaluate((node) => {
+      const group = node.closest(".kova-settings-reference-group")!.getBoundingClientRect();
+      const target = node.getBoundingClientRect();
+      return {
+        rightGap: group.right - target.right,
+        contained: target.left >= group.left && target.right <= group.right,
+        width: target.width,
+        height: target.height,
+        coarsePointer: matchMedia("(pointer: coarse)").matches,
+      };
+    });
+    expect(alignment.rightGap).toBe(0);
+    expect(alignment.contained).toBe(true);
+    const minimumSwitchTarget = alignment.coarsePointer ? 44 : 32;
+    expect(alignment.width).toBeGreaterThanOrEqual(minimumSwitchTarget);
+    expect(alignment.height).toBeGreaterThanOrEqual(minimumSwitchTarget);
     await page.screenshot({
       path: info.outputPath(`settings-${theme}.png`),
       animations: "disabled",

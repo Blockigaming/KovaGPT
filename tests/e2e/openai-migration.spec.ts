@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
+import { revealSidebar } from "./current-ui";
 
 const sse = (...chunks: string[]) =>
   chunks
@@ -45,24 +46,26 @@ test("guest chat consumes Kova SSE once and keeps page and menu identity", async
   await waitForKovaHydration(page);
   const viewport = page.viewportSize();
   if (viewport && viewport.width >= 1024) {
-    const sidebarBrand = page.locator("aside .kova-sidebar-brand:visible");
+    const navigation = await revealSidebar(page);
+    const sidebarBrand = navigation.locator(".kova-sidebar-brand");
     await expect(sidebarBrand).toHaveCount(1);
-    await expect(sidebarBrand).toHaveText("Kova GPT");
+    await expect(sidebarBrand).toHaveText("KovaGPT");
   } else {
     await expect(
       page
-        .locator("header.kova-topbar:visible")
-        .getByRole("heading", { name: "Kova GPT", exact: true }),
+        .locator('[data-ui-reference="chatgpt-mobile-topbar"]')
+        .getByRole("heading", { name: "KovaGPT", exact: true }),
     ).toHaveCount(1);
-    await page.getByRole("button", { name: "Open menu", exact: true }).click();
-    await expect(page.locator(".kova-sidebar-brand:visible")).toHaveCount(1);
-    await expect(page.locator(".kova-sidebar-brand:visible")).toHaveText("Kova GPT");
+    const navigation = await revealSidebar(page);
+    const sidebarBrand = navigation.locator(".kova-sidebar-brand");
+    await expect(sidebarBrand).toHaveCount(1);
+    await expect(sidebarBrand).toHaveText("KovaGPT");
     await page.keyboard.press("Escape");
   }
   if (testInfo.project.name === "desktop-1280x800") {
     await page.screenshot({ path: "test-results/openai-migration-logo.png", fullPage: false });
   }
-  const input = page.getByRole("textbox").first();
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await input.fill("Hello mocked runtime");
   await page.getByTestId("send-button").click();
   await expect(page.getByText("Mocked OpenAI response", { exact: false })).toBeVisible();
@@ -78,7 +81,7 @@ test("guest chat consumes Kova SSE once and keeps page and menu identity", async
     .toBe(true);
   await page.reload();
   await waitForKovaHydration(page);
-  await expect(page.getByRole("textbox").first()).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -100,7 +103,7 @@ test("kill-switch error is shown once without automatic retry or horizontal over
   });
   await page.goto("/");
   await waitForKovaHydration(page);
-  const input = page.getByRole("textbox").first();
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await input.fill("Should be blocked");
   await page.getByTestId("send-button").click();
   await expect(page.getByText(/temporarily disabled/i).first()).toBeVisible();
@@ -123,7 +126,7 @@ test("Stop aborts a slow generation and preserves one retryable assistant messag
   });
   await page.goto("/");
   await waitForKovaHydration(page);
-  const input = page.getByRole("textbox").first();
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await input.fill("Stop this response");
   await page.getByTestId("send-button").click();
   const stop = page.getByTestId("stop-button").first();

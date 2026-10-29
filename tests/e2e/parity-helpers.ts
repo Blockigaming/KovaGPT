@@ -98,7 +98,7 @@ export const ELEMENT_MAP = {
   newChat: { chatgpt: "[data-testid='create-new-chat-button']", kova: "[aria-label='New chat']" },
   search: { chatgpt: "[aria-label='Search chats']", kova: "[aria-label='Search chats']" },
   emptyGreeting: { chatgpt: "main h1", kova: "main h1" },
-  composer: { chatgpt: "form", kova: ".kova-composer" },
+  composer: { chatgpt: "form", kova: ".spec400-composer" },
   composerInput: { chatgpt: "#prompt-textarea", kova: "textarea" },
   sendControl: {
     chatgpt: "[data-testid='send-button']",

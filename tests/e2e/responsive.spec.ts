@@ -56,22 +56,24 @@ test.describe("KovaGPT responsive shell", () => {
     expect(filtered, `unexpected client errors: ${filtered.join("\n")}`).toEqual([]);
   });
 
-  test("mobile-only chrome is only visible on phone layouts", async ({ page }, testInfo) => {
+  test("mobile-only chrome follows the shared desktop breakpoint", async ({ page }, testInfo) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     const width = page.viewportSize()?.width ?? 0;
-    const isPhone = width < 768;
+    const isMobileLayout = width < 1024;
 
-    if (isPhone) {
+    if (isMobileLayout) {
       await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
       await expect(
         page
           .locator("header.kova-topbar:visible")
-          .getByRole("heading", { name: "Kova GPT", exact: true }),
+          .getByRole("heading", { level: 1, name: "KovaGPT", exact: true }),
       ).toBeVisible();
+    } else {
+      await expect(page.locator("header.kova-topbar:not(.kova-desktop-topbar)")).toBeHidden();
     }
 
-    // Desktop-only PanelLeft trigger appears only when sidebar is collapsed on md+
+    // The desktop sidebar trigger appears only while its persistent sidebar is collapsed.
     const collapsedTrigger = page.getByRole("button", { name: /open sidebar/i });
     if (width >= 1200) {
       // Persistent sidebar starts open on desktop; the fixed trigger should NOT be visible.
@@ -82,7 +84,7 @@ test.describe("KovaGPT responsive shell", () => {
           await expect(collapsedTrigger.first()).toBeHidden();
         });
     }
-    await testInfo.attach(`chrome-${isPhone ? "phone" : "large"}`, {
+    await testInfo.attach(`chrome-${isMobileLayout ? "mobile" : "desktop"}`, {
       body: await page.screenshot(),
       contentType: "image/png",
     });

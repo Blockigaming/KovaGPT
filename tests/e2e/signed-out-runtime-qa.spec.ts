@@ -39,7 +39,7 @@ test.beforeEach(({ page: _page }, testInfo) => {
 for (const theme of themes) {
   test(`guest home exposes its core semantic and keyboard contract in ${theme} @a11y`, async ({
     page,
-  }, testInfo) => {
+  }) => {
     await openGuestHome(page, theme);
 
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
@@ -54,9 +54,21 @@ for (const theme of themes) {
     await expect(
       page.getByRole("region", { name: "What are you working on?", exact: true }),
     ).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
+    const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+    const send = page.getByRole("button", {
+      name: "Send message",
+      exact: true,
+      includeHidden: true,
+    });
+    const voice = page.getByRole("button", { name: "Voice", exact: true });
+    await expect(input).toBeVisible();
+    await expect(input).toHaveValue("");
     await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
+    await expect(send).toBeHidden();
+    await expect(send).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toHaveCount(0);
+    await expect(voice).toBeVisible();
+    await expect(voice).toBeDisabled();
     const logInButton = page
       .getByRole("button", { name: "Log in", exact: true })
       .filter({ visible: true })
@@ -66,23 +78,35 @@ for (const theme of themes) {
     // Guests still cannot access a switchable model picker.
     await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
 
-    if (testInfo.project.name.startsWith("phone-")) {
+    const mobileLayout = page.viewportSize()!.width < 1024;
+    if (mobileLayout) {
       const menuButton = page.getByRole("button", { name: "Open menu" });
       const addButton = page.getByRole("button", {
         name: "Attach",
         exact: true,
       });
-      const sendButton = page.getByRole("button", { name: "Send message", exact: true });
       await expect(menuButton).toBeVisible();
+      await expect(menuButton).toHaveAttribute("aria-controls", "kova-primary-navigation");
+      const navigationTitle = page.locator("[data-kova-navigation-heading]");
+      await expect(navigationTitle).toHaveAttribute("role", "heading");
+      await expect(navigationTitle).toHaveAttribute("aria-level", "1");
       await expect(
-        page.getByRole("heading", { level: 1, name: "Kova GPT", exact: true }),
+        page.getByRole("heading", { level: 1, name: "KovaGPT", exact: true }),
       ).toBeVisible();
       await expectMinimumTouchTarget(menuButton);
       await expectMinimumTouchTarget(addButton);
-      await expectMinimumTouchTarget(sendButton);
+      await expectMinimumTouchTarget(voice);
       await expectMinimumTouchTarget(logInButton);
     } else {
-      await expect(page.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
+      const navigation = page.getByRole("navigation", { name: "Primary navigation", exact: true });
+      await expect(navigation).toBeVisible();
+      await expect(navigation).toHaveAttribute("id", "kova-primary-navigation");
+      await expect(
+        navigation.getByRole("navigation", { name: "KovaGPT features", exact: true }),
+      ).toBeVisible();
+      const brand = navigation.locator(".kova-sidebar-brand");
+      await expect(brand).toHaveText("KovaGPT");
+      await expect(brand.locator("img, svg")).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Search chats" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Collapse sidebar" })).toBeVisible();
     }
@@ -122,6 +146,25 @@ for (const theme of themes) {
     await page.keyboard.press("Escape");
     await expect(responseOptions).toBeHidden();
     await expect(options).toBeFocused();
+
+    // Check the typed primary action after the skip-link and Options keyboard
+    // paths, so filling the draft cannot disturb the initial Tab sequence.
+    await input.fill("Review this editable accessibility draft.");
+    await expect(input).toHaveValue("Review this editable accessibility draft.");
+    await expect(input).toBeFocused();
+    await expect(send).toBeVisible();
+    await expect(send).toBeEnabled();
+    await expect(voice).toBeHidden();
+    if (mobileLayout) await expectMinimumTouchTarget(send);
+    await expect(page.locator(".kova-user-message")).toHaveCount(0);
+    await input.clear();
+    await expect(input).toHaveValue("");
+    await expect(input).toBeFocused();
+    await expect(send).toBeHidden();
+    await expect(send).toBeDisabled();
+    await expect(voice).toBeVisible();
+    await expect(voice).toBeDisabled();
+    await expect(page.locator(".kova-user-message")).toHaveCount(0);
 
     // Account policy links live on the full account form. This synthetic local
     // address is never submitted and no password or live account is used.
