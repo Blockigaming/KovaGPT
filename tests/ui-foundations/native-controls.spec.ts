@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { inflateSync } from "node:zlib";
 
 // Decode the actual browser PNG, including row filters. This checks painted
@@ -62,6 +62,46 @@ function bitmap(png: Buffer) {
       Array.from(decoded.subarray((y * width + x) * channels, (y * width + x) * channels + 3)),
   };
 }
+// A locator screenshot rounds fractional layout edges outwards: an 18px
+// control at y=100.5 can otherwise produce a 19px PNG. Align only the isolated
+// fixture control's paint origin, preserving its exact DOM size and CSS glyph.
+async function paintedControl(control: Locator, expectedSize: 16 | 18, path?: string) {
+  await control.scrollIntoViewIfNeeded();
+  const before = (await control.boundingBox())!;
+  expect([before.width, before.height]).toEqual([expectedSize, expectedSize]);
+  const original = await control.evaluate((input: HTMLElement) => {
+    const original = {
+      value: input.style.getPropertyValue("translate"),
+      priority: input.style.getPropertyPriority("translate"),
+    };
+    const box = input.getBoundingClientRect();
+    input.style.setProperty(
+      "translate",
+      `${Math.round(box.x) - box.x}px ${Math.round(box.y) - box.y}px`,
+      "important",
+    );
+    return original;
+  });
+  try {
+    const aligned = (await control.boundingBox())!;
+    expect([aligned.width, aligned.height]).toEqual([expectedSize, expectedSize]);
+    expect([aligned.x, aligned.y]).toEqual([Math.round(aligned.x), Math.round(aligned.y)]);
+    const pixels = bitmap(await control.screenshot({ path, scale: "css" }));
+    expect([pixels.width, pixels.height]).toEqual([expectedSize, expectedSize]);
+    return pixels;
+  } finally {
+    await control.evaluate(
+      (input: HTMLElement, original) => {
+        if (original.value) input.style.setProperty("translate", original.value, original.priority);
+        else input.style.removeProperty("translate");
+      },
+      original,
+    );
+    const restored = (await control.boundingBox())!;
+    expect([restored.width, restored.height]).toEqual([expectedSize, expectedSize]);
+  }
+}
+
 function luminance(rgb: number[]) {
   const values = rgb.map((value) => {
     const channel = value / 255;
@@ -89,6 +129,7 @@ for (const pointer of ["fine", "coarse"] as const) {
     for (const theme of ["light", "dark"] as const) {
       test(`${theme}: native Space, radio arrows and FormData preserve browser semantics`, async ({
         page,
+        browserName,
       }) => {
         await open(page, theme);
         const checkbox = page.getByRole("checkbox", { name: "Include notes", exact: true });
@@ -113,13 +154,27 @@ for (const pointer of ["fine", "coarse"] as const) {
         await expect(grid).toBeChecked();
         await expect(grid).toBeFocused();
         await grid.press("ArrowRight");
-        await expect(list).toBeChecked();
-        await expect(list).toBeFocused();
-        await list.press("ArrowLeft");
+        const disabledView = page.getByRole("radio", { name: "Disabled view", exact: true });
+        if (browserName === "webkit") {
+          // WebKit's native group stops before the disabled final radio instead
+          // of wrapping. Verify the boundary and both enabled directions.
+          await expect(grid).toBeChecked();
+          await expect(grid).toBeFocused();
+          await grid.press("ArrowLeft");
+          await expect(list).toBeChecked();
+          await expect(list).toBeFocused();
+          await list.press("ArrowRight");
+        } else {
+          await expect(list).toBeChecked();
+          await expect(list).toBeFocused();
+          await list.press("ArrowLeft");
+        }
         await expect(grid).toBeChecked();
-        await expect(
-          page.getByRole("radio", { name: "Disabled view", exact: true }),
-        ).not.toBeChecked();
+        await expect(grid).toBeFocused();
+        await expect(list).not.toBeChecked();
+        await expect(disabledView).toBeDisabled();
+        await expect(disabledView).not.toBeChecked();
+        await expect(disabledView).not.toBeFocused();
         await expect(disabled).toBeDisabled();
         await disabled.evaluate((input: HTMLInputElement) => input.click());
         await expect(disabled).toBeChecked();
@@ -150,13 +205,11 @@ for (const pointer of ["fine", "coarse"] as const) {
         await open(page, theme);
         const check = page.getByRole("checkbox", { name: "Checked example", exact: true });
         const radio = page.getByRole("radio", { name: "List", exact: true });
-        const checkPixels = bitmap(
-          await check.screenshot({
-            path: info.outputPath(`native-check-${theme}.png`),
-            scale: "css",
-          }),
+        const checkPixels = await paintedControl(
+          check,
+          18,
+          info.outputPath(`native-check-${theme}.png`),
         );
-        expect([checkPixels.width, checkPixels.height]).toEqual([18, 18]);
         let darkest = [255, 255, 255],
           lightest = [0, 0, 0];
         for (let y = 4; y < 14; y++)
@@ -169,13 +222,11 @@ for (const pointer of ["fine", "coarse"] as const) {
           contrast(darkest, lightest),
           "The check glyph must visibly contrast inside the filled box",
         ).toBeGreaterThanOrEqual(4.5);
-        const radioPixels = bitmap(
-          await radio.screenshot({
-            path: info.outputPath(`native-radio-${theme}.png`),
-            scale: "css",
-          }),
+        const radioPixels = await paintedControl(
+          radio,
+          16,
+          info.outputPath(`native-radio-${theme}.png`),
         );
-        expect([radioPixels.width, radioPixels.height]).toEqual([16, 16]);
         expect(
           contrast(radioPixels.at(8, 8), radioPixels.at(3, 8)),
           "The selected radio dot must remain visible",
@@ -198,16 +249,21 @@ for (const pointer of ["fine", "coarse"] as const) {
         const disabled = page.getByRole("checkbox", { name: "Disabled example", exact: true });
         await expect(check).toHaveCSS("appearance", "auto");
         await expect(check).toHaveCSS("background-image", "none");
-        await expect(check).toHaveCSS("forced-color-adjust", "auto");
+        const adjustment = await check.evaluate((input) => ({
+          supported: CSS.supports("forced-color-adjust", "auto"),
+          value: getComputedStyle(input).getPropertyValue("forced-color-adjust"),
+        }));
+        // An unsupported property has no computed value. Supported engines
+        // must still honor auto; the paint and behavior checks below always run.
+        expect(adjustment.value).toBe(adjustment.supported ? "auto" : "");
         await check.focus();
         await check.press("Space");
         await expect(check).toBeChecked();
         await expect(check).toHaveCSS("outline-style", "solid");
-        const pixels = bitmap(
-          await check.screenshot({
-            path: info.outputPath(`native-forced-colors-${theme}.png`),
-            scale: "css",
-          }),
+        const pixels = await paintedControl(
+          check,
+          18,
+          info.outputPath(`native-forced-colors-${theme}.png`),
         );
         let darkest = [255, 255, 255],
           lightest = [0, 0, 0];
@@ -224,7 +280,7 @@ for (const pointer of ["fine", "coarse"] as const) {
         const list = page.getByRole("radio", { name: "List", exact: true });
         const grid = page.getByRole("radio", { name: "Grid", exact: true });
         await expect(list).toHaveCSS("appearance", "auto");
-        const unselectedRadio = bitmap(await grid.screenshot({ scale: "css" }));
+        const unselectedRadio = await paintedControl(grid, 16);
         await list.focus();
         await list.press("ArrowRight");
         await expect(grid).toBeChecked();
@@ -232,11 +288,10 @@ for (const pointer of ["fine", "coarse"] as const) {
         await expect(
           page.getByRole("radio", { name: "Disabled view", exact: true }),
         ).toBeDisabled();
-        const radio = bitmap(
-          await grid.screenshot({
-            path: info.outputPath(`native-radio-forced-${theme}.png`),
-            scale: "css",
-          }),
+        const radio = await paintedControl(
+          grid,
+          16,
+          info.outputPath(`native-radio-forced-${theme}.png`),
         );
         // Native high-contrast radio geometry belongs to the browser. Compare
         // the same center before/after selection rather than assuming a ring inset.

@@ -1,6 +1,19 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+
+async function expectRestingComposer(page: Page) {
+  const composer = page.locator(".spec400-composer");
+  const compactDesktop = await page.evaluate(
+    () => innerWidth >= 1024 && !matchMedia("(any-pointer: coarse)").matches,
+  );
+  await expect(composer).toHaveCSS("border-radius", "26px");
+  await expect(composer).toHaveCSS("display", compactDesktop ? "grid" : "flex");
+  await expect
+    .poll(async () => (await composer.boundingBox())?.height)
+    .toBe(compactDesktop ? 52 : 100);
+  return compactDesktop;
+}
 
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: empty composer, starter drafts, expand input, Context and Options`, async ({
@@ -10,29 +23,34 @@ for (const theme of ["dark", "light"] as const) {
     await page.goto("/");
     await waitForKovaHydration(page);
     const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
-    const composer = page.locator(".spec400-composer");
+    const send = page.getByTestId("send-button");
+    const voice = page.getByTestId("voice-button");
     await expect(input).toBeEnabled();
     await expect(
       page.getByRole("heading", { name: "What are you working on?", exact: true }),
     ).toBeVisible();
     await expect(input).toHaveAttribute("placeholder", "Describe what you need…");
-    await expect(composer).toHaveCSS("border-radius", "28px");
-    const restingHeight = (await composer.boundingBox())!.height;
-    expect(restingHeight).toBeGreaterThanOrEqual(128);
-    expect(restingHeight).toBeLessThanOrEqual(136);
-    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Open voice", exact: true })).toHaveCount(0);
+    await expectRestingComposer(page);
+    await expect(send).toBeHidden();
+    await expect(send).toBeDisabled();
+    await expect(voice).toBeVisible();
+    await expect(voice).toHaveAccessibleName("Voice");
+    await expect(voice).toBeDisabled();
     await expect(page.getByText("Continue working", { exact: true })).toHaveCount(0);
     for (const action of ["Write something", "Summarize a file", "Compare options"]) {
       await input.fill("");
       await page.getByRole("button", { name: `Start with ${action}`, exact: true }).click();
       await expect(input).not.toHaveValue("");
       await expect(input).toBeFocused();
+      await expect(send).toBeVisible();
+      await expect(voice).toBeHidden();
       await expect(page.locator("[data-chat-transcript]")).toHaveCount(0);
     }
     await input.fill("Keep the original requirement.");
     const expand = page.getByRole("button", { name: "Expand input", exact: true });
-    await expand.click();
+    await input.press("Tab");
+    await expect(expand).toBeFocused();
+    await expand.press("Enter");
     const dialog = page.getByRole("dialog", { name: "Expand input", exact: true });
     await expect(dialog).toBeVisible();
     const expandedInput = dialog.getByRole("textbox", { name: "Message", exact: true });
@@ -92,12 +110,9 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expect(input).toBeEnabled();
-  const composer = page.locator(".spec400-composer");
-  await expect(composer).toHaveCSS("border-radius", "28px");
-  const width = page.viewportSize()!.width;
-  expect((await composer.boundingBox())!.height).toBeGreaterThanOrEqual(width < 1024 ? 120 : 128);
+  const compactDesktop = await expectRestingComposer(page);
   await input.fill("First line");
-  await input.press(width < 1024 ? "Enter" : "Shift+Enter");
+  await input.press(compactDesktop ? "Shift+Enter" : "Enter");
   await expect(input).toHaveValue("First line\n");
   await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
   await page

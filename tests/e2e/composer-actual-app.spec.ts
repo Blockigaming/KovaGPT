@@ -7,23 +7,50 @@ import { choosePickerValue } from "./select-control";
 
 async function geometry(page: Page) {
   const composer = page.locator(".spec400-composer");
-  await expect(composer).toHaveCSS("border-radius", "28px");
-  for (const name of ["Attach", "Send message"]) {
-    const button = composer.getByRole("button", { name, exact: true });
-    const box = await button.boundingBox();
-    expect(box!.width).toBeGreaterThanOrEqual(44);
-    expect(box!.height).toBeGreaterThanOrEqual(44);
+  await expect(composer).toHaveCSS("border-radius", "26px");
+  const coarseLayout = await page.evaluate(
+    () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
+  );
+  const targetSize = coarseLayout ? 44 : 36;
+  const send = composer.getByTestId("send-button");
+  const voice = composer.getByTestId("voice-button");
+  const hasDraft = (await composer.getAttribute("data-has-draft")) === "true";
+  const primary = hasDraft ? send : voice;
+  await expect(primary).toBeVisible();
+  await expect(hasDraft ? voice : send).toBeHidden();
+  for (const button of [
+    composer.getByRole("button", { name: "Attach", exact: true }),
+    composer.getByRole("button", { name: "Dictate", exact: true }),
+    primary,
+  ]) {
+    await expect(button).toBeVisible();
+    await expect.poll(async () => (await button.boundingBox())?.width).toBe(targetSize);
+    await expect.poll(async () => (await button.boundingBox())?.height).toBe(targetSize);
   }
-  // Read both bounds in one layout and wait for textarea/font resizing to settle.
+  // Verify the compact inline row and the responsive/multiline stacked layout.
+  // Read related bounds together while textarea/font sizing settles.
   await expect
     .poll(() =>
       composer.evaluate((node) => {
-        const input = node.querySelector("textarea")!.getBoundingClientRect();
+        const textarea = node.querySelector("textarea")!;
+        const input = textarea.getBoundingClientRect();
         const attach = node.querySelector('[aria-label="Attach"]')!.getBoundingClientRect();
-        return input.bottom - attach.top;
+        const compact =
+          innerWidth >= 1024 &&
+          !matchMedia("(any-pointer: coarse)").matches &&
+          textarea.dataset.multiline !== "true" &&
+          !node.querySelector(".spec400-attachment-chips, .spec400-selected-tool");
+        const box = node.getBoundingClientRect();
+        return {
+          display: getComputedStyle(node).display === (compact ? "grid" : "flex"),
+          height: compact ? box.height === 52 : box.height > 52,
+          alignment: compact
+            ? Math.abs(input.y + input.height / 2 - (attach.y + attach.height / 2)) <= 1
+            : input.bottom - attach.top <= 1,
+        };
       }),
     )
-    .toBeLessThanOrEqual(1);
+    .toEqual({ display: true, height: true, alignment: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
@@ -418,7 +445,7 @@ for (const theme of ["light", "dark"] as const) {
     await input.fill("Keep this draft while checking my plan");
     await openResponseOptions(page);
     await expect(thinking.getByText("Thinking", { exact: true })).toBeVisible();
-    await expect(thinking.locator("svg.lucide-lock")).toBeVisible();
+    await expect(thinking.locator('svg[data-product-icon="Lock"]')).toBeVisible();
     await expect(thinking).toHaveAttribute("aria-label", "Thinking is locked. Open Subscriptions");
     await geometry(page);
     await page.screenshot({
