@@ -279,7 +279,7 @@ function renderElement(element, values) {
   return context.result;
 }
 
-test("Settings retains all eight sections and includes a legacy current section through selectTab", () => {
+test("Settings retains all eleven sections and includes a legacy current section through selectTab", () => {
   const path = "src/components/SettingsDialog.tsx";
   const element = pickerElements(path)[0];
   const changes = [];
@@ -306,7 +306,7 @@ test("Settings retains all eight sections and includes a legacy current section 
   const pageGroups = source(path)
     .split("const pageGroups: TabGroup[] = [")[1]
     .split("const groups")[0];
-  assert.equal((pageGroups.match(/\{\s*v:/g) ?? []).length, 8);
+  assert.equal((pageGroups.match(/\{\s*v:/g) ?? []).length, 11);
 });
 
 test("Project and Work dynamic pickers retain ids, disabled state, placeholders and dependent resets", () => {

@@ -87,6 +87,8 @@ SAFE_FAILURE_CODES=frozenset({
     "synthetic_command_signaled","synthetic_command_output_bound",
     "native_command_failed","native_command_unconfirmed","native_extension_preload_unqualified",
     "native_permission_unqualified","native_dependency_unqualified","private_command_output_bound",
+    "timeout_control_identity_unconfirmed","timeout_control_positive_unconfirmed",
+    "timeout_control_expiry_unconfirmed","outbound_connection_not_denied",
 })
 
 
@@ -244,6 +246,9 @@ def failure_details(error,stage="setup"):
     code=code if code in SAFE_FAILURE_CODES else "synthetic_native_unconfirmed"
     value={"code":code,"stage":stage if stage in BUILD_STAGES else "setup"}
     if isinstance(error,SyntheticCommandFailure):value["command"]=error.details
+    for proof_module in [operator.volume_proof,builder.volume_proof]:
+        observed=proof_module.safe_mount_policy_observations(error)
+        if observed is not None:value["mountPolicy"]=observed
     return value
 
 
@@ -535,6 +540,9 @@ class SyntheticProbe(operator.OperatorProbe):
                 result["nativeResourcesCleanupConfirmed"]=False
                 cleanup_details["native"]["exceptionType"]=safe_exception_type(error)
             if not result["nativeResourcesCleanupConfirmed"]:
+                code=getattr(self,"storage_cleanup_code",None)
+                if type(code) is str and (code in operator.CLEANUP_STORAGE_CODES or code=="owned_storage_cleanup_unconfirmed"):
+                    cleanup_details["native"]["storageCode"]=code
                 preserve_cleanup_failure(result,cleanup_details)
             result["nativeCommandCount"]=self.command_count
         return result
@@ -549,8 +557,9 @@ def identities_from_builder(value):
 def cleanup_all(env,*,details=None):
     failures=details if details is not None else {}
     try:
-        native=operator.cleanup_operator_state(env,context_validator=synthetic_context)
-        if not native:failures["native"]={"code":"synthetic_owned_cleanup_unconfirmed","stage":"cleanup"}
+        detail={"code":"synthetic_owned_cleanup_unconfirmed","stage":"cleanup"}
+        native=operator.cleanup_operator_state(env,context_validator=synthetic_context,details=detail)
+        if not native:failures["native"]=detail
     except Exception as error:native=False;failures["native"]=failure_details(error,"cleanup")
     try:
         image=cleanup_image_from_state(env) if native else False

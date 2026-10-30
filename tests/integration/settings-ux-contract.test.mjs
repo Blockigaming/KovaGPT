@@ -256,6 +256,9 @@ test("settings navigation is centralized and routes every rendered category", ()
       "profile",
       "appearance",
       "responses",
+      "memory",
+      "security",
+      "storage",
       "notifications",
       "connections",
       "privacy",
@@ -367,7 +370,7 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
   assert.equal(page.width, "100%");
   assert.equal(page.height, "auto");
   assert.equal(page["max-height"], "none");
-  assert.equal(page.background, "transparent");
+  assert.equal(page.background, "var(--background)");
   for (const selector of [
     '[role="dialog"].kova-settings-dialog',
     '[role="dialog"].kova-settings-dialog.is-authenticated',

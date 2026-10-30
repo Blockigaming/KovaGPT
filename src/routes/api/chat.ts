@@ -787,8 +787,7 @@ export const Route = createFileRoute("/api/chat")({
             if (auth && freeModeUpgradeRequired(callerTier, getMode(mode).id)) {
               return Response.json(
                 {
-                  error:
-                    "This mode requires a paid plan. Upgrade to use Thinking and higher modes.",
+                  error: "This mode requires a paid plan. Upgrade to use this mode.",
                   code: "mode_not_entitled",
                   upgradeUrl: "/pricing",
                   retryable: false,

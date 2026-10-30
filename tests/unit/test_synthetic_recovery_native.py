@@ -7,7 +7,9 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 from pathlib import Path
+from types import SimpleNamespace
 import subprocess
 import sys
 from contextlib import redirect_stdout
@@ -28,6 +30,85 @@ runtime_bytes=fixture.runtime_bytes
 
 
 class SyntheticTests(unittest.TestCase):
+    def test_mount_policy_output_accepts_only_exact_typed_boolean_diagnostics(self):
+        observed={"filesystemTmpfs":True,"sourceTmpfs":True,"filesystemRoot":True,"readWrite":True,
+            "nosuid":True,"nodev":True,"noexec":True,"readOnlyAbsent":True,"noswap":False,
+            "optionalFieldsEmpty":True,"sharedPropagation":False,"masterPropagation":False,
+            "propagateFrom":False,"unbindable":False,"unknownOptionalField":False}
+        for module in [o.volume_proof,m.builder.volume_proof]:
+            error=module.Stopped("volume_runtime_mount_policy_unqualified")
+            error.mount_policy_observations=observed;error.raw_mountinfo="/PRIVATE_RAW_MOUNT_CANARY"
+            error.details={"volume":"PRIVATE_VOLUME_CANARY"}
+            result=m.failure_details(error)
+            self.assertEqual(result,{"code":"volume_runtime_mount_policy_unqualified","stage":"setup",
+                                     "mountPolicy":observed})
+            self.assertNotIn("PRIVATE_",json.dumps(result))
+            for value in [{**observed,"PRIVATE_FIELD_CANARY":True},
+                    {key:item for key,item in observed.items() if key!="noswap"},
+                    {**observed,"noswap":1},{**observed,"noswap":"PRIVATE_VALUE_CANARY"},[],None]:
+                error.mount_policy_observations=value
+                with self.subTest(module=module.__name__,value=value):
+                    result=m.failure_details(error)
+                    self.assertNotIn("mountPolicy",result);self.assertNotIn("PRIVATE_",json.dumps(result))
+            for foreign in [module.Stopped("volume_runtime_capacity_mismatch"),
+                    m.Stopped("volume_runtime_mount_policy_unqualified"),
+                    ValueError("volume_runtime_mount_policy_unqualified")]:
+                foreign.mount_policy_observations=observed
+                self.assertNotIn("mountPolicy",m.failure_details(foreign))
+        class ForeignPropertyError(Exception):
+            @property
+            def mount_policy_observations(self):raise AssertionError("PRIVATE_PROPERTY_CANARY")
+        self.assertEqual(m.failure_details(ForeignPropertyError("PRIVATE_EXCEPTION_CANARY")),
+                         {"code":"synthetic_native_unconfirmed","stage":"setup"})
+
+    def test_mount_policy_primary_and_fixed_storage_failures_preserve_quarantine(self):
+        expected_codes={"owned_volume_creation_outcome_unknown","owned_volume_activated_runtime_unconfirmed",
+            "owned_volume_census_unqualified","owned_volume_configuration_changed","owned_volume_inspect_unqualified",
+            "owned_volume_container_references_present","owned_volume_removal_unconfirmed",
+            "owned_volume_command_unconfirmed","owned_volume_command_output_unqualified"}
+        self.assertEqual(o.CLEANUP_STORAGE_CODES,expected_codes)
+        spec={"name":"PRIVATE_VOLUME_CANARY","destination":"/PRIVATE_DESTINATION_CANARY",
+            "mountpoint":"/PRIVATE_HOST_CANARY","driver":"local","device":"tmpfs",
+            "size_mib":128,"nr_inodes":131072,"uid":1001,"gid":1001,"mode":"0700"}
+        with self.assertRaises(o.volume_proof.Stopped) as caught:
+            o.volume_proof.validate_runtime_proof(runtime_bytes([spec]).replace(b"rw,noswap",b"rw"),[spec])
+        primary=caught.exception
+        class DerivedStopped(o.ram.Stopped):pass
+        cases=[(o.ram.Stopped(code),code) for code in sorted(expected_codes)]+[
+            (o.ram.Stopped("PRIVATE_CLEANUP_CANARY"),"owned_storage_cleanup_unconfirmed"),
+            (ValueError("owned_volume_activated_runtime_unconfirmed"),"owned_storage_cleanup_unconfirmed"),
+            (DerivedStopped("owned_volume_activated_runtime_unconfirmed"),"owned_storage_cleanup_unconfirmed"),
+            (o.ram.Stopped("owned_volume_activated_runtime_unconfirmed","PRIVATE_EXTRA_ARG_CANARY"),
+             "owned_storage_cleanup_unconfirmed")]
+        for error,expected in cases:
+            p=self.probe();p.save_state=lambda:None
+            p.ram_volumes=SimpleNamespace(owner=p.token,cleanup=unittest.mock.Mock(side_effect=error))
+            def fail():p.stage="native_tools";raise primary
+            p.initialize=fail;p.cleanup=p.cleanup_storage
+            with self.subTest(error=type(error).__name__,expected=expected):
+                result=p.execute_synthetic()
+                self.assertEqual(result["errorCode"],"volume_runtime_mount_policy_unqualified")
+                self.assertFalse(result["primaryFailure"]["mountPolicy"]["noswap"])
+                self.assertEqual(result["cleanupFailure"]["native"]["storageCode"],expected)
+                for field in ["syntheticNativeProofComplete","nativeResourcesCleanupConfirmed","sourceProof",
+                        "sourceMetadataCompatible","independentlyReviewed","restoreQualified","restorePerformed"]:
+                    self.assertIs(result[field],False,field)
+                self.assertNotIn("PRIVATE_",json.dumps(result))
+                p.ram_volumes.cleanup.assert_called_once_with()
+
+    def test_cleanup_backstop_reports_only_fixed_storage_code_and_keeps_image_quarantined(self):
+        for code,expected in [("owned_volume_activated_runtime_unconfirmed","owned_volume_activated_runtime_unconfirmed"),
+                ("owned_storage_cleanup_unconfirmed","owned_storage_cleanup_unconfirmed"),
+                ("PRIVATE_BACKSTOP_CANARY",None),(["PRIVATE_BACKSTOP_CANARY"],None)]:
+            p=self.probe();p.uid=os.getuid();p.gid=os.getgid();p.save_state();details={}
+            def cleanup(instance):instance.storage_cleanup_code=code;return False
+            with self.subTest(code=code),patch.object(o.OperatorProbe,"cleanup",cleanup), \
+                 patch.object(m,"cleanup_image_from_state") as image:
+                self.assertEqual(m.cleanup_all(self.env,details=details),(False,False))
+                image.assert_not_called()
+            self.assertEqual(details["native"].get("storageCode"),expected)
+            self.assertNotIn("PRIVATE_",json.dumps(details));p.state_path.unlink()
+
     def test_new_runtime_and_volume_failures_emit_only_literal_safe_codes(self):
         for error_type in m.RAM_STOPPED_TYPES:
             known=error_type("volume_runtime_mount_policy_unqualified")
@@ -297,6 +378,7 @@ class SyntheticTests(unittest.TestCase):
         p=self.probe();p.native_tools={"timeout":"/server/timeout","sha256sum":"/server/sha"}
         p.client_tools={"timeout":"/operator/timeout","sha256sum":"/operator/sha"}
         p.bash_pins={"a":"a"*64,"b":"a"*64,"client":"b"*64};calls=[]
+        p.timeout_control=lambda key,tools:124
         def docker(args,**_):
             calls.append(args)
             key=next(k for k in ["a","b","client"] if p.names[k] in args)
@@ -304,7 +386,8 @@ class SyntheticTests(unittest.TestCase):
             if "3" in args:return 124,b""
             return 0,b""
         p.docker=docker
-        self.assertGreater(p.denial_probes([("synthetic","1.1.1.1",443),("synthetic","2606:4700::1111",443)]),0)
+        with patch.object(m.base.time,"monotonic",side_effect=[x for _ in range(40) for x in (0,3)]):
+            self.assertGreater(p.denial_probes([("synthetic","1.1.1.1",443),("synthetic","2606:4700::1111",443)]),0)
         self.assertTrue(any(p.names["client"] in a and "/operator/timeout" in a for a in calls))
         self.assertFalse(any(p.names["client"] in a and "/server/timeout" in a for a in calls))
         def wrong_hash(args,**_):
@@ -815,6 +898,61 @@ class SyntheticTests(unittest.TestCase):
     def test_image_environment_rejects_duplicates_and_source_or_provider_keys(self):
         for values in [["PATH=a","PATH=b"],["KOVA_PRODUCTION_DATABASE_URL=synthetic"],["OPENAI_API_KEY=synthetic"]]:
             with self.assertRaises(m.Stopped):o.environment(values)
+
+    def test_timeout_control_proves_actual_host_implementation_without_version_flag(self):
+        p=self.probe();timeout=shutil.which("timeout");sha=shutil.which("sha256sum")
+        self.assertIsNotNone(timeout);self.assertIsNotNone(sha)
+        def command(args,**kwargs):
+            value=subprocess.run(args[2:],capture_output=True,timeout=kwargs.get("timeout",5))
+            return value.returncode,value.stdout
+        p.docker=command
+        status=p.timeout_control("a",{"timeout":timeout,"sha256sum":sha})
+        self.assertIn(status,{124,143});self.assertIn("a",p.timeout_pins)
+        self.assertTrue(p.network_evidence[-1]["positiveControlPassed"])
+        self.assertTrue(p.network_evidence[-1]["expiryControlPassed"])
+
+    def test_timeout_expiry_must_be_measured_and_preserve_fast_positive_control(self):
+        tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
+        for status,output,elapsed,positive in [(143,b"timeout-control-started\n",0.1,True),
+          (127,b"timeout-control-started\n",1,True),(124,b"unexpected\n",1,True),
+          (124,b"timeout-control-started\n",1,False)]:
+            p=self.probe()
+            def command(args,**_):
+                if "/native/sha" in args:return 0,b"a"*64+b"  /native/timeout\n"
+                if "printf 'timeout-control-positive\\n'" in args:return (0,b"timeout-control-positive\n") if positive else (1,b"")
+                return status,output
+            p.docker=command
+            with self.subTest(status=status,elapsed=elapsed,positive=positive), \
+                 patch.object(m.base.time,"monotonic",side_effect=[0,elapsed]),self.assertRaises(m.Stopped):
+                p.timeout_control("a",tools)
+
+    def test_timeout_client_pin_and_changed_server_binary_are_rejected(self):
+        tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
+        for smoke_hash,accept in [("a"*64,False),("b"*64,True)]:
+            p=self.probe();p.operator_smoke={"tools":[{"name":"timeout","sha256":smoke_hash}]}
+            def command(args,**_):
+                if "/native/sha" in args:return 0,b"b"*64+b"  /native/timeout\n"
+                if "printf 'timeout-control-positive\\n'" in args:return 0,b"timeout-control-positive\n"
+                return 143,b"timeout-control-started\n"
+            p.docker=command
+            with self.subTest(smoke_hash=smoke_hash),patch.object(m.base.time,"monotonic",side_effect=[0,1]):
+                if accept:self.assertEqual(p.timeout_control("client",tools),143)
+                else:
+                    with self.assertRaisesRegex(m.Stopped,"timeout_control_identity_unconfirmed"):
+                        p.timeout_control("client",tools)
+        p.timeout_pins["a"]="a"*64
+        with self.assertRaisesRegex(m.Stopped,"timeout_control_identity_unconfirmed"):p.timeout_control("a",tools)
+
+    def test_route_timeout_status_is_accepted_only_for_measured_proven_implementation(self):
+        tools={"timeout":"/native/timeout"}
+        for code,out,elapsed,expected,accept in [(143,b"",3,143,True),(124,b"",3,124,True),
+          (143,b"",0.1,143,False),(143,b"",3,124,False),(0,b"",0.1,124,False),
+          (127,b"",3,124,False),(124,b"data",3,124,False)]:
+            p=self.probe();p.docker=lambda args,**_:(code,out)
+            with self.subTest(code=code,elapsed=elapsed,expected=expected),patch.object(m.base.time,"monotonic",side_effect=[0,elapsed]):
+                if accept:self.assertEqual(p.timed_denial_command("a",tools,"network-control",expected),code)
+                else:
+                    with self.assertRaises(m.Stopped):p.timed_denial_command("a",tools,"network-control",expected)
 
 
 if __name__=="__main__":unittest.main()

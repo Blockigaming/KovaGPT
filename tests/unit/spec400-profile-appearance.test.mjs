@@ -101,60 +101,44 @@ const labeledSelect = (f, label) =>
     (node) => node.type === "Select" || node.type === "select",
   );
 
-test("live appearance preview uses selected reading size, capped width, density, button state and motion", async () => {
+const appearanceSelect = (f, key) =>
+  f.find("Select", (node) =>
+    nodes(node).some((child) => child.props?.["aria-labelledby"] === `appearance-${key}`),
+  );
+
+test("appearance rows invoke every real preference and preview the reading values", async () => {
   const f = appearanceFixture();
-  assert.match(f.text(), /Live appearance preview/);
-  assert.doesNotMatch(f.text(), /Original palette|Accent presets are unavailable/);
-  assert.match(f.text(), /device’s reduced-motion setting always takes priority/);
-  assert.equal(
-    f.find("p", (n) => n.props.className === "kova-appearance-preview-prose").props.style.fontSize,
-    20,
-  );
-  assert.equal(
-    f.find("div", (n) => n.props.className === "kova-appearance-preview-reading").props.style
-      .maxWidth,
-    900,
-  );
-  assert.equal(
-    f.find("div", (n) => n.props.className === "kova-appearance-preview-nav").props.style.minHeight,
-    48,
-  );
-  for (const [label, value, key] of [
-    ["Reading size", "18", "readingSize"],
-    ["Reading width", "680", "readingWidth"],
-    ["Density", "comfortable", "density"],
-    ["Motion", "full", "motion"],
+  assert.match(f.text(), /Preview/);
+  assert.doesNotMatch(f.text(), /Preview button|Original palette|Accent presets are unavailable/);
+  assert.match(f.text(), /device’s reduced-motion preference takes priority/);
+  const reading = f.find("p", (n) => n.props.style?.fontSize === 20);
+  assert.equal(reading.props.style.maxWidth, 900);
+  for (const [key, value] of [
+    ["readingSize", "18"],
+    ["readingWidth", "680"],
+    ["density", "comfortable"],
+    ["motion", "full"],
   ]) {
-    labeledSelect(f, label).props.onValueChange(value);
+    appearanceSelect(f, key).props.onValueChange(value);
     await f.flush();
     assert.equal(
       f.props.settings[key],
       ["readingSize", "readingWidth"].includes(key) ? Number(value) : value,
     );
+    assert.equal(f.props.settings.customInstructions, original.customInstructions);
   }
-  assert.equal(f.find("section").props["data-motion"], "full");
-  assert.equal(
-    f.find("div", (n) => n.props.className === "kova-appearance-preview-nav").props.style.minHeight,
-    56,
-  );
-  await f.click("Preview button");
-  assert.equal(f.find("button", (n) => text(n) === "Preview button").props["aria-pressed"], true);
-  assert.match(f.text(), /Preview button selected/);
-  const before = f.calls.length;
-  await f.click("Preview button");
-  assert.equal(f.calls.length, before, "preview interaction must never change saved preferences");
 });
 
-test("theme controls and Reset appearance invoke the real bounded callbacks", async () => {
+test("theme and Reset appearance use bounded callbacks and preserve unrelated preferences", async () => {
   const f = appearanceFixture();
-  f.find("input", (n) => n.props.value === "system").props.onChange();
+  appearanceSelect(f, "mode").props.onValueChange("system");
   await f.flush();
   assert.equal(f.props.settings.mode, "system");
   assert.deepEqual(f.modes, ["system"]);
   await f.click("Reset appearance");
   assert.deepEqual(f.modes, ["system", "dark"]);
   assert.deepEqual(f.props.settings, appearance.resetAppearance(original));
-  assert.match(f.text(), /Response preferences and data are unchanged/);
+  assert.match(f.text(), /Appearance reset to defaults/);
 });
 
 test("preferred-name validation and failed saves preserve the previous value and account", () => {

@@ -1,25 +1,15 @@
 import { expect, test, type Page, type TestInfo, type Locator } from "@playwright/test";
 import { coreFixture, reviewProject } from "./core-app-fixture";
-import { openResponseOptions, openCurrentSettings, chooseSettingsSection } from "./current-ui";
+import {
+  openResponseOptions,
+  openCurrentSettings,
+  chooseSettingsSection,
+  revealSidebar,
+} from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 async function openSidebar(page: Page) {
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      ),
-  );
-  const navigation = page
-    .getByRole("navigation", { name: "Primary navigation", exact: true })
-    .or(page.getByRole("dialog", { name: "Primary navigation", exact: true }));
-  if (await navigation.isVisible()) return navigation;
-  const opener = page
-    .getByRole("button", { name: /^(Open menu|Open sidebar|Expand sidebar|Toggle sidebar)$/ })
-    .filter({ visible: true });
-  if (await opener.count()) await opener.first().click();
-  await expect(navigation).toBeVisible();
-  return navigation;
+  return revealSidebar(page);
 }
 
 async function expectReadableFilter(tab: Locator) {
@@ -301,12 +291,14 @@ test("project sections and account settings remain navigable and cancel safely",
   const searchSettings = settings.getByRole("textbox", { name: "Search settings", exact: true });
   if (await searchSettings.isVisible()) {
     await searchSettings.fill("subscription");
-    await expect(settings.getByRole("tab", { name: "Billing", exact: true })).toBeVisible();
+    await expect(settings.getByRole("tab", { name: "Subscriptions", exact: true })).toBeVisible();
     await expect(settings.getByRole("tab", { name: "Responses", exact: true })).toHaveCount(0);
   } else {
     await settings.getByRole("button", { name: "Section", exact: true }).click();
-    await page.getByRole("combobox", { name: "Search sections", exact: true }).fill("Billing");
-    await expect(page.getByRole("option", { name: "Billing", exact: true })).toBeVisible();
+    await page
+      .getByRole("combobox", { name: "Search sections", exact: true })
+      .fill("Subscriptions");
+    await expect(page.getByRole("option", { name: "Subscriptions", exact: true })).toBeVisible();
     await expect(page.getByRole("option", { name: "Responses", exact: true })).toHaveCount(0);
     await page.keyboard.press("Escape");
   }

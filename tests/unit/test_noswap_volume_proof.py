@@ -22,6 +22,10 @@ def volume(destination="/work",name="kova-ram-synthetic",device="0:123"):
 
 ROOT="1 0 0:9 / / ro,relatime - overlay overlay rw,lowerdir=synthetic\n"
 RAM="2 1 0:123 / /work rw,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,noswap,size=131072k,nr_inodes=131072\n"
+POLICY_DEFAULTS={"filesystemTmpfs":True,"sourceTmpfs":True,"filesystemRoot":True,"readWrite":True,
+    "nosuid":True,"nodev":True,"noexec":True,"readOnlyAbsent":True,"noswap":True,"optionalFieldsEmpty":True,
+    "sharedPropagation":False,"masterPropagation":False,"propagateFrom":False,"unbindable":False,
+    "unknownOptionalField":False}
 
 
 def runtime(mounts=ROOT+RAM):
@@ -32,6 +36,53 @@ def runtime(mounts=ROOT+RAM):
 
 
 class RuntimeProofTests(unittest.TestCase):
+    def test_mount_policy_diagnostic_tracks_each_actual_predicate_without_raw_metadata(self):
+        mutations=[(" - tmpfs tmpfs "," - PRIVATE_TYPE_CANARY tmpfs ",{"filesystemTmpfs":False}),
+            (" - tmpfs tmpfs "," - tmpfs PRIVATE_SOURCE_CANARY ",{"sourceTmpfs":False}),
+            ("0:123 / /work","0:123 /PRIVATE_ROOT_CANARY /work",{"filesystemRoot":False}),
+            ("rw,nosuid","nosuid",{"readWrite":False}),
+            ("nosuid,","",{"nosuid":False}),("nodev,","",{"nodev":False}),
+            ("noexec,","",{"noexec":False}),("rw,nosuid","rw,ro,nosuid",{"readOnlyAbsent":False}),
+            ("rw,noswap,","rw,",{"noswap":False})]
+        for field,token in [("sharedPropagation","shared:123"),("masterPropagation","master:123"),
+                ("propagateFrom","propagate_from:123"),("unbindable","unbindable"),
+                ("unknownOptionalField","PRIVATE_OPTION_CANARY")]:
+            mutations.append(("relatime - tmpfs","relatime "+token+" - tmpfs",
+                              {"optionalFieldsEmpty":False,field:True}))
+        for before,after,changes in mutations:
+            with self.subTest(changes=changes),self.assertRaises(m.Stopped) as caught:
+                m.validate_runtime_proof(runtime(ROOT+RAM.replace(before,after)),[volume()])
+            error=caught.exception
+            self.assertEqual(error.args,("volume_runtime_mount_policy_unqualified",))
+            observed=m.safe_mount_policy_observations(error)
+            self.assertEqual(observed,{**POLICY_DEFAULTS,**changes})
+            self.assertTrue(all(type(value) is bool for value in observed.values()))
+            self.assertNotIn("PRIVATE_",m.canonical(observed).decode())
+            self.assertNotIn("/work",m.canonical(observed).decode())
+            observed["noswap"]=not observed["noswap"]
+            self.assertNotEqual(observed,error.mount_policy_observations)
+
+    def test_mount_policy_diagnostic_rejects_injected_shapes_values_and_foreign_exception_properties(self):
+        valid=POLICY_DEFAULTS.copy();valid["noswap"]=False
+        for value in [None,[],{**valid,"PRIVATE_FIELD_CANARY":True},
+                {key:item for key,item in valid.items() if key!="noswap"},
+                {**valid,"noswap":0},{**valid,"noswap":1},{**valid,"noswap":"PRIVATE_VALUE_CANARY"},
+                {**valid,"noswap":None}]:
+            error=m.Stopped("volume_runtime_mount_policy_unqualified");error.mount_policy_observations=value
+            with self.subTest(value=value):self.assertIsNone(m.safe_mount_policy_observations(error))
+        class DerivedStopped(m.Stopped):pass
+        class ForeignPropertyError(Exception):
+            @property
+            def mount_policy_observations(self):
+                raise AssertionError("PRIVATE_PROPERTY_CANARY")
+        for error in [DerivedStopped("volume_runtime_mount_policy_unqualified"),
+                ValueError("volume_runtime_mount_policy_unqualified"),ForeignPropertyError("PRIVATE_EXCEPTION_CANARY"),
+                m.Stopped("volume_runtime_capacity_mismatch"),
+                m.Stopped("volume_runtime_mount_policy_unqualified","PRIVATE_EXTRA_ARG_CANARY")]:
+            if not isinstance(error,ForeignPropertyError):error.mount_policy_observations=valid
+            with self.subTest(error=type(error).__name__):
+                self.assertIsNone(m.safe_mount_policy_observations(error))
+
     def test_exact_live_metadata_produces_private_kernel_records_and_safe_receipt(self):
         result=m.validate_runtime_proof(runtime(),{"work":volume()})
         self.assertEqual(result["records"],[{"name":"kova-ram-synthetic","device":"0:123","root":"/",

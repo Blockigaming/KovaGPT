@@ -1,6 +1,12 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { ChevronDown, Check } from "lucide-react";
-import { MODES, versionGroupsForTier, type ModeId, type Tier } from "@/lib/modes";
+import { Brain, ChevronDown, Check } from "lucide-react";
+import {
+  MODES,
+  isModeAllowedForTier,
+  versionGroupsForTier,
+  type ModeId,
+  type Tier,
+} from "@/lib/modes";
 import { modeDisplayLabel } from "@/lib/mode-display-label";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
@@ -29,8 +35,8 @@ export function ResponsiveModelSelector({
 }) {
   const { isDesktop, interaction } = useLayout();
   const { isSignedIn, isLoaded } = useUser();
-  // Signed-out and Free users never receive a switchable model picker.
-  const locked = !isLoaded || !isSignedIn || userTier === "free";
+  // Guests remain on Default; every signed-in plan has its exact server-enforced choices.
+  const locked = !isLoaded || !isSignedIn;
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -41,10 +47,10 @@ export function ResponsiveModelSelector({
     groups.flatMap((group) => group.modes).find((item) => item.id === mode) ?? MODES[0];
   const topbar = placement === "topbar";
 
-  // Signed-out and Free visitors are pinned to Instant even if stale local state
-  // previously contained a paid/legacy mode.
+  // Reset stale or disallowed choices after authentication or plan changes.
   useEffect(() => {
-    if (!isLoaded || (isSignedIn && userTier !== "free")) return;
+    if (!isLoaded) return;
+    if (isSignedIn && isModeAllowedForTier(userTier, mode)) return;
     setOpen(false);
     if (mode !== "instant") onChange("instant");
   }, [isLoaded, isSignedIn, mode, onChange, userTier]);
@@ -113,6 +119,9 @@ export function ResponsiveModelSelector({
                 (selected ? "bg-accent" : "hover:bg-accent/60")
           }
         >
+          {availableMode.id === "thinking" && (
+            <Brain aria-hidden="true" className="h-4 w-4 shrink-0" />
+          )}
           <span className="flex-1 text-[15px] font-medium">{modeDisplayLabel(availableMode)}</span>
           {selected && (
             <Check
@@ -134,14 +143,14 @@ export function ResponsiveModelSelector({
     </div>
   ));
 
-  // Guests and Free users see the brand label in the same position, but no switchable menu.
+  // Guests see the brand in the header and Default inside the composer.
   if (locked)
     return (
       <span
         data-slot="model-selector-label"
         className="kova-model-static inline-flex min-h-11 min-w-0 select-none items-center px-3 text-lg font-semibold tracking-[-0.015em] text-foreground [font-family:var(--font-ui,var(--font-sans))]"
       >
-        <span className="truncate leading-none">KovaGPT</span>
+        <span className="truncate leading-none">{topbar ? "KovaGPT" : "Default"}</span>
       </span>
     );
 
@@ -169,6 +178,7 @@ export function ResponsiveModelSelector({
             data-ui-reference="chatgpt-model-selector"
             className={triggerClass}
           >
+            {current.id === "thinking" && <Brain aria-hidden="true" className="h-4 w-4 shrink-0" />}
             <span className={(useSheet ? "truncate " : "") + "leading-none text-foreground"}>
               {compact ? (
                 modeDisplayLabel(current)

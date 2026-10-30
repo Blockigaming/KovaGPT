@@ -35,14 +35,14 @@ test("phone composer stays touch-sized and grows for multiline text or attachmen
   const phone = chatStyles.slice(
     chatStyles.indexOf("@media (max-width: 1023px), (any-pointer: coarse)"),
   );
-  assert.match(phone, /\.spec400-composer\s*\{[^}]*display: flex;[^}]*min-height: 0/);
+  assert.match(phone, /\.spec400-composer\s*\{[^}]*display: flex;[^}]*min-height: 136px/);
   assert.match(phone, /\.spec400-composer-input\s*\{\s*min-height: 26px;\s*max-height: 144px/);
   assert.match(phone, /\.spec400-send-button\s*\{\s*min-width: 44px;\s*width: 44px/);
   assert.match(phone, /\.spec400-expand-input\s*\{[^}]*min-height: 44px/);
   const surface = chatStyles.match(/\.spec400-composer\s*\{([^}]+)\}/)?.[1];
   assert.ok(surface);
-  assert.match(surface, /display: grid/);
-  assert.match(surface, /min-height: 52px/);
+  assert.match(surface, /display: flex/);
+  assert.match(surface, /min-height: 148px/);
   assert.doesNotMatch(surface, /(?:^|[;{]\s*)height:|overflow: hidden/);
   assert.match(chatStyles, /\.spec400-attachment-chips\s*\{[^}]*flex-wrap: wrap/);
   assert.match(chatStyles, /env\(safe-area-inset-bottom\)/);

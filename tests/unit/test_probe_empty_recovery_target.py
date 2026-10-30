@@ -394,5 +394,113 @@ class NativeProbeTests(unittest.TestCase):
         p.network_evidence.append({"container":"a","family":6,"port":443,"connectDenied":True})
         p.verify_effective_firewalls()
 
+    def test_base_timeout_control_calibrates_each_supported_expiry_without_version_flag(self):
+        tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
+        for expired in [124,143]:
+            p=self.probe();calls=[]
+            self.assertEqual(p.timeout_pins,{})
+            def docker(args,**kwargs):
+                calls.append((args,kwargs))
+                if tools["sha256sum"] in args:return 0,b"a"*64+b"  /native/timeout\n"
+                if "printf 'timeout-control-positive\\n'" in args:return 0,b"timeout-control-positive\n"
+                return expired,b"timeout-control-started\n"
+            p.docker=docker
+            with self.subTest(expired=expired),patch.object(m.time,"monotonic",side_effect=[0,1]):
+                self.assertEqual(p.timeout_control("a",tools),expired)
+            self.assertEqual(p.timeout_pins,{"a":"a"*64})
+            self.assertEqual(p.network_evidence[-1],{"container":"a","timeoutSha256":"a"*64,
+                "timeoutExitCode":expired,"positiveControlPassed":True,"expiryControlPassed":True})
+            self.assertEqual(len(calls),3)
+            self.assertFalse(any("--version" in args for args,_ in calls))
+            self.assertIn("3",calls[1][0]);self.assertIn("1",calls[2][0])
+            self.assertIn("printf 'timeout-control-started\\n'; exec sleep 3",calls[2][0])
+            self.assertTrue(all(kwargs.get("allow_failure") for _,kwargs in calls[1:]))
+
+    def test_base_timeout_control_rejects_incomplete_positive_or_unmeasured_expiry(self):
+        tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
+        cases=[(143,b"timeout-control-started\n",0.1,0,b"timeout-control-positive\n"),
+            (124,b"timeout-control-started\n",3,0,b"timeout-control-positive\n"),
+            (127,b"timeout-control-started\n",1,0,b"timeout-control-positive\n"),
+            (0,b"timeout-control-started\n",1,0,b"timeout-control-positive\n"),
+            (124,b"",1,0,b"timeout-control-positive\n"),
+            (124,b"unexpected\n",1,0,b"timeout-control-positive\n"),
+            (124,b"timeout-control-started\n",1,1,b"timeout-control-positive\n"),
+            (124,b"timeout-control-started\n",1,0,b"")]
+        for status,output,elapsed,positive_code,positive_output in cases:
+            p=self.probe()
+            def docker(args,**_):
+                if tools["sha256sum"] in args:return 0,b"a"*64+b"  /native/timeout\n"
+                if "printf 'timeout-control-positive\\n'" in args:return positive_code,positive_output
+                return status,output
+            p.docker=docker
+            with self.subTest(status=status,elapsed=elapsed,positive_code=positive_code,output=output),\
+                 patch.object(m.time,"monotonic",side_effect=[0,elapsed]),self.assertRaises(m.Stopped):
+                p.timeout_control("a",tools)
+            self.assertEqual(p.network_evidence,[])
+
+    def test_base_timeout_binary_identity_changes_and_command_failures_never_grant_evidence(self):
+        tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
+        p=self.probe();p.timeout_pins["a"]="a"*64
+        p.docker=lambda args,**_:(0,b"b"*64+b"  /native/timeout\n")
+        with self.assertRaisesRegex(m.Stopped,"timeout_control_identity_unconfirmed"):p.timeout_control("a",tools)
+        self.assertEqual(p.timeout_pins["a"],"a"*64);self.assertEqual(p.network_evidence,[])
+        for raw in [b"not-a-hash\n",b"",b"\xff",b"A"*64+b"  /native/timeout\n"]:
+            p=self.probe();p.docker=lambda args,**_:(0,raw)
+            with self.subTest(raw=raw),self.assertRaises(m.Stopped):p.timeout_control("a",tools)
+            self.assertEqual(p.network_evidence,[])
+        p=self.probe();p.docker=lambda args,**_:(_ for _ in ()).throw(m.Stopped("native_command_failed"))
+        with self.assertRaisesRegex(m.Stopped,"native_command_failed"):p.timeout_control("a",tools)
+        self.assertEqual(p.network_evidence,[])
+
+    def test_base_timed_denial_requires_calibrated_status_elapsed_window_and_no_output(self):
+        tools={"timeout":"/native/timeout"}
+        cases=[(143,b"",3,143,True),(124,b"",3,124,True),(1,b"",0.01,143,True),
+            (143,b"",0.1,143,False),(143,b"",5,143,False),(143,b"",3,124,False),
+            (124,b"",3,143,False),(0,b"",3,124,False),(127,b"",3,124,False),
+            (-15,b"",3,143,False),(124,b"response",3,124,False),(1,b"response",0.1,143,False)]
+        for code,out,elapsed,expired,accept in cases:
+            p=self.probe();p.docker=lambda args,**_:(code,out)
+            with self.subTest(code=code,elapsed=elapsed,expired=expired),patch.object(m.time,"monotonic",side_effect=[0,elapsed]):
+                if accept:self.assertEqual(p.timed_denial_command("a",tools,"synthetic-network-control",expired),code)
+                else:
+                    with self.assertRaisesRegex(m.Stopped,"outbound_connection_not_denied"):
+                        p.timed_denial_command("a",tools,"synthetic-network-control",expired)
+
+    def test_base_denial_path_calibrates_real_controls_and_uses_each_containers_measured_status(self):
+        p=self.probe();p.native_tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
+        statuses={"a":143,"b":124,"client":143};clock={"value":0.0};calls=[]
+        def docker(args,**kwargs):
+            calls.append(args);key=next(k for k,name in p.names.items() if name in args)
+            if "/native/sha" in args:return 0,b"a"*64+b"  synthetic-binary\n"
+            if "/native/timeout" not in args:return 0,b""
+            script=args[-1]
+            if script=="printf 'timeout-control-positive\\n'":return 0,b"timeout-control-positive\n"
+            if "timeout-control-started" in script:
+                clock["value"]+=1;return statuses[key],b"timeout-control-started\n"
+            if "/dev/udp/" in script:self.assertIn("exec dd bs=1 count=1",script)
+            clock["value"]+=3;return statuses[key],b""
+        p.docker=docker
+        targets=[("production-https","1.1.1.1",443),("production-db","2606:4700::1111",5432)]
+        with patch.object(m.time,"monotonic",side_effect=lambda:clock["value"]):
+            self.assertEqual(p.denial_probes(targets),21)
+        controls=[r for r in p.network_evidence if "timeoutExitCode" in r]
+        self.assertEqual({r["container"]:r["timeoutExitCode"] for r in controls},statuses)
+        self.assertFalse(any("--version" in args and "/native/timeout" in args for args in calls))
+        self.assertEqual(len([r for r in p.network_evidence if r.get("connectDenied")]),18)
+        self.assertEqual(len([args for args in calls if args[-1:].count("printf 'timeout-control-positive\\n'")]),3)
+
+    def test_base_immediate_network_failure_requires_an_actual_route_denial_diagnostic(self):
+        for diagnostic in [b"connection refused",b"arbitrary failure",b""]:
+            p=self.probe();p.native_tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
+            p.timeout_control=lambda key,tools:143;p.last_stderr=diagnostic
+            def docker(args,**_):
+                if "/native/sha" in args:return 0,b"a"*64+b"  /bin/bash\n"
+                return (1,b"") if "/native/timeout" in args else (0,b"")
+            p.docker=docker
+            with self.subTest(diagnostic=diagnostic),patch.object(m.time,"monotonic",side_effect=[0,0.01]),\
+                 self.assertRaisesRegex(m.Stopped,"numeric_denial_cause_unconfirmed"):
+                p.denial_probes([("production-https","1.1.1.1",443)])
+            self.assertFalse(any(r.get("connectDenied") for r in p.network_evidence))
+
 
 if __name__=="__main__":unittest.main()

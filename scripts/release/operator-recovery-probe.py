@@ -40,6 +40,16 @@ FORBIDDEN_ENV=base.FORBIDDEN_ENV
 ROOT=base.ROOT
 recovery=base.recovery
 ident=base.ident
+CLEANUP_STORAGE_CODES=frozenset({"owned_volume_creation_outcome_unknown","owned_volume_activated_runtime_unconfirmed",
+    "owned_volume_census_unqualified","owned_volume_configuration_changed","owned_volume_inspect_unqualified",
+    "owned_volume_container_references_present","owned_volume_removal_unconfirmed",
+    "owned_volume_command_unconfirmed","owned_volume_command_output_unqualified"})
+
+
+def safe_storage_cleanup_code(error):
+    if (type(error) is ram.Stopped and len(error.args)==1 and type(error.args[0]) is str
+            and error.args[0] in CLEANUP_STORAGE_CODES):return error.args[0]
+    return "owned_storage_cleanup_unconfirmed"
 
 
 def environment(values):
@@ -62,6 +72,7 @@ class OperatorProbe(base.Probe):
                 and re.fullmatch(r"[a-f0-9]{40}",source_sha or ""),"operator_image_pin_required")
         self.operator_image_id=image_id;self.operator_source_sha=source_sha
         self.client_tools={};self.operator_env={};self.bash_pins={};self.operator_smoke=None
+        self.timeout_pins={}
         self.server_image_id=None
         self.ram_volumes=None;self.ram_keys={};self.short_ram_index=0
         self.names.update({key:"kova-empty-"+key+"-"+self.token for key in ["smoke","toolcheck"]})
@@ -101,7 +112,10 @@ class OperatorProbe(base.Probe):
             if manager.owner==self.token:
                 try:
                     safe=bool(manager.cleanup()) and safe
-                except Exception:safe=False
+                except Exception as error:
+                    safe=False
+                    if not getattr(self,"storage_cleanup_code",None):
+                        self.storage_cleanup_code=safe_storage_cleanup_code(error)
         return safe
 
     def docker(self,args,**kwargs):
@@ -408,6 +422,13 @@ while :; do sleep 1; done"""
                 "tableCount":len(rows),"namespaceObjectCount":len(census["namespaceObjects"]),
                 "globalObjectCount":len(census["globalObjects"])}
 
+    def timeout_control(self,key,tools):
+        expired=super().timeout_control(key,tools)
+        if key=="client":
+            expected=next((row.get("sha256") for row in self.operator_smoke["tools"] if row.get("name")=="timeout"),None)
+            require(self.timeout_pins[key]==expected,"timeout_control_identity_unconfirmed")
+        return expired
+
     def denial_probes(self,targets):
         self.stage="actual_egress_denial"
         count=0
@@ -418,14 +439,12 @@ while :; do sleep 1; done"""
             # /dev/tcp is the same pinned Bash that passed the actual dual-stack
             # TLS controls. Missing tools/unknown execution states never pass.
             self.docker(["exec",self.names[key],"/bin/bash","--version"])
-            self.docker(["exec",self.names[key],tools["timeout"],"--version"])
+            expired=self.timeout_control(key,tools)
             _,raw=self.docker(["exec",self.names[key],tools["sha256sum"],"/bin/bash"])
             value=raw.decode().split()[0];require(SHA.fullmatch(value) and value==self.bash_pins[key],"bash_control_identity_changed")
             for kind,ip,port in targets+extra:
                 ipaddress.ip_address(ip);require(port in {53,443,5432},"denial_probe_port_unqualified")
-                code,_=self.docker(["exec",self.names[key],tools["timeout"],"3","/bin/bash","-ceu",
-                    "exec 3<>/dev/tcp/"+ip+"/"+str(port)],timeout=5,allow_failure=True)
-                require(code in {1,124},"outbound_connection_not_denied")
+                code=self.timed_denial_command(key,tools,"exec 3<>/dev/tcp/"+ip+"/"+str(port),expired)
                 if code==1:
                     require(b"network is unreachable" in self.last_stderr.lower()
                             or b"no route to host" in self.last_stderr.lower(),"numeric_denial_cause_unconfirmed")
@@ -435,15 +454,14 @@ while :; do sleep 1; done"""
             # An actual UDP DNS query must receive no reply; TCP53 alone would
             # not test Docker's embedded UDP resolver escape path.
             self.docker(["exec",self.names[key],"/bin/bash","-ceu","command -v dd >/dev/null"])
-            dns="exec 3<>/dev/udp/127.0.0.11/53; printf '\\x12\\x34\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01' >&3; dd bs=1 count=1 <&3 >/dev/null 2>&1"
-            code,_=self.docker(["exec",self.names[key],tools["timeout"],"3","/bin/bash","-ceu",dns],
-                              timeout=5,allow_failure=True)
-            require(code==124,"embedded_dns_udp_denial_unconfirmed")
+            dns="exec 3<>/dev/udp/127.0.0.11/53; printf '\\x12\\x34\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01' >&3; exec dd bs=1 count=1 <&3 >/dev/null 2>&1"
+            code=self.timed_denial_command(key,tools,dns,expired)
+            require(code==expired,"embedded_dns_udp_denial_unconfirmed")
             count+=1
         return count
 
 
-def cleanup_operator_state(env, *, context_validator=base.checked_context):
+def cleanup_operator_state(env, *, context_validator=base.checked_context,details=None):
     """Backstop for exact owned resources; no target starts or proof renewal."""
     source=context_validator(env)
     run_id,attempt=env.get("GITHUB_RUN_ID",""),env.get("GITHUB_RUN_ATTEMPT","")
@@ -468,4 +486,9 @@ def cleanup_operator_state(env, *, context_validator=base.checked_context):
     p.private_root=Path(state["privateRoot"]) if state.get("privateRoot") else None
     p.pg_uid=state.get("pgUid");p.pg_gid=state.get("pgGid");p.uid=state["uid"];p.gid=state["gid"]
     p.command_count=0;p.last_stderr=b"";p.cleanup_confirmed=False
-    return p.cleanup()
+    safe=p.cleanup()
+    if not safe and details is not None:
+        code=getattr(p,"storage_cleanup_code",None)
+        if type(code) is str and (code in CLEANUP_STORAGE_CODES or code=="owned_storage_cleanup_unconfirmed"):
+            details["storageCode"]=code
+    return safe

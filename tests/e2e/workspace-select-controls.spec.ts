@@ -146,7 +146,9 @@ for (const theme of ["light", "dark"] as const) {
       await expect(navigation.getByRole("tab", { name: "Responses", exact: true })).toBeInViewport({
         ratio: 1,
       });
-      await expect(navigation.getByRole("tab", { name: "Billing", exact: true })).toBeInViewport({
+      await expect(
+        navigation.getByRole("tab", { name: "Subscriptions", exact: true }),
+      ).toBeInViewport({
         ratio: 1,
       });
     }
@@ -176,12 +178,14 @@ for (const theme of ["light", "dark"] as const) {
       await expect(
         navigation.getByRole("textbox", { name: "Search settings", exact: true }),
       ).toBeInViewport({ ratio: 1 });
-      const billing = navigation.getByRole("tab", { name: "Billing", exact: true });
+      const billing = navigation.getByRole("tab", { name: "Subscriptions", exact: true });
       await billing.scrollIntoViewIfNeeded();
       await expect(billing).toBeInViewport({ ratio: 1 });
       await billing.click();
       await expect(page).toHaveURL(/\/settings\/billing$/);
-      await expect(settings.getByRole("heading", { name: "Billing", exact: true })).toBeVisible();
+      await expect(
+        settings.getByRole("heading", { name: "Subscriptions", exact: true }),
+      ).toBeVisible();
     }
     expect(errors).toEqual([]);
   });

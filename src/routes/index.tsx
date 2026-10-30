@@ -1063,6 +1063,20 @@ function KovaGPT() {
     applyReadingPreferences(document.documentElement, settings);
   }, [settings, settingsReady]);
 
+  // Apply preference edits made in another tab without resetting the conversation.
+  useEffect(() => {
+    if (!settingsReady) return;
+    const sync = (event: StorageEvent) => {
+      if (event.key !== settingsKey(userKey) || event.newValue === null) return;
+      const loaded = loadSettings(userKey);
+      setSettings((previous) =>
+        JSON.stringify(previous) === JSON.stringify(loaded) ? previous : loaded,
+      );
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [settingsReady, userKey]);
+
   // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
   // which was the main source of typing/streaming lag.
   useEffect(() => {

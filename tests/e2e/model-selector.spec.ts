@@ -2,32 +2,27 @@ import { test, expect } from "@playwright/test";
 
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openResponseOptions } from "./current-ui";
 
-test("Free chat has no model picker and Thinking is an upgrade action", async ({ page }) => {
+test("Free chat offers Default and Thinking without executing Chat", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "free" });
   let chatRequests = 0;
   await page.route("**/api/chat", async (route) => {
     chatRequests += 1;
     await route.abort("blockedbyclient");
   });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/");
   await waitForKovaHydration(page);
-
-  await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toHaveCount(0);
-  const responseOptions = await openResponseOptions(page);
-  await expect(responseOptions).toContainText("Your Free plan uses its included setting.");
-  const upgrade = page.getByTestId("thinking-upgrade-button");
-  await expect(upgrade).toBeVisible();
-  await expect(upgrade).toHaveAttribute("aria-label", "Thinking is locked. Open Subscriptions");
-  await upgrade.click();
-  await expect(page).toHaveURL(/\/settings\/billing(?:[?#]|$)/);
+  await page.getByTestId("model-selector-trigger").filter({ visible: true }).click();
+  await expect(page.locator('[data-testid^="model-option-"]:visible')).toHaveCount(2);
+  await expect(page.getByTestId("model-option-instant")).toHaveText("Default");
+  await page.getByTestId("model-option-thinking").click();
+  await expect(
+    page.getByTestId("model-selector-trigger").filter({ visible: true }),
+  ).toHaveAttribute("aria-label", "Choose model: KovaGPT Thinking");
   expect(chatRequests).toBe(0);
 });
 
-test("Plus model selector exposes Instant Medium and Thinking using the High route", async ({
-  page,
-}) => {
+test("Plus model selector exposes Default Medium Thinking and High", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "plus" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
@@ -35,7 +30,6 @@ test("Plus model selector exposes Instant Medium and Thinking using the High rou
   const useSheet = await page.evaluate(
     () => window.innerWidth < 1024 || window.matchMedia("(pointer: coarse)").matches,
   );
-  await openResponseOptions(page);
   const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
   await expect(trigger).toBeVisible();
   await trigger.click();
@@ -46,18 +40,21 @@ test("Plus model selector exposes Instant Medium and Thinking using the High rou
     : page.getByRole("dialog", { name: "Choose model" });
   await expect(optionRoot).toBeVisible({ timeout: 3000 });
   await expect(optionRoot.getByTestId("model-option-instant")).toBeVisible();
-  await expect(optionRoot.getByTestId("model-option-instant")).toHaveText("Instant");
+  await expect(optionRoot.getByTestId("model-option-instant")).toHaveText("Default");
   await expect(optionRoot.getByTestId("model-option-medium")).toBeVisible();
-  await expect(optionRoot.getByTestId("model-option-high")).toContainText("Thinking");
-  await expect(optionRoot.getByTestId("model-option-thinking")).toHaveCount(0);
+  await expect(optionRoot.getByTestId("model-option-high")).toContainText("High");
+  await expect(optionRoot.getByTestId("model-option-thinking")).toBeVisible();
   await expect(optionRoot.getByTestId("model-option-extra_high")).toHaveCount(0);
 
-  await optionRoot.getByTestId("model-option-high").click();
+  await optionRoot.getByTestId("model-option-thinking").click();
   await expect(optionRoot).toHaveCount(0);
   await expect(trigger).toHaveAttribute("aria-label", "Choose model: KovaGPT Thinking");
   await expect(trigger).toContainText("Thinking");
   await trigger.click();
-  await expect(optionRoot.getByTestId("model-option-high")).toHaveAttribute("aria-pressed", "true");
+  await expect(optionRoot.getByTestId("model-option-thinking")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await page.keyboard.press("Escape");
   await expect(optionRoot).toHaveCount(0);
   if (!useSheet) {
@@ -66,17 +63,16 @@ test("Plus model selector exposes Instant Medium and Thinking using the High rou
   }
 });
 
-test("Pro picker keeps all six modes and the High label", async ({ page }) => {
+test("Pro picker keeps all seven modes and the High label", async ({ page }) => {
   await installAuthenticatedFixture(page, { tier: "pro" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await openResponseOptions(page);
   const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
   await expect(trigger).toBeVisible();
   await trigger.click();
   const options = page.locator('[data-testid^="model-option-"]:visible');
-  await expect(options).toHaveCount(6);
-  for (const id of ["instant", "medium", "high", "extra_high", "max", "ultra"]) {
+  await expect(options).toHaveCount(7);
+  for (const id of ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"]) {
     await expect(page.getByTestId(`model-option-${id}`)).toBeVisible();
   }
   await expect(page.getByTestId("model-option-high")).toHaveText("High");
@@ -85,33 +81,23 @@ test("Pro picker keeps all six modes and the High label", async ({ page }) => {
   await expect(page.getByTestId("thinking-upgrade-button")).toHaveCount(0);
 });
 
-test("signed-out Thinking navigates to upgrade without executing Chat", async ({ page }) => {
+test("signed-out chat retains Default without paid model access", async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
   await page.route("https://*.supabase.co/**", (route) => route.abort("blockedbyclient"));
-  let chatRequests = 0;
-  await page.route("**/api/chat", async (route) => {
-    chatRequests += 1;
-    await route.abort("blockedbyclient");
-  });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.goto("/");
   await waitForKovaHydration(page);
   await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toHaveCount(0);
-  await openResponseOptions(page);
-  await page.getByTestId("thinking-upgrade-button").click();
-  await expect(page).toHaveURL(/\/pricing(?:[?#]|$)/);
-  expect(chatRequests).toBe(0);
+  await expect(page.getByTestId("thinking-upgrade-button")).toHaveCount(0);
+  await expect(page.locator(".spec400-composer-trailing")).toContainText("Default");
 });
 
 test.describe("short desktop model picker", () => {
   test.use({ viewport: { width: 1440, height: 520 }, isMobile: false, hasTouch: false });
 
-  test("paid model picker escapes the Options scroller and preserves nested keyboard focus", async ({
-    page,
-  }) => {
+  test("paid model picker fits a short window and preserves keyboard focus", async ({ page }) => {
     await installAuthenticatedFixture(page, { tier: "pro" });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const responseOptions = await openResponseOptions(page);
     const trigger = page.getByTestId("model-selector-trigger").filter({ visible: true });
     await trigger.click();
     const picker = page.getByRole("dialog", { name: "Choose model", exact: true });
@@ -166,7 +152,6 @@ test.describe("short desktop model picker", () => {
 
     await page.keyboard.press("Escape");
     await expect(picker).toHaveCount(0);
-    await expect(responseOptions).toBeVisible();
     await expect(trigger).toBeFocused();
     await trigger.press("Space");
     await expect(picker).toBeVisible();
@@ -175,7 +160,6 @@ test.describe("short desktop model picker", () => {
     await expect(picker.getByTestId("model-option-medium")).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(picker).toHaveCount(0);
-    await expect(responseOptions).toBeVisible();
     await expect(trigger).toBeFocused();
     await expect(trigger).toHaveAttribute("aria-label", "Choose model: KovaGPT Medium");
   });

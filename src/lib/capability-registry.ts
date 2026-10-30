@@ -282,7 +282,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.plus_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.plus_monthly.trialPeriodDays,
       description:
-        "Instant, Medium, Thinking, and Adaptive Memory. Operational usage limits still apply.",
+        "Default, Medium, Thinking, High, and Adaptive Memory. Operational usage limits still apply.",
       features: planFeatures("plus"),
     },
     pro: {
@@ -292,7 +292,7 @@ export const CAPABILITY_REGISTRY = Object.freeze({
       lookupKey: BILLING_PLANS.pro_monthly.lookupKey,
       trialPeriodDays: BILLING_PLANS.pro_monthly.trialPeriodDays,
       description:
-        "Instant, Medium, High, Extra high, Max, and Ultra. Operational token and premium-request limits still apply.",
+        "Default, Medium, Thinking, High, Extra high, Max, and Ultra. Operational token and premium-request limits still apply.",
       features: planFeatures("pro"),
     },
   },

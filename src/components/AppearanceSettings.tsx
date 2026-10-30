@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, FileText, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Settings } from "@/components/SettingsDialog";
+import type { Settings } from "@/lib/settings-types";
 import { appearanceValues, resetAppearance } from "@/lib/appearance-preferences.mjs";
 import { applyThemeMode } from "@/lib/theme";
 import "@/styles/appearance-settings.css";
@@ -21,202 +21,126 @@ export function AppearanceSettings({
   onChange: (settings: Settings) => void;
 }) {
   const values = appearanceValues(settings);
-  const [previewSelected, setPreviewSelected] = useState(false);
-  const [resetNotice, setResetNotice] = useState("");
+  const [notice, setNotice] = useState("");
   const change = (patch: Partial<Settings>) => {
-    setResetNotice("");
+    setNotice("");
     if (patch.mode) applyThemeMode(patch.mode);
     onChange({ ...settings, ...patch });
   };
+  const rows = [
+    {
+      key: "mode",
+      label: "Theme",
+      hint: "Choose how KovaGPT looks.",
+      options: [
+        ["dark", "Dark"],
+        ["light", "Light"],
+        ["system", "System"],
+      ],
+    },
+    {
+      key: "density",
+      label: "Density",
+      hint: "Space between navigation and list items.",
+      options: [
+        ["comfortable", "Comfortable"],
+        ["compact", "Compact"],
+      ],
+    },
+    {
+      key: "readingSize",
+      label: "Text size",
+      hint: "The size of text in answers.",
+      options: [
+        ["16", "Default"],
+        ["18", "Large"],
+        ["20", "Extra large"],
+      ],
+    },
+    {
+      key: "readingWidth",
+      label: "Reading width",
+      hint: "The maximum width of answers.",
+      options: [
+        ["680", "Narrow"],
+        ["760", "Default"],
+        ["900", "Wide"],
+      ],
+    },
+    {
+      key: "motion",
+      label: "Motion",
+      hint: "Your device’s reduced-motion preference takes priority.",
+      options: [
+        ["full", "Full"],
+        ["reduced", "Reduced"],
+      ],
+    },
+  ] as const;
   return (
-    <div
-      className="kova-appearance-settings space-y-6"
-      data-ui-reference="chatgpt.settings.appearance"
-    >
-      <p className="text-sm text-muted-foreground">
-        Changes apply immediately and save on this device for this account. Cross-device sync is
-        unavailable.
-      </p>
-      <fieldset className="space-y-3">
-        <legend className="text-sm font-semibold">Theme</legend>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {(
-            [
-              ["dark", "Dark", "Default"],
-              ["light", "Light", "Light surfaces"],
-              ["system", "Match device settings", "Follows your device"],
-            ] as const
-          ).map(([mode, title, hint]) => (
-            <label
-              key={mode}
-              className="kova-appearance-theme-choice"
-              data-selected={values.mode === mode}
-            >
-              <input
-                type="radio"
-                name="settings-theme"
-                value={mode}
-                checked={values.mode === mode}
-                onChange={() => change({ mode })}
-              />
-              <span>
-                <span className="block text-sm font-medium">{title}</span>
-                <span className="block text-xs text-muted-foreground">{hint}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm">
-          Density
-          <Select
-            value={values.density}
-            onValueChange={(value) => change({ density: value as Settings["density"] })}
-          >
-            <SelectTrigger aria-label="Density">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="comfortable">Comfortable (default)</SelectItem>
-              <SelectItem value="compact">Compact</SelectItem>
-            </SelectContent>
-          </Select>
-        </label>
-        <label className="grid gap-2 text-sm">
-          Reading size
-          <Select
-            value={String(values.readingSize)}
-            onValueChange={(value) =>
-              change({ readingSize: Number(value) as Settings["readingSize"] })
-            }
-          >
-            <SelectTrigger aria-label="Reading size">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[16, 18, 20].map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size}px{size === 16 ? " (default)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-        <label className="grid gap-2 text-sm">
-          Reading width
-          <Select
-            value={String(values.readingWidth)}
-            onValueChange={(value) =>
-              change({ readingWidth: Number(value) as Settings["readingWidth"] })
-            }
-          >
-            <SelectTrigger aria-label="Reading width">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[680, 760, 900].map((width) => (
-                <SelectItem key={width} value={String(width)}>
-                  {width}px{width === 760 ? " (default)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-        <label className="grid gap-2 text-sm">
-          Motion
-          <Select
-            value={values.motion}
-            onValueChange={(value) => change({ motion: value as Settings["motion"] })}
-          >
-            <SelectTrigger aria-label="Motion">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="full">Full (default)</SelectItem>
-              <SelectItem value="reduced">Reduced</SelectItem>
-            </SelectContent>
-          </Select>
-        </label>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Reading width is capped to the available space. Your device’s reduced-motion setting always
-        takes priority.
-      </p>
-      <section
-        className="kova-appearance-preview space-y-4"
-        aria-labelledby="appearance-preview-heading"
-        data-motion={values.motion}
-        data-density={values.density}
-        data-selected={previewSelected}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 id="appearance-preview-heading" className="text-sm font-semibold">
-            Live appearance preview
-          </h3>
-          <span className="text-xs text-muted-foreground">
-            {values.readingSize}px · {values.readingWidth}px maximum
-          </span>
-        </div>
-        <div className="kova-appearance-preview-reading" style={{ maxWidth: values.readingWidth }}>
-          <div
-            className="kova-appearance-preview-nav"
-            style={{ minHeight: values.density === "compact" ? 48 : 56 }}
-          >
-            <FileText className="h-4 w-4" aria-hidden="true" />
-            <span>Project notes</span>
-            <span className="ml-auto text-xs text-muted-foreground">Example</span>
-          </div>
-          <p className="kova-appearance-preview-prose" style={{ fontSize: values.readingSize }}>
-            A clear answer starts with the useful details. Your reading preferences adjust this
-            paragraph while controls and headings keep their familiar size.
-          </p>
-          <div className="kova-appearance-preview-box">
-            <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
+    <div className="kova-appearance-settings" data-ui-reference="chatgpt.settings.appearance">
+      <div className="kova-preference-list">
+        {rows.map(({ key, label, hint, options }) => (
+          <div className="kova-preference-row" key={key}>
             <div>
-              <p className="text-sm font-medium">Planning notes</p>
-              <p className="text-xs text-muted-foreground">An example content box</p>
+              <label id={`appearance-${key}`} className="font-medium">
+                {label}
+              </label>
+              <p>{hint}</p>
             </div>
+            <Select
+              value={String(values[key])}
+              onValueChange={(value) => {
+                if (key === "readingSize")
+                  change({ readingSize: Number(value) as Settings["readingSize"] });
+                else if (key === "readingWidth")
+                  change({ readingWidth: Number(value) as Settings["readingWidth"] });
+                else change({ [key]: value } as Partial<Settings>);
+              }}
+            >
+              <SelectTrigger aria-labelledby={`appearance-${key}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map(([value, title]) => (
+                  <SelectItem key={value} value={value}>
+                    {title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Button
-            type="button"
-            aria-pressed={previewSelected}
-            onClick={() => setPreviewSelected((selected) => !selected)}
-          >
-            {previewSelected ? <Check className="h-4 w-4" aria-hidden="true" /> : null}Preview
-            button
-          </Button>
-          <p className="min-h-5 text-xs text-muted-foreground" role="status">
-            {previewSelected
-              ? "Preview button selected."
-              : "Try the button to preview its selected state."}
-          </p>
-        </div>
+        ))}
+      </div>
+      <section className="kova-appearance-preview" aria-label="Reading preview">
+        <p className="text-xs text-muted-foreground mb-3">Preview</p>
+        <p
+          style={{ fontSize: values.readingSize, maxWidth: values.readingWidth, lineHeight: 1.65 }}
+        >
+          A clear answer starts with the useful details. Your reading preferences apply to answers
+          throughout KovaGPT.
+        </p>
       </section>
-      <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-3 mt-5">
         <Button
-          type="button"
-          variant="outline"
+          variant="ghost"
           onClick={() => {
-            const next = resetAppearance(settings);
-            applyThemeMode(next.mode);
-            onChange(next);
-            setResetNotice(
-              "Appearance defaults restored. Response preferences and data are unchanged.",
-            );
+            const reset = resetAppearance(settings);
+            applyThemeMode(reset.mode);
+            onChange(reset);
+            setNotice("Appearance reset to defaults.");
           }}
         >
-          <RotateCcw className="h-4 w-4" aria-hidden="true" />
+          <RotateCcw aria-hidden="true" className="h-4 w-4 mr-2" />
           Reset appearance
         </Button>
-        <p className="text-xs text-muted-foreground">
-          Restores Dark theme, Comfortable density, 16px reading size, 760px reading width, and Full
-          motion.
-        </p>
-        <p className="text-xs text-muted-foreground" role="status">
-          {resetNotice}
+        <p role="status" className="text-sm text-muted-foreground">
+          {notice}
         </p>
       </div>
+      <p className="text-xs text-muted-foreground mt-5">
+        Saved automatically for this account on this device.
+      </p>
     </div>
   );
 }

@@ -354,6 +354,7 @@ class Probe:
         self.host_firewall_pins={}
         self.native_tools={}
         self.network_evidence=[]
+        self.timeout_pins={}
         self.netns={}
         self.neighbors=[]
 
@@ -857,6 +858,38 @@ while :; do sleep 1; done"""
             require(digest(raw)==self.host_firewall_pins[tool],"host_firewall_rules_changed")
             self.network_evidence.append({"hostFamily":6 if tool=="ip6tables" else 4,"rulesSha256":digest(raw)})
 
+    def timeout_control(self,key,tools):
+        _,raw=self.docker(["exec",self.names[key],tools["sha256sum"],tools["timeout"]])
+        try:value=raw.decode("ascii").split()[0]
+        except (UnicodeDecodeError,IndexError):raise Stopped("timeout_control_identity_unconfirmed") from None
+        require(SHA.fullmatch(value),"timeout_control_identity_unconfirmed")
+        old=self.timeout_pins.setdefault(key,value)
+        require(old==value,"timeout_control_identity_unconfirmed")
+        positive=b"timeout-control-positive\n"
+        code,out=self.docker(["exec",self.names[key],tools["timeout"],"3","/bin/bash","-ceu",
+            "printf 'timeout-control-positive\\n'"],timeout=5,allow_failure=True)
+        require(code==0 and out==positive,"timeout_control_positive_unconfirmed")
+        # Measure this exact pinned implementation. GNU expires with 124;
+        # the pinned BusyBox applet signals the command (128+SIGTERM).
+        started=time.monotonic()
+        code,out=self.docker(["exec",self.names[key],tools["timeout"],"1","/bin/bash","-ceu",
+            "printf 'timeout-control-started\\n'; exec sleep 3"],timeout=5,allow_failure=True)
+        elapsed=time.monotonic()-started
+        require(code in {124,143} and out==b"timeout-control-started\n" and 0.75<=elapsed<=2.5,
+                "timeout_control_expiry_unconfirmed")
+        self.network_evidence.append({"container":key,"timeoutSha256":value,"timeoutExitCode":code,
+                                      "positiveControlPassed":True,"expiryControlPassed":True})
+        return code
+
+    def timed_denial_command(self,key,tools,script,expired):
+        started=time.monotonic()
+        code,out=self.docker(["exec",self.names[key],tools["timeout"],"3","/bin/bash","-ceu",script],
+                             timeout=5,allow_failure=True)
+        elapsed=time.monotonic()-started
+        require(out==b"" and (code==1 or (code==expired and 2.5<=elapsed<=4.75)),
+                "outbound_connection_not_denied")
+        return code
+
     def denial_probes(self,targets):
         self.stage="actual_egress_denial"
         count=0
@@ -867,14 +900,12 @@ while :; do sleep 1; done"""
             # /dev/tcp is the same pinned Bash that passed the actual dual-stack
             # TLS controls. Missing tools/unknown execution states never pass.
             self.docker(["exec",self.names[key],"/bin/bash","--version"])
-            self.docker(["exec",self.names[key],self.native_tools["timeout"],"--version"])
+            expired=self.timeout_control(key,self.native_tools)
             _,raw=self.docker(["exec",self.names[key],self.native_tools["sha256sum"],"/bin/bash"])
             value=raw.decode().split()[0];require(SHA.fullmatch(value),"bash_control_identity_missing");bash_hashes.append(value)
             for kind,ip,port in targets+extra:
                 ipaddress.ip_address(ip);require(port in {53,443,5432},"denial_probe_port_unqualified")
-                code,_=self.docker(["exec",self.names[key],self.native_tools["timeout"],"3","/bin/bash","-ceu",
-                    "exec 3<>/dev/tcp/"+ip+"/"+str(port)],timeout=5,allow_failure=True)
-                require(code in {1,124},"outbound_connection_not_denied")
+                code=self.timed_denial_command(key,self.native_tools,"exec 3<>/dev/tcp/"+ip+"/"+str(port),expired)
                 if code==1:
                     require(b"network is unreachable" in self.last_stderr.lower()
                             or b"no route to host" in self.last_stderr.lower(),"numeric_denial_cause_unconfirmed")
@@ -884,10 +915,9 @@ while :; do sleep 1; done"""
             # An actual UDP DNS query must receive no reply; TCP53 alone would
             # not test Docker's embedded UDP resolver escape path.
             self.docker(["exec",self.names[key],"/bin/bash","-ceu","command -v dd >/dev/null"])
-            dns="exec 3<>/dev/udp/127.0.0.11/53; printf '\\x12\\x34\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01' >&3; dd bs=1 count=1 <&3 >/dev/null 2>&1"
-            code,_=self.docker(["exec",self.names[key],self.native_tools["timeout"],"3","/bin/bash","-ceu",dns],
-                              timeout=5,allow_failure=True)
-            require(code==124,"embedded_dns_udp_denial_unconfirmed")
+            dns="exec 3<>/dev/udp/127.0.0.11/53; printf '\\x12\\x34\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01' >&3; exec dd bs=1 count=1 <&3 >/dev/null 2>&1"
+            code=self.timed_denial_command(key,self.native_tools,dns,expired)
+            require(code==expired,"embedded_dns_udp_denial_unconfirmed")
             count+=1
         require(len(set(bash_hashes))==1,"server_client_bash_binary_mismatch")
         return count

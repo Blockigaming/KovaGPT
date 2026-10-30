@@ -15,6 +15,9 @@ MAX_BYTES = 8 * 1024**2
 PATH = re.compile(r"/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\Z")
 DEVICE = re.compile(r"[0-9]+:[0-9]+\Z")
 NAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}\Z")
+MOUNT_POLICY_KEYS = frozenset({"filesystemTmpfs","sourceTmpfs","filesystemRoot","readWrite",
+    "nosuid","nodev","noexec","readOnlyAbsent","noswap","optionalFieldsEmpty",
+    "sharedPropagation","masterPropagation","propagateFrom","unbindable","unknownOptionalField"})
 
 
 class Stopped(Exception):
@@ -24,6 +27,16 @@ class Stopped(Exception):
 def require(ok, code):
     if not ok:
         raise Stopped(code)
+
+
+def safe_mount_policy_observations(error):
+    """Only this exact failure may expose the fixed boolean-only diagnostic."""
+    if type(error) is not Stopped or error.args!=("volume_runtime_mount_policy_unqualified",):return None
+    value=getattr(error,"mount_policy_observations",None)
+    if (type(value) is dict and set(value)==MOUNT_POLICY_KEYS
+            and all(type(v) is bool for v in value.values())):
+        return dict(value)
+    return None
 
 
 def canonical(value):
@@ -141,10 +154,25 @@ def validate_runtime_proof(raw, specs):
         candidates=[r for r in mounts if r["target"]==destination]
         require(len(candidates)==1, "volume_runtime_mount_missing_or_shadowed")
         mount=candidates[0]
-        require(mount["type"]==mount["source"]=="tmpfs" and mount["root"]=="/"
+        policy_ok=(mount["type"]==mount["source"]=="tmpfs" and mount["root"]=="/"
                 and {"rw","nosuid","nodev","noexec"}<=set(mount["options"])
                 and "ro" not in mount["options"] and "noswap" in mount["superOptions"]
-                and not mount["optional"], "volume_runtime_mount_policy_unqualified")
+                and not mount["optional"])
+        if not policy_ok:
+            error=Stopped("volume_runtime_mount_policy_unqualified")
+            error.mount_policy_observations={
+                "filesystemTmpfs":mount["type"]=="tmpfs","sourceTmpfs":mount["source"]=="tmpfs",
+                "filesystemRoot":mount["root"]=="/","readWrite":"rw" in mount["options"],
+                "nosuid":"nosuid" in mount["options"],"nodev":"nodev" in mount["options"],
+                "noexec":"noexec" in mount["options"],"readOnlyAbsent":"ro" not in mount["options"],
+                "noswap":"noswap" in mount["superOptions"],"optionalFieldsEmpty":not mount["optional"],
+                "sharedPropagation":any(re.fullmatch(r"shared:[0-9]+",v) is not None for v in mount["optional"]),
+                "masterPropagation":any(re.fullmatch(r"master:[0-9]+",v) is not None for v in mount["optional"]),
+                "propagateFrom":any(re.fullmatch(r"propagate_from:[0-9]+",v) is not None for v in mount["optional"]),
+                "unbindable":"unbindable" in mount["optional"],
+                "unknownOptionalField":any(v!="unbindable" and re.fullmatch(r"(?:shared|master|propagate_from):[0-9]+",v) is None
+                                           for v in mount["optional"])}
+            raise error
         require(not any(r["target"].startswith(destination+"/") for r in mounts),
                 "volume_runtime_descendant_mount")
         value=stats[destination];fs=filesystems[destination]

@@ -239,48 +239,13 @@ test("uploading and failed attachments retain their submission guard", () => {
   }
 });
 
-test("Free Thinking in Options opens Subscriptions with its lock on the right", () => {
-  const html = render({ showModelStatus: true }, signedInAccount, desktopLayout, true);
-  assert.match(html, /aria-label="Thinking is locked. Open Subscriptions"/);
-  assert.match(html, /Thinking<svg[^>]*lucide-lock/);
-  assert.doesNotMatch(html, /href="\/pricing"|data-testid="model-status"/);
-  thinkingUpgradeProps.onClick();
-  assert.deepEqual(upgradeActions, [
-    { kind: "settings", type: "kova-open-settings", tab: "billing" },
-  ]);
-  for (const userTier of ["plus", "pro"]) {
-    const paid = render({ userTier, showModelStatus: true }, signedInAccount, desktopLayout, true);
-    assert.doesNotMatch(paid, /data-testid="thinking-upgrade-button"/);
-    assert.match(paid, /data-testid="model-status"/);
+test("Options points to the shared model picker without an obsolete Thinking upgrade", () => {
+  for (const userTier of ["free", "plus", "pro"]) {
+    const html = render({ userTier }, signedInAccount, desktopLayout, true);
+    assert.match(html, /Choose your model from the bottom of the message box/);
+    assert.doesNotMatch(html, /thinking-upgrade-button|Thinking is locked/);
+    assert.deepEqual(upgradeActions, []);
   }
-  assert.doesNotMatch(render({ isStreaming: true }), /data-testid="thinking-upgrade-button"/);
-});
-
-test("guest Thinking opens the existing plans page rather than signed-out General settings", () => {
-  const html = render(
-    { showModelStatus: true },
-    { isLoaded: true, user: null },
-    desktopLayout,
-    true,
-  );
-  assert.match(html, /aria-label="Thinking is locked. Open Subscriptions"/);
-  assert.match(html, /Thinking<svg[^>]*lucide-lock/);
-  assert.doesNotMatch(html, /data-testid="model-status"/);
-  assert.equal(thinkingUpgradeProps.disabled, false);
-  assert.equal(thinkingUpgradeProps["aria-haspopup"], undefined);
-  thinkingUpgradeProps.onClick();
-  assert.deepEqual(upgradeActions, [{ kind: "navigate", to: "/pricing" }]);
-});
-
-test("Thinking waits for authentication status before choosing the subscription destination", () => {
-  const html = render({}, { isLoaded: false, user: null }, desktopLayout, true);
-  assert.equal(thinkingUpgradeProps.disabled, true);
-  const button = html.match(/<button\b[^>]*data-testid="thinking-upgrade-button"[^>]*>/)?.[0];
-  assert.ok(button);
-  assert.match(button, /\sdisabled(?:=|\s|>)/);
-  // Native disabled buttons cannot activate while authentication is unresolved.
-  if (!thinkingUpgradeProps.disabled) thinkingUpgradeProps.onClick();
-  assert.deepEqual(upgradeActions, []);
 });
 
 test("new and populated chats retain the approved Attach, Context, Options toolbar", () => {
@@ -295,7 +260,7 @@ test("new and populated chats retain the approved Attach, Context, Options toolb
   }
 });
 
-test("phone chat keeps one growing input and effort inside Options", () => {
+test("phone chat keeps one growing input and its model status beside the trailing actions", () => {
   for (const userTier of ["free", "plus", "pro"]) {
     const html = render(
       { showAddMenu: true, surface: "conversation", userTier, showModelStatus: true },
@@ -308,7 +273,8 @@ test("phone chat keeps one growing input and effort inside Options", () => {
     assert.equal((html.match(/data-testid="send-button"/g) ?? []).length, 1);
     assert.doesNotMatch(html, /data-testid="stop-button"/);
     assertMicrophoneControls(html);
-    assert.doesNotMatch(html, /data-testid="thinking-upgrade-button"|data-testid="model-status"/);
+    assert.doesNotMatch(html, /data-testid="thinking-upgrade-button"/);
+    assert.match(html, /data-testid="model-status"/);
     assert.match(html, /rows="1"/);
     assert.match(html, /enterKeyHint="enter"/i);
   }

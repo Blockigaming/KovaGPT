@@ -84,7 +84,7 @@ test("mode output ceilings remain monotonic through Max and Ultra", () => {
 });
 
 test("Free paid modes fail closed instead of selecting or downgrading a model", () => {
-  for (const mode of ["medium", "thinking", "high", "extra_high", "max", "ultra", "kova_5_5"]) {
+  for (const mode of ["medium", "high", "extra_high", "max", "ultra", "kova_5_5"]) {
     assert.equal(freeModeUpgradeRequired("free", mode), true);
     assert.throws(
       () => routeModel({ task: "chat", mode, tier: "free", hasImages: true }),
@@ -213,4 +213,17 @@ test("the frontend cannot override the selected model", async () => {
   assert.doesNotMatch(source, /body\.model\s*=\s*(?:payload|clientBody)/);
   const complexity = scoreComplexity("prove this theorem and derive the optimization problem");
   assert.ok(complexity.score >= 2);
+});
+
+test("Free Thinking explicitly routes one level above Default while premium stays locked", () => {
+  assert.equal(freeModeUpgradeRequired("free", "thinking"), false);
+  assert.equal(
+    routeModel({ task: "chat", mode: "thinking", tier: "free" }).role,
+    "ADVANCED_REASONING",
+  );
+  assert.equal(routeModel({ task: "chat", mode: "instant", tier: "free" }).role, "DEFAULT_CHAT");
+  assert.throws(
+    () => routeModel({ task: "chat", mode: "thinking", tier: "free", deepMode: true }),
+    /mode_not_entitled/,
+  );
 });

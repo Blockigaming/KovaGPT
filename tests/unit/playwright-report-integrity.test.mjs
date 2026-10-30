@@ -73,8 +73,8 @@ test("settings touch-target coverage measures the visible mobile list", () => {
   const source = readFileSync("tests/e2e/settings-theme-transition.spec.ts", "utf8");
   const openSections = source.indexOf('name: "Section", exact: true }).click()');
   const visibleList = source.indexOf('.getByRole("listbox", { name: "Suggestions", exact: true })');
-  const eightSections = source.indexOf("await expect(options).toHaveCount(8)");
-  assert.ok(openSections > 0 && openSections < visibleList && visibleList < eightSections);
+  const primarySections = source.indexOf("await expect(options).toHaveCount(11)");
+  assert.ok(openSections > 0 && openSections < visibleList && visibleList < primarySections);
   assert.match(source, /await expect\(options\.nth\(index\)\)\.toBeVisible\(\)/);
   assert.match(source, /toBeGreaterThanOrEqual\(\s*44/);
 });
