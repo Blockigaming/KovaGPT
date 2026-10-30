@@ -27,26 +27,16 @@ async function geometry(page: Page) {
     await expect.poll(async () => (await button.boundingBox())?.width).toBe(targetSize);
     await expect.poll(async () => (await button.boundingBox())?.height).toBe(targetSize);
   }
-  // Verify the compact inline row and the responsive/multiline stacked layout.
-  // Read related bounds together while textarea/font sizing settles.
+  // Writing stays above the toolbar at every viewport, including multiline drafts.
   await expect
     .poll(() =>
       composer.evaluate((node) => {
-        const textarea = node.querySelector("textarea")!;
-        const input = textarea.getBoundingClientRect();
+        const input = node.querySelector("textarea")!.getBoundingClientRect();
         const attach = node.querySelector('[aria-label="Attach"]')!.getBoundingClientRect();
-        const compact =
-          innerWidth >= 1024 &&
-          !matchMedia("(any-pointer: coarse)").matches &&
-          textarea.dataset.multiline !== "true" &&
-          !node.querySelector(".spec400-attachment-chips, .spec400-selected-tool");
-        const box = node.getBoundingClientRect();
         return {
-          display: getComputedStyle(node).display === (compact ? "grid" : "flex"),
-          height: compact ? box.height === 52 : box.height > 52,
-          alignment: compact
-            ? Math.abs(input.y + input.height / 2 - (attach.y + attach.height / 2)) <= 1
-            : input.bottom - attach.top <= 1,
+          display: getComputedStyle(node).display === "flex",
+          height: node.getBoundingClientRect().height >= 128,
+          alignment: input.bottom <= attach.top + 1,
         };
       }),
     )

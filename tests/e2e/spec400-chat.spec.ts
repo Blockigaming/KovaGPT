@@ -8,24 +8,19 @@ async function expectRestingComposer(page: Page) {
     () => innerWidth >= 1024 && !matchMedia("(any-pointer: coarse)").matches,
   );
   await expect(composer).toHaveCSS("border-radius", "26px");
-  await expect(composer).toHaveCSS("display", compactDesktop ? "grid" : "flex");
-  if (compactDesktop) {
-    await expect.poll(async () => (await composer.boundingBox())?.height).toBe(52);
-  } else {
-    const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
-    await expect.poll(async () => (await input.boundingBox())?.height).toBeGreaterThanOrEqual(26);
-    await expect.poll(async () => (await input.boundingBox())?.height).toBeLessThanOrEqual(144);
-    // The responsive row has fixed padding, border, gap and 44px actions. Its
-    // textarea may wrap at narrow conversation widths, adding real text rows.
-    await expect
-      .poll(() =>
-        composer.evaluate((node) => {
-          const input = node.querySelector("textarea")!.getBoundingClientRect();
-          return node.getBoundingClientRect().height - input.height;
-        }),
-      )
-      .toBe(74);
-  }
+  await expect(composer).toHaveCSS("display", "flex");
+  await expect.poll(async () => (await composer.boundingBox())?.height).toBeGreaterThanOrEqual(128);
+  const input = composer.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  await expect.poll(async () => (await input.boundingBox())?.height).toBeGreaterThanOrEqual(26);
+  await expect
+    .poll(() =>
+      composer.evaluate((node) => {
+        const input = node.querySelector("textarea")!.getBoundingClientRect();
+        const toolbar = node.querySelector(".spec400-composer-toolbar")!.getBoundingClientRect();
+        return input.bottom <= toolbar.top + 1;
+      }),
+    )
+    .toBe(true);
   return compactDesktop;
 }
 

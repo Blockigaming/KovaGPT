@@ -4,7 +4,15 @@ import { waitForKovaHydration } from "./hydration";
 export async function openResponseOptions(page: Page) {
   const panel = page.getByRole("dialog", { name: "Response options", exact: true });
   if (!(await panel.isVisible())) {
-    await page.getByRole("button", { name: "Options", exact: true }).click();
+    const options = page.getByRole("button", { name: "Options", exact: true });
+    if (await options.isVisible()) await options.click();
+    else {
+      await page.getByRole("button", { name: "Attach", exact: true }).click();
+      await page
+        .getByTestId("mobile-bottom-sheet")
+        .getByRole("button", { name: "Response options", exact: true })
+        .click();
+    }
   }
   await expect(panel).toBeVisible();
   return panel;

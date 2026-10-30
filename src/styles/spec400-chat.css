@@ -16,7 +16,7 @@
   padding: 16px 12px 10px;
   gap: 12px;
   border: 1px solid var(--composer-border, transparent);
-  border-radius: 28px;
+  border-radius: var(--kova-radius-composer, 26px);
   background: var(--composer-background, var(--surface-secondary));
   color: var(--foreground);
 }
@@ -982,7 +982,6 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
 @media (max-width: 479px) {
   .spec400-composer {
     padding: 14px 8px 8px;
-    border-radius: 24px;
   }
   .spec400-composer-toolbar {
     gap: 2px;
@@ -991,8 +990,8 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
     gap: 0;
   }
   .spec400-composer-tools .spec400-toolbar-icon {
-    width: 36px;
-    min-width: 36px;
+    width: 44px;
+    min-width: 44px;
     padding: 8px;
   }
   .spec400-composer-trailing {

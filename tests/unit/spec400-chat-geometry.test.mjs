@@ -30,7 +30,7 @@ test("the two-row ChatGPT composer has one authoritative desktop and touch geome
   assert.equal(base["min-height"].value, "148px");
   assert.equal(base.display.value, "flex");
   assert.equal(base["flex-direction"].value, "column");
-  assert.equal(base["border-radius"].value, "28px");
+  assert.equal(base["border-radius"].value, "var(--kova-radius-composer, 26px)");
   assert.equal(base["border-radius"].important, undefined);
   assert.match(
     readFileSync("src/styles/visual-tokens.css", "utf8"),

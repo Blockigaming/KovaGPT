@@ -98,7 +98,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.width).toBeCloseTo(metrics.axisWidth, 1);
     expect(metrics.width).toBeLessThanOrEqual(metrics.composerWidth);
     if (page.viewportSize()!.width >= 1024) expect(metrics.width).toBeGreaterThanOrEqual(640);
-    expect(metrics.height).toBeCloseTo(coarseComposer ? 100 : 52, 0);
+    expect(metrics.height).toBeGreaterThanOrEqual(coarseComposer ? 136 : 148);
     expect(metrics.input!.height).toBeGreaterThanOrEqual(26);
     const control = coarseComposer ? 44 : 36;
     expect(metrics.attach!.width).toBe(control);
@@ -106,11 +106,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(metrics.send!.width).toBe(control);
     expect(metrics.send!.height).toBe(control);
     expect(metrics.attach!.y).toBeCloseTo(metrics.send!.y, 1);
-    if (coarseComposer) expect(metrics.input!.bottom).toBeLessThanOrEqual(metrics.attach!.y);
-    else {
-      expect(metrics.input!.y).toBeGreaterThanOrEqual(metrics.attach!.y);
-      expect(metrics.input!.bottom).toBeLessThanOrEqual(metrics.attach!.bottom);
-    }
+    expect(metrics.input!.bottom).toBeLessThanOrEqual(metrics.attach!.y);
   }
 
   if (!coarseComposer) {
@@ -410,8 +406,12 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   for (const action of [
     page.getByRole("button", { name: "Open menu" }),
     page.getByRole("button", { name: "Attach", exact: true }),
-    page.getByRole("button", { name: "Context", exact: true }),
-    page.getByRole("button", { name: "Options", exact: true }),
+    ...(page.viewportSize()!.width >= 380
+      ? [
+          page.getByRole("button", { name: "Context", exact: true }),
+          page.getByRole("button", { name: "Options", exact: true }),
+        ]
+      : []),
     page.getByRole("button", { name: "Dictate", exact: true }),
     page.getByRole("button", { name: "Voice", exact: true }),
   ]) {
@@ -438,6 +438,8 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   const sheet = page.getByTestId("mobile-bottom-sheet");
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Files", exact: true })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Context", exact: true })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Response options", exact: true })).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Camera", exact: true })).toBeVisible();
   await sheet.getByRole("button", { name: "Close sheet" }).click();

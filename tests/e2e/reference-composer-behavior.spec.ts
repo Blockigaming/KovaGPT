@@ -3,7 +3,7 @@ import { fixture } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 for (const theme of ["light", "dark"] as const) {
-  test(`${theme}: the compact composer expands and contracts without a resize loop`, async ({
+  test(`${theme}: the two-row composer expands and contracts without a resize loop`, async ({
     page,
   }, info) => {
     const resizeErrors: string[] = [];
@@ -23,13 +23,13 @@ for (const theme of ["light", "dark"] as const) {
     const desktop =
       page.viewportSize()!.width >= 1024 &&
       !(await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches));
-    if (desktop) await expect(composer).toHaveCSS("display", "grid");
+    await expect(composer).toHaveCSS("display", "flex");
     const compactHeight = (await composer.boundingBox())!.height;
-    if (desktop) expect(compactHeight).toBe(52);
+    expect(compactHeight).toBeGreaterThanOrEqual(128);
 
     // This text fits the full expanded row but wraps the narrow desktop slot.
     // A height-based toggle would alternate between those two layouts forever.
-    await input.fill("expand ".repeat(12));
+    await input.fill("expand ".repeat(36));
     await expect(send).toBeVisible();
     await expect(voice).toBeHidden();
     if (desktop) {

@@ -29,6 +29,13 @@ for (const [tier, choices] of [
     await menu.getByTestId("model-option-thinking").click();
     await expect(picker).toContainText("Thinking");
     await expect(picker.locator("svg")).toHaveCount(2);
+    for (const id of choices) {
+      await picker.click();
+      await page.getByTestId(`model-option-${id}`).click();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    }
     await input.fill("A local draft, never sent");
     await expect(composer.getByRole("button", { name: "Send message", exact: true })).toBeVisible();
     await expect(composer.getByTestId("voice-button")).toBeHidden();
