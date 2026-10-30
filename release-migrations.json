@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 200,
-  "latest": "20261030130349_kova_project_file_cleanup_definitions_forward.sql",
+  "count": 201,
+  "latest": "20261030141704_kova_monthly_intro_lifecycle_forward.sql",
   "migrations": [
     {
       "order": 1,
@@ -4149,6 +4149,62 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 201,
+      "filename": "20261030141704_kova_monthly_intro_lifecycle_forward.sql",
+      "timestamp": "20261030141704",
+      "sha256": "787d04b875dab35224e5f45ec4c0f0d6ca2e1c9aec41cd6992d037a6e6775ecc",
+      "tables": [
+        "kova_policy_accounts",
+        "kova_policy_customer_bindings",
+        "kova_policy_checkout_claims",
+        "kova_policy_intro_redemptions",
+        "kova_policy_event_receipts",
+        "kova_policy_subscription_state"
+      ],
+      "functions": [
+        "kova_policy_auth_lock",
+        "kova_policy_lock_account",
+        "kova_policy_checkout_json",
+        "kova_policy_claim_customer",
+        "kova_policy_complete_customer",
+        "kova_policy_claim_checkout",
+        "kova_policy_attach_checkout",
+        "kova_policy_settle_checkout",
+        "kova_policy_checkout_status",
+        "kova_policy_pending_checkout",
+        "kova_policy_customer_for_portal",
+        "kova_policy_account_status",
+        "kova_policy_schedule_deletion",
+        "kova_policy_recover_deletion",
+        "kova_policy_due_deletions",
+        "kova_policy_begin_finalization",
+        "kova_policy_renew_finalization",
+        "kova_policy_ack_customer_retired",
+        "kova_policy_confirm_finalization",
+        "kova_policy_guard_auth_deletion",
+        "kova_policy_apply_legacy_event",
+        "kova_monthly_subscription_summary",
+        "kova_policy_readiness"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "kova_policy_accounts",
+        "kova_policy_customer_bindings",
+        "kova_policy_checkout_claims",
+        "kova_policy_intro_redemptions",
+        "kova_policy_event_receipts",
+        "kova_policy_subscription_state"
+      ],
+      "policies": [],
+      "indexes": [
+        "kova_policy_due_accounts",
+        "kova_policy_one_pending_checkout",
+        "kova_policy_checkout_owner_history"
+      ]
     }
   ]
 }
