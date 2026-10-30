@@ -24,6 +24,7 @@ RECIPE_FILES = frozenset({
     "run-reviewed-empty-recovery.py", "reviewed-empty-recovery-plan.py", "operator-recovery-probe.py",
     "prepare-recovery-operator-image.py", "recovery-operator-client-smoke.py", "recovery-operator-client.Dockerfile",
     "collect-empty-recovery-metadata.py", "extension-member-semantics-preflight.sql",
+    "owned-noswap-volumes.py", "noswap-volume-proof.py",
     "extension-semantic-capture.py", "extension-routine-type-payloads.py", "extension-routine-type-hash-query.py",
     "extension-relation-payloads.py", "extension-relation-query-hooks.py", "pg17-extension-relation-manifest.json",
     "canonicalize-pg17-extension-nodes.py", "pg17-extension-node-schema.json",

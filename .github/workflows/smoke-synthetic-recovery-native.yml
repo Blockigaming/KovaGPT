@@ -29,7 +29,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Check rejection, logging and private runtime recipes without Docker
-        run: python3 -m unittest discover -s tests/unit -p test_synthetic_recovery_native.py -q
+        run: |
+          python3 -m unittest discover -s tests/unit -p test_synthetic_recovery_native.py -q
+          python3 -m unittest discover -s tests/unit -p test_prepare_recovery_operator_image.py -q
+          python3 -m unittest discover -s tests/unit -p test_owned_noswap_volumes.py -q
+          python3 -m unittest discover -s tests/unit -p test_noswap_volume_proof.py -q
       - name: Build generic client locally and prove empty native targets and denied routes
         run: >-
           timeout --signal=TERM --kill-after=30s 30m
