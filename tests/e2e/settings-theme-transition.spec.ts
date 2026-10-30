@@ -212,7 +212,7 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
   const options = page
     .getByRole("listbox", { name: "Suggestions", exact: true })
     .getByRole("option");
-  await expect(options).toHaveCount(8);
+  await expect(options).toHaveCount(11);
   for (let index = 0; index < (await options.count()); index++) {
     await expect(options.nth(index)).toBeVisible();
     expect(

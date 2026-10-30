@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { openResponseOptions } from "./current-ui";
 
 for (const theme of ["dark", "light"] as const) {
   test(`${theme}: modern workspace surfaces remain usable and contained`, async ({
@@ -68,8 +69,9 @@ test("menus retain focus, placement, and reduced-motion behavior", async ({ page
   await page.goto("/");
   await waitForKovaHydration(page);
   const options = page.getByRole("button", { name: "Options", exact: true });
-  await options.click();
-  const panel = page.getByRole("dialog", { name: "Response options", exact: true });
+  const attach = page.locator('button[aria-label="Attach"]');
+  const optionsTrigger = (await options.isVisible()) ? options : attach;
+  const panel = await openResponseOptions(page);
   await expect(panel).toBeVisible();
   const box = await panel.boundingBox();
   expect(box!.x).toBeGreaterThanOrEqual(0);
@@ -77,9 +79,9 @@ test("menus retain focus, placement, and reduced-motion behavior", async ({ page
   await page.screenshot({ path: info.outputPath("options-menu-dark.png"), animations: "disabled" });
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
-  await expect(options).toBeFocused();
+  await expect(optionsTrigger).toBeFocused();
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await options.click();
+  await openResponseOptions(page);
   await expect(panel).toBeVisible();
   const motion = await panel.evaluate((el) => ({
     duration: getComputedStyle(el).animationDuration,
@@ -89,8 +91,7 @@ test("menus retain focus, placement, and reduced-motion behavior", async ({ page
     motion.name === "none" || motion.duration.split(",").every((x) => parseFloat(x) <= 0.01),
   ).toBe(true);
   await page.keyboard.press("Escape");
-  await expect(options).toBeFocused();
-  const attach = page.locator('button[aria-label="Attach"]');
+  await expect(optionsTrigger).toBeFocused();
   await attach.click();
   await expect(attach).toHaveAttribute("aria-expanded", "true");
   const attachmentPanel = page.getByRole("dialog").filter({ visible: true });

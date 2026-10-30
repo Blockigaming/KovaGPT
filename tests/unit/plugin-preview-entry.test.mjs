@@ -35,7 +35,7 @@ test("review entry exposes every catalog provider, appearance and local reset co
   );
 });
 
-test("shared launch catalog supplies all thirteen preview providers", () => {
+test("shared launch catalog supplies all twelve preview providers", () => {
   const result = buildSync({
     entryPoints: ["src/lib/plugin-review-catalog.ts"],
     bundle: true,
@@ -49,8 +49,8 @@ test("shared launch catalog supplies all thirteen preview providers", () => {
   new Function("module", "exports", result.outputFiles[0].text)(module, module.exports);
   const { LAUNCH_PLUGIN_REVIEW_CATALOG: catalog, getPluginPreviewProvider: provider } =
     module.exports;
-  assert.equal(catalog.length, 13);
-  assert.equal(new Set(catalog.map((entry) => entry.connector.id)).size, 13);
+  assert.equal(catalog.length, 12);
+  assert.equal(new Set(catalog.map((entry) => entry.connector.id)).size, 12);
   for (const entry of catalog) {
     const value = provider(entry.connector.id);
     assert.equal(value.id, entry.connector.id);

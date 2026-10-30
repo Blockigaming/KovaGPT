@@ -151,18 +151,23 @@ for (const theme of ["light", "dark"] as const) {
       animations: "disabled",
     });
     await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
     await page.getByLabel("Choose files", { exact: true }).setInputFiles({
       name: "Draft notes.txt",
       mimeType: "text/plain",
       buffer: Buffer.from("Synthetic draft attachment."),
     });
     await expect(page.getByLabel("Remove Draft notes.txt", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Context", exact: true }).click();
+    const contextButton = page.getByRole("button", { name: "Context", exact: true });
+    const attach = page.getByRole("button", { name: "Attach", exact: true });
+    const contextInAttach = !(await contextButton.isVisible());
+    if (contextInAttach) await attach.click();
+    await contextButton.click();
     const settings = page.getByRole("dialog", { name: "Context", exact: true });
     await expect(settings).toBeVisible();
     await expect(settings.getByText("Draft notes.txt", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("button", { name: "Context", exact: true })).toBeFocused();
+    await expect(contextInAttach ? attach : contextButton).toBeFocused();
     await expect(input).toHaveValue(/Plan a thoughtful product launch/);
   });
 

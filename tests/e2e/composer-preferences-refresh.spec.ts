@@ -27,11 +27,15 @@ for (const [tier, choices] of [
     await expect(menu.locator('[data-slot="model-selector-option"]')).toHaveCount(choices.length);
     for (const id of choices) await expect(menu.getByTestId(`model-option-${id}`)).toBeVisible();
     await menu.getByTestId("model-option-thinking").click();
+    await expect(menu).toBeHidden();
     await expect(picker).toContainText("Thinking");
     await expect(picker.locator("svg")).toHaveCount(2);
     for (const id of choices) {
       await picker.click();
-      await page.getByTestId(`model-option-${id}`).click();
+      await expect(menu).toBeVisible();
+      await menu.getByTestId(`model-option-${id}`).click();
+      await expect(menu).toBeHidden();
+      await expect(picker).toBeFocused();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );
