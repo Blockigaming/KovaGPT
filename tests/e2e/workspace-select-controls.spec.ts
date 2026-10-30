@@ -28,7 +28,10 @@ async function boundedPopup(page: Page) {
 async function choose(page: Page, control: Locator, option: string) {
   await control.click();
   const popup = await boundedPopup(page);
-  await popup.getByRole("option", { name: option, exact: true }).click();
+  const item = popup.getByRole("option", { name: option, exact: true });
+  // Settle viewport scroll controls before click calculates a stable pointer target.
+  await item.scrollIntoViewIfNeeded();
+  await item.click();
   await expect(control).toContainText(option);
 }
 

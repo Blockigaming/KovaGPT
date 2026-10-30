@@ -91,12 +91,12 @@ for (const desktop of [true, false]) {
       for (const placement of ["topbar", "composer"]) {
         for (const compact of [true, false]) {
           const html = closed.render(tier, "instant", placement, compact);
-          assert.match(html, /aria-label="Choose model: Kova GPT Instant"/);
+          assert.match(html, /aria-label="Choose model: KovaGPT Instant"/);
           assert.doesNotMatch(html, /\bLite\b|data-testid="model-option-/);
         }
       }
       const openHtml = open.render(tier, "instant", "composer");
-      assert.ok(openHtml.includes(`Kova GPT ${modelIdentity.KOVA_MODEL_VERSION}`));
+      assert.ok(openHtml.includes(`KovaGPT ${modelIdentity.KOVA_MODEL_VERSION}`));
       const options = Array.from(
         openHtml.matchAll(
           /<button\b[^>]*data-testid="model-option-([^"]+)"[^>]*>[\s\S]*?<span[^>]*>([^<]+)<\/span>/g,
@@ -124,8 +124,8 @@ for (const desktop of [true, false]) {
     const f = fixture({ desktop });
     for (const placement of ["topbar", "composer"]) {
       const html = f.render("plus", "high", placement);
-      assert.match(html, /aria-label="Choose model: Kova GPT Thinking"/);
-      assert.doesNotMatch(html, /Kova GPT High/);
+      assert.match(html, /aria-label="Choose model: KovaGPT Thinking"/);
+      assert.doesNotMatch(html, /KovaGPT High/);
     }
     assert.equal(f.modes.getMode("high").id, "high");
     assert.equal(f.modes.getMode("high").label, "High");
@@ -141,7 +141,7 @@ for (const desktop of [true, false]) {
       Array.from(f.modes.modesForTier("pro"), (mode) => mode.id),
       ["instant", "medium", "high", "extra_high", "max", "ultra"],
     );
-    assert.match(f.render("pro", "high"), /aria-label="Choose model: Kova GPT High"/);
+    assert.match(f.render("pro", "high"), /aria-label="Choose model: KovaGPT High"/);
   });
 }
 

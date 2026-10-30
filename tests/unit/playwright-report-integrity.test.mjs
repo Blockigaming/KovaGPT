@@ -31,7 +31,7 @@ for case in ["valid", "missing", "truncated", "unfinished", "unsafe", "duplicate
         if case=="duplicate": (directory/"second.zip").write_bytes(target.read_bytes())
         if case=="symlink": target.rename(directory/"actual"); target.symlink_to(directory/"actual")
         try:
-            results[case]={"passed":module.validate(root,out)==12,"output":out.exists()}
+            results[case]={"passed":module.validate(root,out)==13,"output":out.exists()}
         except (ValueError,OSError,zipfile.BadZipFile):
             results[case]={"passed":False,"output":out.exists()}
 print(json.dumps(results))

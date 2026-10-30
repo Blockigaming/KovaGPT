@@ -23,7 +23,7 @@
 }
 
 .kova-app-shell[data-ui="modern"] .kova-empty-state h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 24px;
   font-weight: 400;
   line-height: 1.25;
@@ -76,7 +76,7 @@
 }
 
 .kova-state-panel h1 {
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-weight: 400;
   line-height: 1.2;
 }

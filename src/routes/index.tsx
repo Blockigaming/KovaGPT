@@ -1405,7 +1405,7 @@ function KovaGPT() {
     [],
   );
 
-  const greeting = "What are you working on?";
+  const greeting = "How can I help today?";
 
   const transcriptScope = JSON.stringify([storagePrincipal, activeId, principalReady]);
   const transcriptScopeRef = useRef(transcriptScope);
@@ -3225,7 +3225,7 @@ function KovaGPT() {
 
           <div className="flex items-center min-w-0 flex-1 relative">
             <div className="spec400-chat-title">
-              {chatStarted ? active?.title || "Chat" : sidebarOpen ? "" : "Kova GPT"}
+              {chatStarted ? active?.title || "Chat" : sidebarOpen ? "" : "KovaGPT"}
             </div>
             {selectedWorkflowSkill ? (
               <Button
@@ -3455,12 +3455,6 @@ function KovaGPT() {
                           ))}
                       </ul>
                     </section>
-                  ) : isLoaded ? (
-                    <p className="spec400-capability-note">
-                      {isSignedIn
-                        ? "Attach a file to work with its contents."
-                        : "Sign in to save chats and attach files."}
-                    </p>
                   ) : null}
                 </div>
               </section>

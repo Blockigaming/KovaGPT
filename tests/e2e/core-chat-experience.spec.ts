@@ -11,7 +11,7 @@ test.describe("core shell and chat experience", () => {
     await expect(page.locator("body")).toBeVisible();
     await expect(page.getByRole("textbox").first()).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "What are you working on?", exact: true }),
+      page.getByRole("heading", { name: "How can I help today?", exact: true }),
     ).toBeVisible();
 
     const textbox = page.getByRole("textbox").first();

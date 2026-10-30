@@ -1653,7 +1653,7 @@ function LibraryPage() {
     const dateLabel = new Date(metadata.savedAt).toLocaleDateString();
     const modifiedLabel = metadata.modifiedAt
       ? `Modified ${formatDisplayDateTime(metadata.modifiedAt, timeFormat)}`
-      : "Modified unavailable in this list";
+      : null;
     const selectedItem = selected.includes(item.id);
     const openPreview = (event: MouseEvent<HTMLButtonElement>) => {
       previewReturnFocusRef.current = event.currentTarget;
@@ -1712,7 +1712,7 @@ function LibraryPage() {
                 {size ? ` · ${size}` : ""}
                 {" · "}
                 <time dateTime={metadata.savedAt}>Saved {dateLabel}</time>
-                <span title={modifiedLabel}> · {modifiedLabel}</span>
+                {modifiedLabel ? <span title={modifiedLabel}> · {modifiedLabel}</span> : null}
               </span>
             </button>
           </div>
@@ -1768,7 +1768,7 @@ function LibraryPage() {
               {size ? ` · ${size}` : ""}
             </span>
             <time dateTime={metadata.savedAt}>Saved {dateLabel}</time>
-            <span title={modifiedLabel}> · {modifiedLabel}</span>
+            {modifiedLabel ? <span title={modifiedLabel}> · {modifiedLabel}</span> : null}
           </div>
           {visibleFavorites.has(item.id) ? (
             <Star className="h-4 w-4 shrink-0 fill-current text-amber-500" aria-label="Favorite" />

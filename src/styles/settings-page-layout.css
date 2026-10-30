@@ -63,7 +63,7 @@
 .kova-settings-section-select {
   display: none;
 }
-@container settings (max-width: 959px) {
+@container settings (max-width: 719px) {
   .kova-settings-route .kova-settings-page > [data-orientation="vertical"] {
     flex-direction: column;
     gap: 0;

@@ -67,15 +67,6 @@ export function AppearanceSettings({
           ))}
         </div>
       </fieldset>
-      <div className="kova-settings-reference-group">
-        <div className="kova-settings-reference-row flex flex-wrap items-center justify-between gap-2 py-3">
-          <span className="text-sm font-medium">Accent</span>
-          <span className="text-sm text-muted-foreground">Original palette</span>
-        </div>
-        <p className="pb-3 text-xs text-muted-foreground">
-          The current color palette is preserved. Accent presets are unavailable.
-        </p>
-      </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="grid gap-2 text-sm">
           Density

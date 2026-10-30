@@ -41,7 +41,7 @@ for (const theme of ["dark", "light"] as const) {
     const voice = page.getByTestId("voice-button");
     await expect(input).toBeEnabled();
     await expect(
-      page.getByRole("heading", { name: "What are you working on?", exact: true }),
+      page.getByRole("heading", { name: "How can I help today?", exact: true }),
     ).toBeVisible();
     await expect(input).toHaveAttribute("placeholder", "Describe what you need…");
     await expectRestingComposer(page);

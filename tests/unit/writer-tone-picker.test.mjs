@@ -314,8 +314,8 @@ test("tone and Rewrite delegate control geometry to the shared themed primitives
   assert.match(route, /import \{ Button \} from "@\/components\/ui\/button"/);
   assert.match(route, /import \{ SearchablePicker \} from "@\/components\/ui\/searchable-picker"/);
   const geometry = readFileSync("src/styles/visual-tokens.css", "utf8");
-  assert.match(geometry, /--kova-radius-input: 10px/);
-  assert.match(geometry, /--kova-radius-compact: 6px/);
+  assert.match(geometry, /--kova-radius-input: 14px/);
+  assert.match(geometry, /--kova-radius-compact: 10px/);
   for (const file of ["popover", "command"])
     assert.match(
       readFileSync(`src/components/ui/${file}.tsx`, "utf8"),

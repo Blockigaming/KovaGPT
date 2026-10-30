@@ -102,7 +102,7 @@ export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
     meta: [
-      { title: "Connections | Kova" },
+      { title: "Connections | KovaGPT" },
       {
         name: "description",
         content: "Browse plugins and manage supported connections in KovaGPT.",
@@ -1706,7 +1706,7 @@ function AppsPage() {
               onValueChange={setConnectionFilter}
               className="spec400-plugin-directory"
             >
-              <TabsList className="spec400-plugin-tabs" aria-label="Connection filters">
+              <TabsList className="spec400-plugin-tabs" aria-label="Connections">
                 <TabsTrigger value="all">
                   All <span>{catalog.length}</span>
                 </TabsTrigger>

@@ -48,7 +48,7 @@ test.describe("mobile shell UI truth", () => {
     const opener =
       viewport.width < 1024
         ? page.getByRole("button", { name: "Open menu" })
-        : page.getByRole("button", { name: "Search chats" }).first();
+        : page.getByRole("button", { name: "Search chats", exact: true });
     await opener.focus();
     const openerHandle = await opener.elementHandle();
     expect(openerHandle).not.toBeNull();

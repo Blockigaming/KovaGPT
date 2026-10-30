@@ -1,5 +1,9 @@
 /* Reference foundation. ChatGPT surface and control tokens are defined here once. Source: DESIGN.md. Component files own their geometry; there is no blanket button shape override. */
 :root {
+  --kova-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --kova-motion-fast: 140ms;
+  --kova-motion-standard: 220ms;
+  --kova-overlay-shadow: 0 16px 56px #00000020, 0 2px 8px #0000000a;
   --destructive: oklch(0.58 0.22 25);
   --destructive-foreground: oklch(0.995 0 0);
   --surface-scrim: oklch(0 0 0 / 45%);
@@ -112,12 +116,12 @@
   --chat-reading-font: var(--font-reading);
   --chat-greeting-font: var(--font-reading);
   --kova-radius-button: 9999px;
-  --kova-radius-control: 10px;
-  --kova-radius-input: 10px;
-  --kova-radius-compact: 6px;
-  --kova-radius-sidebar: 8px;
+  --kova-radius-control: 12px;
+  --kova-radius-input: 14px;
+  --kova-radius-compact: 10px;
+  --kova-radius-sidebar: 12px;
   --kova-radius-card: 16px;
-  --kova-radius-menu: 12px;
+  --kova-radius-menu: 16px;
   --kova-radius-panel: 24px;
   --kova-radius-composer: 26px;
   --kova-radius-message: 20px;
@@ -158,6 +162,7 @@
   --kova-icon-stroke: 1.75;
 }
 .dark {
+  --kova-overlay-shadow: 0 20px 64px #00000066, 0 0 0 1px #ffffff05;
   --destructive: oklch(0.62 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
   --surface-app: var(--background);

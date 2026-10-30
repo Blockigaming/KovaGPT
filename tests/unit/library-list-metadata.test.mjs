@@ -22,7 +22,8 @@ test("only a validated actual modified instant is shown", () => {
 });
 test("Library labels date semantics and exposes existing chat-only Trash with scoped restoration", () => {
   const source = readFileSync("src/routes/library.tsx", "utf8");
-  assert.match(source, /Modified unavailable in this list/);
+  assert.doesNotMatch(source, /Modified unavailable in this list/);
+  assert.match(source, /modifiedAt/);
   assert.match(source, /Saved \{dateLabel\}/);
   assert.match(source, /Library files are not kept here/);
   assert.match(source, /<ChatTrashPanel key=\{principal \?\? "guest"\} userKey=\{userKey\}/);
