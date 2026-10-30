@@ -1702,7 +1702,7 @@ async function nativeFixture(testContext, action) {
     `select jsonb_build_object(
     'version',current_setting('server_version_num')::int,'user',current_user,
     'systemId',(select system_identifier::text from pg_control_system()),
-    'dataDirectory',current_setting('data_directory'),'address',inet_server_addr()::text,
+    'dataDirectory',current_setting('data_directory'),'address',host(inet_server_addr()),
     'port',inet_server_port(),'superuser',(select rolsuper from pg_roles where rolname=current_user),
     'roles',(select count(*)=3 and bool_and(not rolsuper and (rolname<>'service_role' or rolbypassrls))
       from pg_roles where rolname in ('anon','authenticated','service_role')),

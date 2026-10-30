@@ -22,7 +22,7 @@ EXPECTED = {
     "release-migrations.json": "3dafcfd009d069df0e3c0932b2885007fd7cf07a10514bb258bd9471dacdc52b",
     "scripts/release/monthly-intro-lifecycle-guards.mjs": "6b12d22e1b4321b59de5ba4307d564355e2350de23efd3b6c17184a5b0b8139d",
     "supabase/migrations/20261030141704_kova_monthly_intro_lifecycle_forward.sql": "787d04b875dab35224e5f45ec4c0f0d6ca2e1c9aec41cd6992d037a6e6775ecc",
-    "tests/unit/monthly-intro-lifecycle-forward.test.mjs": "7db6f6f62d3d8aa5efa2726f8c7d238e7db2d5493c48ea79e78c004eff9da41d",
+    "tests/unit/monthly-intro-lifecycle-forward.test.mjs": "166d5ead11baaecab6e0349690959ea49523479ac24940369b673722f5f48d19",
 }
 
 
