@@ -40,6 +40,27 @@ class SyntheticTests(unittest.TestCase):
         self.assertEqual(m.failure_details(ValueError("volume_runtime_mount_policy_unqualified"))["code"],
                          "synthetic_native_unconfirmed")
 
+    def test_server_failure_codes_and_command_stages_are_fixed_to_exact_hub_digest(self):
+        server=m.base.server_image
+        for code in server.PUBLIC_FAILURE_CODES:
+            self.assertEqual(m.failure_details(server.Stopped(code))["code"],code)
+            self.assertEqual(m.safe_exception_type(server.Stopped(code)),"Stopped")
+        for error in [server.Stopped("SYNTHETIC_PRIVATE_REGISTRY_CANARY"),
+                      ValueError("server_image_manifest_digest_mismatch")]:
+            result=m.failure_details(error)
+            self.assertEqual(result["code"],"synthetic_native_unconfirmed")
+            self.assertNotIn("PRIVATE_REGISTRY",json.dumps(result))
+        commands=[(["docker","buildx","version"],"server-buildx-version"),
+                  (["docker","buildx","imagetools","inspect","--raw",server.TRANSPORT_REF],"server-raw-manifest"),
+                  (["docker","buildx","imagetools","inspect","--format","{{json .Image}}",server.TRANSPORT_REF],"server-semantic-config"),
+                  (["docker","image","inspect",server.TRANSPORT_REF],"server-loaded-image"),
+                  (["docker","pull","--platform","linux/amd64",server.TRANSPORT_REF],"pinned-server-pull")]
+        for command,stage in commands:
+            self.assertEqual(m.native_command_stage(command),stage)
+            if server.TRANSPORT_REF in command:
+                altered=[server.ORIGINAL_ECR_REF if value==server.TRANSPORT_REF else value for value in command]
+                self.assertEqual(m.native_command_stage(altered),"native-other")
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
         self.env={"KOVA_SYNTHETIC_NATIVE_CONFIRMATION":"SYNTHETIC_ONLY","GITHUB_ACTIONS":"true","RUNNER_OS":"Linux",
@@ -53,6 +74,10 @@ class SyntheticTests(unittest.TestCase):
         p.client_dir=self.root/"client";p.server_dirs={k:self.root/k for k in ["a","b"]}
         p.image_env={"PATH":"/pg/bin"};p.image_volumes=[];p.operator_env={"PATH":"/usr/bin"}
         p.server_image_id="sha256:"+"2"*64
+        p.server_image_qualification={"syntheticFixture":True,"operation":"verified-official-server-image-transport",
+            "imageId":p.server_image_id,"actualRepoDigest":m.base.server_image.TRANSPORT_REF,
+            "transportReference":m.base.server_image.TRANSPORT_REF,
+            "originalEcrReference":m.base.server_image.ORIGINAL_ECR_REF}
         fake=fixture.FakeDocker();fake.manager=p.owned_ram;p.test_ram_docker=fake
         original_run=p.run
         def run(argv,**kwargs):
@@ -300,6 +325,9 @@ class SyntheticTests(unittest.TestCase):
         p.verify_effective_firewalls=lambda:None;p.denial_probes=lambda *_:12;p.inspect_and_recheck_runtime=lambda *_:None
         p.cleanup=lambda:True
         result=p.execute_synthetic();self.assertTrue(result["syntheticNativeProofComplete"])
+        self.assertEqual(result["serverImageTransport"],p.server_image_qualification)
+        self.assertEqual(result["serverImageTransport"]["actualRepoDigest"],m.base.server_image.TRANSPORT_REF)
+        self.assertNotEqual(result["serverImageTransport"]["actualRepoDigest"],m.base.server_image.ORIGINAL_ECR_REF)
         for field in ["sourceProof","sourceMetadataCompatible","independentlyReviewed","restoreQualified",
                       "futureTargetApproved","customerRowsUsed","productionMutated","ociArchiveUploaded"]:
             self.assertIs(result[field],False,field)
@@ -325,9 +353,16 @@ class SyntheticTests(unittest.TestCase):
                 p.native_attempted_stage="native-other"
                 return True
             p.cleanup=cleanup
+            def qualify(callback):
+                # Exercise the actual native callback and exact transport command;
+                # cryptographic helper behavior has its own dedicated suite.
+                callback(["docker","pull","--platform","linux/amd64",m.base.server_image.TRANSPORT_REF],timeout=300)
+                raise AssertionError("synthetic fixture must fail at its selected native boundary")
             with self.subTest(failed=failed),patch.object(m.os,"getuid",return_value=1001), \
-                 patch.object(m.subprocess,"run",side_effect=command):
+                 patch.object(m.subprocess,"run",side_effect=command),\
+                 patch.object(m.base.server_image,"qualify",side_effect=qualify) as qualification:
                 result=p.execute_synthetic()
+            self.assertEqual(qualification.call_count,int(failed=="pinned-server-pull"))
             self.assertFalse(result["syntheticNativeProofComplete"])
             self.assertTrue(result["nativeResourcesCleanupConfirmed"])
             self.assertEqual(result["errorCode"],"native_command_failed")

@@ -26,7 +26,6 @@ import subprocess
 import tempfile
 import time
 
-IMAGE = "public.ecr.aws/supabase/postgres@sha256:3e2a7ab48783077d0122dc72ed5174afb543110c38266c845716c51d130658e4"
 BUILD = "17.6.1.155"
 ROOT = Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location("kova_recovery", Path(__file__).with_name("managed-auth-recovery.py"))
@@ -35,6 +34,8 @@ _spec.loader.exec_module(recovery)
 _metadata_spec = importlib.util.spec_from_file_location("kova_empty_metadata", Path(__file__).with_name("collect-empty-recovery-metadata.py"))
 metadata_source = importlib.util.module_from_spec(_metadata_spec)
 _metadata_spec.loader.exec_module(metadata_source)
+server_image=metadata_source.server_image
+IMAGE=server_image.TRANSPORT_REF
 IDENT = re.compile(r"[a-z_][a-z0-9_]*\Z")
 SHA = re.compile(r"[a-f0-9]{64}\Z")
 OPERATOR = "kova_probe_operator"
@@ -413,11 +414,11 @@ class Probe:
         _,raw=self.run(["git","rev-parse","HEAD"])
         require(raw.decode().strip()==self.source,"checked_out_source_mismatch")
         self.docker(["info","--format","{{.OSType}}"])
-        self.docker(["pull","--platform","linux/amd64",IMAGE],timeout=300)
-        _,raw=self.docker(["image","inspect",IMAGE])
-        info=json.loads(raw)[0]
+        qualified=server_image.qualify(lambda args,**kwargs:self.run(args,**kwargs))
+        self.server_image_qualification=qualified["receipt"]
+        info=qualified["imageInfo"]
         require(info.get("Os")=="linux" and info.get("Architecture")=="amd64"
-                and IMAGE in info.get("RepoDigests",[]),"pinned_image_identity_mismatch")
+                and info.get("Id")==self.server_image_qualification["imageId"],"pinned_image_identity_mismatch")
         self.image_env=dict(x.split("=",1) for x in info.get("Config",{}).get("Env",[]) if "=" in x)
         self.image_volumes=sorted((info.get("Config",{}).get("Volumes") or {}).keys())
         require(all(p.startswith("/") and not any(s in p for s in ["..",",",":","/proc","/sys","docker.sock"])
@@ -988,6 +989,7 @@ while :; do sleep 1; done"""
         self.save_state()
         try:
             self.initialize()
+            result["serverImageTransport"]=self.server_image_qualification
             targets=denial_targets(self.metadata)
             self.private_root=Path(tempfile.mkdtemp(prefix="kova-empty-"+self.run_id+"-"+self.attempt+"-",dir=self.runner_temp))
             os.chmod(self.private_root,0o700)
@@ -1049,9 +1051,14 @@ while :; do sleep 1; done"""
             # A late postcondition failure must revoke every earlier success flag.
             result["dataFreeSafetyProofComplete"]=False
             result["sourceMetadataCompatible"]=False
-            result["errorCode"]=str(error) if isinstance(error,Stopped) else "data_free_native_probe_unconfirmed"
+            code=str(error) if isinstance(error,(Stopped,server_image.Stopped)) else ""
+            result["errorCode"]=(code if isinstance(error,Stopped)
+                or isinstance(error,server_image.Stopped) and code in server_image.PUBLIC_FAILURE_CODES
+                else "data_free_native_probe_unconfirmed")
             result["failedStage"]=self.stage
         finally:
+            qualified=getattr(self,"server_image_qualification",None)
+            if type(qualified) is dict:result.setdefault("serverImageTransport",qualified)
             result["cleanupConfirmed"]=self.cleanup()
             if not result["cleanupConfirmed"]:result["errorCode"]="owned_cleanup_unconfirmed"
             result["checkedAtUtc"]=datetime.now(timezone.utc).isoformat()

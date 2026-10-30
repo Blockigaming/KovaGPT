@@ -148,10 +148,11 @@ RAM_FAILURE_CODES=frozenset({
     'volume_runtime_stat_unqualified',
 })
 SAFE_FAILURE_CODES=SAFE_FAILURE_CODES|RAM_FAILURE_CODES
-RAM_STOPPED_TYPES=(operator.ram.Stopped,builder.ram.Stopped,operator.volume_proof.Stopped,builder.volume_proof.Stopped)
+SAFE_FAILURE_CODES=SAFE_FAILURE_CODES|base.server_image.PUBLIC_FAILURE_CODES
+RAM_STOPPED_TYPES=(operator.ram.Stopped,builder.ram.Stopped,operator.volume_proof.Stopped,builder.volume_proof.Stopped,base.server_image.Stopped)
 
 
-NATIVE_COMMAND_STAGES=frozenset({"not-attempted","git-head","docker-info","pinned-server-pull","native-other"})
+NATIVE_COMMAND_STAGES=frozenset({"not-attempted","git-head","docker-info","pinned-server-pull","server-buildx-version","server-raw-manifest","server-semantic-config","server-loaded-image","native-other"})
 NATIVE_PROBE_STAGES=frozenset({"synthetic_initial","synthetic_toolchain","synthetic_fixture_from_image",
     "synthetic_complete","initial","native_tools","network_create","native_metadata_prepare",
     "native_tls_controls","native_catalog_proof","native_extension_coverage","original_destination_guard",
@@ -162,6 +163,10 @@ def native_command_stage(argv):
     if argv==["git","rev-parse","HEAD"]:return "git-head"
     if argv==["docker","info","--format","{{.OSType}}"]:return "docker-info"
     if argv==["docker","pull","--platform","linux/amd64",base.IMAGE]:return "pinned-server-pull"
+    if argv==["docker","buildx","version"]:return "server-buildx-version"
+    if argv==["docker","buildx","imagetools","inspect","--raw",base.IMAGE]:return "server-raw-manifest"
+    if argv==["docker","buildx","imagetools","inspect","--format","{{json .Image}}",base.IMAGE]:return "server-semantic-config"
+    if argv==["docker","image","inspect",base.IMAGE]:return "server-loaded-image"
     return "native-other"
 
 
@@ -469,6 +474,7 @@ class SyntheticProbe(operator.OperatorProbe):
         self.save_state()
         try:
             self.stage="synthetic_toolchain";self.initialize()
+            result["serverImageTransport"]=self.server_image_qualification
             self.private_root=Path(tempfile.mkdtemp(prefix="kova-empty-"+self.run_id+"-"+self.attempt+"-",dir=self.runner_temp))
             os.chmod(self.private_root,0o700)
             base.write_private(self.private_root/"ownership.json",base.encoded({"token":self.token,"source":self.source,
@@ -521,6 +527,8 @@ class SyntheticProbe(operator.OperatorProbe):
                 "exceptionType":safe_exception_type(error),
                 "commandCount":self.command_count,"stderrTail":safe_diagnostic(self.last_stderr,self._diagnostic_secrets)}
         finally:
+            qualified=getattr(self,"server_image_qualification",None)
+            if type(qualified) is dict:result.setdefault("serverImageTransport",qualified)
             cleanup_details={"native":{"code":"synthetic_owned_cleanup_unconfirmed"}}
             try:result["nativeResourcesCleanupConfirmed"]=self.cleanup()
             except Exception as error:
