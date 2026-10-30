@@ -6,6 +6,7 @@ An export/restore success is database recovery evidence, not provider login,
 Storage-object recovery, key custody, migration approval or application acceptance.
 """
 import argparse
+import importlib.util
 from functools import wraps
 import resource
 import hashlib
@@ -31,7 +32,8 @@ IDENT = re.compile(r"[a-z_][a-z0-9_]*\Z")
 MANAGED_SCHEMAS = {"auth", "storage", "realtime"}
 BASELINE_SERVICE_TABLES = {("auth", "schema_migrations"), ("storage", "migrations"), ("realtime", "schema_migrations")}
 LEGACY_MEMBERS = {"full.dump", "schema.sql", "managed-schema.sql", "catalog.json", "rows.json", "toc.list", "manifest.json"}
-MEMBERS = LEGACY_MEMBERS | {"extension-data.json"}
+V2_MEMBERS = LEGACY_MEMBERS | {"extension-data.json"}
+MEMBERS = V2_MEMBERS | {"extension-semantic-source.json"}
 TIMEOUT = 900
 OPERATION_SECONDS = 1500
 DEADLINE = None
@@ -39,7 +41,7 @@ PUBLIC_STAGE = "startup"
 PUBLIC_STAGES = frozenset({"startup", "capture-authorization", "capture-source-config",
     "capture-client-tools", "capture-snapshot", "capture-catalog", "capture-dump",
     "capture-schema", "capture-coverage", "capture-rows", "capture-package",
-    "capture-encrypt", "capture-roundtrip", "capture-receipt", "restore"})
+    "capture-encrypt", "capture-roundtrip", "capture-receipt", "capture-semantics", "restore-semantics", "restore"})
 PUBLIC_FAILURE_CODES = frozenset({"explicit_execution_required", "capture_not_enabled",
     "source_approval_mismatch", "source_build_approval_missing", "backup_passphrase_missing",
     "production_connection_rejected", "trusted_ca_bundle_required", "pg17_client_required",
@@ -53,10 +55,12 @@ PUBLIC_FAILURE_CODES = frozenset({"explicit_execution_required", "capture_not_en
     "extension_data_catalog_rejected", "extension_data_columns_rejected",
     "extension_copy_data_rejected", "extension_sequence_state_rejected",
     "extension_data_bound_exceeded", "extension_data_payload_rejected",
-    "extension_data_coverage_missing", "extension_target_definition_mismatch"})
+    "extension_data_coverage_missing", "extension_target_definition_mismatch",
+    "source_snapshot_encoding_unqualified", "extension_semantic_capture_unqualified",
+    "extension_semantic_source_unqualified", "extension_semantic_target_mismatch"})
 STDOUT_BYTES = 128 * 1024**2
 MAX_BYTES = 4 * 1024**3
-CANONICAL_PG = "-c TimeZone=UTC -c DateStyle=ISO,YMD -c bytea_output=hex -c extra_float_digits=3"
+CANONICAL_PG = "-c TimeZone=UTC -c DateStyle=ISO,YMD -c bytea_output=hex -c extra_float_digits=3 -c search_path=pg_catalog"
 GUARD = Path(__file__).with_name("managed-auth-recovery-target.mjs")
 EMPTY_CENSUS = Path(__file__).with_name("empty-restore-target-catalog.sql")
 EMPTY_STRUCTURAL_KEYS = {
@@ -242,7 +246,7 @@ def source_environment(env):
     ca = Path(env.get("KOVA_RECOVERY_CA_BUNDLE", "/etc/ssl/certs/ca-certificates.crt"))
     require(ca.is_file(), "trusted_ca_bundle_required")
     child = clean_pg_env(env)
-    child.update(PGHOST=u.hostname, PGPORT=str(port), PGDATABASE="postgres", PGUSER=user,
+    child.update(PGHOST=u.hostname, PGPORT=str(port), PGDATABASE="postgres", PGUSER=user, PGCLIENTENCODING="UTF8",
                  PGPASSWORD=unquote(u.password), PGSSLMODE="verify-full", PGSSLROOTCERT=str(ca),
                  PGOPTIONS=CANONICAL_PG + " -c default_transaction_read_only=on -c statement_timeout=120000 -c lock_timeout=5000 -c idle_in_transaction_session_timeout=1600000")
     return child
@@ -269,8 +273,12 @@ class Snapshot:
                                         stderr=subprocess.DEVNULL, preexec_fn=child_limits)
         self.buffer = b""
         try:
-            row = self.query("SELECT jsonb_build_object('snapshot',pg_export_snapshot(),'database',current_database(),'version',current_setting('server_version'),'versionNum',current_setting('server_version_num')::int);", begin=True)
+            row = self.query("SELECT jsonb_build_object('snapshot',pg_export_snapshot(),'database',current_database(),'version',current_setting('server_version'),'versionNum',current_setting('server_version_num')::int,'serverEncoding',current_setting('server_encoding'),'clientEncoding',current_setting('client_encoding'),'snapshotSha256',encode(sha256(convert_to(pg_current_snapshot()::text,'UTF8')),'hex'));", begin=True)
             require(row["database"] == "postgres" and row["versionNum"] == 170006, "source_version_mismatch")
+            require(row.get("serverEncoding")==row.get("clientEncoding")=="UTF8"
+                    and SHA.fullmatch(row.get("snapshotSha256","")), "source_snapshot_encoding_unqualified")
+            self.snapshot_sha256=row["snapshotSha256"]
+            self.server_encoding=row["serverEncoding"];self.client_encoding=row["clientEncoding"]
             self.id = row["snapshot"]
             require(re.fullmatch(r"[a-fA-F0-9]+-[a-fA-F0-9]+-\d+", self.id), "snapshot_rejected")
             self.version = row["version"]
@@ -616,7 +624,7 @@ def bounded_archive(path, out):
             require(len(members) < len(MEMBERS), "backup_members_rejected")
             members.append(member)
         names = {m.name for m in members}
-        require(len(members) == len(names) and names in [LEGACY_MEMBERS,MEMBERS]
+        require(len(members) == len(names) and names in [LEGACY_MEMBERS,V2_MEMBERS,MEMBERS]
                 and all(m.isfile() and 0 < m.size <= (MAX_BYTES if m.name == "full.dump" else 128*1024**2) for m in members)
                 and sum(m.size for m in members) <= MAX_BYTES, "backup_members_rejected")
         for m in budgeted(members):
@@ -626,6 +634,44 @@ def bounded_archive(path, out):
                 while chunk := reader.read(1024**2):
                     dst.write(chunk)
                     check_deadline()
+
+
+def semantic_module():
+    file=Path(__file__).with_name("extension-semantic-capture.py")
+    spec=importlib.util.spec_from_file_location("managed_auth_private_semantics",file)
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    return module
+
+
+def capture_semantic_source(snapshot,env):
+    try:return semantic_module().capture(snapshot,env,check_deadline=check_deadline)
+    except Stopped:raise
+    except Exception:raise Stopped("extension_semantic_capture_unqualified") from None
+
+
+def verify_semantic_source(frame,manifest,env,attestation):
+    expected=manifest.get("extensionSemanticCanonicalSha256", "")
+    require(manifest.get("extensionSemanticCaptureSameExportedSnapshot") is True
+            and manifest.get("extensionSemanticCoverageComplete") is True and SHA.fullmatch(expected)
+            and frame.get("sourceSnapshotSha256")==manifest.get("extensionSemanticSourceSnapshotSha256")
+            and attestation.get("sourceCanonicalSemanticsSha256")==expected
+            and attestation.get("customerImportRequiresSemanticEquality") is True,
+            "extension_semantic_source_unqualified")
+    try:return semantic_module().verify_saved(frame,source_sha=env.get("KOVA_APPROVED_BACKUP_SOURCE_SHA"),
+                                               expected_canonical_sha256=expected,check_deadline=check_deadline)
+    except Stopped:raise
+    except Exception:raise Stopped("extension_semantic_source_unqualified") from None
+
+
+def verify_semantic_target(target,source_frame,manifest):
+    try:
+        with Snapshot(target) as snapshot:
+            observed=semantic_module().collect(snapshot,source_sha=source_frame["sourceSha"],check_deadline=check_deadline)
+        require(observed["canonicalReceipt"]["canonicalSha256"]==manifest["extensionSemanticCanonicalSha256"],
+                "extension_semantic_target_mismatch")
+        return observed["canonicalReceipt"]
+    except Stopped:raise
+    except Exception:raise Stopped("extension_semantic_target_mismatch") from None
 
 
 @bounded_operation
@@ -656,6 +702,14 @@ def capture(env, output):
                 catalog["extensionData"] = snapshot.query(EXTENSION_DATA_CATALOG_SQL)
                 extension_entries(catalog)
                 fresh_file(work/"catalog.json", encoded(catalog))
+                mark_stage("capture-semantics")
+                semantics=capture_semantic_source(snapshot,env)
+                require(semantics.get("captureSnapshotBound") is True
+                        and semantics.get("sourceSnapshotSha256")==snapshot.snapshot_sha256
+                        and semantics.get("canonicalReceipt",{}).get("allCatalogFieldsCovered") is True
+                        and SHA.fullmatch(semantics.get("canonicalReceipt",{}).get("canonicalSha256","")),
+                        "extension_semantic_capture_unqualified")
+                fresh_file(work/"extension-semantic-source.json",encoded(semantics))
                 mark_stage("capture-dump")
                 run(["pg_dump", "--no-password", "--format=custom", "--snapshot", snapshot.id,
                      "--file", str(work/"full.dump")], source_env)
@@ -676,12 +730,15 @@ def capture(env, output):
                 fresh_file(work/"rows.json", encoded(row_fingerprints(source_env, catalog, snapshot.id)))
             mark_stage("capture-package")
             # Hashes and all schema/role/user-derived data stay INSIDE ciphertext.
-            manifest = {"format":2,"operation":"complete-managed-auth-database-capture","project":PROJECT,
+            manifest = {"format":3,"operation":"complete-managed-auth-database-capture","project":PROJECT,
                         "sourceSha":source,"postgresBuild":BUILD,"capturedAt":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),
                         "schemaSha256":schema_hash((work/"schema.sql").read_bytes()),
                         "managedSchemaSha256":schema_hash((work/"managed-schema.sql").read_bytes()),
                         "consistentExportedSnapshot":True,"storageObjectBytesIncluded":False,
                         "extensionTableDataSameExportedSnapshot":True,
+                        "extensionSemanticCaptureSameExportedSnapshot":True,"extensionSemanticCoverageComplete":True,
+                        "extensionSemanticCanonicalSha256":semantics["canonicalReceipt"]["canonicalSha256"],
+                        "extensionSemanticSourceSnapshotSha256":semantics["sourceSnapshotSha256"],
                         "sequenceStateTransactionalSnapshot":False,
                         "sequenceStateCapture":"non-mvcc-high-water-marks",
                         "dashboardProviderConfigurationIncluded":False,"postgresRolePasswordsIncluded":False,
@@ -711,6 +768,8 @@ def capture(env, output):
                        "encryptedSha256":file_digest(encrypted),"encryptedBytes":encrypted.stat().st_size,
                        "completeRequiredDatabaseTableCoverage":True,"consistentSnapshot":True,"encryptedRoundtripVerified":True,
                        "extensionTableDataSameExportedSnapshot":True,"sequenceStateTransactionalSnapshot":False,
+                       "extensionSemanticCaptureSameExportedSnapshot":True,"extensionSemanticCoverageComplete":True,
+                       "extensionSemanticCanonicalSha256":semantics["canonicalReceipt"]["canonicalSha256"],
                        "restoreExercised":False,"fullProjectRecoveryQualified":False,
                        "storageObjectBytesBackedUp":False,"providerConfigRecoveryQualified":False,
                        "credentialCustodyQualified":False,"productionMutated":False,"plaintextUploaded":False}
@@ -750,7 +809,7 @@ def target_environment(env, approved):
     u = urlparse(approved["uri"])
     out = clean_pg_env(env)
     out.update(PGHOST=u.hostname, PGHOSTADDR=approved["expectedIp"], PGPORT=str(approved["port"]),
-               PGDATABASE=approved["database"], PGUSER=unquote(u.username), PGPASSFILE=str(private_file(env["PGPASSFILE"])),
+               PGDATABASE=approved["database"], PGUSER=unquote(u.username), PGCLIENTENCODING="UTF8", PGPASSFILE=str(private_file(env["PGPASSFILE"])),
                PGCONNECT_TIMEOUT="5", PGOPTIONS=CANONICAL_PG + " -c statement_timeout=120000 -c lock_timeout=5000")
     params = parse_qs(u.query)
     require(params.get("sslmode") == ["verify-full"] and len(params.get("sslrootcert", [])) == 1
@@ -1079,26 +1138,34 @@ def restore(env, archive, output):
         extracted.mkdir(mode=0o700)
         bounded_archive(plain, extracted)
         manifest = json.loads((extracted/"manifest.json").read_bytes())
-        archive_members = MEMBERS if manifest.get("format") == 2 else LEGACY_MEMBERS
-        require(manifest.get("format") in {1,2} and manifest.get("operation") == "complete-managed-auth-database-capture" and manifest.get("project") == PROJECT
+        archive_members = {1:LEGACY_MEMBERS,2:V2_MEMBERS,3:MEMBERS}.get(manifest.get("format"),set())
+        require(manifest.get("format") in {1,2,3} and manifest.get("operation") == "complete-managed-auth-database-capture" and manifest.get("project") == PROJECT
                 and manifest.get("postgresBuild") == BUILD and manifest.get("consistentExportedSnapshot") is True
                 and manifest.get("sourceSha") == env.get("KOVA_APPROVED_BACKUP_SOURCE_SHA")
                 and len(manifest["files"]) == len(archive_members)-1
                 and {r["name"] for r in manifest["files"]} == archive_members-{"manifest.json"}
                 and {p.name for p in extracted.iterdir()} == archive_members, "backup_manifest_rejected")
+        require(a.get("customerImportRequiresSemanticEquality") is not True or manifest["format"]==3,
+                "extension_semantic_source_unqualified")
         for row in budgeted(manifest["files"]):
             member = extracted/row["name"]
             require(member.stat().st_size == row["bytes"] and file_digest(member) == row["sha256"], "backup_member_integrity_failed")
         source_catalog = json.loads((extracted/"catalog.json").read_bytes())
         identifiers(source_catalog)
         supplement = (json.loads((extracted/"extension-data.json").read_bytes())
-                      if manifest["format"] == 2 else None)
+                      if manifest["format"] in {2,3} else None)
         if supplement is not None:
             require(manifest.get("extensionTableDataSameExportedSnapshot") is True
                     and manifest.get("sequenceStateTransactionalSnapshot") is False
                     and manifest.get("sequenceStateCapture") == "non-mvcc-high-water-marks",
                     "backup_manifest_rejected")
             validate_extension_data(source_catalog, supplement)
+        source_semantics=None
+        if manifest["format"]==3:
+            mark_stage("restore-semantics")
+            source_semantics=json.loads((extracted/"extension-semantic-source.json").read_bytes())
+            verify_semantic_source(source_semantics,manifest,env,a)
+            mark_stage("restore")
         if baseline_mode == "managed-baseline":
             proof = target_observation(target, source_catalog)
             require(proof["observed"]["serverVersionNum"] == 170006, "target_postgres_patch_mismatch")
@@ -1175,6 +1242,10 @@ def restore(env, archive, output):
         # triggers without changing their saved enabled/disabled definitions.
         # Schema restore and SQL generation may outlive the prior check.
         # Both baseline modes require fresh identity/isolation before data.
+        if source_semantics is not None:
+            mark_stage("restore-semantics")
+            verify_semantic_target(target,source_semantics,manifest)
+            mark_stage("restore")
         restore_write_preflight(env, target, approved, a)
         run(["psql","-X","--no-password","--quiet","--single-transaction","--set","ON_ERROR_STOP=1",
              "--command","SET session_replication_role=replica","--file",str(data_sql),
@@ -1197,6 +1268,8 @@ def restore(env, archive, output):
                    "actualImageRepoDigest":a["actualImageRepoDigest"],"postgresBuild":BUILD,
                    "restoredDatabaseStateVerified":True,"tablesSequencesLargeObjectsVerified":True,
                    "schemaOwnersPoliciesPrivilegesVerified":True,"productionMutated":False,
+                   "extensionSemanticsVerified":source_semantics is not None,
+                   "extensionSemanticCanonicalSha256":manifest.get("extensionSemanticCanonicalSha256"),
                    "providerConfigRecoveryQualified":False,"credentialCustodyQualified":False,
                    "storageObjectBytesRecovered":False,"fullProjectRecoveryQualified":False}
         write_success_receipt(output, receipt)

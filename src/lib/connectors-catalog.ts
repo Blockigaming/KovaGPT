@@ -1353,14 +1353,6 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     domain: "make.com",
   },
   {
-    id: "hubspot",
-    label: "HubSpot",
-    description: "Reference contacts, companies, and deal context.",
-    category: "Productivity",
-    status: "planned",
-    domain: "hubspot.com",
-  },
-  {
     id: "salesforce",
     label: "Salesforce",
     description: "Reference CRM accounts, contacts, and opportunities.",

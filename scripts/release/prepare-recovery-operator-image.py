@@ -8,6 +8,7 @@ requalified with the final target/network policy before sensitive use.
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -20,11 +21,20 @@ import tempfile
 
 ROOT=Path(__file__).resolve().parents[2]
 SOURCE=ROOT/"scripts/release"
+spec=importlib.util.spec_from_file_location("operator_owned_ram_volumes",SOURCE/"owned-noswap-volumes.py")
+ram=importlib.util.module_from_spec(spec);spec.loader.exec_module(ram)
+spec=importlib.util.spec_from_file_location("operator_ram_kernel_proof",SOURCE/"noswap-volume-proof.py")
+volume_proof=importlib.util.module_from_spec(spec);spec.loader.exec_module(volume_proof)
 BASE_TAG="ubuntu:24.04"
 KEY_FINGERPRINT="B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8"
 UBUNTU_KEY_FINGERPRINT="F6ECB3762474EDA9D21B7022871920D1991BC93C"
 FILES=["managed-auth-recovery.py","managed-auth-recovery-target.mjs","verify-isolated-restore-target.mjs",
-       "empty-restore-target-catalog.sql","recovery-operator-client-smoke.py","run-isolated-recovery-client.py"]
+       "empty-restore-target-catalog.sql","recovery-operator-client-smoke.py","run-isolated-recovery-client.py",
+       "extension-semantic-capture.py","extension-routine-type-payloads.py",
+       "extension-routine-type-hash-query.py","extension-relation-payloads.py",
+       "extension-relation-query-hooks.py","pg17-extension-relation-manifest.json",
+       "canonicalize-pg17-extension-nodes.py","pg17-extension-node-schema.json",
+       "extension-regclass-datum-byteorder-audit.sql"]
 SAFE_HOST_ENV={"PATH","HOME","LANG","LC_ALL","TZ","TMPDIR","HTTP_PROXY","HTTPS_PROXY","ALL_PROXY",
                "NO_PROXY","http_proxy","https_proxy","all_proxy","no_proxy","SSL_CERT_FILE","SSL_CERT_DIR"}
 SENSITIVE_KEYS={"KOVA_PRODUCTION_DATABASE_URL","KOVA_PRODUCTION_BACKUP_PASSPHRASE","PGPASSWORD",
@@ -100,7 +110,8 @@ def check_smoke(value):
             and all(value.get(k) is True for k in ["nonroot","nativePythonEngineImport","nativeNodeDestinationGuard",
                        "nativeFileBoundLauncherImport","nodePasswordOverrideRejected","syntheticGpgRoundtrip",
                        "wrongGpgPassphraseRejected","readonlyRootObserved","noNewPrivilegesObserved",
-                       "capabilitiesDroppedObserved","tmpfsNoSwapObserved","memorySwapDisabledObserved"])
+                       "capabilitiesDroppedObserved","tmpfsNoSwapObserved","memorySwapDisabledObserved",
+                       "nativeSemanticDependencyClosureLoaded"])
             and all(value.get(k) is False for k in ["actualTargetConnected","customerRowsUsed","restorePerformed"]),
             "native_client_smoke_unqualified")
     require(len(value.get("tools",[]))==9 and {r.get("name") for r in value.get("tools",[])}==
@@ -164,22 +175,61 @@ class Builder:
                 and not self.output.is_symlink(),"private_image_output_unqualified")
         self.owner=secrets.token_hex(12);self.tag="kova-recovery-operator:"+self.owner
         self.image_id=None
+        self.run_id=env.get("GITHUB_RUN_ID","");self.attempt=env.get("GITHUB_RUN_ATTEMPT","")
+        require(re.fullmatch(r"[1-9][0-9]*",self.run_id) and re.fullmatch(r"[1-9][0-9]*",self.attempt),
+                "generic_image_run_identity_required")
+        self.ram_volumes=None;self.ram_index=0;self.last_ram_keys=[]
 
-    def command(self,argv,*,timeout=120):
+    def command(self,argv,*,timeout=120,data=None):
         try:
             with tempfile.TemporaryFile() as out,tempfile.TemporaryFile() as err:
-                result=subprocess.run(argv,stdout=out,stderr=err,env=self.env,timeout=timeout,check=False)
+                result=subprocess.run(argv,input=data,stdout=out,stderr=err,env=self.env,timeout=timeout,check=False)
                 require(result.returncode==0,"data_free_image_native_command_unconfirmed")
                 require(out.tell()<=64*1024**2 and err.tell()<=64*1024**2,"image_command_output_bound")
                 out.seek(0);return out.read()
         except (OSError,subprocess.SubprocessError):raise Stopped("data_free_image_native_command_unconfirmed") from None
 
+    def owned_ram(self):
+        if self.ram_volumes is None:
+            self.ram_volumes=ram.OwnedVolumes(self.source,self.owner,self.run_id,self.attempt,self.temp,self.command)
+        return self.ram_volumes
+
     def run_args(self):
-        return ["docker","run","--rm","--no-healthcheck","--network","none","--cap-drop","ALL",
+        key="builder"+str(self.ram_index)+"-tmp";self.ram_index+=1;self.last_ram_keys=[key]
+        tmp=self.owned_ram().ensure(key,"/tmp",128,os.getuid(),os.getgid(),"1777")
+        return ["docker","run","--rm","--name","kova-builder-smoke-"+self.owner,"--log-driver","none",
+                "--label","kova.ram.owner="+self.owner,"--no-healthcheck","--network","none","--cap-drop","ALL",
                 "--security-opt","no-new-privileges:true","--read-only","--user",str(os.getuid())+":"+str(os.getgid()),
                 "--cgroupns","private",
                 "--pids-limit","128","--memory","768m","--memory-swap","768m","--cpus","1",
-                "--tmpfs","/tmp:rw,nosuid,nodev,noexec,noswap,mode=1777,size=128m",self.image_id]
+                "--mount",tmp,self.image_id]
+
+    def run_generic(self,args):
+        specs=self.owned_ram().expected_mounts(self.last_ram_keys)
+        self.owned_ram().record_activation(self.last_ram_keys)
+        index=args.index(self.image_id);options=args[:index];command=args[index+1:]
+        if "--entrypoint" in options:
+            entry=options.index("--entrypoint");original=[options[entry+1]];del options[entry:entry+2]
+        else:original=["python3","/opt/kova/scripts/release/recovery-operator-client-smoke.py"]
+        wrapper="""proof=$1; count=$2; shift 2
+paths=( "${@:1:count}" ); shift "$count"
+printf '%s\n' KOVA_PRIVATE_RAM_PROOF_BEGIN
+/bin/bash -ceu "$proof" kova-private-ram-check "${paths[@]}"
+printf '%s\n' KOVA_PRIVATE_RAM_PROOF_END
+exec "$@"
+""".replace("\n+","\n")
+        raw=self.command(options+["--entrypoint","/bin/bash",self.image_id,"-ceu",wrapper,"kova-builder-ram-proof",
+            volume_proof.runtime_proof_script(),str(len(specs)),*[s["destination"] for s in specs],*original,*command],timeout=90)
+        begin=b"KOVA_PRIVATE_RAM_PROOF_BEGIN\n";end=b"KOVA_PRIVATE_RAM_PROOF_END\n"
+        require(raw.startswith(begin) and raw.count(end)==1,"generic_ram_kernel_proof_unconfirmed")
+        proof,stdout=raw[len(begin):].split(end,1)
+        observed=volume_proof.validate_runtime_proof(proof,specs)
+        self.owned_ram().record_runtime_proof(observed["records"])
+        return stdout
+
+    def cleanup_storage(self):
+        if self.ram_volumes is None:return True
+        return self.ram_volumes.cleanup()
 
     def cleanup_image(self):
         # Generic image only; never remove a foreign tag or invoke global prune.
@@ -218,7 +268,7 @@ class Builder:
                     and actual.get("Config",{}).get("User")=="65532:65532"
                     and actual.get("Config",{}).get("Healthcheck",{}).get("Test")==["NONE"],
                     "built_client_identity_unconfirmed")
-            smoke=check_smoke(json.loads(self.command(self.run_args(),timeout=90)))
+            smoke=check_smoke(json.loads(self.run_generic(self.run_args())))
             require(smoke.get("genericSourceSha256")=={name:hashes[name] for name in FILES},
                     "image_generic_source_changed")
             inventory={"sourceSha":self.source,"baseRepoDigest":base,"baseImageId":base_id,
@@ -227,7 +277,7 @@ class Builder:
                        "genericSourceSha256":hashes,"nativeSmoke":smoke}
             # Extract the installed-version SBOM via a networkless native client;
             # it contains generic package names/versions, never source metadata.
-            packages=self.command(self.run_args()[:-1]+["--entrypoint","/bin/cat",self.image_id,
+            packages=self.run_generic(self.run_args()[:-1]+["--entrypoint","/bin/cat",self.image_id,
                                   "/opt/kova-build/packages.tsv"])
             require(sha(packages)==smoke["packageInventorySha256"],"package_inventory_changed")
             inventory["installedPackagesTsv"]=packages.decode()
@@ -246,6 +296,7 @@ class Builder:
                 "restorePerformed":False,"clientNetworkIsolationQualified":False,"futureRestoreApproved":False,
                 "retentionDays":7,"newCloudResourceCreated":False,
                 "checkedAtUtc":datetime.now(timezone.utc).isoformat()}
+            require(self.cleanup_storage(),"generic_ram_volume_cleanup_unconfirmed")
             require(self.cleanup_image(),"generic_image_cleanup_unconfirmed")
             receipt["localTagRemoved"]=True
             (self.output/"image-preparation-receipt.json").write_bytes(canonical(receipt))
@@ -254,6 +305,8 @@ class Builder:
             return receipt
         finally:
             if not success:
+                try:self.cleanup_storage()
+                except Exception:pass
                 try:self.cleanup_image()
                 except Exception:pass
                 # Exact owned output only; no plaintext/payload is ever present.

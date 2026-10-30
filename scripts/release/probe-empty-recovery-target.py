@@ -625,7 +625,6 @@ while :; do sleep 1; done"""
                "privateRoot":str(self.private_root) if self.private_root else None,
                "pgUid":self.pg_uid,"pgGid":self.pg_gid,"uid":self.uid,"gid":self.gid,
                "cleanupConfirmed":self.cleanup_confirmed}
-        if hasattr(self,"tmpfs_volumes"):state["tmpfsVolumes"]=self.checked_tmpfs_specs(self.tmpfs_volumes)
         if self.state_path.exists():
             old=json.loads(private_file(self.state_path).read_bytes())
             require(all(old.get(k)==state[k] for k in ["token","source","runId","attempt"]),"owned_state_conflict")
@@ -639,7 +638,7 @@ while :; do sleep 1; done"""
         values={"PGHOST":host or self.hosts[target],"PGHOSTADDR":ip,"PGPORT":"5432","PGDATABASE":"postgres",
                 "PGUSER":OPERATOR,"PGSSLMODE":"verify-full","PGSSLROOTCERT":ca,
                 "PGPASSFILE":"/run/client/pgpass","PGCONNECT_TIMEOUT":"3",
-                "PGOPTIONS":"-c TimeZone=UTC -c DateStyle=ISO,YMD -c bytea_output=hex -c extra_float_digits=3 -c default_transaction_read_only=on"}
+                "PGOPTIONS":recovery.CANONICAL_PG+" -c default_transaction_read_only=on","PGCLIENTENCODING":"UTF8"}
         for key,value in values.items():flags += ["--env",key+"="+value]
         return self.docker(flags+[self.names["client"],self.native_tools["psql"],"-X","--no-password","--quiet",
             "--tuples-only","--no-align","--set","ON_ERROR_STOP=1","--set","VERBOSITY=sqlstate","--file","-"],
@@ -923,14 +922,14 @@ while :; do sleep 1; done"""
                             and self.resource_absent(self.network,network=True),"owned_network_removal_unconfirmed")
                 network_gone=True
             except Exception:safe=False;network_gone=False
-        volumes_gone=True
-        if hasattr(self,"cleanup_tmpfs_volumes"):
-            try:volumes_gone=self.cleanup_tmpfs_volumes(containers_gone)
-            except Exception:volumes_gone=False
-            if not volumes_gone:safe=False
+        storage_gone=True
+        if containers_gone and network_gone and callable(getattr(self,"cleanup_storage",None)):
+            try:storage_gone=bool(self.cleanup_storage())
+            except Exception:storage_gone=False
+            if not storage_gone:safe=False
         # Keep both firewall layers and private backing files if a live target
         # or an uncertain daemon operation cannot yet be reconciled.
-        for tool in reversed(self.firewall_reserved) if containers_gone and network_gone and volumes_gone else []:
+        for tool in reversed(self.firewall_reserved) if containers_gone and network_gone and storage_gone else []:
             base=["sudo","-n",tool,"-w","5"]
             try:
                 jump=["DOCKER-USER","-i",self.bridge,"-m","comment","--comment",self.token,"-j",self.chain]
@@ -958,7 +957,7 @@ while :; do sleep 1; done"""
                 require(not any(len(tokens)>=2 and tokens[1]==self.chain for tokens in after)
                         and ["-A",*jump] not in after,"owned_firewall_chain_removal_unconfirmed")
             except Exception:safe=False
-        if self.private_root and containers_gone and network_gone and volumes_gone:
+        if self.private_root and containers_gone and network_gone and storage_gone:
             try:
                 root=Path(self.private_root)
                 if root.exists():

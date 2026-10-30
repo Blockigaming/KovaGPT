@@ -87,15 +87,70 @@ SAFE_FAILURE_CODES=frozenset({
     "synthetic_command_signaled","synthetic_command_output_bound",
     "native_command_failed","native_command_unconfirmed","native_extension_preload_unqualified",
     "native_permission_unqualified","native_dependency_unqualified","private_command_output_bound",
-    "operator_tmpfs_options_unqualified","operator_tmpfs_owner_unqualified",
-    "operator_tmpfs_destination_unqualified","operator_tmpfs_state_unqualified",
-    "operator_tmpfs_census_unqualified","operator_tmpfs_identity_unqualified",
-    "operator_tmpfs_mountpoint_unqualified","operator_tmpfs_name_not_absent",
-    "operator_tmpfs_reservation_changed","operator_tmpfs_duplicate_destination",
-    "operator_tmpfs_removal_unconfirmed",
     "timeout_control_identity_unconfirmed","timeout_control_positive_unconfirmed",
     "timeout_control_expiry_unconfirmed","outbound_connection_not_denied",
 })
+
+
+RAM_FAILURE_CODES=frozenset({
+    'generic_ram_kernel_proof_unconfirmed',
+    'generic_ram_volume_cleanup_unconfirmed',
+    'owned_volume_activated_runtime_unconfirmed',
+    'owned_volume_attempt_reserved',
+    'owned_volume_census_unqualified',
+    'owned_volume_cleanup_recipe_unqualified',
+    'owned_volume_cleanup_state_unqualified',
+    'owned_volume_command_output_unqualified',
+    'owned_volume_command_unconfirmed',
+    'owned_volume_configuration_changed',
+    'owned_volume_container_mount_unqualified',
+    'owned_volume_container_references_present',
+    'owned_volume_context_unqualified',
+    'owned_volume_create_unconfirmed',
+    'owned_volume_creation_outcome_unknown',
+    'owned_volume_creation_unconfirmed',
+    'owned_volume_destination_unqualified',
+    'owned_volume_duplicate_json_key',
+    'owned_volume_existing_plan_unqualified',
+    'owned_volume_identity_unqualified',
+    'owned_volume_inspect_unqualified',
+    'owned_volume_json_unqualified',
+    'owned_volume_mode_unqualified',
+    'owned_volume_mount_count_unqualified',
+    'owned_volume_mount_keys_unqualified',
+    'owned_volume_name_not_absent',
+    'owned_volume_recipe_unqualified',
+    'owned_volume_removal_unconfirmed',
+    'owned_volume_runtime_identity_changed',
+    'owned_volume_runtime_shape_unqualified',
+    'owned_volume_runtime_state_unqualified',
+    'owned_volume_state_bound',
+    'owned_volume_state_changed',
+    'owned_volume_state_identity_changed',
+    'owned_volume_state_private_required',
+    'short_run_kernel_proof_unconfirmed',
+    'volume_mountinfo_bound',
+    'volume_mountinfo_duplicate_id',
+    'volume_mountinfo_escape_unqualified',
+    'volume_mountinfo_shape',
+    'volume_runtime_capability_or_swap_unqualified',
+    'volume_runtime_capacity_mismatch',
+    'volume_runtime_descendant_mount',
+    'volume_runtime_mount_missing_or_shadowed',
+    'volume_runtime_mount_policy_unqualified',
+    'volume_runtime_output_bound',
+    'volume_runtime_output_duplicate',
+    'volume_runtime_output_unqualified',
+    'volume_runtime_owner_mode_or_device_mismatch',
+    'volume_runtime_root_not_readonly',
+    'volume_runtime_shared_superblock',
+    'volume_runtime_specs_duplicate',
+    'volume_runtime_specs_unqualified',
+    'volume_runtime_stat_coverage',
+    'volume_runtime_stat_unqualified',
+})
+SAFE_FAILURE_CODES=SAFE_FAILURE_CODES|RAM_FAILURE_CODES
+RAM_STOPPED_TYPES=(operator.ram.Stopped,builder.ram.Stopped,operator.volume_proof.Stopped,builder.volume_proof.Stopped)
 
 
 NATIVE_COMMAND_STAGES=frozenset({"not-attempted","git-head","docker-info","pinned-server-pull","native-other"})
@@ -118,6 +173,7 @@ def safe_exception_type(error):
              PermissionError:"PermissionError",FileNotFoundError:"FileNotFoundError",
              subprocess.TimeoutExpired:"TimeoutExpired",ValueError:"ValueError",
              json.JSONDecodeError:"JSONDecodeError",RuntimeError:"RuntimeError",AssertionError:"AssertionError"}
+    if type(error) in RAM_STOPPED_TYPES:return "Stopped"
     return allowed.get(type(error),"UnknownException")
 
 
@@ -181,7 +237,7 @@ class SyntheticCommandFailure(Stopped):
 
 
 def failure_details(error,stage="setup"):
-    code=str(error) if isinstance(error,(Stopped,builder.Stopped)) else "synthetic_native_unconfirmed"
+    code=str(error) if isinstance(error,(Stopped,builder.Stopped,*RAM_STOPPED_TYPES)) else "synthetic_native_unconfirmed"
     code=code if code in SAFE_FAILURE_CODES else "synthetic_native_unconfirmed"
     value={"code":code,"stage":stage if stage in BUILD_STAGES else "setup"}
     if isinstance(error,SyntheticCommandFailure):value["command"]=error.details
@@ -410,6 +466,8 @@ class SyntheticProbe(operator.OperatorProbe):
           "sourceMetadataCompatible":False,"independentlyReviewed":False,"restoreQualified":False,
           "futureTargetApproved":False,"customerBackupDecryptionPerformed":False,"protectedPhraseUsed":False,"restorePerformed":False,
           "ociArchiveExported":False,"ociArchiveUploaded":False,"targetsRetained":False}
+        kernel=os.uname().release
+        if re.fullmatch(r"[0-9][A-Za-z0-9_.+-]{0,127}",kernel):result["nativeKernelRelease"]=kernel
         self.save_state()
         try:
             self.stage="synthetic_toolchain";self.initialize()
@@ -449,6 +507,9 @@ class SyntheticProbe(operator.OperatorProbe):
                 wrongCaRejectedCount=2,numericDeniedConnectProbeCount=attempts,ordinaryTargetRows=0,
                 activePreloadLibraryCount=0,consumerWorkerCount=0,hostPublishedPortCount=0,socketMountCount=0,
                 privateTmpfsNoswapObserved=True,containerSwapDisabledObserved=True,dockerLoggingDisabledObserved=True,
+                dataBacking="owned-local-tmpfs-volumes",noDiskDataBackingObserved=True,
+                ownedTmpfsVolumeCount=len(self.owned_ram().specs),
+                runtimeMountProofSha256=base.digest(base.encoded(self.owned_ram().runtime_records)),
                 networkEvidenceSha256=base.digest(base.encoded(self.network_evidence+self.neighbors)),
                 syntheticBaselineFingerprints=snapshots[0]["fingerprints"])
             self.stage="synthetic_complete"

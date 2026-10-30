@@ -27,6 +27,8 @@ def module(name,file):
 
 base=module("operator_base_probe","probe-empty-recovery-target.py")
 builder=module("operator_base_builder","prepare-recovery-operator-image.py")
+ram=module("operator_owned_ram","owned-noswap-volumes.py")
+volume_proof=module("operator_ram_proof","noswap-volume-proof.py")
 Stopped=base.Stopped
 require=base.require
 encoded=base.encoded
@@ -50,26 +52,6 @@ def environment(values):
     return out
 
 
-def checked_tmpfs_options(options):
-    """Only bounded private tmpfs mounts; never pass arbitrary driver options."""
-    require(isinstance(options,str),"operator_tmpfs_options_unqualified")
-    parts=options.split(",")
-    require(len(parts)==len(set(parts)) and set(parts)>={"rw","nosuid","nodev","noexec","noswap"},
-            "operator_tmpfs_options_unqualified")
-    values={}
-    for part in parts:
-        if part in {"rw","nosuid","nodev","noexec","noswap"}:continue
-        pair=part.split("=",1)
-        require(len(pair)==2 and pair[0] in {"mode","uid","gid","size"} and pair[0] not in values,
-                "operator_tmpfs_options_unqualified")
-        values[pair[0]]=pair[1]
-    require(values.get("mode") in {"0700","1777"} and re.fullmatch(r"[1-9][0-9]{0,4}m",values.get("size",""))
-            and 1<=int(values["size"][:-1])<=32768,"operator_tmpfs_options_unqualified")
-    require(all(re.fullmatch(r"(?:0|[1-9][0-9]{0,9})",values[k]) and int(values[k])<2**31
-                for k in ["uid","gid"] if k in values),"operator_tmpfs_options_unqualified")
-    return values
-
-
 class OperatorProbe(base.Probe):
     """Reuse with a reviewed exact OCI ID; source/restore gates remain external."""
     def __init__(self,metadata,env,output,*,operator_image_id,operator_source_sha=None,resources=None):
@@ -77,14 +59,13 @@ class OperatorProbe(base.Probe):
         self.configure_operator(operator_image_id,operator_source_sha or self.source,resources)
 
     def configure_operator(self,image_id,source_sha,resources=None):
-        require(not getattr(self,"tmpfs_volumes",{}),"operator_tmpfs_state_unqualified")
         require(re.fullmatch(r"sha256:[a-f0-9]{64}",image_id or "")
                 and re.fullmatch(r"[a-f0-9]{40}",source_sha or ""),"operator_image_pin_required")
         self.operator_image_id=image_id;self.operator_source_sha=source_sha
         self.client_tools={};self.operator_env={};self.bash_pins={};self.operator_smoke=None
-        self.tmpfs_volumes={}
-        self.timeout_pins={}
         self.server_image_id=None
+        self.timeout_pins={}
+        self.ram_volumes=None;self.ram_keys={};self.short_ram_index=0
         self.names.update({key:"kova-empty-"+key+"-"+self.token for key in ["smoke","toolcheck"]})
         self.state_path=self.runner_temp/("kova-operator-owned-"+self.run_id+"-"+self.attempt+".json")
         require(not self.state_path.exists(),"operator_attempt_already_reserved")
@@ -101,9 +82,34 @@ class OperatorProbe(base.Probe):
                 and all(self.resources["serverTmpfsMiB"][k]+128<self.resources["serverMemoryMiB"][k]
                         for k in ["a","b"]),"operator_memory_policy_unqualified")
 
+    def owned_ram(self):
+        if self.ram_volumes is None:
+            self.ram_volumes=ram.OwnedVolumes(self.source,self.token,self.run_id,self.attempt,self.runner_temp,
+                lambda args,**kwargs:self.run(args,**kwargs)[1])
+        return self.ram_volumes
+
+    def ram_mount(self,key,destination,size_mib,uid,gid,mode):
+        value=self.owned_ram().ensure(key,destination,size_mib,uid,gid,mode)
+        return value
+
+    def cleanup_storage(self):
+        # Constructor-free cleanup backstops attach only validated owned state.
+        managers=([self.ram_volumes] if getattr(self,"ram_volumes",None) is not None else
+            ram.restore_from_state({"GITHUB_SHA":self.source,"GITHUB_RUN_ID":self.run_id,
+                "GITHUB_RUN_ATTEMPT":self.attempt,"RUNNER_TEMP":str(self.runner_temp)},
+                context_validator=lambda _:self.source,command=lambda args,**kwargs:self.run(args,**kwargs)[1]))
+        safe=True
+        for manager in managers:
+            if manager.owner==self.token:
+                try:
+                    safe=bool(manager.cleanup()) and safe
+                except Exception:safe=False
+        return safe
+
     def docker(self,args,**kwargs):
-        # Name and label even short-lived pinned-image diagnostics, so SIGKILL
-        # never leaves an unowned anonymous container to an unprovable cleanup.
+        # Short data-free tools prove their mounted backing before executing,
+        # then return the original stdout after the private proof is stripped.
+        keys=None;image=None;default_entrypoint=None
         if args[:1]==["run"] and "--rm" in args and "--name" not in args:
             require(IMAGE in args and args[args.index("--network")+1]=="none",
                     "unowned_native_container_forbidden")
@@ -111,112 +117,42 @@ class OperatorProbe(base.Probe):
             if name not in self.containers_reserved:self.reserve_absent(name)
             else:require(self.resource_absent(name),"toolcheck_name_not_absent")
             self.save_state()
+            key="toolcheck"+str(self.short_ram_index)+"-tmp";self.short_ram_index+=1
+            mount=self.ram_mount(key,"/tmp",128,self.uid,self.gid,"1777")
+            keys=[key];image=IMAGE
             args=["run","--name",name,"--log-driver","none","--cgroupns","private",
-                  "--memory","768m","--memory-swap","768m",
-                  "--tmpfs","/tmp:rw,nosuid,nodev,noexec,noswap,mode=1777,size=128m",
+                  "--memory","768m","--memory-swap","768m","--mount",mount,
                   *self.labels(),*args[1:]]
-            for path in self.image_volumes:
-                if path!="/tmp":args[1:1]=["--tmpfs",path+":rw,nosuid,nodev,noexec,noswap,mode=0700,size=128m"]
-        if args[:1]==["run"]:args=self.owned_tmpfs_run_args(args)
-        return super().docker(args,**kwargs)
-
-    def tmpfs_spec(self,container_name,mount):
-        keys=[key for key,name in self.names.items() if name==container_name]
-        require(len(keys)==1 and keys[0] in {"a","b","client","smoke","toolcheck"},
-                "operator_tmpfs_owner_unqualified")
-        require(isinstance(mount,str) and mount.count(":")==1,"operator_tmpfs_destination_unqualified")
-        destination,options=mount.split(":",1)
-        require(re.fullmatch(r"/[A-Za-z0-9_./-]+",destination) and ".." not in destination
-                and destination not in {"/","/proc","/sys","/dev"}
-                and not destination.startswith(("/proc/","/sys/","/dev/")),
-                "operator_tmpfs_destination_unqualified")
-        checked_tmpfs_options(options)
-        suffix=digest(destination.encode())[:12]
-        return {"name":"kova-empty-tmpfs-"+self.token+"-"+keys[0]+"-"+suffix,
-                "containerKey":keys[0],"destination":destination,"options":options}
-
-    def checked_tmpfs_specs(self,values):
-        require(isinstance(values,dict) and len(values)<=64,"operator_tmpfs_state_unqualified")
-        for name,spec in values.items():
-            require(isinstance(spec,dict) and set(spec)=={"name","containerKey","destination","options"}
-                    and spec.get("containerKey") in self.names,"operator_tmpfs_state_unqualified")
-            expected=self.tmpfs_spec(self.names[spec["containerKey"]],spec["destination"]+":"+spec["options"])
-            require(spec==expected and name==spec["name"],"operator_tmpfs_state_unqualified")
-        return values
-
-    def tmpfs_volume_absent(self,name):
-        # Inspect exit1 also means daemon failure; only a complete successful
-        # census establishes absence before creation or after removal.
-        code,raw=super().docker(["volume","ls","--format","{{json .}}"])
-        require(code==0,"operator_tmpfs_census_unqualified")
-        names=[]
-        for line in raw.splitlines():
-            row=json.loads(line);value=row.get("Name")
-            require(isinstance(value,str) and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*",value),
-                    "operator_tmpfs_census_unqualified")
-            names.append(value)
-        return name not in names
-
-    def inspect_tmpfs_volume(self,spec):
-        _,raw=super().docker(["volume","inspect",spec["name"]])
-        values=json.loads(raw)
-        require(isinstance(values,list) and len(values)==1,"operator_tmpfs_identity_unqualified")
-        value=values[0];labels=value.get("Labels") or {}
-        require(value.get("Name")==spec["name"] and value.get("Driver")=="local" and value.get("Scope")=="local"
-                and value.get("Options")=={"type":"tmpfs","device":"tmpfs","o":spec["options"]}
-                and self.owned_labels(labels)
-                and labels.get("kova.empty-probe.container")==spec["containerKey"]
-                and labels.get("kova.empty-probe.destination")==digest(spec["destination"].encode()),
-                "operator_tmpfs_identity_unqualified")
-        mountpoint=value.get("Mountpoint","")
-        require(isinstance(mountpoint,str) and Path(mountpoint).is_absolute()
-                and Path(mountpoint).name=="_data" and Path(mountpoint).parent.name==spec["name"]
-                and not any(p in Path(mountpoint).parts for p in ["..","proc","sys"]),
-                "operator_tmpfs_mountpoint_unqualified")
-        return mountpoint
-
-    def reserve_tmpfs_volume(self,spec):
-        name=spec["name"]
-        if name not in self.tmpfs_volumes:
-            require(self.tmpfs_volume_absent(name),"operator_tmpfs_name_not_absent")
-            self.tmpfs_volumes[name]=spec
-            # Reservation must survive uncertain create/run completion.
-            self.save_state()
-            super().docker(["volume","create","--driver","local",*self.labels(),
-                "--label","kova.empty-probe.container="+spec["containerKey"],
-                "--label","kova.empty-probe.destination="+digest(spec["destination"].encode()),
-                "--opt","type=tmpfs","--opt","device=tmpfs","--opt","o="+spec["options"],name])
-        require(self.tmpfs_volumes[name]==spec,"operator_tmpfs_reservation_changed")
-        self.inspect_tmpfs_volume(spec)
-
-    def owned_tmpfs_run_args(self,args):
-        require("--name" in args,"operator_tmpfs_owner_unqualified")
-        name=args[args.index("--name")+1]
-        out=[];seen=set();i=0
-        while i<len(args):
-            if args[i]!="--tmpfs":out.append(args[i]);i+=1;continue
-            spec=self.tmpfs_spec(name,args[i+1])
-            require(spec["destination"] not in seen,"operator_tmpfs_duplicate_destination")
-            seen.add(spec["destination"]);self.reserve_tmpfs_volume(spec)
-            # local driver passes noswap to Linux; --tmpfs rejects that valid
-            # kernel option. Never use a plaintext disk volume or host bind.
-            out += ["--mount","type=volume,src="+spec["name"]+",dst="+spec["destination"]+",volume-nocopy"]
-            i+=2
-        return out
-
-    def cleanup_tmpfs_volumes(self,containers_gone):
-        values=self.checked_tmpfs_specs(self.tmpfs_volumes)
-        if values and not containers_gone:return False
-        safe=True
-        for name,spec in reversed(list(values.items())):
-            try:
-                if self.tmpfs_volume_absent(name):continue
-                self.inspect_tmpfs_volume(spec)
-                # No force/prune: Docker must refuse any still-attached volume.
-                super().docker(["volume","rm",name],timeout=30)
-                require(self.tmpfs_volume_absent(name),"operator_tmpfs_removal_unconfirmed")
-            except Exception:safe=False
-        return safe
+        elif args[:1]==["run"] and "--rm" in args and "--name" in args and args[args.index("--name")+1]==self.names["smoke"]:
+            keys=["smoke-tmp"];image=self.operator_image_id
+            default_entrypoint=["python3","/opt/kova/scripts/release/recovery-operator-client-smoke.py"]
+        if keys is None:return super().docker(args,**kwargs)
+        index=args.index(image);options=args[:index];command=args[index+1:]
+        if "--entrypoint" in options:
+            entry=options.index("--entrypoint");original=[options[entry+1]]
+            del options[entry:entry+2]
+        else:
+            require(default_entrypoint is not None,"short_run_entrypoint_unqualified");original=default_entrypoint
+        specs=self.owned_ram().expected_mounts(keys)
+        self.owned_ram().record_activation(keys)
+        wrapper="""proof=$1; count=$2; shift 2
+paths=( "${@:1:count}" ); shift "$count"
+printf '%s\n' KOVA_PRIVATE_RAM_PROOF_BEGIN
+/bin/bash -ceu "$proof" kova-private-ram-check "${paths[@]}"
+printf '%s\n' KOVA_PRIVATE_RAM_PROOF_END
+exec "$@"
+"""
+        wrapped=options+["--entrypoint","/bin/bash",image,"-ceu",wrapper,"kova-framed-ram-proof",
+            volume_proof.runtime_proof_script(),str(len(specs)),*[s["destination"] for s in specs],*original,*command]
+        allow=kwargs.pop("allow_failure",False)
+        code,raw=super().docker(wrapped,allow_failure=True,**kwargs)
+        begin=b"KOVA_PRIVATE_RAM_PROOF_BEGIN\n";end=b"KOVA_PRIVATE_RAM_PROOF_END\n"
+        require(raw.startswith(begin) and raw.count(end)==1,"short_run_kernel_proof_unconfirmed")
+        proof,stdout=raw[len(begin):].split(end,1)
+        observed=volume_proof.validate_runtime_proof(proof,specs)
+        self.owned_ram().record_runtime_proof(observed["records"])
+        require(code==0 or allow,"native_command_failed")
+        return code,stdout
 
     def labels(self):
         out=[]
@@ -255,7 +191,7 @@ class OperatorProbe(base.Probe):
             "--no-healthcheck","--network","none","--cap-drop","ALL","--security-opt","no-new-privileges:true",
             "--read-only","--user",str(self.uid)+":"+str(self.gid),"--cgroupns","private",
             "--pids-limit","128","--memory","768m","--memory-swap","768m","--cpus","1",
-            "--tmpfs","/tmp:rw,nosuid,nodev,noexec,noswap,mode=1777,size=128m",self.operator_image_id],timeout=90)
+            "--mount",self.ram_mount("smoke-tmp","/tmp",128,self.uid,self.gid,"1777"),self.operator_image_id],timeout=90)
         smoke=builder.check_smoke(json.loads(raw))
         expected={name:builder.file_sha(HERE/name) for name in builder.FILES}
         require(smoke.get("genericSourceSha256")==expected,"operator_source_files_mismatch")
@@ -271,58 +207,38 @@ class OperatorProbe(base.Probe):
         memory=self.resources["clientMemoryMiB"] if key=="client" else self.resources["serverMemoryMiB"][key]
         args[args.index("--memory")+1]=str(memory)+"m"
         args += ["--memory-swap",str(memory)+"m","--cgroupns","private","--log-driver","none"]
-        out=[];i=0
+        out=[];i=0;keys=[];mask_index=0
         while i<len(args):
             if args[i]=="--tmpfs":
-                mount=args[i+1];destination=mount.split(":",1)[0]
-                if key=="client" and destination!="/tmp":i+=2;continue
-                mount += ",noswap"
-                mount += ",size=128m"
-                out += ["--tmpfs",mount];i+=2;continue
+                destination=args[i+1].split(":",1)[0]
+                if key=="client" and destination!="/tmp" or key!="client" and destination=="/run/server/data":i+=2;continue
+                volume_key=key+"-tmp" if destination=="/tmp" else key+"-mask"+str(mask_index)
+                mask_index+=1
+                size=128 if destination=="/tmp" else 64
+                uid,gid=(self.uid,self.gid) if key=="client" else (self.pg_uid,self.pg_gid)
+                mode="1777" if destination=="/tmp" else "0700"
+                out += ["--mount",self.ram_mount(volume_key,destination,size,uid,gid,mode)]
+                keys.append(volume_key);i+=2;continue
             if args[i]=="--mount" and key!="client":
                 out += ["--mount",args[i+1]+",readonly"];i+=2;continue
             out.append(args[i]);i+=1
         if key=="client":
-            out += ["--tmpfs","/work:rw,nosuid,nodev,noexec,noswap,mode=0700,uid="+str(self.uid)+",gid="+str(self.gid)+",size="+str(self.resources["clientTmpfsMiB"])+"m",
+            volume_key="client-work";keys.append(volume_key)
+            out += ["--mount",self.ram_mount(volume_key,"/work",self.resources["clientTmpfsMiB"],self.uid,self.gid,"0700"),
                     "--env","TMPDIR=/work"]
         else:
-            out += ["--tmpfs","/run/server/data:rw,nosuid,nodev,noexec,noswap,mode=0700,uid="+str(self.pg_uid)+",gid="+str(self.pg_gid)+",size="+str(self.resources["serverTmpfsMiB"][key])+"m"]
+            volume_key=key+"-data";keys.append(volume_key)
+            out += ["--mount",self.ram_mount(volume_key,"/run/server/data",self.resources["serverTmpfsMiB"][key],self.pg_uid,self.pg_gid,"0700")]
+        self.ram_keys[key]=keys
         return out
 
     def assert_runtime_policy(self,key):
-        # Read kernel observations, never infer noswap/capabilities from recipe.
-        expected=self._container_args(key)
-        mounts=[self.tmpfs_spec(self.names[key],expected[i+1]) for i,arg in enumerate(expected) if arg=="--tmpfs"]
-        script="""uid=$(id -u); [[ "$uid" != 0 ]]
-cap=missing; nnp=missing
-while IFS=: read -r field value; do
- case "$field" in CapEff) cap=${value//[[:space:]]/};; NoNewPrivs) nnp=${value//[[:space:]]/};; esac
-done < /proc/self/status
-[[ "$cap" == 0000000000000000 && "$nnp" == 1 ]]
-read -r swap < /sys/fs/cgroup/memory.swap.max; [[ "$swap" == 0 ]]
-memory="$1"; shift; read -r maximum < /sys/fs/cgroup/memory.max; [[ "$maximum" == "$memory" ]]
-root_seen=0
-while read -r source destination type options rest; do
- if [[ "$destination" == / ]]; then [[ ",$options," == *,ro,* ]]; root_seen=1; fi
-done < /proc/mounts
-[[ "$root_seen" == 1 ]]
-while [[ "$#" -gt 0 ]]; do
- wanted="$1"; limit="$2"; shift 2; seen=0
- while read -r source destination type options rest; do
-  if [[ "$destination" == "$wanted" ]]; then
-   [[ "$type" == tmpfs && ",$options," == *,nosuid,* && ",$options," == *,nodev,* && ",$options," == *,noexec,* && ",$options," == *,noswap,* ]]
-   [[ ",$options," =~ ,size=([0-9]+)k, ]]
-   [[ "${BASH_REMATCH[1]}" -gt 0 && "${BASH_REMATCH[1]}" -le "$limit" ]]
-   seen=$((seen+1))
-  fi
- done < /proc/mounts
- [[ "$seen" == 1 ]]
-done
-"""
-        memory=(self.resources["clientMemoryMiB"] if key=="client" else self.resources["serverMemoryMiB"][key])*1024**2
-        arguments=[str(memory)]
-        for spec in mounts:arguments += [spec["destination"],str(int(checked_tmpfs_options(spec["options"])["size"][:-1])*1024)]
-        self.docker(["exec",self.names[key],"/bin/bash","-ceu",script,"--",*arguments])
+        specs=[self.owned_ram().specs[k] for k in self.ram_keys[key]]
+        _,raw=self.docker(["exec",self.names[key],"/bin/bash","-ceu",volume_proof.runtime_proof_script(),
+                          "kova-private-ram-proof",*[s["destination"] for s in specs]])
+        observed=volume_proof.validate_runtime_proof(raw,specs)
+        self.owned_ram().record_runtime_proof(observed["records"])
+        return observed["receipt"]
 
     def consumer_proof(self,target):
         proof=super().consumer_proof(target)
@@ -350,7 +266,9 @@ printf '%s\n' 'hostssl all all 172.30.240.4/32 scram-sha-256' 'hostssl all all f
 pg_ctl -D "$PGDATA" -l /tmp/postgres.log -o "-c listen_addresses='*' -c ssl=on -c ssl_cert_file=/run/server/server.crt -c ssl_key_file=/run/server/server.key -c ssl_ca_file=/run/server/ca.crt -c unix_socket_directories=/tmp -c shared_preload_libraries='' -c cron.launch_active_jobs=off -c autovacuum=off -c log_statement=none" -w start >/tmp/pg-start.log 2>&1
 trap 'pg_ctl -D "$PGDATA" -m fast -w stop >/tmp/stop.log 2>&1 || true; exit 0' TERM INT
 while :; do sleep 1; done"""
-        self.docker(self._container_args(key)+["--entrypoint","/bin/bash",(self.operator_image_id if key=="client" else IMAGE),"-ceu",script])
+        args=self._container_args(key)
+        self.owned_ram().record_activation(self.ram_keys[key])
+        self.docker(args+["--entrypoint","/bin/bash",(self.operator_image_id if key=="client" else IMAGE),"-ceu",script])
         info=self.inspect(self.names[key]);self.verify_container(key,info)
         self.namespace_firewall(key,info["State"]["Pid"])
         self.assert_runtime_policy(key)
@@ -387,16 +305,14 @@ while :; do sleep 1; done"""
                 and all(m.get("Type") in {"bind","volume"} for m in info.get("Mounts",[])),
                 "unexpected_container_mount")
         require(info["Config"].get("Healthcheck",{}).get("Test")==["NONE"],"image_healthcheck_not_disabled")
-        specs=[self.tmpfs_spec(self.names[key],expected[i+1]) for i,arg in enumerate(expected) if arg=="--tmpfs"]
-        volumes=[m for m in info.get("Mounts",[]) if m.get("Type")=="volume"]
-        require(len(specs)==len(volumes),"private_tmpfs_data_plane_missing")
-        for spec in specs:
-            require(self.tmpfs_volumes.get(spec["name"])==spec,"operator_tmpfs_reservation_changed")
-            mountpoint=self.inspect_tmpfs_volume(spec)
-            matches=[m for m in volumes if m.get("Name")==spec["name"]]
-            require(len(matches)==1 and matches[0].get("Destination")==spec["destination"]
-                    and matches[0].get("Driver")=="local" and matches[0].get("Source")==mountpoint
-                    and matches[0].get("RW") is True,"private_tmpfs_data_plane_missing")
+        expected_specs=[self.owned_ram().specs[k] for k in self.ram_keys[key]]
+        actual_volumes=[m for m in info.get("Mounts",[]) if m.get("Type")=="volume"]
+        require(len(actual_volumes)==len(expected_specs)
+                and {m.get("Destination") for m in actual_volumes}=={s["destination"] for s in expected_specs},
+                "private_tmpfs_data_plane_missing")
+        for spec in expected_specs:
+            actual=next(m for m in actual_volumes if m["Destination"]==spec["destination"])
+            ram.verify_inspected_mount(spec,actual)
         environment=dict(x.split("=",1) for x in info["Config"].get("Env",[]) if "=" in x)
         allowed={**(self.operator_env if key=="client" else self.image_env),"HOME":"/tmp","TZ":"UTC"}
         if key=="client":allowed["TMPDIR"]="/work"
@@ -584,6 +500,5 @@ def cleanup_operator_state(env, *, context_validator=base.checked_context):
     p.containers_reserved=state["containersReserved"];p.firewall_reserved=state["firewallReserved"];p.network_reserved=state["networkReserved"]
     p.private_root=Path(state["privateRoot"]) if state.get("privateRoot") else None
     p.pg_uid=state.get("pgUid");p.pg_gid=state.get("pgGid");p.uid=state["uid"];p.gid=state["gid"]
-    p.tmpfs_volumes=p.checked_tmpfs_specs(state.get("tmpfsVolumes",{}))
     p.command_count=0;p.last_stderr=b"";p.cleanup_confirmed=False
     return p.cleanup()

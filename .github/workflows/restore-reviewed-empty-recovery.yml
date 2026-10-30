@@ -1,0 +1,164 @@
+name: Restore one explicitly reviewed private empty recipient
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/restore-reviewed-empty-recovery.yml
+      - scripts/release/**
+      - tests/unit/test_reviewed_empty_recovery*.py
+      - tests/unit/test_extension*.py
+      - tests/unit/test_pg17_extension_nodes.py
+      - tests/unit/test_managed_auth_semantic_recovery.py
+      - tests/unit/reviewed-empty-recovery-workflow.test.mjs
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type RESTORE_REVIEWED_PRIVATE_EMPTY_ONLY; this never changes production
+        required: true
+        type: string
+      source_sha:
+        description: Exact reviewed current main SHA, equal to selected workflow revision
+        required: true
+        type: string
+      reviewed_manifest_json:
+        description: Explicit independently reviewed manifest, without credentials or customer data
+        required: true
+        type: string
+      reviewed_manifest_sha256:
+        description: SHA-256 of the exact manifest JSON bytes supplied above
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: reviewed-private-recovery
+  cancel-in-progress: false
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Exercise synthetic review, artifact, custody and import ordering gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/unit -p 'test_reviewed_empty_recovery*.py' -q
+          python3 -m unittest discover -s tests/unit -p 'test_extension*.py' -q
+          python3 -m unittest discover -s tests/unit -p test_pg17_extension_nodes.py -q
+          python3 -m unittest discover -s tests/unit -p 'test_managed_auth*recovery.py' -q
+          python3 -m unittest discover -s tests/unit -p test_prepare_recovery_operator_image.py -q
+          node --test tests/unit/reviewed-empty-recovery-workflow.test.mjs
+          node --test tests/unit/extension-node-shape-audit.test.mjs
+          node --test tests/unit/extension-relation-query-hooks.test.mjs
+          node --test tests/unit/managed-auth-extension-copy.test.mjs
+
+  restore-private-recipient:
+    needs: source-tests
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/main' && github.actor == github.repository_owner && inputs.source_sha == github.sha && inputs.confirmation == 'RESTORE_REVIEWED_PRIVATE_EMPTY_ONLY'
+    environment:
+      name: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      KOVA_REVIEWED_RECOVERY_CONFIRMATION: RESTORE_REVIEWED_PRIVATE_EMPTY_ONLY
+      KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Select official signed OCI transport before sensitive processing
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends skopeo
+          command -v gh >/dev/null
+          command -v docker >/dev/null
+          command -v timeout >/dev/null
+      - name: Bind exact manifest bytes without printing private review inputs
+        env:
+          REVIEW_MANIFEST_JSON: ${{ inputs.reviewed_manifest_json }}
+          REVIEW_MANIFEST_SHA256: ${{ inputs.reviewed_manifest_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, os, pathlib, re
+          raw = os.environ['REVIEW_MANIFEST_JSON'].encode('utf-8')
+          expected = os.environ['REVIEW_MANIFEST_SHA256']
+          if not re.fullmatch(r'[a-f0-9]{64}', expected) or len(raw) > 65536 or hashlib.sha256(raw).hexdigest() != expected:
+              raise SystemExit('reviewed manifest bytes rejected')
+          root = pathlib.Path(os.environ['RUNNER_TEMP'])
+          target = root / ('kova-reviewed-manifest-' + os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT'] + '.json')
+          descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+          with os.fdopen(descriptor, 'wb') as stream:
+              stream.write(raw)
+          PY
+      - name: Collect fresh read-only metadata in a separate source-only process
+        env:
+          KOVA_EMPTY_PROBE_CONFIRMATION: PROBE_EMPTY_ONLY
+          KOVA_AUTH_APPROVED_SOURCE_DATABASE_VERSION: 17.6.1.155
+          KOVA_PRODUCTION_DATABASE_URL: ${{ secrets.KOVA_PRODUCTION_DATABASE_URL }}
+        run: >-
+          timeout --signal=TERM --kill-after=15s 6m
+          python3 scripts/release/collect-empty-recovery-metadata.py --execute --extension-coverage
+          --output "$RUNNER_TEMP/kova-reviewed-source-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/metadata.json"
+      - name: Verify reviewed artifacts and fresh isolation before private client restore
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KOVA_PRODUCTION_BACKUP_PASSPHRASE: ${{ secrets.KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926 }}
+          REVIEW_MANIFEST_SHA256: ${{ inputs.reviewed_manifest_sha256 }}
+        run: >-
+          timeout --signal=TERM --kill-after=180s 30m
+          python3 scripts/release/run-reviewed-empty-recovery.py --execute
+          --manifest "$RUNNER_TEMP/kova-reviewed-manifest-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+          --manifest-sha256 "$REVIEW_MANIFEST_SHA256"
+          --metadata "$RUNNER_TEMP/kova-reviewed-source-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/metadata.json"
+          --output "$RUNNER_TEMP/kova-reviewed-result-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/receipt.json"
+      - name: Reconcile only this run's owned private resources and source metadata
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup_status=0
+          if ! python3 scripts/release/run-reviewed-empty-recovery.py --cleanup-only; then
+            cleanup_status=1
+          fi
+          python3 - <<'PY'
+          import os, pathlib, re, shutil
+          root = pathlib.Path(os.environ['RUNNER_TEMP']).resolve()
+          run, attempt = os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT']
+          if not re.fullmatch(r'[1-9][0-9]*', run) or not re.fullmatch(r'[1-9][0-9]*', attempt):
+              raise SystemExit('private cleanup identity rejected')
+          source = root / ('kova-reviewed-source-' + run + '-' + attempt)
+          manifest = root / ('kova-reviewed-manifest-' + run + '-' + attempt + '.json')
+          if source.is_symlink() or manifest.is_symlink():
+              raise SystemExit('private cleanup path rejected')
+          if source.exists():
+              shutil.rmtree(source)
+          manifest.unlink(missing_ok=True)
+          PY
+          exit "$cleanup_status"
+      - name: Retain only the fixed hash and status recovery receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reviewed-private-recovery-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/kova-reviewed-result-${{ github.run_id }}-${{ github.run_attempt }}/receipt.json
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0

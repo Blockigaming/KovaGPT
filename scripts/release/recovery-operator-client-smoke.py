@@ -14,7 +14,12 @@ import tempfile
 ROOT=Path(__file__).resolve().parent
 TOOLS=["python3","node","gpg","psql","pg_dump","pg_restore","timeout","bash","sha256sum"]
 SOURCE_NAMES=["managed-auth-recovery.py","managed-auth-recovery-target.mjs","verify-isolated-restore-target.mjs",
-              "empty-restore-target-catalog.sql","recovery-operator-client-smoke.py","run-isolated-recovery-client.py"]
+              "empty-restore-target-catalog.sql","recovery-operator-client-smoke.py","run-isolated-recovery-client.py",
+       "extension-semantic-capture.py","extension-routine-type-payloads.py",
+       "extension-routine-type-hash-query.py","extension-relation-payloads.py",
+       "extension-relation-query-hooks.py","pg17-extension-relation-manifest.json",
+       "canonicalize-pg17-extension-nodes.py","pg17-extension-node-schema.json",
+       "extension-regclass-datum-byteorder-audit.sql"]
 
 
 def require(value):
@@ -58,6 +63,17 @@ def smoke():
     launcher=importlib.util.module_from_spec(launcher_spec);launcher_spec.loader.exec_module(launcher)
     loaded=launcher.load_engine(hashlib.sha256((ROOT/"managed-auth-recovery.py").read_bytes()).hexdigest())
     require(loaded.BUILD==engine.BUILD)
+    # Load every final format-3 helper/schema/query hook without database input.
+    semantic=engine.semantic_module()
+    semantic_sources=semantic.source_files()
+    require(set(semantic_sources)==set(semantic.HELPERS)
+            and all(re.fullmatch(r"[a-f0-9]{64}",v) for v in semantic_sources.values()))
+    semantic.audit_body()
+    adapter=semantic.relations.adapter_options(semantic.core)
+    require("pg_extension" in adapter["manifests"])
+    private_query=semantic.generator.build_capture_all_private_wire_query(
+        **semantic.relations.capture_query_options(semantic.core,semantic.generator))
+    require(type(private_query) is str and "PRIVATE_GHA_CAPTURE_ONLY" in private_query)
     with tempfile.TemporaryDirectory(prefix="generic-client-") as directory:
         work=Path(directory);os.chmod(work,0o700)
         phrase=secrets.token_urlsafe(48).encode()
@@ -92,7 +108,7 @@ def smoke():
             "installedPackageCount":len(packages.splitlines()),
             "signedInReleaseFiles":[{"name":p.name,"sha256":hashlib.sha256(p.read_bytes()).hexdigest()} for p in signatures],
             "nativePythonEngineImport":True,"nativeNodeDestinationGuard":True,"nodePasswordOverrideRejected":True,
-            "nativeFileBoundLauncherImport":True,"readonlyRootObserved":True,"noNewPrivilegesObserved":True,
+            "nativeFileBoundLauncherImport":True,"nativeSemanticDependencyClosureLoaded":True,"readonlyRootObserved":True,"noNewPrivilegesObserved":True,
             "capabilitiesDroppedObserved":True,"tmpfsNoSwapObserved":True,"memorySwapDisabledObserved":True,
             "syntheticGpgRoundtrip":True,"wrongGpgPassphraseRejected":True,
             "actualTargetConnected":False,"customerRowsUsed":False,"restorePerformed":False}
