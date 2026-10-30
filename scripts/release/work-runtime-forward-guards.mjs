@@ -1457,10 +1457,23 @@ const guardDefinitionSha256 = "ff89d138f79046dce793f1870b72f402dc405f9bb706ef2e7
 const zeroColumnAclQuery =
   "select not exists(select 1 from pg_attribute a join pg_class c on c.oid=a.attrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname=any(array['account_audit_entries','agent_jobs','account_deletion_fences','app_notifications','notification_preferences','user_library_items','user_preferences','ai_usage_events','project_files','projects','project_members','work_sync_counters','work_saved_records','work_recent_items','work_sync_mutations','work_execution_runs','work_execution_events','work_execution_receipts','work_execution_outputs','work_accounting_settlements','work_browser_sessions']) and a.attnum>0 and not a.attisdropped and coalesce(cardinality(a.attacl),0)>0) as valid";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
-const expectedInstalledCatalogSha256 =
-  "049cd0a5f7ec0e037a539384fc3486dc475472a50b7c50fd46650bbe872c2e25";
-const expectedInstalledPgCatalogSha256 =
-  "a285dea06e01c3e587a1693a39858aef6d2fbcd9ff10c4f0a7da3e78746ea66b";
+// PostgreSQL18 also records named NOT NULL constraints in pg_constraint.
+// Keep every raw catalog field and pin a separate exact profile per server major.
+const installedCatalogProfiles = Object.freeze({
+  17: Object.freeze({
+    canonicalSha256: "e63ebbe33c281357c41b3e908c8ae2c388e46d1ff3363fdf3252c68c33c45ccb",
+    postgresJsonbSha256: "0efdd7c4d84c6d192ce24d834d9c94394157230569b5fab7d2453c6ed7edd467",
+  }),
+  18: Object.freeze({
+    canonicalSha256: "049cd0a5f7ec0e037a539384fc3486dc475472a50b7c50fd46650bbe872c2e25",
+    postgresJsonbSha256: "a285dea06e01c3e587a1693a39858aef6d2fbcd9ff10c4f0a7da3e78746ea66b",
+  }),
+});
+const serverMajorQuery = "select current_setting('server_version_num')::integer / 10000 as major";
+const catalogProfile = (major) =>
+  Number.isInteger(major) && Object.hasOwn(installedCatalogProfiles, major)
+    ? installedCatalogProfiles[major]
+    : null;
 const canonical = (value) =>
   JSON.stringify(value, (_key, item) =>
     item && typeof item === "object" && !Array.isArray(item)
@@ -1503,6 +1516,9 @@ export async function workRuntimeInstallationSnapshot(query) {
 /** Qualified local/production-unused metadata; never proof of whole Auth recovery. */
 export async function captureUnusedWorkRuntimeQualification(query) {
   const source = await readFile(WORK_RUNTIME_MIGRATION, "utf8");
+  const serverMajor = (await query(serverMajorQuery)).rows[0].major;
+  const profile = catalogProfile(serverMajor);
+  if (!profile) throw Error("work_forward_server_version_unsupported");
   if (!(await query(roleQuery)).rows[0].valid) throw Error("work_forward_role_drift");
   if (!(await query(zeroColumnAclQuery)).rows[0].valid)
     throw Error("work_forward_column_acl_drift");
@@ -1521,15 +1537,16 @@ export async function captureUnusedWorkRuntimeQualification(query) {
   if (guard !== guardDefinitionSha256) throw Error("work_forward_session_guard_drift");
   const snapshot = (await query(snapshotQuery + " as value")).rows[0].value;
   if (!exactObjects(snapshot)) throw Error("work_forward_incomplete_installation");
-  if (sha256(canonical(snapshot)) !== expectedInstalledCatalogSha256)
+  if (sha256(canonical(snapshot)) !== profile.canonicalSha256)
     throw Error("work_forward_installation_drift");
   for (const name of WORK_RUNTIME_TABLES) {
     if ((await query(`select exists(select 1 from public.${name}) as used`)).rows[0].used)
       throw Error("work_forward_used_schema_keep_on_rollback");
   }
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     operation: "unused-work-runtime-uninstall",
+    serverMajor,
     migrationSha256: sha256(source),
     baseline,
     snapshot,
@@ -1541,14 +1558,16 @@ export async function captureUnusedWorkRuntimeQualification(query) {
 /** No CASCADE: unknown dependants and any used state prevent uninstall. */
 export async function unusedWorkRuntimeRollback(qualification) {
   const source = await readFile(WORK_RUNTIME_MIGRATION, "utf8");
+  const profile = catalogProfile(qualification?.serverMajor);
   if (
-    qualification?.schemaVersion !== 1 ||
+    !profile ||
+    qualification?.schemaVersion !== 2 ||
     qualification?.operation !== "unused-work-runtime-uninstall" ||
     qualification.migrationSha256 !== sha256(source) ||
     qualification.guardDefinitionSha256 !== guardDefinitionSha256 ||
     qualification.snapshotSha256 !== sha256(JSON.stringify(qualification.snapshot)) ||
     !exactObjects(qualification.snapshot) ||
-    sha256(canonical(qualification.snapshot)) !== expectedInstalledCatalogSha256 ||
+    sha256(canonical(qualification.snapshot)) !== profile.canonicalSha256 ||
     canonical(qualification.baseline) !== canonical(baselineExpected)
   )
     throw Error("work_forward_invalid_qualification");
@@ -1561,14 +1580,16 @@ export async function unusedWorkRuntimeRollback(qualification) {
     "lock table public.account_audit_entries,public.account_deletion_fences,public.agent_jobs,public.ai_usage_events,public.app_notifications,public.notification_preferences,public.project_files,public.project_members,public.projects,public.user_library_items,public.user_preferences in access share mode;",
   ];
   sql.push(
-    "do $work_unused_guard$ begin if not (" +
+    "do $work_unused_guard$ begin if current_setting('server_version_num')::integer / 10000<>" +
+      qualification.serverMajor +
+      " then raise exception 'work_forward_server_version_mismatch'; end if; if not (" +
       zeroColumnAclQuery.replace(/ as valid$/, "") +
       ") then raise exception 'work_forward_column_acl_drift'; end if; if not (" +
       roleQuery.replace(/ as valid$/, "") +
       ") then raise exception 'work_forward_role_drift'; end if; if encode(sha256(convert_to((" +
       snapshotQuery +
       ")::text,'UTF8')),'hex')<>'" +
-      expectedInstalledPgCatalogSha256 +
+      profile.postgresJsonbSha256 +
       "' then raise exception 'work_forward_installation_drift'; end if; if (" +
       baselineQuery +
       ") is distinct from " +

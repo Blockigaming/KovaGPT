@@ -17,13 +17,18 @@ import signal
 import socket
 import subprocess
 
-EXPECTED = {'supabase/migrations/20261030163511_kova_work_runtime_forward.sql': '50935857c4564c7b695df43cb3ed8c68fcebc560bc0dcb40177486002dc4b5fa', 'scripts/release/work-runtime-forward-guards.mjs': 'a845dae5bfe0d725a6b3ac5ec16be7c2aecba54fa98260af6fc02bc107dec8cf', 'tests/fixtures/work-runtime-prerequisite-catalog-20261030.json': '13b8daf520686eccaa909a818ae9c3483b84d0edbc7afeae9e16703858dfe23a', 'tests/fixtures/work-runtime-forward-native-smoke-20261030.sql': 'faf0e8fa168707b2c7418fbfba881b9b87f9ee1fcbdbb2ea7ddf518cbf44abb3'}
+EXPECTED = {'supabase/migrations/20261030163511_kova_work_runtime_forward.sql': 'c741654759d53efbc03af3d0d13bd3499761e42795d14755d1a5f47f1fc87502', 'scripts/release/work-runtime-forward-guards.mjs': 'b835ab22cd3cbb11a63f3e602fc5a6f1713d3b20b29442b8b0d33603a16f6ab5', 'tests/fixtures/work-runtime-prerequisite-catalog-20261030.json': '13b8daf520686eccaa909a818ae9c3483b84d0edbc7afeae9e16703858dfe23a', 'tests/fixtures/work-runtime-forward-native-smoke-20261030.sql': '5362f3afa1abc334552757d79074eb11f6226b6ce728b9b4b1d8046106c46d6d', 'supabase/migrations/20260903213000_work_cross_device_sync.sql': '87209bc11cac44d6efc7f51f04886ae5ba44093fbc862a4fd0edef43850b810b', 'supabase/migrations/20260903214500_work_sync_protection_hardening.sql': '49beb15d9fc16cd72593bdf16b338a496fb3431bc8fa9539b4a6ff92d40e123b', 'supabase/migrations/20260904235937_work_session_sync.sql': '70b4564e0645906026f4cca32ffa29c2978a6a75667c6bf4f3a7899a43937418', 'supabase/migrations/20260905002615_unified_work_execution_protocol.sql': '39b33292df7317a15b7973c9196d218980b5b2e686211bfc992285318dea444d', 'supabase/migrations/20260905005310_work_accounting_reconciliation.sql': 'eddd3caa63401723a24f9f1b99ddc9f20eae88729f5f09b7091bfd97fc059ed1', 'supabase/migrations/20260905034000_work_browser_takeover.sql': 'ba24b2113aabdeb77b65dfb01236105f394c381299490e9aee9216fbb5fff6c1', 'supabase/migrations/20260910143000_work_specialist_state_transitions.sql': '75f9f68c264620470a8c32075a1b0eef6bdc342f6fb4b6ce9010ee12de2f8d66', 'supabase/migrations/20260913022249_stabilize_work_browser_session_timestamps.sql': '01a3f198633dd26ca38ee17ad70aa7c1a661059e1478686bfb18be06d278fb0f'}
 SQL = "tests/fixtures/work-runtime-forward-native-smoke-20261030.sql"
 MIGRATION = "supabase/migrations/20261030163511_kova_work_runtime_forward.sql"
 MARKERS = (
     "WORK_FORWARD_NATIVE_PREFLIGHT_PASS",
     "WORK_FORWARD_NATIVE_ABSENT_BASELINE_INSTALL_PASS",
     "WORK_FORWARD_NATIVE_OWNED_REVOCATION_PASS",
+    "WORK_FORWARD_NATIVE_VERSION_PROFILE_PASS",
+)
+CANONICAL_MARKERS = (
+    "WORK_FORWARD_NATIVE_CANONICAL_DEFAULTLESS_NOOP_PASS",
+    "WORK_FORWARD_NATIVE_CANONICAL_SUPABASE_DEFAULTS_NOOP_PASS",
 )
 
 
@@ -41,6 +46,27 @@ def validate_sources(repository):
     if smoke.count(migration) != 1 or any(smoke.count(marker) != 1 for marker in MARKERS):
         raise RuntimeError("work_native_exact_payload_or_markers_changed")
     return smoke
+
+
+def canonical_smoke_sources(repository, smoke):
+    """Exact historical-source no-op cases, each for a separate new synthetic DB."""
+    prefix = smoke[:smoke.index("begin read only;")]
+    catalog = json.loads((repository / "tests/fixtures/work-runtime-prerequisite-catalog-20261030.json").read_text())
+    entries = catalog["canonicalSources"]
+    if len(entries) != 8 or len({entry["path"] for entry in entries}) != 8:
+        raise RuntimeError("work_native_canonical_sources_changed")
+    for entry in entries:
+        if EXPECTED.get(entry["path"]) != entry["sha256"]:
+            raise RuntimeError("work_native_canonical_source_pins_missing")
+    historical = "\n".join((repository / entry["path"]).read_text() for entry in entries)
+    tables = ["work_sync_counters", "work_saved_records", "work_recent_items", "work_sync_mutations", "work_execution_runs", "work_execution_events", "work_execution_receipts", "work_execution_outputs", "work_accounting_settlements", "work_browser_sessions"]
+    policies = "\n".join("create policy kova_owned_session_guard on public." + name + " as restrictive for all to anon,authenticated using ((select kova_auth_guard.session_is_active())) with check ((select kova_auth_guard.session_is_active()));" for name in tables)
+    migration = (repository / MIGRATION).read_text()
+    cases = {}
+    for index, marker in enumerate(CANONICAL_MARKERS):
+        defaults = "alter default privileges in schema public grant all on tables to service_role;alter default privileges in schema public grant select,insert,update,delete on tables to anon,authenticated;" if index else ""
+        cases[marker] = prefix + "\n" + defaults + "\n" + historical + "\n" + policies + "\ninsert into public.work_sync_counters(owner_id) values('11111111-1111-4111-8111-111111111111');\nset default_transaction_read_only=on;\n" + migration + "\nreset default_transaction_read_only;\ndo $native_preserved$ begin if (select count(*) from public.work_sync_counters)<>1 then raise exception 'native_work_canonical_row_changed';end if;end $native_preserved$;\nselect '" + marker + "' as evidence;\n"
+    return cases
 
 
 def clean_cluster(root, data, binaries, environment, created):
@@ -134,9 +160,24 @@ def main():
             raise RuntimeError("work_native_unexpected_credential_in_output")
         (evidence / "native-work.log").write_text(output)
         verified = [marker for marker in MARKERS if sum(line.strip() == marker for line in result.stdout.splitlines()) == 1]
-        receipt.update({"database": database, "exitCode": result.returncode, "verifiedChecks": verified, "nativeQualified": result.returncode == 0 and len(verified) == len(MARKERS)})
-        if not receipt["nativeQualified"]:
+        receipt.update({"database": database, "exitCode": result.returncode, "verifiedChecks": verified, "canonicalReplays": []})
+        if result.returncode != 0 or len(verified) != len(MARKERS):
             raise RuntimeError("work_native_replay_or_session_guard_failed")
+        for marker, sql in canonical_smoke_sources(repository, smoke).items():
+            target = "kova_work_native_" + secrets.token_hex(10)
+            subprocess.run(cli, env=connection, input="create database " + target + " template template0;", text=True, check=True, stdout=subprocess.DEVNULL, timeout=15)
+            replay = subprocess.run(cli, env={**connection, "PGDATABASE": target}, input=sql, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+            output = replay.stdout + replay.stderr
+            if password in output:
+                raise RuntimeError("work_native_unexpected_credential_in_output")
+            with (evidence / "native-work.log").open("a") as log:
+                log.write("\n-- " + marker + " --\n" + output)
+            passed = replay.returncode == 0 and sum(line.strip() == marker for line in replay.stdout.splitlines()) == 1
+            receipt["canonicalReplays"].append({"database": target, "marker": marker, "exitCode": replay.returncode, "readOnlyNoopAndRowsPreserved": passed})
+            if not passed:
+                raise RuntimeError("work_native_canonical_noop_failed")
+            receipt["verifiedChecks"].append(marker)
+        receipt["nativeQualified"] = len(receipt["verifiedChecks"]) == len(MARKERS) + len(CANONICAL_MARKERS)
     finally:
         receipt["cleanupConfirmed"] = clean_cluster(root, data, binaries, environment, created)
         receipt["nativeQualified"] = receipt["nativeQualified"] and receipt["cleanupConfirmed"]

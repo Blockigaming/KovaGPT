@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
+import { execFileSync } from "node:child_process";
 import {
   WORK_RUNTIME_MIGRATION,
   WORK_RUNTIME_TABLES,
@@ -120,6 +121,42 @@ test("the actual native fixture bootstraps all captured helper definitions in on
     );
   } finally {
     await db.close();
+  }
+});
+
+test("both exact native canonical replays execute the forward as read-only no-ops and preserve synthetic rows", async () => {
+  const cases = JSON.parse(
+    execFileSync(
+      "python3",
+      [
+        "-c",
+        "import importlib.util,json,pathlib;s=importlib.util.spec_from_file_location('native','scripts/release/work-runtime-forward-native.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);r=pathlib.Path.cwd();print(json.dumps(m.canonical_smoke_sources(r,m.validate_sources(r))))",
+      ],
+      { encoding: "utf8", maxBuffer: 2 * 1024 * 1024 },
+    ),
+  );
+  assert.equal(Object.keys(cases).length, 2);
+  for (const [marker, sql] of Object.entries(cases)) {
+    assert.equal(sql.split(migration).length, 2);
+    const db = new PGlite();
+    try {
+      await db.exec(
+        "create role anon;create role authenticated;create role service_role bypassrls;",
+      );
+      const results = await db.exec(sql.replace(/^\\set ON_ERROR_STOP on\n/m, ""));
+      assert.equal(results.at(-1).rows[0].evidence, marker);
+      assert.equal(
+        (await rows(db, "select count(*)::int n from public.work_sync_counters"))[0].n,
+        1,
+      );
+      assert.equal(
+        (await rows(db, "select current_setting('default_transaction_read_only') as value"))[0]
+          .value,
+        "off",
+      );
+    } finally {
+      await db.close();
+    }
   }
 });
 test("frozen production prerequisite metadata passes read-only preflight before any Work installation", async () => {
@@ -680,5 +717,94 @@ test("the exact historical Supabase default-ACL canonical profile is a preservin
     await failure(db, migration, /work_forward_existing_object/);
   } finally {
     await db.close();
+  }
+});
+
+test("unused qualifications bind the actual immutable PostgreSQL major", async () => {
+  const db = await fixture();
+  try {
+    const qualification = await captureUnusedWorkRuntimeQualification(query(db));
+    const major = (
+      await rows(db, "select current_setting('server_version_num')::integer / 10000 as major")
+    )[0].major;
+    assert.equal(qualification.schemaVersion, 2);
+    assert.equal(qualification.serverMajor, major);
+    const rollback = await unusedWorkRuntimeRollback(qualification);
+    assert.match(rollback, new RegExp("server_version_num'\\)::integer / 10000<>" + major));
+    await assert.rejects(db.exec("set server_version_num='170006'"), /cannot be changed/);
+    await assert.rejects(
+      unusedWorkRuntimeRollback({ ...qualification, serverMajor: major === 18 ? 17 : 18 }),
+      /work_forward_invalid_qualification/,
+    );
+    await db.exec(rollback);
+    assert.equal(
+      (await rows(db, "select to_regclass('public.work_execution_runs') as value"))[0].value,
+      null,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("unsupported or falsely reported server majors cannot acquire an unused qualification", async () => {
+  const db = await fixture();
+  try {
+    const actualMajor = (
+      await rows(db, "select current_setting('server_version_num')::integer / 10000 as major")
+    )[0].major;
+    for (const major of [16, 19, null, "18", "toString", 17.5]) {
+      let otherQueries = 0;
+      const adapter = async (sql, args) => {
+        if (sql.includes("server_version_num")) return { rows: [{ major }] };
+        otherQueries++;
+        return db.query(sql, args);
+      };
+      await assert.rejects(
+        captureUnusedWorkRuntimeQualification(adapter),
+        /work_forward_server_version_unsupported/,
+      );
+      assert.equal(otherQueries, 0);
+    }
+    const adapter = (sql, args) =>
+      sql.includes("server_version_num")
+        ? Promise.resolve({ rows: [{ major: actualMajor === 18 ? 17 : 18 }] })
+        : db.query(sql, args);
+    await assert.rejects(
+      captureUnusedWorkRuntimeQualification(adapter),
+      /work_forward_installation_drift/,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("NOT NULL column drift and PostgreSQL18 constraint renaming retain full fingerprint protection", async () => {
+  for (const change of ["column", "constraint"]) {
+    const db = await fixture();
+    try {
+      if (change === "column") {
+        await db.exec("alter table public.work_execution_runs alter column owner_id drop not null");
+      } else {
+        const major = (
+          await rows(db, "select current_setting('server_version_num')::integer / 10000 as major")
+        )[0].major;
+        assert.equal(major, 18);
+        const name = (
+          await rows(
+            db,
+            "select c.conname from pg_constraint c join pg_attribute a on a.attrelid=c.conrelid and a.attnum=any(c.conkey) where c.conrelid='public.work_execution_runs'::regclass and c.contype='n' and a.attname='owner_id'",
+          )
+        )[0].conname;
+        await db.exec(
+          `alter table public.work_execution_runs rename constraint ${ident(name)} to changed_not_null_constraint`,
+        );
+      }
+      await assert.rejects(
+        captureUnusedWorkRuntimeQualification(query(db)),
+        /work_forward_installation_drift/,
+      );
+    } finally {
+      await db.close();
+    }
   }
 });

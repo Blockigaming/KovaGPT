@@ -1,0 +1,112 @@
+name: Apply reviewed Google connection forward only
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/google-connection-forward.yml
+      - scripts/release/google-forward-operator.py
+      - scripts/release/ensure-pg17-client.sh
+      - scripts/release/supabase-prod-ca-2021.crt
+      - tests/unit/test_google_forward_operator.py
+      - tests/unit/google-forward-operator-sql.test.mjs
+      - supabase/migrations/20261030132255_google_connection_lifecycle_forward.sql
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: CHECK is read-only; APPLY_GOOGLE_FORWARD applies only the pinned Google migration
+        required: true
+        type: choice
+        options: [CHECK, APPLY_GOOGLE_FORWARD]
+        default: CHECK
+      source_sha:
+        description: Exact reviewed current main SHA, equal to the selected workflow revision
+        required: true
+        type: string
+      confirmation:
+        description: Repeat the selected operation exactly
+        required: true
+        type: string
+      window_id:
+        description: Existing exclusive production window UUID; required for APPLY
+        required: false
+        type: string
+      window_expires_at:
+        description: Window expiration Unix seconds, at most 20 minutes ahead; required for APPLY
+        required: false
+        type: string
+        default: "0"
+
+permissions:
+  contents: read
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+
+concurrency:
+  group: kovagpt-production-google-forward
+  cancel-in-progress: false
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify native PostgreSQL 17 client without production credentials
+        run: timeout --signal=TERM --kill-after=10s 300s bash scripts/release/ensure-pg17-client.sh
+      - name: Verify the pinned public Supabase root certificate
+        run: |
+          set -euo pipefail
+          openssl x509 -in scripts/release/supabase-prod-ca-2021.crt -noout -subject -issuer -dates -fingerprint -sha256
+          openssl x509 -in scripts/release/supabase-prod-ca-2021.crt -checkend 2592000 -noout
+          openssl verify -CAfile scripts/release/supabase-prod-ca-2021.crt scripts/release/supabase-prod-ca-2021.crt
+      - run: python3 -m unittest discover -s tests/unit -p 'test_google_forward_operator.py'
+      - run: node --test tests/unit/google-forward-operator-sql.test.mjs
+
+  google-forward-only:
+    needs: source-tests
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/main' && inputs.source_sha == github.sha && inputs.confirmation == inputs.operation
+    environment:
+      name: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Require the tested PostgreSQL 17 client before credentials are supplied
+        run: timeout --signal=TERM --kill-after=10s 300s bash scripts/release/ensure-pg17-client.sh
+      - name: Verify target or apply only the approved canonical Google forward
+        env:
+          KOVA_PRODUCTION_DATABASE_URL: ${{ secrets.KOVA_PRODUCTION_DATABASE_URL }}
+          KOVA_GOOGLE_OPERATION: ${{ inputs.operation }}
+          KOVA_GOOGLE_CONFIRMATION: ${{ inputs.confirmation }}
+          KOVA_GOOGLE_SOURCE_SHA: ${{ inputs.source_sha }}
+          KOVA_GOOGLE_WINDOW_ID: ${{ inputs.window_id }}
+          KOVA_GOOGLE_WINDOW_EXPIRES_AT: ${{ inputs.window_expires_at || '0' }}
+        run: >-
+          timeout --signal=TERM --kill-after=10s 120s
+          python3 scripts/release/google-forward-operator.py
+          --mode "$KOVA_GOOGLE_OPERATION"
+          --source-sha "$KOVA_GOOGLE_SOURCE_SHA"
+          --confirmation "$KOVA_GOOGLE_CONFIRMATION"
+          --window-id "$KOVA_GOOGLE_WINDOW_ID"
+          --window-expires-at "$KOVA_GOOGLE_WINDOW_EXPIRES_AT"
+          --receipt "$RUNNER_TEMP/kova-google-forward-receipt.json"
+      - name: Preserve only the sanitized outcome
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: google-forward-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/kova-google-forward-receipt.json
+          if-no-files-found: warn
+          retention-days: 7
