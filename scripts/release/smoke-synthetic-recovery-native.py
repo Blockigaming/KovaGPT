@@ -105,13 +105,23 @@ def safe_diagnostic(raw,secrets_to_hide=(),limit=MAX_DIAGNOSTIC_BYTES):
     text=re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]","",text)
     for secret in secrets_to_hide:text=text.replace(secret,"[redacted]")
     text=re.sub(r"(?i)\b([a-z][a-z0-9+.-]*://)[^\s/@]+(?::[^\s/@]*)?@",r"\1[redacted]@",text)
-    text=re.sub(r"(?im)(\b(?:proxy-)?authorization\b(?:\\?[\"'])?[ \t]*[:=][ \t]*)[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*",r"\1[redacted]",text)
+    text=re.sub(r"(?im)(\b(?:proxy-)?authorization\b(?:\\?[\"'])?[ \t]*[:=][ \t]*)[^\r\n]*(?:\r?\n(?:#[0-9]+[ \t]+[0-9]+(?:\.[0-9]+)?[ \t])?[ \t]+[^\r\n]*)*",r"\1[redacted]",text)
     text=re.sub(r"(?i)\bbearer[ \t]+[\"']?[^\s\"'<>]+","Bearer [redacted]",text)
     text=re.sub(r"(?i)([?&#](?:access[_-]?token|refresh[_-]?token|id[_-]?token|api[_-]?key|client[_-]?secret|token|secret|password|key|credential|signature|authorization|auth|x-amz-(?:credential|signature|security-token))=)[^&\s\"']+",r"\1[redacted]",text)
     text=re.sub(r"\b(?:sk-(?:proj-)?[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9_]{12,}|github_pat_[A-Za-z0-9_]{12,}|AKIA[A-Z0-9]{16})\b","[redacted]",text)
     text=text.replace("\r","\n")
     text="".join(c if c=="\n" or 32<=ord(c)<=126 else "?" for c in text)
-    return text.encode("ascii")[-limit:].decode("ascii") if limit else ""
+    return text if limit is None else text.encode("ascii")[-limit:].decode("ascii") if limit else ""
+
+
+def executed_buildkit_diagnostic(stderr,secrets_to_hide=(),limit=MAX_DIAGNOSTIC_BYTES):
+    # Sanitize the entire bounded in-memory capture BEFORE selecting progress
+    # output. Dockerfile frames and echoed RUN recipes have no numeric time.
+    clean=safe_diagnostic(stderr,secrets_to_hide,limit=None)
+    lines=[line for line in clean.splitlines()
+           if re.fullmatch(r"#[0-9]+[ \t]+[0-9]+(?:\.[0-9]+)?[ \t]+.+",line)]
+    if not lines:return None
+    return "\n".join(lines).encode("ascii")[-limit:].decode("ascii") if limit else ""
 
 
 def observed_docker_build_stages(stderr):
@@ -225,10 +235,13 @@ class SyntheticBuilder(builder.Builder):
                   "timeout":"synthetic_command_timeout","os-error":"synthetic_command_os_error"}[status]
             if not bounded:code="synthetic_command_output_bound"
             hidden=getattr(self,"_diagnostic_secrets",diagnostic_secrets(self.env))
-            stderr_tail=safe_diagnostic(stderr,hidden)
+            executed_tail=executed_buildkit_diagnostic(stderr,hidden) if stage=="build" and argv[:2]==["docker","build"] else None
+            stderr_tail=executed_tail if executed_tail is not None else safe_diagnostic(stderr,hidden)
             stdout_tail=safe_diagnostic(stdout,hidden,MAX_DIAGNOSTIC_BYTES-len(stderr_tail.encode("ascii")))
             details={"stage":stage,"status":status,"completed":completed,"exitCode":exit_code,
                      "outputWithinBound":bounded,"stderrTail":stderr_tail,"stdoutTail":stdout_tail}
+            if stage=="build" and argv[:2]==["docker","build"]:
+                details["stderrTailKind"]="buildkit-executed" if executed_tail is not None else "sanitized-raw"
             if status=="os-error":details["osErrorNumber"]=os_error
             if stage=="build" and argv[:2]==["docker","build"]:
                 # Parse the complete bounded capture, before the 4KiB tail can

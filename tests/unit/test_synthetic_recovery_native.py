@@ -327,8 +327,52 @@ class SyntheticTests(unittest.TestCase):
             b.command(["docker","build","--progress=plain","public-context"])
         details=caught.exception.details
         self.assertEqual(details["observedStage"],"ubuntu-architecture-guard")
-        self.assertNotIn("#7 0.102 KOVA_OPERATOR_STAGE=ubuntu-architecture-guard",details["stderrTail"])
+        self.assertIn("#7 0.102 KOVA_OPERATOR_STAGE=ubuntu-architecture-guard",details["stderrTail"])
+        self.assertEqual(details["stderrTailKind"],"buildkit-executed")
+        self.assertNotIn("Dockerfile:",details["stderrTail"])
         self.assertLessEqual(len(details["stderrTail"])+len(details["stdoutTail"]),m.MAX_DIAGNOSTIC_BYTES)
+
+    def test_executed_build_output_survives_large_frame_is_redacted_and_bounded(self):
+        canary="SYNTHETIC_ENV_CANARY"
+        raw=(b"#7 [2/4] RUN printf source-command-echo\n"
+             b"#7 1.01 KOVA_OPERATOR_STAGE=pgdg-index-refresh\n"
+             b"#7 1.02 E: Malformed entry (Component) in fixture.sources\n"
+             b"#7 1.03 Authorization: Basic U1lOVEhFVElDX0NBTkFSWQ==\n"
+             b"#7 1.04 https://fixture.invalid/?access_token=SYNTHETIC_QUERY_CANARY\n"
+             b"#7 1.05 SYNTHETIC_ENV_CANARY\n" + b"Dockerfile frame source echo\n"*1000)
+        tail=m.executed_buildkit_diagnostic(raw,(canary,))
+        self.assertIn("Malformed entry (Component)",tail)
+        self.assertNotIn("Dockerfile frame",tail);self.assertNotIn("source-command-echo",tail)
+        for hidden in [canary,"U1lOVEhFVElDX0NBTkFSWQ==","SYNTHETIC_QUERY_CANARY"]:self.assertNotIn(hidden,tail)
+        self.assertIn("[redacted]",tail)
+        huge=b"".join(("#7 2.01 safe output line "+str(i)+"\n").encode() for i in range(1000))
+        bounded=m.executed_buildkit_diagnostic(huge)
+        self.assertLessEqual(len(bounded.encode("ascii")),m.MAX_DIAGNOSTIC_BYTES)
+        self.assertIn("safe output line 999",bounded)
+        self.assertIsNone(m.executed_buildkit_diagnostic(b"Dockerfile:12\n12 | RUN source echo\n"))
+        b=m.SyntheticBuilder(self.env);b.set_build_stage("build");b._diagnostic_secrets=(canary,)
+        def command(argv,**kwargs):
+            kwargs["stderr"].write(raw)
+            return subprocess.CompletedProcess(argv,1)
+        with patch.object(m.subprocess,"run",side_effect=command),self.assertRaises(m.SyntheticCommandFailure) as caught:
+            b.command(["docker","build","--progress=plain","public-context"])
+        details=caught.exception.details
+        self.assertIn("Malformed entry (Component)",details["stderrTail"])
+        self.assertEqual(details["observedStage"],"pgdg-index-refresh")
+        self.assertEqual(details["stderrTailKind"],"buildkit-executed")
+        for hidden in [canary,"U1lOVEhFVElDX0NBTkFSWQ==","SYNTHETIC_QUERY_CANARY"]:self.assertNotIn(hidden,details["stderrTail"])
+        self.assertLessEqual(len(details["stderrTail"])+len(details["stdoutTail"]),m.MAX_DIAGNOSTIC_BYTES)
+
+    def test_buildkit_prefixed_folded_authorization_cannot_escape_redaction(self):
+        for header in ["Authorization", "Proxy-Authorization"]:
+            raw=("#7 1.00 "+header+": Basic\n#7 1.01    U1lOVEhFVElDX0NBTkFSWQ==\n"
+                 "#7 1.02 E: safe next diagnostic\n").encode()
+            for sanitize in [m.safe_diagnostic,m.executed_buildkit_diagnostic]:
+                with self.subTest(header=header,sanitize=sanitize.__name__):
+                    clean=sanitize(raw)
+                    self.assertNotIn("U1lOVEhFVElDX0NBTkFSWQ==",clean)
+                    self.assertIn("[redacted]",clean)
+                    self.assertIn("E: safe next diagnostic",clean)
 
     def test_docker_stage_markers_precede_guards_and_do_not_change_original_commands(self):
         source=m.HERE.joinpath("recovery-operator-client.Dockerfile").read_text()
@@ -362,10 +406,38 @@ class SyntheticTests(unittest.TestCase):
                               "! grep -Eiq '^(Trusted|Allow-Insecure):[[:space:]]*yes' /etc/apt/sources.list.d/ubuntu.sources;")
             line=line.replace("if [[ -e /etc/apt/sources.list || -L /etc/apt/sources.list ]]; then [[ -f /etc/apt/sources.list && ! -L /etc/apt/sources.list ]]; awk '/^[[:space:]]*($|#)/ {next} {exit 1}' /etc/apt/sources.list; fi;",
                               "[[ ! -s /etc/apt/sources.list ]];")
+            line=line.replace("'Architectures: amd64' 'Components: main'", "'Architectures: amd64'")
             stripped.append(line)
         normalized=" ".join("\n".join(stripped).replace("\\\n"," ").split())
         self.assertEqual(hashlib.sha256(normalized.encode()).hexdigest(),
                          "d830f8159ff4b57a8ef9923c04f5bf6d0ab66b8c8bb8c9e551cb624a92dd1c8c")
+
+    def test_pgdg_deb822_source_writer_has_required_main_component_and_parses_offline(self):
+        source=m.HERE.joinpath("recovery-operator-client.Dockerfile").read_text()
+        lines=source.splitlines()
+        start=next(i for i,line in enumerate(lines) if "'KOVA_OPERATOR_STAGE=pgdg-source-write'" in line)+1
+        end=next(i for i in range(start,len(lines)) if "'KOVA_OPERATOR_STAGE=pgdg-index-refresh'" in lines[i])
+        fixture=self.root/"synthetic-pgdg.sources"
+        command=" ".join(line.rstrip().removesuffix(chr(92)).strip() for line in lines[start:end]).replace("/etc/apt/sources.list.d/kova-pgdg.sources",'"$1"')
+        result=subprocess.run(["bash","-o","pipefail","-ceu",command,"canary",str(fixture)],capture_output=True)
+        self.assertEqual(result.returncode,0,result.stderr.decode())
+        self.assertEqual(result.stdout,b"")
+        expected={"Types":"deb","URIs":"https://apt.postgresql.org/pub/repos/apt","Suites":"noble-pgdg",
+                  "Architectures":"amd64","Components":"main",
+                  "Signed-By":"/usr/share/postgresql-common/pgdg/kova-pgdg.asc"}
+        fields=dict(line.split(": ",1) for line in fixture.read_text().splitlines())
+        self.assertEqual(fields,expected)
+        # apt-cache policy only parses fixture metadata: no index update, network,
+        # package installation or host APT source changes occur.
+        apt=Path("/usr/bin/apt-cache")
+        if not apt.exists():self.skipTest("offline APT parser unavailable")
+        lists=self.root/"synthetic-lists";lists.mkdir()
+        cache=self.root/"synthetic-cache";cache.mkdir()
+        args=[str(apt),"-o","Dir::Etc::sourcelist="+str(fixture),"-o","Dir::Etc::sourceparts=-",
+              "-o","Dir::State::lists="+str(lists),"-o","Dir::Cache="+str(cache),"policy"]
+        self.assertEqual(subprocess.run(args,capture_output=True).returncode,0)
+        fixture.write_text(fixture.read_text().replace("Components: main\n",""))
+        self.assertNotEqual(subprocess.run(args,capture_output=True).returncode,0)
 
     def test_legacy_apt_sources_accepts_only_absent_empty_comments_or_blank_lines(self):
         source=m.HERE.joinpath("recovery-operator-client.Dockerfile").read_text()

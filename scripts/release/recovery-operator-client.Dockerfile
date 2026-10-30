@@ -68,7 +68,7 @@ RUN printf '%s\n' 'KOVA_OPERATOR_STAGE=ubuntu-release-read'; \
       | python3 -c 'import sys;rows=[x.split(":") for x in sys.stdin.read().splitlines()];print("KOVA_OPERATOR_STAGE=pgdg-key-count-guard",flush=True);assert sum(x[0]=="pub" for x in rows)==1;print("KOVA_OPERATOR_STAGE=pgdg-key-fingerprint-guard",flush=True);assert next(x[9] for x in rows if x[0]=="fpr")=="B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8"'; \
     printf '%s\n' 'KOVA_OPERATOR_STAGE=pgdg-source-write'; \
     printf '%s\n' 'Types: deb' 'URIs: https://apt.postgresql.org/pub/repos/apt' \
-      'Suites: noble-pgdg' 'Architectures: amd64' \
+      'Suites: noble-pgdg' 'Architectures: amd64' 'Components: main' \
       'Signed-By: /usr/share/postgresql-common/pgdg/kova-pgdg.asc' \
       > /etc/apt/sources.list.d/kova-pgdg.sources; \
     printf '%s\n' 'KOVA_OPERATOR_STAGE=pgdg-index-refresh'; \
