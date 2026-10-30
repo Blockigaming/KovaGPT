@@ -67,6 +67,6 @@ test("browser CI uses the Node preview without changing the production preset", 
   );
   assert.match(
     releaseE2eJob,
-    /run: npm run test:e2e -- --shard=\$\{\{ matrix\.shard \}\}\/3 --reporter=list,blob --workers=2/,
+    /run: npm run test:e2e -- --shard=\$\{\{ matrix\.shard \}\}\/4 --reporter=list,blob --workers=2/,
   );
 });
