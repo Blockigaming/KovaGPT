@@ -79,6 +79,18 @@ function fixture() {
     },
   };
   const modules = {
+    "@/lib/github-chat-tools.server": {
+      githubChatTools: {
+        getContext: async () => {
+          if (state.githubUnavailable) throw new Error("github_read_context_unavailable");
+          return state.githubContext ?? { tools: [] };
+        },
+        run: async (...args) => {
+          calls.push(["github_read", ...args]);
+          return { service: "GitHub", content: "fixture source" };
+        },
+      },
+    },
     "@/integrations/supabase/client.server": { supabaseAdmin: db },
     "@/lib/lockdown-policy.mjs": {
       assertLockdownAllows: async (_db, owner, capability) => {
@@ -146,6 +158,56 @@ function fixture() {
   );
   return { ...exported, state, calls };
 }
+
+test("chat merges GitHub repository tools and dispatches through its pinned context", async () => {
+  const f = fixture();
+  f.state.githubContext = {
+    ownerId: "owner-a",
+    repositories: [],
+    tools: [
+      {
+        type: "function",
+        function: { name: "github_read", parameters: {}, description: "fixture" },
+      },
+    ],
+  };
+  const context = await f.getConnectedToolContext("owner-a");
+  assert.deepEqual(
+    context.tools.map((tool) => tool.function.name),
+    ["outlook_search", "github_read"],
+  );
+  const args = { repository: "owner/repo", operation: "readme" };
+  const result = await f.runConnectedTool("owner-a", "github_read", args, context);
+  assert.equal(result.content, "fixture source");
+  assert.deepEqual(f.calls.find((call) => call[0] === "github_read").slice(1), [
+    "owner-a",
+    "github_read",
+    args,
+    f.state.githubContext,
+  ]);
+  assert.equal(f.state.decrypts, 0);
+  f.state.lockdown = true;
+  await assert.rejects(
+    f.runConnectedTool("owner-a", "github_read", args, context),
+    /lockdown_mode/,
+  );
+  assert.equal(f.calls.filter((call) => call[0] === "github_read").length, 1);
+});
+
+test("unavailable GitHub context preserves other provider tools and cannot be invoked", async () => {
+  const f = fixture();
+  f.state.githubUnavailable = true;
+  const context = await f.getConnectedToolContext("owner-a");
+  assert.deepEqual(
+    context.tools.map((tool) => tool.function.name),
+    ["outlook_search"],
+  );
+  await assert.rejects(
+    f.runConnectedTool("owner-a", "github_read", {}, context),
+    /github_read_not_allowed/,
+  );
+  assert.equal(f.state.decrypts, 0);
+});
 
 test("tool planning offers only actually granted service reads and pins account IDs", async () => {
   const f = fixture();

@@ -13,9 +13,15 @@ import { decryptCredential, encryptCredential } from "./credential-vault.server"
 import { readConnection } from "./connection-read.server.mjs";
 import { oauthRefreshRequest, selectRefreshTokens } from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
+import { githubChatTools } from "@/lib/github-chat-tools.server";
+import type { GitHubChatContext } from "@/lib/github-chat-read.server.mjs";
 
 type BoundAccount = ConnectedAccount & { updated_at: string };
-export type ConnectedToolContext = { accounts: BoundAccount[]; tools: ToolDef[] };
+export type ConnectedToolContext = {
+  accounts: BoundAccount[];
+  tools: ToolDef[];
+  github?: GitHubChatContext;
+};
 const accountColumns =
   "id,provider_id,account_label,status,granted_scopes,token_expires_at,updated_at";
 // Narrow types for the existing connector tables, which are absent from the
@@ -198,10 +204,12 @@ export async function getConnectedToolContext(ownerId: string): Promise<Connecte
       },
     ];
   });
-  return { accounts, tools };
+  // An unavailable GitHub binding must not hide other providers' usable tools.
+  const github = await githubChatTools.getContext(ownerId).catch(() => undefined);
+  return { accounts, tools: [...tools, ...(github?.tools ?? [])], github };
 }
 
-export async function runConnectedTool(
+export async function runConnectionAccountSearch(
   ownerId: string,
   name: string,
   args: Record<string, unknown>,
@@ -256,4 +264,18 @@ export async function runConnectedTool(
     safe_summary: `Read ${flow.label} search results`,
   });
   return result;
+}
+
+export async function runConnectedTool(
+  ownerId: string,
+  name: string,
+  args: Record<string, unknown>,
+  context: ConnectedToolContext,
+) {
+  if (name === "github_read") {
+    await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
+    if (!context.github) throw new Error("github_read_not_allowed");
+    return githubChatTools.run(ownerId, name, args, context.github);
+  }
+  return runConnectionAccountSearch(ownerId, name, args, context);
 }

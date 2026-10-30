@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { getConnectedToolContext, runConnectedTool } from "@/integrations/connected-tools.server";
+import {
+  getConnectedToolContext,
+  runConnectionAccountSearch,
+} from "@/integrations/connected-tools.server";
 import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
 
 export const searchConnectedAccount = createServerFn({ method: "POST" })
@@ -20,7 +23,7 @@ export const searchConnectedAccount = createServerFn({ method: "POST" })
     if (!flow) return { error: "This connection is unavailable." };
     try {
       const binding = await getConnectedToolContext(context.userId);
-      return await runConnectedTool(
+      return await runConnectionAccountSearch(
         context.userId,
         flow.tool,
         { account_id: data.accountId, query: data.query },
