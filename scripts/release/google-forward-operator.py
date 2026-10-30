@@ -17,7 +17,13 @@ SOURCE = ROOT / "supabase/migrations/20261030132255_google_connection_lifecycle_
 SOURCE_SHA256 = "4fde05fe365efabf0f5466640dc7ea07e8182864b4529dc7def2a71a4e82c3e2"
 SYSTEM_SHA256 = "d165ac49d4d2aaa4733f7f220c351c99ff09493dace033a726f6fd722a573a15"
 PROJECT = "mfbycmbjygcfkrsuepxf"
-CA = "/etc/ssl/certs/ca-certificates.crt"
+# Public CA used by Supabase Studio's Download certificate control, verified
+# against Studio source ab448c11afd1ecc39190b6e0a972cc367e92a88e:
+# https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt
+# DER SHA256:807025ad50d4ed219d2c9c7d299c004f824eb00cf7f65afef607d07b72e6cafa.
+# Trust only this pinned provider root for the already-restricted DB hosts.
+CA = str(ROOT / "scripts/release/supabase-prod-ca-2021.crt")
+CA_SHA256 = "700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7"
 VERSION = "20261030132255"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\Z")
@@ -119,6 +125,9 @@ def connection_environment(env):
             and all(len(v) == 1 for v in query.values())
             and query.get("sslmode", ["verify-full"])[0] in {"require", "verify-full"}, "production_connection_rejected")
     require(Path(CA).is_file(), "trusted_ca_bundle_missing")
+    require(Path(CA).stat().st_size <= 16384 and
+            hashlib.sha256(Path(CA).read_bytes()).hexdigest() == CA_SHA256,
+            "trusted_ca_integrity_failed")
     child = {k: v for k, v in env.items() if k in {"PATH", "HOME", "LANG", "LC_ALL", "TZ", "TMPDIR"}}
     child.update(PGHOST=u.hostname, PGPORT="5432", PGDATABASE="postgres", PGUSER=user,
                  PGPASSWORD=password, PGSSLMODE="verify-full", PGSSLROOTCERT=CA,

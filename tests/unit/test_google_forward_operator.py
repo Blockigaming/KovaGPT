@@ -1,8 +1,10 @@
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
+import ssl
 import sys
 import tempfile
 import time
@@ -53,6 +55,39 @@ class Transport:
 
 
 class GoogleForwardOperatorTests(unittest.TestCase):
+    def test_only_the_pinned_public_supabase_ca_is_used_for_database_verification(self):
+        source = Path(OP.CA).read_bytes()
+        self.assertEqual(hashlib.sha256(source).hexdigest(), OP.CA_SHA256)
+        self.assertEqual(source.count(b"-----BEGIN CERTIFICATE-----"), 1)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        before = {hashlib.sha256(value).hexdigest() for value in context.get_ca_certs(binary_form=True)}
+        context.load_verify_locations(cafile=OP.CA)
+        after = {hashlib.sha256(value).hexdigest() for value in context.get_ca_certs(binary_form=True)}
+        expected = "807025ad50d4ed219d2c9c7d299c004f824eb00cf7f65afef607d07b72e6cafa"
+        self.assertIn(expected, after)
+        self.assertEqual(after, before | {expected})
+        e = env(); e["PGSSLROOTCERT"] = "/untrusted-provider-ca"
+        child = OP.connection_environment(e)
+        self.assertEqual(child["PGSSLROOTCERT"], OP.CA)
+        self.assertEqual(child["PGSSLMODE"], "verify-full")
+
+    def test_tampered_provider_ca_stops_before_any_psql_or_provider_access(self):
+        t = Transport()
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "wrong-ca.crt"; path.write_text("untrusted certificate")
+            with patch.object(OP, "CA", str(path)):
+                with self.assertRaisesRegex(OP.Stopped, "trusted_ca_integrity_failed"):
+                    OP.execute("CHECK", env(), SOURCE_SHA, "CHECK", run=t)
+        self.assertEqual([call[0][0] for call in t.calls], ["git"])
+        self.assertTrue(all(sql is None for _, _, sql, _ in t.calls))
+
+    def test_oversized_provider_ca_is_rejected_without_loading_or_connecting(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "large-ca.crt"; path.write_bytes(b"x" * 16385)
+            with patch.object(OP, "CA", str(path)):
+                with self.assertRaisesRegex(OP.Stopped, "trusted_ca_integrity_failed"):
+                    OP.connection_environment(env())
+
     def test_native_pg17_prerequisite_is_verified_without_credentials_and_precedes_transport(self):
         workflow = (ROOT / ".github/workflows/google-connection-forward.yml").read_text()
         source, operator = workflow.split("  source-tests:", 1)[1].split("  google-forward-only:", 1)
