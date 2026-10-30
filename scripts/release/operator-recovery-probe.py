@@ -16,6 +16,7 @@ import secrets
 import shutil
 import stat
 import tempfile
+import time
 
 HERE=Path(__file__).resolve().parent
 
@@ -63,6 +64,7 @@ class OperatorProbe(base.Probe):
         self.operator_image_id=image_id;self.operator_source_sha=source_sha
         self.client_tools={};self.operator_env={};self.bash_pins={};self.operator_smoke=None
         self.server_image_id=None
+        self.timeout_pins={}
         self.ram_volumes=None;self.ram_keys={};self.short_ram_index=0
         self.names.update({key:"kova-empty-"+key+"-"+self.token for key in ["smoke","toolcheck"]})
         self.state_path=self.runner_temp/("kova-operator-owned-"+self.run_id+"-"+self.attempt+".json")
@@ -338,7 +340,7 @@ while :; do sleep 1; done"""
 
     def tls_controls(self,target):
         self.stage="native_tls_controls"
-        identity="SELECT jsonb_build_object('address',inet_server_addr()::text,'version',current_setting('server_version_num')::integer,'systemIdentifier',(SELECT system_identifier::text FROM pg_control_system()),'tls',(SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()))::text;\n"
+        identity="SELECT jsonb_build_object('address',host(inet_server_addr()),'version',current_setting('server_version_num')::integer,'systemIdentifier',(SELECT system_identifier::text FROM pg_control_system()),'tls',(SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()))::text;\n"
         values=[]
         for family in [4,6]:
             _,raw=self.client_sql(target,identity,family=family)
@@ -407,6 +409,41 @@ while :; do sleep 1; done"""
                 "tableCount":len(rows),"namespaceObjectCount":len(census["namespaceObjects"]),
                 "globalObjectCount":len(census["globalObjects"])}
 
+    def timeout_control(self,key,tools):
+        _,raw=self.docker(["exec",self.names[key],tools["sha256sum"],tools["timeout"]])
+        value=raw.decode().split()[0]
+        require(SHA.fullmatch(value),"timeout_control_identity_unconfirmed")
+        if key=="client":
+            expected=next((row.get("sha256") for row in self.operator_smoke["tools"] if row.get("name")=="timeout"),None)
+            require(value==expected,"timeout_control_identity_unconfirmed")
+        old=self.timeout_pins.setdefault(key,value)
+        require(old==value,"timeout_control_identity_unconfirmed")
+        positive=b"timeout-control-positive\n"
+        code,out=self.docker(["exec",self.names[key],tools["timeout"],"3","/bin/bash","-ceu",
+            "printf 'timeout-control-positive\\n'"],timeout=5,allow_failure=True)
+        require(code==0 and out==positive,"timeout_control_positive_unconfirmed")
+        # GNU returns124; the pinned BusyBox server applet returns128+SIGTERM.
+        # Measure this exact implementation rather than assuming a version flag
+        # or accepting a signal status without a real bounded expiration.
+        started=time.monotonic()
+        code,out=self.docker(["exec",self.names[key],tools["timeout"],"1","/bin/bash","-ceu",
+            "printf 'timeout-control-started\\n'; exec sleep 3"],timeout=5,allow_failure=True)
+        elapsed=time.monotonic()-started
+        require(code in {124,143} and out==b"timeout-control-started\n" and 0.75<=elapsed<=2.5,
+                "timeout_control_expiry_unconfirmed")
+        self.network_evidence.append({"container":key,"timeoutSha256":value,"timeoutExitCode":code,
+                                      "positiveControlPassed":True,"expiryControlPassed":True})
+        return code
+
+    def timed_denial_command(self,key,tools,script,expired):
+        started=time.monotonic()
+        code,out=self.docker(["exec",self.names[key],tools["timeout"],"3","/bin/bash","-ceu",script],
+                             timeout=5,allow_failure=True)
+        elapsed=time.monotonic()-started
+        require(out==b"" and (code==1 or (code==expired and 2.5<=elapsed<=4.75)),
+                "outbound_connection_not_denied")
+        return code
+
     def denial_probes(self,targets):
         self.stage="actual_egress_denial"
         count=0
@@ -417,14 +454,12 @@ while :; do sleep 1; done"""
             # /dev/tcp is the same pinned Bash that passed the actual dual-stack
             # TLS controls. Missing tools/unknown execution states never pass.
             self.docker(["exec",self.names[key],"/bin/bash","--version"])
-            self.docker(["exec",self.names[key],tools["timeout"],"--version"])
+            expired=self.timeout_control(key,tools)
             _,raw=self.docker(["exec",self.names[key],tools["sha256sum"],"/bin/bash"])
             value=raw.decode().split()[0];require(SHA.fullmatch(value) and value==self.bash_pins[key],"bash_control_identity_changed")
             for kind,ip,port in targets+extra:
                 ipaddress.ip_address(ip);require(port in {53,443,5432},"denial_probe_port_unqualified")
-                code,_=self.docker(["exec",self.names[key],tools["timeout"],"3","/bin/bash","-ceu",
-                    "exec 3<>/dev/tcp/"+ip+"/"+str(port)],timeout=5,allow_failure=True)
-                require(code in {1,124},"outbound_connection_not_denied")
+                code=self.timed_denial_command(key,tools,"exec 3<>/dev/tcp/"+ip+"/"+str(port),expired)
                 if code==1:
                     require(b"network is unreachable" in self.last_stderr.lower()
                             or b"no route to host" in self.last_stderr.lower(),"numeric_denial_cause_unconfirmed")
@@ -434,10 +469,9 @@ while :; do sleep 1; done"""
             # An actual UDP DNS query must receive no reply; TCP53 alone would
             # not test Docker's embedded UDP resolver escape path.
             self.docker(["exec",self.names[key],"/bin/bash","-ceu","command -v dd >/dev/null"])
-            dns="exec 3<>/dev/udp/127.0.0.11/53; printf '\\x12\\x34\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01' >&3; dd bs=1 count=1 <&3 >/dev/null 2>&1"
-            code,_=self.docker(["exec",self.names[key],tools["timeout"],"3","/bin/bash","-ceu",dns],
-                              timeout=5,allow_failure=True)
-            require(code==124,"embedded_dns_udp_denial_unconfirmed")
+            dns="exec 3<>/dev/udp/127.0.0.11/53; printf '\\x12\\x34\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01' >&3; exec dd bs=1 count=1 <&3 >/dev/null 2>&1"
+            code=self.timed_denial_command(key,tools,dns,expired)
+            require(code==expired,"embedded_dns_udp_denial_unconfirmed")
             count+=1
         return count
 
