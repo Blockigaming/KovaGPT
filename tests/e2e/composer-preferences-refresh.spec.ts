@@ -129,9 +129,11 @@ test("every primary settings destination opens its own working section", async (
     ["Appearance", "appearance"],
   ]) {
     const tab = page.getByRole("tab", { name: label, exact: true });
+    const sectionPicker = page.getByRole("button", { name: "Section", exact: true });
+    await expect(tab.or(sectionPicker).filter({ visible: true })).toBeVisible();
     if (await tab.isVisible()) await tab.click();
     else {
-      await page.getByRole("button", { name: "Section", exact: true }).click();
+      await sectionPicker.click();
       await page.getByRole("option", { name: new RegExp(`^${label}(?: Selected)?$`) }).click();
     }
     await expect(page).toHaveURL(new RegExp(`/settings/${route}$`));

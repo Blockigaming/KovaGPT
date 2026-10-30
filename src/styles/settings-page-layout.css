@@ -17,7 +17,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: 20px;
   background: var(--background);
-  overflow: hidden;
+  overflow: clip;
 }
 .kova-settings-route .kova-settings-page-header {
   padding-inline: 0;
@@ -41,11 +41,11 @@
   flex: 0 0 208px;
   align-self: flex-start;
   background: transparent;
-  position: static;
+  position: sticky;
   padding: 20px 12px;
   width: 216px;
   flex-basis: 216px;
-  max-height: none;
+  max-height: calc(100dvh - 48px);
 }
 .kova-settings-route .kova-settings-page .kova-settings-content {
   overflow: visible;

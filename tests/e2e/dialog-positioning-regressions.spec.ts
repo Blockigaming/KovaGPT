@@ -84,14 +84,17 @@ async function focusStaysInside(page: Page, surface: Locator) {
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`${theme}: real Settings modal remains contained and scrollable while fullpage Settings stays transparent`, async ({
+  test(`${theme}: real Settings modal remains contained and scrollable beside the themed fullpage workspace`, async ({
     page,
   }, info) => {
     await coreFixture(page, theme, "free", { preserveStorageOnReload: true });
     await page.goto("/settings/responses");
     await waitForKovaHydration(page);
     const fullpage = page.locator(".kova-settings-page");
-    await expect(fullpage).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    const pageColor = await page
+      .locator("body")
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
+    await expect(fullpage).toHaveCSS("background-color", pageColor);
     await expect(fullpage.locator(".kova-settings-content")).toHaveCSS(
       "background-color",
       "rgba(0, 0, 0, 0)",
