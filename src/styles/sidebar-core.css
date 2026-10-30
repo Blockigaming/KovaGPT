@@ -25,9 +25,9 @@
   border: 0;
   border-radius: 0;
   transition:
-    width 180ms ease,
-    min-width 180ms ease,
-    transform 180ms ease,
+    width var(--kova-motion-standard) var(--kova-ease),
+    min-width var(--kova-motion-standard) var(--kova-ease),
+    transform var(--kova-motion-standard) var(--kova-ease),
     visibility 0ms;
 }
 .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
@@ -36,10 +36,10 @@
   visibility: hidden;
   pointer-events: none;
   transition:
-    width 180ms ease,
-    min-width 180ms ease,
-    transform 180ms ease,
-    visibility 0ms 180ms;
+    width var(--kova-motion-standard) var(--kova-ease),
+    min-width var(--kova-motion-standard) var(--kova-ease),
+    transform var(--kova-motion-standard) var(--kova-ease),
+    visibility 0ms var(--kova-motion-standard);
 }
 .kova-sidebar-inner {
   display: flex;
@@ -369,9 +369,9 @@
   padding: 0 8px 12px;
   border: 0;
   transition:
-    width 180ms ease,
-    min-width 180ms ease,
-    padding 180ms ease,
+    width var(--kova-motion-standard) var(--kova-ease),
+    min-width var(--kova-motion-standard) var(--kova-ease),
+    padding var(--kova-motion-standard) var(--kova-ease),
     visibility 0ms;
 }
 .kova-sidebar-rail[data-kova-core-rail][data-state="closed"] {
@@ -381,10 +381,10 @@
   visibility: hidden;
   pointer-events: none;
   transition:
-    width 180ms ease,
-    min-width 180ms ease,
-    padding 180ms ease,
-    visibility 0ms 180ms;
+    width var(--kova-motion-standard) var(--kova-ease),
+    min-width var(--kova-motion-standard) var(--kova-ease),
+    padding var(--kova-motion-standard) var(--kova-ease),
+    visibility 0ms var(--kova-motion-standard);
 }
 .kova-rail-shortcuts {
   display: flex;
@@ -437,7 +437,7 @@ button.kova-sidebar-scrim {
   padding: 0;
   background: #0008;
   transition:
-    opacity 180ms ease,
+    opacity var(--kova-motion-standard) var(--kova-ease),
     visibility 0ms;
 }
 .kova-sidebar-scrim[data-state="closed"] {
@@ -445,8 +445,8 @@ button.kova-sidebar-scrim {
   visibility: hidden;
   pointer-events: none;
   transition:
-    opacity 180ms ease,
-    visibility 0ms 180ms;
+    opacity var(--kova-motion-standard) var(--kova-ease),
+    visibility 0ms var(--kova-motion-standard);
 }
 /* ChatGPT mobile chrome keeps the page label and actions on one opaque bar. */
 .kova-topbar:not(.kova-desktop-topbar) {

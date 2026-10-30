@@ -1982,7 +1982,7 @@ export function ChatInput({
             <button
               type="button"
               data-testid="voice-button"
-              className="spec400-toolbar-button spec400-toolbar-icon spec400-primary-voice"
+              className="spec400-send-button spec400-primary-voice"
               hidden={hasDraft || isStreaming}
               aria-label="Voice"
               aria-haspopup="dialog"

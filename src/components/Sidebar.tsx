@@ -14,6 +14,7 @@ import {
 } from "@/components/SidebarIcons";
 import {
   Archive,
+  MessageSquare,
   ChevronDown,
   BarChart3,
   LogOut,
@@ -900,8 +901,8 @@ export function Sidebar({
             </Button>
           </div>
           <p id="sidebar-personalization-description">
-            Choose additional shortcuts for your collapsed desktop sidebar. New chat, Search,
-            Projects, Scheduled tasks, Library, Connections, and your account stay available.
+            Choose additional shortcuts for your collapsed desktop sidebar. New chat, Projects,
+            Scheduled tasks, Library, Connections, and your account stay available.
           </p>
           <fieldset>
             <legend>Additional shortcuts</legend>
@@ -1178,22 +1179,7 @@ export function Sidebar({
                     <NewChatGlyph aria-hidden="true" />
                   </button>
                 </RailTooltip>
-                <RailTooltip label="Search">
-                  <button
-                    type="button"
-                    className="kova-rail-button"
-                    aria-label="Search"
-                    onClick={() => {
-                      if (onOpenWorkspaceSearch) onOpenWorkspaceSearch();
-                      else {
-                        setSearchOpen(true);
-                        if (!open) onToggle();
-                      }
-                    }}
-                  >
-                    <SearchGlyph aria-hidden="true" />
-                  </button>
-                </RailTooltip>
+                {railLink("/", "Chat", MessageSquare)}
                 {signedIn ? railLink("/projects", "Projects", ProjectsGlyph) : null}
                 {canSchedule ? railLink("/scheduled-tasks", "Scheduled tasks", TasksGlyph) : null}
                 {signedIn ? railLink("/library", "Library", LibraryGlyph) : null}
@@ -1259,24 +1245,11 @@ export function Sidebar({
       >
         <div className="kova-sidebar-inner">
           <header className="kova-sidebar-header">
-            <span className="kova-sidebar-brand">KovaGPT</span>
+            <span className="kova-sidebar-brand flex items-center gap-2">
+              <NovaLogo decorative className="h-6 w-6" />
+              KovaGPT
+            </span>
             <div className="kova-sidebar-header-actions">
-              <button
-                type="button"
-                className="kova-header-button flex"
-                onClick={() => {
-                  if (onOpenWorkspaceSearch) {
-                    closeAfterMobileNavigation();
-                    onOpenWorkspaceSearch();
-                  } else setSearchOpen((value) => !value);
-                }}
-                aria-label="Search chats"
-                aria-haspopup={onOpenWorkspaceSearch ? "dialog" : undefined}
-                aria-expanded={onOpenWorkspaceSearch ? undefined : searchOpen}
-                title="Search chats"
-              >
-                <SearchGlyph />
-              </button>
               <button
                 type="button"
                 className="kova-header-button kova-sidebar-toggle flex lg:hidden"

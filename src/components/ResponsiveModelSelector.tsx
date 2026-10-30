@@ -128,7 +128,7 @@ export function ResponsiveModelSelector({
   const options = groups.map((group) => (
     <div key={group.id} className="pb-2">
       <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
-        {group.label.replace(/^KovaGPT(?=\s|$)/u, "Kova GPT")}
+        {group.label.replace(/^KovaGPT(?=\s|$)/u, "KovaGPT")}
       </div>
       {group.modes.map(renderOption)}
     </div>
@@ -141,7 +141,7 @@ export function ResponsiveModelSelector({
         data-slot="model-selector-label"
         className="kova-model-static inline-flex min-h-11 min-w-0 select-none items-center px-3 text-lg font-semibold tracking-[-0.015em] text-foreground [font-family:var(--font-ui,var(--font-sans))]"
       >
-        <span className="truncate leading-none">Kova GPT</span>
+        <span className="truncate leading-none">KovaGPT</span>
       </span>
     );
 
@@ -161,7 +161,7 @@ export function ResponsiveModelSelector({
                 : undefined
             }
             aria-haspopup="dialog"
-            aria-label={"Choose model: Kova GPT " + modeDisplayLabel(current)}
+            aria-label={"Choose model: KovaGPT " + modeDisplayLabel(current)}
             aria-expanded={open}
             aria-controls={!useSheet && open ? menuId : undefined}
             data-testid="model-selector-trigger"
@@ -174,7 +174,7 @@ export function ResponsiveModelSelector({
                 modeDisplayLabel(current)
               ) : (
                 <>
-                  Kova GPT<span className="ml-1 font-normal">· {modeDisplayLabel(current)}</span>
+                  KovaGPT<span className="ml-1 font-normal">· {modeDisplayLabel(current)}</span>
                 </>
               )}
             </span>

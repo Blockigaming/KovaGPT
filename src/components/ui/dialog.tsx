@@ -23,7 +23,7 @@ const DialogOverlay = React.forwardRef<
     data-ui-reference="chatgpt.dialog.backdrop"
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/30 dark:bg-black/50 duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none",
+      "fixed inset-0 z-50 bg-black/40 backdrop-blur-[3px] duration-[var(--kova-motion-standard)] ease-[var(--kova-ease)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none",
       className,
     )}
     {...props}
@@ -50,7 +50,7 @@ const DialogContent = React.forwardRef<
       data-kova-dialog-surface={constrainToViewport ? "" : undefined}
       ref={ref}
       className={cn(
-        "font-[family-name:var(--font-ui)] fixed left-1/2 top-1/2 z-50 flex min-w-0 w-[calc(100%-2rem)] max-w-[450px] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-[var(--kova-radius-panel)] border border-border bg-popover p-5 text-popover-foreground shadow-[var(--shadow-floating)] duration-150 [overflow-wrap:anywhere] data-[state=closed]:pointer-events-none",
+        "font-[family-name:var(--font-ui)] fixed left-1/2 top-1/2 z-50 flex min-w-0 w-[calc(100%-2rem)] max-w-[450px] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-[var(--kova-radius-panel)] border border-border bg-popover p-5 text-popover-foreground shadow-[var(--shadow-floating)] duration-[var(--kova-motion-standard)] ease-[var(--kova-ease)] [overflow-wrap:anywhere] data-[state=closed]:pointer-events-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain supports-[height:100dvh]:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem)]",
         className,
@@ -61,7 +61,7 @@ const DialogContent = React.forwardRef<
       <DialogPrimitive.Close
         data-kova-dialog-close=""
         data-ui-reference="chatgpt.button.icon"
-        className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground ring-offset-background cursor-pointer transition-colors duration-150 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
+        className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground ring-offset-background cursor-pointer transition-colors duration-[var(--kova-motion-standard)] ease-[var(--kova-ease)] hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
       >
         <X className="h-[18px] w-[18px]" />
         <span className="sr-only">{closeLabel}</span>

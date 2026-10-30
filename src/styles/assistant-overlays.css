@@ -50,3 +50,43 @@ body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
   font-weight: 600;
   line-height: 1.25;
 }
+
+@media (min-width: 640px) {
+  .kova-auth-surface[data-kova-auth-dialog] {
+    padding-bottom: 24px;
+  }
+}
+
+/* Portals share the same visual depth and timing as the workspace. Radix keeps
+   ownership of placement, collision handling, keyboard navigation and focus. */
+body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
+  :is(
+    [data-slot="popover-content"],
+    [data-slot="dialog-overlay"],
+    [data-radix-menu-content],
+    [data-kova-dialog-surface]
+  ) {
+  box-shadow: var(--kova-overlay-shadow);
+  animation-duration: var(--kova-motion-standard);
+  animation-timing-function: var(--kova-ease);
+}
+body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
+  :is(
+    [data-slot="popover-content"],
+    [data-radix-menu-content],
+    [data-kova-dialog-surface]
+  )[data-state="closed"] {
+  animation-duration: var(--kova-motion-fast);
+}
+@media (prefers-reduced-motion: reduce) {
+  body:has(:is(.kova-assistant, .kova-app-shell)[data-ui="modern"])
+    :is(
+      [data-slot="popover-content"],
+      [data-slot="dialog-overlay"],
+      [data-radix-menu-content],
+      [data-kova-dialog-surface]
+    ) {
+    animation: none;
+    transition: none;
+  }
+}

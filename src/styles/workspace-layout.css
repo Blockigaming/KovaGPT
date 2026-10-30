@@ -13,11 +13,11 @@
 }
 
 .kova-app-shell[data-ui="modern"] .kova-page-header .kova-page-title {
-  font-family: var(--font-ui);
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.025em;
+  font-family: var(--font-ui) !important;
+  font-size: 30px !important;
+  font-weight: 500 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.025em !important;
 }
 
 .kova-app-shell[data-ui="modern"] .kova-page-description {
@@ -104,5 +104,34 @@
   .kova-workspace-mode-switch,
   .kova-workspace-mode {
     min-height: 44px;
+  }
+}
+
+/* Quiet feedback across resource browsing and navigation; no hover-induced
+   movement of rows, filenames, controls or surrounding content. */
+:is(.kova-app-shell, .kova-assistant)[data-ui="modern"]
+  :is(
+    .kova-file-row,
+    .kova-project-card,
+    .kova-connector-card,
+    .kova-nav-row,
+    .kova-settings-nav-item
+  ) {
+  transition:
+    background-color var(--kova-motion-fast) ease,
+    border-color var(--kova-motion-fast) ease,
+    color var(--kova-motion-fast) ease,
+    box-shadow var(--kova-motion-fast) ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.kova-app-shell, .kova-assistant)[data-ui="modern"]
+    :is(
+      .kova-file-row,
+      .kova-project-card,
+      .kova-connector-card,
+      .kova-nav-row,
+      .kova-settings-nav-item
+    ) {
+    transition: none;
   }
 }
