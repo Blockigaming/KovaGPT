@@ -58,6 +58,27 @@ class RecoveryTests(unittest.TestCase):
         out=m.clean_pg_env({"PATH":"safe","PGSERVICE":"unsafe","PGOPTIONS":"unsafe","OPENAI_API_KEY":"synthetic","KOVA_PRODUCTION_DATABASE_URL":"synthetic","KOVA_PRODUCTION_BACKUP_PASSPHRASE":"synthetic"})
         self.assertEqual(set(out),{"PATH","PGCONNECT_TIMEOUT","PGAPPNAME"})
 
+    def test_source_require_request_is_upgraded_to_verified_tls_with_the_selected_ca(self):
+        for authority in [f"postgres:synthetic-password@db.{m.PROJECT}.supabase.co",f"postgres.{m.PROJECT}:synthetic-password@aws-0-us-west-2.pooler.supabase.com"]:
+            supplied=self.source_env(f"postgresql://{authority}:5432/postgres?sslmode=require")
+            supplied.update(PGSSLMODE="disable",PGSSLROOTCERT="/untrusted/ca.pem",PGHOSTADDR="203.0.113.1",PGSERVICE="untrusted")
+            out=m.source_environment(supplied)
+            self.assertEqual(out["PGSSLMODE"],"verify-full")
+            self.assertEqual(out["PGSSLROOTCERT"],str(self.ca))
+            self.assertNotIn("PGHOSTADDR",out)
+            self.assertNotIn("PGSERVICE",out)
+            self.assertNotIn("KOVA_PRODUCTION_DATABASE_URL",out)
+
+    def test_source_tls_upgrade_rejects_unsafe_modes_ambiguous_options_nested_poolers_and_nul_credentials(self):
+        base=f"postgresql://postgres.{m.PROJECT}:synthetic-password@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
+        rejected=[base+"?sslmode="+mode for mode in ["disable","allow","prefer","verify-ca",""]]
+        rejected += [base+"?sslmode=require&sslmode=verify-full",base+"?sslmode=require&sslrootcert=/untrusted/ca.pem",base.replace("aws-0-","nested.aws-0-"),base.replace("synthetic-password","synthetic%00password")]
+        for uri in rejected:
+            with self.subTest(uri="nonsecret-rejected-fixture"), patch.object(m.subprocess,"run") as run:
+                with self.assertRaisesRegex(m.Stopped,"production_connection_rejected"):
+                    m.source_environment(self.source_env(uri))
+                run.assert_not_called()
+
     def test_public_failure_uses_only_fixed_stage_and_code_enumerations(self):
         with patch.object(m,"PUBLIC_STAGE","capture-snapshot"):
             known=m.public_failure(m.Stopped("snapshot_lost"))

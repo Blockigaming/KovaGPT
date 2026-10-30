@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { createHash, X509Certificate } from "node:crypto";
 import { test } from "node:test";
 
 const { load } = createRequire(import.meta.url)("js-yaml");
@@ -144,4 +145,42 @@ test("official fallback pins Ubuntu24 amd64, full PGDG fingerprint and scoped HT
   );
   assert.equal(uploads.length, 1);
   assert.doesNotMatch(uploads[0].with.path, /\.sql|full\.dump|catalog\.json|rows\.json/);
+});
+
+test("capture and both source metadata workflows select the qualified public Supabase CA", () => {
+  for (const [filename, job] of [
+    ["capture-managed-auth-production.yml", "capture-only"],
+    ["probe-empty-recovery-target.yml", "probe-empty"],
+    ["restore-reviewed-empty-recovery.yml", "restore-private-recipient"],
+  ]) {
+    const current = load(
+      readFileSync(new URL(`../../.github/workflows/${filename}`, import.meta.url), "utf8"),
+    );
+    const sources = current.jobs[job].steps.filter(
+      (step) => step.env?.KOVA_PRODUCTION_DATABASE_URL,
+    );
+    assert.equal(sources.length, 1, filename);
+    assert.equal(
+      sources[0].env.KOVA_RECOVERY_CA_BUNDLE,
+      "${{ github.workspace }}/scripts/release/supabase-prod-ca-2021.crt",
+    );
+    assert.equal(current.permissions.contents, "read");
+    assert.match(current.jobs[job].if, /refs\/heads\/main/);
+    assert.match(current.jobs[job].if, /inputs\.source_sha == github\.sha/);
+  }
+});
+
+test("the selected public CA is the already-qualified provider root with a valid self signature and lifetime", () => {
+  const pem = readFileSync(
+    new URL("../../scripts/release/supabase-prod-ca-2021.crt", import.meta.url),
+  );
+  assert.equal(
+    createHash("sha256").update(pem).digest("hex"),
+    "700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7",
+  );
+  const certificate = new X509Certificate(pem);
+  assert.equal(certificate.ca, true);
+  assert.equal(certificate.verify(certificate.publicKey), true);
+  assert.ok(Date.parse(certificate.validFrom) <= Date.now());
+  assert.ok(Date.parse(certificate.validTo) > Date.now());
 });

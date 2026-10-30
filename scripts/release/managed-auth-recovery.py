@@ -241,18 +241,21 @@ def source_environment(env):
     except ValueError:
         raise Stopped("production_connection_rejected") from None
     user = unquote(u.username or "")
+    password = unquote(u.password or "")
     direct = u.hostname == f"db.{PROJECT}.supabase.co" and user == "postgres"
-    pooler = (u.hostname or "").endswith(".pooler.supabase.com") and user == f"postgres.{PROJECT}"
+    pooler = bool(re.fullmatch(r"[a-z0-9-]+\.pooler\.supabase\.com", u.hostname or "")) and user == f"postgres.{PROJECT}"
     params = parse_qs(u.query, keep_blank_values=True)
     require(u.scheme in {"postgres", "postgresql"} and (direct or pooler) and port == 5432
-            and u.path == "/postgres" and u.password and not u.fragment
+            and u.path == "/postgres" and password and "\x00" not in password and not u.fragment
             and set(params) <= {"sslmode"} and all(len(v) == 1 for v in params.values())
-            and params.get("sslmode", ["verify-full"])[0] == "verify-full", "production_connection_rejected")
+            and params.get("sslmode", ["verify-full"])[0] in {"require", "verify-full"}, "production_connection_rejected")
     ca = Path(env.get("KOVA_RECOVERY_CA_BUNDLE", "/etc/ssl/certs/ca-certificates.crt"))
     require(ca.is_file(), "trusted_ca_bundle_required")
     child = clean_pg_env(env)
+    # Ignore the URL's weaker TLS request: discrete libpq settings always verify
+    # the server hostname and selected CA. The raw URL never enters client argv.
     child.update(PGHOST=u.hostname, PGPORT=str(port), PGDATABASE="postgres", PGUSER=user, PGCLIENTENCODING="UTF8",
-                 PGPASSWORD=unquote(u.password), PGSSLMODE="verify-full", PGSSLROOTCERT=str(ca),
+                 PGPASSWORD=password, PGSSLMODE="verify-full", PGSSLROOTCERT=str(ca),
                  PGOPTIONS=CANONICAL_PG + " -c default_transaction_read_only=on -c statement_timeout=120000 -c lock_timeout=5000 -c idle_in_transaction_session_timeout=1600000")
     return child
 

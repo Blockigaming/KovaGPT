@@ -34,7 +34,14 @@ function validate(value) {
   );
   assert.equal(secretSteps.length, 1);
   assert.match(secretSteps[0].run, /collect-empty-recovery-metadata\.py/);
-  assert.deepEqual(Object.keys(secretSteps[0].env), ["KOVA_PRODUCTION_DATABASE_URL"]);
+  assert.deepEqual(Object.keys(secretSteps[0].env), [
+    "KOVA_PRODUCTION_DATABASE_URL",
+    "KOVA_RECOVERY_CA_BUNDLE",
+  ]);
+  assert.equal(
+    secretSteps[0].env.KOVA_RECOVERY_CA_BUNDLE,
+    "${{ github.workspace }}/scripts/release/supabase-prod-ca-2021.crt",
+  );
   assert.doesNotMatch(JSON.stringify(job.env), /secrets\.|DATABASE_URL|PGPASSWORD/);
   const native = job.steps.find((step) => step.run?.includes("--metadata-file"));
   assert.ok(native);
@@ -61,6 +68,11 @@ test("data-free probe confines source credentials to the guarded metadata step a
 
 test("mutation checks reject credentials in client/job scope, broad uploads and unpinned dispatch", () => {
   const mutations = [
+    (w) => {
+      w.jobs["probe-empty"].steps.find(
+        (step) => step.env?.KOVA_PRODUCTION_DATABASE_URL,
+      ).env.KOVA_RECOVERY_CA_BUNDLE = "/untrusted/ca.pem";
+    },
     (w) => {
       w.jobs["probe-empty"].env.KOVA_PRODUCTION_DATABASE_URL =
         "${{ secrets.KOVA_PRODUCTION_DATABASE_URL }}";

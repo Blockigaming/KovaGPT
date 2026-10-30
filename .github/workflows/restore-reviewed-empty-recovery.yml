@@ -113,6 +113,7 @@ jobs:
           KOVA_EMPTY_PROBE_CONFIRMATION: PROBE_EMPTY_ONLY
           KOVA_AUTH_APPROVED_SOURCE_DATABASE_VERSION: 17.6.1.155
           KOVA_PRODUCTION_DATABASE_URL: ${{ secrets.KOVA_PRODUCTION_DATABASE_URL }}
+          KOVA_RECOVERY_CA_BUNDLE: ${{ github.workspace }}/scripts/release/supabase-prod-ca-2021.crt
         run: >-
           timeout --signal=TERM --kill-after=15s 6m
           python3 scripts/release/collect-empty-recovery-metadata.py --execute --extension-coverage

@@ -111,6 +111,7 @@ jobs:
           KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
           KOVA_AUTH_APPROVED_SOURCE_DATABASE_VERSION: ${{ inputs.approved_database_build }}
           KOVA_PRODUCTION_DATABASE_URL: ${{ secrets.KOVA_PRODUCTION_DATABASE_URL }}
+          KOVA_RECOVERY_CA_BUNDLE: ${{ github.workspace }}/scripts/release/supabase-prod-ca-2021.crt
           KOVA_PRODUCTION_BACKUP_PASSPHRASE: ${{ secrets.KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926 }}
         run: timeout --signal=TERM --kill-after=10s 26m python3 scripts/release/managed-auth-recovery.py capture --execute --output "$RUNNER_TEMP/managed-auth-capture"
       - name: Retain ciphertext and fixed sanitized receipt only
