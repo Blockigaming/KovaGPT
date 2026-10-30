@@ -30,6 +30,19 @@ runtime_bytes=fixture.runtime_bytes
 
 
 class SyntheticTests(unittest.TestCase):
+    def test_numeric_denial_diagnostic_uses_existing_exact_stopped_type_and_fixed_code_only(self):
+        error=o.base.Stopped("numeric_denial_cause_unconfirmed")
+        self.assertIs(type(error),m.Stopped)
+        self.assertIs(o.Stopped,m.base.Stopped)
+        self.assertEqual(m.failure_details(error),{"code":"numeric_denial_cause_unconfirmed","stage":"setup"})
+        for error in [ValueError("numeric_denial_cause_unconfirmed"),
+                      RuntimeError("numeric_denial_cause_unconfirmed"),
+                      m.Stopped("SYNTHETIC_PRIVATE_ROUTE_CANARY"),
+                      m.Stopped("numeric_denial_cause_unconfirmed SYNTHETIC_PRIVATE_ROUTE_CANARY")]:
+            actual=m.failure_details(error)
+            self.assertEqual(actual["code"],"synthetic_native_unconfirmed")
+            self.assertNotIn("PRIVATE_ROUTE_CANARY",json.dumps(actual))
+
     def test_mount_policy_output_accepts_only_exact_typed_boolean_diagnostics(self):
         observed={"filesystemTmpfs":True,"sourceTmpfs":True,"filesystemRoot":True,"readWrite":True,
             "nosuid":True,"nodev":True,"noexec":True,"readOnlyAbsent":True,"noswap":False,
@@ -953,6 +966,35 @@ class SyntheticTests(unittest.TestCase):
                 if accept:self.assertEqual(p.timed_denial_command("a",tools,"network-control",expected),code)
                 else:
                     with self.assertRaises(m.Stopped):p.timed_denial_command("a",tools,"network-control",expected)
+
+    def test_operator_route_denials_use_actual_bash_wording_and_preserve_client_tools_and_udp_guard(self):
+        diagnostics=[b"/bin/bash: connect: Network unreachable\n/bin/bash: line 1: /dev/tcp/1.1.1.1/443: Network unreachable\n",
+                     b"/bin/bash: connect: Network is unreachable\n",b"/bin/bash: connect: No route to host\n",
+                     b"connection refused",b"permission denied",b"command not found",b"arbitrary failure",b""]
+        for diagnostic in diagnostics:
+            p=self.probe();p.native_tools={"timeout":"/server/timeout","sha256sum":"/server/sha"}
+            p.client_tools={"timeout":"/operator/timeout","sha256sum":"/operator/sha"}
+            p.bash_pins={"a":"a"*64,"b":"a"*64,"client":"b"*64};p.timeout_control=lambda key,tools:143
+            calls=[];clock={"value":0.0}
+            def docker(args,**kwargs):
+                calls.append(args);p.last_stderr=b""
+                key=next(key for key in ["a","b","client"] if p.names[key] in args)
+                if any(arg.endswith("/sha") for arg in args):return 0,(p.bash_pins[key]+"  /bin/bash\n").encode()
+                if not any(arg.endswith("/timeout") for arg in args):return 0,b""
+                self.assertTrue(kwargs.get("allow_failure"))
+                if "/dev/udp/" in args[-1]:clock["value"]+=3;return 143,b""
+                p.last_stderr=diagnostic;return 1,b""
+            p.docker=docker
+            with self.subTest(diagnostic=diagnostic),patch.object(m.base.time,"monotonic",side_effect=lambda:clock["value"]):
+                if b"unreachable" in diagnostic.lower() or b"no route to host" in diagnostic.lower():
+                    self.assertEqual(p.denial_probes([("public-https","1.1.1.1",443)]),18)
+                    self.assertEqual(len([r for r in p.network_evidence if r.get("connectDenied")]),15)
+                    self.assertTrue(any(p.names["client"] in args and "/operator/timeout" in args for args in calls))
+                    self.assertEqual(len([args for args in calls if "/dev/udp/" in args[-1]]),3)
+                else:
+                    with self.assertRaisesRegex(m.Stopped,"numeric_denial_cause_unconfirmed"):
+                        p.denial_probes([("public-https","1.1.1.1",443)])
+                    self.assertFalse(any(r.get("connectDenied") for r in p.network_evidence))
 
     def tls_fixture(self,*,mutation=None,bad_host=(1,b"server certificate does not match host"),
                     bad_ca=(1,b"certificate verify failed")):

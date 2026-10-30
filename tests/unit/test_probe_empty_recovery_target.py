@@ -502,6 +502,26 @@ class NativeProbeTests(unittest.TestCase):
                 p.denial_probes([("production-https","1.1.1.1",443)])
             self.assertFalse(any(r.get("connectDenied") for r in p.network_evidence))
 
+    def test_base_immediate_route_denials_accept_native_bash_wording_and_keep_udp_timeout_required(self):
+        diagnostics=[b"/bin/bash: connect: Network unreachable\n/bin/bash: line 1: /dev/tcp/1.1.1.1/443: Network unreachable\n",
+                     b"/bin/bash: connect: Network is unreachable\n",b"/bin/bash: connect: No route to host\n"]
+        for diagnostic in diagnostics:
+            p=self.probe();p.native_tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
+            p.timeout_control=lambda key,tools:143
+            calls=[];clock={"value":0.0}
+            def docker(args,**kwargs):
+                calls.append(args);p.last_stderr=b""
+                if "/native/sha" in args:return 0,b"a"*64+b"  /bin/bash\n"
+                if "/native/timeout" not in args:return 0,b""
+                self.assertTrue(kwargs.get("allow_failure"))
+                if "/dev/udp/" in args[-1]:clock["value"]+=3;return 143,b""
+                p.last_stderr=diagnostic;return 1,b""
+            p.docker=docker
+            with self.subTest(diagnostic=diagnostic),patch.object(m.time,"monotonic",side_effect=lambda:clock["value"]):
+                self.assertEqual(p.denial_probes([("public-https","1.1.1.1",443)]),18)
+            self.assertEqual(len([r for r in p.network_evidence if r.get("connectDenied")]),15)
+            self.assertEqual(len([args for args in calls if "/dev/udp/" in args[-1]]),3)
+
     def tls_fixture(self,*,mutation=None,bad_host=(1,b"server certificate does not match host"),
                     bad_ca=(1,b"certificate verify failed")):
         p=self.probe();p.native_tools={"timeout":"/native/timeout"};sql_calls=[];tcp_calls=[]

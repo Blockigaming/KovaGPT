@@ -447,6 +447,7 @@ while :; do sleep 1; done"""
                 code=self.timed_denial_command(key,tools,"exec 3<>/dev/tcp/"+ip+"/"+str(port),expired)
                 if code==1:
                     require(b"network is unreachable" in self.last_stderr.lower()
+                            or b"network unreachable" in self.last_stderr.lower()
                             or b"no route to host" in self.last_stderr.lower(),"numeric_denial_cause_unconfirmed")
                 self.network_evidence.append({"container":key,"kind":kind,"family":ipaddress.ip_address(ip).version,
                                               "port":port,"addressSha256":digest(ip.encode()),"connectDenied":True})
