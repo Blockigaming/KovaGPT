@@ -257,6 +257,26 @@ class CoordinatorTests(unittest.TestCase):
         self.assertEqual([c[0][:2] for c in calls], [["docker", "image"], ["skopeo", "copy"], ["docker", "image"]])
         self.assertEqual(calls[1][0][-1], "docker-daemon:synthetic-tag")
 
+    def test_hub_verifier_is_reviewed_host_code_outside_exact_client_source_allowlists(self):
+        expected = ["managed-auth-recovery.py", "managed-auth-recovery-target.mjs", "verify-isolated-restore-target.mjs",
+                    "empty-restore-target-catalog.sql", "recovery-operator-client-smoke.py", "run-isolated-recovery-client.py",
+                    "extension-semantic-capture.py", "extension-routine-type-payloads.py",
+                    "extension-routine-type-hash-query.py", "extension-relation-payloads.py",
+                    "extension-relation-query-hooks.py", "pg17-extension-relation-manifest.json",
+                    "canonicalize-pg17-extension-nodes.py", "pg17-extension-node-schema.json",
+                    "extension-regclass-datum-byteorder-audit.sql"]
+        client = m.module("reviewed_client_source_allowlist", "recovery-operator-client-smoke.py")
+        self.assertEqual(len(expected), 15)
+        self.assertEqual(m.builder.FILES, expected)
+        self.assertEqual(client.SOURCE_NAMES, expected)
+        self.assertIn("verified-server-image.py", m.review.RECIPE_FILES)
+        self.assertNotIn("verified-server-image.py", m.builder.FILES)
+        self.assertNotIn("verified-server-image.py", client.SOURCE_NAMES)
+        context = self.root / "generic-context"; context.mkdir()
+        source_hashes = m.builder.source_context(context)
+        self.assertEqual(set(source_hashes), set(expected) | {"recovery-operator-client.Dockerfile"})
+        self.assertEqual({path.name for path in (context / "source").iterdir()}, set(expected))
+
     def test_archive_inventory_source_closure_or_loaded_id_mismatch_never_qualifies(self):
         plan, paths, inventory, calls, run = self.operator_fixture()
         original = copy.deepcopy(plan)
@@ -383,20 +403,25 @@ class CoordinatorTests(unittest.TestCase):
         self.assertNotIn("KOVA_PRODUCTION_BACKUP_PASSPHRASE", bindings)
         self.assertEqual(bindings["PGPASSFILE"], "/run/client/pgpass")
 
-    def test_phrase_enters_only_stdin_not_docker_arguments_environment_or_host_files(self):
+    def qualified_import_fixture(self, name):
         p = self.bare_coordinator()
         phrase = "SYNTHETIC_PHRASE_CANARY_" * 3
         p.env["KOVA_PRODUCTION_BACKUP_PASSPHRASE"] = phrase
-        client = self.root / "client"; client.mkdir()
-        capture = self.root / "capture"; capture.mkdir()
+        directory = self.root / name; directory.mkdir()
+        client = directory / "client"; client.mkdir()
+        capture = directory / "capture"; capture.mkdir()
         ciphertext = private(capture / "managed-auth-backup.tar.gpg", b"synthetic encrypted fixture")
         plan = {"capture": {"ciphertextSha256": m.builder.file_sha(ciphertext), "ciphertextBytes": ciphertext.stat().st_size,
                             "sourceSha": SOURCE}, "sourceCanonicalSemanticsSha256": "e" * 64}
         attestation = {"host": "synthetic-recipient.internal", "serverIp": "172.30.240.2", "systemIdentifier": "12345",
-                       "observedAt": datetime.now(timezone.utc).isoformat()}
+                       "observedAt": datetime.now(timezone.utc).isoformat(),
+                       "actualImageRepoDigest": m.review.SERVER_IMAGE, "serverImageTransportSha256": "f" * 64}
         expected = {"operation": "managed-auth-isolated-restore", "restoredDatabaseStateVerified": True,
                     "tablesSequencesLargeObjectsVerified": True, "schemaOwnersPoliciesPrivilegesVerified": True,
-                    "extensionSemanticsVerified": True, "extensionSemanticCanonicalSha256": "e" * 64}
+                    "extensionSemanticsVerified": True, "extensionSemanticCanonicalSha256": "e" * 64,
+                    "actualImageRepoDigest": attestation["actualImageRepoDigest"],
+                    "originalApprovedImageRepoDigest": m.review.ORIGINAL_SERVER_IMAGE,
+                    "serverImageTransportSha256": attestation["serverImageTransportSha256"]}
         calls = []
         def docker(args, **kwargs):
             calls.append((args, kwargs))
@@ -405,9 +430,13 @@ class CoordinatorTests(unittest.TestCase):
             return 0, b""
         p.probe = SimpleNamespace(client_dir=client, uid=1234, gid=1234, names={"client": "synthetic-client"},
                                  client_tools={"python3": "/usr/bin/python3"}, docker=docker,
-                                 verify_effective_firewalls=lambda: None, inspect_and_recheck_runtime=lambda key: None,
-                                 consumer_proof=lambda key: None)
+                                 verify_effective_firewalls=unittest.mock.Mock(),
+                                 inspect_and_recheck_runtime=unittest.mock.Mock(), consumer_proof=unittest.mock.Mock())
         p.paths = {"capture": capture}
+        return p, plan, attestation, expected, calls, phrase, client
+
+    def test_phrase_enters_only_stdin_not_docker_arguments_environment_or_host_files(self):
+        p, plan, attestation, expected, calls, phrase, client = self.qualified_import_fixture("valid-import")
         with patch.object(p, "check_plan", return_value=object()):
             self.assertEqual(p.import_qualified(plan, attestation), expected)
         self.assertNotIn("KOVA_PRODUCTION_BACKUP_PASSPHRASE", p.env)
@@ -420,6 +449,36 @@ class CoordinatorTests(unittest.TestCase):
         bindings = m.strict_json((client / "bindings.json").read_bytes())
         self.assertNotIn("KOVA_PRODUCTION_DATABASE_URL", bindings)
         self.assertNotIn("KOVA_PRODUCTION_BACKUP_PASSPHRASE", bindings)
+
+    def test_restore_receipt_requires_exact_actual_origin_original_provenance_and_transport_hash(self):
+        mutations = [
+            ("actualImageRepoDigest", m.review.ORIGINAL_SERVER_IMAGE),
+            # Same content under a familiar Hub spelling is still not the
+            # exact observed spelling bound by this fixture's attestation.
+            ("actualImageRepoDigest", "supabase/postgres@" + m.review.CONTENT_DIGEST),
+            ("actualImageRepoDigest", m.review.SERVER_IMAGE.replace("supabase/postgres", "foreign/postgres")),
+            ("originalApprovedImageRepoDigest", m.review.SERVER_IMAGE),
+            ("originalApprovedImageRepoDigest", m.review.ORIGINAL_SERVER_IMAGE[:-1] + "0"),
+            ("serverImageTransportSha256", "0" * 64),
+            ("serverImageTransportSha256", "F" * 64),
+            *[(key, None) for key in ["actualImageRepoDigest", "originalApprovedImageRepoDigest",
+                                      "serverImageTransportSha256"]],
+        ]
+        for index, (key, value) in enumerate(mutations):
+            p, plan, attestation, returned, calls, _, _ = self.qualified_import_fixture("bad-import-" + str(index))
+            if value is None: returned.pop(key)
+            else: returned[key] = value
+            with self.subTest(key=key, value=value), patch.object(p, "check_plan", return_value=object()):
+                with self.assertRaisesRegex(m.Stopped, "actual_restore_receipt_unqualified"):
+                    p.import_qualified(plan, attestation)
+            self.assertTrue(any("--execute" in args for args, _ in calls))
+            # These are only pre-execution checks. An invalid returned receipt
+            # must not reach the final acceptance/requalification pass.
+            p.probe.verify_effective_firewalls.assert_called_once_with()
+            self.assertEqual(p.probe.inspect_and_recheck_runtime.call_args_list,
+                             [unittest.mock.call("client"), unittest.mock.call("a"), unittest.mock.call("b")])
+            self.assertEqual(p.probe.consumer_proof.call_args_list,
+                             [unittest.mock.call("a"), unittest.mock.call("b")])
 
     def test_stale_qualification_does_not_release_phrase(self):
         p = self.bare_coordinator(); phrase = "SYNTHETIC_PHRASE_CANARY_" * 3

@@ -54,7 +54,8 @@ SAFE_FAILURE_CODES=frozenset({"reviewed_private_recovery_unqualified","artifact_
     "operator_inventory_hash_mismatch","loaded_operator_id_mismatch","native_target_contains_seed_data",
     "native_blank_census_unqualified","runtime_log_swap_or_cgroup_policy_changed","runtime_logging_policy_changed",
     "outbound_connection_not_denied","numeric_denial_cause_unconfirmed","embedded_dns_udp_denial_unconfirmed",
-    "fresh_native_evidence_stale","actual_restore_receipt_unqualified","private_client_restore_failed"})
+    "fresh_native_evidence_stale","actual_restore_receipt_unqualified","private_client_restore_failed",
+    "server_transport_proof_unqualified","reviewed_server_transport_pin_mismatch","fresh_server_transport_mismatch"})
 SAFE_NATIVE_STAGES=frozenset({"initial","native_tools","network_create","native_metadata_prepare",
     "native_tls_controls","native_catalog_proof","native_extension_coverage","original_destination_guard",
     "actual_egress_denial","native_proof_complete"})
@@ -328,7 +329,9 @@ class Coordinator:
         p.inspect_and_recheck_runtime("client")
         actual={"observedAt":datetime.now(timezone.utc).isoformat(),
             "baselineFingerprints":snapshots[0]["fingerprints"],"clientImageId":p.operator_image_id,
-            "clientInventorySha256":plan["operatorClient"]["inventorySha256"],"serverImageRepoDigest":base.IMAGE,
+            "clientInventorySha256":plan["operatorClient"]["inventorySha256"],
+            "serverImageRepoDigest":p.server_image_qualification["actualRepoDigest"],
+            "serverImageTransport":p.server_image_qualification,
             "networkEvidenceSha256":base.digest(base.encoded(p.network_evidence+p.neighbors)),
             "freshDistinctIdsCreated":True,"originalDestinationGuardPassed":True,"privateTlsIpv4Passed":True,
             "privateTlsIpv6Passed":True,"wrongCaRejected":True,"wrongHostnameRejected":True,
@@ -377,7 +380,10 @@ class Coordinator:
         require(result.get("operation")=="managed-auth-isolated-restore" and result.get("restoredDatabaseStateVerified") is True
                 and result.get("tablesSequencesLargeObjectsVerified") is True
                 and result.get("schemaOwnersPoliciesPrivilegesVerified") is True and result.get("extensionSemanticsVerified") is True
-                and result.get("extensionSemanticCanonicalSha256")==plan["sourceCanonicalSemanticsSha256"],
+                and result.get("extensionSemanticCanonicalSha256")==plan["sourceCanonicalSemanticsSha256"]
+                and result.get("actualImageRepoDigest")==attestation["actualImageRepoDigest"]
+                and result.get("originalApprovedImageRepoDigest")==review.ORIGINAL_SERVER_IMAGE
+                and result.get("serverImageTransportSha256")==attestation["serverImageTransportSha256"],
                 "actual_restore_receipt_unqualified")
         p.verify_effective_firewalls()
         for key in ["client","a","b"]:p.inspect_and_recheck_runtime(key)
@@ -398,7 +404,10 @@ class Coordinator:
             self.stage="qualified-private-restore";restored=self.import_qualified(plan,attestation)
             result.update(restoreVerified=True,sourceCanonicalSemanticsSha256=plan["sourceCanonicalSemanticsSha256"],
                 targetIdentitySha256=sha(canonical({k:attestation[k] for k in ["host","database","port","serverIp","systemIdentifier"]})),
-                clientImageId=plan["operatorClient"]["imageId"],serverImageRepoDigest=base.IMAGE,
+                clientImageId=plan["operatorClient"]["imageId"],serverImageRepoDigest=attestation["actualImageRepoDigest"],
+                originalApprovedServerImageRepoDigest=review.ORIGINAL_SERVER_IMAGE,
+                serverImageTransport=attestation["serverImageTransport"],
+                serverImageTransportSha256=attestation["serverImageTransportSha256"],
                 restoredFingerprintSha256=sha(canonical(restored)),networkEvidenceSha256=attestation["networkEvidenceSha256"])
         except Exception as error:
             # Only explicit fixed enums leave the private process.

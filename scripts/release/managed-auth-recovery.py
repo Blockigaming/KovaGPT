@@ -27,6 +27,10 @@ from urllib.parse import parse_qs, unquote, urlparse
 PROJECT = "mfbycmbjygcfkrsuepxf"
 BUILD = "17.6.1.155"
 IMAGE_TAG = "public.ecr.aws/supabase/postgres:17.6.1.155"
+SERVER_CONTENT_DIGEST = "sha256:3e2a7ab48783077d0122dc72ed5174afb543110c38266c845716c51d130658e4"
+ORIGINAL_SERVER_IMAGE = "public.ecr.aws/supabase/postgres@" + SERVER_CONTENT_DIGEST
+SERVER_TRANSPORT_IMAGE = "docker.io/supabase/postgres@" + SERVER_CONTENT_DIGEST
+OBSERVED_SERVER_IMAGES = frozenset({SERVER_TRANSPORT_IMAGE, "supabase/postgres@" + SERVER_CONTENT_DIGEST})
 SHA = re.compile(r"[a-f0-9]{64}\Z")
 IDENT = re.compile(r"[a-z_][a-z0-9_]*\Z")
 MANAGED_SCHEMAS = {"auth", "storage", "realtime"}
@@ -57,7 +61,8 @@ PUBLIC_FAILURE_CODES = frozenset({"explicit_execution_required", "capture_not_en
     "extension_data_bound_exceeded", "extension_data_payload_rejected",
     "extension_data_coverage_missing", "extension_target_definition_mismatch",
     "source_snapshot_encoding_unqualified", "extension_semantic_capture_unqualified",
-    "extension_semantic_source_unqualified", "extension_semantic_target_mismatch"})
+    "extension_semantic_source_unqualified", "extension_semantic_target_mismatch",
+    "isolation_server_transport_unqualified"})
 STDOUT_BYTES = 128 * 1024**2
 MAX_BYTES = 4 * 1024**3
 CANONICAL_PG = "-c TimeZone=UTC -c DateStyle=ISO,YMD -c bytea_output=hex -c extra_float_digits=3 -c search_path=pg_catalog"
@@ -791,8 +796,36 @@ def attest(env):
     require(SHA.fullmatch(env.get("KOVA_AUTH_RESTORE_ATTESTATION_SHA256", ""))
             and digest(raw) == env["KOVA_AUTH_RESTORE_ATTESTATION_SHA256"], "isolation_attestation_unbound")
     a = json.loads(raw)
+    transport = a.get("serverImageTransport")
+    # The host qualifier uses the standard Engine digest validation contract.
+    # Its receipt is bound to the reviewed fresh-target attestation; runtime
+    # never downloads an image or substitutes ECR provenance for the Hub origin.
+    require(type(transport) is dict and set(transport)=={
+                "operation","originalEcrReference","transportReference","contentDigest","manifestSha256",
+                "manifestDescriptorCount","compressedLayerCount","imageId","actualRepoDigest","buildxVersion",
+                "semanticConfigSha256","engineVerificationContract","manualLayerHashingPerformed"}
+            and transport.get("operation") == "verified-official-server-image-transport"
+            and transport.get("originalEcrReference") == ORIGINAL_SERVER_IMAGE
+            and transport.get("transportReference") == SERVER_TRANSPORT_IMAGE
+            and transport.get("contentDigest") == SERVER_CONTENT_DIGEST
+            and transport.get("manifestSha256") == SERVER_CONTENT_DIGEST.removeprefix("sha256:")
+            and type(transport.get("actualRepoDigest")) is str and transport["actualRepoDigest"] in OBSERVED_SERVER_IMAGES
+            and type(transport.get("imageId")) is str and re.fullmatch(r"sha256:[a-f0-9]{64}",transport["imageId"])
+            and type(transport.get("semanticConfigSha256")) is str and SHA.fullmatch(transport["semanticConfigSha256"])
+            and type(transport.get("compressedLayerCount")) is int and 0<transport["compressedLayerCount"]<=256
+            and type(transport.get("manifestDescriptorCount")) is int
+            and transport["manifestDescriptorCount"]==transport["compressedLayerCount"]+1
+            and type(transport.get("buildxVersion")) is str and 0<len(transport["buildxVersion"])<=512
+            and all(32<=ord(c)<=126 for c in transport["buildxVersion"])
+            and transport.get("imageId") == a.get("serverImageId")
+            and transport.get("semanticConfigSha256") == a.get("serverImageSemanticConfigSha256")
+            and transport.get("engineVerificationContract") == "docker-engine-digest-pinned-pull"
+            and transport.get("manualLayerHashingPerformed") is False
+            and a.get("serverImageTransportSha256") == digest(encoded(transport))
+            and a.get("originalApprovedImageRepoDigest") == ORIGINAL_SERVER_IMAGE,
+            "isolation_server_transport_unqualified")
     require(a.get("format") == 1 and a.get("sourceProject") == PROJECT and a.get("imageTag") == IMAGE_TAG
-            and re.fullmatch(r"public\.ecr\.aws/supabase/postgres@sha256:[a-f0-9]{64}", a.get("actualImageRepoDigest", ""))
+            and a.get("actualImageRepoDigest") == transport["actualRepoDigest"]
             and a.get("postgresBuild") == BUILD and SHA.fullmatch(a.get("networkEvidenceSha256", ""))
             and a.get("productionRoutesDenied") is True and a.get("internetEgressDenied") is True
             and a.get("consumersStopped") is True and a.get("cronLaunchActiveJobs") is False
@@ -1266,6 +1299,8 @@ def restore(env, archive, output):
                    "baselineMode":baseline_mode,
                    "encryptedBackupSha256":expected,"isolationAttestationSha256":env["KOVA_AUTH_RESTORE_ATTESTATION_SHA256"],
                    "actualImageRepoDigest":a["actualImageRepoDigest"],"postgresBuild":BUILD,
+                   "originalApprovedImageRepoDigest":a.get("originalApprovedImageRepoDigest"),
+                   "serverImageTransportSha256":a.get("serverImageTransportSha256"),
                    "restoredDatabaseStateVerified":True,"tablesSequencesLargeObjectsVerified":True,
                    "schemaOwnersPoliciesPrivilegesVerified":True,"productionMutated":False,
                    "extensionSemanticsVerified":source_semantics is not None,

@@ -164,7 +164,8 @@ exec "$@"
         _,raw=self.docker(["image","inspect",IMAGE])
         server=json.loads(raw)[0]
         self.server_image_id=server.get("Id")
-        require(re.fullmatch(r"sha256:[a-f0-9]{64}",self.server_image_id or ""),"server_image_id_unqualified")
+        require(re.fullmatch(r"sha256:[a-f0-9]{64}",self.server_image_id or "")
+                and self.server_image_id==self.server_image_qualification["imageId"],"server_image_id_unqualified")
         self.image_env=environment(server.get("Config",{}).get("Env",[]))
         _,raw=self.docker(["run","--rm","--no-healthcheck","--network","none","--cap-drop","ALL",
             "--security-opt","no-new-privileges:true","--user",str(self.uid)+":"+str(self.gid),

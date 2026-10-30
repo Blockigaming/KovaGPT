@@ -14,16 +14,31 @@ NOW=1800000000
 def stamp(seconds):return datetime.fromtimestamp(seconds,timezone.utc).isoformat()
 
 
+def synthetic_transport():
+    """Completed-qualifier boundary fixture only; no registry/image was read."""
+    return {"operation":"verified-official-server-image-transport",
+        "originalEcrReference":m.ORIGINAL_SERVER_IMAGE,"transportReference":m.SERVER_IMAGE,
+        "contentDigest":m.CONTENT_DIGEST,"manifestSha256":m.CONTENT_DIGEST.removeprefix("sha256:"),
+        "manifestDescriptorCount":4,"compressedLayerCount":3,"imageId":"sha256:"+"4"*64,
+        "actualRepoDigest":m.SERVER_IMAGE,"buildxVersion":"github.com/docker/buildx v0.24.0 synthetic",
+        "semanticConfigSha256":"5"*64,"engineVerificationContract":"docker-engine-digest-pinned-pull",
+        "manualLayerHashingPerformed":False}
+
+
 def fixture():
     recipes={name:"a"*64 for name in m.RECIPE_FILES}
     pin={"runId":12,"artifactId":34,"sourceSha":"b"*40,"receiptSha256":"c"*64}
     operator={**pin,"imageId":"sha256:"+"d"*64,"inventorySha256":"e"*64,"archiveSha256":"f"*64,"archiveBytes":1234}
     capture={**pin,"ciphertextSha256":"f"*64,"ciphertextBytes":456}
     baseline={name:"1"*64 for name in m.PIN_KEYS}
+    transport=synthetic_transport()
     plan={"format":1,"ownerReviewed":True,"reviewScope":m.SCOPE,"freshDistinctTargetIdsAllowed":True,
           "priorTargetsReused":False,"reviewedBy":"Blockigaming","reviewedAt":stamp(NOW-5),"expiresAt":stamp(NOW+600),
           "sourceProject":m.PROJECT,"destinationKind":"fresh-private-template0-docker-tmpfs","sourceSha":"b"*40,
           "postgresBuild":m.BUILD,"serverImageRepoDigest":m.SERVER_IMAGE,"approvedTargetOnlyRoles":["kova_probe_operator"],
+          "originalApprovedServerImageRepoDigest":m.ORIGINAL_SERVER_IMAGE,
+          "serverImageId":transport["imageId"],"serverImageSemanticConfigSha256":transport["semanticConfigSha256"],
+          "reviewedServerImageTransportSha256":m.sha(m.canonical(transport)),
           "recipeFileSha256":recipes,"reviewedBaselineFingerprints":baseline,"nativeProbe":pin,"operatorClient":operator,
           "capture":capture,"sourceCanonicalSemanticsSha256":"2"*64,
           "allowDecryptionForSemanticComparison":True,"customerImportRequiresSemanticEquality":True,
@@ -39,7 +54,8 @@ def fixture():
     receipts={"nativeProbe":{**envelope,"receipt":{"operation":"data-free-native-empty-target-probe",
       "dataFreeSafetyProofComplete":True,"sourceMetadataCompatible":True,"cleanupConfirmed":True,
       "observedBaselineFingerprints":baseline,"imageRepoDigest":m.SERVER_IMAGE,"nativeServerVersionNum":170006,
-      "customerRowsUsed":False,"customerRestorePerformed":False,"targetsRetained":False}},
+      "customerRowsUsed":False,"customerRestorePerformed":False,"targetsRetained":False,
+      "serverImageTransport":copy.deepcopy(transport)}},
       "operatorClient":{**envelope,"receipt":{"operation":"data-free-recovery-operator-image-preparation",
        "clientImageId":operator["imageId"],"inventorySha256":operator["inventorySha256"],
        "ociArchiveSha256":operator["archiveSha256"],"ociArchiveBytes":operator["archiveBytes"],
@@ -54,6 +70,7 @@ def fixture():
        "allCatalogFieldsCovered":True,"semanticEqualityProven":True,"unsupportedPayloadCount":0}}
     actual={"observedAt":stamp(NOW-2),"baselineFingerprints":baseline,"clientImageId":operator["imageId"],
        "clientInventorySha256":operator["inventorySha256"],"serverImageRepoDigest":m.SERVER_IMAGE,
+       "serverImageTransport":copy.deepcopy(transport),
        "networkEvidenceSha256":"3"*64,"cronLaunchActiveJobs":False,
        **{k:True for k in ["freshDistinctIdsCreated","originalDestinationGuardPassed","privateTlsIpv4Passed",
          "privateTlsIpv6Passed","wrongCaRejected","wrongHostnameRejected","productionRoutesDenied",
@@ -79,6 +96,86 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(proof["emptyBaselineSource"],"pinned-image-template0-plus-extensions")
         self.assertTrue(proof["customerImportRequiresSemanticEquality"])
         self.assertEqual(proof["sourceCanonicalSemanticsSha256"],"2"*64)
+        self.assertEqual(proof["actualImageRepoDigest"],m.SERVER_IMAGE)
+        self.assertEqual(proof["originalApprovedImageRepoDigest"],m.ORIGINAL_SERVER_IMAGE)
+        self.assertEqual(proof["serverImageTransport"],f[4]["serverImageTransport"])
+        self.assertEqual(proof["serverImageTransportSha256"],m.sha(m.canonical(f[4]["serverImageTransport"])))
+        self.assertEqual(proof["serverImageId"],f[0]["serverImageId"])
+        self.assertEqual(proof["serverImageSemanticConfigSha256"],f[0]["serverImageSemanticConfigSha256"])
+        self.assertEqual(proof["imageTag"],"public.ecr.aws/supabase/postgres:"+m.BUILD)
+
+    def test_only_existing_exact_content_pin_has_official_hub_transport(self):
+        digest="sha256:3e2a7ab48783077d0122dc72ed5174afb543110c38266c845716c51d130658e4"
+        self.assertEqual(m.CONTENT_DIGEST,digest)
+        self.assertEqual(m.ORIGINAL_SERVER_IMAGE,"public.ecr.aws/supabase/postgres@"+digest)
+        self.assertEqual(m.SERVER_IMAGE,"docker.io/supabase/postgres@"+digest)
+        for key,value in [("originalApprovedServerImageRepoDigest",m.SERVER_IMAGE),
+                ("originalApprovedServerImageRepoDigest","public.ecr.aws/supabase/postgres@sha256:"+"0"*64),
+                ("serverImageRepoDigest",m.ORIGINAL_SERVER_IMAGE),
+                ("serverImageRepoDigest","supabase/postgres@"+digest),
+                ("serverImageRepoDigest","docker.io/supabase/postgres@sha256:"+"0"*64)]:
+            f=fixture();f[0][key]=value
+            with self.subTest(key=key,value=value),self.assertRaises(m.Stopped):self.validate(f)
+
+    def test_review_pins_prior_receipt_bytes_and_both_image_config_identities(self):
+        for key in ["originalApprovedServerImageRepoDigest","reviewedServerImageTransportSha256",
+                    "serverImageId","serverImageSemanticConfigSha256"]:
+            f=fixture();f[0].pop(key)
+            with self.subTest(missing=key),self.assertRaises(m.Stopped):self.validate(f)
+        for key,value in [("reviewedServerImageTransportSha256","0"*64),
+                          ("serverImageId","sha256:"+"0"*64),
+                          ("serverImageSemanticConfigSha256","0"*64)]:
+            f=fixture();f[0][key]=value
+            with self.subTest(key=key),self.assertRaises(m.Stopped):self.validate(f)
+        f=fixture();f[2]["nativeProbe"]["receipt"]["serverImageTransport"]["buildxVersion"]+=" changed"
+        with self.assertRaisesRegex(m.Stopped,"reviewed_server_transport_pin_mismatch"):self.validate(f)
+
+    def test_prior_receipt_cannot_forge_origin_or_claim_unperformed_manual_hashing(self):
+        invalid=[("operation","some-other-qualifier"),("originalEcrReference",m.SERVER_IMAGE),
+            ("transportReference",m.ORIGINAL_SERVER_IMAGE),("contentDigest","sha256:"+"0"*64),
+            ("manifestSha256","0"*64),("actualRepoDigest",m.ORIGINAL_SERVER_IMAGE),
+            ("actualRepoDigest","docker.io/supabase/postgres@sha256:"+"0"*64),
+            ("imageId","4"*64),("imageId",[]),("actualRepoDigest",[]),
+            ("semanticConfigSha256","x"*64),("semanticConfigSha256",{}),
+            ("manifestDescriptorCount",5),("manifestDescriptorCount",True),
+            ("compressedLayerCount",False),("compressedLayerCount",0),("compressedLayerCount",257),
+            ("buildxVersion",""),("buildxVersion","unsafe\nversion"),("buildxVersion","v"*513),
+            ("engineVerificationContract","manual-client-download"),("manualLayerHashingPerformed",True)]
+        for key,value in invalid:
+            f=fixture();receipt=f[2]["nativeProbe"]["receipt"]["serverImageTransport"];receipt[key]=value
+            f[0]["reviewedServerImageTransportSha256"]=m.sha(m.canonical(receipt))
+            with self.subTest(key=key,value=value),self.assertRaisesRegex(m.Stopped,"server_transport_proof_unqualified"):
+                self.validate(f)
+        for change in [lambda r:r.pop("manifestDescriptorCount"),lambda r:r.update(unreviewedField=True)]:
+            f=fixture();receipt=f[2]["nativeProbe"]["receipt"]["serverImageTransport"];change(receipt)
+            f[0]["reviewedServerImageTransportSha256"]=m.sha(m.canonical(receipt))
+            with self.assertRaisesRegex(m.Stopped,"server_transport_proof_unqualified"):self.validate(f)
+
+    def test_fresh_honest_alias_and_buildx_version_change_bind_the_fresh_receipt(self):
+        f=fixture();reviewed=self.validate(f)
+        fresh=f[4]["serverImageTransport"]
+        fresh["actualRepoDigest"]="supabase/postgres@"+m.CONTENT_DIGEST
+        fresh["buildxVersion"]="github.com/docker/buildx v0.25.0 synthetic"
+        f[4]["serverImageRepoDigest"]=fresh["actualRepoDigest"]
+        proof=m.bound_fresh_attestation(reviewed,f[4],now=NOW)
+        self.assertNotEqual(proof["serverImageTransportSha256"],f[0]["reviewedServerImageTransportSha256"])
+        self.assertEqual(proof["serverImageTransportSha256"],m.sha(m.canonical(fresh)))
+        self.assertEqual(proof["serverImageTransport"],fresh)
+        self.assertEqual(proof["actualImageRepoDigest"],fresh["actualRepoDigest"])
+        self.assertEqual(proof["originalApprovedImageRepoDigest"],m.ORIGINAL_SERVER_IMAGE)
+        self.assertEqual(proof["serverImageId"],f[0]["serverImageId"])
+        self.assertEqual(proof["serverImageSemanticConfigSha256"],f[0]["serverImageSemanticConfigSha256"])
+
+    def test_fresh_receipt_requires_prior_content_identity_and_observed_origin_consistency(self):
+        for key,value in [("imageId","sha256:"+"0"*64),("semanticConfigSha256","0"*64),
+              ("originalEcrReference",m.SERVER_IMAGE),("actualRepoDigest",m.ORIGINAL_SERVER_IMAGE),
+              ("actualRepoDigest","docker.io/supabase/postgres@sha256:"+"0"*64),
+              ("actualRepoDigest","supabase/postgres@"+m.CONTENT_DIGEST)]:
+            f=fixture();reviewed=self.validate(f);f[4]["serverImageTransport"][key]=value
+            with self.subTest(key=key,value=value),self.assertRaises(m.Stopped):
+                m.bound_fresh_attestation(reviewed,f[4],now=NOW)
+        f=fixture();reviewed=self.validate(f);f[4].pop("serverImageTransport")
+        with self.assertRaises(m.Stopped):m.bound_fresh_attestation(reviewed,f[4],now=NOW)
 
     def test_missing_or_unreviewed_or_wrong_scope_never_grants_review(self):
         for key,value in [("ownerReviewed",False),("reviewScope","auto-observed"),

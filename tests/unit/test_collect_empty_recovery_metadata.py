@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -16,6 +17,15 @@ def metadata():
     return {"format":1,"project":m.PROJECT,"postgresBuild":m.BUILD,"serverVersionNum":170006,
             "database":"postgres","readOnly":True,"extensions":[],"schemas":[],"roles":[],
             "memberships":[],"roleSettings":[]}
+
+
+def synthetic_qualification():
+    """Caller-boundary fixture, never a real registry/digest qualification."""
+    return {"imageInfo":{"Id":"sha256:"+"2"*64,"Architecture":"amd64","Os":"linux"},
+            "receipt":{"operation":"verified-official-server-image-transport","syntheticFixture":True,
+                "imageId":"sha256:"+"2"*64,"actualRepoDigest":m.server_image.TRANSPORT_REF,
+                "transportReference":m.server_image.TRANSPORT_REF,
+                "originalEcrReference":m.server_image.ORIGINAL_ECR_REF}}
 
 
 class MetadataTests(unittest.TestCase):
@@ -110,8 +120,10 @@ class MetadataTests(unittest.TestCase):
                           ("GITHUB_SHA","b"*40),("KOVA_APPROVED_SOURCE_SHA","c"*40)]:
             calls=[]
             def command(args,**_):calls.append(args);return ("a"*40+"\n").encode()
-            with self.subTest(key=key),patch.object(m,"command",side_effect=command),self.assertRaises(m.Stopped):
+            with self.subTest(key=key),patch.object(m,"command",side_effect=command),\
+                 patch.object(m.server_image,"qualify") as qualification,self.assertRaises(m.Stopped):
                 m.collect({**self.env,key:value},self.root/"private"/"metadata.json")
+            qualification.assert_not_called()
             self.assertFalse(any(c[0]=="docker" for c in calls))
 
     def test_collector_credentials_are_in_private_reader_envfile_not_args_or_restore_output(self):
@@ -119,8 +131,6 @@ class MetadataTests(unittest.TestCase):
         def command(args,**kwargs):
             calls.append(args)
             if args[0]=="git":return ("a"*40+"\n").encode()
-            if args[:3]==["docker","image","inspect"]:
-                return json.dumps([{"Architecture":"amd64","Os":"linux","RepoDigests":[m.IMAGE]}]).encode()
             if args[:2]==["docker","run"]:
                 file=Path(args[args.index("--env-file")+1]);reader_files.append(file)
                 self.assertEqual(file.stat().st_mode & 0o777,0o600)
@@ -133,7 +143,14 @@ class MetadataTests(unittest.TestCase):
                 self.assertIn(f"{os.getuid()}:{os.getgid()}",args)
                 return json.dumps(metadata()).encode()
             return b""
-        with patch.object(m,"command",side_effect=command):receipt=m.collect(self.env,output)
+        def qualified(callback):
+            self.assertIs(callback,m.command)
+            callback(["docker","buildx","version"],timeout=30)
+            return synthetic_qualification()
+        with patch.object(m,"command",side_effect=command),\
+             patch.object(m.server_image,"qualify",side_effect=qualified) as qualification:
+            receipt=m.collect(self.env,output)
+        qualification.assert_called_once()
         self.assertEqual(output.stat().st_mode & 0o777,0o600)
         self.assertEqual(output.parent.stat().st_mode & 0o777,0o700)
         self.assertTrue(all(not p.exists() for p in reader_files))
@@ -142,20 +159,50 @@ class MetadataTests(unittest.TestCase):
         self.assertNotIn("synthetic-password",json.dumps(calls))
         self.assertFalse(receipt["productionMutated"])
         self.assertFalse(receipt["customerRowsRead"])
+        saved=json.loads(output.read_bytes())
+        self.assertEqual(saved["metadataActualRepoDigest"],m.server_image.TRANSPORT_REF)
+        self.assertEqual(saved["metadataImageQualification"],synthetic_qualification()["receipt"])
+        self.assertNotEqual(saved["metadataActualRepoDigest"],m.server_image.ORIGINAL_ECR_REF)
+        self.assertFalse(any(c[:3]==["docker","image","tag"] or c[:2]==["docker","tag"] for c in calls))
 
     def test_bad_image_or_reader_failure_writes_no_metadata(self):
         for stage in ["image","reader"]:
             output=self.root/stage/"metadata.json"
             def command(args,**_):
                 if args[0]=="git":return ("a"*40+"\n").encode()
-                if args[:3]==["docker","image","inspect"]:
-                    return json.dumps([{"Architecture":"arm64" if stage=="image" else "amd64", "Os":"linux",
-                                        "RepoDigests":[m.IMAGE]}]).encode()
                 if args[:2]==["docker","run"]:raise m.Stopped("metadata_command_unconfirmed")
                 return b""
-            with self.subTest(stage=stage),patch.object(m,"command",side_effect=command),self.assertRaises(m.Stopped):
+            fixture=synthetic_qualification()
+            if stage=="image":fixture["imageInfo"]["Architecture"]="arm64"
+            with self.subTest(stage=stage),patch.object(m,"command",side_effect=command),\
+                 patch.object(m.server_image,"qualify",return_value=fixture),self.assertRaises(m.Stopped):
                 m.collect(self.env,output)
             self.assertFalse(output.exists());self.assertFalse(output.parent.exists())
+
+    def test_image_qualification_uses_actual_sanitized_callback_before_private_reader_exists(self):
+        calls=[]
+        def command(args,**kwargs):
+            calls.append((args,kwargs["env"]))
+            self.assertIsNone(kwargs["input"])
+            for key in ["KOVA_PRODUCTION_DATABASE_URL","KOVA_PRODUCTION_BACKUP_PASSPHRASE", "PGPASSWORD",
+                        "OPENAI_API_KEY","GITHUB_TOKEN"]:
+                self.assertNotIn(key,kwargs["env"])
+            kwargs["stdout"].write(("a"*40+"\n").encode() if args[0]=="git" else b"synthetic-buildx-version\n")
+            return subprocess.CompletedProcess(args,0)
+        def qualified(callback):
+            self.assertIs(callback,m.command)
+            self.assertEqual(callback(["docker","buildx","version"],timeout=30),b"synthetic-buildx-version\n")
+            raise m.server_image.Stopped("server_image_manifest_digest_mismatch")
+        output=self.root/"unqualified"/"metadata.json"
+        with patch.dict(os.environ,{"KOVA_PRODUCTION_DATABASE_URL":"SYNTHETIC_SOURCE_CANARY", "PGPASSWORD":"CANARY",
+                                    "OPENAI_API_KEY":"CANARY","GITHUB_TOKEN":"CANARY"}),\
+             patch.object(m.subprocess,"run",side_effect=command),\
+             patch.object(m.server_image,"qualify",side_effect=qualified) as qualification,\
+             self.assertRaisesRegex(m.server_image.Stopped,"server_image_manifest_digest_mismatch"):
+            m.collect(self.env,output)
+        qualification.assert_called_once()
+        self.assertEqual([c[0] for c in calls],[["git","rev-parse","HEAD"],["docker","buildx","version"]])
+        self.assertFalse(output.exists());self.assertFalse(output.parent.exists())
 
     def test_host_command_environment_drops_all_production_and_provider_variables(self):
         with patch.dict(os.environ,{"KOVA_PRODUCTION_DATABASE_URL":"synthetic","OPENAI_API_KEY":"synthetic",

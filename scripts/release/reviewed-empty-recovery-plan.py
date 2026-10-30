@@ -11,7 +11,10 @@ import json
 import re
 
 PROJECT = "mfbycmbjygcfkrsuepxf"
-SERVER_IMAGE = "public.ecr.aws/supabase/postgres@sha256:3e2a7ab48783077d0122dc72ed5174afb543110c38266c845716c51d130658e4"
+CONTENT_DIGEST = "sha256:3e2a7ab48783077d0122dc72ed5174afb543110c38266c845716c51d130658e4"
+ORIGINAL_SERVER_IMAGE = "public.ecr.aws/supabase/postgres@" + CONTENT_DIGEST
+SERVER_IMAGE = "docker.io/supabase/postgres@" + CONTENT_DIGEST
+OBSERVED_SERVER_IMAGES = frozenset({SERVER_IMAGE, "supabase/postgres@" + CONTENT_DIGEST})
 BUILD = "17.6.1.155"
 SCOPE = "FRESH_DISTINCT_TARGET_IDS_FROM_REVIEWED_RECIPE"
 SHA = re.compile(r"[a-f0-9]{64}\Z")
@@ -24,7 +27,7 @@ RECIPE_FILES = frozenset({
     "run-reviewed-empty-recovery.py", "reviewed-empty-recovery-plan.py", "operator-recovery-probe.py",
     "prepare-recovery-operator-image.py", "recovery-operator-client-smoke.py", "recovery-operator-client.Dockerfile",
     "collect-empty-recovery-metadata.py", "extension-member-semantics-preflight.sql",
-    "owned-noswap-volumes.py", "noswap-volume-proof.py",
+    "owned-noswap-volumes.py", "noswap-volume-proof.py", "verified-server-image.py",
     "extension-semantic-capture.py", "extension-routine-type-payloads.py", "extension-routine-type-hash-query.py",
     "extension-relation-payloads.py", "extension-relation-query-hooks.py", "pg17-extension-relation-manifest.json",
     "canonicalize-pg17-extension-nodes.py", "pg17-extension-node-schema.json",
@@ -53,6 +56,29 @@ def timestamp(value):
 
 def exact_hash(value):
     return isinstance(value,str) and SHA.fullmatch(value) is not None
+
+
+def server_transport(value):
+    """Require the narrow completed host qualifier, never forge registry origin."""
+    require(type(value) is dict and set(value)=={
+        "operation","originalEcrReference","transportReference","contentDigest","manifestSha256",
+        "manifestDescriptorCount","compressedLayerCount","imageId","actualRepoDigest","buildxVersion",
+        "semanticConfigSha256","engineVerificationContract","manualLayerHashingPerformed"}
+        and value.get("operation")=="verified-official-server-image-transport"
+        and value.get("originalEcrReference")==ORIGINAL_SERVER_IMAGE
+        and value.get("transportReference")==SERVER_IMAGE and value.get("contentDigest")==CONTENT_DIGEST
+        and value.get("manifestSha256")==CONTENT_DIGEST.removeprefix("sha256:")
+        and type(value.get("actualRepoDigest")) is str and value["actualRepoDigest"] in OBSERVED_SERVER_IMAGES
+        and type(value.get("imageId")) is str and re.fullmatch(r"sha256:[a-f0-9]{64}",value["imageId"])
+        and exact_hash(value.get("semanticConfigSha256"))
+        and type(value.get("compressedLayerCount")) is int and 0<value["compressedLayerCount"]<=256
+        and type(value.get("manifestDescriptorCount")) is int
+        and value["manifestDescriptorCount"]==value["compressedLayerCount"]+1
+        and type(value.get("buildxVersion")) is str and 0<len(value["buildxVersion"])<=512
+        and all(32<=ord(c)<=126 for c in value["buildxVersion"])
+        and value.get("engineVerificationContract")=="docker-engine-digest-pinned-pull"
+        and value.get("manualLayerHashingPerformed") is False,"server_transport_proof_unqualified")
+    return value
 
 
 def artifact_pin(value, *, oci=False):
@@ -106,6 +132,7 @@ def validated_plan(raw, expected_sha256, context, receipts, recipe_hashes, *, no
             and p.get("sourceSha")==context.get("GITHUB_SHA")==context.get("KOVA_APPROVED_SOURCE_SHA")
             and SOURCE.fullmatch(p.get("sourceSha","")) and p.get("postgresBuild")==BUILD
             and p.get("serverImageRepoDigest")==SERVER_IMAGE
+            and p.get("originalApprovedServerImageRepoDigest")==ORIGINAL_SERVER_IMAGE
             and p.get("approvedTargetOnlyRoles")==["kova_probe_operator"],"reviewed_source_or_target_recipe_mismatch")
     require(set(recipe_hashes)==RECIPE_FILES and p.get("recipeFileSha256")==recipe_hashes
             and all(exact_hash(v) for v in recipe_hashes.values()),"reviewed_recipe_hash_mismatch")
@@ -128,6 +155,11 @@ def validated_plan(raw, expected_sha256, context, receipts, recipe_hashes, *, no
             and proof.get("imageRepoDigest")==SERVER_IMAGE and proof.get("nativeServerVersionNum")==170006
             and proof.get("customerRowsUsed") is False and proof.get("customerRestorePerformed") is False
             and proof.get("targetsRetained") is False,"prior_actual_native_proof_unqualified")
+    transport=server_transport(proof.get("serverImageTransport"))
+    require(p.get("reviewedServerImageTransportSha256")==sha(canonical(transport))
+            and p.get("serverImageId")==transport["imageId"]
+            and p.get("serverImageSemanticConfigSha256")==transport["semanticConfigSha256"],
+            "reviewed_server_transport_pin_mismatch")
     image=receipts["operatorClient"]["receipt"]
     require(image.get("operation")=="data-free-recovery-operator-image-preparation"
             and image.get("clientImageId")==operator["imageId"] and image.get("inventorySha256")==operator["inventorySha256"]
@@ -181,10 +213,15 @@ def bound_fresh_attestation(reviewed, actual, *, now=None):
             and plan.get("freshDistinctTargetIdsAllowed") is True,"validated_owner_plan_required")
     observed=timestamp(actual.get("observedAt"))
     require(-5<=now-observed<=60 and now<=timestamp(plan["expiresAt"]),"fresh_native_evidence_stale")
+    transport=server_transport(actual.get("serverImageTransport"))
+    require(transport["imageId"]==plan["serverImageId"]
+            and transport["semanticConfigSha256"]==plan["serverImageSemanticConfigSha256"]
+            and actual.get("serverImageRepoDigest")==transport["actualRepoDigest"],
+            "fresh_server_transport_mismatch")
     require(actual.get("baselineFingerprints")==plan["reviewedBaselineFingerprints"]
             and actual.get("clientImageId")==plan["operatorClient"]["imageId"]
             and actual.get("clientInventorySha256")==plan["operatorClient"]["inventorySha256"]
-            and actual.get("serverImageRepoDigest")==plan["serverImageRepoDigest"]
+            and actual.get("serverImageRepoDigest") in OBSERVED_SERVER_IMAGES
             and exact_hash(actual.get("networkEvidenceSha256"))
             and all(actual.get(k) is True for k in ["freshDistinctIdsCreated","originalDestinationGuardPassed",
                "privateTlsIpv4Passed","privateTlsIpv6Passed","wrongCaRejected","wrongHostnameRejected",
@@ -197,7 +234,11 @@ def bound_fresh_attestation(reviewed, actual, *, now=None):
             and re.fullmatch(r"[0-9]+",target.get("systemIdentifier","")),"fresh_target_identity_missing")
     # Original JS configuration/SQL guards still verify host, IP, TLS and systemID.
     return {"format":1,"sourceProject":PROJECT,"imageTag":"public.ecr.aws/supabase/postgres:"+BUILD,
-            "actualImageRepoDigest":plan["serverImageRepoDigest"],"postgresBuild":BUILD,
+            "actualImageRepoDigest":transport["actualRepoDigest"],"postgresBuild":BUILD,
+            "originalApprovedImageRepoDigest":ORIGINAL_SERVER_IMAGE,
+            "serverImageTransport":transport,"serverImageTransportSha256":sha(canonical(transport)),
+            "serverImageId":plan["serverImageId"],
+            "serverImageSemanticConfigSha256":plan["serverImageSemanticConfigSha256"],
             **target,"observedAt":actual["observedAt"],"networkEvidenceSha256":actual["networkEvidenceSha256"],
             "productionRoutesDenied":True,"internetEgressDenied":True,"consumersStopped":True,
             "cronLaunchActiveJobs":False,"independentlyReviewed":True,"ownerReviewedPlanSha256":plan_sha256,

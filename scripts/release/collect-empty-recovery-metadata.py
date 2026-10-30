@@ -20,7 +20,9 @@ import tempfile
 import uuid
 from urllib.parse import urlparse
 
-IMAGE = "public.ecr.aws/supabase/postgres@sha256:3e2a7ab48783077d0122dc72ed5174afb543110c38266c845716c51d130658e4"
+_image_spec=importlib.util.spec_from_file_location("metadata_verified_server_image",Path(__file__).with_name("verified-server-image.py"))
+server_image=importlib.util.module_from_spec(_image_spec);_image_spec.loader.exec_module(server_image)
+IMAGE=server_image.TRANSPORT_REF
 MAX_BYTES = 8*1024**2
 EXTENSION_COVERAGE = Path(__file__).with_name("extension-member-semantics-preflight.sql")
 SCRIPT = Path(__file__).with_name("managed-auth-recovery.py")
@@ -207,10 +209,9 @@ def collect(env, output, *, extension_coverage=False):
     require(root.is_dir() and output.is_absolute() and output.parent.resolve().is_relative_to(root)
             and not output.parent.exists(),"metadata_private_output_required")
     source=recovery.source_environment(env)
-    command(["docker","pull","--platform","linux/amd64",IMAGE],timeout=300)
-    image=json.loads(command(["docker","image","inspect",IMAGE]))
-    require(len(image)==1 and image[0].get("Architecture")=="amd64" and image[0].get("Os")=="linux"
-            and IMAGE in image[0].get("RepoDigests",[]),"metadata_image_pin_mismatch")
+    qualified=server_image.qualify(command)
+    require(qualified["imageInfo"].get("Architecture")=="amd64" and qualified["imageInfo"].get("Os")=="linux",
+            "metadata_image_pin_mismatch")
     output.parent.mkdir(mode=0o700)
     success=False
     try:
@@ -236,6 +237,8 @@ def collect(env, output, *, extension_coverage=False):
             value=parse_source_output(raw,extension_coverage)
             value.update(databaseHost=urlparse(env["KOVA_PRODUCTION_DATABASE_URL"]).hostname,
                          sourceCommit=commit,metadataImageDigest=IMAGE,sourceBuildOperatorPin=BUILD,
+                         metadataActualRepoDigest=qualified["receipt"]["actualRepoDigest"],
+                         metadataImageQualification=qualified["receipt"],
                          sourcePackagingBuildObservedBySql=False)
             data=canonical(value)
             require(env["KOVA_PRODUCTION_DATABASE_URL"].encode() not in data,"source_url_in_metadata_rejected")
@@ -268,6 +271,8 @@ if __name__=="__main__":
     def interrupted(*_):raise Stopped("metadata_interrupted")
     signal.signal(signal.SIGTERM,interrupted);signal.signal(signal.SIGINT,interrupted)
     try:main()
-    except Exception:
-        print('{"ok":false,"error":"empty_recovery_metadata_unqualified"}')
+    except Exception as error:
+        code=(str(error) if isinstance(error,server_image.Stopped)
+              and str(error) in server_image.PUBLIC_FAILURE_CODES else "empty_recovery_metadata_unqualified")
+        print(json.dumps({"ok":False,"error":code},sort_keys=True,separators=(",",":")))
         raise SystemExit(1)

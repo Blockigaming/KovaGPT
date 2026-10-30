@@ -29,6 +29,17 @@ def metadata():
             "sourceSettingsComplete":True,"withheldSettingCount":0}
 
 
+def synthetic_qualification():
+    """Synthetic caller-boundary receipt; not a real verified image."""
+    return {"imageInfo":{"Id":"sha256:"+"2"*64,"Os":"linux","Architecture":"amd64",
+                         "Config":{"Env":["PATH=/synthetic/pg/bin"],"Volumes":{}},
+                         "RepoDigests":[m.server_image.TRANSPORT_REF]},
+            "receipt":{"syntheticFixture":True,"operation":"verified-official-server-image-transport",
+                       "imageId":"sha256:"+"2"*64,"actualRepoDigest":m.server_image.TRANSPORT_REF,
+                       "transportReference":m.server_image.TRANSPORT_REF,
+                       "originalEcrReference":m.server_image.ORIGINAL_ECR_REF}}
+
+
 class NativeProbeTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
@@ -39,6 +50,19 @@ class NativeProbeTests(unittest.TestCase):
                   "GITHUB_RUN_ATTEMPT":"1","RUNNER_TEMP":str(self.root),"PATH":os.environ["PATH"]}
 
     def probe(self):return m.Probe(metadata(),self.env,self.root/"output"/"receipt.json")
+
+    def test_verified_transport_evidence_survives_later_native_failure_without_qualifying_target(self):
+        p=self.probe();receipt={"operation":"verified-official-server-image-transport",
+            "transportReference":m.IMAGE,"originalEcrReference":m.server_image.ORIGINAL_ECR_REF}
+        def late_failure():
+            p.server_image_qualification=receipt
+            raise m.Stopped("native_dependency_unqualified")
+        with patch.object(p,"initialize",side_effect=late_failure),patch.object(p,"cleanup",return_value=True):
+            result=p.execute()
+        self.assertEqual(result["serverImageTransport"],receipt)
+        self.assertFalse(result["dataFreeSafetyProofComplete"])
+        self.assertFalse(result["sourceMetadataCompatible"])
+        self.assertFalse(result["independentlyReviewed"])
 
     def test_explicit_main_source_and_no_production_credentials_required(self):
         self.assertEqual(m.checked_context(self.env),"a"*40)
@@ -52,6 +76,47 @@ class NativeProbeTests(unittest.TestCase):
         out=m.clean_host_env({"PATH":"safe","HTTPS_PROXY":"http://policy.invalid","PGPASSWORD":"private",
                               "KOVA_PRODUCTION_DATABASE_URL":"private","GITHUB_TOKEN":"private"})
         self.assertEqual(out,{"PATH":"safe","HTTPS_PROXY":"http://policy.invalid"})
+
+    def test_native_initialize_uses_qualified_same_digest_boundary_and_retains_honest_transport(self):
+        p=self.probe();calls=[]
+        def command(args,**kwargs):
+            calls.append(args)
+            self.assertFalse(any(key in p.env for key in ["PGPASSWORD","KOVA_PRODUCTION_DATABASE_URL","GITHUB_TOKEN"]))
+            if args==["git","rev-parse","HEAD"]:return 0,(p.source+"\n").encode()
+            if args[:2]==["docker","run"]:
+                self.assertIn(m.server_image.TRANSPORT_REF,args)
+                self.assertNotIn(m.server_image.ORIGINAL_ECR_REF,args)
+                return 0,b"999\n999\n/native/postgres\n/native/pg_ctl\n/native/initdb\n/native/psql\n/native/pg_dump\n/native/timeout\n/native/sha256sum\npostgres (PostgreSQL) 17.6\n"
+            return 0,b"synthetic-command-output\n"
+        def qualified(callback):
+            self.assertEqual(callback(["docker","buildx","version"],timeout=30),(0,b"synthetic-command-output\n"))
+            return synthetic_qualification()
+        p.run=command
+        with patch.object(m.os,"getuid",return_value=1001),patch.object(m.shutil,"which",return_value="/synthetic/tool"),\
+             patch.object(m.server_image,"qualify",side_effect=qualified) as qualification:
+            p.initialize()
+        qualification.assert_called_once()
+        self.assertEqual(p.server_image_qualification,synthetic_qualification()["receipt"])
+        self.assertEqual(p.server_image_qualification["actualRepoDigest"],m.IMAGE)
+        self.assertNotEqual(p.server_image_qualification["actualRepoDigest"],m.server_image.ORIGINAL_ECR_REF)
+        self.assertIn(["docker","buildx","version"],calls)
+        self.assertFalse(any(args[:2]==["docker","tag"] or args[:3]==["docker","image","tag"] for args in calls))
+
+    def test_server_boundary_failure_is_fixed_and_prevents_native_tool_container(self):
+        for message,expected in [("server_image_manifest_digest_mismatch","server_image_manifest_digest_mismatch"),
+                                 ("SYNTHETIC_PRIVATE_REGISTRY_SECRET","data_free_native_probe_unconfirmed")]:
+            p=self.probe();calls=[]
+            p.run=lambda args,**kwargs:(calls.append(args) or (0,(p.source+"\n").encode()))
+            p.cleanup=lambda:True
+            with self.subTest(message=message),patch.object(m.os,"getuid",return_value=1001),\
+                 patch.object(m.server_image,"qualify",side_effect=m.server_image.Stopped(message)) as qualification:
+                result=p.execute()
+            qualification.assert_called_once()
+            self.assertEqual(result["errorCode"],expected)
+            self.assertFalse(result["dataFreeSafetyProofComplete"])
+            self.assertFalse(any(args[:2]==["docker","run"] for args in calls))
+            self.assertNotIn("PRIVATE_REGISTRY_SECRET",json.dumps(result))
+            p.output.unlink();p.state_path.unlink()
 
     def test_setting_policy_is_shared_with_collector_and_rejects_secret_or_preload_values(self):
         self.assertEqual(m.SAFE_SETTINGS,m.metadata_source.SAFE_GUC_KEYS)
@@ -291,7 +356,7 @@ class NativeProbeTests(unittest.TestCase):
 
     def test_late_extension_coverage_mismatch_revokes_success_and_main_rejects(self):
         p=self.probe()
-        p.initialize=lambda:None
+        p.initialize=lambda:setattr(p,"server_image_qualification",synthetic_qualification()["receipt"])
         def files(work):p.server_dirs={k:work/k for k in ["a","b"]}
         p.make_private_files=files;p.create_network=lambda:None
         p.start_container=lambda target:{"Id":target}
