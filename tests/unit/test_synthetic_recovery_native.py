@@ -164,6 +164,96 @@ class SyntheticTests(unittest.TestCase):
         result=p.execute_synthetic();self.assertFalse(result["syntheticNativeProofComplete"])
         self.assertFalse(result["nativeResourcesCleanupConfirmed"])
 
+    def test_native_toolchain_failure_preserves_exact_attempt_and_sanitized_stderr_before_cleanup(self):
+        for failed in ["git-head","docker-info","pinned-server-pull"]:
+            p=self.probe();p.save_state=lambda:None;p._diagnostic_secrets=("SYNTHETIC_ENV_CANARY",)
+            calls=[]
+            def command(argv,**kwargs):
+                calls.append(argv)
+                attempted=m.native_command_stage(argv)
+                if attempted==failed:
+                    kwargs["stderr"].write(b"safe pull diagnostic\n"+b"x"*5000+
+                        b"\nSYNTHETIC_ENV_CANARY Authorization: Basic U1lOVEhFVElDX0NBTkFSWQ==\nsafe final diagnostic\n")
+                    return subprocess.CompletedProcess(argv,1)
+                kwargs["stdout"].write((p.source+"\n").encode() if attempted=="git-head" else b"linux\n")
+                return subprocess.CompletedProcess(argv,0)
+            def cleanup():
+                p.last_stderr=b"CLEANUP_REPLACED_STDERR"
+                p.native_attempted_stage="native-other"
+                return True
+            p.cleanup=cleanup
+            with self.subTest(failed=failed),patch.object(m.os,"getuid",return_value=1001), \
+                 patch.object(m.subprocess,"run",side_effect=command):
+                result=p.execute_synthetic()
+            self.assertFalse(result["syntheticNativeProofComplete"])
+            self.assertTrue(result["nativeResourcesCleanupConfirmed"])
+            self.assertEqual(result["errorCode"],"native_command_failed")
+            self.assertEqual(result["primaryFailure"]["code"],"native_command_failed")
+            self.assertEqual(result["failedStage"],"native_tools")
+            evidence=result["nativeFailure"]
+            self.assertEqual(evidence["commandStage"],failed)
+            self.assertEqual(evidence["exceptionType"],"Stopped")
+            self.assertEqual(evidence["commandCount"],len(calls))
+            self.assertIn("safe final diagnostic",evidence["stderrTail"])
+            self.assertIn("[redacted]",evidence["stderrTail"])
+            self.assertLessEqual(len(evidence["stderrTail"].encode("ascii")),m.MAX_DIAGNOSTIC_BYTES)
+            for hidden in ["SYNTHETIC_ENV_CANARY","U1lOVEhFVElDX0NBTkFSWQ==","CLEANUP_REPLACED_STDERR"]:
+                self.assertNotIn(hidden,json.dumps(result))
+            self.assertEqual(calls[-1],["git","rev-parse","HEAD"] if failed=="git-head" else
+                ["docker","info","--format","{{.OSType}}"] if failed=="docker-info" else
+                ["docker","pull","--platform","linux/amd64",m.base.IMAGE])
+            for field in ["sourceProof","sourceMetadataCompatible","independentlyReviewed","restoreQualified"]:
+                self.assertIs(result[field],False)
+
+    def test_native_attempt_classification_does_not_echo_unknown_commands_or_exception_names(self):
+        for argv in [["docker","pull","--platform","linux/arm64",m.base.IMAGE],
+                     ["docker","pull","--platform","linux/amd64","unreviewed:tag"],
+                     ["synthetic-private-argument"]]:
+            self.assertEqual(m.native_command_stage(argv),"native-other")
+        class SyntheticPrivateExceptionName(RuntimeError):pass
+        self.assertEqual(m.safe_exception_type(SyntheticPrivateExceptionName("PRIVATE_EXCEPTION_ARGUMENT")),"UnknownException")
+        self.assertEqual(m.safe_exception_type(ValueError("PRIVATE_EXCEPTION_ARGUMENT")),"ValueError")
+        self.assertNotIn("PRIVATE_EXCEPTION_ARGUMENT",m.safe_exception_type(RuntimeError("PRIVATE_EXCEPTION_ARGUMENT")))
+        self.assertTrue(all(m.native_command_stage(argv) in m.NATIVE_COMMAND_STAGES for argv in [[],["unknown"]]))
+        for code in ["native_command_failed","native_command_unconfirmed","native_permission_unqualified",
+                     "native_extension_preload_unqualified","native_dependency_unqualified","private_command_output_bound"]:
+            self.assertEqual(m.failure_details(m.Stopped(code))["code"],code)
+
+    def test_unknown_native_phase_is_replaced_by_fixed_fallback(self):
+        p=self.probe();p.save_state=lambda:None;p.cleanup=lambda:True
+        def fail():
+            p.stage="SYNTHETIC_PRIVATE_STAGE_CANARY";p.native_attempted_stage="SYNTHETIC_PRIVATE_ATTEMPT_CANARY"
+            raise m.Stopped("native_command_failed")
+        p.initialize=fail
+        result=p.execute_synthetic()
+        self.assertEqual(result["failedStage"],"native-stage-unconfirmed")
+        self.assertEqual(result["nativeFailure"]["commandStage"],"native-other")
+        self.assertNotIn("SYNTHETIC_PRIVATE_STAGE_CANARY",json.dumps(result))
+        self.assertNotIn("SYNTHETIC_PRIVATE_ATTEMPT_CANARY",json.dumps(result))
+
+    def test_uncertain_native_attempt_does_not_reuse_old_stderr(self):
+        p=self.probe();p.last_stderr=b"STALE_SYNTHETIC_PRIVATE_CANARY"
+        with patch.object(m.subprocess,"run",side_effect=OSError("PRIVATE_OSERROR_ARGUMENT")):
+            with self.assertRaisesRegex(m.Stopped,"native_command_unconfirmed"):
+                p.run(["docker","info","--format","{{.OSType}}"])
+        self.assertEqual(p.native_failure["commandStage"],"docker-info")
+        self.assertEqual(p.native_failure["stderrTail"],"")
+        self.assertNotIn("PRIVATE_OSERROR_ARGUMENT",json.dumps(p.native_failure))
+
+    def test_cleanup_exception_does_not_erase_native_primary_failure(self):
+        p=self.probe();p.save_state=lambda:None
+        def fail():
+            p.stage="native_tools";p.native_attempted_stage="pinned-server-pull"
+            raise m.Stopped("native_command_failed")
+        def cleanup():raise ValueError("SYNTHETIC_PRIVATE_CLEANUP_ARGUMENT")
+        p.initialize=fail;p.cleanup=cleanup
+        result=p.execute_synthetic()
+        self.assertEqual(result["errorCode"],"native_command_failed")
+        self.assertEqual(result["nativeFailure"]["commandStage"],"pinned-server-pull")
+        self.assertFalse(result["nativeResourcesCleanupConfirmed"])
+        self.assertEqual(result["cleanupFailure"]["native"]["exceptionType"],"ValueError")
+        self.assertNotIn("SYNTHETIC_PRIVATE_CLEANUP_ARGUMENT",json.dumps(result))
+
     def test_synthetic_builder_builds_only_allowlisted_recipe_and_never_exports_archive(self):
         self.assertNotIn("oci-archive:",m.SyntheticBuilder.build.__code__.co_consts)
         self.assertEqual(m.FIXTURE_EXTENSIONS,("pgcrypto","vector"))

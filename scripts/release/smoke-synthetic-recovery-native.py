@@ -85,7 +85,32 @@ SAFE_FAILURE_CODES=frozenset({
     "foreign_image_cleanup_forbidden","generic_image_cleanup_unconfirmed",
     "synthetic_command_nonzero_exit","synthetic_command_timeout","synthetic_command_os_error",
     "synthetic_command_signaled","synthetic_command_output_bound",
+    "native_command_failed","native_command_unconfirmed","native_extension_preload_unqualified",
+    "native_permission_unqualified","native_dependency_unqualified","private_command_output_bound",
 })
+
+
+NATIVE_COMMAND_STAGES=frozenset({"not-attempted","git-head","docker-info","pinned-server-pull","native-other"})
+NATIVE_PROBE_STAGES=frozenset({"synthetic_initial","synthetic_toolchain","synthetic_fixture_from_image",
+    "synthetic_complete","initial","native_tools","network_create","native_metadata_prepare",
+    "native_tls_controls","native_catalog_proof","native_extension_coverage","original_destination_guard",
+    "actual_egress_denial","native_proof_complete"})
+
+
+def native_command_stage(argv):
+    if argv==["git","rev-parse","HEAD"]:return "git-head"
+    if argv==["docker","info","--format","{{.OSType}}"]:return "docker-info"
+    if argv==["docker","pull","--platform","linux/amd64",base.IMAGE]:return "pinned-server-pull"
+    return "native-other"
+
+
+def safe_exception_type(error):
+    # Never emit an arbitrary class name, exception argument or representation.
+    allowed={Stopped:"Stopped",builder.Stopped:"Stopped",OSError:"OSError",
+             PermissionError:"PermissionError",FileNotFoundError:"FileNotFoundError",
+             subprocess.TimeoutExpired:"TimeoutExpired",ValueError:"ValueError",
+             json.JSONDecodeError:"JSONDecodeError",RuntimeError:"RuntimeError",AssertionError:"AssertionError"}
+    return allowed.get(type(error),"UnknownException")
 
 
 def diagnostic_secrets(env):
@@ -298,6 +323,8 @@ class SyntheticProbe(operator.OperatorProbe):
     def __init__(self,env,output,*,operator_image_id):
         self.source,self.run_id,self.attempt,self.runner_temp=identities(env)
         self.metadata={};self.env=base.clean_host_env(env)
+        self._diagnostic_secrets=diagnostic_secrets(env)
+        self.native_attempted_stage="not-attempted";self.native_failure=None
         self.output=Path(output)
         require(self.output.is_absolute() and self.output.name=="receipt.json"
                 and self.output.resolve().is_relative_to(self.runner_temp)
@@ -315,6 +342,17 @@ class SyntheticProbe(operator.OperatorProbe):
         self.image_env={};self.image_volumes=[];self.host_firewall_pins={};self.native_tools={}
         self.network_evidence=[];self.netns={};self.neighbors=[]
         self.configure_operator(operator_image_id,self.source)
+
+    def run(self,argv,**kwargs):
+        self.native_attempted_stage=native_command_stage(argv)
+        self.last_stderr=b""  # An uncertain attempt must not reuse older stderr.
+        try:return super().run(argv,**kwargs)
+        except Exception as error:
+            if self.native_failure is None:
+                self.native_failure={"commandStage":self.native_attempted_stage,
+                    "exceptionType":safe_exception_type(error),"commandCount":self.command_count,
+                    "stderrTail":safe_diagnostic(self.last_stderr,self._diagnostic_secrets)}
+            raise
 
     def derive_image_fixture(self):
         # Read only this already isolated, freshly initialized trusted image.
@@ -408,11 +446,21 @@ class SyntheticProbe(operator.OperatorProbe):
             self.stage="synthetic_complete"
         except Exception as error:
             preserve_primary_failure(result,error)
-            result["failedStage"]=self.stage
+            result["failedStage"]=self.stage if self.stage in NATIVE_PROBE_STAGES else "native-stage-unconfirmed"
+            # Copy the sanitized primary command evidence BEFORE cleanup can
+            # change last_stderr or attempt another native command.
+            result["nativeFailure"]=dict(self.native_failure) if self.native_failure is not None else {
+                "commandStage":self.native_attempted_stage if self.native_attempted_stage in NATIVE_COMMAND_STAGES else "native-other",
+                "exceptionType":safe_exception_type(error),
+                "commandCount":self.command_count,"stderrTail":safe_diagnostic(self.last_stderr,self._diagnostic_secrets)}
         finally:
-            result["nativeResourcesCleanupConfirmed"]=self.cleanup()
+            cleanup_details={"native":{"code":"synthetic_owned_cleanup_unconfirmed"}}
+            try:result["nativeResourcesCleanupConfirmed"]=self.cleanup()
+            except Exception as error:
+                result["nativeResourcesCleanupConfirmed"]=False
+                cleanup_details["native"]["exceptionType"]=safe_exception_type(error)
             if not result["nativeResourcesCleanupConfirmed"]:
-                preserve_cleanup_failure(result,{"native":{"code":"synthetic_owned_cleanup_unconfirmed"}})
+                preserve_cleanup_failure(result,cleanup_details)
             result["nativeCommandCount"]=self.command_count
         return result
 
