@@ -79,9 +79,9 @@ while IFS= read -r line; do printf 'M\t%s\n' "$line"; done < /proc/self/mountinf
 for destination in "$@"; do
  [[ "$destination" == /* && -d "$destination" && ! -L "$destination" ]]
  printf 'S\t%s\t' "$destination"
- stat --format='%u %g %a %d %i' -- "$destination"
+ stat -c '%u %g %a %d %i' -- "$destination"
  printf 'F\t%s\t' "$destination"
- stat --file-system --format='%b %S %c' -- "$destination"
+ stat -f -c '%b %S %c' -- "$destination"
 done
 '''
 

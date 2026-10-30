@@ -2,7 +2,9 @@
 import importlib.util
 import os
 from pathlib import Path
+import shutil
 import subprocess
+import tempfile
 import unittest
 
 
@@ -86,10 +88,52 @@ class RuntimeProofTests(unittest.TestCase):
         result=subprocess.run(["bash","-n","-c",script],capture_output=True)
         self.assertEqual(result.returncode,0,result.stderr.decode())
         for required in ["/proc/self/mountinfo","/proc/self/status","memory.swap.max",'for destination in "$@"',
-                         "stat --file-system",'! -L "$destination"']:
+                         "stat -c '%u %g %a %d %i' -- \"$destination\"",
+                         "stat -f -c '%b %S %c' -- \"$destination\"",'! -L "$destination"']:
             self.assertIn(required,script)
         for forbidden in ["mount -", "umount", "sudo", "curl", "cat \"$destination\"", "eval "]:
             self.assertNotIn(forbidden,script)
+        self.assertNotIn("--format",script)
+        self.assertNotIn("--file-system",script)
+
+    def test_exact_stat_fragment_preserves_native_fields_using_shared_short_option_contract(self):
+        # Run only the emitted per-destination read-only metadata fragment. This
+        # is not a container/kernel-noswap proof or a native BusyBox execution.
+        script=m.runtime_proof_script()
+        fragment=script.split('for destination in "$@"; do\n',1)[1].rsplit("\ndone\n",1)[0]
+        native_stat=shutil.which("stat")
+        self.assertIsNotNone(native_stat)
+        # A strict shared-option boundary rejects the original GNU-only forms,
+        # then delegates accepted short forms to this host's real stat binary.
+        shared_contract=r'''stat() {
+ if [[ "$#" -eq 4 && "$1" == -c && "$2" == '%u %g %a %d %i' && "$3" == -- ]]; then :
+ elif [[ "$#" -eq 5 && "$1" == -f && "$2" == -c && "$3" == '%b %S %c' && "$4" == -- ]]; then :
+ else return 64
+ fi
+ "$proof_stat" "$@"
+}
+'''
+        with tempfile.TemporaryDirectory(prefix="proof-stat-") as temporary:
+            destination=Path(temporary)/"metadata only";destination.mkdir(mode=0o700)
+            actual=destination.stat();filesystem=os.statvfs(destination)
+            expected=(f"S\t{destination}\t{actual.st_uid} {actual.st_gid} {actual.st_mode&0o7777:o} "
+                      f"{actual.st_dev} {actual.st_ino}\n"
+                      f"F\t{destination}\t{filesystem.f_blocks} {filesystem.f_frsize} {filesystem.f_files}\n").encode()
+            for prefix in ["",shared_contract]:
+                with self.subTest(shared_contract=bool(prefix)):
+                    result=subprocess.run(["bash","-euo","pipefail","-c",
+                        'proof_stat=$1; destination=$2\n'+prefix+fragment,"proof-stat",native_stat,str(destination)],
+                        capture_output=True,timeout=5)
+                    self.assertEqual(result.returncode,0,result.stderr.decode())
+                    self.assertEqual(result.stdout,expected)
+            for before,after in [("stat -c '","stat --format='"),("stat -f -c '","stat --file-system --format='")]:
+                changed=fragment.replace(before,after)
+                self.assertNotEqual(changed,fragment)
+                with self.subTest(rejected_long_option=after):
+                    result=subprocess.run(["bash","-euo","pipefail","-c",
+                        'proof_stat=$1; destination=$2\n'+shared_contract+changed,
+                        "proof-stat",native_stat,str(destination)],capture_output=True,timeout=5)
+                    self.assertEqual(result.returncode,64)
 
 
 
