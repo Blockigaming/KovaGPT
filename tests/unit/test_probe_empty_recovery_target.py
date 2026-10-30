@@ -7,6 +7,7 @@ from pathlib import Path
 import socket
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 SCRIPT=Path(__file__).resolve().parents[2]/"scripts/release/probe-empty-recovery-target.py"
@@ -231,6 +232,25 @@ class NativeProbeTests(unittest.TestCase):
         catalog["extensions"][0]["owner"]="wrong_owner"
         self.assertFalse(p.native_snapshot("a")["extensionMatch"])
 
+    def test_optional_extension_coverage_is_identical_readonly_query_and_never_semantics(self):
+        p=self.probe()
+        self.assertIsNone(p.extension_coverage("a"))
+        proof={"format":1,"operation":"extension-member-semantics-coverage-preflight","serverVersionNum":170006,
+               **{k:False for k in ["qualified","qualificationReady","semanticEqualityProven",
+                  "catalogPayloadAdaptersImplemented","deparsedDdlTreatedAsExact","customerRowsRead",
+                  "rawMetadataReturned","productionMutated"]},"counts":{"unimplementedPayloadObjects":3},
+               "memberInventorySha256":"a"*64,"dependencyInventorySha256":"b"*64}
+        p.metadata["extensionCoverage"]=proof
+        p.metadata["extensionCoverageQuerySha256"]=m.digest(m.metadata_source.EXTENSION_COVERAGE.read_bytes())
+        calls=[]
+        p.client_sql=lambda target,sql:(calls.append(sql) or (0,json.dumps(proof).encode()))
+        self.assertEqual(p.extension_coverage("a"),proof)
+        self.assertIn("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;",calls[0])
+        self.assertIn("SET LOCAL search_path=pg_catalog;",calls[0])
+        self.assertIn(m.metadata_source.EXTENSION_COVERAGE.read_text(),calls[0])
+        proof["semanticEqualityProven"]=True
+        with self.assertRaises(m.metadata_source.Stopped):p.extension_coverage("a")
+
     def test_replication_or_extra_clients_are_not_accepted_as_stopped_consumers(self):
         p=self.probe()
         good={"preload":"","sessionPreload":"","localPreload":"","cron":"off","sockets":"",
@@ -253,6 +273,32 @@ class NativeProbeTests(unittest.TestCase):
         self.assertEqual(result["errorCode"],"native_dependency_unqualified")
         self.assertTrue(result["cleanupConfirmed"])
         self.assertNotIn("roles",p.output.read_text());self.assertNotIn("password",p.output.read_text())
+
+    def test_late_extension_coverage_mismatch_revokes_success_and_main_rejects(self):
+        p=self.probe()
+        p.initialize=lambda:None
+        def files(work):p.server_dirs={k:work/k for k in ["a","b"]}
+        p.make_private_files=files;p.create_network=lambda:None
+        p.start_container=lambda target:{"Id":target}
+        p.static_ipv6_neighbors=lambda *_:None;p.prepare_native=lambda *_:None
+        p.tls_controls=lambda target:{"a":"111","b":"222"}[target]
+        p.original_destination_guard=lambda *_:None;p.consumer_proof=lambda *_:None
+        fingerprints={k:"f"*64 for k in ["emptyBaselineCensusSha256","emptyBaselineCatalogSha256",
+                      "emptyBaselineRowsSha256","emptyBaselineSchemaSha256"]}
+        p.native_snapshot=lambda *_:{"fingerprints":fingerprints,"roleMatch":True,"namespaceMatch":True,
+                  "extensionMatch":True,"namespaceObjectCount":0,"globalObjectCount":0,"tableCount":0}
+        p.extension_coverage=lambda target:{"notMatching":target}
+        p.verify_effective_firewalls=lambda:None;p.denial_probes=lambda *_:0;p.cleanup=lambda:True
+        with patch.object(m,"denial_targets",return_value=[]):result=p.execute()
+        self.assertEqual(result["errorCode"],"independent_extension_coverage_differ")
+        self.assertFalse(result["dataFreeSafetyProofComplete"])
+        self.assertFalse(result["sourceMetadataCompatible"])
+        metadata_file=self.root/"main-metadata.json";metadata_file.write_text("{}");metadata_file.chmod(0o600)
+        import sys
+        with patch.object(m,"Probe",return_value=SimpleNamespace(execute=lambda:result)), \
+             patch.object(sys,"argv",["probe","--execute","--metadata-file",str(metadata_file),
+                                       "--output",str(self.root/"main-receipt.json")]):
+            with self.assertRaisesRegex(m.Stopped,"data_free_native_probe_unqualified"):m.main()
 
     def test_repeated_firewall_verification_uses_rule_pins_not_denial_or_host_observations(self):
         p=self.probe();p.netns={k:(100+i,1000+i) for i,k in enumerate(["a","b","client"])}

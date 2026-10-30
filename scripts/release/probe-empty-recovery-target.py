@@ -192,6 +192,10 @@ def validate_metadata(metadata, *, source_sha):
             and type(metadata.get("withheldSettingCount")) is int and metadata["withheldSettingCount"]==withheld
             and metadata["sourceSettingsComplete"]==(withheld==0),
             "source_setting_coverage_missing")
+    if "extensionCoverage" in metadata:
+        metadata_source.check_extension_coverage(metadata["extensionCoverage"])
+        require(metadata.get("extensionCoverageQuerySha256")==digest(metadata_source.EXTENSION_COVERAGE.read_bytes()),
+                "source_extension_coverage_query_unqualified")
     return metadata
 
 
@@ -806,6 +810,14 @@ while :; do sleep 1; done"""
                 "tableCount":len(rows),"namespaceObjectCount":len(census["namespaceObjects"]),
                 "globalObjectCount":len(census["globalObjects"])}
 
+    def extension_coverage(self,target):
+        if "extensionCoverage" not in self.metadata:return None
+        self.stage="native_extension_coverage"
+        sql="BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\nSET LOCAL search_path=pg_catalog;\n" \
+            +metadata_source.EXTENSION_COVERAGE.read_text()+"\nCOMMIT;\n"
+        _,raw=self.client_sql(target,sql)
+        return metadata_source.check_extension_coverage(json.loads(raw))
+
     def original_destination_guard(self,target,system_id):
         self.stage="original_destination_guard"
         uri="postgresql://"+OPERATOR+"@"+self.hosts[target]+":5432/postgres?sslmode=verify-full&sslrootcert="+str(self.client_dir/"ca.crt")
@@ -980,7 +992,7 @@ while :; do sleep 1; done"""
             self.make_private_files(self.private_root)
             self.create_network()
             self.start_container("client")
-            ids=[];systems=[];snapshots=[];mounts=[]
+            ids=[];systems=[];snapshots=[];mounts=[];extension_coverages=[]
             for target in ["a","b"]:
                 info=self.start_container(target)
                 ids.append(info["Id"])
@@ -991,6 +1003,7 @@ while :; do sleep 1; done"""
                 self.original_destination_guard(target,system_id)
                 self.consumer_proof(target)
                 snapshots.append(self.native_snapshot(target))
+                extension_coverages.append(self.extension_coverage(target))
             require(len(set(ids))==len(set(systems))==len(set(mounts))==2,"independent_native_targets_not_distinct")
             require(snapshots[0]["fingerprints"]==snapshots[1]["fingerprints"],"independent_image_baselines_differ")
             self.verify_effective_firewalls()
@@ -1015,8 +1028,22 @@ while :; do sleep 1; done"""
                 observedBaselineFingerprints=snapshots[0]["fingerprints"],
                 nativeNamespaceObjectCount=snapshots[0]["namespaceObjectCount"],
                 nativeGlobalObjectCount=snapshots[0]["globalObjectCount"],nativeTargetTableCount=snapshots[0]["tableCount"])
+            if extension_coverages[0] is not None:
+                require(encoded(extension_coverages[0])==encoded(extension_coverages[1]),
+                        "independent_extension_coverage_differ")
+                source_coverage=self.metadata["extensionCoverage"]
+                result["extensionCoverage"]={
+                    "querySha256":self.metadata["extensionCoverageQuerySha256"],
+                    "sourceCoverageSha256":digest(encoded(source_coverage)),
+                    "imageCoverage":extension_coverages[0],
+                    "sourceImageInventoryEqual":all(source_coverage[k]==extension_coverages[0][k]
+                        for k in ["memberInventorySha256","dependencyInventorySha256"]),
+                    "semanticEqualityProven":False,"qualificationReady":False}
             self.stage="native_proof_complete"
         except Exception as error:
+            # A late postcondition failure must revoke every earlier success flag.
+            result["dataFreeSafetyProofComplete"]=False
+            result["sourceMetadataCompatible"]=False
             result["errorCode"]=str(error) if isinstance(error,Stopped) else "data_free_native_probe_unconfirmed"
             result["failedStage"]=self.stage
         finally:

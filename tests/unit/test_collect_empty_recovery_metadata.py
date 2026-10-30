@@ -37,6 +37,27 @@ class MetadataTests(unittest.TestCase):
             self.assertNotIn(forbidden,m.SOURCE_SQL)
         self.assertIn("'readOnly',current_setting('transaction_read_only')='on'",m.SOURCE_SQL)
 
+    def test_extension_preflight_shares_fixed_readonly_snapshot_and_never_implies_semantics(self):
+        query=m.source_query(True)
+        self.assertEqual(query.count("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;"),1)
+        self.assertEqual(query.count("COMMIT;"),1)
+        self.assertIn("SET LOCAL search_path=pg_catalog;",query)
+        self.assertIn(m.EXTENSION_COVERAGE.read_text(),query)
+        proof={"format":1,"operation":"extension-member-semantics-coverage-preflight","serverVersionNum":170006,
+               **{k:False for k in ["qualified","qualificationReady","semanticEqualityProven",
+                  "catalogPayloadAdaptersImplemented","deparsedDdlTreatedAsExact","customerRowsRead",
+                  "rawMetadataReturned","productionMutated"]},"counts":{"unimplementedPayloadObjects":12},
+               "memberInventorySha256":"a"*64,"dependencyInventorySha256":"b"*64}
+        raw=(json.dumps(metadata())+"\n"+json.dumps(proof)+"\n").encode()
+        value=m.parse_source_output(raw,True)
+        self.assertEqual(value["extensionCoverage"]["counts"]["unimplementedPayloadObjects"],12)
+        self.assertFalse(value["extensionCoverage"]["semanticEqualityProven"])
+        self.assertEqual(value["extensionCoverageQuerySha256"],m.sha(m.EXTENSION_COVERAGE.read_bytes()))
+        for change in [{"semanticEqualityProven":True},{"customerRowsRead":True},{"serverVersionNum":180003}]:
+            with self.subTest(change=change),self.assertRaises(m.Stopped):
+                m.parse_source_output((json.dumps(metadata())+"\n"+json.dumps({**proof,**change})).encode(),True)
+        with self.assertRaises(m.Stopped):m.parse_source_output(raw,False)
+
     def test_settings_exclude_credentials_urls_and_preload_consumers(self):
         raw=metadata();sensitive="sk-synthetic-DO-NOT-COPY"
         raw["roleSettings"]=[{"role":"authenticator","database":"postgres","settings":[

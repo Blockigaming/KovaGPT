@@ -7,6 +7,8 @@ on:
       - .github/workflows/probe-empty-recovery-target.yml
       - .github/workflows/capture-managed-auth-production.yml
       - scripts/release/collect-empty-recovery-metadata.py
+      - scripts/release/extension-member-semantics-preflight.sql
+      - tests/unit/extension-member-semantics-preflight.test.mjs
       - scripts/release/probe-empty-recovery-target.py
       - scripts/release/empty-restore-target-catalog.sql
       - scripts/release/managed-auth-recovery.py
@@ -62,6 +64,7 @@ jobs:
           node --test tests/unit/empty-restore-target-catalog.test.mjs
           node --test tests/unit/empty-recovery-probe-workflow.test.mjs
           node --test tests/unit/managed-auth-capture-client-tools.test.mjs
+          node --test tests/unit/extension-member-semantics-preflight.test.mjs
 
   probe-empty:
     needs: source-tests
@@ -88,7 +91,7 @@ jobs:
           KOVA_PRODUCTION_DATABASE_URL: ${{ secrets.KOVA_PRODUCTION_DATABASE_URL }}
         run: >-
           timeout --signal=TERM --kill-after=15s 6m
-          python3 scripts/release/collect-empty-recovery-metadata.py --execute
+          python3 scripts/release/collect-empty-recovery-metadata.py --execute --extension-coverage
           --output "$RUNNER_TEMP/kova-empty-source-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/metadata.json"
       - name: Exercise two native empty targets, verified TLS and denied dual-stack routes
         run: >-

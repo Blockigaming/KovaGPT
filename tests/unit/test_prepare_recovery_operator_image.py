@@ -1,0 +1,177 @@
+"""Synthetic image identity/guard/archive mutations; never Docker or network."""
+import copy
+import importlib.util
+import io
+import json
+import os
+from pathlib import Path
+import subprocess
+import tarfile
+import tempfile
+import unittest
+from unittest.mock import patch
+
+ROOT=Path(__file__).resolve().parents[2]
+SCRIPT=ROOT/"scripts/release/prepare-recovery-operator-image.py"
+spec=importlib.util.spec_from_file_location("generic_image",SCRIPT)
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+
+
+def smoke():
+    names=["python3","node","gpg","psql","pg_dump","pg_restore","timeout","bash","sha256sum"]
+    return {"operation":"generic-recovery-client-native-smoke","nonroot":True,
+        "genericSourceSha256":{name:m.file_sha(m.SOURCE/name) for name in m.FILES},
+        "tools":[{"name":n,"path":"/usr/bin/"+n,"version":n+" (PostgreSQL) 17.7" if n in {"psql","pg_dump","pg_restore"} else "synthetic-version",
+                  "sha256":"a"*64} for n in names],"packageInventorySha256":m.sha(b"synthetic\n"),
+        "installedPackageCount":1,"signedInReleaseFiles":[{"name":"synthetic_InRelease","sha256":"b"*64}],
+        "nativePythonEngineImport":True,"nativeNodeDestinationGuard":True,"nodePasswordOverrideRejected":True,
+        "nativeFileBoundLauncherImport":True,"readonlyRootObserved":True,"noNewPrivilegesObserved":True,
+        "capabilitiesDroppedObserved":True,"tmpfsNoSwapObserved":True,"memorySwapDisabledObserved":True,
+        "syntheticGpgRoundtrip":True,"wrongGpgPassphraseRejected":True,"actualTargetConnected":False,
+        "customerRowsUsed":False,"restorePerformed":False}
+
+
+def write_oci(path,config,*,tampered=False):
+    layer=b"synthetic generic layer"
+    manifest=m.canonical({"schemaVersion":2,"config":{"digest":"sha256:"+m.sha(config),"size":len(config)},
+        "layers":[{"digest":"sha256:"+m.sha(layer),"size":len(layer)}]})
+    objects={"oci-layout":b'{"imageLayoutVersion":"1.0.0"}',
+        "index.json":m.canonical({"schemaVersion":2,"manifests":[{"digest":"sha256:"+m.sha(manifest),"size":len(manifest)}]}),
+        "blobs/sha256/"+m.sha(manifest):manifest,"blobs/sha256/"+m.sha(config):config,
+        "blobs/sha256/"+m.sha(layer):(b"tampered generic layer" if tampered else layer)}
+    with tarfile.open(path,"w") as package:
+        for name,data in objects.items():
+            info=tarfile.TarInfo(name);info.size=len(data);package.addfile(info,io.BytesIO(data))
+    return "sha256:"+m.sha(manifest)
+
+
+class PreparationTests(unittest.TestCase):
+    def setUp(self):
+        self.folder=tempfile.TemporaryDirectory();self.addCleanup(self.folder.cleanup)
+        self.root=Path(self.folder.name)
+        self.env={"GITHUB_ACTIONS":"true","RUNNER_OS":"Linux","GITHUB_EVENT_NAME":"workflow_dispatch",
+            "GITHUB_REPOSITORY":"Blockigaming/KovaGPT","GITHUB_REF":"refs/heads/main",
+            "GITHUB_SHA":"a"*40,"KOVA_APPROVED_SOURCE_SHA":"a"*40,"RUNNER_TEMP":str(self.root),
+            "KOVA_OPERATOR_IMAGE_CONFIRMATION":"BUILD_DATA_FREE_OPERATOR_IMAGE","PATH":os.environ["PATH"]}
+
+    def builder(self):return m.Builder(self.env,self.root/"operator-client-image")
+
+    def test_only_exact_main_dispatch_and_explicit_source_can_build(self):
+        self.assertEqual(m.context(self.env),"a"*40)
+        for key,value in [("GITHUB_EVENT_NAME","pull_request"),("GITHUB_REF","refs/heads/unreviewed"),
+                          ("GITHUB_REPOSITORY","foreign/repository"),("GITHUB_ACTIONS","false"),
+                          ("KOVA_APPROVED_SOURCE_SHA","b"*40),("KOVA_OPERATOR_IMAGE_CONFIRMATION","RESTORE")]:
+            with self.subTest(key=key),self.assertRaises(m.Stopped):m.context({**self.env,key:value})
+
+    def test_source_target_phrase_and_provider_secrets_stop_before_commands(self):
+        for key in [*m.SENSITIVE_KEYS,"KOVA_PRODUCTION_OTHER_SECRET","APPROVED_ISOLATED_HOST","KOVA_AUTH_RESTORE_ATTESTATION"]:
+            with self.subTest(key=key),self.assertRaises(m.Stopped):m.context({**self.env,key:"synthetic-private"})
+        p=m.Builder({**self.env,"ACTIONS_RUNTIME_TOKEN":"platform-private","HTTPS_PROXY":"http://policy.invalid"},self.root/"operator-client-image")
+        self.assertNotIn("ACTIONS_RUNTIME_TOKEN",p.env);self.assertEqual(p.env["HTTPS_PROXY"],"http://policy.invalid")
+
+    def test_base_digest_must_be_measured_official_ubuntu_amd64_identity(self):
+        value=[{"Id":"sha256:"+"b"*64,"Os":"linux","Architecture":"amd64","RepoDigests":["ubuntu@sha256:"+"c"*64]}]
+        self.assertEqual(m.measured_base(value)[0],"ubuntu@sha256:"+"c"*64)
+        for key,other in [("Architecture","arm64"),("Os","windows"),("RepoDigests",["foreign@sha256:"+"c"*64]),("RepoDigests",[])]:
+            altered=copy.deepcopy(value);altered[0][key]=other
+            with self.subTest(key=key),self.assertRaises(m.Stopped):m.measured_base(altered)
+
+    def test_docker_context_is_public_source_allowlist_without_repository_or_runtime_files(self):
+        hashes=m.source_context(self.root)
+        self.assertEqual(set(hashes),set(m.FILES)|{"recovery-operator-client.Dockerfile"})
+        self.assertEqual({str(p.relative_to(self.root)) for p in self.root.rglob("*") if p.is_file()},
+                         {"Dockerfile"}|{"source/"+name for name in m.FILES})
+        self.assertFalse(any(".git" in str(p) or "metadata.json" in str(p) for p in self.root.rglob("*")))
+
+    def test_smoke_cannot_qualify_with_wrong_major_missing_tool_or_asserted_target_access(self):
+        self.assertTrue(m.check_smoke(smoke())["syntheticGpgRoundtrip"])
+        for mutate in [lambda v:v.update(syntheticGpgRoundtrip=False),lambda v:v.update(actualTargetConnected=True),
+                       lambda v:v["tools"].pop(),lambda v:v["tools"][3].update(version="psql (PostgreSQL) 18.1"),
+                       lambda v:v["tools"][0].update(sha256="invalid"),lambda v:v["tools"].append(v["tools"][0]),
+                       lambda v:v.update(signedInReleaseFiles=[])]:
+            value=smoke();mutate(value)
+            with self.assertRaises(m.Stopped):m.check_smoke(value)
+
+    def test_final_smoke_container_is_nonroot_readonly_unprivileged_networkless_and_healthcheck_off(self):
+        p=self.builder();p.image_id="sha256:"+"d"*64
+        with patch.object(m.os,"getuid",return_value=1001),patch.object(m.os,"getgid",return_value=1001):args=p.run_args()
+        for item in ["--rm","--no-healthcheck","--read-only","no-new-privileges:true"]:self.assertIn(item,args)
+        self.assertEqual(args[args.index("--network")+1],"none")
+        self.assertEqual(args[args.index("--cap-drop")+1],"ALL")
+        self.assertEqual(args[args.index("--user")+1],"1001:1001")
+        self.assertEqual(args[args.index("--memory-swap")+1],args[args.index("--memory")+1])
+        self.assertIn("noswap",args[args.index("--tmpfs")+1])
+        self.assertNotIn("--mount",args);self.assertNotIn("--env",args);self.assertNotIn("--privileged",args)
+
+    def test_output_cannot_escape_runner_or_overwrite_existing_files(self):
+        for output in [self.root.parent/"operator-client-image",self.root/"receipt.json"]:
+            with self.assertRaises(m.Stopped):m.Builder(self.env,output)
+        output=self.root/"operator-client-image";output.mkdir()
+        with self.assertRaises(m.Stopped):m.Builder(self.env,output)
+
+    def test_foreign_image_tag_is_not_removed_on_cleanup(self):
+        p=self.builder();calls=[]
+        def command(args,**_):
+            calls.append(args)
+            if "ls" in args:return json.dumps({"Repository":p.tag.split(":")[0],"Tag":p.tag.split(":")[1]}).encode()
+            return json.dumps([{"Config":{"Labels":{"org.kova.recovery.owner":"foreign"}}}]).encode()
+        p.command=command
+        with self.assertRaises(m.Stopped):p.cleanup_image()
+        self.assertFalse(any("rm" in args for args in calls))
+
+    def test_dockerfile_shell_and_signed_source_trust_boundaries(self):
+        text=(ROOT/"scripts/release/recovery-operator-client.Dockerfile").read_text()
+        for value in [m.KEY_FINGERPRINT,m.UBUNTU_KEY_FINGERPRINT,"Signed-By:","noble-pgdg","Architectures: amd64",
+                      "https://apt.postgresql.org/pub/repos/apt","--proto '=https'","HEALTHCHECK NONE","USER 65532:65532"]:
+            self.assertIn(value,text)
+        for bad in ["apt-key","trusted=yes","allow-unauthenticated","COPY . ","--mount=type=secret"]:self.assertNotIn(bad,text)
+        run=text.split("RUN ",1)[1].split("\nCOPY ",1)[0].replace("\\\n","")
+        result=subprocess.run(["bash","-n"],input=run.encode(),capture_output=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_workflow_has_no_secret_or_production_binding_and_uploads_only_generic_three_files(self):
+        text=(ROOT/".github/workflows/prepare-recovery-operator-image.yml").read_text()
+        for bad in ["secrets.","environment:","DATABASE_URL","BACKUP_PASSPHRASE","contents: write","packages: write"]:
+            self.assertNotIn(bad,text)
+        for value in ["inputs.source_sha == github.sha","refs/heads/main","BUILD_DATA_FREE_OPERATOR_IMAGE",
+                      "retention-days: 7","compression-level: 0","operator-client.oci.tar","client-image-inventory.json",
+                      "image-preparation-receipt.json","persist-credentials: false"]:self.assertIn(value,text)
+        self.assertEqual(text.count("actions/upload-artifact@"),1)
+
+    def test_oci_archive_verifies_layout_config_identity_and_every_layer_hash(self):
+        archive=self.root/"generic.oci.tar";config=b"synthetic generic config"
+        manifest=write_oci(archive,config)
+        self.assertEqual(m.oci_identity(archive,"sha256:"+m.sha(config)),manifest)
+        with self.assertRaises(m.Stopped):m.oci_identity(archive,"sha256:"+"f"*64)
+        write_oci(archive,config,tampered=True)
+        with self.assertRaises(m.Stopped):m.oci_identity(archive,"sha256:"+m.sha(config))
+        with tarfile.open(archive,"w") as package:
+            payload=b"not an OCI archive";item=tarfile.TarInfo("manifest.json");item.size=len(payload)
+            package.addfile(item,io.BytesIO(payload))
+        with self.assertRaises(m.Stopped):m.oci_identity(archive,"sha256:"+m.sha(config))
+
+    def test_mocked_build_preserves_oci_config_identity_and_does_not_claim_target_qualification(self):
+        p=self.builder();config=b"synthetic generic config";image_id="sha256:"+m.sha(config);calls=[]
+        def command(args,**_):
+            calls.append(args)
+            if args[:2]==["git","rev-parse"]:return b"a"*40+b"\n"
+            if args[:3]==["docker","image","inspect"]:
+                if args[-1]==m.BASE_TAG:return json.dumps([{"Id":"sha256:"+"b"*64,"Os":"linux","Architecture":"amd64","RepoDigests":["ubuntu@sha256:"+"c"*64]}]).encode()
+                return json.dumps([{"Id":image_id,"Os":"linux","Architecture":"amd64","Config":{"User":"65532:65532","Healthcheck":{"Test":["NONE"]},"Labels":{"org.kova.recovery.owner":p.owner,"org.opencontainers.image.revision":"a"*40}}}]).encode()
+            if args[:2]==["docker","run"]:
+                return b"synthetic\n" if "/bin/cat" in args else json.dumps(smoke()).encode()
+            if args[:2]==["skopeo","copy"]:
+                archive=Path(args[-1].removeprefix("oci-archive:").removesuffix(":operator-client"))
+                write_oci(archive,config)
+            return b""
+        p.command=command;p.cleanup_image=lambda:True
+        with patch.object(m.os,"getuid",return_value=1001):receipt=p.execute()
+        self.assertEqual(receipt["clientImageId"],image_id)
+        self.assertFalse(receipt["restorePerformed"]);self.assertFalse(receipt["clientNetworkIsolationQualified"])
+        self.assertFalse(receipt["futureRestoreApproved"]);self.assertFalse(receipt["customerDataReceived"])
+        self.assertEqual({x.name for x in p.output.iterdir()},
+                         {"operator-client.oci.tar","client-image-inventory.json","image-preparation-receipt.json"})
+        self.assertTrue(any(args[:2]==["docker","build"] and "--no-cache" in args for args in calls))
+
+
+if __name__=="__main__":unittest.main()

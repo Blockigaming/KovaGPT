@@ -22,6 +22,7 @@ from urllib.parse import urlparse
 
 IMAGE = "public.ecr.aws/supabase/postgres@sha256:3e2a7ab48783077d0122dc72ed5174afb543110c38266c845716c51d130658e4"
 MAX_BYTES = 8*1024**2
+EXTENSION_COVERAGE = Path(__file__).with_name("extension-member-semantics-preflight.sql")
 SCRIPT = Path(__file__).with_name("managed-auth-recovery.py")
 spec = importlib.util.spec_from_file_location("empty_recovery_metadata_source", SCRIPT)
 recovery = importlib.util.module_from_spec(spec)
@@ -147,7 +148,43 @@ def sanitize_settings(raw):
     return out
 
 
-def collect(env, output):
+def source_query(extension_coverage):
+    if not extension_coverage:return SOURCE_SQL
+    # Two fixed metadata SELECTs share one read-only snapshot; no row export.
+    require(SOURCE_SQL.rstrip().endswith("COMMIT;"),"metadata_query_transaction_unqualified")
+    body=SOURCE_SQL.rstrip()[:-len("COMMIT;")]
+    body=body.replace("READ ONLY;", "READ ONLY;\nSET LOCAL search_path=pg_catalog;",1)
+    return body+EXTENSION_COVERAGE.read_text()+"\nCOMMIT;\n"
+
+
+def check_extension_coverage(proof):
+    require(isinstance(proof,dict) and proof.get("format")==1
+        and proof.get("operation")=="extension-member-semantics-coverage-preflight"
+        and proof.get("serverVersionNum")==170006
+        and all(proof.get(k) is False for k in ["qualified","qualificationReady","semanticEqualityProven",
+           "catalogPayloadAdaptersImplemented","deparsedDdlTreatedAsExact","customerRowsRead",
+           "rawMetadataReturned","productionMutated"]),"extension_coverage_result_unqualified")
+    require(all(re.fullmatch(r"[a-f0-9]{64}",proof.get(k,"")) for k in
+            ["memberInventorySha256","dependencyInventorySha256"])
+        and isinstance(proof.get("counts"),dict)
+        and all(type(n) is int and n>=0 for n in proof["counts"].values()),
+        "extension_coverage_result_shape")
+    return proof
+
+
+def parse_source_output(raw, extension_coverage):
+    lines=[line for line in raw.splitlines() if line.strip()]
+    require(len(lines)==(2 if extension_coverage else 1),"metadata_result_count_unqualified")
+    value=sanitize_settings(json.loads(lines[0]))
+    if extension_coverage:
+        proof=json.loads(lines[1])
+        check_extension_coverage(proof)
+        value["extensionCoverage"]=proof
+        value["extensionCoverageQuerySha256"]=sha(EXTENSION_COVERAGE.read_bytes())
+    return value
+
+
+def collect(env, output, *, extension_coverage=False):
     commit=source_pin(env)
     require(not output.exists() and not output.is_symlink(),"metadata_output_exists")
     root=Path(env.get("RUNNER_TEMP","")).resolve()
@@ -177,10 +214,10 @@ def collect(env, output):
                              "--read-only","--no-healthcheck","--cap-drop","ALL","--security-opt","no-new-privileges:true",
                              "--network","bridge","--env-file",str(file),"--entrypoint","psql",IMAGE,
                              "-X","--no-password","--quiet","--tuples-only","--no-align","--set","ON_ERROR_STOP=1","--file","-"],
-                            data=SOURCE_SQL.encode(),timeout=150)
+                            data=source_query(extension_coverage).encode(),timeout=150)
             finally:
                 remove_metadata_reader(owner,name)
-            value=sanitize_settings(json.loads(raw))
+            value=parse_source_output(raw,extension_coverage)
             value.update(databaseHost=urlparse(env["KOVA_PRODUCTION_DATABASE_URL"]).hostname,
                          sourceCommit=commit,metadataImageDigest=IMAGE,sourceBuildOperatorPin=BUILD,
                          sourcePackagingBuildObservedBySql=False)
@@ -204,9 +241,10 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute",action="store_true")
     parser.add_argument("--output",required=True)
+    parser.add_argument("--extension-coverage",action="store_true")
     args=parser.parse_args()
     require(args.execute,"metadata_execution_not_enabled")
-    receipt=collect(os.environ,Path(args.output))
+    receipt=collect(os.environ,Path(args.output),extension_coverage=args.extension_coverage)
     print(json.dumps(receipt,sort_keys=True,separators=(",",":")))
 
 
