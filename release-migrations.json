@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 201,
-  "latest": "20261030132255_google_connection_lifecycle_forward.sql",
+  "count": 203,
+  "latest": "20261030163511_kova_work_runtime_forward.sql",
   "migrations": [
     {
       "order": 1,
@@ -4181,6 +4181,141 @@
         "google_connections_owner",
         "google_oauth_attempts_owner_expiry",
         "google_oauth_exchange_cleanup"
+      ]
+    },
+    {
+      "order": 202,
+      "filename": "20261030141704_kova_monthly_intro_lifecycle_forward.sql",
+      "timestamp": "20261030141704",
+      "sha256": "787d04b875dab35224e5f45ec4c0f0d6ca2e1c9aec41cd6992d037a6e6775ecc",
+      "tables": [
+        "kova_policy_accounts",
+        "kova_policy_customer_bindings",
+        "kova_policy_checkout_claims",
+        "kova_policy_intro_redemptions",
+        "kova_policy_event_receipts",
+        "kova_policy_subscription_state"
+      ],
+      "functions": [
+        "kova_policy_auth_lock",
+        "kova_policy_lock_account",
+        "kova_policy_checkout_json",
+        "kova_policy_claim_customer",
+        "kova_policy_complete_customer",
+        "kova_policy_claim_checkout",
+        "kova_policy_attach_checkout",
+        "kova_policy_settle_checkout",
+        "kova_policy_checkout_status",
+        "kova_policy_pending_checkout",
+        "kova_policy_customer_for_portal",
+        "kova_policy_account_status",
+        "kova_policy_schedule_deletion",
+        "kova_policy_recover_deletion",
+        "kova_policy_due_deletions",
+        "kova_policy_begin_finalization",
+        "kova_policy_renew_finalization",
+        "kova_policy_ack_customer_retired",
+        "kova_policy_confirm_finalization",
+        "kova_policy_guard_auth_deletion",
+        "kova_policy_apply_legacy_event",
+        "kova_monthly_subscription_summary",
+        "kova_policy_readiness"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "kova_policy_accounts",
+        "kova_policy_customer_bindings",
+        "kova_policy_checkout_claims",
+        "kova_policy_intro_redemptions",
+        "kova_policy_event_receipts",
+        "kova_policy_subscription_state"
+      ],
+      "policies": [],
+      "indexes": [
+        "kova_policy_due_accounts",
+        "kova_policy_one_pending_checkout",
+        "kova_policy_checkout_owner_history"
+      ]
+    },
+    {
+      "order": 203,
+      "filename": "20261030163511_kova_work_runtime_forward.sql",
+      "timestamp": "20261030163511",
+      "sha256": "50935857c4564c7b695df43cb3ed8c68fcebc560bc0dcb40177486002dc4b5fa",
+      "tables": [
+        "work_sync_counters",
+        "work_saved_records",
+        "work_recent_items",
+        "work_sync_mutations",
+        "work_execution_runs",
+        "work_execution_events",
+        "work_execution_receipts",
+        "work_execution_outputs",
+        "work_accounting_settlements",
+        "work_browser_sessions"
+      ],
+      "functions": [
+        "auth_user_exists",
+        "set_project_file_upload_state",
+        "work_sync_request_fingerprint",
+        "work_sync_payload_depth_allowed",
+        "next_work_sync_version",
+        "purge_work_sync_receipts",
+        "get_work_sync_changes",
+        "enforce_work_sync_receipt_capacity",
+        "enforce_work_saved_payload_capacity",
+        "delete_work_saved_record",
+        "validate_work_session",
+        "upsert_work_saved_record",
+        "mutate_work_recent_item",
+        "assert_work_execution_lease",
+        "publish_work_execution_output",
+        "publish_work_project_file",
+        "next_work_execution_dispatch",
+        "settle_work_accounting",
+        "lock_work_browser_run",
+        "admit_work_browser_owner",
+        "finish_work_browser_owner",
+        "authorize_work_browser",
+        "guard_work_browser_takeover",
+        "commit_work_execution"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "work_sync_counters",
+        "work_saved_records",
+        "work_recent_items",
+        "work_sync_mutations",
+        "work_execution_runs",
+        "work_execution_events",
+        "work_execution_receipts",
+        "work_execution_outputs",
+        "work_accounting_settlements",
+        "work_browser_sessions"
+      ],
+      "policies": [
+        "work_saved_records_owner_read",
+        "work_recent_items_owner_read",
+        "work_execution_owner_read",
+        "work_execution_event_owner_read",
+        "work_output_owner_read",
+        "work_browser_owner_read",
+        "kova_owned_session_guard"
+      ],
+      "indexes": [
+        "work_saved_records_owner_sync_idx",
+        "work_saved_records_owner_active_idx",
+        "work_recent_items_owner_sync_idx",
+        "work_recent_items_owner_active_idx",
+        "work_sync_mutations_created_idx",
+        "work_sync_mutations_owner_created_idx",
+        "work_execution_owner_updated_idx",
+        "work_execution_dispatch_idx",
+        "work_browser_one_live_run"
       ]
     }
   ]
