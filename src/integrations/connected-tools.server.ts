@@ -227,6 +227,9 @@ export async function runConnectionAccountSearch(
       canReadConnection(account, id),
   );
   if (!bound) throw new Error("connection_account_not_allowed");
+  const providerConfigured = () =>
+    configuredOAuthProviders().some((provider) => provider.id === flow.provider);
+  if (!providerConfigured()) throw new Error("connection_changed_or_expired");
   const limit = await consumeApplicationRateLimit({
     identity: `user:${ownerId}`,
     action: "connection_read",
@@ -253,9 +256,35 @@ export async function runConnectionAccountSearch(
     account.updated_at !== bound.updated_at
   )
     throw new Error("connection_changed_or_expired");
+  const ensureCurrentBinding = async () => {
+    const { data: current, error: currentError } = await db
+      .from("integration_linked_accounts")
+      .select(`${accountColumns},access_token_ciphertext,deleted_at`)
+      .eq("id", bound.id)
+      .eq("owner_id", ownerId)
+      .eq("provider_id", flow.provider)
+      .is("workspace_id", null)
+      .is("deleted_at", null)
+      .maybeSingle();
+    await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
+    if (
+      currentError ||
+      !current ||
+      !providerConfigured() ||
+      !canReadConnection(current, id) ||
+      current.updated_at !== account.updated_at ||
+      current.access_token_ciphertext !== account.access_token_ciphertext
+    )
+      throw new Error("connection_changed_or_expired");
+  };
   const token = await decryptCredential(account.access_token_ciphertext);
+  await ensureCurrentBinding();
   const result = await readConnection(id, String(args.query ?? ""), token);
-  await db.from("integration_audit_events").insert({
+  // Revocation, reconnect, scope changes and Lockdown can occur while the
+  // provider request is in flight. Discard its data unless the same binding
+  // remains authorized. Recheck after the audit await before exposing it.
+  await ensureCurrentBinding();
+  const { error: auditError } = await db.from("integration_audit_events").insert({
     owner_id: ownerId,
     linked_account_id: bound.id,
     provider_id: flow.provider,
@@ -263,6 +292,8 @@ export async function runConnectionAccountSearch(
     result: "success",
     safe_summary: `Read ${flow.label} search results`,
   });
+  if (auditError) throw new Error("connection_audit_unavailable");
+  await ensureCurrentBinding();
   return result;
 }
 
