@@ -34,10 +34,33 @@ MEMBERS = {"full.dump", "schema.sql", "managed-schema.sql", "catalog.json", "row
 TIMEOUT = 900
 OPERATION_SECONDS = 1500
 DEADLINE = None
+PUBLIC_STAGE = "startup"
+PUBLIC_STAGES = frozenset({"startup", "capture-authorization", "capture-source-config",
+    "capture-client-tools", "capture-snapshot", "capture-catalog", "capture-dump",
+    "capture-schema", "capture-coverage", "capture-rows", "capture-package",
+    "capture-encrypt", "capture-roundtrip", "capture-receipt", "restore"})
+PUBLIC_FAILURE_CODES = frozenset({"explicit_execution_required", "capture_not_enabled",
+    "source_approval_mismatch", "source_build_approval_missing", "backup_passphrase_missing",
+    "production_connection_rejected", "trusted_ca_bundle_required", "pg17_client_required",
+    "source_version_mismatch", "snapshot_rejected", "snapshot_lost", "snapshot_deadline_exceeded",
+    "snapshot_response_invalid", "private_command_unconfirmed", "private_output_bound_exceeded",
+    "foreign_data_recovery_unqualified", "identifier_review_required", "schema_review_required",
+    "dump_bound_exceeded", "full_table_data_coverage_missing", "materialized_data_coverage_missing",
+    "required_schema_missing", "hosted_auth_capture_missing", "row_proof_bound_exceeded",
+    "row_proof_invalid", "archive_bound_exceeded", "encryption_roundtrip_mismatch",
+    "operation_deadline_exceeded", "operator_interrupted", "output_exists"})
 STDOUT_BYTES = 128 * 1024**2
 MAX_BYTES = 4 * 1024**3
 CANONICAL_PG = "-c TimeZone=UTC -c DateStyle=ISO,YMD -c bytea_output=hex -c extra_float_digits=3"
 GUARD = Path(__file__).with_name("managed-auth-recovery-target.mjs")
+EMPTY_CENSUS = Path(__file__).with_name("empty-restore-target-catalog.sql")
+EMPTY_STRUCTURAL_KEYS = {
+    "systemNamespaceObjectsSha256", "inheritanceSha256", "publicationRelationsSha256",
+    "publicationNamespacesSha256", "foreignTablesSha256", "operatorFamilyOperatorsSha256",
+    "operatorFamilyProceduresSha256", "objectDescriptionsSha256", "sharedObjectDescriptionsSha256",
+    "securityLabelsSha256", "sharedSecurityLabelsSha256", "initialPrivilegesSha256",
+    "dependenciesSha256", "sharedDependenciesSha256",
+}
 
 
 class Stopped(Exception):
@@ -47,6 +70,20 @@ class Stopped(Exception):
 def require(ok, code):
     if not ok:
         raise Stopped(code)
+
+
+def mark_stage(stage):
+    global PUBLIC_STAGE
+    require(stage in PUBLIC_STAGES, "public_stage_rejected")
+    PUBLIC_STAGE = stage
+
+
+def public_failure(exc):
+    # Both fields are fixed enumerations; raw exception/child diagnostics never escape.
+    code = str(exc) if isinstance(exc, Stopped) else ""
+    return {"ok":False,"error":"managed_auth_recovery_unqualified",
+            "stage":PUBLIC_STAGE if PUBLIC_STAGE in PUBLIC_STAGES else "startup",
+            "code":code if code in PUBLIC_FAILURE_CODES else "unclassified_private_failure"}
 
 
 def digest(data):
@@ -274,15 +311,15 @@ class Snapshot:
 
 CATALOG_SQL = """
 SELECT jsonb_build_object(
- 'extensions',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname) ORDER BY e.extname),'[]') FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace),
- 'schemas',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',n.nspname,'owner',pg_get_userbyid(n.nspowner),'acl',n.nspacl,'comment',obj_description(n.oid,'pg_namespace')) ORDER BY n.nspname),'[]') FROM pg_namespace n WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname<>'information_schema'),
- 'tables',(SELECT coalesce(jsonb_agg(jsonb_build_object('schema',n.nspname,'name',c.relname,'kind',c.relkind,'populated',c.relispopulated) ORDER BY n.nspname,c.relname),'[]') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','p','m','f') AND n.nspname NOT LIKE 'pg_%' AND n.nspname<>'information_schema'),
+ 'extensions',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname,'owner',pg_get_userbyid(e.extowner)) ORDER BY e.extname),'[]') FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace),
+ 'schemas',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',n.nspname,'owner',pg_get_userbyid(n.nspowner),'acl',n.nspacl,'comment',obj_description(n.oid,'pg_namespace')) ORDER BY n.nspname),'[]') FROM pg_namespace n WHERE n.nspname !~ '^pg_' AND n.nspname<>'information_schema'),
+ 'tables',(SELECT coalesce(jsonb_agg(jsonb_build_object('schema',n.nspname,'name',c.relname,'kind',c.relkind,'populated',c.relispopulated) ORDER BY n.nspname,c.relname),'[]') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','p','m','f') AND n.nspname !~ '^pg_' AND n.nspname<>'information_schema'),
  'preinstalledObjects',(SELECT coalesce(jsonb_agg(jsonb_build_object('schema',o.schema,'name',o.name,'kind',o.kind) ORDER BY o.schema,o.kind,o.name),'[]') FROM (
-   SELECT n.nspname AS schema,c.relname AS name,'relation' AS kind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname<>'information_schema' AND NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_class'::regclass AND d.objid=c.oid AND d.deptype='e')
-   UNION ALL SELECT n.nspname,p.proname||'('||pg_get_function_identity_arguments(p.oid)||')','routine' FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname<>'information_schema' AND NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_proc'::regclass AND d.objid=p.oid AND d.deptype='e')
-   UNION ALL SELECT n.nspname,t.typname,'type' FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname<>'information_schema' AND t.typtype IN ('d','e','r','m') AND NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_type'::regclass AND d.objid=t.oid AND d.deptype='e')
+   SELECT n.nspname AS schema,c.relname AS name,'relation' AS kind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname !~ '^pg_' AND n.nspname<>'information_schema' AND NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_class'::regclass AND d.objid=c.oid AND d.deptype='e')
+   UNION ALL SELECT n.nspname,p.proname||'('||pg_get_function_identity_arguments(p.oid)||')','routine' FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname !~ '^pg_' AND n.nspname<>'information_schema' AND NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_proc'::regclass AND d.objid=p.oid AND d.deptype='e')
+   UNION ALL SELECT n.nspname,t.typname,'type' FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname !~ '^pg_' AND n.nspname<>'information_schema' AND t.typtype IN ('d','e','r','m') AND NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_type'::regclass AND d.objid=t.oid AND d.deptype='e')
  )o),
- 'sequences',(SELECT coalesce(jsonb_agg(jsonb_build_object('schema',n.nspname,'name',c.relname) ORDER BY n.nspname,c.relname),'[]') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind='S' AND n.nspname NOT LIKE 'pg_%' AND n.nspname<>'information_schema'),
+ 'sequences',(SELECT coalesce(jsonb_agg(jsonb_build_object('schema',n.nspname,'name',c.relname) ORDER BY n.nspname,c.relname),'[]') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind='S' AND n.nspname !~ '^pg_' AND n.nspname<>'information_schema'),
  'roles',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',rolname,'super',rolsuper,'inherit',rolinherit,'createRole',rolcreaterole,'createDb',rolcreatedb,'login',rolcanlogin,'replication',rolreplication,'bypassRls',rolbypassrls,'connectionLimit',rolconnlimit,'validUntil',rolvaliduntil) ORDER BY rolname),'[]') FROM pg_roles),
  'memberships',(SELECT coalesce(jsonb_agg(jsonb_build_object('role',pg_get_userbyid(roleid),'member',pg_get_userbyid(member),'grantor',pg_get_userbyid(grantor),'admin',admin_option,'inherit',inherit_option,'set',set_option) ORDER BY roleid,member),'[]') FROM pg_auth_members),
  'roleSettings',(SELECT coalesce(jsonb_agg(jsonb_build_object('role',CASE WHEN s.setrole=0 THEN '*' ELSE pg_get_userbyid(s.setrole) END,'database',coalesce(d.datname,'*'),'settings',s.setconfig) ORDER BY s.setrole,s.setdatabase),'[]') FROM pg_db_role_setting s LEFT JOIN pg_database d ON d.oid=s.setdatabase),
@@ -411,13 +448,16 @@ def bounded_archive(path, out):
 
 @bounded_operation
 def capture(env, output):
+    mark_stage("capture-authorization")
     require(env.get("KOVA_AUTH_RECOVERY_CONFIRMATION") == "CAPTURE_ONLY", "capture_not_enabled")
     source = env.get("GITHUB_SHA", "")
     require(re.fullmatch(r"[a-f0-9]{40}", source) and env.get("KOVA_APPROVED_SOURCE_SHA") == source
             and env.get("GITHUB_REF") == "refs/heads/main", "source_approval_mismatch")
     require(env.get("KOVA_AUTH_APPROVED_SOURCE_DATABASE_VERSION") == BUILD, "source_build_approval_missing")
     phrase = passphrase(env)
+    mark_stage("capture-source-config")
     source_env = source_environment(env)
+    mark_stage("capture-client-tools")
     client_check(source_env)
     require(not output.exists(), "output_exists")
     output.mkdir(mode=0o700)
@@ -426,22 +466,29 @@ def capture(env, output):
         with tempfile.TemporaryDirectory(prefix="kova-full-auth-capture-") as temp:
             work = Path(temp)
             os.chmod(work, 0o700)
+            mark_stage("capture-snapshot")
             with Snapshot(source_env) as snapshot:
+                mark_stage("capture-catalog")
                 catalog = snapshot.query(CATALOG_SQL)
                 identifiers(catalog)
                 fresh_file(work/"catalog.json", encoded(catalog))
+                mark_stage("capture-dump")
                 run(["pg_dump", "--no-password", "--format=custom", "--snapshot", snapshot.id,
                      "--file", str(work/"full.dump")], source_env)
                 require(0 < (work/"full.dump").stat().st_size <= MAX_BYTES, "dump_bound_exceeded")
                 snapshot.query("SELECT '{}'::jsonb;")  # keep exporter alive between bounded children
+                mark_stage("capture-schema")
                 for name, args in [("schema.sql", []), ("managed-schema.sql", ["--schema="+s for s in sorted(MANAGED_SCHEMAS)])]:
                     run(["pg_dump", "--no-password", "--schema-only", "--snapshot", snapshot.id,
                          *args, "--file", str(work/name)], source_env)
                     snapshot.query("SELECT '{}'::jsonb;")
+                mark_stage("capture-coverage")
                 toc = run(["pg_restore", "--list", str(work/"full.dump")], clean_pg_env(env))
                 fresh_file(work/"toc.list", toc)
                 table_coverage(catalog, toc_entries(toc.decode()))
+                mark_stage("capture-rows")
                 fresh_file(work/"rows.json", encoded(row_fingerprints(source_env, catalog, snapshot.id)))
+            mark_stage("capture-package")
             # Hashes and all schema/role/user-derived data stay INSIDE ciphertext.
             manifest = {"format":1,"operation":"complete-managed-auth-database-capture","project":PROJECT,
                         "sourceSha":source,"postgresBuild":BUILD,"capturedAt":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),
@@ -462,12 +509,15 @@ def capture(env, output):
                     check_deadline()
             require(plain.stat().st_size <= MAX_BYTES, "archive_bound_exceeded")
             encrypted = output/"managed-auth-backup.tar.gpg"
+            mark_stage("capture-encrypt")
             crypt(env, phrase, plain, encrypted)
             # Prove the just-created artifact decrypts under the bound key without
             # exposing it or creating a second uploaded plaintext artifact.
+            mark_stage("capture-roundtrip")
             check = work/"decrypt-check.tar"
             crypt(env, phrase, encrypted, check, decrypt=True)
             require(file_digest(check) == file_digest(plain), "encryption_roundtrip_mismatch")
+            mark_stage("capture-receipt")
             receipt = {"operation":"managed-auth-capture","project":PROJECT,"sourceSha":source,
                        "encryptedSha256":file_digest(encrypted),"encryptedBytes":encrypted.stat().st_size,
                        "completeRequiredDatabaseTableCoverage":True,"consistentSnapshot":True,"encryptedRoundtripVerified":True,
@@ -530,7 +580,7 @@ SELECT jsonb_build_object('database',current_database(),'serverAddress',inet_ser
 'authUsers',(SELECT count(*)::int FROM auth.users),'authIdentities',(SELECT count(*)::int FROM auth.identities),
 'authSessions',(SELECT count(*)::int FROM auth.sessions),'storageBuckets',(SELECT count(*)::int FROM storage.buckets),
 'storageObjects',(SELECT count(*)::int FROM storage.objects),'applicationRelations',(SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('public','kova_private') AND c.relkind IN ('r','p','f','S','v','m') AND NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_class'::regclass AND d.objid=c.oid AND d.deptype='e')),
-'extensions',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname) ORDER BY e.extname),'[]') FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace))::text;
+'extensions',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname,'owner',pg_get_userbyid(e.extowner)) ORDER BY e.extname),'[]') FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace))::text;
 COMMIT;"""
     observed = json.loads(psql(env, sql))
     return {"observed":observed,"sourceExtensions":source_catalog["extensions"]}
@@ -587,6 +637,141 @@ def schema_restore_list(entries, source_catalog, target_catalog):
     return ("\n".join(result) + "\n").encode()
 
 
+def restore_baseline_mode(env, attestation):
+    """A blank database is a separate reviewed target, never a fallback."""
+    mode = env.get("KOVA_AUTH_RESTORE_BASELINE_MODE", "managed-baseline")
+    require(mode in {"managed-baseline", "empty-database"}, "restore_baseline_mode_rejected")
+    if mode == "empty-database":
+        require(env.get("KOVA_AUTH_RECOVERY_CONFIRMATION") == "RESTORE_EMPTY_ISOLATED"
+                and attestation.get("baselineMode") == mode,
+                "empty_baseline_mode_approval_missing")
+        require(attestation.get("emptyBaselineIndependentlyReviewed") is True
+                and attestation.get("emptyBaselineSource") == "pinned-image-template0-plus-extensions",
+                "empty_baseline_provenance_unqualified")
+        for key in ("emptyBaselineCensusSha256", "emptyBaselineCatalogSha256",
+                    "emptyBaselineRowsSha256", "emptyBaselineSchemaSha256"):
+            require(SHA.fullmatch(attestation.get(key, "")), "empty_baseline_pin_missing")
+    else:
+        require(env.get("KOVA_AUTH_RECOVERY_CONFIRMATION") == "RESTORE_ISOLATED"
+                and attestation.get("baselineMode", mode) == mode,
+                "restore_baseline_mode_approval_missing")
+    return mode
+
+
+def empty_schema_restore_list(entries, source_catalog, target_catalog):
+    """Restore all managed and application definitions in archive order.
+
+    Only a proven-identical existing namespace and an exact installed extension
+    definition may be omitted. No helper, policy, owner, ACL or service schema
+    is exempted. Final full-schema comparison remains mandatory.
+    """
+    source_ns = {s["name"]:s for s in source_catalog["schemas"]}
+    target_ns = {s["name"]:s for s in target_catalog["schemas"]}
+    require(all(source_ns.get(name) == value for name,value in target_ns.items()),
+            "namespace_owner_acl_mismatch")
+    require(encoded(source_catalog["extensions"]) == encoded(target_catalog["extensions"]),
+            "empty_target_extensions_mismatch")
+    result = []
+    extension_names = {e["name"] for e in source_catalog["extensions"]}
+    for entry in budgeted(entries):
+        kind, schema, name = entry["kind"], entry["schema"], entry["nameOwner"]
+        if kind in {"TABLE DATA", "SEQUENCE SET", "MATERIALIZED VIEW DATA",
+                    "BLOB", "BLOBS", "BLOB COMMENTS", "BLOB ACL"}:
+            continue
+        if kind in {"ENCODING", "STDSTRINGS", "SEARCHPATH"}:
+            continue
+        if kind == "EXTENSION":
+            require(schema == "-" and name.split()[0] in extension_names,
+                    "empty_target_extension_toc_mismatch")
+            continue
+        if kind == "SCHEMA":
+            ns = name.split()[0]
+            require(ns in source_ns, "schema_toc_mismatch")
+            if ns in target_ns:
+                require(source_ns[ns] == target_ns[ns], "namespace_owner_acl_mismatch")
+                continue
+        if schema == "-" and kind in {"COMMENT", "ACL"} and name.startswith("SCHEMA "):
+            ns = name.split()[1]
+            require(ns in source_ns, "schema_acl_reconciliation_required")
+            if ns in target_ns:
+                require(source_ns[ns] == target_ns[ns], "namespace_owner_acl_mismatch")
+                continue
+        # Keep global extension comments/ACLs, publications and every supported
+        # archive object. They are not silently inherited from the baseline.
+        result.append(entry["line"])
+    return ("\n".join(result) + "\n").encode()
+
+
+EMPTY_IDENTITY_SQL = """BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
+SELECT jsonb_build_object(
+ 'database',current_database(),'serverAddress',inet_server_addr()::text,
+ 'serverPort',inet_server_port(),'serverVersionNum',current_setting('server_version_num')::int,
+ 'systemIdentifier',(SELECT system_identifier::text FROM pg_control_system()),
+ 'managedRelationsPresent',(SELECT coalesce(jsonb_agg(name ORDER BY name),'[]')
+   FROM unnest(ARRAY['auth.users','auth.identities','auth.sessions','storage.buckets','storage.objects']) name
+   WHERE to_regclass(name) IS NOT NULL)
+)::text;
+COMMIT;
+"""
+
+
+def empty_target_identity(target, approved, *, require_blank):
+    observed = json.loads(psql(target, EMPTY_IDENTITY_SQL))
+    require(all(str(observed.get(k)) == str(approved[v]) for k,v in {
+        "database":"database", "serverAddress":"expectedIp", "serverPort":"port",
+        "systemIdentifier":"expectedSystemId"}.items()), "empty_target_fingerprint_mismatch")
+    require(observed.get("serverVersionNum") == 170006, "target_postgres_patch_mismatch")
+    if require_blank:
+        require(observed.get("managedRelationsPresent") == [], "empty_target_not_blank")
+    return observed
+
+
+def empty_target_preflight(target, approved, attestation, work, label):
+    """Prove the reviewed blank target before receiving any backup plaintext.
+
+    The census alone is not image provenance. Independent baseline pins must
+    come from the exact trusted image/template0 plus reviewed extensions;
+    hashing the proposed target and calling it a baseline is not qualification.
+    Every check is repeated immediately before the first restore write.
+    """
+    empty_target_identity(target, approved, require_blank=True)
+    census = json.loads(psql(target, "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n"
+                            + EMPTY_CENSUS.read_text() + "\nCOMMIT;\n"))
+    require(census.get("format") == 1 and census.get("serverVersionNum") == 170006
+            and census.get("completeness", {}).get("explicitPg17CatalogEnumeration") is True,
+            "empty_target_census_unqualified")
+    objects = census.get("namespaceObjects")
+    require(isinstance(objects, list) and all(isinstance(o, dict) and
+            (o.get("directExtension") is not None or o.get("internalExtension") is not None)
+            for o in objects), "empty_target_user_objects_present")
+    # Global objects are not guessed to be built-ins by OID or lack of schema.
+    # Their full census is bound to the independently reviewed image baseline.
+    require(isinstance(census.get("globalObjects"), list), "empty_target_global_census_missing")
+    structural = census.get("structuralCatalogs", {})
+    require(isinstance(structural, dict) and set(structural) == EMPTY_STRUCTURAL_KEYS
+            and all(isinstance(v, str) and SHA.fullmatch(v) for v in structural.values()),
+            "empty_target_structural_census_missing")
+    catalog = json.loads(psql(target, CATALOG_SQL))
+    identifiers(catalog)
+    require(catalog.get("largeObjects") == [], "isolated_large_objects_not_empty")
+    rows = row_fingerprints(target, catalog)
+    require(all(r.get("rows") == 0 and r.get("sha256") == digest(b"") for r in rows),
+            "empty_target_seed_data_present")
+    require(psql(target, "SELECT coalesce(current_setting('cron.launch_active_jobs',true),'off');\n").strip()
+            == b"off", "cron_not_disabled")
+    schema = work/(label+"-empty-schema.sql")
+    require(not schema.exists(), "empty_baseline_output_exists")
+    run(["pg_dump", "--no-password", "--schema-only", "--file", str(schema)], target)
+    actual = {
+        "emptyBaselineCensusSha256":digest(encoded(census)),
+        "emptyBaselineCatalogSha256":digest(encoded(catalog)),
+        "emptyBaselineRowsSha256":digest(encoded(rows)),
+        "emptyBaselineSchemaSha256":schema_hash(schema.read_bytes()),
+    }
+    require(all(actual[k] == attestation[k] for k in actual), "empty_target_baseline_pin_mismatch")
+    return catalog
+
+
 
 def baseline_service_data(source_rows, target_rows):
     """Skip only proven-identical initialized service migration markers.
@@ -639,8 +824,10 @@ def sequence_values(sql):
 
 @bounded_operation
 def restore(env, archive, output):
-    require(env.get("KOVA_AUTH_RECOVERY_CONFIRMATION") == "RESTORE_ISOLATED", "restore_not_enabled")
+    require(env.get("KOVA_AUTH_RECOVERY_CONFIRMATION") in {"RESTORE_ISOLATED", "RESTORE_EMPTY_ISOLATED"},
+            "restore_not_enabled")
     a = attest(env)  # isolation is established BEFORE receiving plaintext
+    baseline_mode = restore_baseline_mode(env, a)
     require(not env.get("PGPASSWORD"), "isolated_password_environment_rejected")
     guard_env = {**clean_pg_env(env), **{k:v for k,v in env.items() if k.startswith("APPROVED_ISOLATED_") or k == "PGPASSFILE"}}
     approved = json.loads(run(["node", str(GUARD), "--configuration"], guard_env, timeout=5))
@@ -655,6 +842,12 @@ def restore(env, archive, output):
     with tempfile.TemporaryDirectory(prefix="kova-private-auth-restore-") as temp:
         work = Path(temp)
         os.chmod(work, 0o700)
+        blank_catalog = None
+        if baseline_mode == "empty-database":
+            blank_catalog = empty_target_preflight(target, approved, a, work, "before-decrypt")
+            # The read-only proof itself can take time. Validate the bound
+            # isolation deadline after it, immediately before decryption.
+            require(attest(env) == a, "isolation_attestation_changed")
         plain = work/"payload.tar"
         crypt(env, phrase, archive, plain, decrypt=True)
         extracted = work/"payload"
@@ -671,27 +864,41 @@ def restore(env, archive, output):
             require(member.stat().st_size == row["bytes"] and file_digest(member) == row["sha256"], "backup_member_integrity_failed")
         source_catalog = json.loads((extracted/"catalog.json").read_bytes())
         identifiers(source_catalog)
-        proof = target_observation(target, source_catalog)
-        require(proof["observed"]["serverVersionNum"] == 170006, "target_postgres_patch_mismatch")
-        run(["node", str(GUARD), "--observation"], guard_env, data=encoded(proof), timeout=5)
+        if baseline_mode == "managed-baseline":
+            proof = target_observation(target, source_catalog)
+            require(proof["observed"]["serverVersionNum"] == 170006, "target_postgres_patch_mismatch")
+            run(["node", str(GUARD), "--observation"], guard_env, data=encoded(proof), timeout=5)
         # The target is independently pinned and empty; current schema/roles
         # must also match the capture. Historical baseline metadata cannot pass.
         require(psql(target, "SELECT has_parameter_privilege(current_user,'session_replication_role','SET');\n").strip() == b"t", "isolated_restore_authority_missing")
-        target_catalog = json.loads(psql(target, CATALOG_SQL))
+        target_catalog = blank_catalog if baseline_mode == "empty-database" else json.loads(psql(target, CATALOG_SQL))
         role_compatibility(source_catalog, target_catalog, a.get("approvedTargetOnlyRoles", []))
         require(psql(target, "SELECT coalesce(current_setting('cron.launch_active_jobs',true),'off');\n").strip() == b"off", "cron_not_disabled")
         identifiers(target_catalog)
-        require(not any(o["schema"] not in MANAGED_SCHEMAS for o in target_catalog["preinstalledObjects"]), "unsupported_preinstalled_baseline_collision")
         source_rows = json.loads((extracted/"rows.json").read_bytes())
         require(not target_catalog["largeObjects"], "isolated_large_objects_not_empty")
-        skip_tables = baseline_service_data(source_rows, row_fingerprints(target, target_catalog))
-        managed = work/"target-managed.sql"
-        run(["pg_dump","--no-password","--schema-only",*["--schema="+s for s in sorted(MANAGED_SCHEMAS)],"--file",str(managed)],target)
-        require(schema_hash(managed.read_bytes()) == manifest["managedSchemaSha256"], "managed_ddl_baseline_mismatch")
+        if baseline_mode == "managed-baseline":
+            require(not any(o["schema"] not in MANAGED_SCHEMAS for o in target_catalog["preinstalledObjects"]), "unsupported_preinstalled_baseline_collision")
+            skip_tables = baseline_service_data(source_rows, row_fingerprints(target, target_catalog))
+            managed = work/"target-managed.sql"
+            run(["pg_dump","--no-password","--schema-only",*["--schema="+s for s in sorted(MANAGED_SCHEMAS)],"--file",str(managed)],target)
+            require(schema_hash(managed.read_bytes()) == manifest["managedSchemaSha256"], "managed_ddl_baseline_mismatch")
+        else:
+            # All service-marker rows are restored on a truly blank database.
+            # Never borrow the initialized-baseline omission list.
+            skip_tables = set()
         entries = toc_entries((extracted/"toc.list").read_text())
         table_coverage(source_catalog, entries)
         selected = work/"schema-restore.list"
-        fresh_file(selected, schema_restore_list(entries, source_catalog, target_catalog))
+        selector = empty_schema_restore_list if baseline_mode == "empty-database" else schema_restore_list
+        fresh_file(selected, selector(entries, source_catalog, target_catalog))
+        if baseline_mode == "empty-database":
+            # Isolation may expire during decryption/inspection. Revalidate
+            # the immutable attestation and every target pin before writing.
+            fresh_catalog = empty_target_preflight(target, approved, a, work, "before-write")
+            require(encoded(fresh_catalog) == encoded(target_catalog), "empty_target_changed")
+            role_compatibility(source_catalog, fresh_catalog, a.get("approvedTargetOnlyRoles", []))
+            require(attest(env) == a, "isolation_attestation_changed")
         # Every owner/ACL is retained. Managed definitions are not replayed over
         # the exact matching baseline. Any conflict aborts this transaction.
         run(["pg_restore","--no-password","--exit-on-error","--single-transaction",
@@ -722,6 +929,13 @@ def restore(env, archive, output):
                     check_deadline()
         # Import only on the isolated target. SET replication_role suppresses
         # triggers without changing their saved enabled/disabled definitions.
+        if baseline_mode == "empty-database":
+            # Schema restore and SQL generation may outlive the prior check.
+            # Reconfirm isolation and the actual target before customer data.
+            empty_target_identity(target, approved, require_blank=False)
+            require(psql(target, "SELECT coalesce(current_setting('cron.launch_active_jobs',true),'off');\n").strip()
+                    == b"off", "cron_not_disabled")
+            require(attest(env) == a, "isolation_attestation_changed")
         run(["psql","-X","--no-password","--quiet","--single-transaction","--set","ON_ERROR_STOP=1",
              "--command","SET session_replication_role=replica","--file",str(data_sql),
              "--command","SET session_replication_role=origin"],target,output=subprocess.DEVNULL)
@@ -738,6 +952,7 @@ def restore(env, archive, output):
         run(["pg_dump","--no-password","--schema-only","--file",str(schema)],target)
         require(schema_hash(schema.read_bytes()) == manifest["schemaSha256"], "restored_schema_privileges_mismatch")
         receipt = {"operation":"managed-auth-isolated-restore","project":PROJECT,"backupSourceSha":manifest["sourceSha"],
+                   "baselineMode":baseline_mode,
                    "encryptedBackupSha256":expected,"isolationAttestationSha256":env["KOVA_AUTH_RESTORE_ATTESTATION_SHA256"],
                    "actualImageRepoDigest":a["actualImageRepoDigest"],"postgresBuild":BUILD,
                    "restoredDatabaseStateVerified":True,"tablesSequencesLargeObjectsVerified":True,
@@ -760,6 +975,7 @@ def main():
     if args.mode == "capture":
         capture(os.environ, Path(args.output))
     else:
+        mark_stage("restore")
         require(args.archive, "archive_required")
         restore(os.environ, Path(args.archive), Path(args.output))
     print('{"ok":true,"receiptWritten":true}')
@@ -772,9 +988,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, interrupted)
     try:
         main()
-    except Exception:
-        # Database/provider diagnostics may contain credentials or account data.
-        # The public failure is deliberately fixed; private state is quarantined
-        # by the isolated operator and must never be retried against production.
-        print('{"ok":false,"error":"managed_auth_recovery_unqualified"}')
+    except Exception as exc:
+        # Fixed stage/code enums only; no raw diagnostics, queries or account data.
+        print(json.dumps(public_failure(exc),sort_keys=True,separators=(",",":")))
         raise SystemExit(1)

@@ -35,12 +35,73 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Require existing PostgreSQL 17 clients and GPG
+      - name: Select PostgreSQL 17 clients and require GPG
         shell: bash
         run: |
           set -euo pipefail
+          pg17_dir=/usr/lib/postgresql/17/bin
+          select_pg17() {
+            if [[ -x "$pg17_dir/psql" && -x "$pg17_dir/pg_dump" && -x "$pg17_dir/pg_restore" ]]; then
+              export PATH="$pg17_dir:$PATH"
+            fi
+          }
+          require_pg17() {
+            local program version expected
+            for program in psql pg_dump pg_restore; do
+              version="$("$program" --version)" || return 1
+              expected="^${program} \\(PostgreSQL\\) 17\\."
+              [[ "$version" =~ $expected ]] || return 1
+            done
+          }
+          pg17_candidate() {
+            local line
+            while IFS= read -r line; do
+              if [[ "$line" =~ ^[[:space:]]*Candidate:[[:space:]]+([^[:space:]]+) ]]; then
+                printf '%s\n' "${BASH_REMATCH[1]}"
+                return
+              fi
+            done < <(apt-cache policy postgresql-client-17)
+          }
+          select_pg17
+          if ! require_pg17; then
+            sudo apt-get update
+            candidate="$(pg17_candidate)"
+            if [[ -z "$candidate" || "$candidate" == '(none)' ]]; then
+              # Official PostgreSQL Ubuntu instructions; explicit noble/amd64,
+              # scoped Signed-By key, full fingerprint and normal APT signatures.
+              . /etc/os-release
+              [[ "$ID" == ubuntu && "$VERSION_ID" == 24.04 && "$VERSION_CODENAME" == noble ]]
+              [[ "$(dpkg --print-architecture)" == amd64 ]]
+              command -v curl >/dev/null
+              command -v gpg >/dev/null
+              pg17_key_dir="$(mktemp -d)"
+              trap 'python3 -c "import shutil,sys;shutil.rmtree(sys.argv[1])" "$pg17_key_dir"' EXIT
+              curl --fail --silent --show-error --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 60 \
+                https://www.postgresql.org/media/keys/ACCC4CF8.asc -o "$pg17_key_dir/key.asc"
+              fingerprints=()
+              while IFS=: read -r kind f2 f3 f4 f5 f6 f7 f8 f9 fingerprint rest; do
+                if [[ "$kind" == fpr ]]; then fingerprints+=("$fingerprint"); fi
+              done < <(gpg --batch --show-keys --with-colons "$pg17_key_dir/key.asc")
+              [[ "${#fingerprints[@]}" == 1 && "${fingerprints[0]}" == B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 ]]
+              sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+              sudo install -m 0644 "$pg17_key_dir/key.asc" /usr/share/postgresql-common/pgdg/kova-pgdg.asc
+              printf '%s\n' 'Types: deb' 'URIs: https://apt.postgresql.org/pub/repos/apt' \
+                'Suites: noble-pgdg' 'Architectures: amd64' 'Components: main' \
+                'Signed-By: /usr/share/postgresql-common/pgdg/kova-pgdg.asc' > "$pg17_key_dir/pgdg.sources"
+              sudo install -m 0644 "$pg17_key_dir/pgdg.sources" /etc/apt/sources.list.d/kova-pgdg.sources
+              sudo apt-get update
+              candidate="$(pg17_candidate)"
+            fi
+            [[ "$candidate" =~ ^17\.[0-9A-Za-z.+:~_-]+$ ]]
+            sudo apt-get install --yes --no-install-recommends "postgresql-client-17=$candidate"
+            select_pg17
+            require_pg17
+          fi
+          if [[ -x "$pg17_dir/psql" && -x "$pg17_dir/pg_dump" && -x "$pg17_dir/pg_restore" ]]; then
+            printf '%s\n' "$pg17_dir" >> "$GITHUB_PATH"
+          fi
           for program in psql pg_dump pg_restore; do
-            "$program" --version | rg '^.*\(PostgreSQL\) 17\.' >/dev/null
+            "$program" --version
           done
           command -v gpg >/dev/null
           command -v timeout >/dev/null

@@ -223,6 +223,13 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(more).toBeFocused();
+    const search = page.getByRole("button", { name: "Search this project", exact: true });
+    await search.click();
+    await expect(
+      page.getByRole("dialog", { name: "Search this project", exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(search).toBeFocused();
     await page.getByRole("tab", { name: "Files", exact: true }).click();
     await expect(page.getByRole("list", { name: "Project files", exact: true })).toContainText(
       "Research brief.pdf",

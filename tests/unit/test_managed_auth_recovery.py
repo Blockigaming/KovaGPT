@@ -56,6 +56,20 @@ class RecoveryTests(unittest.TestCase):
         out=m.clean_pg_env({"PATH":"safe","PGSERVICE":"unsafe","PGOPTIONS":"unsafe","OPENAI_API_KEY":"synthetic","KOVA_PRODUCTION_DATABASE_URL":"synthetic","KOVA_PRODUCTION_BACKUP_PASSPHRASE":"synthetic"})
         self.assertEqual(set(out),{"PATH","PGCONNECT_TIMEOUT","PGAPPNAME"})
 
+    def test_public_failure_uses_only_fixed_stage_and_code_enumerations(self):
+        with patch.object(m,"PUBLIC_STAGE","capture-snapshot"):
+            known=m.public_failure(m.Stopped("snapshot_lost"))
+            self.assertEqual(known["stage"],"capture-snapshot")
+            self.assertEqual(known["code"],"snapshot_lost")
+            for exc in [RuntimeError("synthetic-private-password"),m.Stopped("synthetic-private-url")]:
+                value=m.public_failure(exc)
+                self.assertEqual(value["code"],"unclassified_private_failure")
+                self.assertNotIn("synthetic-private",json.dumps(value))
+        with patch.object(m,"PUBLIC_STAGE","synthetic-private-stage"):
+            self.assertEqual(m.public_failure(Exception())["stage"],"startup")
+        with self.assertRaisesRegex(m.Stopped,"public_stage_rejected"):
+            m.mark_stage("synthetic-private-stage")
+
     def test_private_errors_never_echo_child_diagnostics(self):
         result=subprocess.CompletedProcess(["psql"],1,stdout=b"synthetic private rows",stderr=b"synthetic private key")
         with patch.object(m.subprocess,"run",return_value=result):

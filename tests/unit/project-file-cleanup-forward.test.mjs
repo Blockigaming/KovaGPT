@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
-const path = "supabase/migrations/20261030121047_kova_project_file_cleanup_definitions_forward.sql";
+const path = "supabase/migrations/20261030130349_kova_project_file_cleanup_definitions_forward.sql";
 const migration = await readFile(path, "utf8");
 const original = await readFile(
   "supabase/migrations/20260904200000_project_file_upload_integrity.sql",

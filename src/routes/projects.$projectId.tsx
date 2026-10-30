@@ -186,6 +186,9 @@ function ProjectDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const projectMoreRef = useRef<HTMLButtonElement>(null);
+  const projectSearchTriggerRef = useRef<HTMLElement | null>(null);
+  const projectSearchUrlRef = useRef<string | undefined>(undefined);
+  const projectSearchRequestKeyRef = useRef<string | null>(null);
   const projectActionUrlRef = useRef<string | undefined>(undefined);
   const projectActionTriggerRef = useRef<HTMLElement | null>(null);
   const openProjectDelete = (trigger?: HTMLElement) => {
@@ -198,6 +201,13 @@ function ProjectDetailPage() {
   const requestSequenceRef = useRef(0);
   const memberRoleOperationsRef = useRef(new Map<string, symbol>());
   currentRequestKeyRef.current = requestKey;
+
+  const openProjectSearch = (trigger: HTMLElement | null) => {
+    projectSearchTriggerRef.current = trigger;
+    projectSearchUrlRef.current = window.location.href;
+    projectSearchRequestKeyRef.current = currentRequestKeyRef.current;
+    setSearchOpen(true);
+  };
 
   const fnGet = useServerFn(getProject);
   const fnUpdate = useServerFn(updateProject);
@@ -670,7 +680,7 @@ function ProjectDetailPage() {
               size="icon"
               aria-label="Search this project"
               title="Search this project"
-              onClick={() => setSearchOpen(true)}
+              onClick={(event) => openProjectSearch(event.currentTarget)}
             >
               <Search className="h-4 w-4" aria-hidden="true" />
             </Button>
@@ -687,7 +697,7 @@ function ProjectDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setSearchOpen(true)}>
+                <DropdownMenuItem onSelect={() => openProjectSearch(projectMoreRef.current)}>
                   <Search aria-hidden="true" />
                   Search this project
                 </DropdownMenuItem>
@@ -1064,6 +1074,14 @@ function ProjectDetailPage() {
         projectId={projectId}
         open={searchOpen}
         onOpenChange={setSearchOpen}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          restoreDialogFocus(
+            projectSearchTriggerRef.current,
+            projectSearchUrlRef.current,
+            projectSearchRequestKeyRef.current !== currentRequestKeyRef.current,
+          );
+        }}
         onNavigate={(kind) => {
           setSearchOpen(false);
           setTab(kind === "chat" ? "chats" : kind === "file" ? "files" : kind);
@@ -3300,11 +3318,13 @@ function SearchDialog({
   projectId,
   open,
   onOpenChange,
+  onCloseAutoFocus,
   onNavigate,
 }: {
   projectId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onCloseAutoFocus: (event: Event) => void;
   onNavigate: (kind: SearchResult["kind"]) => void;
 }) {
   const fn = useServerFn(searchProject);
@@ -3340,7 +3360,7 @@ function SearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>Search this project</DialogTitle>
         </DialogHeader>

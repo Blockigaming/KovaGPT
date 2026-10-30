@@ -63,9 +63,9 @@ for (const theme of ["dark", "light"] as const) {
     if (info.project.name.includes("desktop")) {
       const logo = page.locator(".kova-sidebar-brand img");
       await expect(logo).toHaveAttribute("src", "/kova-logo.png");
-      expect(
-        await logo.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
-      ).toBe(true);
+      await expect
+        .poll(() => logo.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0))
+        .toBe(true);
       await expect(
         page.getByRole("link", { name: "Connections", exact: true }).filter({ visible: true }),
       ).toBeVisible();

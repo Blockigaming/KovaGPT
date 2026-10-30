@@ -256,13 +256,27 @@ export function createOpenAiServices({
           if (observed && !sessionId) {
             sessionId = identifier(observed, "");
             register("agent_session", sessionId, async (options) => {
-              if (!terminal)
-                await client.beta.agents.sessions.events.create(
-                  sessionId,
-                  { events: [{ type: "agent.session.input.cancel" }] },
-                  options,
-                );
-              await client.beta.agents.sessions.delete(sessionId, options);
+              if (!terminal) {
+                try {
+                  await client.beta.agents.sessions.events.create(
+                    sessionId,
+                    { events: [{ type: "agent.session.input.cancel" }] },
+                    options,
+                  );
+                } catch {
+                  // Still delete this request's session when cancellation is unconfirmed.
+                }
+              }
+              const deleted = await client.beta.agents.sessions.delete(sessionId, {
+                ...options,
+                signal: AbortSignal.timeout(10_000),
+              });
+              if (
+                deleted?.id !== sessionId ||
+                deleted.deleted !== true ||
+                deleted.object !== "agent.session.deleted"
+              )
+                fail("provider_cleanup_unconfirmed", 503);
             });
           }
           if (eventBytes > 2 * 1024 * 1024) fail("agent_output_limit");

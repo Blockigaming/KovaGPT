@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
   "count": 200,
-  "latest": "20261030121100_kova_browser_read_session_guards.sql",
+  "latest": "20261030130349_kova_project_file_cleanup_definitions_forward.sql",
   "migrations": [
     {
       "order": 1,
@@ -4119,8 +4119,22 @@
     },
     {
       "order": 199,
-      "filename": "20261030121047_kova_project_file_cleanup_definitions_forward.sql",
-      "timestamp": "20261030121047",
+      "filename": "20261030121100_kova_browser_read_session_guards.sql",
+      "timestamp": "20261030121100",
+      "sha256": "5159b0b9d710d12fb3994cdfa8c4e4ed93b52b3d5b82ad049f4be0d004f646f2",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": ["kova_owned_browser_read_guard", "kova_owned_browser_read_guard"],
+      "indexes": []
+    },
+    {
+      "order": 200,
+      "filename": "20261030130349_kova_project_file_cleanup_definitions_forward.sql",
+      "timestamp": "20261030130349",
       "sha256": "db68bb65c931f4ada0471b962aa79f51c7ab28e086b85f49643a07265ed8739c",
       "tables": [],
       "functions": [
@@ -4134,20 +4148,6 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": []
-    },
-    {
-      "order": 200,
-      "filename": "20261030121100_kova_browser_read_session_guards.sql",
-      "timestamp": "20261030121100",
-      "sha256": "5159b0b9d710d12fb3994cdfa8c4e4ed93b52b3d5b82ad049f4be0d004f646f2",
-      "tables": [],
-      "functions": [],
-      "destructive": false,
-      "dataBackfill": false,
-      "reversible": false,
-      "rls": [],
-      "policies": ["kova_owned_browser_read_guard", "kova_owned_browser_read_guard"],
       "indexes": []
     }
   ]
