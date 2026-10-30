@@ -97,17 +97,25 @@ export async function readConnection(id, query, token, fetchImpl = fetch) {
     rows = rows.filter((row) =>
       str(row.displayName).toLowerCase().includes(query.trim().toLowerCase()),
     );
-  return {
-    service: CONNECTION_FLOWS[id].label,
-    results: rows.slice(0, 10).map((row) => ({
+  const result = { service: CONNECTION_FLOWS[id].label, results: [], limited: true };
+  const encoder = new TextEncoder();
+  for (const row of rows.slice(0, 10)) {
+    const url = row.webLink ?? row.webUrl ?? row.url ?? row.permalink;
+    const item = {
       id: str(row.id ?? row.ts, 300),
       title:
         id === "notion"
           ? title(row)
           : str(row.subject ?? row.name ?? row.displayName ?? row.title ?? row.text, 300),
-      url: safeConnectionLink(row.webLink ?? row.webUrl ?? row.url ?? row.permalink),
+      url: typeof url === "string" && url.length <= 2048 ? safeConnectionLink(url) : null,
       snippet: str(row.bodyPreview ?? row.description ?? row.text),
-    })),
-    limited: true,
-  };
+    };
+    // Measure the serialized UTF-8 result, including JSON escaping. A provider
+    // can return control characters or very large URLs; never cut serialized
+    // JSON in the chat dispatcher or silently exceed its context boundary.
+    const next = { ...result, results: [...result.results, item] };
+    if (encoder.encode(JSON.stringify(next)).byteLength > 24_000) break;
+    result.results.push(item);
+  }
+  return result;
 }

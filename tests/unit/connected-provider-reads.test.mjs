@@ -252,3 +252,36 @@ test("refresh requests retain client authentication and validate user-token expi
     /refresh_expiry_missing/,
   );
 });
+
+test("provider control characters and oversized URLs cannot overflow or truncate serialized tool results", async () => {
+  const value = Array.from({ length: 20 }, (_, index) => ({
+    id: String(index),
+    subject: "Provider result",
+    bodyPreview: "\u0000".repeat(2000),
+    webLink: "https://example.test/" + "x".repeat(8000),
+  }));
+  const result = await readConnection("outlook", "needle", "fixture-token", async () =>
+    Response.json({ value }),
+  );
+  const serialized = JSON.stringify(result);
+  assert.ok(new TextEncoder().encode(serialized).byteLength <= 24000);
+  assert.ok(result.results.length > 0 && result.results.length < 10);
+  assert.ok(result.results.every((row) => row.url === null));
+  assert.deepEqual(JSON.parse(serialized), result);
+  assert.equal(result.limited, true);
+});
+
+test("multibyte provider text stays within the UTF8 tool budget with complete JSON records", async () => {
+  const value = Array.from({ length: 10 }, (_, index) => ({
+    id: String(index),
+    subject: "Evidence",
+    bodyPreview: "🧪".repeat(2000),
+    webLink: "https://example.test/evidence",
+  }));
+  const result = await readConnection("outlook", "needle", "fixture-token", async () =>
+    Response.json({ value }),
+  );
+  assert.ok(new TextEncoder().encode(JSON.stringify(result)).byteLength <= 24000);
+  assert.ok(result.results.length > 0 && result.results.length < 10);
+  assert.ok(result.results.every((row) => row.id && row.title && row.snippet));
+});

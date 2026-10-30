@@ -61,7 +61,10 @@ function fixture() {
         },
         insert(value) {
           calls.push([table, "insert", value]);
-          return Promise.resolve({ error: null });
+          return Promise.resolve().then(async () => {
+            if (table === "integration_audit_events") await state.onAudit?.();
+            return { error: state.auditError ?? null };
+          });
         },
         maybeSingle() {
           const matches = state.row && filters.every(([key, value]) => state.row[key] === value);
@@ -116,6 +119,7 @@ function fixture() {
     "./credential-vault.server": {
       decryptCredential: async () => {
         state.decrypts += 1;
+        await state.onDecrypt?.();
         return "fake-token";
       },
       encryptCredential: async (value) => `encrypted:${value}`,
@@ -124,6 +128,7 @@ function fixture() {
       readConnection: async (id, query, token) => {
         state.reads += 1;
         calls.push(["read", id, query, token]);
+        await state.onRead?.();
         return { results: [{ title: "test result" }] };
       },
     },
@@ -295,6 +300,102 @@ test("Lockdown and unavailable request protection prevent outbound reads", async
     );
     assert.equal(f.state.decrypts, 0);
     assert.equal(f.state.reads, 0);
+  }
+});
+
+for (const [name, patch] of [
+  ["revoked status", { status: "revoked" }],
+  ["deleted account", { deleted_at: "2026-10-30T01:00:00Z" }],
+  ["expired token", { token_expires_at: "2000-01-01T00:00:00Z" }],
+  ["removed scopes", { granted_scopes: [] }],
+  ["reconnected version", { updated_at: "new-reconnect" }],
+  ["rotated credential without version", { access_token_ciphertext: "other-token" }],
+  ["changed owner", { owner_id: "owner-b" }],
+  ["moved workspace", { workspace_id: "workspace-one" }],
+]) {
+  test(`in-flight ${name} discards provider data and cannot report a successful read`, async () => {
+    const f = fixture(),
+      context = await f.getConnectedToolContext("owner-a");
+    f.state.onRead = () => {
+      f.state.row = { ...f.state.row, ...patch };
+    };
+    await assert.rejects(
+      f.runConnectedTool(
+        "owner-a",
+        "outlook_search",
+        { account_id: f.state.row.id, query: "hello" },
+        context,
+      ),
+      /connection_changed_or_expired/,
+    );
+    assert.equal(f.state.reads, 1);
+    assert.equal(
+      f.calls.filter((call) => call[0] === "integration_audit_events" && call[1] === "insert")
+        .length,
+      0,
+    );
+  });
+}
+
+test("Lockdown and provider disablement during decryption, the request or audit withhold data", async () => {
+  for (const stage of ["onDecrypt", "onRead", "onAudit"]) {
+    for (const control of ["lockdown", "configured"]) {
+      const f = fixture(),
+        context = await f.getConnectedToolContext("owner-a");
+      f.state[stage] = () => {
+        f.state[control] = control === "lockdown";
+      };
+      await assert.rejects(
+        f.runConnectedTool(
+          "owner-a",
+          "outlook_search",
+          { account_id: f.state.row.id, query: "hello" },
+          context,
+        ),
+        /lockdown_mode|connection_changed_or_expired/,
+      );
+      assert.equal(f.state.reads, stage === "onDecrypt" ? 0 : 1);
+    }
+  }
+});
+
+test("a changed credential while decryption is pending cannot reach the provider", async () => {
+  const f = fixture(),
+    context = await f.getConnectedToolContext("owner-a");
+  f.state.onDecrypt = () => {
+    f.state.row.access_token_ciphertext = "replaced";
+  };
+  await assert.rejects(
+    f.runConnectedTool(
+      "owner-a",
+      "outlook_search",
+      { account_id: f.state.row.id, query: "hello" },
+      context,
+    ),
+    /connection_changed_or_expired/,
+  );
+  assert.equal(f.state.reads, 0);
+});
+
+test("a revocation during audit and an unavailable audit both withhold provider results", async () => {
+  for (const failure of ["revocation", "audit"]) {
+    const f = fixture(),
+      context = await f.getConnectedToolContext("owner-a");
+    if (failure === "revocation")
+      f.state.onAudit = () => {
+        f.state.row.status = "revoked";
+      };
+    else f.state.auditError = { message: "private database diagnostic" };
+    await assert.rejects(
+      f.runConnectedTool(
+        "owner-a",
+        "outlook_search",
+        { account_id: f.state.row.id, query: "hello" },
+        context,
+      ),
+      /connection_changed_or_expired|connection_audit_unavailable/,
+    );
+    assert.equal(f.state.reads, 1);
   }
 });
 
