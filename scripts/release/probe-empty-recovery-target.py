@@ -119,10 +119,10 @@ def literal(value):
     return "'" + value.replace("'", "''") + "'"
 
 
-def safe_setting(raw):
+def safe_setting(raw, *, role=None, database=None):
     require(isinstance(raw, str) and "=" in raw and len(raw) <= 2048, "source_setting_unqualified")
     key, value = raw.split("=", 1)
-    require(metadata_source.retained_setting(raw),
+    require(metadata_source.retained_setting(raw,role=role,database=database),
             "source_setting_unqualified")
     return key, value
 
@@ -176,7 +176,7 @@ def validate_metadata(metadata, *, source_sha):
         require(row.get("role") == "*" or row.get("role") in role_names, "source_setting_role_unqualified")
         require(row.get("database") in {"*", "postgres"} and isinstance(row.get("settings"), list),
                 "source_setting_database_unqualified")
-        for raw in row["settings"]:safe_setting(raw)
+        for raw in row["settings"]:safe_setting(raw,role=row["role"],database=row["database"])
         fingerprints=row.get("settingFingerprints")
         require(isinstance(fingerprints,list),"source_setting_fingerprint_coverage_missing")
         retained=[]
@@ -242,7 +242,7 @@ def role_setup_sql(metadata):
             statements.append(grant+" WITH "+option.upper()+" "+str(row[option]).upper()+" GRANTED BY "+ident(row["grantor"])+";")
     for row in metadata["roleSettings"]:
         for setting in row["settings"]:
-            key,value=safe_setting(setting)
+            key,value=safe_setting(setting,role=row["role"],database=row["database"])
             if row["role"] == "*":
                 require(row["database"] == "postgres", "global_database_setting_unqualified")
                 prefix="ALTER DATABASE postgres"

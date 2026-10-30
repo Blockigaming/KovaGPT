@@ -75,6 +75,30 @@ class MetadataTests(unittest.TestCase):
             self.assertNotIn(secret,encoded)
         self.assertTrue(all(len(x["sha256"])==64 for x in out["roleSettings"][0]["settingFingerprints"]))
 
+    def test_public_expiry_enum_and_inactive_role_preload_are_scope_checked(self):
+        for raw in ["app.settings.jwt_exp=3600","log_statement=none","log_statement=ddl"]:
+            self.assertTrue(m.retained_setting(raw))
+        for raw in ["app.settings.jwt_exp=0","app.settings.jwt_exp=31536001","app.settings.jwt_exp=1;SELECT",
+                    "log_statement=unknown","log_statement=all;SELECT"]:
+            self.assertFalse(m.retained_setting(raw))
+        for raw in ['session_preload_libraries=supautils, safeupdate',
+                    'session_preload_libraries="safeupdate",supautils']:
+            self.assertTrue(m.retained_setting(raw,role="authenticator",database="*"))
+            for role,database in [("*","postgres"),("postgres","*"),("kova_probe_operator","*"),
+                                  ("authenticator","other")]:
+                self.assertFalse(m.retained_setting(raw,role=role,database=database))
+        for raw in ["session_preload_libraries=pg_net","session_preload_libraries=supautils,pg_cron",
+                    "session_preload_libraries=supautils,supautils",'session_preload_libraries="supautils',
+                    "local_preload_libraries=safeupdate","shared_preload_libraries=supautils"]:
+            self.assertFalse(m.retained_setting(raw,role="authenticator",database="*"))
+        raw=metadata();raw["roleSettings"]=[{"role":"authenticator","database":"*",
+            "settings":["session_preload_libraries=supautils, safeupdate","log_statement=none"]},
+            {"role":"*","database":"postgres","settings":["app.settings.jwt_exp=3600"]}]
+        out=m.sanitize_settings(raw)
+        self.assertTrue(out["sourceSettingsComplete"]);self.assertEqual(out["withheldSettingCount"],0)
+        raw["roleSettings"][0]["role"]="postgres"
+        self.assertEqual(m.sanitize_settings(raw)["withheldSettingCount"],1)
+
     def test_invalid_source_version_database_or_readonly_bit_is_rejected(self):
         for key,value in [("serverVersionNum",180003),("readOnly",False),("database","other"),
                           ("project","wrong"),("roles",None)]:

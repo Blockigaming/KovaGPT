@@ -102,10 +102,26 @@ def source_pin(env):
     return commit
 
 
-def retained_setting(item):
+def retained_setting(item, *, role=None, database=None):
     require(isinstance(item,str) and "=" in item and "\x00" not in item,"role_setting_shape_rejected")
     key,value=item.split("=",1)
     lower=key.lower()
+    if key=="app.settings.jwt_exp":
+        return re.fullmatch(r"[0-9]{1,8}",value) is not None and 1<=int(value)<=31536000
+    if key=="log_statement":
+        return value in {"none","ddl","mod","all"}
+    if key=="session_preload_libraries":
+        # Preserve only the known inert *configuration* of an inactive PostgREST
+        # role. No source library is loaded in the distinct restore operator.
+        # Active/session/local/shared preload and worker checks remain empty.
+        if role!="authenticator" or database not in {"*","postgres"} or len(value)>2048:return False
+        names=[]
+        for part in value.split(","):
+            token=part.strip()
+            if token.startswith('"') and token.endswith('"'):token=token[1:-1]
+            if token not in {"safeupdate","supautils"}:return False
+            names.append(token)
+        return bool(names) and len(names)==len(set(names))
     return (key in SAFE_GUC_KEYS and len(value)<=2048
             and not any(part in lower for part in ["password","secret","token","credential","jwt","preload"])
             and not any(part in value.lower() for part in ["://","sk-","-----begin "])
@@ -137,7 +153,7 @@ def sanitize_settings(raw):
                 and isinstance(row.get("settings"),list),"role_setting_shape_rejected")
         fingerprints=[];retained=[]
         for item in row["settings"]:
-            keep=retained_setting(item)
+            keep=retained_setting(item,role=row["role"],database=row["database"])
             fingerprints.append({"key":item.split("=",1)[0],"sha256":sha(item.encode()),"retained":keep})
             if keep:retained.append(item)
             else:withheld+=1

@@ -217,6 +217,21 @@ class NativeProbeTests(unittest.TestCase):
         p.docker=lambda *_args,**_kwargs:(1,b"")
         with self.assertRaises(m.Stopped):p.resource_absent(name)
 
+    def test_inactive_role_preload_settings_never_enter_operator_connection_env(self):
+        d=metadata()
+        d["roles"].append({**copy.deepcopy(d["roles"][0]),"name":"authenticator"})
+        raw="session_preload_libraries=supautils, safeupdate"
+        d["roleSettings"]=[{"role":"authenticator","database":"*","settings":[raw],
+            "settingFingerprints":[{"key":"session_preload_libraries","sha256":m.digest(raw.encode()),"retained":True}]}]
+        m.validate_metadata(d,source_sha="a"*40)
+        sql=m.role_setup_sql(d)
+        self.assertIn('ALTER ROLE "authenticator" SET "session_preload_libraries"',sql)
+        self.assertNotIn(m.OPERATOR,sql)
+        for role in ["*","postgres",m.OPERATOR]:
+            with self.subTest(role=role),self.assertRaises(m.Stopped):
+                m.safe_setting(raw,role=role,database="*")
+        self.assertEqual(m.safe_setting(raw,role="authenticator",database="*"),tuple(raw.split("=",1)))
+
     def test_native_snapshot_compares_complete_extension_owner_metadata(self):
         p=self.probe();p.native_tools={"pg_dump":"/native/pg_dump"};p.uid=1001;p.gid=1001
         catalog={k:copy.deepcopy(p.metadata[k]) for k in ["roles","memberships","schemas","extensions"]}
