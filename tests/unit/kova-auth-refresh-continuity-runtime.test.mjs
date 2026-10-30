@@ -12,7 +12,7 @@ const deferred = () => {
 };
 const session = (id) => ({ access_token: `${id}-token`, user: { id } });
 
-function fixture() {
+function fixture(initialSession = session("first-owner")) {
   const calls = [],
     timers = [];
   const window = {
@@ -24,7 +24,7 @@ function fixture() {
     pending = false,
     validationRequired = false,
     revision = 0;
-  let currentSession = session("first-owner"),
+  let currentSession = initialSession,
     listener;
   const users = [],
     assurances = [];
@@ -177,6 +177,20 @@ function fixture() {
   };
 }
 
+test("initial guest validation preserves the server subtree without resolving auth early", async () => {
+  const f = fixture(null);
+  f.render();
+  const serverKey = f.tree.key;
+  assert.equal(f.tree.props.value.isLoaded, false);
+  assert.equal(f.tree.props.value.user, null);
+  await f.flush();
+  assert.equal(f.tree.props.value.isLoaded, true);
+  assert.equal(f.tree.props.value.user, null);
+  assert.equal(f.tree.key, serverKey, "guest resolution must not replace the hydrated controls");
+  assert.equal(f.calls.includes("sign-out"), false);
+  f.unmount();
+});
+
 test("a pending authority probe hides controls without changing the validated legacy principal or task subtree", async () => {
   const f = fixture();
   await f.flush();
@@ -306,6 +320,11 @@ for (const nextOwner of ["first-owner", "second-owner"]) {
         assert.equal(f.tree.props.value.isLoaded, true);
       } else {
         assert.equal(f.tree.props.value.user, null, "the former owner cannot remain actionable");
+        assert.notEqual(
+          f.tree.key,
+          "first-owner",
+          "the former owner's private subtree is replaced before account validation finishes",
+        );
       }
       verification.resolve(
         boundary === "user"
