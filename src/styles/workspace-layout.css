@@ -13,11 +13,11 @@
 }
 
 .kova-app-shell[data-ui="modern"] .kova-page-header .kova-page-title {
-  font-family: var(--font-ui) !important;
-  font-size: 30px !important;
-  font-weight: 500 !important;
-  line-height: 1.25 !important;
-  letter-spacing: -0.025em !important;
+  font-family: var(--font-ui);
+  font-size: var(--page-title-size, 30px);
+  font-weight: var(--page-title-weight, 500);
+  line-height: var(--page-title-line, 1.25);
+  letter-spacing: -0.025em;
 }
 
 .kova-app-shell[data-ui="modern"] .kova-page-description {
