@@ -120,7 +120,7 @@ test("settings keeps its760px content cap below sidebar breakpoint and Work uses
     css,
     /\.kova-settings-route \.kova-settings-page \.kova-settings-content \{\s*max-width: 760px/,
   );
-  assert.match(css, /@container settings \(max-width: 959px\)/);
+  assert.match(css, /@container settings \(max-width: 719px\)/);
   const caps = [];
   postcss.parse(css).walkDecls("max-width", (declaration) => {
     if (declaration.parent.selector?.includes(".kova-settings-content"))

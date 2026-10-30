@@ -510,7 +510,7 @@ for (const tier of ["plus", "pro"] as const) {
     await page.getByTestId("model-option-high").click();
     await expect(picker).toHaveAttribute(
       "aria-label",
-      `Choose model: Kova GPT ${tier === "plus" ? "Thinking" : "High"}`,
+      `Choose model: KovaGPT ${tier === "plus" ? "Thinking" : "High"}`,
     );
     await expect(picker).toContainText(tier === "plus" ? "Thinking" : "High");
     await page.keyboard.press("Escape");

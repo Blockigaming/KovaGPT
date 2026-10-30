@@ -6,7 +6,8 @@ test("desktop chat header does not duplicate the sidebar brand or composer model
   const header = source
     .split('<header className="kova-topbar kova-desktop-topbar')[1]
     .split("</header>")[0];
-  assert.doesNotMatch(header, /ResponsiveModelSelector|NovaLogo|KovaGPT/);
+  assert.doesNotMatch(header, /ResponsiveModelSelector|NovaLogo/);
+  assert.match(header, /sidebarOpen \? "" : "KovaGPT"/);
   assert.match(header, /conversationActions\(\)/);
   const composer = readFileSync("src/components/ChatInput.tsx", "utf8");
   assert.match(composer, /ResponsiveModelSelector|ModelSelector/);

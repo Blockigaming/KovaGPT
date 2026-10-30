@@ -18,7 +18,7 @@ async function openGuestHome(page: Page, theme: ThemeMode) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(
-    page.getByRole("heading", { level: 1, name: "What are you working on?", exact: true }),
+    page.getByRole("heading", { level: 1, name: "How can I help today?", exact: true }),
   ).toBeVisible();
 }
 
@@ -52,7 +52,7 @@ for (const theme of themes) {
     await expect(page.getByRole("main")).toHaveCount(1);
     await expect(page.locator("h1")).toHaveCount(1);
     await expect(
-      page.getByRole("region", { name: "What are you working on?", exact: true }),
+      page.getByRole("region", { name: "How can I help today?", exact: true }),
     ).toBeVisible();
     const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
     const send = page.getByRole("button", {
@@ -106,7 +106,9 @@ for (const theme of themes) {
       ).toBeVisible();
       const brand = navigation.locator(".kova-sidebar-brand");
       await expect(brand).toHaveText("KovaGPT");
-      await expect(brand.locator("img, svg")).toHaveCount(0);
+      await expect(brand.locator("img")).toHaveCount(1);
+      await expect(brand.locator("img")).toHaveAttribute("src", "/kova-logo.png");
+      await expect(brand.locator("img")).toHaveAttribute("alt", "");
       await expect(page.getByRole("button", { name: "Search chats" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Collapse sidebar" })).toBeVisible();
     }

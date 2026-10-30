@@ -45,7 +45,7 @@ test("directory labels use the SDK UI stack while project display type is an exp
 });
 
 test("collection title weight and row labels have distinct, scoped typography", () => {
-  assert.equal(page["--page-title-weight"], "600");
+  assert.equal(page["--page-title-weight"], "500");
   assert.equal(title["letter-spacing"], "-0.025em");
   assert.equal(projectCard["font-weight"], "500");
   assert.equal(projectCard["letter-spacing"], "normal");
@@ -53,9 +53,9 @@ test("collection title weight and row labels have distinct, scoped typography", 
   assert.equal(projectCard["line-height"], "22px");
 });
 
-test("directory headings use 32/38 desktop and 24/28 phone geometry with bounded collection cards", () => {
-  assert.equal(page["--page-title-size"], "32px");
-  assert.equal(page["--page-title-line"], "38px");
+test("directory headings use 30/40 desktop and 24/28 phone geometry with bounded collection cards", () => {
+  assert.equal(page["--page-title-size"], "30px");
+  assert.equal(page["--page-title-line"], "40px");
   assert.equal(page["--surface-card-radius"], "var(--kova-radius-card)");
   assert.match(tokens, /--kova-radius-card:\s*16px;/);
   assert.match(theme, /--radius-xl:\s*var\(--kova-radius-card\);/);

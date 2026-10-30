@@ -1310,6 +1310,24 @@ export function Sidebar({
                 {icon(NewChatGlyph)}
                 <span>New chat</span>
               </button>
+              <button
+                type="button"
+                className="kova-nav-row"
+                aria-label="Search chats"
+                aria-haspopup={onOpenWorkspaceSearch ? "dialog" : undefined}
+                aria-expanded={onOpenWorkspaceSearch ? undefined : searchOpen}
+                onClick={() => {
+                  if (onOpenWorkspaceSearch) {
+                    closeAfterMobileNavigation();
+                    onOpenWorkspaceSearch();
+                  } else setSearchOpen((value) => !value);
+                }}
+              >
+                <span className="kova-sidebar-icon" aria-hidden="true">
+                  <SearchGlyph />
+                </span>
+                <span>Search</span>
+              </button>
               {navLink("/images", "Images", ImagesGlyph)}
               {navLink("/apps", "Connections", PluginsGlyph)}
               {signedIn ? (

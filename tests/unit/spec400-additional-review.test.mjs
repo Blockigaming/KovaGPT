@@ -220,9 +220,9 @@ test("review runtime has no service calls, recording, billing or fake shared lin
     declaration(heading, "font-family"),
     "var(--font-ui, ui-sans-serif, system-ui, sans-serif)",
   );
-  assert.equal(declaration(heading, "font-size"), "clamp(36px, 5vw, 60px)");
-  assert.equal(declaration(heading, "line-height"), "1.1");
-  assert.equal(declaration(heading, "font-weight"), "400");
+  assert.equal(declaration(heading, "font-size"), "clamp(30px, 3.5vw, 44px)");
+  assert.equal(declaration(heading, "line-height"), "1.15");
+  assert.equal(declaration(heading, "font-weight"), "500");
   const phoneHeading = sheet.nodes
     .filter(
       (node) =>

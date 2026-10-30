@@ -13,7 +13,7 @@ test("shared fields do not impose a blanket button shape on the full-viewport sc
       blanket.push(rule);
   });
   assert.equal(blanket.length, 0, "Button components and sidebar rows own their shape");
-  assert.match(read("src/styles/visual-tokens.css"), /--kova-radius-compact:\s*6px;/);
+  assert.match(read("src/styles/visual-tokens.css"), /--kova-radius-compact:\s*10px;/);
 });
 test("sidebar backdrop keeps its explicit square-corner rule without an important override", () => {
   let backdrop;
