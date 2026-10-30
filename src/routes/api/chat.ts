@@ -26,6 +26,7 @@ import {
   runGoogleTool,
   stagePendingAction,
 } from "@/lib/google-tools.server";
+import { getConnectedToolContext, runConnectedTool } from "@/integrations/connected-tools.server";
 import {
   chatCompletions,
   getAiProviderConfig,
@@ -1472,9 +1473,27 @@ export const Route = createFileRoute("/api/chat")({
                     { required: false },
                   )) ?? null)
                 : null;
+            const connectedContext =
+              !selectedHostedTool &&
+              auth &&
+              usesExistingContext &&
+              (!customKova || customKova.config.apps.length > 0) &&
+              !hasAttachments &&
+              m.id !== "instant" &&
+              lastText.length > 0
+                ? ((await preflight.run(
+                    "other_connector_tools",
+                    () => getConnectedToolContext(auth.userId),
+                    { required: false },
+                  )) ?? null)
+                : null;
+            const connectionTools = [
+              ...(googleContext?.tools ?? []),
+              ...(connectedContext?.tools ?? []),
+            ];
             const availableTools = customKova
-              ? customKova.filterTools(googleContext?.tools ?? [])
-              : (googleContext?.tools ?? []);
+              ? customKova.filterTools(connectionTools)
+              : connectionTools;
             const googleBinding = googleContext?.binding ?? undefined;
             const enableTools = availableTools.length > 0;
 
@@ -1929,12 +1948,21 @@ export const Route = createFileRoute("/api/chat")({
                       }
                     }
                     try {
-                      const out = await runGoogleTool(
-                        auth!.userId,
-                        tc.function.name,
-                        parsedArgs,
-                        googleBinding,
-                      );
+                      const out = connectedContext?.tools.some(
+                        (tool) => tool.function.name === tc.function.name,
+                      )
+                        ? await runConnectedTool(
+                            auth!.userId,
+                            tc.function.name,
+                            parsedArgs,
+                            connectedContext,
+                          )
+                        : await runGoogleTool(
+                            auth!.userId,
+                            tc.function.name,
+                            parsedArgs,
+                            googleBinding,
+                          );
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };
