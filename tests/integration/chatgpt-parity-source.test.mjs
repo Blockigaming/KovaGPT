@@ -21,6 +21,8 @@ const [
   headerActions,
   starters,
   modelStatus,
+  tokens,
+  sidebarStyles,
 ] = await Promise.all([
   readFile("src/routes/index.tsx", "utf8"),
   readFile("src/styles.css", "utf8"),
@@ -40,6 +42,8 @@ const [
   readFile("src/components/ConversationHeaderActions.tsx", "utf8"),
   readFile("src/components/HomeChatStarters.tsx", "utf8"),
   readFile("src/components/ComposerModelStatus.tsx", "utf8"),
+  readFile("src/styles/visual-tokens.css", "utf8"),
+  readFile("src/styles/sidebar-core.css", "utf8"),
 ]);
 
 test("Chat and Work remain reachable without a phone topbar mode switch", () => {
@@ -65,7 +69,7 @@ test("sidebar keeps core destinations before its native More disclosure", () => 
   for (const destination of [
     'navLink("/library", "Library"',
     'navLink("/projects", "Projects"',
-    'navLink("/apps", "Plugins"',
+    'navLink("/apps", "Connections"',
   ]) {
     const index = sidebar.indexOf(destination);
     assert.ok(index >= 0 && index < moreStart, `${destination} must precede More`);
@@ -73,9 +77,13 @@ test("sidebar keeps core destinations before its native More disclosure", () => 
 });
 
 test("secondary navigation remains discoverable without active unavailable destinations", () => {
+  const disclosure = sidebar.match(/<details\b[^>]*>/)?.[0];
+  assert.ok(disclosure, "More must retain its native disclosure element");
+  assert.match(disclosure, /className="kova-sidebar-more-disclosure"/);
+  assert.match(disclosure, /data-ui-reference="gemini-sidebar-disclosure"/);
   assert.match(
-    sidebar,
-    /<details\s+className="kova-sidebar-more-disclosure"\s+open=\{isOn\("\/work"\) \|\| isOn\("\/discovery"\) \|\| undefined\}\s*>/,
+    disclosure,
+    /open=\{isOn\("\/work"\) \|\| isOn\("\/discovery"\) \|\| isOn\("\/maps"\) \|\| undefined\}/,
   );
   assert.match(sidebar, /aria-label="Expand sidebar"/);
   // Coming-soon placeholders were removed, rather than turned into working destinations.
@@ -254,18 +262,43 @@ test("web-backed answers keep exact clickable citations", () => {
 });
 
 test("the neutral shell has one theme layer and accessible collapsed navigation", () => {
-  assert.equal((styles.match(/^:root\s*\{/gm) ?? []).length, 1);
-  assert.equal((styles.match(/^\.dark\s*\{/gm) ?? []).length, 1);
-  assert.match(styles, /--surface-workspace: var\(--background\);/);
-  assert.match(
+  for (const owner of [
+    "visual-tokens",
+    "sidebar-core",
+    "spec400-chat",
+    "control-geometry",
+    "assistant-overlays",
+    "reference-surfaces",
+  ])
+    assert.equal(styles.split(`@import "./styles/${owner}.css";`).length - 1, 1, owner);
+  assert.doesNotMatch(
     styles,
-    /\.kova-topbar\s*\{[^}]*background: color-mix\(in oklab, var\(--background\) 92%, transparent\) !important;[^}]*box-shadow: 0 1px 0 color-mix\(in oklab, var\(--background\) 70%, transparent\) !important;[^}]*backdrop-filter: blur\(18px\) saturate\(130%\) !important;/s,
+    /@import\s+["']\.\/styles\/(?:assistant|assistant-modern|chatgpt-parity|chatgpt-final-parity)\.css["']/,
   );
+  assert.equal((styles.match(/^:root\s*\{/gm) ?? []).length, 0);
+  assert.equal((styles.match(/^\.dark\s*\{/gm) ?? []).length, 0);
+  assert.equal((tokens.match(/^:root\s*\{/gm) ?? []).length, 1);
+  assert.equal((tokens.match(/^\.dark\s*\{/gm) ?? []).length, 1);
+  const lightTheme = tokens.match(/^:root\s*\{([\s\S]*?)^\}/m)?.[1];
+  const darkTheme = tokens.match(/^\.dark\s*\{([\s\S]*?)^\}/m)?.[1];
+  assert.ok(lightTheme && darkTheme, "Both canonical theme scopes must exist");
+  for (const theme of [lightTheme, darkTheme])
+    assert.match(theme, /--surface-workspace: var\(--background\);/);
+  const mobileBar = sidebarStyles.match(
+    /\.kova-topbar:not\(\.kova-desktop-topbar\)\s*\{([^}]*)\}/,
+  )?.[1];
+  assert.ok(mobileBar, "The current mobile topbar must retain its scoped surface owner");
+  assert.match(mobileBar, /background: var\(--background\);/);
+  assert.doesNotMatch(mobileBar, /backdrop-filter|box-shadow/);
   assert.doesNotMatch(styles, /main button\.rounded-full/);
   assert.doesNotMatch(styles, /\[role=["']dialog["']\] button\.rounded-full/);
   assert.doesNotMatch(sidebar, /ActiveBar|bg-\[var\(--kova-blue\)\]/);
-  assert.match(sidebar, /aria-hidden=\{collapsed \? true : undefined\}/);
-  assert.match(sidebar, /inert=\{collapsed \? true : undefined\}/);
+  const primaryNavigation = sidebar.match(/<aside\b[^>]*>/)?.[0];
+  assert.ok(primaryNavigation, "The primary navigation landmark must remain present");
+  assert.match(primaryNavigation, /id="kova-primary-navigation"/);
+  assert.match(primaryNavigation, /aria-label="Primary navigation"/);
+  assert.match(primaryNavigation, /aria-hidden=\{collapsed \? true : undefined\}/);
+  assert.match(primaryNavigation, /inert=\{collapsed \? true : undefined\}/);
   assert.match(appShell, /addEventListener\("kova-open-settings", handleOpenSettings\)/);
 
   for (const source of [route, styles, appShell, sidebar, chatInput, chatMessage]) {

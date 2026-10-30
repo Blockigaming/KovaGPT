@@ -374,6 +374,7 @@ export function BillingWorkspace({
         }
       }}
       className="kova-billing-workspace"
+      data-ui-reference="chatgpt-account-billing"
     >
       <TabsList aria-label="Billing sections" className="kova-billing-tabs">
         <TabsTrigger value="overview">Overview</TabsTrigger>

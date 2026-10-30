@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -146,14 +147,15 @@ export function ResultServerExportDialog({
               ))}
           </SelectContent>
         </Select>
-        <button
+        <Button
+          variant="outline"
           type="button"
-          className="min-h-11 rounded-lg border px-4"
+          className="border"
           disabled={pending}
           onClick={() => void prepare()}
         >
           {pending ? "Preparing locally…" : "Prepare file locally"}
-        </button>
+        </Button>
         {error && (
           <p role="alert" className="text-sm text-foreground">
             {error} Your draft is preserved.
@@ -191,12 +193,9 @@ export function ResultServerExportDialog({
             <input type="hidden" name="filename" value={ready.filename} />
             <input type="hidden" name="bytes" value={ready.bytes} />
             <p className="mb-3 break-words text-sm">Ready: {ready.filename}</p>
-            <button
-              type="submit"
-              className="min-h-11 rounded-lg bg-primary px-4 text-primary-foreground"
-            >
+            <Button variant="default" type="submit" className="bg-primary text-primary-foreground">
               Send file and download
-            </button>
+            </Button>
           </form>
         )}
         {requested && (
@@ -205,15 +204,16 @@ export function ResultServerExportDialog({
             the file again to retry.
           </p>
         )}
-        <button
+        <Button
+          variant="outline"
           type="button"
-          className="min-h-11 rounded-lg border px-4"
+          className="border"
           onClick={() => {
             if (current()) onClose();
           }}
         >
           Close
-        </button>
+        </Button>
       </DialogContent>
     </Dialog>
   );

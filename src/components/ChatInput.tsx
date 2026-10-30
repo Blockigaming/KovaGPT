@@ -536,11 +536,8 @@ export function ChatInput({
     const el = ref.current;
     if (!el) return;
     const resize = () => {
-      el.style.height = "0px";
       const limit = isMobileLayout ? 144 : 240;
-      const minimum = isMobileLayout ? 40 : 48;
-      const height = Math.min(Math.max(el.scrollHeight, minimum), limit);
-      el.style.height = `${height}px`;
+      const minimum = 26;
       const metrics = window.getComputedStyle(el);
       const singleLine = Math.max(
         parseFloat(metrics.minHeight) || 0,
@@ -548,7 +545,48 @@ export function ChatInput({
           parseFloat(metrics.paddingTop) +
           parseFloat(metrics.paddingBottom),
       );
-      el.dataset.multiline = String(height > singleLine + 1);
+      const composer = el.closest<HTMLElement>(".spec400-composer");
+      if (composer && !isMobileLayout) {
+        // Measure against the compact text slot even while the draft is expanded.
+        // Measuring only the current wider row would repeatedly expand/collapse
+        // drafts that fit one wide line but not the compact input slot.
+        const groupWidth = (selector: string) => {
+          const group = composer.querySelector<HTMLElement>(selector);
+          if (!group) return 0;
+          const controls = Array.from(group.children).filter(
+            (node) => node.getClientRects().length,
+          );
+          const gap = parseFloat(window.getComputedStyle(group).columnGap) || 0;
+          return (
+            controls.reduce((width, node) => width + node.getBoundingClientRect().width, 0) +
+            Math.max(0, controls.length - 1) * gap
+          );
+        };
+        const composerMetrics = window.getComputedStyle(composer);
+        const compactPadding =
+          parseFloat(composerMetrics.getPropertyValue("--composer-compact-padding")) || 7;
+        const compactGap =
+          parseFloat(composerMetrics.getPropertyValue("--composer-compact-gap")) || 8;
+        const compactWidth = Math.max(
+          48,
+          composer.clientWidth -
+            compactPadding * 2 -
+            compactGap * 2 -
+            groupWidth(".spec400-composer-tools") -
+            groupWidth(".spec400-composer-trailing"),
+        );
+        const previousWidth = el.style.width;
+        el.style.width = `${compactWidth}px`;
+        el.style.height = "0px";
+        el.dataset.multiline = String(el.scrollHeight > singleLine + 1);
+        el.style.width = previousWidth;
+      } else {
+        el.style.height = "0px";
+        el.dataset.multiline = String(el.scrollHeight > singleLine + 1);
+      }
+      el.style.height = "0px";
+      const height = Math.min(Math.max(el.scrollHeight, minimum), limit);
+      el.style.height = `${height}px`;
       el.style.overflowY = el.scrollHeight > limit ? "auto" : "hidden";
     };
     resize();
@@ -1554,6 +1592,7 @@ export function ChatInput({
   const previewText = pastePreviewOpen ? pasteOffer?.text : previewAttachment?.textContent;
   const textWindow =
     previewText === undefined ? null : attachmentPreviewWindow(previewText, previewOffset);
+  const hasDraft = Boolean(value.trim() || attachments.length || pasteOffer);
 
   return (
     <div
@@ -1575,6 +1614,8 @@ export function ChatInput({
       )}
       <div
         className="spec400-composer"
+        data-ui-reference="chatgpt-composer"
+        data-has-draft={hasDraft ? "true" : "false"}
         data-focus-origin={composerFocusOrigin}
         onPointerDownCapture={() => setComposerFocusOrigin("pointer")}
         onKeyDownCapture={(event) => {
@@ -1683,7 +1724,7 @@ export function ChatInput({
               composingRef.current = false;
             }}
             placeholder={placeholder ?? "Describe what you need…"}
-            rows={2}
+            rows={1}
             spellCheck
             autoComplete="off"
             autoCorrect="on"
@@ -1768,7 +1809,7 @@ export function ChatInput({
                     ref={plusTriggerRef}
                     type="button"
                     disabled={disabled || isStreaming}
-                    className="spec400-toolbar-button"
+                    className="spec400-toolbar-button spec400-toolbar-icon"
                     aria-label="Attach"
                     title="Add files and tools"
                     aria-haspopup="dialog"
@@ -1776,7 +1817,7 @@ export function ChatInput({
                     onClick={isMobileLayout ? () => setPlusOpen(true) : undefined}
                   >
                     <Plus aria-hidden="true" />
-                    <span>Attach</span>
+                    <span className="sr-only">Attach</span>
                   </button>
                 </PopoverTrigger>
                 {!isMobileLayout && (
@@ -1808,7 +1849,7 @@ export function ChatInput({
             {(showAddMenu || readOnlyContext) && (
               <button
                 type="button"
-                className="spec400-toolbar-button"
+                className="spec400-toolbar-button spec400-toolbar-icon"
                 aria-label="Context"
                 title="Files, instructions, and saved material"
                 aria-haspopup="dialog"
@@ -1817,7 +1858,7 @@ export function ChatInput({
                 onClick={(event) => openMessageSettings(event.currentTarget)}
               >
                 <Files aria-hidden="true" />
-                <span>Context</span>
+                <span className="sr-only">Context</span>
                 {attachments.length > 0 && (
                   <span className="spec400-context-count">{attachments.length}</span>
                 )}
@@ -1827,7 +1868,7 @@ export function ChatInput({
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="spec400-toolbar-button"
+                  className="spec400-toolbar-button spec400-toolbar-icon"
                   disabled={disabled}
                   aria-label="Options"
                   title="Response format, length, and tone"
@@ -1835,7 +1876,7 @@ export function ChatInput({
                   aria-expanded={optionsOpen}
                 >
                   <SlidersHorizontal aria-hidden="true" />
-                  <span>Options</span>
+                  <span className="sr-only">Options</span>
                 </button>
               </PopoverTrigger>
               <PopoverContent
@@ -1967,10 +2008,12 @@ export function ChatInput({
                 </section>
               </PopoverContent>
             </Popover>
+          </div>
+          <div className="spec400-composer-trailing">
             <button
               type="button"
               data-testid="dictate-button"
-              className="spec400-toolbar-button"
+              className="spec400-toolbar-button spec400-toolbar-icon"
               aria-label="Dictate"
               aria-haspopup="dialog"
               aria-expanded={activeVoiceMode === "dictate"}
@@ -1979,12 +2022,13 @@ export function ChatInput({
               onClick={(event) => openVoice("dictate", event.currentTarget)}
             >
               <Mic aria-hidden="true" />
-              <span className="hidden sm:inline">Dictate</span>
+              <span className="sr-only">Dictate</span>
             </button>
             <button
               type="button"
               data-testid="voice-button"
-              className="spec400-toolbar-button"
+              className="spec400-toolbar-button spec400-toolbar-icon spec400-primary-voice"
+              hidden={hasDraft || isStreaming}
               aria-label="Voice"
               aria-haspopup="dialog"
               aria-expanded={activeVoiceMode === "voice"}
@@ -2005,40 +2049,42 @@ export function ChatInput({
               onClick={(event) => openVoice("voice", event.currentTarget)}
             >
               <AudioLines aria-hidden="true" />
-              <span className="hidden sm:inline">Voice</span>
+              <span className="sr-only">Voice</span>
             </button>
+            {isStreaming ? (
+              <button
+                type="button"
+                onClick={onStop}
+                className="spec400-send-button"
+                aria-label="Stop generating"
+                data-testid="stop-button"
+              >
+                <Square aria-hidden="true" />
+                <span>Stop</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!canSubmit}
+                onClick={triggerSubmit}
+                className="spec400-send-button"
+                hidden={!hasDraft}
+                aria-label="Send message"
+                data-testid="send-button"
+                title={
+                  disabled
+                    ? "Messaging is unavailable"
+                    : sendDisabled
+                      ? "Getting this chat ready…"
+                      : (blockedAttachmentMessage ??
+                        (!online ? "Reconnect to send" : "Send message"))
+                }
+              >
+                <ArrowUp aria-hidden="true" />
+                <span>Send</span>
+              </button>
+            )}
           </div>
-          {isStreaming ? (
-            <button
-              type="button"
-              onClick={onStop}
-              className="spec400-send-button"
-              aria-label="Stop generating"
-              data-testid="stop-button"
-            >
-              <Square aria-hidden="true" />
-              <span>Stop</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={!canSubmit}
-              onClick={triggerSubmit}
-              className="spec400-send-button"
-              aria-label="Send message"
-              data-testid="send-button"
-              title={
-                disabled
-                  ? "Messaging is unavailable"
-                  : sendDisabled
-                    ? "Getting this chat ready…"
-                    : (blockedAttachmentMessage ?? (!online ? "Reconnect to send" : "Send message"))
-              }
-            >
-              <ArrowUp aria-hidden="true" />
-              <span>Send</span>
-            </button>
-          )}
         </div>
       </div>
       {pasteOffer && (
@@ -2095,8 +2141,11 @@ export function ChatInput({
             voiceCallbacksRef.current.disabled
           )
             return;
+          const invoker = voiceTriggerRef.current;
           restoreDialogFocus(
-            voiceDraftAppliedRef.current ? ref.current : (voiceTriggerRef.current ?? ref.current),
+            voiceDraftAppliedRef.current || invoker?.hidden
+              ? ref.current
+              : (invoker ?? ref.current),
             voiceReturnUrlRef.current,
           );
         }}
@@ -2449,9 +2498,11 @@ export function ChatInput({
           />
         </Suspense>
       ) : null}
-      <p className="mt-2 text-center text-[11px] text-muted-foreground">
-        KovaGPT can make mistakes. Check important information.
-      </p>
+      {surface !== "empty" && (
+        <p className="spec400-composer-disclaimer mt-2 text-center text-[11px] text-muted-foreground">
+          KovaGPT can make mistakes. Check important information.
+        </p>
+      )}
     </div>
   );
 }

@@ -34,6 +34,7 @@ function fixture({ favorite = false, folderBusy = false } = {}) {
         "DropdownMenuContent",
         "DropdownMenuItem",
         "DropdownMenuSeparator",
+        "Button",
         "MoreHorizontal",
         "Eye",
         "LinkIcon",
@@ -108,20 +109,26 @@ function fixture({ favorite = false, folderBusy = false } = {}) {
   return { calls, content, row, item };
 }
 
-test("Library actions share one icon gutter and 44px minimum row height", () => {
+test("Library actions inherit the shared SDK menu gutter and 32px/44px pointer geometry", () => {
   const { content } = fixture();
-  const classes = content.props.className.split(/\s+/);
+  assert.equal(content.props.className, "w-64", "Consumer must not replace shared row geometry");
+  const item = primitive.slice(
+    primitive.indexOf("const DropdownMenuItem"),
+    primitive.indexOf("const DropdownMenuCheckboxItem"),
+  );
   for (const expected of [
-    "[&_[role=menuitem]]:min-h-11",
-    "[&_[role=menuitem]]:pl-8",
-    "[&_[role=menuitem]>svg]:absolute",
-    "[&_[role=menuitem]>svg]:left-2",
-    "[&_[role=menuitem]>svg]:top-1/2",
-    "[&_[role=menuitem]>svg]:-translate-y-1/2",
-    "[&_[role=menuitem]>svg]:mr-0",
+    "min-h-8",
+    "gap-1.5",
+    "rounded-[6px]",
+    "px-2",
+    "py-1.5",
+    "[@media(pointer:coarse)]:min-h-11",
+    "[&>svg]:size-[18px]",
+    "[&>svg]:shrink-0",
   ]) {
-    assert.ok(classes.includes(expected), `Missing shared gutter rule: ${expected}`);
+    assert.ok(item.includes(expected), `Missing shared menu rule: ${expected}`);
   }
+  assert.doesNotMatch(item, /\[&>svg\]:absolute/);
 });
 
 test("Library action labels get a wider menu while retaining the phone viewport clamp", () => {

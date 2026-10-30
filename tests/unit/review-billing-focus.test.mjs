@@ -49,7 +49,7 @@ test("billing opener is wired and dismiss restores only a visible same-page invo
       contentRef: { current: null },
     };
     deps.restoreDialogFocus = compile(
-      `${readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace("export function", "function")}; return restoreDialogFocus;`,
+      `${readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace(/^export function/gm, "function")}; return restoreDialogFocus;`,
       { window },
     );
     compile(`return (${handler("onOpenAutoFocus")});`, deps)();

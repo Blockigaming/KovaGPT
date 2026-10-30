@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
+import { Button } from "@/components/ui/button";
 import {
   clearOAuthResponseFromUrl,
   completeOAuthSessionFromUrl,
@@ -75,6 +76,7 @@ function OAuthCallbackPage() {
   return (
     <main
       aria-busy={!error}
+      data-ui-reference="chatgpt.auth.transition"
       className="flex min-h-[100dvh] items-center justify-center bg-background px-4 text-foreground"
     >
       {error ? (
@@ -90,12 +92,9 @@ function OAuthCallbackPage() {
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             <p className="mt-2 text-xs text-muted-foreground">Support reference: AUTH-CALLBACK</p>
-            <a
-              href="/?sign-in=1"
-              className="kova-button mt-5 inline-flex items-center justify-center rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90"
-            >
-              Try again
-            </a>
+            <Button asChild className="mt-5">
+              <a href="/?sign-in=1">Try again</a>
+            </Button>
           </div>
         </section>
       ) : (

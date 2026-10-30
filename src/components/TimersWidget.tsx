@@ -1,3 +1,5 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 // Utility-row widget that shows active timers/alarms,
 // counts down live, shows a silent notification when already permitted, and
 // exposes a quick "add timer" affordance.
@@ -175,14 +177,17 @@ export function TimersWidget({
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
               <TimerIcon className="w-3.5 h-3.5" /> Timers
             </div>
-            <button
+            <Button
+              data-ui-reference="chatgpt.tasks.control"
+              variant="ghost"
+              size="icon"
               type="button"
               onClick={() => setOpen(false)}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-accent"
+              className="flex   items-center justify-center  hover:bg-accent"
               aria-label="Close timers"
             >
               <X className="w-3.5 h-3.5" />
-            </button>
+            </Button>
           </div>
           {!ready ? (
             <div className="px-1 py-2 text-xs text-muted-foreground" role="status">
@@ -210,7 +215,10 @@ export function TimersWidget({
                       {done ? "Done" : formatRemaining(remaining)}
                     </div>
                   </div>
-                  <button
+                  <Button
+                    data-ui-reference="chatgpt.tasks.control"
+                    variant="ghost"
+                    size="icon"
                     type="button"
                     onClick={() => {
                       if (!ready) return;
@@ -218,17 +226,18 @@ export function TimersWidget({
                         toast.error("The timer could not be removed from this browser.");
                       }
                     }}
-                    className="flex min-h-11 min-w-11 items-center justify-center rounded hover:bg-background/60"
+                    className="flex   items-center justify-center  hover:bg-background/60"
                     aria-label={`${done ? "Remove" : "Cancel"} ${t.label}`}
                   >
                     <X className="w-3.5 h-3.5" />
-                  </button>
+                  </Button>
                 </li>
               );
             })}
           </ul>
           <div className="flex items-center gap-2 pt-1 border-t border-border">
-            <input
+            <Input
+              data-ui-reference="chatgpt.tasks.input"
               type="number"
               min={1}
               max={600}
@@ -236,11 +245,13 @@ export function TimersWidget({
               onChange={(e) => setMinutes(Math.max(1, Math.min(600, Number(e.target.value) || 1)))}
               step={1}
               disabled={!ready}
-              className="h-11 w-16 rounded-md border border-border bg-background px-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+              className=" w-16 rounded-md border border-border bg-background  text-xs disabled:cursor-not-allowed disabled:opacity-60"
               aria-label="Minutes"
             />
             <span className="text-xs text-muted-foreground">min</span>
-            <button
+            <Button
+              data-ui-reference="chatgpt.tasks.control"
+              variant="default"
               type="button"
               disabled={!ready}
               onClick={() => {
@@ -251,18 +262,20 @@ export function TimersWidget({
                   return;
                 }
               }}
-              className="ml-auto inline-flex min-h-11 items-center gap-1 rounded-full bg-foreground px-4 text-xs text-background hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="ml-auto inline-flex  items-center gap-1  bg-foreground  text-xs text-background hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Plus className="w-3 h-3" /> Start
-            </button>
+            </Button>
           </div>
         </div>
       )}
-      <button
+      <Button
+        data-ui-reference="chatgpt.tasks.control"
+        variant="outline"
         ref={launcherRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-transparent px-4 py-2 text-xs font-medium transition hover:bg-accent"
+        className="inline-flex  items-center gap-2  border border-border bg-transparent   text-xs font-medium transition hover:bg-accent"
         aria-label={ready ? "Timers" : "Timers (loading)"}
         aria-expanded={open}
         aria-controls="kova-timers-panel"
@@ -279,7 +292,7 @@ export function TimersWidget({
             <span>Timers</span>
           </>
         )}
-      </button>
+      </Button>
     </div>
   );
 }

@@ -1,3 +1,6 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -129,20 +132,20 @@ export function WorkSessionPanel({
       >
         <label className="min-w-48 flex-1 text-sm">
           New objective
-          <input
+          <Input
             value={newObjective}
             onChange={(event) => setNewObjective(event.target.value)}
             maxLength={4000}
-            className="mt-1 block min-h-11 w-full rounded-lg border bg-background p-2"
+            className="mt-1 block min-h-11 w-full border bg-background"
           />
         </label>
-        <button className={button} disabled={!newObjective.trim()}>
+        <Button variant="ghost" className={button} disabled={!newObjective.trim()}>
           Create session
-        </button>
+        </Button>
         {prepared && (
-          <button type="button" className={button} onClick={() => start(prepared)}>
+          <Button variant="ghost" type="button" className={button} onClick={() => start(prepared)}>
             Save prepared plan
-          </button>
+          </Button>
         )}
       </form>
       {sessions.length > 0 && (
@@ -179,7 +182,8 @@ export function WorkSessionPanel({
             <p className="text-xs text-muted-foreground">
               Branched from saved revision {selected.parent.revision}.{" "}
               {sessions.some((value) => value.id === selected.parent!.id) ? (
-                <button
+                <Button
+                  variant="link"
                   className="underline"
                   onClick={() => {
                     setSelectedId(selected.parent!.id);
@@ -187,7 +191,7 @@ export function WorkSessionPanel({
                   }}
                 >
                   Open parent plan
-                </button>
+                </Button>
               ) : (
                 "The parent plan is no longer available."
               )}
@@ -227,8 +231,8 @@ export function WorkSessionPanel({
             >
               <label className="block text-sm">
                 Objective
-                <input
-                  className="mt-1 block min-h-11 w-full rounded-lg border bg-background p-2"
+                <Input
+                  className="mt-1 block min-h-11 w-full border bg-background"
                   value={edit.objective}
                   maxLength={4000}
                   onChange={(event) => setEdit({ ...edit, objective: event.target.value })}
@@ -236,8 +240,8 @@ export function WorkSessionPanel({
               </label>
               <label className="block text-sm">
                 Context
-                <textarea
-                  className="mt-1 block min-h-11 w-full rounded-lg border bg-background p-2"
+                <Textarea
+                  className="mt-1 block min-h-11 w-full border bg-background"
                   value={edit.context}
                   maxLength={16000}
                   onChange={(event) => setEdit({ ...edit, context: event.target.value })}
@@ -245,20 +249,32 @@ export function WorkSessionPanel({
               </label>
               <label className="block text-sm">
                 Plan — one step per line
-                <textarea
-                  className="mt-1 block min-h-32 w-full rounded-lg border bg-background p-2"
+                <Textarea
+                  className="mt-1 block min-h-32 w-full border bg-background"
                   value={edit.plan}
                   onChange={(event) => setEdit({ ...edit, plan: event.target.value })}
                 />
               </label>
               <div className="flex flex-wrap gap-2">
-                <button className={button}>Save plan</button>
-                <button type="button" className={button} onClick={() => openEditor(selected)}>
+                <Button variant="ghost" className={button}>
+                  Save plan
+                </Button>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  className={button}
+                  onClick={() => openEditor(selected)}
+                >
                   Reload saved version
-                </button>
-                <button type="button" className={button} onClick={() => setEdit(null)}>
+                </Button>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  className={button}
+                  onClick={() => setEdit(null)}
+                >
                   Cancel edit
-                </button>
+                </Button>
               </div>
             </form>
           ) : (
@@ -269,8 +285,9 @@ export function WorkSessionPanel({
                   <li key={step.id}>
                     <label className="flex items-start gap-2 text-sm">
                       <input
+                        data-ui-reference="chatgpt.checkbox"
                         type="checkbox"
-                        className="mt-1"
+                        className="mt-1 kova-native-check"
                         checked={step.done}
                         onChange={() =>
                           perform(() =>
@@ -296,10 +313,11 @@ export function WorkSessionPanel({
                 ))}
               </ul>
               <div className="flex flex-wrap gap-2">
-                <button className={button} onClick={() => openEditor(selected)}>
+                <Button variant="ghost" className={button} onClick={() => openEditor(selected)}>
                   Edit plan
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   className={button}
                   onClick={() =>
                     perform(() =>
@@ -316,8 +334,9 @@ export function WorkSessionPanel({
                   }
                 >
                   {selected.status === "paused" ? "Resume planning" : "Pause planning"}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   className={button}
                   onClick={() =>
                     perform(() =>
@@ -336,8 +355,9 @@ export function WorkSessionPanel({
                   }
                 >
                   {selected.status === "completed" ? "Reopen plan" : "Mark plan complete"}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   className={button}
                   disabled={!revision}
                   onClick={() =>
@@ -348,8 +368,9 @@ export function WorkSessionPanel({
                   }
                 >
                   Start branch
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   className={button}
                   onClick={() =>
                     perform(() => {
@@ -368,8 +389,9 @@ export function WorkSessionPanel({
                   }
                 >
                   Continue in chat
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   className={button}
                   onClick={() =>
                     perform(() => {
@@ -391,7 +413,7 @@ export function WorkSessionPanel({
                   }
                 >
                   Delete session
-                </button>
+                </Button>
               </div>
               {!revision && (
                 <p className="text-xs text-muted-foreground">

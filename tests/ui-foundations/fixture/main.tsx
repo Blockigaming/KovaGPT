@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { PublicFixture } from "./public-pages";
+import { NativeControlsFixture } from "./native-controls";
 import { BenchmarkReview } from "./benchmark-review";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ function Fixture() {
   const trigger = <Button data-testid="trigger">Open example</Button>;
   const onConfirm = () => setResult("Confirmed once");
   const side = surface.replace("sheet-", "") as "top" | "bottom" | "left" | "right";
+  if (surface === "native-controls") return <NativeControlsFixture />;
   if (
     surface.startsWith("public-") &&
     (standaloneReview || new URLSearchParams(location.search).get("review") === "1")

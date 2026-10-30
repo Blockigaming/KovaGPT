@@ -1,3 +1,5 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -171,7 +173,8 @@ export function WorkExecutionPanel({
     return (
       <section className="mb-4 rounded-xl border bg-card p-4" aria-label="Work execution">
         <p>Work controls were cleared on this device.</p>
-        <button
+        <Button
+          variant="link"
           type="button"
           className="mt-2 text-sm underline"
           onClick={() => {
@@ -180,20 +183,21 @@ export function WorkExecutionPanel({
           }}
         >
           Reload Work controls
-        </button>
+        </Button>
       </section>
     );
   return (
     <section className="mb-4 rounded-xl border bg-card p-4" aria-label="Work execution">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-semibold">Run prepared work</h2>
-        <button
-          className="min-h-11 rounded-lg border border-border px-3 text-sm"
+        <Button
+          variant="outline"
+          className="border border-border text-sm"
           disabled={locked}
           onClick={() => void load()}
         >
           Refresh execution status
-        </button>
+        </Button>
       </div>
       <p className="mt-2 text-sm text-muted-foreground" role="status">
         {available
@@ -202,8 +206,8 @@ export function WorkExecutionPanel({
       </p>
       <label className="mt-3 block text-sm">
         Objective
-        <textarea
-          className="mt-1 block min-h-20 w-full rounded-lg border bg-background p-2"
+        <Textarea
+          className="mt-1 block min-h-20 w-full border bg-background"
           maxLength={12000}
           value={objective}
           disabled={locked}
@@ -236,7 +240,7 @@ export function WorkExecutionPanel({
             <SelectTrigger aria-label="Work model mode" className="mt-1 text-base sm:text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               {!modelOptions.length && (
                 <SelectItem value="normal">Normal · configuration unavailable</SelectItem>
               )}
@@ -261,7 +265,7 @@ export function WorkExecutionPanel({
             <SelectTrigger aria-label="Reasoning effort" className="mt-1 text-base sm:text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               <SelectItem value="default">Provider default</SelectItem>
               {selectedModel?.reasoningEfforts.map((effort) => (
                 <SelectItem key={effort} value={effort}>
@@ -279,8 +283,9 @@ export function WorkExecutionPanel({
           ? " This reasoning choice is no longer available. Review the current options."
           : ""}
       </p>
-      <button
-        className="mt-2 rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
+      <Button
+        variant="outline"
+        className="mt-2 border text-sm disabled:opacity-50"
         disabled={!available || locked || !objective.trim() || !projectId}
         onClick={() =>
           void send({
@@ -299,22 +304,28 @@ export function WorkExecutionPanel({
         }
       >
         Start work
-      </button>
+      </Button>
       {error && (
         <p className="mt-2 text-sm" role="alert">
           {error}
         </p>
       )}
       {pending && !busy && (
-        <button className="mt-2 text-sm underline" onClick={() => void send(pending)}>
+        <Button
+          variant="link"
+          className="mt-2 text-sm underline"
+          onClick={() => void send(pending)}
+        >
           Retry unconfirmed action
-        </button>
+        </Button>
       )}
       {Boolean(snapshot?.runs.length) && (
         <label className="mt-4 block text-sm">
           Execution history
+          {/* Keep choices inside the viewport when sync feedback moves this trigger. */}
           <SearchablePicker
             className="mt-1 flex min-h-11 w-full max-w-full rounded-lg border bg-background px-3 py-2 text-base sm:text-sm"
+            position="item-aligned"
             value={selected ?? ""}
             onValueChange={(value) => {
               setSelected(value);
@@ -330,13 +341,14 @@ export function WorkExecutionPanel({
         </label>
       )}
       {snapshot?.nextCursor && (
-        <button
+        <Button
+          variant="link"
           className="mt-2 text-sm underline"
           disabled={locked}
           onClick={() => void load(snapshot.nextCursor!)}
         >
           Load older executions
-        </button>
+        </Button>
       )}
       {run && (
         <div className="mt-4 space-y-3 border-t pt-3">
@@ -388,23 +400,26 @@ export function WorkExecutionPanel({
           )}
           {!WORK_TERMINAL.includes(run.status) && (
             <div className="flex flex-wrap gap-2">
-              <button
-                className="rounded border px-2 py-1 text-sm"
+              <Button
+                variant="outline"
+                className="border text-sm"
                 disabled={locked}
                 onClick={() => command({ type: "cancel" })}
               >
                 Cancel run
-              </button>
-              <button
-                className="rounded border px-2 py-1 text-sm"
+              </Button>
+              <Button
+                variant="outline"
+                className="border text-sm"
                 disabled={locked || run.status === "paused"}
                 onClick={() => command({ type: "pause" })}
               >
                 Pause run
-              </button>
+              </Button>
               {run.status === "paused" && (
-                <button
-                  className="rounded border px-2 py-1 text-sm"
+                <Button
+                  variant="outline"
+                  className="border text-sm"
                   disabled={
                     !available ||
                     locked ||
@@ -415,7 +430,7 @@ export function WorkExecutionPanel({
                   onClick={() => command({ type: "resume" })}
                 >
                   Resume run
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -426,16 +441,17 @@ export function WorkExecutionPanel({
             <div>
               <label className="block text-sm">
                 {run.status === "waiting_for_user" ? "Your answer" : "Direction for the next step"}
-                <textarea
-                  className="mt-1 w-full rounded border bg-background p-2"
+                <Textarea
+                  className="mt-1 w-full border bg-background"
                   maxLength={4000}
                   value={text}
                   disabled={locked}
                   onChange={(event) => setText(event.target.value)}
                 />
               </label>
-              <button
-                className="rounded border px-2 py-1 text-sm"
+              <Button
+                variant="outline"
+                className="border text-sm"
                 disabled={locked || !text.trim()}
                 onClick={() =>
                   command(
@@ -446,18 +462,19 @@ export function WorkExecutionPanel({
                 }
               >
                 {run.status === "waiting_for_user" ? "Answer question" : "Queue direction"}
-              </button>
+              </Button>
             </div>
           )}
           {run.directions.map((direction) => (
             <div key={direction.id} className="flex gap-3 text-sm">
               <p className="whitespace-pre-wrap">{direction.text}</p>
-              <button
+              <Button
+                variant="ghost"
                 disabled={locked}
                 onClick={() => command({ type: "remove_direction", id: direction.id })}
               >
                 Remove queued direction
-              </button>
+              </Button>
             </div>
           ))}
           {run.approval && run.status === "approval_required" && (
@@ -475,9 +492,10 @@ export function WorkExecutionPanel({
               <p className="break-all text-xs">Input SHA-256: {run.approval.inputHash}</p>
               <div className="mt-2 flex gap-2">
                 {(["approve", "deny"] as const).map((type) => (
-                  <button
+                  <Button
+                    variant="outline"
                     key={type}
-                    className="rounded border px-2 py-1 text-sm"
+                    className="border text-sm"
                     disabled={locked || Date.now() >= run.approval!.expiresAt}
                     onClick={() =>
                       command({
@@ -490,7 +508,7 @@ export function WorkExecutionPanel({
                     }
                   >
                     {type === "approve" ? "Approve this action once" : "Deny action"}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

@@ -70,10 +70,12 @@ test("chat and shared-shell Open menu callbacks open the sidebar across tablet b
 });
 
 test("mobile menu, sidebar geometry, and modal behavior share the 1024px desktop boundary", () => {
-  assert.match(topbar, /<header className="[^"]*lg:hidden"/);
+  assert.match(topbar, /<header[\s\S]*?className="[^"]*lg:hidden"/);
   assert.match(sidebar, /matchMedia\("\(max-width: 1023px\)"\)/);
-  assert.match(sidebar, /max-lg:fixed max-lg:inset-y-0 max-lg:left-0/);
-  assert.match(sidebar, /open \? "max-lg:translate-x-0" : "max-lg:-translate-x-full"/);
+  const geometry = read("src/styles/sidebar-core.css");
+  assert.match(geometry, /@media \(max-width: 1023px\)/);
+  assert.match(geometry, /position: fixed;/);
+  assert.match(geometry, /transform: translateX\(-100%\)/);
   assert.doesNotMatch(sidebar, /max-md:|md:!w-0|max-width: 767px/);
 });
 
@@ -95,19 +97,10 @@ function workspaceSearchCallback(deps) {
       close = node.initializer.getText(file);
     if (ts.isJsxOpeningElement(node) && node.tagName.getText(file) === "button") {
       const attributes = node.attributes.properties;
-      const row = attributes.find((attribute) => attribute.name?.getText(file) === "className");
       const click = attributes.find((attribute) => attribute.name?.getText(file) === "onClick");
-      const label =
-        ts.isJsxElement(node.parent) &&
-        node.parent.children.some(
-          (child) =>
-            ts.isJsxElement(child) &&
-            child.openingElement.tagName.getText(file) === "span" &&
-            child.children.some((text) => ts.isJsxText(text) && text.text.trim() === "Search"),
-        );
+      const label = attributes.find((attribute) => attribute.name?.getText(file) === "aria-label");
       if (
-        label &&
-        row?.initializer?.text === "kova-nav-row" &&
+        label?.initializer?.text === "Search chats" &&
         click?.initializer?.expression?.getText(file).includes("onOpenWorkspaceSearch()")
       )
         searches.push(click.initializer.expression.getText(file));
@@ -116,7 +109,7 @@ function workspaceSearchCallback(deps) {
   }
   visit(file);
   assert.ok(viewport && close, "Compile the actual drawer Search handler and viewport helper");
-  assert.equal(searches.length, 1, "Only the expanded Search action matches the runtime fixture");
+  assert.equal(searches.length, 1, "Only the header Search action matches the runtime fixture");
   return new Function(
     ...Object.keys(deps),
     ts.transpileModule(

@@ -9,6 +9,8 @@ export function WorkspacePageHeader({
   actions,
   meta,
   titleId,
+  reference = "chatgpt.page.header",
+  readingTitle = false,
 }: {
   icon?: LucideIcon;
   title: string;
@@ -16,10 +18,12 @@ export function WorkspacePageHeader({
   actions?: ReactNode;
   meta?: ReactNode;
   titleId?: string;
+  reference?: string;
+  readingTitle?: boolean;
 }) {
   const utilities = useContext(WorkspacePageUtilities);
   return (
-    <header className="kova-page-header" aria-labelledby={titleId}>
+    <header className="kova-page-header" aria-labelledby={titleId} data-ui-reference={reference}>
       <div className="kova-page-identity flex min-w-0 flex-1 min-[641px]:basis-80 items-start gap-3">
         {Icon ? (
           <span
@@ -30,7 +34,13 @@ export function WorkspacePageHeader({
           </span>
         ) : null}
         <div className="min-w-0">
-          <h1 id={titleId} className="kova-page-title">
+          <h1
+            id={titleId}
+            className="kova-page-title"
+            style={
+              readingTitle ? { fontFamily: "var(--font-reading)", fontWeight: 400 } : undefined
+            }
+          >
             {title}
           </h1>
           <p className="kova-page-description">{description}</p>

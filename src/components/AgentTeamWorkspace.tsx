@@ -1,3 +1,6 @@
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -200,6 +203,7 @@ export function AgentTeamWorkspace() {
               {AGENT_WORKFLOW_TEMPLATES.map((item) => (
                 <button
                   data-kova-button-shape="preserve"
+                  data-ui-reference="chatgpt.agent.template-card"
                   key={item.id}
                   onClick={() => chooseTemplate(item.id)}
                   className={`w-44 rounded-xl border p-3 text-left ${item.id === templateId ? "bg-accent" : ""}`}
@@ -213,18 +217,18 @@ export function AgentTeamWorkspace() {
             </div>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <textarea
+            <Textarea
               value={objective}
               onChange={(event) => setObjective(event.target.value)}
               aria-label="Agent team objective"
-              className="min-h-24 rounded-xl border bg-background p-3 sm:col-span-2"
+              className="min-h-24 border bg-background sm:col-span-2"
               placeholder="What should your team accomplish?"
             />
-            <input
+            <Input
               value={projectId}
               onChange={(event) => setProjectId(event.target.value)}
               aria-label="Project ID"
-              className="h-10 rounded-lg border bg-background px-3"
+              className="border bg-background"
               placeholder="Project ID (optional)"
             />
             <div className="flex flex-wrap gap-1">
@@ -234,6 +238,8 @@ export function AgentTeamWorkspace() {
                   className="flex min-h-10 items-center gap-2 rounded-lg border px-2 text-xs"
                 >
                   <input
+                    className="kova-native-check"
+                    data-ui-reference="chatgpt.checkbox"
                     type="checkbox"
                     checked={context.includes(item)}
                     onChange={() =>
@@ -250,7 +256,8 @@ export function AgentTeamWorkspace() {
           <div className="mt-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium">Task graph</h3>
-              <button
+              <Button
+                variant="outline"
                 onClick={() =>
                   setTasks((all) => [
                     ...all,
@@ -263,10 +270,10 @@ export function AgentTeamWorkspace() {
                     },
                   ])
                 }
-                className="min-h-10 rounded-lg border px-3 text-xs"
+                className="border text-xs"
               >
                 Add specialist
-              </button>
+              </Button>
             </div>
             <ul className="mt-2 grid gap-2 md:grid-cols-2">
               {tasks.map((item, index) => (
@@ -296,7 +303,7 @@ export function AgentTeamWorkspace() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <input
+                    <Input
                       aria-label={`Title for task ${index + 1}`}
                       value={item.title}
                       onChange={(event) =>
@@ -312,9 +319,10 @@ export function AgentTeamWorkspace() {
                           ),
                         )
                       }
-                      className="h-9 min-w-0 flex-1 rounded-lg border bg-background px-2 text-sm"
+                      className="min-w-0 flex-1 border bg-background text-sm"
                     />
-                    <button
+                    <Button
+                      variant="ghost"
                       aria-label={`Remove ${item.title}`}
                       onClick={() =>
                         setTasks((all) =>
@@ -326,10 +334,10 @@ export function AgentTeamWorkspace() {
                             })),
                         )
                       }
-                      className="min-h-9 min-w-9 rounded-lg hover:bg-accent"
+                      className="hover:bg-accent"
                     >
                       ×
-                    </button>
+                    </Button>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <span>
@@ -372,7 +380,8 @@ export function AgentTeamWorkspace() {
                       </SelectContent>
                     </Select>
                     {item.dependencies.map((dependency) => (
-                      <button
+                      <Button
+                        variant="outline"
                         key={dependency}
                         onClick={() =>
                           setTasks((all) =>
@@ -388,15 +397,17 @@ export function AgentTeamWorkspace() {
                             ),
                           )
                         }
-                        className="rounded border px-2 py-1"
+                        className="border"
                         aria-label={`Remove dependency ${dependency}`}
                       >
                         {dependency} ×
-                      </button>
+                      </Button>
                     ))}
                   </div>
                   <label className="mt-2 flex items-center gap-2 text-xs">
                     <input
+                      className="kova-native-check"
+                      data-ui-reference="chatgpt.checkbox"
                       type="checkbox"
                       checked={item.checkpoint ?? false}
                       onChange={() =>
@@ -414,14 +425,15 @@ export function AgentTeamWorkspace() {
             </ul>
           </div>
           <div className="mt-4 flex items-center gap-3">
-            <button
+            <Button
+              variant="default"
               disabled={busy || !objective.trim() || !tasks.length}
               onClick={create}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-foreground px-4 text-sm text-background disabled:opacity-50"
+              className="inline-flex items-center gap-2 bg-foreground text-sm text-background disabled:opacity-50"
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
               Launch {tasks.length} specialists
-            </button>
+            </Button>
             <p className="text-xs text-muted-foreground">
               {tier === "plus"
                 ? "Sequential execution"
@@ -446,12 +458,13 @@ export function AgentTeamWorkspace() {
               </p>
             </div>
             <div className="flex gap-1">
-              <button
+              <Button
+                variant="outline"
                 disabled={busy}
                 onClick={() =>
                   control(activeRun.id, activeRun.status === "paused" ? "resume" : "pause")
                 }
-                className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs"
+                className="inline-flex items-center gap-1 border text-xs"
               >
                 {activeRun.status === "paused" ? (
                   <Play className="h-3 w-3" />
@@ -459,24 +472,27 @@ export function AgentTeamWorkspace() {
                   <Pause className="h-3 w-3" />
                 )}
                 {activeRun.status === "paused" ? "Resume" : "Pause"}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
                 disabled={busy}
                 onClick={() => control(activeRun.id, "retry")}
-                className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs"
+                className="inline-flex items-center gap-1 border text-xs"
               >
                 <RotateCcw className="h-3 w-3" />
                 Retry failed
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
                 disabled={busy}
                 onClick={() => control(activeRun.id, "cancel")}
-                className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs text-destructive"
+                className="inline-flex items-center gap-1 border text-xs text-destructive"
               >
                 <Square className="h-3 w-3" />
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => {
                   localStorage.setItem(
                     "kova-automation-draft",
@@ -488,10 +504,10 @@ export function AgentTeamWorkspace() {
                   );
                   navigate({ to: "/scheduled-tasks" });
                 }}
-                className="min-h-10 rounded-lg border px-3 text-xs"
+                className="border text-xs"
               >
                 Schedule rerun
-              </button>
+              </Button>
             </div>
           </div>
           <div className="mt-4 grid gap-3 lg:grid-cols-[1.2fr_.8fr]">
@@ -521,13 +537,15 @@ export function AgentTeamWorkspace() {
                           {item.output_text}
                         </pre>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <button
+                          <Button
+                            variant="outline"
                             onClick={() => downloadOutput(item)}
-                            className="min-h-9 rounded-lg border px-3 text-xs"
+                            className="border text-xs"
                           >
                             Download deliverable
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="outline"
                             onClick={() => {
                               localStorage.setItem(
                                 "kova-work-context",
@@ -541,27 +559,29 @@ export function AgentTeamWorkspace() {
                               );
                               navigate({ to: "/" });
                             }}
-                            className="min-h-9 rounded-lg border px-3 text-xs"
+                            className="border text-xs"
                           >
                             Continue in Chat
-                          </button>
+                          </Button>
                         </div>
                       </details>
                     )}
                     {item.status === "approval_needed" && (
                       <div className="mt-3 flex gap-2">
-                        <button
+                        <Button
+                          variant="default"
                           onClick={() => control(activeRun.id, "approve", item.id)}
-                          className="min-h-10 rounded-lg bg-foreground px-3 text-xs text-background"
+                          className="bg-foreground text-xs text-background"
                         >
                           Approve checkpoint
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="outline"
                           onClick={() => control(activeRun.id, "deny", item.id)}
-                          className="min-h-10 rounded-lg border px-3 text-xs"
+                          className="border text-xs"
                         >
                           Deny and pause
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </li>

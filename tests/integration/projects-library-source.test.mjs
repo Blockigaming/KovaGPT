@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { libraryDeleteConfirmation } from "../../src/lib/library-delete-confirmation.ts";
 
 const styles = await readFile("src/styles.css", "utf8");
+const tokens = await readFile("src/styles/visual-tokens.css", "utf8");
 const reference = await readFile("docs/kova-observable-reference.md", "utf8");
 const projects = await readFile("src/routes/projects.tsx", "utf8");
 const projectDetail = await readFile("src/routes/projects.$projectId.tsx", "utf8");
@@ -32,6 +33,7 @@ test("observable reference documents workspace measurements without private asse
 });
 
 test("visual system exposes semantic workspace tokens and reusable classes", () => {
+  assert.equal((styles.match(/@import "\.\/styles\/visual-tokens\.css";/g) ?? []).length, 1);
   for (const token of [
     "--surface-workspace",
     "--surface-raised",
@@ -39,6 +41,10 @@ test("visual system exposes semantic workspace tokens and reusable classes", () 
     "--kova-radius-card",
     "--kova-touch",
     "--motion-standard",
+  ]) {
+    assert.match(tokens, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  for (const token of [
     ".kova-page",
     ".kova-toolbar",
     ".kova-empty-state",
@@ -99,7 +105,11 @@ test("project detail has instructions autosave states and mobile-safe tabs", () 
   assert.match(projectDetail, /\{isOwner \? "Settings" : "Access"\}/);
   assert.match(
     projectDetailStyles,
-    /\.kova-project-workspace \.kova-project-tools-trigger\s*\{[^}]*min-height: 44px;/,
+    /\.kova-project-workspace \.kova-project-tools-trigger\s*\{[^}]*min-height: 36px;/,
+  );
+  assert.match(
+    projectDetailStyles,
+    /@media \(pointer: coarse\)\s*\{[\s\S]*?\.kova-project-workspace :is\(\.kova-project-tools-trigger, \.kova-project-resource-link\)\s*\{\s*min-height: 44px;/,
   );
   assert.match(managementStyles, /\.spec400-project-navigation\s*\{[^}]*flex-wrap: wrap;/);
   assert.match(

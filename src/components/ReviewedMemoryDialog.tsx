@@ -1,3 +1,5 @@
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   Dialog,
@@ -171,6 +173,7 @@ export function ReviewedMemoryDialog({
         }}
       >
         <DialogContent
+          data-ui-reference="chatgpt.memory-review.dialogcontent"
           className="max-h-[85dvh] overflow-y-auto sm:max-w-lg"
           onCloseAutoFocus={(event) => {
             event.preventDefault();
@@ -209,14 +212,15 @@ export function ReviewedMemoryDialog({
               <label htmlFor={fieldId} className="text-sm font-medium">
                 Exact memory text
               </label>
-              <textarea
+              <Textarea
+                data-ui-reference="chatgpt.memory-review.textarea"
                 ref={fieldRef}
                 id={fieldId}
                 value={text}
                 maxLength={1500}
                 rows={5}
                 disabled={busy}
-                className="w-full rounded-lg border bg-background p-3 text-sm"
+                className="w-full  border bg-background  text-sm"
                 onChange={(event) => {
                   if (!lock.current) {
                     draft.current = { text: event.target.value, confirmed: false };
@@ -230,15 +234,16 @@ export function ReviewedMemoryDialog({
                 {text.length}/1500 characters. No text is generated or saved while you edit.
               </p>
               <label className="flex min-h-11 cursor-pointer items-start gap-2 py-2 text-sm">
-                <input
-                  type="checkbox"
+                <Checkbox
+                  data-ui-reference="chatgpt.checkbox"
+
                   checked={confirmed}
                   disabled={busy}
                   className="mt-1"
-                  onChange={(event) => {
+                  onCheckedChange={(checked) => {
                     if (!lock.current) {
-                      draft.current = { ...draft.current, confirmed: event.target.checked };
-                      setConfirmed(event.target.checked);
+                      draft.current = { ...draft.current, confirmed: checked === true };
+                      setConfirmed(checked === true);
                     }
                   }}
                 />
@@ -249,10 +254,16 @@ export function ReviewedMemoryDialog({
             </>
           ) : null}
           <DialogFooter className="[&>button]:w-full sm:[&>button]:w-auto">
-            <Button variant="outline" onClick={close} disabled={busy}>
+            <Button
+              data-ui-reference="chatgpt.memory-review.control"
+              variant="outline"
+              onClick={close}
+              disabled={busy}
+            >
               Cancel
             </Button>
             <Button
+              data-ui-reference="chatgpt.memory-review.control"
               onClick={() => void save()}
               disabled={checking || busy || revision === null || !confirmed || !text.trim()}
             >

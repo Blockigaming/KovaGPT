@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -118,8 +119,13 @@ function BrainPage() {
 
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
-        <header className="flex flex-wrap items-start justify-between gap-4">
+      <main
+        data-ui-reference="claude.project.overview"
+        className={"kova-tool-page " + "mx-auto w-full max-w-6xl px-4 py-7 sm:px-6"}
+      >
+        <header
+          className={"kova-tool-heading " + "flex flex-wrap items-start justify-between gap-4"}
+        >
           <div>
             <div className="flex items-center gap-2">
               <Brain className="h-6 w-6" />
@@ -151,17 +157,18 @@ function BrainPage() {
         ) : brain.error ? (
           <div role="alert" className="mt-7 rounded-2xl border border-destructive/40 p-4">
             Kova Brain could not load your workspace.
-            <button
+            <Button
+              variant="outline"
               onClick={() => void brain.refetch()}
-              className="ml-3 rounded-lg border px-3 py-1.5 text-sm"
+              className="ml-3  border   text-sm"
             >
               Retry
-            </button>
+            </Button>
           </div>
         ) : brain.data ? (
           <>
             <section
-              className="mt-7 rounded-2xl border bg-card/35 p-4"
+              className={"kova-tool-panel " + "mt-7 rounded-2xl border bg-card/35 p-4"}
               aria-labelledby="brain-state-title"
             >
               <div className="flex items-center justify-between gap-3">
@@ -192,7 +199,7 @@ function BrainPage() {
             </section>
 
             <div className="mt-5 grid gap-5 lg:grid-cols-2">
-              <section className="rounded-2xl border bg-card/35 p-3">
+              <section className={"kova-tool-panel " + "rounded-2xl border bg-card/35 p-3"}>
                 <div className="flex items-center gap-2 px-2 pb-2 pt-1">
                   <CalendarDays className="h-4 w-4" />
                   <div>
@@ -210,7 +217,7 @@ function BrainPage() {
                 </div>
               </section>
 
-              <section className="rounded-2xl border bg-card/35 p-3">
+              <section className={"kova-tool-panel " + "rounded-2xl border bg-card/35 p-3"}>
                 <div className="flex items-center gap-2 px-2 pb-2 pt-1">
                   <Lightbulb className="h-4 w-4" />
                   <div>
@@ -241,7 +248,7 @@ function BrainPage() {
               </section>
             </div>
 
-            <section className="mt-5 rounded-2xl border bg-card/35 p-4">
+            <section className={"kova-tool-panel " + "mt-5 rounded-2xl border bg-card/35 p-4"}>
               <div className="flex items-center gap-2">
                 <PackageOpen className="h-4 w-4" />
                 <h2 className="font-semibold">Brain principles</h2>

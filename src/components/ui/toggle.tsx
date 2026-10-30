@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const toggleVariants = cva(
-  "font-[family-name:var(--font-ui)] inline-flex items-center justify-center gap-2 rounded-[var(--kova-radius-button)] text-sm font-medium cursor-pointer transition-colors hover:bg-muted hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed data-[state=on]:bg-accent data-[state=on]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "font-[family-name:var(--font-ui)] inline-flex items-center justify-center gap-1.5 rounded-[8px] text-sm font-medium cursor-pointer transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed data-[state=on]:bg-accent data-[state=on]:text-accent-foreground [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 [&_svg]:pointer-events-none [&_svg]:size-[18px] [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -14,9 +14,9 @@ const toggleVariants = cva(
           "border border-input bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground",
       },
       size: {
-        default: "h-11 px-3 min-w-11",
-        sm: "h-11 px-3 min-w-11",
-        lg: "h-12 px-4 min-w-12",
+        default: "h-9 min-w-9 px-3",
+        sm: "h-8 min-w-8 px-3",
+        lg: "h-10 min-w-10 px-3.5",
       },
     },
     defaultVariants: {
@@ -31,6 +31,8 @@ const Toggle = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TogglePrimitive.Root> & VariantProps<typeof toggleVariants>
 >(({ className, variant, size, ...props }, ref) => (
   <TogglePrimitive.Root
+    data-slot="toggle"
+    data-ui-reference="chatgpt.button.toggle"
     ref={ref}
     className={cn(toggleVariants({ variant, size, className }))}
     {...props}

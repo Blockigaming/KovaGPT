@@ -109,11 +109,10 @@ function fixture(options = {}) {
 const primaryLabels = [
   "New chat",
   "Search",
-  "Chat",
   "Projects",
   "Scheduled tasks",
   "Library",
-  "Plugins",
+  "Connections",
 ];
 const controls = (tree) => all(tree).filter(({ type }) => type === "button" || type === "Link");
 
@@ -132,7 +131,7 @@ for (const choices of [
       controls(f.find("Primary destinations"))
         .filter(({ type }) => type === "Link")
         .map(({ props }) => props.to),
-      ["/", "/projects", "/scheduled-tasks", "/library", "/apps"],
+      ["/projects", "/scheduled-tasks", "/library", "/apps"],
     );
     for (const label of primaryLabels)
       assert.equal(controls(f.tree).filter(({ props }) => props["aria-label"] === label).length, 1);
@@ -173,11 +172,10 @@ test("guest/auth and scheduling gates are unchanged and hidden expanded rail is 
 });
 
 for (const [path, label] of [
-  ["/", "Chat"],
   ["/projects/project-1", "Projects"],
   ["/scheduled-tasks/task-1", "Scheduled tasks"],
   ["/library", "Library"],
-  ["/apps/plugin-1", "Plugins"],
+  ["/apps/plugin-1", "Connections"],
   ["/images", "Images"],
   ["/work", "Work"],
   ["/discovery", "Discover"],
@@ -285,9 +283,10 @@ test("every collapsed action is wrapped in the shared pointer-and-keyboard Toolt
   assert.equal(f.tree.type, "TooltipProvider");
 });
 
-test("rail keeps 72px geometry, a 64px header, 24px logo and 44px expansion target", () => {
+test("rail keeps one 56px width owner, a 64px header and a 24px owner logo", () => {
   const f = fixture();
-  assert.match(f.find("Collapsed navigation").props.className, /w-\[72px\]/);
+  assert.equal(f.find("Collapsed navigation").props.className, "kova-sidebar-rail");
+  assert.equal(fixture({ path: "/" }).find("Chat"), undefined);
   const header = all(f.tree).find(
     ({ type, props }) => type === "div" && props.className?.includes("h-16"),
   );
@@ -300,28 +299,25 @@ test("rail keeps 72px geometry, a 64px header, 24px logo and 44px expansion targ
   assert.deepEqual(f.calls, [["toggle"]]);
 });
 
-test("rail uses shared shape ownership, 44px controls and stroke 2", () => {
+test("rail geometry has a single shared owner and expands touch controls without forced strokes", () => {
+  const core = postcss.parse(readFileSync("src/styles/sidebar-core.css", "utf8"));
+  const dialog = postcss.parse(readFileSync("src/styles/sidebar-personalization.css", "utf8"));
   const rules = [];
-  postcss
-    .parse(readFileSync("src/styles/sidebar-personalization.css", "utf8"))
-    .walkRules((rule) => rules.push(rule));
+  core.walkRules((rule) => rules.push(rule));
   const property = (rule, name) => rule.nodes.findLast((node) => node.prop === name)?.value;
-  const target = rules.find((rule) => rule.selector.endsWith(".kova-rail-button"));
-  assert.equal(property(target, "min-width"), "44px");
-  assert.equal(property(target, "min-height"), "44px");
-  assert.equal(property(target, "border-radius"), undefined);
-  const shared = [];
-  postcss
-    .parse(readFileSync("src/styles/sidebar-core.css", "utf8"))
-    .walkRules((rule) => shared.push(rule));
-  const shape = shared.find((rule) => rule.selector.endsWith(".kova-rail-button"));
-  assert.equal(property(shape, "border-radius"), "var(--kova-radius-control)");
-  assert.equal(fixture().find("Collapsed navigation").props["aria-label"], "Collapsed navigation");
-  const stroke = rules.findLast(
+  const shape = rules.find((rule) => rule.selector === ".kova-sidebar-rail .kova-rail-button");
+  assert.equal(property(shape, "min-width"), "36px");
+  assert.equal(property(shape, "min-height"), "36px");
+  assert.equal(property(shape, "border-radius"), "8px");
+  const width = rules.find((rule) => rule.selector === ".kova-sidebar-rail[data-kova-core-rail]");
+  assert.equal(property(width, "width"), "var(--kova-sidebar-rail-width, 56px)");
+  const touch = rules.find(
     (rule) =>
-      rule.selector.includes(
-        ".kova-sidebar-rail[data-kova-refined-sidebar][data-kova-core-rail]",
-      ) && rule.selector.endsWith("svg"),
+      rule.parent.params === "(pointer: coarse), (max-width: 1023px)" &&
+      rule.selector.includes(".kova-sidebar-rail .kova-rail-button"),
   );
-  assert.equal(property(stroke, "stroke-width"), "2");
+  assert.equal(property(touch, "min-width"), "44px");
+  assert.equal(property(touch, "min-height"), "44px");
+  dialog.walkRules((rule) => assert.ok(!rule.selector.includes(".kova-sidebar-rail")));
+  assert.equal(fixture().find("Collapsed navigation").props["aria-label"], "Collapsed navigation");
 });

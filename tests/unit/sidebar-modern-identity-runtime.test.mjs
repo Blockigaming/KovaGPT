@@ -57,6 +57,7 @@ const emptyState = enclosingExpression(classElement("kova-sidebar-empty"));
 const help = enclosingExpression(classElement("kova-sidebar-help"));
 const footer = classElement("kova-sidebar-footer");
 const shared = {
+  hideGuestLogin: false,
   CircleHelp: "CircleHelp",
   CreditCard: "CreditCard",
   SettingsGlyph: "SettingsGlyph",
@@ -111,6 +112,21 @@ test("guest sidebar exposes one Help action, Subscriptions and concise login", (
   assert.ok(!all(tree).some((node) => node.props["aria-label"] === "Account menu"));
 });
 
+test("homepage can omit its duplicate guest login while preserving Help and Subscriptions", () => {
+  const tree = renderSidebar(footer, {
+    ...shared,
+    hideGuestLogin: true,
+    isLoaded: true,
+    signedIn: false,
+    closeAfterMobileNavigation() {},
+    onOpenHelp() {},
+    onOpenSettings() {},
+  });
+  assert.ok(!all(tree).some((node) => node.type === "button" && text(node) === "Log in"));
+  assert.ok(all(tree).some((node) => node.type === "button" && text(node) === "Help"));
+  assert.ok(all(tree).some((node) => node.type === "a" && text(node) === "Subscriptions"));
+});
+
 const mobileDeclaration = findNode(
   topbar,
   (node) => ts.isFunctionDeclaration(node) && node.name?.text === "MobileTopBar",
@@ -120,6 +136,7 @@ const mobileDeclaration = findNode(
 function renderTopbar(props = {}, user = { isLoaded: true, isSignedIn: false }) {
   return compile(`${mobileDeclaration}\nreturn MobileTopBar(props);`, {
     props,
+    Button: "button",
     useUser: () => user,
     clerkEnabled: true,
     ...Object.fromEntries(
@@ -130,9 +147,9 @@ function renderTopbar(props = {}, user = { isLoaded: true, isSignedIn: false }) 
   });
 }
 
-test("mobile home names Kova GPT and preserves specific destination and conversation titles", () => {
+test("mobile home names KovaGPT and preserves specific destination and conversation titles", () => {
   for (const [title, expected] of [
-    [undefined, "Kova GPT"],
+    [undefined, "KovaGPT"],
     ["Projects", "Projects"],
     [
       "A saved conversation with a long descriptive title",
@@ -188,6 +205,7 @@ test("inline chat search exposes its current expanded state and preserves toggli
     let next = searchOpen;
     const tree = renderSidebar(button, {
       searchOpen,
+      onOpenWorkspaceSearch: undefined,
       setSearchOpen: (update) => (next = update(next)),
       SearchGlyph: "SearchGlyph",
     });

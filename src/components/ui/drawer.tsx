@@ -4,7 +4,7 @@ import { Drawer as DrawerPrimitive } from "vaul";
 import { cn } from "@/lib/utils";
 
 const Drawer = ({
-  shouldScaleBackground = true,
+  shouldScaleBackground = false,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
@@ -23,7 +23,7 @@ const DrawerOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay
     ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/50", className)}
+    className={cn("fixed inset-0 z-50 bg-black/30 dark:bg-black/50", className)}
     {...props}
   />
 ));
@@ -37,6 +37,7 @@ const DrawerContent = React.forwardRef<
     <DrawerOverlay />
     <DrawerPrimitive.Content
       data-slot="drawer-content"
+      data-ui-reference="chatgpt.sheet.bottom"
       ref={ref}
       className={cn(
         "font-[family-name:var(--font-ui)] fixed inset-x-0 bottom-0 z-50 flex h-auto max-h-[92dvh] min-w-0 flex-col overflow-y-auto overscroll-contain rounded-t-[var(--kova-radius-panel)] border border-border bg-popover text-popover-foreground [overflow-wrap:anywhere]",
@@ -55,14 +56,14 @@ const DrawerContent = React.forwardRef<
 DrawerContent.displayName = "DrawerContent";
 
 const DrawerHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("grid min-w-0 gap-2 p-6 text-left", className)} {...props} />
+  <div className={cn("grid min-w-0 gap-2 p-5 text-left", className)} {...props} />
 );
 DrawerHeader.displayName = "DrawerHeader";
 
 const DrawerFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "mt-auto flex min-w-0 flex-col gap-2 p-6 pt-0 pb-[calc(1.5rem+env(safe-area-inset-bottom))] [&>button]:h-auto [&>button]:min-h-11 [&>button]:max-w-full [&>button]:whitespace-normal",
+      "mt-auto flex min-w-0 flex-col gap-2 p-5 pt-0 pb-[calc(1.25rem+env(safe-area-inset-bottom))] [&>button]:h-auto [&>button]:min-h-9 [@media(pointer:coarse)]:[&>button]:min-h-11 [&>button]:max-w-full [&>button]:whitespace-normal",
       className,
     )}
     {...props}
@@ -78,7 +79,7 @@ const DrawerTitle = React.forwardRef<
     ref={ref}
     data-slot="drawer-title"
     className={cn(
-      "font-[family-name:var(--font-ui)] text-xl font-semibold leading-7 tracking-tight",
+      "font-[family-name:var(--font-ui)] text-lg font-semibold leading-6 tracking-normal",
       className,
     )}
     {...props}
@@ -92,7 +93,7 @@ const DrawerDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Description
     ref={ref}
-    className={cn("text-sm leading-relaxed text-muted-foreground", className)}
+    className={cn("text-sm leading-5 text-muted-foreground", className)}
     {...props}
   />
 ));

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 // Auth shim backed by Supabase auth.
 //
 // Historically this file wrapped Clerk; consumers across the app import
@@ -396,13 +397,15 @@ function KovaClerkProvider({
           className="fixed left-1/2 top-4 z-[120] flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-xl border border-border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg"
         >
           <span>KovaGPT could not verify your session. Your browser data was not changed.</span>
-          <button
+          <Button
+            data-ui-reference="chatgpt.auth.session.action"
+            variant="outline"
             type="button"
-            className="shrink-0 rounded-md border border-border px-2.5 py-1 font-medium hover:bg-accent"
+            className="shrink-0  border border-border px-2.5  font-medium hover:bg-accent"
             onClick={() => window.location.reload()}
           >
             Retry
-          </button>
+          </Button>
         </div>
       ) : null}
       <AuthDialog
@@ -891,13 +894,15 @@ function SupabaseClerkProvider({
               ? "Sign-in is temporarily unavailable because authentication is not configured."
               : "KovaGPT could not verify your session. Your browser data was not changed."}
           </span>
-          <button
+          <Button
+            data-ui-reference="chatgpt.auth.session.action"
+            variant="outline"
             type="button"
-            className="shrink-0 rounded-md border border-border px-2.5 py-1 font-medium hover:bg-accent"
+            className="shrink-0  border border-border px-2.5  font-medium hover:bg-accent"
             onClick={() => window.location.reload()}
           >
             Retry
-          </button>
+          </Button>
         </div>
       ) : null}
       <AuthDialog
@@ -1041,9 +1046,14 @@ function AuthTrigger({
   }
 
   return (
-    <button type="button" onClick={handleClick}>
+    <Button
+      data-ui-reference="chatgpt.auth.session.action"
+      variant="ghost"
+      type="button"
+      onClick={handleClick}
+    >
       {children ?? (variant === "sign-in" ? "Log in" : "Sign up")}
-    </button>
+    </Button>
   );
 }
 

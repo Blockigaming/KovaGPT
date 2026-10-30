@@ -93,6 +93,8 @@ function fixture() {
     activeModal: null,
     account: null,
     menu,
+    toggleSidebar: null,
+    openSidebar: null,
     mobileHome: false,
     tab: "general",
     focusRequest: 0,
@@ -101,6 +103,8 @@ function fixture() {
   document.querySelector = (selector) => {
     if (selector === '[aria-label="Open menu"]') return state.menu;
     if (selector === '[aria-label="Account menu"]') return state.account;
+    if (selector === '[aria-label="Toggle sidebar"]') return state.toggleSidebar;
+    if (selector === '[aria-label="Open sidebar"]') return state.openSidebar;
     assert.equal(selector, '[aria-modal="true"]:not([data-state="closed"]), dialog[open]');
     return state.activeModal;
   };
@@ -320,5 +324,71 @@ test("an unavailable desktop Account menu obeys the existing mobile fallback gua
     f.dismiss();
     assert.equal(f.document.activeElement, f.menu);
     assert.deepEqual(f.focused, [["Open menu", { preventScroll: true }]]);
+  }
+});
+
+test("Images Settings restores its visible Toggle sidebar after the mobile drawer closes", () => {
+  const f = fixture();
+  f.window.location.href = "https://local.invalid/images";
+  f.state.menu = null;
+  f.state.toggleSidebar = f.target("Toggle sidebar");
+  f.open();
+  f.drawer.inert = true;
+  f.drawer.ariaHidden = true;
+  f.dismiss();
+  assert.equal(f.document.activeElement, f.state.toggleSidebar);
+  assert.deepEqual(f.focused, [["Toggle sidebar", { preventScroll: true }]]);
+});
+
+test("known sidebar fallbacks retain Account, Open menu, Toggle sidebar, Open sidebar order", () => {
+  for (const expected of ["Account menu", "Open menu", "Toggle sidebar", "Open sidebar"]) {
+    const f = fixture();
+    f.state.account = f.target("Account menu");
+    f.state.toggleSidebar = f.target("Toggle sidebar");
+    f.state.openSidebar = f.target("Open sidebar");
+    const fallbacks = [f.state.account, f.state.menu, f.state.toggleSidebar, f.state.openSidebar];
+    for (const target of fallbacks.slice(
+      0,
+      fallbacks.findIndex((item) => item.name === expected),
+    ))
+      target.hasLayout = false;
+    f.open();
+    f.opener.isConnected = false;
+    f.dismiss();
+    assert.deepEqual(f.focused, [[expected, { preventScroll: true }]]);
+    assert.deepEqual(f.attempts, [expected]);
+  }
+});
+
+test("Images sidebar fallbacks keep all visibility, ownership and later-focus guards", () => {
+  for (const name of ["toggleSidebar", "openSidebar"]) {
+    for (const change of [
+      (f, target) => (target.isConnected = false),
+      (f, target) => (target.hasLayout = false),
+      (f, target) => (target.inert = true),
+      (f, target) => (target.ariaHidden = true),
+      (f, target) => (target.hidden = true),
+      (f, target) => (target.disabled = true),
+      (f, target) => (target.visibility = "hidden"),
+      (f) => (f.window.location.href = "https://local.invalid/library"),
+      (f) => (f.currentAuthUserKeyRef.current = "another-account"),
+      (f) => (f.state.activeModal = f.target("Another dialog")),
+      (f) => (f.document.activeElement = f.target("Later interaction")),
+    ]) {
+      const f = fixture();
+      f.window.location.href = "https://local.invalid/images";
+      f.state.menu = null;
+      const target = f.target(name === "toggleSidebar" ? "Toggle sidebar" : "Open sidebar");
+      f.state[name] = target;
+      f.open();
+      f.opener.isConnected = false;
+      f.surface.isConnected = false;
+      f.document.activeElement = f.document.body;
+      change(f, target);
+      const active = f.document.activeElement;
+      f.close();
+      assert.equal(f.document.activeElement, active);
+      assert.deepEqual(f.focused, []);
+    }
   }
 });

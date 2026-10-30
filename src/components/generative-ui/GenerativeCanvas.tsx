@@ -1,3 +1,6 @@
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { useId, useRef, useState } from "react";
 import { validateGenerativeWidget, type GenerativeWidget } from "@/lib/generative-ui.mjs";
 import { resultRevisionDiff } from "@/lib/result-revision-diff.mjs";
@@ -65,6 +68,7 @@ export function GenerativeCanvas({
     <section
       className={`kova-generative-canvas${expanded ? " kova-generative-canvas-expanded" : ""}`}
       data-canvas-type={draft.type}
+      data-ui-reference="gemini.canvas.workspace"
       aria-label={`${draft.title} workspace`}
     >
       <header className="kova-generative-heading">
@@ -83,15 +87,17 @@ export function GenerativeCanvas({
           <h3>{draft.title}</h3>
         </div>
         {!expanded && onOpenCanvas && !isText ? (
-          <button
+          <Button
+            variant="ghost"
             type="button"
             disabled={!validated}
             onClick={(event) => validated && onOpenCanvas(validated, event.currentTarget)}
           >
             Open workspace
-          </button>
+          </Button>
         ) : isText && onOpenEditor ? (
-          <button
+          <Button
+            variant="ghost"
             type="button"
             disabled={!validated}
             onClick={() =>
@@ -99,7 +105,7 @@ export function GenerativeCanvas({
             }
           >
             Open in Canvas
-          </button>
+          </Button>
         ) : null}
       </header>
 
@@ -109,7 +115,7 @@ export function GenerativeCanvas({
             <label htmlFor={`${fieldId}-content`}>
               {draft.type === "code" ? `${draft.language} code` : "Editable draft"}
             </label>
-            <textarea
+            <Textarea
               id={`${fieldId}-content`}
               className={draft.type === "code" ? "kova-generative-code" : ""}
               value={draft.content}
@@ -121,7 +127,7 @@ export function GenerativeCanvas({
         ) : draft.type === "date" ? (
           <div className="kova-generative-date">
             <label htmlFor={`${fieldId}-date`}>Selected date</label>
-            <input
+            <Input
               id={`${fieldId}-date`}
               type="date"
               value={draft.value}
@@ -146,7 +152,7 @@ export function GenerativeCanvas({
                   </span>
                   <div className="kova-generative-milestone">
                     <label htmlFor={`${fieldId}-${item.id}-title`}>Milestone {index + 1}</label>
-                    <input
+                    <Input
                       id={`${fieldId}-${item.id}-title`}
                       value={item.title}
                       maxLength={200}
@@ -162,7 +168,7 @@ export function GenerativeCanvas({
                     <div className="kova-generative-dates">
                       <label>
                         Start
-                        <input
+                        <Input
                           type="date"
                           value={item.start}
                           max={item.end}
@@ -181,7 +187,7 @@ export function GenerativeCanvas({
                       </label>
                       <label>
                         End
-                        <input
+                        <Input
                           type="date"
                           value={item.end}
                           min={item.start}
@@ -224,7 +230,8 @@ export function GenerativeCanvas({
                         </Select>
                       </label>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
                       type="button"
                       disabled={draft.items.length === 1}
                       aria-label={`Remove milestone ${index + 1}`}
@@ -236,12 +243,13 @@ export function GenerativeCanvas({
                       }
                     >
                       Remove
-                    </button>
+                    </Button>
                   </div>
                 </li>
               ))}
             </ol>
-            <button
+            <Button
+              variant="ghost"
               type="button"
               disabled={draft.items.length >= 64}
               onClick={() => {
@@ -265,7 +273,7 @@ export function GenerativeCanvas({
               }}
             >
               Add milestone
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="kova-generative-board">
@@ -281,7 +289,7 @@ export function GenerativeCanvas({
                     {cards.map((card, index) => (
                       <li key={card.id}>
                         <label htmlFor={`${fieldId}-${card.id}-title`}>Idea {index + 1}</label>
-                        <input
+                        <Input
                           id={`${fieldId}-${card.id}-title`}
                           value={card.title}
                           maxLength={200}
@@ -297,7 +305,7 @@ export function GenerativeCanvas({
                           }
                         />
                         <label htmlFor={`${fieldId}-${card.id}-body`}>Notes</label>
-                        <textarea
+                        <Textarea
                           id={`${fieldId}-${card.id}-body`}
                           value={card.body ?? ""}
                           maxLength={4000}
@@ -338,7 +346,8 @@ export function GenerativeCanvas({
                         </Select>
                         <div className="kova-generative-card-actions">
                           {([-1, 1] as const).map((direction) => (
-                            <button
+                            <Button
+                              variant="ghost"
                               key={direction}
                               type="button"
                               aria-label={`Move ${card.title} ${direction === -1 ? "up" : "down"}`}
@@ -353,9 +362,10 @@ export function GenerativeCanvas({
                               }}
                             >
                               {direction === -1 ? "Move up" : "Move down"}
-                            </button>
+                            </Button>
                           ))}
-                          <button
+                          <Button
+                            variant="ghost"
                             type="button"
                             aria-label={`Remove ${card.title}`}
                             onClick={() =>
@@ -366,13 +376,14 @@ export function GenerativeCanvas({
                             }
                           >
                             Remove
-                          </button>
+                          </Button>
                         </div>
                       </li>
                     ))}
                   </ol>
                   {!cards.length && <p className="kova-generative-empty">No ideas here yet.</p>}
-                  <button
+                  <Button
+                    variant="ghost"
                     type="button"
                     disabled={draft.cards.length >= 64}
                     aria-label={`Add idea to ${column.title}`}
@@ -394,7 +405,7 @@ export function GenerativeCanvas({
                     }
                   >
                     Add idea
-                  </button>
+                  </Button>
                 </section>
               );
             })}
@@ -434,15 +445,17 @@ export function GenerativeCanvas({
 
       <footer className="kova-generative-footer">
         <div className="kova-generative-actions">
-          <button
+          <Button
+            variant="ghost"
             type="button"
             className="kova-generative-apply"
             disabled={!changed || !validated}
             onClick={apply}
           >
             Apply draft
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             type="button"
             disabled={!changed}
             onClick={() => {
@@ -451,15 +464,16 @@ export function GenerativeCanvas({
             }}
           >
             Discard changes
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             type="button"
             disabled={!differsFromOriginal && !comparing}
             aria-pressed={comparing}
             onClick={() => setComparing((value) => !value)}
           >
             {comparing ? "Hide comparison" : "Compare versions"}
-          </button>
+          </Button>
         </div>
         <p role="status" aria-live="polite">
           {!validated

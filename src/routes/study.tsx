@@ -10,7 +10,10 @@ function StudyPage() {
   const { user, isLoaded } = useUser();
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-3xl overflow-y-auto p-4 md:p-8">
+      <main
+        data-ui-reference="chatgpt.study.workspace"
+        className={"kova-tool-page " + "mx-auto w-full max-w-3xl overflow-y-auto p-4 md:p-8"}
+      >
         <h1 className="mb-5 text-2xl font-semibold">Study</h1>
         {isLoaded ? (
           <StudyPanel key={user?.id ?? "guest"} ownerId={user?.id ?? null} />

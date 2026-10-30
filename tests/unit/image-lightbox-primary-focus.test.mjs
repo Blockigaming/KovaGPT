@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import postcss from "postcss";
+import ts from "typescript";
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 const images = read("src/routes/images.tsx");
 const pages = postcss.parse(read("src/styles/core-pages.css"));
-const parity = postcss.parse(read("src/styles/chatgpt-parity.css"));
+const geometry = postcss.parse(read("src/styles/control-geometry.css"));
 const selector = "[data-image-lightbox] .kova-image-lightbox-primary:focus-visible";
 const rule = pages.nodes.find((node) => node.type === "rule" && node.selector === selector);
 const declaration = (node, property) =>
@@ -15,7 +16,28 @@ const declaration = (node, property) =>
 // Source/cascade regression only. Rendering is verified independently.
 test("lightbox autofocus remains on the uniquely identified white primary action", () => {
   assert.equal((images.match(/kova-image-lightbox-primary/g) ?? []).length, 1);
-  const button = images.match(/<button\s+ref=\{lightboxInitialFocusRef\}[\s\S]*?<\/button>/)?.[0];
+  const parsed = ts.createSourceFile(
+    "images.tsx",
+    images,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  let button;
+  const visit = (node) => {
+    if (
+      ts.isJsxElement(node) &&
+      node.openingElement.attributes.properties.some(
+        (attribute) =>
+          ts.isJsxAttribute(attribute) &&
+          attribute.name.getText(parsed) === "ref" &&
+          attribute.initializer?.getText(parsed) === "{lightboxInitialFocusRef}",
+      )
+    )
+      button = node.getText(parsed);
+    ts.forEachChild(node, visit);
+  };
+  visit(parsed);
   assert.ok(button);
   assert.match(button, /kova-image-lightbox-primary[^"\n]*bg-white[^"\n]*text-black/);
   assert.match(button, /Reuse prompt/);
@@ -37,25 +59,22 @@ test("focused primary action preserves black-on-white contrast while generic acc
     assert.equal(declaration(rule, property).value, value);
     assert.equal(declaration(rule, property).important, true);
   }
-  const generic = parity.nodes.find(
-    (node) =>
-      node.type === "rule" &&
-      declaration(node, "background")?.value === "var(--accent)" &&
-      node.selector.endsWith(":focus-visible"),
+  const generic = geometry.nodes.filter(
+    (node) => node.type === "rule" && node.selector.includes(":focus-visible"),
   );
-  assert.ok(generic);
-  const scopes = generic.selector.match(/^:where\(([^)]+)\)/)?.[1];
-  assert.ok(scopes);
-  assert.deepEqual(
-    new Set(postcss.list.comma(scopes)),
-    new Set(['[role="menu"]', '[role="listbox"]', ".kova-model-menu"]),
-    "Ordinary dialog actions must not inherit the menu accent",
-  );
-  assert.doesNotMatch(generic.selector, /\[role="dialog"\]/);
-  assert.equal(declaration(generic, "background").value, "var(--accent)");
-  assert.equal(declaration(generic, "background").important, true);
-  // Generic :where() contributes zero specificity, leaving :focus-visible (0,1,0).
-  // This scoped selector adds an attribute and class, yielding (0,3,0).
+  assert.ok(generic.length);
+  for (const focus of generic) {
+    assert.ok(
+      !declaration(focus, "background"),
+      "Global focus rings must not replace a primary action fill",
+    );
+    assert.ok(!declaration(focus, "background-color"));
+  }
+  const menu = read("src/components/ui/dropdown-menu.tsx");
+  assert.match(menu, /focus:bg-accent/);
+  assert.doesNotMatch(read("src/components/ui/button.tsx"), /focus(?:-visible)?:bg-accent/);
+  assert.ok(!read("src/styles.css").includes('@import "./styles/chatgpt-parity.css"'));
+  // The contrast treatment stays scoped to the identified primary lightbox action.
   assert.match(
     rule.selector,
     /^\[data-image-lightbox\] \.kova-image-lightbox-primary:focus-visible$/,

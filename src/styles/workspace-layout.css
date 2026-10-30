@@ -1,15 +1,5 @@
 /* ChatGPT owns page organization and chrome. Projects adds its own Drive-style
    resource browser; reading content retains the explicit Claude type role. */
-.kova-app-shell[data-ui="modern"] .kova-page:not(.kova-file-directory):not(.kova-settings-page) {
-  --page-max: 1040px;
-  --page-padding: 24px clamp(20px, 4vw, 40px) 48px;
-  --page-title-size: 28px;
-  --page-title-line: 1.25;
-  --page-title-weight: 600;
-  max-width: 1040px;
-  margin-inline: auto;
-  gap: 24px;
-}
 
 .kova-app-shell[data-ui="modern"] .kova-page-header {
   align-items: flex-start;
@@ -23,11 +13,11 @@
 }
 
 .kova-app-shell[data-ui="modern"] .kova-page-header .kova-page-title {
-  font-family: var(--font-ui) !important;
-  font-size: 28px !important;
-  font-weight: 600 !important;
-  line-height: 1.25 !important;
-  letter-spacing: -0.025em !important;
+  font-family: var(--font-ui);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
 }
 
 .kova-app-shell[data-ui="modern"] .kova-page-description {
@@ -49,42 +39,9 @@
   padding: 4px clamp(20px, 4vw, 40px);
 }
 
-body .kova-sidebar .kova-sidebar-workspace {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-top: 12px;
-}
-
-body .kova-sidebar .kova-sidebar-section-label {
-  margin: 0;
-  padding: 8px 12px 4px;
-  color: var(--muted-foreground);
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 18px;
-}
-
-body .kova-sidebar .kova-sidebar-more-disclosure {
-  margin-top: 4px;
-}
-
-body .kova-sidebar .kova-sidebar-more-disclosure > .kova-nav-row {
-  margin-bottom: 2px;
-}
-
-body .kova-sidebar .kova-sidebar-workspace .kova-nav-row {
-  width: 100%;
-}
-
 @media (max-width: 639px) {
-  .kova-app-shell[data-ui="modern"] .kova-page:not(.kova-file-directory):not(.kova-settings-page) {
-    --page-padding: 20px 16px 32px;
-  }
-
   .kova-app-shell[data-ui="modern"] .kova-page-header .kova-page-title {
-    font-size: 24px !important;
+    font-size: 24px;
   }
 
   .kova-app-shell[data-ui="modern"] .kova-page-header .kova-page-actions {
@@ -98,12 +55,54 @@ body .kova-sidebar .kova-sidebar-workspace .kova-nav-row {
   }
 }
 
-@media (max-height: 420px) {
-  body .kova-sidebar .kova-sidebar-workspace {
-    padding-top: 4px;
-  }
-
-  body .kova-sidebar .kova-sidebar-section-label {
-    padding-block: 2px;
+/* ChatGPT Work web: measured 224 × 36 mode control, with 112px options. */
+.kova-workspace-mode-switch {
+  width: 224px;
+  height: 36px;
+  padding: 0;
+  gap: 0;
+  align-items: center;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--muted);
+}
+.kova-workspace-mode {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  width: 112px;
+  height: 36px;
+  place-items: center;
+  border-radius: 9999px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  transition: color 150ms ease;
+}
+.kova-workspace-mode::before {
+  position: absolute;
+  z-index: -1;
+  inset: 1px;
+  content: "";
+  border: 1px solid transparent;
+  border-radius: inherit;
+}
+.kova-workspace-mode.is-active {
+  color: var(--foreground);
+}
+.kova-workspace-mode.is-active::before {
+  border-color: var(--border);
+  background: var(--background);
+  box-shadow: 0 1px 3px #00000008;
+}
+.kova-workspace-mode:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .kova-workspace-mode-switch,
+  .kova-workspace-mode {
+    min-height: 44px;
   }
 }

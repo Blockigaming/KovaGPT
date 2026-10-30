@@ -29,7 +29,14 @@ function fixture(family) {
     );
   const picker = loadUiModule("src/components/ui/searchable-picker.tsx", {
     react: react(() => pickerHooks),
-    "lucide-react": primitives(["Check", "ChevronDown"]),
+    "./reference-icons": primitives(["Check", "ChevronDown"]),
+    "./select": primitives([
+      "Select",
+      "SelectContent",
+      "SelectItem",
+      "SelectTrigger",
+      "SelectValue",
+    ]),
     "./command": primitives([
       "Command",
       "CommandEmpty",

@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
-import { X } from "lucide-react";
+import { X } from "./reference-icons";
 
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ const SheetOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/30 dark:bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className,
     )}
     {...props}
@@ -31,7 +31,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "font-[family-name:var(--font-ui)] fixed z-50 min-w-0 max-w-full max-h-screen overflow-y-auto overscroll-contain [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-dvh gap-4 border-border/80 bg-popover p-6 text-popover-foreground shadow-[var(--shadow-floating)] transition ease-[var(--ease-spring)] data-[state=closed]:duration-[var(--motion-fast)] data-[state=open]:duration-[var(--motion-menu)] data-[state=open]:animate-in data-[state=closed]:animate-out",
+  "font-[family-name:var(--font-ui)] fixed z-50 min-w-0 max-w-full max-h-screen overflow-y-auto overscroll-contain [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-dvh gap-4 border-border/80 bg-popover p-5 text-popover-foreground shadow-[var(--shadow-floating)] transition ease-out data-[state=closed]:duration-[var(--motion-fast)] data-[state=open]:duration-[var(--motion-menu)] data-[state=open]:animate-in data-[state=closed]:animate-out",
   {
     variants: {
       side: {
@@ -60,8 +60,14 @@ const SheetContent = React.forwardRef<
 >(({ side = "right", className, children, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
-    <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
-      <SheetPrimitive.Close className="absolute right-3 top-[max(.75rem,var(--safe-top))] flex h-11 w-11 items-center justify-center rounded-[var(--kova-radius-button)] opacity-65 ring-offset-background cursor-pointer transition hover:bg-accent hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+    <SheetPrimitive.Content
+      data-slot="sheet-content"
+      data-ui-reference="chatgpt.sheet"
+      ref={ref}
+      className={cn(sheetVariants({ side }), className)}
+      {...props}
+    >
+      <SheetPrimitive.Close className="absolute right-3 top-[max(.75rem,var(--safe-top))] flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 ring-offset-background cursor-pointer transition hover:bg-accent hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
         <X className="h-5 w-5" />
         <span className="sr-only">Close</span>
       </SheetPrimitive.Close>
@@ -89,7 +95,7 @@ SheetHeader.displayName = "SheetHeader";
 const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end [&>button]:h-auto [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:max-w-full [&>button]:whitespace-normal",
+      "flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end [&>button]:h-auto [&>button]:min-h-9 [@media(pointer:coarse)]:[&>button]:min-h-11 [&>button]:min-w-0 [&>button]:max-w-full [&>button]:whitespace-normal",
       className,
     )}
     {...props}
@@ -105,7 +111,7 @@ const SheetTitle = React.forwardRef<
     ref={ref}
     data-slot="sheet-title"
     className={cn(
-      "font-[family-name:var(--font-ui)] text-xl font-semibold leading-7 tracking-tight text-foreground",
+      "font-[family-name:var(--font-ui)] text-lg font-semibold leading-6 tracking-normal text-foreground",
       className,
     )}
     {...props}
@@ -119,7 +125,7 @@ const SheetDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Description
     ref={ref}
-    className={cn("text-sm leading-relaxed text-muted-foreground", className)}
+    className={cn("text-sm leading-5 text-muted-foreground", className)}
     {...props}
   />
 ));

@@ -210,20 +210,16 @@
   opacity: 0.6;
 }
 
-/* Owner response-reference override: only authored inline code gets a blue accent. */
+/* ChatGPT inline code uses a quiet neutral chip, separate from fenced output. */
 body .prose-chat :not(pre) > code {
-  color: #1555a5 !important;
-  background: #eaf2ff !important;
+  color: var(--foreground);
+  background: var(--surface-secondary);
   border: 0;
   border-radius: 4px;
   padding: 0.12em 0.3em;
-  font-family: var(--font-mono) !important;
+  font-family: var(--font-mono);
   font-size: 0.9em;
   overflow-wrap: anywhere;
-}
-html.dark body .prose-chat :not(pre) > code {
-  color: #8cbeff !important;
-  background: #172b45 !important;
 }
 body .prose-chat .kova-table-scroll {
   max-width: 100%;

@@ -1,24 +1,27 @@
-/* Owner's 400-item interaction specification; all colors retain the 9cc tokens. */
+/* ChatGPT composer: the observed desktop empty state is one 52px row,
+   with 36px icon controls and an 8px optical inset. Attachments and multiline
+   drafts grow into the same two-row surface rather than reserving empty space. */
 .spec400-chat-input {
   width: 100%;
-  max-width: var(--kova-reading-width);
+  max-width: var(--kova-composer-width, 768px);
   margin-inline: auto;
   padding: 0 0 max(12px, env(safe-area-inset-bottom));
 }
 .spec400-composer {
+  --composer-compact-padding: 7px;
+  --composer-compact-gap: 8px;
   position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 128px;
-  padding: 12px;
-  gap: 8px;
-  border: 1px solid var(--muted-foreground);
-  border-radius: var(--kova-radius-composer);
-  background: var(--surface-input, var(--background));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "tools input trailing";
+  align-items: center;
+  min-height: 52px;
+  padding: var(--composer-compact-padding);
+  gap: var(--composer-compact-gap);
+  border: 1px solid var(--composer-border, transparent);
+  border-radius: var(--kova-radius-composer, 26px);
+  background: var(--composer-background, var(--surface-secondary));
   color: var(--foreground);
-}
-.spec400-chat-input[data-composer-surface="empty"] .spec400-composer {
-  min-height: 160px;
 }
 .spec400-composer[data-focus-origin="keyboard"]:focus-within {
   outline: 2px solid var(--ring);
@@ -26,24 +29,28 @@
 }
 .spec400-input-region {
   position: relative;
-  flex: 1 0 auto;
+  display: flex;
+  align-items: center;
+  grid-area: input;
+  flex: 1 1 auto;
   min-width: 0;
-  padding-right: 44px;
+  min-height: 36px;
+  padding-right: 0;
 }
 .spec400-composer-input {
   display: block;
   width: 100%;
   min-width: 0;
-  min-height: 48px;
+  min-height: 26px;
   max-height: 240px;
-  padding: 4px;
+  padding: 0;
   border: 0;
   background: transparent;
   resize: none;
   color: inherit;
   font: inherit;
   font-size: 1rem;
-  line-height: 1.625;
+  line-height: 26px;
   outline: none;
 }
 .spec400-composer-input::placeholder,
@@ -52,21 +59,55 @@
   opacity: 1;
 }
 .spec400-composer-toolbar,
-.spec400-composer-tools {
+.spec400-composer-tools,
+.spec400-composer-trailing {
   display: flex;
   align-items: center;
   gap: 4px;
   min-width: 0;
 }
 .spec400-composer-toolbar {
+  display: contents;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   flex: none;
-  margin-top: auto;
+  margin-top: 0;
 }
 .spec400-composer-tools {
-  flex: 1;
-  flex-wrap: wrap;
+  grid-area: tools;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+}
+.spec400-composer-trailing {
+  grid-area: trailing;
+  flex: none;
+}
+.spec400-composer:has(
+  .spec400-composer-input[data-multiline="true"],
+  .spec400-attachment-chips,
+  .spec400-selected-tool
+) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 12px;
+}
+.spec400-composer:has(
+    .spec400-composer-input[data-multiline="true"],
+    .spec400-attachment-chips,
+    .spec400-selected-tool
+  )
+  .spec400-composer-toolbar {
+  display: flex;
+}
+.spec400-composer:has(
+    .spec400-composer-input[data-multiline="true"],
+    .spec400-attachment-chips,
+    .spec400-selected-tool
+  )
+  .spec400-input-region {
+  min-height: 26px;
+  padding-right: 36px;
 }
 .spec400-toolbar-button,
 .spec400-send-button,
@@ -125,19 +166,53 @@
 }
 .spec400-icon-button,
 .spec400-expand-input {
-  width: 44px;
+  width: 36px;
+  min-height: 36px;
   padding: 0;
 }
 .spec400-expand-input {
   position: absolute;
   right: 0;
   top: 0;
+  translate: 4px -6px;
+  color: var(--muted-foreground);
+  opacity: 0;
+  pointer-events: none;
+}
+.spec400-composer:has(.spec400-composer-input[data-multiline="true"]) .spec400-expand-input,
+.spec400-expand-input:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.spec400-toolbar-icon {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 50%;
   color: var(--muted-foreground);
 }
+.spec400-toolbar-icon > .spec400-context-count {
+  position: absolute;
+  inset: -1px -1px auto auto;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 10px;
+  line-height: 1;
+}
 .spec400-send-button {
-  min-width: 44px;
-  width: 44px;
-  height: 44px;
+  min-width: 36px;
+  min-height: 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   background: var(--foreground);
   color: var(--background);
   padding: 0;
@@ -152,6 +227,21 @@
   cursor: not-allowed;
   background: var(--muted);
   color: var(--muted-foreground);
+}
+.spec400-primary-voice {
+  background: var(--foreground);
+  color: var(--background);
+}
+.spec400-primary-voice:hover {
+  background: color-mix(in srgb, var(--foreground) 85%, var(--background));
+}
+.spec400-primary-voice:disabled {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+.spec400-composer :is(.spec400-toolbar-button, .spec400-send-button)[hidden] {
+  display: none;
 }
 .spec400-connection-status,
 .spec400-composer-hint {
@@ -246,6 +336,10 @@
   max-height: min(70dvh, var(--radix-popover-content-available-height, 70dvh));
   overflow-y: auto;
   border-radius: var(--kova-radius-menu);
+}
+/* Radix rounds its fixed position; keep the collision edge inside that pixel. */
+.kova-composer-menu.spec400-attach-menu {
+  max-height: min(70dvh, calc(var(--radix-popover-content-available-height, 70dvh) - 1px));
 }
 .spec400-options-panel {
   width: min(320px, calc(100vw - 32px));
@@ -397,51 +491,6 @@
   margin-top: auto;
   width: 100%;
 }
-.spec400-starter-actions {
-  display: flex;
-  justify-content: flex-start;
-  gap: 8px;
-  width: 100%;
-  max-width: var(--kova-reading-width);
-  margin: 4px auto 0;
-}
-.spec400-starter-actions .spec400-toolbar-button {
-  border-color: var(--border);
-  padding-inline: 12px;
-}
-.kova-assistant .kova-empty-chat {
-  padding: 24px 32px;
-}
-.kova-assistant .kova-empty-chat-content {
-  flex: none;
-  width: 100%;
-  max-width: var(--kova-reading-width);
-  margin: auto;
-  padding-block: 32px;
-  justify-content: flex-start;
-}
-.kova-assistant .kova-greeting {
-  width: 100%;
-  margin-bottom: 24px;
-  animation: none;
-}
-.kova-assistant .kova-greeting h1 {
-  font-size: 1.75rem;
-  line-height: 2.25rem;
-  font-weight: 600;
-  letter-spacing: normal;
-  padding: 0;
-}
-.kova-assistant .kova-empty-composer {
-  width: 100%;
-  max-width: none;
-}
-.kova-assistant .kova-desktop-topbar {
-  height: 64px;
-  min-height: 64px;
-  border-bottom: 1px solid var(--border);
-  padding-inline: 24px;
-}
 .spec400-chat-title {
   min-width: 0;
   margin: 0;
@@ -493,65 +542,45 @@
   color: var(--muted-foreground);
   font-size: 0.8125rem;
 }
-.spec400-capability-note {
-  width: 100%;
-  margin-top: 24px;
-  font-size: 0.875rem;
-  line-height: 1.375rem;
-  color: var(--muted-foreground);
-}
-@media (max-width: 1023px) {
-  .kova-assistant .kova-empty-chat {
-    padding-inline: 24px;
-  }
+@media (max-width: 1023px), (any-pointer: coarse) {
   .spec400-composer {
-    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
+    padding: 12px;
+    gap: 4px;
+  }
+  .spec400-composer-toolbar {
+    display: flex;
   }
   .spec400-composer-input {
-    min-height: 40px;
+    min-height: 26px;
     max-height: 144px;
+  }
+  .spec400-input-region {
+    min-height: 26px;
+    padding-right: 44px;
+  }
+  .spec400-toolbar-icon,
+  .spec400-expand-input {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
   }
   .spec400-send-button {
     min-width: 44px;
     width: 44px;
+    height: 44px;
+    min-height: 44px;
     padding: 0;
-  }
-  .spec400-send-button > span {
-    display: none;
   }
 }
 @media (max-width: 767px) {
-  .kova-assistant .kova-empty-chat {
-    padding: 16px;
-  }
-  .kova-assistant .kova-empty-chat-content {
-    margin-block: 0;
-    padding-block: 24px;
-  }
-  .kova-assistant .kova-greeting h1 {
-    font-size: 1.5rem;
-    line-height: 2rem;
-  }
   .spec400-chat-input {
     padding-inline: 0;
-  }
-  .spec400-composer-tools {
-    gap: 0;
-  }
-  .spec400-composer-tools > .spec400-toolbar-button {
-    padding-inline: 6px;
-    gap: 4px;
-    font-size: 0.8125rem;
-  }
-  .spec400-composer-tools > .spec400-toolbar-button > svg {
-    width: 16px;
-    height: 16px;
-  }
-  .spec400-starter-actions {
-    flex-wrap: wrap;
-  }
-  .spec400-starter-actions .spec400-toolbar-button {
-    flex: 1 1 auto;
   }
   .spec400-context-drawer[data-kova-dialog-surface] {
     width: 100vw;
@@ -586,25 +615,6 @@
   .spec400-recent-work strong {
     white-space: normal;
     overflow-wrap: anywhere;
-  }
-}
-@media (max-width: 479px) {
-  .spec400-composer-tools > .spec400-toolbar-button {
-    width: 44px;
-    min-width: 44px;
-    padding: 0;
-  }
-  .spec400-composer-tools > .spec400-toolbar-button > span {
-    display: none;
-  }
-  .spec400-composer-tools > .spec400-toolbar-button > svg {
-    width: 20px;
-    height: 20px;
-  }
-}
-@media (max-width: 359px) {
-  .spec400-composer {
-    padding-inline: 8px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -731,40 +741,7 @@
 .spec400-chat-input {
   container-type: inline-size;
 }
-@media (min-width: 1024px) {
-  @container (max-width: 480px) {
-    .spec400-composer-tools > .spec400-toolbar-button {
-      width: 44px;
-      padding: 0;
-    }
-    .spec400-composer-tools > .spec400-toolbar-button > span {
-      display: none;
-    }
-    .spec400-send-button {
-      width: 44px;
-      min-width: 44px;
-      padding: 0;
-    }
-    .spec400-send-button > span {
-      display: none;
-    }
-  }
-}
 /* Scoped overrides beat earlier high-specificity prototype geometry. */
-.kova-assistant section.kova-empty-chat > div.kova-empty-chat-content {
-  flex: none;
-  justify-content: flex-start;
-  padding-block: 32px !important;
-}
-.kova-assistant section.kova-empty-chat .kova-greeting {
-  margin-bottom: 24px;
-}
-.kova-assistant section.kova-empty-chat .kova-greeting h1 {
-  font-size: 1.75rem;
-  line-height: 2.25rem;
-  font-weight: 600;
-  letter-spacing: normal;
-}
 body .spec400-context-drawer[data-kova-dialog-surface] {
   border-radius: var(--kova-radius-panel);
   max-width: 300px !important;
@@ -773,13 +750,6 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   animation: none;
 }
 @media (max-width: 767px) {
-  .kova-assistant section.kova-empty-chat > div.kova-empty-chat-content {
-    padding-block: 24px !important;
-  }
-  .kova-assistant section.kova-empty-chat .kova-greeting h1 {
-    font-size: 1.5rem;
-    line-height: 2rem;
-  }
   body .spec400-context-drawer[data-kova-dialog-surface],
   body .spec400-expanded-input[data-kova-dialog-surface] {
     border-radius: var(--kova-radius-panel);
@@ -890,5 +860,112 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
 @media (max-width: 767px) {
   .spec400-attachment-chip {
     max-width: 100%;
+  }
+}
+/* Empty chat: Grok's prompt-first whitespace, Claude's quiet serif greeting,
+   and ChatGPT's observed vertical suggested-prompt rows. Each element has one
+   reference owner; no historical parity layer overrides these rules. */
+.kova-assistant .kova-empty-chat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: clamp(32px, calc(18dvh - 56px), 144px) 24px 32px;
+  overflow-y: auto;
+}
+.kova-assistant .kova-empty-chat-content {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: var(--kova-composer-width, 768px);
+  margin: 0 auto;
+  padding: 0;
+}
+.kova-assistant .kova-greeting {
+  width: 100%;
+  margin: 0 0 24px;
+  animation: none;
+}
+.kova-assistant .kova-greeting h1 {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-reading, Georgia, serif);
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+.kova-assistant .kova-empty-composer {
+  width: 100%;
+  max-width: none;
+}
+.spec400-chat-input[data-composer-surface="empty"] {
+  padding-bottom: 0;
+}
+.spec400-starter-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  margin: 20px 0 0;
+}
+.spec400-starter-actions .kova-home-starter {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--kova-radius-compact);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  text-align: left;
+  box-shadow: none;
+}
+.spec400-starter-actions .kova-home-starter:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.kova-home-starter-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+.kova-home-starter-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.75;
+}
+.kova-home-starter-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.kova-assistant .spec400-capability-note {
+  margin-top: 16px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+  text-align: left;
+}
+@media (max-width: 767px) {
+  .kova-assistant .kova-empty-chat {
+    padding-inline: 16px;
+  }
+  .kova-assistant .kova-greeting h1 {
+    font-size: 28px;
   }
 }

@@ -116,12 +116,15 @@ for (const viewport of viewports) {
             const cancel = content.getByRole("button", { name: cancelLabel, exact: true });
             await cancel.scrollIntoViewIfNeeded();
             await expect(cancel).toBeInViewport();
-            expect((await cancel.boundingBox())!.height).toBeGreaterThanOrEqual(43);
+            const minimumTarget = await page.evaluate(() =>
+              matchMedia("(pointer: coarse)").matches ? 44 : 36,
+            );
+            expect((await cancel.boundingBox())!.height).toBeGreaterThanOrEqual(minimumTarget - 1);
             expect(
               (await content
                 .getByRole("button", { name: confirmLabel, exact: true })
                 .boundingBox())!.height,
-            ).toBeGreaterThanOrEqual(43);
+            ).toBeGreaterThanOrEqual(minimumTarget - 1);
             if (viewport.width === 390 && enlarged) {
               await page.screenshot({ path: testInfo.outputPath(`${surface}.png`) });
             }

@@ -86,7 +86,7 @@ function fixture() {
     withItem: async (value, action) => action(value),
     restoreDialogFocus: compile(
       readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace(
-        "export function",
+        /^export function/gm,
         "function",
       ) + "; return restoreDialogFocus;",
       { window },

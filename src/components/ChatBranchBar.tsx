@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
 import { Check, GitBranch, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -134,13 +135,15 @@ export function ChatBranchBar({
     >
       {branches.map((branch, index) => (
         <li key={branch.id}>
-          <button
+          <Button
+            data-ui-reference="chatgpt.chat-branches.control"
+            variant="ghost"
             type="button"
             role="option"
             aria-selected={branch.active}
             disabled={busy || branch.active}
             onClick={() => void activate(branch.id)}
-            className="relative flex min-h-11 w-full flex-col items-start justify-center rounded-xl px-3 pr-9 text-left hover:bg-accent disabled:opacity-60"
+            className="h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 relative flex  w-full flex-col items-start justify-center   pr-9 text-left hover:bg-accent disabled:opacity-60"
           >
             <span className="text-sm font-medium">
               {branchName(branch, index)}
@@ -151,7 +154,7 @@ export function ChatBranchBar({
               {branch.durable ? "" : " · this device only"}
             </span>
             {branch.active && <Check className="absolute right-3 h-4 w-4" aria-hidden="true" />}
-          </button>
+          </Button>
         </li>
       ))}
     </ul>
@@ -161,10 +164,12 @@ export function ChatBranchBar({
     <div className="mx-auto flex w-full max-w-[48rem] items-center gap-2 px-3 pt-2 lg:px-0">
       {isMobile ? (
         <>
-          <button
+          <Button
+            data-ui-reference="chatgpt.chat-branches.control"
+            variant="outline"
             type="button"
             onClick={() => setSheetOpen(true)}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-3 text-sm font-medium hover:bg-accent"
+            className="inline-flex  items-center gap-2  border border-border  text-sm font-medium hover:bg-accent"
             aria-label={`Chat branch: ${label}. Change branch`}
           >
             {loading ? (
@@ -173,7 +178,7 @@ export function ChatBranchBar({
               <GitBranch className="h-3.5 w-3.5" />
             )}
             <span className="max-w-40 truncate">{label}</span>
-          </button>
+          </Button>
           <MobileBottomSheet open={sheetOpen} onOpenChange={setSheetOpen} title="Chat branches">
             {searchable ? searchableRows((id) => void activate(id)) : rows}
             {durableHint && (
@@ -184,9 +189,11 @@ export function ChatBranchBar({
       ) : searchable ? (
         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger asChild>
-            <button
+            <Button
+              data-ui-reference="chatgpt.chat-branches.control"
+              variant="outline"
               type="button"
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-border px-3 text-sm font-medium hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex  items-center gap-2  border border-border  text-sm font-medium hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`Chat branch: ${label}. Change branch`}
             >
               {loading ? (
@@ -195,7 +202,7 @@ export function ChatBranchBar({
                 <GitBranch className="h-3.5 w-3.5" />
               )}
               <span className="max-w-48 truncate">{label}</span>
-            </button>
+            </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-72 p-0">
             <p className="px-3 py-2 text-xs font-medium text-muted-foreground">
@@ -213,9 +220,11 @@ export function ChatBranchBar({
       ) : (
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
-            <button
+            <Button
+              data-ui-reference="chatgpt.chat-branches.control"
+              variant="outline"
               type="button"
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-border px-3 text-sm font-medium hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex  items-center gap-2  border border-border  text-sm font-medium hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`Chat branch: ${label}. Change branch`}
             >
               {loading ? (
@@ -224,7 +233,7 @@ export function ChatBranchBar({
                 <GitBranch className="h-3.5 w-3.5" />
               )}
               <span className="max-w-48 truncate">{label}</span>
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-72">
             <DropdownMenuLabel>Branches in this chat</DropdownMenuLabel>
@@ -263,13 +272,15 @@ export function ChatBranchBar({
             {error}
           </span>
           {onRetry && (
-            <button
+            <Button
+              data-ui-reference="chatgpt.chat-branches.control"
+              variant="link"
               type="button"
               onClick={onRetry}
               className="text-xs font-medium underline hover:text-foreground"
             >
               Retry
-            </button>
+            </Button>
           )}
         </div>
       )}

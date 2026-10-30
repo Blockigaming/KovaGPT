@@ -199,7 +199,10 @@ function taskFixture() {
     document,
     window,
     restoreDialogFocus: compile(
-      readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace("export function", "function"),
+      readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace(
+        /^export function/gm,
+        "function",
+      ),
       { window },
       "restoreDialogFocus",
     ),

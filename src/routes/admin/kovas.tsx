@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
@@ -37,7 +40,7 @@ function Page() {
           <Queue key={user.id} owner={user.id} />
         ) : (
           <SignInButton mode="modal">
-            <button>Sign in to moderation</button>
+            <Button variant="default">Sign in to moderation</Button>
           </SignInButton>
         )
       ) : (
@@ -147,7 +150,10 @@ function Queue({ owner }: { owner: string }) {
   }
   if (closed) return <p>Device data was cleared. Reload to reopen moderation.</p>;
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 overflow-y-auto p-6">
+    <div
+      data-ui-reference="chatgpt.gpts.moderation"
+      className="mx-auto w-full max-w-4xl space-y-4 overflow-y-auto p-6"
+    >
       <h1 className="text-2xl font-semibold">Kova moderation</h1>
       <p className="text-sm text-muted-foreground">
         Access requires an operator-configured administrator account. Review the oldest open
@@ -156,34 +162,38 @@ function Queue({ owner }: { owner: string }) {
       </p>
       {error && <p role="alert">{error}</p>}
       <div className="flex flex-wrap gap-3">
-        <button
-          className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
+        <Button
+          variant="outline"
+          size="sm"
+
           disabled={busy}
           onClick={() => setEpoch((v) => v + 1)}
         >
           Refresh reports
-        </button>
+        </Button>
         <label className="min-w-0 text-sm">
           Kova ID
-          <input
-            className="block min-h-11 w-full rounded border bg-background p-2 sm:ml-2 sm:inline-block sm:w-auto"
+          <Input
+            className="block w-full sm:ml-2 sm:inline-block sm:w-auto"
             value={lookup}
             onChange={(e) => setLookup(e.target.value)}
             maxLength={36}
           />
         </label>
-        <button
-          className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
+        <Button
+          variant="outline"
+          size="sm"
+
           disabled={busy || lookup.trim().length !== 36}
           onClick={() => void inspect()}
         >
           Inspect moderation state
-        </button>
+        </Button>
       </div>
       <label className="block text-sm">
         Decision reason
-        <textarea
-          className="w-full rounded border bg-background p-2"
+        <Textarea
+          className="w-full"
           maxLength={2000}
           disabled={busy}
           value={reason}
@@ -224,27 +234,33 @@ function Queue({ owner }: { owner: string }) {
             )}
           </details>
           <div className="flex flex-wrap gap-3">
-            <button
-              className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
+            <Button
+              variant="destructive"
+              size="sm"
+
               disabled={busy || !reason.trim() || row.blocked}
               onClick={() => void act(row.kova_id, row.revision, "block")}
             >
               Block Kova
-            </button>
-            <button
-              className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+
               disabled={busy || !reason.trim() || !row.blocked}
               onClick={() => void act(row.kova_id, row.revision, "restore")}
             >
               Restore access
-            </button>
-            <button
-              className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+
               disabled={busy || !reason.trim() || !row.id}
               onClick={() => void act(row.kova_id, row.revision, "review", row.id)}
             >
               Mark this report reviewed
-            </button>
+            </Button>
             <Link
               className="inline-flex min-h-11 items-center rounded-lg px-3 underline disabled:cursor-not-allowed disabled:opacity-50"
               to={"/kovas" as never}

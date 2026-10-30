@@ -1,3 +1,6 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -121,40 +124,42 @@ export function AgentDefinitionDialog({
             <div className="grid gap-3">
               <label className="text-sm">
                 Name
-                <input
+                <Input
                   value={name}
                   maxLength={120}
                   onChange={(e) => setName(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-lg border bg-background px-3"
+                  className="mt-1 w-full border bg-background"
                 />
               </label>
               <label className="text-sm">
                 Instructions
-                <textarea
+                <Textarea
                   value={instructions}
                   maxLength={12000}
                   onChange={(e) => setInstructions(e.target.value)}
-                  className="mt-1 min-h-32 w-full rounded-lg border bg-background p-3"
+                  className="mt-1 min-h-32 w-full border bg-background"
                 />
               </label>
               <label className="text-sm">
                 Project ID (optional)
-                <input
+                <Input
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-lg border bg-background px-3"
+                  className="mt-1 w-full border bg-background"
                 />
               </label>
               <label className="text-sm">
                 Allowed tools, comma separated
-                <input
+                <Input
                   value={tools}
                   onChange={(e) => setTools(e.target.value)}
-                  className="mt-1 h-10 w-full rounded-lg border bg-background px-3"
+                  className="mt-1 w-full border bg-background"
                 />
               </label>
               <label className="flex min-h-11 items-center gap-2 text-sm">
                 <input
+                  className="kova-native-check"
+                  data-ui-reference="chatgpt.checkbox"
                   type="checkbox"
                   checked={memory}
                   onChange={(e) => setMemory(e.target.checked)}
@@ -183,9 +188,10 @@ export function AgentDefinitionDialog({
                   {version.version === agent?.version ? (
                     <span className="mt-2 inline-block text-xs font-medium">Current version</span>
                   ) : (
-                    <button
+                    <Button
+                      variant="outline"
                       disabled={busy}
-                      className="mt-2 min-h-10 rounded-lg border px-3 text-sm"
+                      className="mt-2 border text-sm"
                       onClick={async () => {
                         if (!agent) return;
                         setBusy(true);
@@ -212,7 +218,7 @@ export function AgentDefinitionDialog({
                       }}
                     >
                       Restore version {version.version}
-                    </button>
+                    </Button>
                   )}
                 </li>
               ))}
@@ -225,13 +231,14 @@ export function AgentDefinitionDialog({
           )}
           {mode === "edit" ? (
             <DialogFooter>
-              <button onClick={requestClose} className="min-h-10 rounded-lg border px-4">
+              <Button variant="outline" onClick={requestClose} className="border">
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="default"
                 disabled={busy || !dirty || !name.trim() || !instructions.trim()}
                 onClick={() => void save()}
-                className="min-h-10 rounded-lg bg-foreground px-4 text-background disabled:opacity-40"
+                className="bg-foreground text-background disabled:opacity-40"
               >
                 {busy ? (
                   <span className="spec400-loading-label">
@@ -241,7 +248,7 @@ export function AgentDefinitionDialog({
                 ) : (
                   "Save changes"
                 )}
-              </button>
+              </Button>
             </DialogFooter>
           ) : null}
         </DialogContent>

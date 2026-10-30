@@ -256,9 +256,10 @@ export function AuthDialog({
       <DialogContent
         aria-modal="true"
         data-kova-auth-dialog=""
+        data-ui-reference="chatgpt-auth-dialog"
         className={cn(
-          "kova-auth-surface gap-0 overflow-y-auto border-border/60 bg-card shadow-xl",
-          "p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:max-w-[400px] sm:pb-6",
+          "kova-auth-surface gap-0 overflow-y-auto bg-background",
+          "p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:max-w-[450px] sm:pb-5",
           "[&>button.absolute]:!h-11 [&>button.absolute]:!w-11",
         )}
         onCloseAutoFocus={(event) => {
@@ -269,11 +270,11 @@ export function AuthDialog({
       >
         {/* Header */}
         <div className="kova-auth-dialog-heading flex flex-col items-center text-center">
-          <div className="kova-auth-dialog-mark mb-4 animate-in fade-in-0 duration-100">
+          <div className="kova-auth-dialog-mark mb-6">
             <NovaLogo mark className="h-8 w-8 text-foreground" />
           </div>
 
-          <DialogTitle className="kova-auth-dialog-title text-[28px] font-normal leading-tight">
+          <DialogTitle className="kova-auth-dialog-title text-[32px] font-medium leading-[38px] tracking-[-0.02em]">
             {step === "magic-sent"
               ? "Sign-in link requested"
               : isSignUp
@@ -283,12 +284,14 @@ export function AuthDialog({
           <DialogDescription className="kova-auth-dialog-description mt-2 max-w-[320px] text-[14px]">
             {step === "magic-sent"
               ? `We asked our email provider to send a sign-in link to ${email}. Delivery can take a few minutes — check your spam folder too.`
-              : "Continue with your configured sign-in method."}
+              : isSignUp
+                ? "Create an account to save your chats and pick up where you left off."
+                : "Welcome back. Log in to continue."}
           </DialogDescription>
         </div>
 
         {/* Body */}
-        <div className="kova-auth-dialog-body mt-6 space-y-3">
+        <div className="kova-auth-body kova-auth-dialog-body mt-6 space-y-3">
           {step === "identify" && (
             <>
               <form onSubmit={handleContinueEmail} className="space-y-3">
@@ -320,7 +323,7 @@ export function AuthDialog({
                       emailTouched && !emailValid ? "kova-auth-email-error" : undefined
                     }
                     className={cn(
-                      "h-11 text-[15px] px-3",
+                      "h-12 rounded-full text-base px-4",
                       emailTouched &&
                         !emailValid &&
                         "border-destructive focus-visible:ring-destructive",
@@ -335,7 +338,7 @@ export function AuthDialog({
                 <Button
                   type="submit"
                   disabled={loading || !emailValid}
-                  className="w-full h-12 rounded-full px-5 text-[15px] font-medium"
+                  className="w-full h-12 rounded-full px-5 text-base font-medium"
                 >
                   Continue
                 </Button>
@@ -360,7 +363,7 @@ export function AuthDialog({
                   onClick={() => void handlePasskey()}
                   disabled={loading}
                   aria-busy={loadingMethod === "passkey"}
-                  className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-border bg-background px-4 text-[15px] font-medium transition hover:bg-accent disabled:opacity-60"
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-border bg-background px-4 text-base font-medium transition hover:bg-accent disabled:opacity-60"
                 >
                   {loadingMethod === "passkey" ? (
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -396,7 +399,7 @@ export function AuthDialog({
                   onClick={handleGoogle}
                   disabled={loading || !googleAvailable}
                   aria-busy={loading || (!useKovaAuth && !providers.resolved)}
-                  className="w-full h-11 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-2 px-4 text-[15px] font-medium disabled:opacity-60"
+                  className="w-full h-12 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-2 px-4 text-base font-medium disabled:opacity-60"
                 >
                   {loadingMethod === "google" || (!useKovaAuth && !providers.resolved) ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -432,7 +435,7 @@ export function AuthDialog({
                   onClick={handleHostedGoogle}
                   disabled={loading || !hostedGoogleAvailable}
                   aria-busy={loadingMethod === "hosted-google" || hostedGooglePending}
-                  className="w-full h-11 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-2 px-4 text-[15px] font-medium disabled:opacity-60"
+                  className="w-full h-12 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-2 px-4 text-base font-medium disabled:opacity-60"
                 >
                   {loadingMethod === "hosted-google" || hostedGooglePending ? (
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -446,7 +449,7 @@ export function AuthDialog({
                   type="button"
                   onClick={() => void requestMagicLink(false)}
                   disabled={loading || !emailValid}
-                  className="w-full h-11 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-2 px-4 text-[15px] font-medium disabled:opacity-60"
+                  className="w-full h-12 rounded-full border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-2 px-4 text-base font-medium disabled:opacity-60"
                 >
                   Email me a sign-in link
                 </button>
@@ -461,7 +464,7 @@ export function AuthDialog({
                 variant="outline"
                 disabled={loading || cooldown > 0}
                 onClick={() => void requestMagicLink(true)}
-                className="w-full h-11 rounded-full px-4 text-sm"
+                className="w-full h-12 rounded-full px-4 text-sm"
               >
                 {cooldown > 0 ? `Retry in ${cooldown}s (local delay)` : "Resend the link"}
               </Button>
@@ -471,7 +474,7 @@ export function AuthDialog({
                   setStep("identify");
                   setCooldown(0);
                 }}
-                className="w-full h-11 rounded-full px-4 text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
+                className="w-full h-12 rounded-full px-4 text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" /> Use a different email
               </button>

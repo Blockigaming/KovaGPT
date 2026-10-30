@@ -81,6 +81,8 @@ function fixture(options = {}) {
   };
   const modules = {
     react,
+    "@/components/ui/input": { Input: "input" },
+    "@/components/ui/button": { Button: "button" },
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": { ChevronDown: "svg", Globe2: "svg", Monitor: "svg" },
     "./work-browser-preview.css": {},

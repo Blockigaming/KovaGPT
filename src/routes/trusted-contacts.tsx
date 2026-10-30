@@ -1,3 +1,6 @@
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
@@ -34,7 +37,10 @@ function Page() {
   const { isLoaded, isSignedIn, user } = useUser();
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-3xl px-4 py-8">
+      <main
+        data-ui-reference="chatgpt.safety.trusted-contacts"
+        className={"kova-tool-page " + "mx-auto w-full max-w-3xl px-4 py-8"}
+      >
         <h1 className="text-2xl font-semibold">Trusted contacts</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           A voluntary connection between two verified accounts. Contacts do not gain access to
@@ -207,17 +213,18 @@ function Contacts({ userId }: { userId: string }) {
           {message}
         </p>
       )}
-      <button
+      <Button
+        variant="outline"
         type="button"
         disabled={busy}
         onClick={() => {
           setError(null);
           void refresh(snapshot?.blockPage ?? 0).catch((reason) => setError(reason.message));
         }}
-        className="rounded-lg border px-3 py-2 text-sm"
+        className=" border   text-sm"
       >
         Refresh contacts
-      </button>
+      </Button>
       {!snapshot ? (
         <p role="status" className="text-sm text-muted-foreground">
           Contacts have not loaded yet.
@@ -230,7 +237,7 @@ function Contacts({ userId }: { userId: string }) {
               declined, revoked, blocked, or removed.
             </p>
           )}
-          <section className="rounded-xl border p-4">
+          <section className={"kova-tool-panel " + "rounded-xl border p-4"}>
             <h2 className="font-semibold">Invite an existing verified account</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               They must review and consent in their own account. Invitations expire after seven
@@ -252,7 +259,7 @@ function Contacts({ userId }: { userId: string }) {
             >
               <label className="block text-sm">
                 Their account email
-                <input
+                <Input
                   type="email"
                   required
                   maxLength={320}
@@ -262,30 +269,31 @@ function Contacts({ userId }: { userId: string }) {
                     setEmail(event.target.value);
                   }}
                   disabled={busy || !snapshot.enabled}
-                  className="mt-1 block w-full rounded-lg border bg-background p-2"
+                  className="mt-1 block w-full  border bg-background "
                 />
               </label>
               <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
+                <Checkbox
+                  data-ui-reference="chatgpt.checkbox"
                   checked={inviteConsent}
-                  onChange={(event) => setInviteConsent(event.target.checked)}
+                  onCheckedChange={(checked) => setInviteConsent(checked === true)}
                   disabled={busy || !snapshot.enabled}
                   className="mt-1"
                 />
                 I agree to share my verified account email with this person and invite them to a
                 voluntary contact connection.
               </label>
-              <button
+              <Button
+                variant="outline"
                 type="submit"
                 disabled={busy || !snapshot.enabled || !inviteConsent}
-                className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
+                className=" border   text-sm disabled:opacity-50"
               >
                 Create in-app invitation
-              </button>
+              </Button>
             </form>
           </section>
-          <section className="rounded-xl border p-4">
+          <section className={"kova-tool-panel " + "rounded-xl border p-4"}>
             <h2 className="font-semibold">Connections and invitations</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               Emails shown here were verified when the invitation was created. No email delivery is
@@ -305,37 +313,41 @@ function Contacts({ userId }: { userId: string }) {
                     <div className="mt-2 flex flex-wrap gap-2">
                       {contact.state === "pending" && contact.recipient_id === userId ? (
                         <>
-                          <button
+                          <Button
+                            variant="outline"
                             disabled={busy || !snapshot.enabled}
                             onClick={() => void act(contact, "review")}
-                            className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
+                            className=" border   text-sm disabled:opacity-50"
                           >
                             Review invitation
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="outline"
                             disabled={busy}
                             onClick={() => void act(contact, "decline")}
-                            className="rounded-lg border px-3 py-2 text-sm"
+                            className=" border   text-sm"
                           >
                             Decline
-                          </button>
+                          </Button>
                         </>
                       ) : (
-                        <button
+                        <Button
+                          variant="outline"
                           disabled={busy}
                           onClick={() => void act(contact, "revoke")}
-                          className="rounded-lg border px-3 py-2 text-sm"
+                          className=" border   text-sm"
                         >
                           Revoke connection
-                        </button>
+                        </Button>
                       )}
-                      <button
+                      <Button
+                        variant="outline"
                         disabled={busy}
                         onClick={() => void act(contact, "block")}
-                        className="rounded-lg border px-3 py-2 text-sm"
+                        className=" border   text-sm"
                       >
                         Block future invitations
-                      </button>
+                      </Button>
                     </div>
                     {review?.id === contact.id && (
                       <div className="mt-3 space-y-3 rounded-lg bg-muted/40 p-3">
@@ -345,16 +357,17 @@ function Contacts({ userId }: { userId: string }) {
                           minutes.
                         </p>
                         <label className="flex items-start gap-2 text-sm">
-                          <input
-                            type="checkbox"
+                          <Checkbox
+                            data-ui-reference="chatgpt.checkbox"
                             checked={acceptConsent}
-                            onChange={(event) => setAcceptConsent(event.target.checked)}
+                            onCheckedChange={(checked) => setAcceptConsent(checked === true)}
                             className="mt-1"
                           />
                           I consent to this voluntary connection and sharing my verified account
                           email. I can revoke it at any time.
                         </label>
-                        <button
+                        <Button
+                          variant="outline"
                           disabled={busy || !acceptConsent || !snapshot.enabled}
                           onClick={() =>
                             void run({
@@ -367,10 +380,10 @@ function Contacts({ userId }: { userId: string }) {
                               policyVersion: TRUSTED_CONTACT_POLICY_VERSION,
                             })
                           }
-                          className="rounded-lg border px-3 py-2 text-sm disabled:opacity-50"
+                          className=" border   text-sm disabled:opacity-50"
                         >
                           Accept connection
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </li>
@@ -382,7 +395,7 @@ function Contacts({ userId }: { userId: string }) {
               </p>
             )}
           </section>
-          <section className="rounded-xl border p-4">
+          <section className={"kova-tool-panel " + "rounded-xl border p-4"}>
             <h2 className="font-semibold">Recent finished invitations</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               Up to 50 recent records. Removing a finished record removes it for both parties.
@@ -396,18 +409,19 @@ function Contacts({ userId }: { userId: string }) {
                   <span className="break-all">
                     {other(contact)} · {contact.state}
                   </span>
-                  <button
+                  <Button
+                    variant="outline"
                     disabled={busy}
                     onClick={() => void act(contact, "remove")}
-                    className="rounded-lg border px-3 py-2"
+                    className=" border  "
                   >
                     Remove record
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
           </section>
-          <section className="rounded-xl border p-4">
+          <section className={"kova-tool-panel " + "rounded-xl border p-4"}>
             <h2 className="font-semibold">Accounts you blocked</h2>
             <ul className="mt-3 space-y-2">
               {snapshot.blocked.map((block) => (
@@ -416,7 +430,8 @@ function Contacts({ userId }: { userId: string }) {
                   className="flex flex-wrap items-center justify-between gap-2 text-sm"
                 >
                   <span className="break-all">{block.blocked_email}</span>
-                  <button
+                  <Button
+                    variant="outline"
                     disabled={busy}
                     onClick={() =>
                       void run({
@@ -426,31 +441,33 @@ function Contacts({ userId }: { userId: string }) {
                         revision: block.revision,
                       })
                     }
-                    className="rounded-lg border px-3 py-2"
+                    className=" border  "
                   >
                     Unblock invitations
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
             <div className="mt-3 flex gap-3 text-sm">
-              <button
+              <Button
+                variant="ghost"
                 disabled={busy || snapshot.blockPage === 0}
                 onClick={() =>
                   void refresh(snapshot.blockPage - 1).catch((reason) => setError(reason.message))
                 }
               >
                 Previous
-              </button>
+              </Button>
               <span>Page {snapshot.blockPage + 1}</span>
-              <button
+              <Button
+                variant="ghost"
                 disabled={busy || !snapshot.moreBlocked}
                 onClick={() =>
                   void refresh(snapshot.blockPage + 1).catch((reason) => setError(reason.message))
                 }
               >
                 Next
-              </button>
+              </Button>
             </div>
           </section>
         </>

@@ -384,7 +384,10 @@ function AuthPage() {
   };
 
   return (
-    <div className="kova-auth-page min-h-screen bg-background">
+    <div
+      data-ui-reference="chatgpt-auth-form"
+      className="kova-auth-page min-h-screen bg-background"
+    >
       <header className="flex h-14 items-center px-4">
         <button
           type="button"
@@ -402,7 +405,7 @@ function AuthPage() {
       >
         <div className="mb-8 flex flex-col items-center text-center">
           <NovaLogo mark className="mb-6 h-8 w-8 text-foreground" />
-          <h1 className="text-[30px] font-semibold leading-tight tracking-tight">
+          <h1 className="text-[32px] font-medium leading-[38px] tracking-[-0.02em]">
             {hasMfaChallenge
               ? "Two-factor verification"
               : magicSent
@@ -412,14 +415,14 @@ function AuthPage() {
                   : "Log in to Kova"}
           </h1>
           {hasMfaChallenge ? (
-            <p className="mt-3 text-[15px] text-muted-foreground">
+            <p className="mt-3 text-base text-muted-foreground">
               {mfaMethod === "totp"
                 ? "Enter the 6-digit code from your authenticator app to finish signing in."
                 : "Enter one of the recovery codes you saved when you enabled two-factor authentication."}
             </p>
           ) : null}
           {magicSent ? (
-            <p className="mt-3 text-[15px] text-muted-foreground">
+            <p className="mt-3 text-base text-muted-foreground">
               We asked our email provider to send a sign-in link to {email}. Delivery can take a few
               minutes — check your spam folder too, then open the link on this device.
             </p>
@@ -432,7 +435,7 @@ function AuthPage() {
             variant="outline"
             disabled={loading}
             onClick={submitPasskey}
-            className="mb-4 h-14 w-full rounded-full"
+            className="mb-4 h-12 w-full rounded-full"
           >
             Continue with a passkey
           </Button>
@@ -460,7 +463,7 @@ function AuthPage() {
               disabled={loading}
               spellCheck={false}
               className={cn(
-                "h-14 rounded-2xl text-center font-mono text-lg",
+                "h-12 rounded-full text-center font-mono text-lg",
                 mfaMethod === "totp" && "tracking-[0.35em]",
               )}
             />
@@ -469,7 +472,7 @@ function AuthPage() {
               disabled={
                 loading || (mfaMethod === "totp" ? mfaCode.length !== 6 : mfaCode.length === 0)
               }
-              className="h-14 w-full rounded-full text-[15px]"
+              className="h-12 w-full rounded-full text-base"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify and sign in"}
             </Button>
@@ -509,7 +512,7 @@ function AuthPage() {
             <Button
               variant="outline"
               disabled={loading || cooldown > 0}
-              className="h-14 w-full rounded-full text-[15px]"
+              className="h-12 w-full rounded-full text-base"
               onClick={() => void sendMagicLink(true)}
             >
               {cooldown > 0 ? `Retry in ${cooldown}s (local delay)` : "Resend the link"}
@@ -551,7 +554,7 @@ function AuthPage() {
                   aria-invalid={showEmailError}
                   aria-describedby={showEmailError ? "kova-auth-page-email-error" : undefined}
                   className={cn(
-                    "h-14 rounded-2xl px-4 pr-16 text-[15px]",
+                    "h-12 rounded-full px-4 pr-16 text-base",
                     !editingEmail && "text-muted-foreground",
                   )}
                 />
@@ -589,7 +592,7 @@ function AuthPage() {
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
                   maxLength={80}
-                  className="h-14 rounded-2xl px-4 text-[15px]"
+                  className="h-12 rounded-full px-4 text-base"
                 />
               </div>
             ) : null}
@@ -624,7 +627,7 @@ function AuthPage() {
                   maxLength={1024}
                   aria-invalid={showPasswordError}
                   aria-describedby="kova-auth-page-password-requirement"
-                  className="h-14 rounded-2xl px-4 pr-14 text-[15px]"
+                  className="h-12 rounded-full px-4 pr-14 text-base"
                 />
                 <button
                   type="button"
@@ -664,7 +667,7 @@ function AuthPage() {
             <Button
               type="submit"
               disabled={loading || !emailValid || password.length < minimumPasswordLength}
-              className="h-14 w-full rounded-full text-[15px] font-medium"
+              className="h-12 w-full rounded-full text-base font-medium"
             >
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isSignUp ? "Create account" : "Log in"}

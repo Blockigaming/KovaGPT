@@ -82,14 +82,32 @@ export async function chooseSettingsSection(page: Page, section: string) {
   };
   const label = secondary[section] ?? labels[section] ?? section;
   const tab = surface.getByRole("tab", { name: label, exact: true });
-  if (await tab.isVisible()) {
-    await tab.click();
-  } else {
-    await surface.getByRole("button", { name: "Section", exact: true }).click();
+  const picker = surface.getByRole("button", { name: "Section", exact: true });
+  const chooseWithPicker = async () => {
+    await picker.click();
     await page
       .getByRole("listbox", { name: "Suggestions", exact: true })
       .getByRole("option", { name: new RegExp(`^${label}(?: Selected)?$`) })
       .click();
+  };
+  if (await tab.isVisible()) {
+    try {
+      await tab.click({ timeout: 4_000 });
+    } catch (error) {
+      // Restoring the sidebar can narrow the settings container after its tabs
+      // first appear. Use the real section picker only if that layout replaced
+      // the tab; unrelated click failures must still fail the test.
+      if (
+        !(error instanceof Error) ||
+        error.name !== "TimeoutError" ||
+        (await tab.isVisible()) ||
+        !(await picker.isVisible())
+      )
+        throw error;
+      await chooseWithPicker();
+    }
+  } else {
+    await chooseWithPicker();
   }
   if (secondary[section]) {
     const names: Record<string, string> = {

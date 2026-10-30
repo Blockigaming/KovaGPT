@@ -1,3 +1,6 @@
+import "@/styles/spec400-management.css";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -142,7 +145,10 @@ function GoalsPage() {
 
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6">
+      <main
+        className="kova-page kova-secondary-page kova-goals-page"
+        data-ui-reference="chatgpt.tasks.goal-list"
+      >
         <WorkspacePageHeader
           icon={Target}
           title="Goals"
@@ -160,7 +166,7 @@ function GoalsPage() {
                 New goal
               </label>
               <div className="mt-2 flex gap-2">
-                <input
+                <Input
                   id="new-goal-title"
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
@@ -169,31 +175,33 @@ function GoalsPage() {
                   }}
                   maxLength={200}
                   placeholder="What do you want to accomplish?"
-                  className="h-11 min-w-0 flex-1 rounded-xl border bg-background px-3"
+                  className="min-w-0 flex-1 border bg-background"
                 />
-                <button
+                <Button
+                  variant="default"
                   disabled={creating || !title.trim()}
                   onClick={() => void addGoal()}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-foreground px-4 text-sm font-medium text-background disabled:opacity-50"
+                  className="inline-flex items-center gap-2 bg-foreground text-sm font-medium text-background disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
                   Add
-                </button>
+                </Button>
               </div>
             </section>
 
             <div className="my-5 flex gap-2">
               {(["open", "all"] as const).map((value) => (
-                <button
+                <Button
+                  variant="ghost"
                   key={value}
                   aria-pressed={filter === value}
                   onClick={() => setFilter(value)}
-                  className={`min-h-10 rounded-lg px-3 text-sm capitalize ${
+                  className={` text-sm capitalize ${
                     filter === value ? "bg-foreground text-background" : "border hover:bg-accent"
                   }`}
                 >
                   {value}
-                </button>
+                </Button>
               ))}
             </div>
 
@@ -206,12 +214,13 @@ function GoalsPage() {
             ) : error ? (
               <div role="alert" className="rounded-2xl border border-destructive/40 p-4">
                 {error}
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => void refresh()}
-                  className="ml-3 rounded-lg border px-3 py-1.5 text-sm"
+                  className="ml-3 border text-sm"
                 >
                   Retry
-                </button>
+                </Button>
               </div>
             ) : visible.length === 0 ? (
               <div className="rounded-2xl border p-10 text-center">
@@ -232,7 +241,9 @@ function GoalsPage() {
                   return (
                     <li key={goal.id} className="rounded-2xl border bg-card/35 p-4">
                       <div className="flex flex-wrap items-start gap-3">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           aria-label={
                             goal.status === "completed"
                               ? `Reopen ${goal.title}`
@@ -244,14 +255,14 @@ function GoalsPage() {
                               progress: goal.status === "completed" ? derivedProgress : 100,
                             })
                           }
-                          className="grid min-h-11 min-w-11 place-items-center rounded-xl hover:bg-accent"
+                          className="grid place-items-center hover:bg-accent"
                         >
                           {goal.status === "completed" ? (
                             <Check className="h-5 w-5" />
                           ) : (
                             <Circle className="h-5 w-5" />
                           )}
-                        </button>
+                        </Button>
 
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
@@ -290,6 +301,8 @@ function GoalsPage() {
                                 className="flex min-h-10 items-center gap-2 rounded-lg px-2 hover:bg-accent/60"
                               >
                                 <input
+                                  className="kova-native-check"
+                                  data-ui-reference="chatgpt.checkbox"
                                   type="checkbox"
                                   checked={milestone.completed}
                                   aria-label={`Complete ${milestone.title}`}
@@ -331,7 +344,9 @@ function GoalsPage() {
                                 >
                                   {milestone.title}
                                 </span>
-                                <button
+                                <Button
+                                  variant="default"
+                                  size="icon"
                                   aria-label={`Delete ${milestone.title}`}
                                   onClick={async () => {
                                     try {
@@ -361,16 +376,16 @@ function GoalsPage() {
                                       );
                                     }
                                   }}
-                                  className="grid min-h-10 min-w-10 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                  className="grid place-items-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                 >
                                   <Trash2 className="h-4 w-4" />
-                                </button>
+                                </Button>
                               </li>
                             ))}
                           </ul>
 
                           <div className="mt-2 flex gap-2">
-                            <input
+                            <Input
                               value={milestoneDraft[goal.id] ?? ""}
                               onChange={(event) =>
                                 setMilestoneDraft((all) => ({
@@ -383,18 +398,21 @@ function GoalsPage() {
                               }}
                               maxLength={240}
                               placeholder="Add milestone"
-                              className="h-10 min-w-0 flex-1 rounded-lg border bg-background px-3 text-sm"
+                              className="min-w-0 flex-1 border bg-background text-sm"
                             />
-                            <button
+                            <Button
+                              variant="outline"
                               onClick={() => void addMilestone(goal)}
-                              className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
+                              className="border text-sm hover:bg-accent"
                             >
                               Add
-                            </button>
+                            </Button>
                           </div>
                         </div>
 
-                        <button
+                        <Button
+                          variant="default"
+                          size="icon"
                           aria-label={`Delete ${goal.title}`}
                           onClick={async () => {
                             try {
@@ -409,10 +427,10 @@ function GoalsPage() {
                               );
                             }
                           }}
-                          className="grid min-h-11 min-w-11 place-items-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          className="grid place-items-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   );

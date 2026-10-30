@@ -1,3 +1,6 @@
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -73,7 +76,7 @@ export function AutomationBuilder({
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent data-ui-reference="chatgpt.tasks.automation-builder" className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <WandSparkles className="h-5 w-5" /> Automation Builder
@@ -94,32 +97,32 @@ export function AutomationBuilder({
           <div className="space-y-4">
             <label className="block text-sm font-medium">
               Automation name
-              <input
+              <Input
                 autoFocus
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 maxLength={200}
-                className="mt-1.5 h-11 w-full rounded-xl border border-border bg-background px-3"
+                className="mt-1.5"
                 placeholder="Weekly project briefing"
               />
             </label>
             <label className="block text-sm font-medium">
               Action
-              <textarea
+              <Textarea
                 value={instruction}
                 onChange={(event) => setInstruction(event.target.value)}
                 maxLength={3500}
-                className="mt-1.5 min-h-28 w-full rounded-xl border border-border bg-background p-3"
+                className="mt-1.5 min-h-28"
                 placeholder="Summarize the progress and open questions in my project notes."
               />
             </label>
             <label className="block text-sm font-medium">
               Condition <span className="font-normal text-muted-foreground">(optional)</span>
-              <input
+              <Input
                 value={conditions}
                 onChange={(event) => setConditions(event.target.value)}
                 maxLength={400}
-                className="mt-1.5 h-11 w-full rounded-xl border border-border bg-background px-3"
+                className="mt-1.5"
                 placeholder="there are new notes since the prior run"
               />
             </label>
@@ -133,12 +136,12 @@ export function AutomationBuilder({
           <div className="space-y-4">
             <label className="block text-sm font-medium">
               Start date and time
-              <input
+              <Input
                 autoFocus
                 type="datetime-local"
                 value={runAt}
                 onChange={(event) => setRunAt(event.target.value)}
-                className="mt-1.5 h-11 w-full rounded-xl border border-border bg-background px-3"
+                className="mt-1.5"
               />
             </label>
             <label className="block text-sm font-medium">
@@ -147,7 +150,7 @@ export function AutomationBuilder({
                 value={repeat}
                 onValueChange={(value) => setRepeat(value as AutomationDraft["repeat"])}
               >
-                <SelectTrigger aria-label="Recurrence" className="mt-1.5 min-h-11 w-full">
+                <SelectTrigger aria-label="Recurrence" className="mt-1.5 w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -187,33 +190,28 @@ export function AutomationBuilder({
           </div>
         )}
         <div className="mt-2 flex justify-between gap-3">
-          <button
+          <Button
+            variant="ghost"
             type="button"
             onClick={() => (step === 0 ? onOpenChange(false) : setStep((value) => value - 1))}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 hover:bg-accent"
           >
             {step > 0 && <ArrowLeft className="h-4 w-4" />}
             {step === 0 ? "Cancel" : "Back"}
-          </button>
+          </Button>
           {step < 2 ? (
-            <button
+            <Button
+              variant="default"
               type="button"
               disabled={!valid}
               onClick={() => setStep((value) => value + 1)}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-foreground px-4 text-background disabled:opacity-50"
             >
               Continue <ArrowRight className="h-4 w-4" />
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
-              disabled={creating}
-              onClick={submit}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-foreground px-4 text-background disabled:opacity-50"
-            >
+            <Button variant="default" type="button" disabled={creating} onClick={submit}>
               <Check className="h-4 w-4" />
               {creating ? "Creating…" : "Create automation"}
-            </button>
+            </Button>
           )}
         </div>
       </DialogContent>

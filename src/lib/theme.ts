@@ -1,4 +1,4 @@
-// Theme mode toggle. The full palette lives in src/styles.css under
+// Theme mode toggle. The full palette lives in src/styles/visual-tokens.css under
 // :root (light) and .dark (dark). This module only flips the .dark class
 // on <html> based on user preference or system setting.
 

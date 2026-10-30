@@ -29,7 +29,12 @@ export const Route = createFileRoute("/developers/$docSlug")({
 function UnavailableDeveloperDoc() {
   const doc = Route.useLoaderData();
   return (
-    <PublicPageView eyebrow="Developer documentation" title={doc.title} summary={doc.description}>
+    <PublicPageView
+      reference="claude-documentation"
+      eyebrow="Developer documentation"
+      title={doc.title}
+      summary={doc.description}
+    >
       <section className="space-y-3 rounded-xl border p-6">
         <h2 className="text-lg font-semibold">Prepare an integration</h2>
         <p>

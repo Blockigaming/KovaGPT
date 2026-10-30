@@ -172,7 +172,7 @@ test("Library shared preview and item/version inspectors keep bounded, padded sc
   assert.match(scroll, /padding-bottom: max\(24px, env\(safe-area-inset-bottom\)\)/);
 });
 
-test("Project inline controls have explicit 44px minimum touch targets", () => {
+test("Project inline rows and shared controls retain at least 44px coarse-pointer targets", () => {
   const parsed = ts.createSourceFile(
     "project.tsx",
     project,
@@ -181,10 +181,21 @@ test("Project inline controls have explicit 44px minimum touch targets", () => {
     ts.ScriptKind.TSX,
   );
   const buttons = [];
+  const knowledgeRows = [];
+  const iconButtons = [];
   const memberRoleTriggers = [];
   function visit(node) {
-    if (ts.isJsxOpeningElement(node) && node.tagName.getText(parsed) === "button")
-      buttons.push(node.getText(parsed));
+    if (ts.isJsxOpeningElement(node) && node.tagName.getText(parsed) === "button") {
+      const text = node.getText(parsed);
+      if (text.includes('className="kova-project-knowledge-row"')) knowledgeRows.push(text);
+      else buttons.push(text);
+    }
+    if (ts.isJsxOpeningElement(node) && node.tagName.getText(parsed) === "Button") {
+      const size = node.attributes.properties.find(
+        (attribute) => ts.isJsxAttribute(attribute) && attribute.name.getText(parsed) === "size",
+      )?.initializer;
+      if (size && ts.isStringLiteral(size) && size.text === "icon") iconButtons.push(node);
+    }
     if (ts.isJsxOpeningElement(node) && node.tagName.getText(parsed) === "SelectTrigger") {
       const className = node.attributes.properties.find(
         (attribute) =>
@@ -200,6 +211,25 @@ test("Project inline controls have explicit 44px minimum touch targets", () => {
   visit(parsed);
   assert.equal(buttons.length, 6);
   for (const button of buttons) assert.match(button, /min-h-11/);
+  assert.equal(knowledgeRows.length, 2);
+  for (const row of knowledgeRows) assert.match(row, /data-kova-button-shape="preserve"/);
+  assert.ok(knowledgeRows.some((row) => row.includes('setTab("context")')));
+  assert.ok(knowledgeRows.some((row) => row.includes('setTab("files")')));
+  const detail = readFileSync("src/styles/project-detail.css", "utf8");
+  const knowledge = detail.match(/\.kova-project-knowledge-row\s*\{([^}]+)\}/)?.[1];
+  assert.match(knowledge, /min-height: 64px/);
+  assert.match(knowledge, /border-radius: 0/);
+  assert.ok(iconButtons.length > 0, "Inline icon actions use the shared semantic Button");
+  const button = readFileSync("src/components/ui/button.tsx", "utf8");
+  assert.match(button, /icon: "h-9 w-9 p-0 \[@media\(pointer:coarse\)\]:min-w-11"/);
+  assert.match(button, /\[@media\(pointer:coarse\)\]:min-h-11/);
   assert.equal(memberRoleTriggers.length, 1);
-  assert.ok(memberRoleTriggers[0].includes("min-h-11"));
+  assert.deepEqual(
+    memberRoleTriggers[0],
+    ["w-28"],
+    "Role picker leaves height to the shared Select",
+  );
+  const select = readFileSync("src/components/ui/select.tsx", "utf8");
+  assert.match(select, /flex h-9 w-full/);
+  assert.match(select, /\[@media\(pointer:coarse\)\]:min-h-11/);
 });

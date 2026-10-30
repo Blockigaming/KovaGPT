@@ -19,7 +19,7 @@ export function LegalDocHero({
   description?: string;
 }) {
   return (
-    <header className="legal-hero px-5 sm:px-6">
+    <header data-ui-reference="chatgpt-legal-document" className="legal-hero px-5 sm:px-6">
       <p className="legal-eyebrow">{eyebrow}</p>
       <h1>{title}</h1>
       {meta ? <p className="legal-hero-meta">{meta}</p> : null}
@@ -87,7 +87,10 @@ export function LegalDoc({
   }, []);
 
   return (
-    <div className="legal-doc mx-auto w-full max-w-6xl px-5 sm:px-6">
+    <div
+      data-ui-reference="chatgpt-legal-document"
+      className="legal-doc mx-auto w-full max-w-6xl px-5 sm:px-6"
+    >
       <details className="legal-toc-mobile">
         <summary>
           <span>On this page</span>

@@ -3,6 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const apps = await readFile(new URL("../../src/routes/apps.tsx", import.meta.url), "utf8");
+const button = await readFile(
+  new URL("../../src/components/ui/button.tsx", import.meta.url),
+  "utf8",
+);
 
 test("Apps validates principal-scoped recent activity before rendering it", () => {
   assert.match(apps, /const parsed: unknown = JSON\.parse\(raw\)/);
@@ -57,6 +61,22 @@ test("Connector management keeps destructive state until the server confirms suc
   );
   assert.match(apps, /if \(!open\) setDisconnectAccount\(null\)/);
   assert.doesNotMatch(apps, /if \(!busy\) setDisconnect/);
-  assert.ok((apps.match(/className="min-h-11"/g) ?? []).length >= 2);
+  const footer = apps.match(
+    /<DialogFooter className="gap-2 sm:justify-end">([\s\S]*?)<\/DialogFooter>/,
+  )?.[1];
+  assert.ok(footer, "The disconnect dialog retains its two explicit confirmation controls");
+  assert.equal((footer.match(/<Button\b/g) ?? []).length, 2);
+  assert.match(
+    footer,
+    /<Button\s+variant="outline"\s+onClick=\{\(\) => setDisconnectAccount\(null\)\}/,
+  );
+  assert.match(
+    footer,
+    /<Button\s+variant="destructive"\s+disabled=\{busy\}\s+onClick=\{\(\) => void performDisconnect\(\)\}/,
+  );
+  assert.match(apps, /import \{ Button \} from "@\/components\/ui\/button"/);
+  assert.match(button, /data-ui-reference="chatgpt\.button\.pill"/);
+  assert.match(button, /default: "h-9 px-\[15\.96px\] py-0"/);
+  assert.match(button, /\[@media\(pointer:coarse\)\]:min-h-11/);
   assert.match(apps, /className="flex min-h-11 min-w-11 items-center justify-center"/);
 });

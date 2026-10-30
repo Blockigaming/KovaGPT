@@ -1,3 +1,6 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -414,7 +417,7 @@ function ScheduledTaskEditorBody({
             // The footer can be well below the persistent recovery controls.
             // Reveal them only when this submission still owns the user's focus.
             if (target && document.activeElement === target) {
-              // DialogContent owns scrolling on desktop and fullscreen phones.
+              // DialogContent owns scrolling at every viewport size.
               // The error follows the heading, so reveal the top directly rather
               // than relying on scrolling a non-scrollable form or the page.
               if (dialogRef.current?.contains(target)) dialogRef.current.scrollTop = 0;
@@ -617,6 +620,7 @@ function ScheduledTaskEditorBody({
         <form
           ref={editorRef}
           className="spec400-schedule-editor space-y-4"
+          data-ui-reference="chatgpt.tasks.edit-form"
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
@@ -684,7 +688,8 @@ function ScheduledTaskEditorBody({
             </div>
           )}
           {pending.current && (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               className={button}
               disabled={busy}
@@ -693,7 +698,7 @@ function ScheduledTaskEditorBody({
               }
             >
               Retry the same request
-            </button>
+            </Button>
           )}
           <fieldset
             disabled={busy || Boolean(pending.current) || task?.status === "running"}
@@ -702,7 +707,7 @@ function ScheduledTaskEditorBody({
             <h3 className="text-base font-semibold">What should Kova do?</h3>
             <label className="block text-sm">
               Title
-              <input
+              <Input
                 {...validationProps("title")}
                 className={control}
                 value={title}
@@ -713,7 +718,7 @@ function ScheduledTaskEditorBody({
             </label>
             <label className="block text-sm">
               Prompt
-              <textarea
+              <Textarea
                 {...validationProps("prompt")}
                 className={`${control} min-h-[120px]`}
                 value={prompt}
@@ -802,7 +807,7 @@ function ScheduledTaskEditorBody({
                 <div className="spec400-form-row">
                   <label className="block text-sm">
                     {repeat === "none" ? "Date" : "Start date"}
-                    <input
+                    <Input
                       {...validationProps("date")}
                       className={control}
                       type="date"
@@ -813,7 +818,7 @@ function ScheduledTaskEditorBody({
                   </label>
                   <label className="block text-sm">
                     Time
-                    <input
+                    <Input
                       {...validationProps("time")}
                       className={control}
                       type="time"
@@ -837,7 +842,7 @@ function ScheduledTaskEditorBody({
             )}
             <label className="block text-sm">
               Timezone
-              <input
+              <Input
                 {...validationProps("timezone")}
                 className={control}
                 list={`${validationId}-timezones`}
@@ -904,7 +909,7 @@ function ScheduledTaskEditorBody({
               </p>
               <label className="block text-sm">
                 Saved conversation excerpt
-                <textarea
+                <Textarea
                   className={control}
                   maxLength={14000}
                   value={snapshot?.kind === "snapshot" ? snapshot.text : ""}
@@ -945,9 +950,14 @@ function ScheduledTaskEditorBody({
                     <SelectItem value="project_file">Project files</SelectItem>
                   </SelectContent>
                 </Select>
-                <button type="button" className={button} onClick={() => void loadFiles()}>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  className={button}
+                  onClick={() => void loadFiles()}
+                >
                   Browse
-                </button>
+                </Button>
               </div>
               {options.length > 0 && (
                 <SearchablePicker
@@ -970,9 +980,14 @@ function ScheduledTaskEditorBody({
                 />
               )}
               {cursor && (
-                <button type="button" className={button} onClick={() => void loadFiles(true)}>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  className={button}
+                  onClick={() => void loadFiles(true)}
+                >
                   Load more files
-                </button>
+                </Button>
               )}
               {refs
                 .filter((ref) => ref.kind !== "snapshot")
@@ -984,13 +999,14 @@ function ScheduledTaskEditorBody({
                         : (options.find((option) => option.id === ref.id)?.label ??
                           "Saved " + ref.kind.replace("_", " "))}
                     </span>
-                    <button
+                    <Button
+                      variant="ghost"
                       type="button"
                       className={button}
                       onClick={() => setRefs((current) => current.filter((item) => item !== ref))}
                     >
                       Remove
-                    </button>
+                    </Button>
                   </div>
                 ))}
             </details>
@@ -1019,20 +1035,23 @@ function ScheduledTaskEditorBody({
               />
               <label className="my-2 flex items-start gap-2 text-sm">
                 <input
+                  className="kova-native-check"
+                  data-ui-reference="chatgpt.checkbox"
                   type="checkbox"
                   checked={connectionConsent}
                   onChange={(event) => setConnectionConsent(event.target.checked)}
                 />
                 Allow this account to read the sources I select for background tasks.
               </label>
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 className={button}
                 disabled={!connectionConsent || !connectionId}
                 onClick={() => void authorizeConnection()}
               >
                 Approve background reads
-              </button>
+              </Button>
               <div className="my-3 space-y-2">
                 {grants.map((grant) => (
                   <div key={grant.id} className="flex justify-between gap-2 text-xs">
@@ -1042,9 +1061,14 @@ function ScheduledTaskEditorBody({
                         "Saved account"}{" "}
                       · expires {new Date(grant.expires_at).toLocaleDateString()}
                     </span>
-                    <button type="button" className={button} onClick={() => void revoke(grant)}>
+                    <Button
+                      variant="ghost"
+                      type="button"
+                      className={button}
+                      onClick={() => void revoke(grant)}
+                    >
                       Revoke and pause affected tasks
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -1073,14 +1097,15 @@ function ScheduledTaskEditorBody({
                   grantId={selectedGrant.id}
                 />
               )}
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 className={button}
                 disabled={!grantId}
                 onClick={() => void loadResources()}
               >
                 Browse readable sources
-              </button>
+              </Button>
               {resources.length > 0 && (
                 <SearchablePicker
                   aria-label="Connected source"
@@ -1093,11 +1118,17 @@ function ScheduledTaskEditorBody({
                 />
               )}
               {resourceCursor && (
-                <button type="button" className={button} onClick={() => void loadResources(true)}>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  className={button}
+                  onClick={() => void loadResources(true)}
+                >
                   Load more sources
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 className={button}
                 disabled={!resource || !selectedGrant || refs.length >= 8}
@@ -1115,7 +1146,7 @@ function ScheduledTaskEditorBody({
                 }
               >
                 Add source to saved context
-              </button>
+              </Button>
               {mode === "event" && (
                 <div className="mt-3 space-y-2">
                   <p className="text-xs">
@@ -1125,7 +1156,7 @@ function ScheduledTaskEditorBody({
                   </p>
                   <label className="block text-sm">
                     Sender or author (optional)
-                    <input
+                    <Input
                       className={control}
                       value={author}
                       maxLength={120}
@@ -1139,7 +1170,7 @@ function ScheduledTaskEditorBody({
                   </label>
                   <label className="block text-sm">
                     Subject or title contains (optional)
-                    <input
+                    <Input
                       className={control}
                       value={contains}
                       maxLength={120}
@@ -1150,7 +1181,7 @@ function ScheduledTaskEditorBody({
                     <>
                       <label className="block text-sm">
                         Label (optional)
-                        <input
+                        <Input
                           className={control}
                           value={label}
                           maxLength={120}
@@ -1183,6 +1214,8 @@ function ScheduledTaskEditorBody({
                   {selectedGrant?.provider === "slack" && (
                     <label className="flex gap-2 text-sm">
                       <input
+                        className="kova-native-check"
+                        data-ui-reference="chatgpt.checkbox"
                         type="checkbox"
                         checked={includeReplies}
                         onChange={(event) => setIncludeReplies(event.target.checked)}
@@ -1190,7 +1223,8 @@ function ScheduledTaskEditorBody({
                       Include replies in this channel
                     </label>
                   )}
-                  <button
+                  <Button
+                    variant="ghost"
                     type="button"
                     className={button}
                     disabled={
@@ -1218,7 +1252,7 @@ function ScheduledTaskEditorBody({
                     }}
                   >
                     Add event filter
-                  </button>
+                  </Button>
                   {triggers.map((trigger, index) => (
                     <div className="flex justify-between text-sm" key={index}>
                       <span>
@@ -1226,7 +1260,8 @@ function ScheduledTaskEditorBody({
                         {trigger.author ? ` · ${trigger.author}` : ""}
                         {trigger.contains ? ` · contains ${trigger.contains}` : ""}
                       </span>
-                      <button
+                      <Button
+                        variant="ghost"
                         type="button"
                         className={button}
                         onClick={() =>
@@ -1234,7 +1269,7 @@ function ScheduledTaskEditorBody({
                         }
                       >
                         Remove
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -1248,6 +1283,8 @@ function ScheduledTaskEditorBody({
             </p>
             <label className="flex items-start gap-2 text-sm">
               <input
+                className="kova-native-check"
+                data-ui-reference="chatgpt.checkbox"
                 {...validationProps("consent")}
                 type="checkbox"
                 checked={consent}
@@ -1269,9 +1306,14 @@ function ScheduledTaskEditorBody({
                 open={initialSection === "history" || undefined}
               >
                 <summary ref={historySummaryRef}>Run history and results</summary>
-                <button type="button" className={button} onClick={() => void loadHistory()}>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  className={button}
+                  onClick={() => void loadHistory()}
+                >
                   Load history
-                </button>
+                </Button>
                 {historyLoaded && !runs.length && <p className="text-sm">No runs yet.</p>}
                 {runs.map((run) => (
                   <article
@@ -1296,9 +1338,14 @@ function ScheduledTaskEditorBody({
                   </article>
                 ))}
                 {runCursor && (
-                  <button type="button" className={button} onClick={() => void loadHistory(true)}>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    className={button}
+                    onClick={() => void loadHistory(true)}
+                  >
                     Earlier runs
-                  </button>
+                  </Button>
                 )}
               </details>
               <details className="rounded-lg border border-border p-3">
@@ -1310,7 +1357,7 @@ function ScheduledTaskEditorBody({
                 </p>
                 <label className="block text-sm">
                   Recipient email
-                  <input
+                  <Input
                     className={control}
                     type="email"
                     value={email}
@@ -1318,7 +1365,8 @@ function ScheduledTaskEditorBody({
                     onChange={(event) => setEmail(event.target.value)}
                   />
                 </label>
-                <button
+                <Button
+                  variant="ghost"
                   type="button"
                   className={button}
                   disabled={busy || !email || Boolean(pending.current)}
@@ -1336,15 +1384,22 @@ function ScheduledTaskEditorBody({
                   }
                 >
                   Offer copy
-                </button>
+                </Button>
               </details>
             </>
           )}
           <footer className="spec400-schedule-footer">
-            <button className={button} type="button" onClick={() => closeEditor()} disabled={busy}>
+            <Button
+              variant="ghost"
+              className={button}
+              type="button"
+              onClick={() => closeEditor()}
+              disabled={busy}
+            >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               className={`${button} spec400-primary`}
               type="submit"
               disabled={
@@ -1365,7 +1420,7 @@ function ScheduledTaskEditorBody({
               ) : (
                 "Save schedule"
               )}
-            </button>
+            </Button>
           </footer>
         </form>
         <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>

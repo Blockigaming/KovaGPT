@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -135,25 +136,34 @@ function WorkspaceTimeline({ items }: { items: DashboardItem[] }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border p-0.5" role="group" aria-label="Timeline range">
+          <div
+            className="flex gap-0.5 rounded-lg border p-0.5"
+            role="group"
+            aria-label="Timeline range"
+          >
             {([7, 30, 90] as const).map((range) => (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
+                data-kova-button-shape="preserve"
+                data-ui-reference="chatgpt.segmented-control.option"
                 key={range}
                 onClick={() => setDays(range)}
                 aria-pressed={days === range}
-                className={`min-h-9 rounded-md px-2 text-xs ${days === range ? "bg-foreground text-background" : "hover:bg-accent"}`}
+                className={`rounded-[var(--kova-radius-compact)] px-3 ${days === range ? "bg-accent text-foreground" : "hover:bg-accent"}`}
               >
                 {range}d
-              </button>
+              </Button>
             ))}
           </div>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             disabled={!windowItems.length}
             onClick={exportTimeline}
-            className="min-h-10 rounded-lg border px-3 text-xs hover:bg-accent disabled:opacity-50"
           >
             Export CSV
-          </button>
+          </Button>
         </div>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -437,13 +447,15 @@ export function RelatedWorkspaceItems({
       ) : unavailable ? (
         <div className="px-3 py-3 text-sm text-muted-foreground" role="alert">
           <p>Related workspace items are unavailable. Try again.</p>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
-            className="mt-2 min-h-11 rounded-lg border border-border px-3 text-foreground"
+            className="mt-2"
             onClick={() => setRetryVersion((value) => value + 1)}
           >
             Retry related workspace
-          </button>
+          </Button>
         </div>
       ) : items.length ? (
         items.map((item) => (

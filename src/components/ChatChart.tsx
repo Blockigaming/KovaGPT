@@ -26,14 +26,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { CHART_TYPES, chartToCsv, type ChartSpec, type ChartType } from "./chat-chart-utils";
-const DEFAULT_COLORS = [
-  "hsl(var(--primary))",
-  "#6366f1",
-  "#ec4899",
-  "#10b981",
-  "#f59e0b",
-  "#0ea5e9",
-];
+const DEFAULT_COLORS = ["var(--primary)", "#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9"];
 
 export function ChatChart({ spec }: { spec: ChartSpec }) {
   const xKey = spec.xKey ?? "name";
@@ -73,9 +66,9 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   };
   const axes = (
     <>
-      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-      <XAxis dataKey={xKey} stroke="hsl(var(--muted-foreground))" fontSize={12} />
-      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+      <XAxis dataKey={xKey} stroke="var(--muted-foreground)" fontSize={12} />
+      <YAxis stroke="var(--muted-foreground)" fontSize={12} />
       <Tooltip />
       <Legend />
     </>

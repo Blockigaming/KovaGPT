@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Link } from "@tanstack/react-router";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -530,7 +532,8 @@ export function CommandPalette({
       >
         <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3 sm:px-6">
           <Search className="h-5 w-5 text-muted-foreground" />
-          <input
+          <Input
+            data-ui-reference="chatgpt.search-dialog.input"
             ref={searchInputRef}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
@@ -540,16 +543,19 @@ export function CommandPalette({
             aria-controls="command-palette-results"
             aria-activedescendant={`command-option-${activeIndex}`}
             aria-label="Search workspace, commands, and chats"
-            className="h-11 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+            className=" min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
-          <button
+          <Button
+            data-ui-reference="chatgpt.search-dialog.control"
+            variant="ghost"
+            size="icon"
             type="button"
             onClick={closePalette}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="flex  w-11 shrink-0 items-center justify-center  text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Close command palette"
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         <div
@@ -559,7 +565,9 @@ export function CommandPalette({
           className="min-h-0 flex-1 max-h-[60dvh] overflow-y-auto overscroll-contain p-2"
         >
           <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Actions</div>
-          <button
+          <Button
+            data-ui-reference="chatgpt.search-dialog.control"
+            variant="ghost"
             type="button"
             onClick={() => {
               onNewChat();
@@ -568,15 +576,17 @@ export function CommandPalette({
             id="command-option-0"
             role="option"
             aria-selected={activeIndex === 0}
-            className={`flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
+            className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-3   py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
           >
             <SquarePen className="h-4 w-4 text-muted-foreground" />
             <span>Start a new chat</span>
             <span className="ml-auto rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">
               ⌘ ⇧ O
             </span>
-          </button>
-          <button
+          </Button>
+          <Button
+            data-ui-reference="chatgpt.search-dialog.control"
+            variant="ghost"
             type="button"
             onClick={() => {
               suppressFocusRestore();
@@ -586,11 +596,11 @@ export function CommandPalette({
             id="command-option-1"
             role="option"
             aria-selected={activeIndex === 1}
-            className={`flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
+            className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-3   py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
           >
             <Settings className="h-4 w-4 text-muted-foreground" />
             <span>Open settings</span>
-          </button>
+          </Button>
           {visibleActions.map((action, actionIndex) => {
             const Icon = action.icon;
             const index = actionIndex + 2;
@@ -636,7 +646,9 @@ export function CommandPalette({
               );
             }
             return (
-              <button
+              <Button
+                data-ui-reference="chatgpt.search-dialog.control"
+                variant="ghost"
                 key={action.action}
                 id={`command-option-${index}`}
                 role="option"
@@ -673,7 +685,7 @@ export function CommandPalette({
                 className={className}
               >
                 {content}
-              </button>
+              </Button>
             );
           })}
 
@@ -690,16 +702,18 @@ export function CommandPalette({
             >
               <span>Workspace results are unavailable.</span>
               {retryWorkspaceSearch ? (
-                <button
+                <Button
+                  data-ui-reference="chatgpt.search-dialog.control"
+                  variant="outline"
                   type="button"
-                  className="min-h-11 rounded-lg border px-3 text-foreground hover:bg-accent"
+                  className="  border  text-foreground hover:bg-accent"
                   onKeyDown={(event) => {
                     if (event.key === "Enter") event.stopPropagation();
                   }}
                   onClick={retryWorkspaceSearch}
                 >
                   Retry
-                </button>
+                </Button>
               ) : null}
             </div>
           ) : null}
@@ -746,7 +760,9 @@ export function CommandPalette({
             </div>
           ) : (
             conversationMatches.map(({ conversation: chat, snippet }, chatIndex) => (
-              <button
+              <Button
+                data-ui-reference="chatgpt.search-dialog.control"
+                variant="ghost"
                 key={chat.id}
                 type="button"
                 onClick={() => {
@@ -758,14 +774,14 @@ export function CommandPalette({
                 id={`command-option-${chatStartIndex + chatIndex}`}
                 role="option"
                 aria-selected={activeIndex === chatStartIndex + chatIndex}
-                className={`flex min-h-11 w-full items-center gap-3 rounded-[var(--kova-radius-compact)] px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === chatStartIndex + chatIndex ? "bg-accent" : ""}`}
+                className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-3   py-2.5 text-left text-sm hover:bg-accent ${activeIndex === chatStartIndex + chatIndex ? "bg-accent" : ""}`}
               >
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
                 <span className="min-w-0 flex-1 truncate">{chat.title}</span>
                 <span className="hidden max-w-52 truncate text-xs text-muted-foreground sm:block">
                   {snippet}
                 </span>
-              </button>
+              </Button>
             ))
           )}
           <p className="border-t px-3 py-2 text-[11px] text-muted-foreground">

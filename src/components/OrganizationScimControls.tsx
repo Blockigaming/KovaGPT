@@ -1,3 +1,5 @@
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { organizationRequest } from "@/lib/organization-client";
@@ -85,7 +87,11 @@ export function OrganizationScimControls({
     }
   }
   return (
-    <section className="rounded-xl border p-4" aria-label="Directory provisioning">
+    <section
+      data-ui-reference="chatgpt.workspace.provisioning"
+      className={"kova-tool-panel " + "rounded-xl border p-4"}
+      aria-label="Directory provisioning"
+    >
       <h2 className="font-semibold">Directory provisioning</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         SCIM provisions organization members through this organization’s SSO identity. Groups remain
@@ -126,11 +132,11 @@ export function OrganizationScimControls({
             <p>Configure and verify this organization’s SSO provider first.</p>
           )}
           <label className="flex items-start gap-2">
-            <input
-              type="checkbox"
+            <Checkbox
+              data-ui-reference="chatgpt.checkbox"
               checked={consent}
               disabled={busy || !status.providerReady}
-              onChange={(event) => setConsent(event.target.checked)}
+              onCheckedChange={(checked) => setConsent(checked === true)}
             />
             <span>
               I authorize this IdP to create and revoke its managed member access. Rotating
@@ -155,11 +161,11 @@ export function OrganizationScimControls({
           {secret && (
             <div className="rounded-lg border p-3">
               <p>Save this token in your IdP now. It is shown once and expires in 90 days.</p>
-              <textarea
+              <Textarea
                 aria-label="One-time SCIM token"
                 readOnly
                 value={secret}
-                className="mt-2 w-full resize-none rounded border bg-background p-2 font-mono text-xs"
+                className="mt-2 w-full resize-none  border bg-background  font-mono text-xs"
               />
               <Button variant="outline" className="mt-2" onClick={() => setSecret(null)}>
                 Hide token

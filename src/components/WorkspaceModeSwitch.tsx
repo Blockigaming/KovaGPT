@@ -3,11 +3,7 @@ import { Link } from "@tanstack/react-router";
 type WorkspaceMode = "chat" | "work";
 
 function modeClass(active: boolean) {
-  return `inline-flex min-h-10 min-w-16 items-center justify-center rounded-full px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-    active
-      ? "bg-background text-foreground shadow-sm"
-      : "text-muted-foreground hover:bg-background/70 hover:text-foreground"
-  }`;
+  return `kova-workspace-mode ${active ? "is-active" : ""}`;
 }
 
 export function WorkspaceModeSwitch({
@@ -20,7 +16,8 @@ export function WorkspaceModeSwitch({
   return (
     <nav
       aria-label="Primary workspace"
-      className={`items-center rounded-full border border-border/70 bg-muted/70 p-1 shadow-sm backdrop-blur ${className}`}
+      data-ui-reference="chatgpt.work-mode-switch"
+      className={`kova-workspace-mode-switch flex ${className}`}
     >
       <Link
         to="/"

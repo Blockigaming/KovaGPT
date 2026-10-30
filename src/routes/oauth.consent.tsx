@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { OAuthAuthorizationDetails, OAuthRedirect, Session } from "@supabase/supabase-js";
@@ -299,20 +300,26 @@ function LegacyConsentRoute({ context }: { context: LegacyContext }) {
             request.
           </p>
           <div className="mt-6 flex w-full flex-col gap-2">
-            <button
+            <Button
+              size="prominent"
+              data-ui-reference="chatgpt.auth.oauth-consent.action"
+              variant="default"
               type="button"
               onClick={() => setAuthDialog({ open: true, mode: "sign-up" })}
-              className="h-12 w-full rounded-2xl bg-foreground font-medium text-background transition hover:opacity-90"
+              className=" w-full  bg-foreground font-medium text-background transition hover:opacity-90"
             >
               Create account
-            </button>
-            <button
+            </Button>
+            <Button
+              size="prominent"
+              data-ui-reference="chatgpt.auth.oauth-consent.action"
+              variant="outline"
               type="button"
               onClick={() => setAuthDialog({ open: true, mode: "sign-in" })}
-              className="h-12 w-full rounded-2xl border border-border font-medium transition hover:bg-accent"
+              className=" w-full  border border-border font-medium transition hover:bg-accent"
             >
               Log in
-            </button>
+            </Button>
           </div>
         </div>
         <AuthDialog
@@ -389,22 +396,28 @@ function LegacyConsentRoute({ context }: { context: LegacyContext }) {
         ) : null}
 
         <div className="mt-6 flex w-full flex-col gap-2">
-          <button
+          <Button
+            size="prominent"
+            data-ui-reference="chatgpt.auth.oauth-consent.action"
+            variant="default"
             type="button"
             disabled={busy}
             onClick={() => void decide(true)}
-            className="h-12 w-full rounded-2xl bg-foreground font-medium text-background transition hover:opacity-90 disabled:opacity-60"
+            className=" w-full  bg-foreground font-medium text-background transition hover:opacity-90 disabled:opacity-60"
           >
             {busy ? "Working" : "Approve"}
-          </button>
-          <button
+          </Button>
+          <Button
+            size="prominent"
+            data-ui-reference="chatgpt.auth.oauth-consent.action"
+            variant="outline"
             type="button"
             disabled={busy}
             onClick={() => void decide(false)}
-            className="h-12 w-full rounded-2xl border border-border font-medium transition hover:bg-accent disabled:opacity-60"
+            className=" w-full  border border-border font-medium transition hover:bg-accent disabled:opacity-60"
           >
             Cancel connection
-          </button>
+          </Button>
         </div>
       </div>
     </Shell>

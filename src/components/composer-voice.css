@@ -1,5 +1,7 @@
-/* Voice is one conversational canvas. All activity comes from real controller
-   state; the abstract voice mark is intentionally static in every state. */
+/* ChatGPT separate Voice: a quiet canvas and the blue/cloud circular orb shown
+   in the official Start talking reference. This code-native reconstruction uses
+   no external asset. Motion follows actual recording/playback state only.
+   Reference: chatgpt.com/features/voice/, official Talk.png illustration. */
 [role="dialog"].kova-voice-dialog {
   --voice-ink: #25272c;
   --voice-soft: #f4f5f7;
@@ -13,9 +15,7 @@
   border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
   border-radius: var(--kova-radius-panel);
   background: var(--background);
-  box-shadow:
-    0 24px 100px #00000026,
-    0 2px 8px #00000008;
+  box-shadow: var(--shadow-floating);
   color: var(--voice-ink);
   overflow: hidden;
 }
@@ -101,36 +101,38 @@
   text-align: center;
 }
 .kova-voice-mark {
-  width: 215px;
-  height: 180px;
+  width: 192px;
+  height: 192px;
   margin: -12px 0 14px;
   flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 20% 77%, #fff 0 19%, transparent 36%),
+    radial-gradient(ellipse at 68% 91%, #fff 0 30%, transparent 52%),
+    radial-gradient(ellipse at 95% 72%, #eff5ff 0 15%, transparent 38%),
+    linear-gradient(180deg, #8386ff 12%, #aebcff 44%, #e6efff 72%, #fff 95%);
 }
-.kova-voice-mark path {
-  stroke-width: 15;
-  stroke-linecap: round;
+.kova-voice-dialog:is([data-voice-phase="recording"], [data-voice-phase="speaking"])
+  .kova-voice-mark {
+  animation: kova-voice-orb-breathe 3s ease-in-out infinite alternate;
 }
-.kova-voice-mark path:nth-child(1) {
-  stroke: #a2b6ca;
+@keyframes kova-voice-orb-breathe {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.025);
+  }
 }
-.kova-voice-mark path:nth-child(2) {
-  stroke: #8da9c7;
-}
-.kova-voice-mark path:nth-child(3) {
-  stroke: #6f93b9;
-}
-.kova-voice-mark path:nth-child(4) {
-  stroke: #8b9fbe;
-}
-.kova-voice-mark path:nth-child(5) {
-  stroke: #a8b2ca;
-}
-.kova-voice-mark path:nth-child(6) {
-  stroke: #c2c6d6;
+@media (prefers-reduced-motion: reduce) {
+  .kova-voice-mark {
+    animation: none !important;
+  }
 }
 .kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-mark {
   width: 174px;
-  height: 145px;
+  height: 174px;
   filter: grayscale(1);
   opacity: 0.6;
 }
@@ -448,8 +450,8 @@
     padding-bottom: 30px;
   }
   .kova-voice-mark {
-    width: 220px;
-    height: 184px;
+    width: 200px;
+    height: 200px;
     margin-bottom: 25px;
   }
   .kova-voice-heading {
@@ -492,12 +494,12 @@
   }
   .kova-voice-mark {
     width: 108px;
-    height: 90px;
+    height: 108px;
     margin: 0 0 8px;
   }
   .kova-voice-dialog:not([data-voice-availability="ready"]) .kova-voice-mark {
     width: 100px;
-    height: 84px;
+    height: 100px;
   }
   .kova-voice-heading {
     font-size: 21px;
@@ -537,7 +539,7 @@
 }
 .kova-voice-dialog[data-voice-compact="true"] .kova-voice-mark {
   width: 100px;
-  height: 84px;
+  height: 100px;
   margin: 0 0 18px;
 }
 .kova-voice-dialog[data-voice-compact="true"] .kova-voice-heading {

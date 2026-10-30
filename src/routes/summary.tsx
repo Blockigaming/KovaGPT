@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { hasGoogleCapability } from "@/lib/google-account-policy.mjs";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -200,19 +201,23 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-card overflow-hidden">
+    <section
+      className={"kova-tool-panel " + "rounded-2xl border border-border bg-card overflow-hidden"}
+    >
       <header className="flex items-center gap-2 px-4 py-3 border-b border-border/60">
         <Icon className="w-4 h-4 text-muted-foreground" />
         <h2 className="text-sm font-medium flex-1">{title}</h2>
         {action}
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => onDismiss(id)}
-          className="p-1 rounded hover:bg-accent text-muted-foreground"
+          className="  hover:bg-accent text-muted-foreground"
           aria-label={`Hide ${title}`}
           title="Hide section"
         >
           <X className="w-3.5 h-3.5" />
-        </button>
+        </Button>
       </header>
       <div className="p-4">{children}</div>
     </section>
@@ -423,22 +428,27 @@ function SummaryPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
+      <div
+        data-ui-reference="gemini.daily-brief.overview"
+        className="kova-tool-page mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 sm:py-8"
+      >
         {/* Greeting + composer */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{greeting}</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Here's what's happening in your workspace.
           </p>
-          <button
+          <Button
+            variant="ghost"
+            data-ui-reference="chatgpt.composer.entry"
             data-kova-button-shape="preserve"
             onClick={() => navigate({ to: "/" })}
-            className="mt-5 w-full flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-left text-muted-foreground hover:bg-accent/40 hover:border-foreground/20 transition shadow-sm"
+            className="kova-tool-search-entry mt-5 w-full flex items-center gap-3  border border-border bg-card px-5  text-left text-muted-foreground hover:bg-accent/40 hover:border-foreground/20 transition shadow-sm"
           >
             <MessageCircle className="w-5 h-5" />
             <span className="text-[15px]">Ask KovaGPT anything…</span>
             <ArrowRight className="w-4 h-4 ml-auto" />
-          </button>
+          </Button>
         </div>
 
         <div className="grid gap-4 sm:gap-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
@@ -478,7 +488,9 @@ function SummaryPage() {
                 <ul className="space-y-1">
                   {continueChats.map((c) => (
                     <li key={c.id}>
-                      <button
+                      <Button
+                        variant="ghost"
+                        data-ui-reference="chatgpt.conversation.row"
                         data-kova-button-shape="preserve"
                         onClick={() => {
                           try {
@@ -488,14 +500,14 @@ function SummaryPage() {
                           }
                           navigate({ to: "/" });
                         }}
-                        className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-left hover:bg-accent/40"
+                        className="w-full flex items-center gap-2    text-sm text-left hover:bg-accent/40"
                       >
                         <MessageCircle className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <span className="truncate flex-1">{c.title || "Untitled"}</span>
                         <span className="text-[11px] text-muted-foreground">
                           {fmtDate(new Date(c.updatedAt).toISOString())}
                         </span>
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -508,7 +520,9 @@ function SummaryPage() {
               <ul className="space-y-1">
                 {pinned.map((c) => (
                   <li key={c.id}>
-                    <button
+                    <Button
+                      variant="ghost"
+                      data-ui-reference="chatgpt.conversation.row"
                       data-kova-button-shape="preserve"
                       onClick={() => {
                         try {
@@ -518,11 +532,11 @@ function SummaryPage() {
                         }
                         navigate({ to: "/" });
                       }}
-                      className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-left hover:bg-accent/40"
+                      className="w-full flex items-center gap-2    text-sm text-left hover:bg-accent/40"
                     >
                       <Pin className="w-3.5 h-3.5 text-muted-foreground shrink-0 fill-current" />
                       <span className="truncate">{c.title || "Untitled"}</span>
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -562,7 +576,7 @@ function SummaryPage() {
                       >
                         <span
                           className="w-2 h-2 rounded-full shrink-0"
-                          style={{ background: p.color ?? "hsl(var(--muted-foreground))" }}
+                          style={{ background: p.color ?? "var(--muted-foreground)" }}
                         />
                         <span className="truncate flex-1">{p.name}</span>
                         <span className="text-[11px] text-muted-foreground">
@@ -877,9 +891,9 @@ function SummaryPage() {
                   <p className="mb-2">
                     Show local weather using your device location. Nothing is stored.
                   </p>
-                  <button onClick={enableWeather} className="text-xs underline">
+                  <Button variant="link" onClick={enableWeather} className="text-xs underline">
                     Enable
-                  </button>
+                  </Button>
                 </div>
               ) : weather.status === "loading" || weather.status === "idle" ? (
                 <Skeleton className="h-8 w-32" />
@@ -899,14 +913,15 @@ function SummaryPage() {
 
         {visibleDismissed.length > 0 && (
           <div className="mt-8 flex justify-center">
-            <button
+            <Button
+              variant="ghost"
               onClick={restore}
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Restore {visibleDismissed.length} hidden section
               {visibleDismissed.length === 1 ? "" : "s"}
-            </button>
+            </Button>
           </div>
         )}
       </div>

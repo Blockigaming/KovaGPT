@@ -169,5 +169,6 @@ test("image-edit fields keep full-width rounded phone geometry and 44px controls
     new URL("../../src/components/ui/select.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(sharedSelect, /rounded-\[var\(--kova-radius-input\)\]/);
+  assert.match(sharedSelect, /rounded-\[8px\]/);
+  assert.match(sharedSelect, /\[@media\(pointer:coarse\)\]:min-h-11/);
 });

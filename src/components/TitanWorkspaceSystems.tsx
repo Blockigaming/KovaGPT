@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { Activity, Camera, Dna, History, Trash2 } from "lucide-react";
 import {
@@ -39,7 +40,11 @@ export function TitanWorkspaceSystems({ items }: { items: ResolvableItem[] }) {
         .filter((item): item is ResolvableItem => Boolean(item))
     : [];
   return (
-    <section className="mb-4 rounded-2xl border bg-card/35 p-3" aria-labelledby="titan-title">
+    <section
+      data-ui-reference="claude.artifacts.section"
+      className="mb-4 rounded-2xl border bg-card/35 p-3"
+      aria-labelledby="titan-title"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 id="titan-title" className="text-sm font-semibold">
@@ -61,16 +66,18 @@ export function TitanWorkspaceSystems({ items }: { items: ResolvableItem[] }) {
               ["time-machine", "Time Machine", History],
             ] as const
           ).map(([id, label, Icon]) => (
-            <button
+            <Button
+              data-ui-reference="claude.artifacts.control"
+              variant="ghost"
               key={id}
               role="tab"
               aria-selected={view === id}
               onClick={() => setView(id)}
-              className={`flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-xs ${view === id ? "bg-foreground text-background" : "hover:bg-accent"}`}
+              className={`flex  shrink-0 items-center gap-1 rounded-md  text-xs ${view === id ? "bg-foreground text-background" : "hover:bg-accent"}`}
             >
               <Icon className="h-3.5 w-3.5" />
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -154,7 +161,9 @@ export function TitanWorkspaceSystems({ items }: { items: ResolvableItem[] }) {
       ) : (
         <div className="mt-3 grid gap-3 lg:grid-cols-[16rem_1fr]">
           <div>
-            <button
+            <Button
+              data-ui-reference="claude.artifacts.control"
+              variant="outline"
               onClick={() => {
                 setSnapshots(captureWorkspaceSnapshot(scope, items));
                 platformEvents.publish("intelligence", "snapshot.captured", {
@@ -162,28 +171,33 @@ export function TitanWorkspaceSystems({ items }: { items: ResolvableItem[] }) {
                 });
               }}
               disabled={!items.length}
-              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border px-3 text-sm hover:bg-accent disabled:opacity-50"
+              className="h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center justify-center gap-2  border  text-sm hover:bg-accent disabled:opacity-50"
             >
               <Camera className="h-4 w-4" />
               Capture now
-            </button>
+            </Button>
             <ol className="mt-2 space-y-1">
               {snapshots.map((snapshot) => (
                 <li
                   key={snapshot.id}
                   className={`flex items-center rounded-lg border ${selectedSnapshot === snapshot.id ? "bg-accent" : ""}`}
                 >
-                  <button
+                  <Button
+                    data-ui-reference="claude.artifacts.control"
+                    variant="ghost"
                     onClick={() => setSelectedSnapshot(snapshot.id)}
-                    className="min-w-0 flex-1 px-3 py-2 text-left"
+                    className="h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 min-w-0 flex-1   text-left"
                   >
                     <span className="block truncate text-sm font-medium">{snapshot.label}</span>
                     <span className="block text-[11px] text-muted-foreground">
                       {new Date(snapshot.createdAt).toLocaleString()} · {snapshot.entries.length}{" "}
                       refs
                     </span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    data-ui-reference="claude.artifacts.control"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => {
                       setSnapshots(removeWorkspaceSnapshot(scope, snapshot.id));
                       platformEvents.publish("intelligence", "snapshot.deleted", {
@@ -191,11 +205,11 @@ export function TitanWorkspaceSystems({ items }: { items: ResolvableItem[] }) {
                       });
                       if (selectedSnapshot === snapshot.id) setSelectedSnapshot(null);
                     }}
-                    className="m-1 p-2"
+                    className="m-1 "
                     aria-label={`Delete ${snapshot.label}`}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ol>

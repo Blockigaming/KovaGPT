@@ -1,25 +1,19 @@
-/* Settings-local structure only. The existing light/dark color tokens remain unchanged. */
+/* Reference: CG-SETTINGS appearance rows. Control geometry comes from CG-SDK;
+   the preview displays the existing account preferences without a second theme. */
 .kova-appearance-theme-choice {
   display: flex;
   min-width: 0;
-  min-height: 64px;
+  min-height: 56px;
   align-items: center;
   gap: 12px;
   border: 1px solid var(--border);
-  border-radius: var(--kova-radius-card);
-  padding: 16px;
-  background: var(--surface-raised);
+  border-radius: 12px;
+  padding: 12px;
+  background: transparent;
   cursor: pointer;
 }
 .kova-appearance-theme-choice:hover {
   background: var(--surface-hover);
-}
-.kova-appearance-theme-choice input[type="radio"] {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--foreground);
 }
 .kova-appearance-theme-choice > span {
   min-width: 0;
@@ -36,9 +30,9 @@
 .kova-appearance-preview {
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: var(--kova-radius-card);
-  padding: 24px;
-  background: var(--background);
+  border-radius: 16px;
+  padding: 20px;
+  background: var(--surface-secondary);
   color: var(--foreground);
 }
 .kova-appearance-preview-reading {
@@ -53,7 +47,7 @@
   align-items: center;
   gap: 12px;
   padding-inline: 12px;
-  border-radius: var(--kova-radius-sidebar);
+  border-radius: 8px;
   background: var(--accent);
   font-size: 14px;
 }
@@ -67,9 +61,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 64px;
+  min-height: 56px;
   border: 1px solid var(--border);
-  border-radius: var(--kova-radius-card);
+  border-radius: 12px;
   padding: 12px;
   background: var(--card);
   transition: transform 120ms ease;
@@ -79,7 +73,7 @@
 }
 .kova-appearance-preview-reading > button {
   justify-self: start;
-  min-height: 44px;
+  min-height: 36px;
 }
 .kova-appearance-preview[data-motion="reduced"] .kova-appearance-preview-box {
   transition: none;

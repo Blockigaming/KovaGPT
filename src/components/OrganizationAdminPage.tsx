@@ -30,7 +30,10 @@ export default function OrganizationAdminPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+      <main
+        data-ui-reference="chatgpt.workspace.members"
+        className={"kova-tool-page " + "mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6"}
+      >
         <WorkspacePageHeader
           icon={Building2}
           title="Organization"
@@ -340,7 +343,7 @@ function OrganizationContent({ userId }: { userId: string }) {
           ref={unavailablePanel}
           tabIndex={-1}
           aria-label="Organization administration is not available yet"
-          className="rounded-xl border bg-muted/20 p-6"
+          className={"kova-tool-panel " + "rounded-xl border bg-muted/20 p-6"}
         >
           <h2 className="text-lg font-semibold">
             Organization administration is not available yet
@@ -373,7 +376,7 @@ function OrganizationContent({ userId }: { userId: string }) {
                 <SelectTrigger
                   ref={organizationSelect}
                   aria-label="Choose organization"
-                  className="mt-1 min-h-11 w-full"
+                  className="mt-1  w-full"
                 >
                   <SelectValue placeholder="Choose an organization" />
                 </SelectTrigger>
@@ -396,7 +399,7 @@ function OrganizationContent({ userId }: { userId: string }) {
               Refresh
             </Button>
           </section>
-          <details className="rounded-xl border p-4">
+          <details className={"kova-tool-panel " + "rounded-xl border p-4"}>
             <summary className="cursor-pointer text-sm font-medium">Create an organization</summary>
             <form
               className="mt-3 flex flex-wrap gap-2"
@@ -420,7 +423,7 @@ function OrganizationContent({ userId }: { userId: string }) {
             </p>
           </details>
           {!!index.invitations?.length && (
-            <section className="rounded-xl border p-4">
+            <section className={"kova-tool-panel " + "rounded-xl border p-4"}>
               <h2 className="font-semibold">Your invitations</h2>
               <ul className="mt-3 divide-y">
                 {index.invitations.map((invite) => (
@@ -469,7 +472,7 @@ function OrganizationContent({ userId }: { userId: string }) {
           )}
           {org && (
             <>
-              <section className="rounded-xl border p-4">
+              <section className={"kova-tool-panel " + "rounded-xl border p-4"}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold">{org.name}</h2>
@@ -535,7 +538,7 @@ function OrganizationContent({ userId }: { userId: string }) {
                           >
                             <SelectTrigger
                               aria-label={`Role for ${member.user_id}`}
-                              className="min-h-11 w-auto"
+                              className=" w-auto"
                             >
                               <SelectValue />
                             </SelectTrigger>
@@ -574,7 +577,7 @@ function OrganizationContent({ userId }: { userId: string }) {
                 </Button>
               </section>
               {admin && (
-                <section className="rounded-xl border p-4">
+                <section className={"kova-tool-panel " + "rounded-xl border p-4"}>
                   <h2 className="font-semibold">Invite an existing account</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Invitations appear in the recipient’s Organization page. The recipient must have
@@ -600,7 +603,7 @@ function OrganizationContent({ userId }: { userId: string }) {
                       value={inviteRole}
                       onValueChange={(value) => setInviteRole(value as OrganizationRole)}
                     >
-                      <SelectTrigger aria-label="Invitation role" className="min-h-11 w-auto">
+                      <SelectTrigger aria-label="Invitation role" className=" w-auto">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -641,7 +644,7 @@ function OrganizationContent({ userId }: { userId: string }) {
               )}
               {owner && (
                 <>
-                  <section className="rounded-xl border p-4">
+                  <section className={"kova-tool-panel " + "rounded-xl border p-4"}>
                     <h2 className="font-semibold">Verified domains and SSO</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Domain verification proves DNS control. It never makes people members
@@ -729,7 +732,7 @@ function OrganizationContent({ userId }: { userId: string }) {
                       </Button>
                     )}
                   </section>
-                  <section className="rounded-xl border p-4">
+                  <section className={"kova-tool-panel " + "rounded-xl border p-4"}>
                     <h2 className="font-semibold">Retention proposal</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Saved as a draft. This does not delete content or activate retention
@@ -765,7 +768,9 @@ function OrganizationContent({ userId }: { userId: string }) {
                     organizationId={org.id}
                   />
                   {index.canClose && (
-                    <details className="rounded-xl border border-destructive/30 p-4">
+                    <details
+                      className={"kova-tool-panel " + "rounded-xl border border-destructive/30 p-4"}
+                    >
                       <summary className="cursor-pointer text-sm font-medium">
                         Close organization
                       </summary>

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
@@ -268,23 +269,27 @@ export function ChatHistorySyncStatus() {
         <p>
           {state.migration} earlier device chat{state.migration === 1 ? "" : "s"} remain on this
           device.{" "}
-          <button
-            className="rounded-md px-1.5 py-1 font-medium text-foreground underline decoration-border underline-offset-2 hover:bg-background"
+          <Button
+            data-ui-reference="chatgpt.chat-history.control"
+            variant="outline"
+            className="rounded-md   font-medium text-foreground underline decoration-border underline-offset-2 hover:bg-background"
             disabled={busy || !controller}
             onClick={() => void act(() => controller?.migrate())}
           >
             Save existing chats to my account
-          </button>
+          </Button>
         </p>
       )}
       {["offline", "device_error", "blocked"].includes(state.phase) && (
-        <button
-          className="mt-1 rounded-md px-1.5 py-1 font-medium text-foreground underline decoration-border underline-offset-2 hover:bg-background"
+        <Button
+          data-ui-reference="chatgpt.chat-history.control"
+          variant="outline"
+          className="mt-1 rounded-md   font-medium text-foreground underline decoration-border underline-offset-2 hover:bg-background"
           disabled={busy || !controller}
           onClick={() => void act(() => controller?.retry())}
         >
           Retry chat sync
-        </button>
+        </Button>
       )}
       {state.conflicts.slice(0, 10).map((conflict) => (
         <details key={conflict.id} className="mt-2 rounded border p-2">
@@ -305,7 +310,9 @@ export function ChatHistorySyncStatus() {
                 .slice(0, 20000) ?? "Deleted from account"}
             </pre>
           </div>
-          <button
+          <Button
+            data-ui-reference="chatgpt.chat-history.control"
+            variant="link"
             className="mr-3 underline"
             onClick={() => {
               const url = URL.createObjectURL(
@@ -322,21 +329,25 @@ export function ChatHistorySyncStatus() {
             }}
           >
             Download both complete copies
-          </button>
-          <button
+          </Button>
+          <Button
+            data-ui-reference="chatgpt.chat-history.control"
+            variant="link"
             className="mr-3 underline"
             disabled={busy}
             onClick={() => void act(() => controller?.resolve(conflict.id, "cloud"))}
           >
             Use account version
-          </button>
-          <button
+          </Button>
+          <Button
+            data-ui-reference="chatgpt.chat-history.control"
+            variant="link"
             className="underline"
             disabled={busy}
             onClick={() => void act(() => controller?.resolve(conflict.id, "keep"))}
           >
             {conflict.epochChanged ? "Save device draft as a new chat" : "Keep device version"}
-          </button>
+          </Button>
         </details>
       ))}
       {state.conflicts.length > 10 && (

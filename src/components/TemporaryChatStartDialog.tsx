@@ -32,6 +32,7 @@ export function TemporaryChatStartDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        data-ui-reference="chatgpt.temporary-chat.dialogcontent"
         className="sm:max-w-lg"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
@@ -52,6 +53,7 @@ export function TemporaryChatStartDialog({
         </div>
 
         <RadioGroup
+          data-ui-reference="chatgpt.temporary-chat.radiogroup"
           value={context}
           onValueChange={(value) => setContext(value as TemporaryChatContext)}
           aria-label="Temporary chat context"
@@ -103,6 +105,7 @@ export function TemporaryChatStartDialog({
 
         <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
+            data-ui-reference="chatgpt.temporary-chat.action"
             className="kova-workspace-action"
             variant="outline"
             onClick={() => onOpenChange(false)}
@@ -110,6 +113,7 @@ export function TemporaryChatStartDialog({
             Cancel
           </Button>
           <Button
+            data-ui-reference="chatgpt.temporary-chat.action"
             className="kova-workspace-action"
             onClick={() => {
               startedRef.current = true;
@@ -153,22 +157,26 @@ export function TemporaryChatBanner({
       </details>
       <div className="flex shrink-0 items-center gap-1">
         {canSave ? (
-          <button
+          <Button
+            data-ui-reference="chatgpt.temporary-chat.action"
+            variant="ghost"
             type="button"
             onClick={onSave}
             disabled={isStreaming}
-            className="rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            className=" px-2.5  text-xs font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             Save to history
-          </button>
+          </Button>
         ) : null}
-        <button
+        <Button
+          data-ui-reference="chatgpt.temporary-chat.action"
+          variant="ghost"
           type="button"
           onClick={onTurnOff}
-          className="rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent"
+          className=" px-2.5  text-xs font-medium hover:bg-accent"
         >
           Turn off
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -184,13 +192,16 @@ export function TemporaryChatToggle({
   onToggle: (trigger: HTMLButtonElement) => void;
 }) {
   return (
-    <button
+    <Button
+      size="icon"
+      data-ui-reference="chatgpt.temporary-chat.action"
+      variant="ghost"
       type="button"
       onClick={(event) => onToggle(event.currentTarget)}
       aria-label={enabled ? "Turn off temporary chat" : "Start temporary chat"}
       aria-pressed={enabled}
       title={enabled ? "Temporary chat on" : "Start temporary chat"}
-      className={`relative min-h-11 min-w-11 shrink-0 p-2 rounded-lg transition ${
+      className={`relative   shrink-0   transition ${
         enabled ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
       }`}
     >
@@ -200,6 +211,6 @@ export function TemporaryChatToggle({
           <Check className="w-4 h-4 text-primary drop-shadow" />
         </span>
       )}
-    </button>
+    </Button>
   );
 }

@@ -6,28 +6,31 @@ const styles = await readFile("src/styles.css", "utf8");
 const shell = await readFile("src/components/AppShell.tsx", "utf8");
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const historySync = await readFile("src/components/ChatHistorySync.tsx", "utf8");
+const tokens = await readFile("src/styles/visual-tokens.css", "utf8");
+const sidebarStyles = await readFile("src/styles/sidebar-core.css", "utf8");
 
 test("brand accents remain available while the primary shell stays neutral", () => {
-  const lightTheme = styles.match(/^:root\s*\{[\s\S]*?^\}/m)?.[0] ?? "";
-  const darkTheme = styles.match(/^\.dark\s*\{[\s\S]*?^\}/m)?.[0] ?? "";
+  const lightTheme = tokens.match(/^:root\s*\{[\s\S]*?^\}/m)?.[0] ?? "";
+  const darkTheme = tokens.match(/^\.dark\s*\{[\s\S]*?^\}/m)?.[0] ?? "";
 
   assert.ok(lightTheme, "the canonical light theme block must exist");
   assert.ok(darkTheme, "the canonical dark theme block must exist");
-  assert.equal((styles.match(/^:root\s*\{/gm) ?? []).length, 1);
-  assert.equal((styles.match(/^\.dark\s*\{/gm) ?? []).length, 1);
-  assert.equal((styles.match(/--surface-composer:/g) ?? []).length, 2);
-  assert.match(lightTheme, /--kova-blue:/);
-  assert.match(lightTheme, /--background: oklch\(1 0 0\)/);
-  assert.match(lightTheme, /--foreground: oklch\(0\.19 0\.008 255\)/);
+  assert.equal((tokens.match(/^:root\s*\{/gm) ?? []).length, 1);
+  assert.equal((tokens.match(/^\.dark\s*\{/gm) ?? []).length, 1);
+  assert.equal((styles.match(/@import "\.\/styles\/visual-tokens\.css";/g) ?? []).length, 1);
+  assert.equal((tokens.match(/--surface-composer:/g) ?? []).length, 2);
+  assert.match(lightTheme, /--kova-blue: var\(--foreground\)/);
+  assert.match(lightTheme, /--background: #ffffff/);
+  assert.match(lightTheme, /--foreground: #0d0d0d/);
   assert.match(lightTheme, /--surface-workspace: var\(--background\)/);
-  assert.match(lightTheme, /--surface-composer: oklch\(0\.982 0\.002 255\)/);
+  assert.match(lightTheme, /--surface-composer: #ffffff/);
   assert.match(darkTheme, /color-scheme: dark/);
-  assert.match(darkTheme, /--background: oklch\(0\.175 0\.004 255\)/);
-  assert.match(darkTheme, /--foreground: oklch\(0\.965 0 0\)/);
-  assert.match(darkTheme, /--surface-composer: oklch\(0\.225 0\.004 255\)/);
+  assert.match(darkTheme, /--background: #212121/);
+  assert.match(darkTheme, /--foreground: #ffffff/);
+  assert.match(darkTheme, /--surface-composer: #303030/);
   assert.match(
-    styles,
-    /\.kova-topbar\s*\{[^}]*background: color-mix\(in oklab, var\(--background\) 92%, transparent\) !important;[^}]*box-shadow: 0 1px 0 color-mix\(in oklab, var\(--background\) 70%, transparent\) !important;[^}]*backdrop-filter: blur\(18px\) saturate\(130%\) !important;/s,
+    sidebarStyles,
+    /\.kova-topbar:not\(\.kova-desktop-topbar\)\s*\{[^}]*background: var\(--background\)/,
   );
 });
 
@@ -44,14 +47,20 @@ test("shell removes decorative effects and keeps navigation neutral and reachabl
   assert.doesNotMatch(sidebar, /bg-\[var\(--kova-blue\)\]/);
   assert.match(sidebar, /aria-hidden=\{collapsed \? true : undefined\}/);
   assert.match(sidebar, /inert=\{collapsed \? true : undefined\}/);
-  assert.match(styles, /\.kova-chat-row:focus-within \.kova-chat-options/);
+  assert.match(
+    sidebarStyles,
+    /\.kova-sidebar \.kova-chat-row:is\(:hover, :focus-within, \.is-active\) \.kova-chat-options\s*\{\s*opacity: 1/,
+  );
   assert.doesNotMatch(sidebar, /new CustomEvent\("kova-open-lens"\)/);
   assert.doesNotMatch(styles, /button\[aria-label="Open Kova Lens"\]\.fixed/);
   assert.match(shell, /addEventListener\("kova-open-settings", handleOpenSettings\)/);
 });
 
 test("selected account navigation is visible while healthy sync stays visually quiet", () => {
-  assert.match(styles, /\.kova-sidebar \.kova-nav-row\.is-active\s*\{/);
+  assert.match(
+    sidebarStyles,
+    /\.kova-sidebar \.kova-nav-row:is\(\[aria-current="page"\], \.is-active\),\s*\.kova-sidebar \.kova-chat-row\.is-active\s*\{\s*background: var\(--sidebar-active\)/,
+  );
   assert.match(historySync, /if \(!visible\)[\s\S]*?className="sr-only"/);
   assert.match(historySync, /rounded-xl border border-border\/70 bg-muted\/40/);
   assert.match(historySync, /role="status" aria-live="polite"/);

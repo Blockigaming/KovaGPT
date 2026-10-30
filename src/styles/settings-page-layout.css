@@ -1,63 +1,94 @@
-/* Only the routable Settings page uses the shell's shared title utility slot. */
-body
-  .kova-settings-route
-  section.kova-settings-page.kova-settings-dialog
-  > .kova-settings-page-header {
+/* Full-page presentation of CG-SETTINGS. Modal/mobile geometry is owned by
+   settings-reference.css; this route retains its own category picker on phones. */
+.kova-settings-route {
+  --page-max: 1120px;
+  container-type: inline-size;
+  container-name: settings;
+}
+.kova-settings-route section.kova-settings-page.kova-settings-dialog {
+  position: static;
+  width: 100%;
+  max-width: none;
+  min-height: 600px;
+  height: auto;
+  max-height: none;
+  transform: none;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.kova-settings-route .kova-settings-page-header {
   padding-inline: 0;
   text-align: left;
 }
-body
-  .kova-settings-route
-  section.kova-settings-page.kova-settings-dialog
-  > .kova-settings-page-header
-  > div {
+.kova-settings-route .kova-settings-page-header > div {
   align-items: flex-start;
 }
-body
-  section.kova-settings-page.kova-settings-dialog
-  > .kova-settings-page-header
-  > div
-  > div:first-child {
+.kova-settings-route .kova-settings-page-header > div > div:first-child {
   min-width: 0;
 }
-body
-  section.kova-settings-page.kova-settings-dialog
-  > .kova-settings-page-header
-  .kova-core-utilities {
+.kova-settings-route .kova-settings-page-header .kova-core-utilities {
   flex-shrink: 0;
 }
-body
-  .kova-settings-route
-  section.kova-settings-page.kova-settings-dialog.kova-settings-reference
-  .kova-settings-content-header {
+.kova-settings-route .kova-settings-page > [data-orientation="vertical"] {
+  overflow: visible;
+}
+.kova-settings-route .kova-settings-page .kova-settings-sidebar {
+  position: sticky;
+  top: 24px;
+  width: 208px;
+  flex: 0 0 208px;
+  align-self: flex-start;
+  max-height: calc(100dvh - 48px);
+  background: transparent;
+}
+.kova-settings-route .kova-settings-page .kova-settings-content {
+  max-width: 760px;
+  overflow: visible;
+  background: transparent;
+}
+.kova-settings-route .kova-settings-page .kova-settings-content-header {
+  min-height: 56px;
   padding-inline: 0;
   margin-inline: 24px;
 }
+.kova-settings-route .kova-settings-page .kova-settings-back {
+  display: none;
+}
+.kova-settings-route .kova-settings-page [role="tabpanel"] {
+  overflow: visible;
+}
+.kova-settings-section-select {
+  display: none;
+}
 @container settings (max-width: 959px) {
-  body
-    .kova-settings-route
-    section.kova-settings-page.kova-settings-dialog.kova-settings-reference
-    .kova-settings-content-header {
+  .kova-settings-route .kova-settings-page > [data-orientation="vertical"] {
+    flex-direction: column;
+    gap: 0;
+  }
+  .kova-settings-route .kova-settings-page .kova-settings-sidebar {
+    display: none;
+  }
+  .kova-settings-route .kova-settings-section-select {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+  .kova-settings-route .kova-settings-page .kova-settings-content,
+  .kova-settings-route .kova-settings-page .kova-settings-content.mobile-hidden {
+    display: flex;
+    width: 100%;
+    padding-top: 0;
+    margin-top: 0;
+  }
+  .kova-settings-route .kova-settings-page .kova-settings-content-header {
     padding-inline: 0;
     margin-inline: 0;
   }
-  body
-    .kova-settings-route
-    section.kova-settings-page.kova-settings-dialog.kova-settings-reference
-    .kova-settings-content
-    > [role="tabpanel"] {
-    padding: 0 0 max(24px, env(safe-area-inset-bottom)) !important;
-  }
-}
-
-/* The page scrolls in AppShell. Keep desktop categories alongside long forms;
-   the existing nav scroller handles short windows without changing the mobile
-   Section picker or the separate modal layout. */
-@container settings (min-width: 960px) {
-  body .kova-settings-route section.kova-settings-page.kova-settings-dialog .kova-settings-sidebar {
-    position: sticky;
-    top: 24px;
-    align-self: flex-start;
-    max-height: calc(100dvh - 48px);
+  .kova-settings-route .kova-settings-page .kova-settings-content > [role="tabpanel"] {
+    padding: 0 0 max(24px, var(--safe-bottom));
   }
 }

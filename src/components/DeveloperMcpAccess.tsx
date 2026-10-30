@@ -76,7 +76,10 @@ export function DeveloperMcpAccessPage({ requestId }: { requestId?: string }) {
   const { isLoaded, user } = useUser(),
     [authOpen, setAuthOpen] = useState(false);
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
+    <main
+      data-ui-reference="chatgpt-settings-form"
+      className="mx-auto w-full max-w-3xl space-y-6 p-5"
+    >
       <Link to="/developers/console" className="text-sm underline">
         Developer console
       </Link>

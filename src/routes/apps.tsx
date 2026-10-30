@@ -102,7 +102,7 @@ export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
     meta: [
-      { title: "Plugins | Kova" },
+      { title: "Connections | Kova" },
       {
         name: "description",
         content: "Browse plugins and manage supported connections in KovaGPT.",
@@ -326,7 +326,7 @@ function GitHubManager({
         <p className="mt-1 text-sm text-muted-foreground">
           Your connection was not changed. Try loading its status again.
         </p>
-        <Button variant="outline" className="mt-4 min-h-11" onClick={() => void reload()}>
+        <Button variant="outline" className="mt-4" onClick={() => void reload()}>
           Try again
         </Button>
       </section>
@@ -468,21 +468,23 @@ function GitHubManager({
         {!data.configured ? (
           <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs">Unavailable</span>
         ) : !activeAccounts.length ? (
-          <button
+          <Button
+            variant="default"
             disabled={busy}
-            className="min-h-11 rounded-full bg-foreground px-4 text-sm text-background disabled:cursor-not-allowed disabled:opacity-60"
+            className="bg-foreground text-sm text-background disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => void connect()}
           >
             {busyAction === "connect" ? "Connecting…" : "Connect"}
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
+            variant="outline"
             disabled={busy}
-            className="min-h-11 rounded-full border px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            className="border text-sm disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => void refreshInstallations()}
           >
             {busyAction === "refresh" ? "Refreshing…" : "Refresh installations"}
-          </button>
+          </Button>
         )}
       </div>
       {loadError && (
@@ -538,35 +540,38 @@ function GitHubManager({
             </div>
             {isActive ? (
               <>
-                <button
+                <Button
+                  variant="outline"
                   type="button"
                   disabled={busy || !data.configured}
-                  className="min-h-11 rounded-lg border px-3 text-sm"
+                  className="border text-sm"
                   onClick={() => void connect()}
                   aria-label={`Reconnect GitHub account @${account.login}`}
                 >
                   Reconnect
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
                   type="button"
                   disabled={busy}
-                  className="min-h-11 rounded-full border px-3 text-sm text-destructive"
+                  className="border text-sm text-destructive"
                   onClick={() => setDisconnectAccount({ id: account.id, login: account.login })}
                   aria-label={`Disconnect GitHub account @${account.login}`}
                 >
                   Disconnect
-                </button>
+                </Button>
               </>
             ) : (
-              <button
+              <Button
+                variant="outline"
                 type="button"
                 disabled={busy}
-                className="min-h-11 rounded-full border px-3 text-sm"
+                className="border text-sm"
                 onClick={() => void connect()}
                 aria-label={`Reconnect GitHub account @${account.login}`}
               >
                 Reconnect
-              </button>
+              </Button>
             )}
           </div>
         );
@@ -602,14 +607,14 @@ function GitHubManager({
           <DialogFooter className="gap-2 sm:justify-end">
             <Button
               variant="outline"
-              className="min-h-11"
+
               onClick={() => setDisconnectAccount(null)}
             >
               {busyAction === "disconnect" ? "Close" : "Cancel"}
             </Button>
             <Button
               variant="destructive"
-              className="min-h-11"
+
               disabled={busy}
               onClick={() => void performDisconnect()}
             >
@@ -634,35 +639,38 @@ function GitHubManager({
       {activeInstallations.length > 0 && (
         <div className="mt-4">
           <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              className="min-h-11 flex-1 rounded-xl border px-3"
+            <Input
+              className="min-h-11 flex-1 border"
               placeholder="Search GitHub repositories"
               aria-label="Search GitHub repositories"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            <button
+            <Button
+              variant="outline"
               disabled={!selected.length || busy}
               onClick={() => void update(true)}
-              className="min-h-11 rounded-full border px-3 text-sm"
+              className="border text-sm"
             >
               Grant selected
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
               disabled={!selected.length || busy}
               onClick={() => void update(false)}
-              className="min-h-11 rounded-full border px-3 text-sm text-destructive"
+              className="border text-sm text-destructive"
             >
               Remove selected
-            </button>
+            </Button>
           </div>
           <ul className="mt-3 max-h-80 divide-y overflow-y-auto rounded-xl border">
             {repos.map((repo) => (
               <li key={repo.id} className="flex min-h-12 items-center gap-3 p-3">
                 <label className="flex min-h-11 min-w-11 items-center justify-center">
                   <input
+                    data-ui-reference="chatgpt.checkbox"
                     type="checkbox"
-                    className="h-4 w-4"
+                    className="h-4 w-4 kova-native-check"
                     disabled={busy}
                     aria-label={`Select ${repo.full_name}`}
                     checked={selected.includes(repo.id)}
@@ -1302,7 +1310,7 @@ function AppsPage() {
           : "Unknown";
   const connectedStatusMessage =
     connectionCountState === "checking"
-      ? "Checking connected plugins…"
+      ? "Checking connections…"
       : connectionCountState === "unavailable"
         ? "Connected plugin count is unavailable. Refresh a provider’s status to try again."
         : "Connected plugin count is not known yet.";
@@ -1363,11 +1371,13 @@ function AppsPage() {
         tabIndex={-1}
         aria-labelledby="apps-title"
         className="kova-page kova-secondary-page spec400-plugins"
+        data-ui-reference="chatgpt.apps.directory"
       >
         <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
           <DialogContent
             className="spec400-plugin-detail"
-            closeLabel="Close plugin details"
+            data-ui-reference="chatgpt.apps.details-dialog"
+            closeLabel="Close connection details"
             onCloseAutoFocus={(event) => {
               event.preventDefault();
               const origin = detailsReturnRef.current;
@@ -1655,7 +1665,7 @@ function AppsPage() {
           )}
         </ConfirmActionDialog>
         <WorkspacePageHeader
-          title="Plugins"
+          title="Connections"
           titleId="apps-title"
           description="Connect tools and sources to Kova"
         />
@@ -1666,7 +1676,7 @@ function AppsPage() {
           </p>
         )}
         {!isLoaded ? (
-          <section role="status" aria-label="Loading plugins" className="spec400-plugin-grid">
+          <section role="status" aria-label="Loading connections" className="spec400-plugin-grid">
             {[1, 2, 3, 4, 5, 6].map((item) => (
               <div
                 key={item}
@@ -1681,7 +1691,7 @@ function AppsPage() {
               <section className="spec400-plugin-signin" aria-labelledby="apps-sign-in-title">
                 <LogIn aria-hidden="true" />
                 <div>
-                  <h2 id="apps-sign-in-title">Sign in to connect plugins</h2>
+                  <h2 id="apps-sign-in-title">Sign in to connect tools</h2>
                   <p>
                     Browse available tools, then sign in to manage your accounts and permissions.
                   </p>
@@ -1696,7 +1706,7 @@ function AppsPage() {
               onValueChange={setConnectionFilter}
               className="spec400-plugin-directory"
             >
-              <TabsList className="spec400-plugin-tabs" aria-label="Plugin connections">
+              <TabsList className="spec400-plugin-tabs" aria-label="Connection filters">
                 <TabsTrigger value="all">
                   All <span>{catalog.length}</span>
                 </TabsTrigger>
@@ -1706,14 +1716,14 @@ function AppsPage() {
               </TabsList>
               <div className="spec400-plugin-filters">
                 <label className="spec400-plugin-search">
-                  <span className="sr-only">Search plugins</span>
+                  <span className="sr-only">Search connections</span>
                   <Search aria-hidden="true" />
                   <Input
                     ref={searchRef}
                     value={query}
                     maxLength={MAX_MANAGEMENT_QUERY_LENGTH}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search plugins"
+                    placeholder="Search connections"
                   />
                 </label>
                 <div className="spec400-plugin-category-filter">
@@ -1737,7 +1747,7 @@ function AppsPage() {
                 <p className="spec400-plugin-result-count" role="status">
                   {connectedStatusUnverified
                     ? connectedStatusMessage
-                    : `${filtered.length} ${filtered.length === 1 ? "plugin" : "plugins"}${query ? ` matching “${query}”` : ""}`}
+                    : `${filtered.length} ${filtered.length === 1 ? "connection" : "connections"}${query ? ` matching “${query}”` : ""}`}
                 </p>
                 {filtered.length ? (
                   renderGrid(filtered)
@@ -1752,8 +1762,8 @@ function AppsPage() {
                             ? "Connection status unavailable"
                             : "Connection status unknown"
                         : connectionFilter === "connected" && !query && category === "all"
-                          ? "No connected plugins"
-                          : "No matching plugins"}
+                          ? "No connections yet"
+                          : "No matching connections"}
                     </h2>
                     <p>
                       {connectedStatusUnverified
@@ -1772,7 +1782,9 @@ function AppsPage() {
                         setConnectionFilter("all");
                       }}
                     >
-                      {connectionFilter === "connected" ? "Browse all plugins" : "Clear filters"}
+                      {connectionFilter === "connected"
+                        ? "Browse all connections"
+                        : "Clear filters"}
                     </Button>
                   </section>
                 )}

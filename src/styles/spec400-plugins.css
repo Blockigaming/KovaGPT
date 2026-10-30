@@ -1,10 +1,10 @@
-/* Plugins only. Inherit the approved baseline palette and shared controls. */
+/* ChatGPT Apps directory pattern. Controls come from the shared OpenAI-derived primitives. */
 .spec400-plugins {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1080px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
   container-type: inline-size;
 }
 .spec400-plugins .kova-page-header {
@@ -13,44 +13,16 @@
   border: 0;
 }
 .spec400-plugin-tabs[role="tablist"] {
-  display: flex;
-  width: 100%;
-  height: auto;
-  min-height: 48px;
-  justify-content: flex-start;
-  gap: 24px;
-  padding: 0;
-  border-radius: 0;
-  border-bottom: 1px solid var(--border);
-  background: transparent;
+  width: fit-content;
+  max-width: 100%;
 }
 .spec400-plugin-tabs [role="tab"] {
-  position: relative;
-  min-height: 48px;
-  padding: 0 2px;
   gap: 8px;
-  border-radius: 0;
-  color: var(--muted-foreground);
-  background: transparent;
-  box-shadow: none;
-  font-size: 15px;
-}
-.spec400-plugin-tabs [role="tab"][data-state="active"] {
-  color: var(--foreground);
-  background: transparent;
-  box-shadow: none;
-}
-.spec400-plugin-tabs [role="tab"][data-state="active"]::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 -1px;
-  height: 2px;
-  background: var(--ring);
 }
 .spec400-plugin-tabs [role="tab"] span {
   min-width: 22px;
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: 999px;
   font-size: 12px;
   line-height: 18px;
   background: var(--muted);
@@ -62,7 +34,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 24px 0 16px;
+  padding: 20px 0 16px;
 }
 .spec400-plugin-search {
   position: relative;
@@ -75,14 +47,13 @@
   width: 18px;
   height: 18px;
   left: 12px;
-  top: 13px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--muted-foreground);
   pointer-events: none;
 }
 .spec400-plugin-search input {
-  min-height: 44px;
   padding-left: 40px;
-  border-radius: var(--kova-radius-input);
 }
 .spec400-plugin-category-filter {
   display: flex;
@@ -93,13 +64,7 @@
   color: var(--muted-foreground);
 }
 .spec400-plugin-category-filter [data-slot="select-trigger"] {
-  min-height: 44px;
   max-width: 100%;
-  padding: 0 32px 0 12px;
-  color: var(--foreground);
-  background: var(--background);
-  border: 1px solid var(--input);
-  border-radius: var(--kova-radius-input);
 }
 .spec400-plugin-category-filter [data-slot="select-trigger"]:focus-visible {
   outline: 2px solid var(--ring);
@@ -117,7 +82,7 @@
 .spec400-plugin-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
+  gap: 16px;
   padding: 0;
   list-style: none;
 }
@@ -125,7 +90,7 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   padding: 20px;
   border: 1px solid var(--border);
   border-radius: var(--kova-radius-card);
@@ -151,15 +116,15 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: #fff;
 }
 .spec400-plugin-logo img {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 .spec400-plugin-logo svg {
@@ -214,12 +179,8 @@
   color: var(--text-warning);
 }
 .spec400-plugin-card-action {
-  min-height: 44px;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--kova-radius-button);
   font-size: 14px;
   box-shadow: none;
-  background: transparent;
 }
 .spec400-plugins button:active,
 .spec400-plugin-detail button:active {
@@ -311,17 +272,16 @@
   color: var(--muted-foreground);
 }
 .spec400-plugin-detail[data-kova-dialog-surface] {
-  inset: 0 0 0 auto;
-  width: min(100%, 420px);
-  max-width: 100%;
-  height: 100dvh;
-  max-height: 100dvh;
+  inset: 50% auto auto 50%;
+  width: min(600px, calc(100vw - 32px));
+  max-width: 600px;
+  height: auto;
+  max-height: calc(100dvh - 48px);
   margin: 0;
   padding: 24px;
   border-radius: var(--kova-radius-panel);
   transform: none;
-  border-bottom: 0;
-  animation: none;
+  overflow-y: auto;
 }
 .spec400-plugin-detail > [aria-hidden="true"]:first-child {
   display: none;
@@ -391,10 +351,9 @@
   gap: 8px;
 }
 .spec400-plugin-actions button {
-  min-height: 44px;
+  min-height: 36px;
   height: auto;
   white-space: normal;
-  border-radius: var(--kova-radius-button);
 }
 .spec400-plugin-scope-list {
   margin: 12px 0;
@@ -462,30 +421,15 @@
     flex: 1;
   }
   .spec400-plugin-detail[data-kova-dialog-surface] {
-    width: 100%;
-    padding: 16px;
-    padding-top: calc(16px + env(safe-area-inset-top));
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
-  }
-  .spec400-plugin-detail [data-kova-dialog-close] {
-    top: calc(12px + env(safe-area-inset-top));
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    padding: 20px;
   }
 }
 
-body .spec400-plugin-detail[data-kova-dialog-surface] {
-  inset: 0 0 0 auto !important;
-  width: min(100%, 420px) !important;
-  max-width: 100% !important;
-  height: 100dvh !important;
-  max-height: 100dvh !important;
-  margin: 0 !important;
-  border-radius: var(--kova-radius-panel);
-  transform: none !important;
-  translate: none !important;
-}
-@media (max-width: 767px) {
-  body .spec400-plugin-detail[data-kova-dialog-surface] {
-    width: 100% !important;
+@media (pointer: coarse) {
+  .spec400-plugin-actions button {
+    min-height: 44px;
   }
 }
 

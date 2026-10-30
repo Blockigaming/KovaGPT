@@ -1,7 +1,8 @@
 import { useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "./reference-icons";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "./command";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
 import { cn } from "@/lib/utils";
 
 export type PickerOption = {
@@ -53,7 +54,7 @@ export function SearchablePickerList({
             onSelect={() => {
               if (!disabled && !option.disabled) onValueChange(option.value);
             }}
-            className="min-h-11"
+            className="min-h-8 [@media(pointer:coarse)]:min-h-11"
           >
             <span className="min-w-0 flex-1">
               <span className="block break-words">{option.label}</span>
@@ -93,9 +94,11 @@ type PickerProps = Pick<
   emptyText?: string;
   /** Settings moves focus to its new section; Escape still returns to the trigger. */
   restoreFocusOnSelect?: boolean;
+  /** Radix placement for short lists; searchable lists use their existing popover. */
+  position?: ComponentPropsWithoutRef<typeof SelectContent>["position"];
 };
 
-/** Keep short native selectors intact; add in-menu search above seven real choices. */
+/** A themed select for short lists; add in-menu search above seven real choices. */
 export function SearchablePicker({
   options,
   value,
@@ -104,6 +107,7 @@ export function SearchablePicker({
   searchLabel,
   emptyText,
   restoreFocusOnSelect = true,
+  position = "popper",
   className,
   disabled,
   dir,
@@ -115,20 +119,42 @@ export function SearchablePicker({
     placeholder === undefined ? options : [{ value: "", label: placeholder }, ...options];
   if (options.length <= 7) {
     return (
-      <select
-        {...fieldProps}
-        dir={dir}
-        className={className}
-        value={value}
+      <Select
+        dir={dir === "ltr" || dir === "rtl" ? dir : undefined}
+        value={`option:${value}`}
         disabled={disabled}
-        onChange={(event) => onValueChange(event.target.value)}
+        onOpenChange={(next) => {
+          if (next) selectedOnClose.current = false;
+        }}
+        onValueChange={(next) => {
+          const choice = choices.find((option) => `option:${option.value}` === next);
+          if (!disabled && choice && !choice.disabled) {
+            selectedOnClose.current = true;
+            onValueChange(choice.value);
+          }
+        }}
       >
-        {choices.map((option) => (
-          <option key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger {...fieldProps} dir={dir} className={className}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent
+          dir={dir}
+          position={position}
+          onCloseAutoFocus={(event) => {
+            if (selectedOnClose.current && !restoreFocusOnSelect) event.preventDefault();
+          }}
+        >
+          {choices.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={`option:${option.value}`}
+              disabled={option.disabled}
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     );
   }
   const selectedLabel =
@@ -143,12 +169,14 @@ export function SearchablePicker({
     >
       <PopoverTrigger asChild>
         <button
+          data-slot="select-trigger"
+          data-ui-reference="chatgpt.select-control.searchable"
           {...fieldProps}
           dir={dir}
           type="button"
           disabled={disabled}
           className={cn(
-            "flex min-w-0 items-center justify-between gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+            "font-[family-name:var(--font-ui)] flex h-9 min-w-0 items-center justify-between gap-2 rounded-[8px] border border-input bg-transparent px-3 text-left text-base font-medium md:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [@media(pointer:coarse)]:min-h-11",
             className,
           )}
         >

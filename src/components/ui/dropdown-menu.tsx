@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "./reference-icons";
 
 import { cn } from "@/lib/utils";
 
@@ -25,9 +25,11 @@ const DropdownMenuSubTrigger = React.forwardRef<
   }
 >(({ className, inset, children, ...props }, ref) => (
   <DropdownMenuPrimitive.SubTrigger
+    data-slot="menu-item"
+    data-ui-reference="chatgpt.menu"
     ref={ref}
     className={cn(
-      "flex min-h-11 min-w-0 cursor-default select-none items-center gap-2 rounded-[var(--kova-radius-compact)] px-3 py-2 text-sm outline-none focus:bg-accent data-[state=open]:bg-accent [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0",
+      "flex min-h-8 min-w-0 cursor-pointer select-none items-center gap-1.5 rounded-[6px] px-2 py-1.5 text-sm leading-5 [@media(pointer:coarse)]:min-h-11 outline-none focus:bg-accent data-[state=open]:bg-accent [&_svg]:pointer-events-none [&_svg]:size-[18px] [&_svg]:shrink-0",
       inset && "pl-8",
       className,
     )}
@@ -44,10 +46,12 @@ const DropdownMenuSubContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
 >(({ className, collisionPadding = 8, ...props }, ref) => (
   <DropdownMenuPrimitive.SubContent
+    data-slot="menu-content"
+    data-ui-reference="chatgpt.menu"
     ref={ref}
     collisionPadding={collisionPadding}
     className={cn(
-      "font-[family-name:var(--font-ui)] z-50 min-w-[min(8rem,var(--radix-dropdown-menu-content-available-width,100vw))] rounded-[var(--kova-radius-menu)] border bg-popover p-2 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--radix-dropdown-menu-content-transform-origin)",
+      "font-[family-name:var(--font-ui)] z-50 min-w-[min(8rem,var(--radix-dropdown-menu-content-available-width,100vw))] rounded-[var(--kova-radius-menu)] border border-border bg-popover p-1.5 text-popover-foreground shadow-[var(--shadow-floating)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:duration-[350ms] data-[state=closed]:duration-200 origin-(--radix-dropdown-menu-content-transform-origin)",
       "[--kova-overlay-vh:100vh] max-h-[min(var(--radix-dropdown-menu-content-available-height,var(--kova-overlay-vh)),calc(var(--kova-overlay-vh)-1rem))] max-w-[min(var(--radix-dropdown-menu-content-available-width,100vw),calc(100vw-1rem))] overflow-y-auto overflow-x-hidden overscroll-contain [overflow-wrap:anywhere] supports-[height:100dvh]:[--kova-overlay-vh:100dvh]",
       className,
     )}
@@ -62,12 +66,14 @@ const DropdownMenuContent = React.forwardRef<
 >(({ className, sideOffset = 4, collisionPadding = 8, ...props }, ref) => (
   <DropdownMenuPrimitive.Portal>
     <DropdownMenuPrimitive.Content
+      data-slot="menu-content"
+      data-ui-reference="chatgpt.menu"
       ref={ref}
       collisionPadding={collisionPadding}
       sideOffset={sideOffset}
       className={cn(
-        "font-[family-name:var(--font-ui)] z-50 min-w-[min(8rem,var(--radix-dropdown-menu-content-available-width,100vw))] rounded-[var(--kova-radius-menu)] border bg-popover p-2 text-popover-foreground shadow-lg",
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--radix-dropdown-menu-content-transform-origin)",
+        "font-[family-name:var(--font-ui)] z-50 min-w-[min(8rem,var(--radix-dropdown-menu-content-available-width,100vw))] rounded-[var(--kova-radius-menu)] border border-border bg-popover p-1.5 text-popover-foreground shadow-[var(--shadow-floating)]",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:duration-[350ms] data-[state=closed]:duration-200 origin-(--radix-dropdown-menu-content-transform-origin)",
         "[--kova-overlay-vh:100vh] max-h-[min(var(--radix-dropdown-menu-content-available-height,var(--kova-overlay-vh)),calc(var(--kova-overlay-vh)-1rem))] max-w-[min(var(--radix-dropdown-menu-content-available-width,100vw),calc(100vw-1rem))] overflow-y-auto overflow-x-hidden overscroll-contain [overflow-wrap:anywhere] supports-[height:100dvh]:[--kova-overlay-vh:100dvh]",
         className,
       )}
@@ -84,9 +90,11 @@ const DropdownMenuItem = React.forwardRef<
   }
 >(({ className, inset, ...props }, ref) => (
   <DropdownMenuPrimitive.Item
+    data-slot="menu-item"
+    data-ui-reference="chatgpt.menu"
     ref={ref}
     className={cn(
-      "relative flex min-h-11 min-w-0 cursor-default select-none items-center gap-2 rounded-[var(--kova-radius-compact)] px-3 py-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-5 [&>svg]:shrink-0",
+      "relative flex min-h-8 min-w-0 cursor-pointer select-none items-center gap-1.5 rounded-[6px] px-2 py-1.5 text-sm leading-5 [@media(pointer:coarse)]:min-h-11 outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-[18px] [&>svg]:shrink-0",
       inset && "pl-8",
       className,
     )}
@@ -100,9 +108,11 @@ const DropdownMenuCheckboxItem = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem>
 >(({ className, children, checked, ...props }, ref) => (
   <DropdownMenuPrimitive.CheckboxItem
+    data-slot="menu-item"
+    data-ui-reference="chatgpt.menu"
     ref={ref}
     className={cn(
-      "relative flex min-h-11 min-w-0 cursor-default select-none items-center rounded-[var(--kova-radius-compact)] py-2 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex min-h-8 min-w-0 cursor-pointer select-none items-center rounded-[6px] py-1.5 pl-8 pr-2 text-sm leading-5 [@media(pointer:coarse)]:min-h-11 outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     checked={checked}
@@ -123,9 +133,11 @@ const DropdownMenuRadioItem = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.RadioItem>
 >(({ className, children, ...props }, ref) => (
   <DropdownMenuPrimitive.RadioItem
+    data-slot="menu-item"
+    data-ui-reference="chatgpt.menu"
     ref={ref}
     className={cn(
-      "relative flex min-h-11 min-w-0 cursor-default select-none items-center rounded-[var(--kova-radius-compact)] py-2 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex min-h-8 min-w-0 cursor-pointer select-none items-center rounded-[6px] py-1.5 pl-8 pr-2 text-sm leading-5 [@media(pointer:coarse)]:min-h-11 outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     {...props}
@@ -149,7 +161,7 @@ const DropdownMenuLabel = React.forwardRef<
   <DropdownMenuPrimitive.Label
     ref={ref}
     className={cn(
-      "px-3 py-2 text-xs font-medium text-muted-foreground",
+      "px-2 py-1.5 text-xs font-medium text-muted-foreground",
       inset && "pl-8",
       className,
     )}
@@ -164,7 +176,7 @@ const DropdownMenuSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Separator
     ref={ref}
-    className={cn("-mx-1.5 my-1 h-px bg-border", className)}
+    className={cn("-mx-1.5 my-1.5 h-px bg-border", className)}
     {...props}
   />
 ));

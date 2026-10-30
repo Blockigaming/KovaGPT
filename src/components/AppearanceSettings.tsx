@@ -29,7 +29,10 @@ export function AppearanceSettings({
     onChange({ ...settings, ...patch });
   };
   return (
-    <div className="space-y-6">
+    <div
+      className="kova-appearance-settings space-y-6"
+      data-ui-reference="chatgpt.settings.appearance"
+    >
       <p className="text-sm text-muted-foreground">
         Changes apply immediately and save on this device for this account. Cross-device sync is
         unavailable.

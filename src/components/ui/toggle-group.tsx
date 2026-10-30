@@ -18,6 +18,8 @@ const ToggleGroup = React.forwardRef<
     VariantProps<typeof toggleVariants>
 >(({ className, variant, size, children, ...props }, ref) => (
   <ToggleGroupPrimitive.Root
+    data-slot="toggle-group"
+    data-ui-reference="chatgpt.segmented-control"
     ref={ref}
     className={cn("flex items-center justify-center gap-1", className)}
     {...props}
@@ -37,6 +39,8 @@ const ToggleGroupItem = React.forwardRef<
 
   return (
     <ToggleGroupPrimitive.Item
+      data-slot="toggle-group-item"
+      data-ui-reference="chatgpt.segmented-control.option"
       ref={ref}
       className={cn(
         toggleVariants({

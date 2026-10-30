@@ -59,7 +59,13 @@ test("public layouts provide a single skip-link destination", async () => {
   ]);
 
   for (const source of [site, seoLanding, legalArticle]) {
-    assert.match(source, /<main\s+id="main-content"\s+tabIndex=\{-1\}/);
+    const mainOpenings = [...source.matchAll(/<main\b[^>]*>/g)].map(([opening]) => opening);
+    assert.ok(mainOpenings.length > 0, "each public template must define its main landmark");
+    for (const opening of mainOpenings) {
+      assert.match(opening, /\bid="main-content"/);
+      assert.match(opening, /\btabIndex=\{-1\}/);
+      assert.equal(opening.match(/\bid="main-content"/g)?.length, 1);
+    }
   }
 
   for (const [index, source] of routes.entries()) {

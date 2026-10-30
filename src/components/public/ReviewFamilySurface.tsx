@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Link } from "@tanstack/react-router";
 import { Circle, Pause, Waves } from "lucide-react";
 import type { RefObject } from "react";
@@ -145,7 +148,7 @@ export function ReviewFamilySurface({
   const input = (label: string, key: "title" | "memberLabel" | "retentionDays", type = "text") => (
     <label>
       {label}
-      <input
+      <Input
         type={type}
         min={type === "number" ? 1 : undefined}
         value={draft[key]}
@@ -156,7 +159,7 @@ export function ReviewFamilySurface({
   const notes = (label: string, placeholder: string) => (
     <label>
       {label}
-      <textarea
+      <Textarea
         rows={5}
         value={draft.notes}
         onChange={(e) => update("notes", e.target.value)}
@@ -216,7 +219,11 @@ export function ReviewFamilySurface({
     );
   if (page.family === "voice")
     return (
-      <div className="spec400-review-columns" data-family-surface="voice-call">
+      <div
+        className="spec400-review-columns"
+        data-family-surface="voice-call"
+        data-ui-reference="chatgpt-voice-preview"
+      >
         <section className="spec400-review-card spec400-call-surface">
           <p className="spec400-eyebrow">Text-only interface preview</p>
           <h2>Call preview</h2>
@@ -237,16 +244,28 @@ export function ReviewFamilySurface({
                 : "Preview open. No call or recording is active."}
           </p>
           <div className="spec400-review-actions">
-            <button data-review-call-start onClick={() => setCall("preview")}>
+            <Button
+              variant="default"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+              type="button"
+              data-review-call-start
+              onClick={() => setCall("preview")}
+            >
               Start text preview
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+              type="button"
               disabled={call === "idle"}
               onClick={() => setCall(call === "paused" ? "preview" : "paused")}
             >
               {call === "paused" ? "Resume preview" : "Pause preview"}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+              type="button"
               disabled={call === "idle"}
               onClick={(event) => {
                 setCall("idle");
@@ -256,7 +275,7 @@ export function ReviewFamilySurface({
               }}
             >
               End preview
-            </button>
+            </Button>
           </div>
           {call !== "idle" && (
             <p className="spec400-transcript">
@@ -331,7 +350,10 @@ export function ReviewFamilySurface({
           {reference && (
             <div>
               <p>{reference.name}</p>
-              <button
+              <Button
+                variant="ghost"
+                className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+                type="button"
                 onClick={(event) => {
                   const input = event.currentTarget
                     .closest("section")
@@ -345,7 +367,7 @@ export function ReviewFamilySurface({
                 }}
               >
                 Remove local reference
-              </button>
+              </Button>
             </div>
           )}
           <p>
@@ -358,7 +380,7 @@ export function ReviewFamilySurface({
           {select("Aspect ratio", "ratio", ["1:1", "2:3", "3:2", "16:9", "9:16"])}
           <label>
             {guidance[0]}
-            <textarea
+            <Textarea
               rows={5}
               value={draft.adjustment}
               onChange={(e) => update("adjustment", e.target.value)}
@@ -708,7 +730,7 @@ export function ReviewFamilySurface({
           ).map(([key, label, placeholder]) => (
             <label key={key}>
               {label}
-              <textarea
+              <Textarea
                 rows={3}
                 value={draft[key]}
                 placeholder={placeholder}

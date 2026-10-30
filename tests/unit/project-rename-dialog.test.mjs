@@ -64,7 +64,7 @@ const resetEffect = find(
     node.arguments[0]?.getText(ast).includes("Invalidate pending completions"),
 ).arguments[0].getText(ast);
 const restoreSource = readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace(
-  "export function",
+  /^export function/gm,
   "function",
 );
 function compile(code, dependencies) {

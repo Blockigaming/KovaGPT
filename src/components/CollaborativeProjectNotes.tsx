@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -179,18 +181,19 @@ function ProjectNotesSession({
     return () => clearTimeout(timer);
   }, [actor, projectId, key, state, canEdit, parse, refresh]);
   return (
-    <section aria-label="Shared Project notes">
+    <section data-ui-reference="claude.project-notes.section" aria-label="Shared Project notes">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">Shared notes for this Project.</p>
         <CollaborationStatus {...presence} />
       </div>
-      <textarea
+      <Textarea
+        data-ui-reference="claude.project-notes.textarea"
         value={state?.draft ?? ""}
         disabled={!state?.note || !canEdit || state.denied}
         onChange={(event) => setStored((current) => ({ ...current, draft: event.target.value }))}
         maxLength={200000}
         rows={16}
-        className="w-full rounded-lg border bg-background p-3 font-mono text-sm disabled:opacity-60"
+        className="w-full  border bg-background  font-mono text-sm disabled:opacity-60"
         aria-label="Project notes"
         placeholder={
           !state?.note
@@ -215,8 +218,10 @@ function ProjectNotesSession({
               : state.error}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              className="min-h-9 rounded border px-3"
+            <Button
+              data-ui-reference="claude.project-notes.control"
+              variant="outline"
+              className="  border "
               onClick={() =>
                 void navigator.clipboard
                   .writeText(state.draft)
@@ -225,10 +230,12 @@ function ProjectNotesSession({
               }
             >
               Copy my draft
-            </button>
+            </Button>
             {state.remote ? (
-              <button
-                className="min-h-9 rounded border px-3"
+              <Button
+                data-ui-reference="claude.project-notes.control"
+                variant="outline"
+                className="  border "
                 onClick={() =>
                   setStored((current) =>
                     current.remote
@@ -244,10 +251,12 @@ function ProjectNotesSession({
                 }
               >
                 Load current version
-              </button>
+              </Button>
             ) : (
-              <button
-                className="min-h-9 rounded border px-3"
+              <Button
+                data-ui-reference="claude.project-notes.control"
+                variant="outline"
+                className="  border "
                 onClick={() =>
                   void refresh().catch((error) =>
                     toast.error(error instanceof Error ? error.message : "Reconnect failed."),
@@ -255,7 +264,7 @@ function ProjectNotesSession({
                 }
               >
                 Reconnect
-              </button>
+              </Button>
             )}
           </div>
         </div>

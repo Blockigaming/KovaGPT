@@ -67,19 +67,22 @@ test("guest chat, authentication, command palette, and mobile navigation stay op
   await page.goto("/");
   await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: /message kovagpt/i })).toBeVisible();
+  const navigation = page.getByRole("dialog", { name: "Primary navigation", exact: true });
   await page.getByRole("button", { name: /open menu/i }).click();
-  await expect(page.getByRole("dialog", { name: /primary navigation/i })).toBeVisible();
+  await expect(navigation).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: /primary navigation/i })).toBeHidden();
+  await expect(navigation).toBeHidden();
 
   await page.getByRole("button", { name: /open menu/i }).click();
-  await page
-    .getByRole("button", { name: /log in/i })
-    .first()
-    .click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(page.getByPlaceholder("Email address")).toBeVisible();
+  await expect(navigation).toBeVisible();
+  await navigation.getByRole("button", { name: "Close sidebar", exact: true }).click();
+  await expect(navigation).toBeHidden();
+  await page.getByRole("main").getByRole("button", { name: "Log in", exact: true }).click();
+  const auth = page.getByRole("dialog", { name: "Log in to Kova", exact: true });
+  await expect(auth).toBeVisible();
+  await expect(auth.getByPlaceholder("Email address")).toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(auth).toBeHidden();
 });
 
 test("sensitive and AI endpoints reject unauthenticated or malformed requests", async ({

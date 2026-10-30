@@ -27,6 +27,8 @@ const all = (tree) =>
   !tree || typeof tree !== "object" ? [] : [tree, ...(tree.children ?? []).flatMap(all)];
 const deps = {
   React,
+  Button: "button",
+  Input: "input",
   terminal: new Set(["completed", "failed", "cancelled"]),
   useMemo: (fn) => fn(),
   useState: (initial) => [initial, () => {}],

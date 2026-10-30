@@ -4,6 +4,7 @@ import type { Message } from "@/lib/chat-store";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 
 import { deriveConversationOutline, type OutlineSection } from "./conversation-outline-utils";
 
@@ -21,17 +22,18 @@ function OutlineNavigation({
       <ol className="space-y-0.5">
         {sections.map((section) => (
           <li key={section.id}>
-            <button
+            <Button
               type="button"
+              variant="ghost"
               aria-current={activeId === section.id ? "location" : undefined}
               onClick={() => onSelect(section.id)}
-              className="flex min-h-10 w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=location]:bg-accent"
+              className="h-auto min-h-9 w-full items-start justify-start gap-2 whitespace-normal rounded-lg py-2 text-left font-normal aria-[current=location]:bg-accent"
             >
               <span className="mt-0.5 text-xs text-muted-foreground">
                 {section.role === "user" ? "You" : "K"}
               </span>
               <span className="line-clamp-2">{section.label}</span>
-            </button>
+            </Button>
           </li>
         ))}
       </ol>
@@ -73,15 +75,16 @@ export function ConversationOutline({ messages }: { messages: Message[] }) {
     setMobileOpen(false);
   };
   const trigger = (
-    <button
+    <Button
       type="button"
+      variant="outline"
       onClick={isMobile ? () => setMobileOpen(true) : undefined}
-      className="fixed right-3 top-20 z-20 inline-flex min-h-11 items-center gap-2 rounded-full border border-border/70 bg-card/85 px-3 text-sm font-medium shadow-md backdrop-blur-md hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:right-6"
+      className="fixed right-3 top-20 z-20 gap-2 lg:right-6"
       aria-label="Open conversation outline"
     >
       <ListTree className="h-4 w-4" />
       <span className="hidden sm:inline">Outline</span>
-    </button>
+    </Button>
   );
   if (isMobile)
     return (

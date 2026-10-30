@@ -104,16 +104,27 @@ test("checkout uses an accessible modal with truthful loading and safe errors", 
   assert.doesNotMatch(checkout, /setError\(msg\)/);
 });
 
-test("plan cards expose a coherent hierarchy and aligned, 44px actions", async () => {
-  const pricing = await read("src/routes/pricing.tsx");
+test("plan cards expose aligned 44px actions and the flat ChatGPT pricing hierarchy", async () => {
+  const [pricing, surfaces] = await Promise.all([
+    read("src/routes/pricing.tsx"),
+    read("src/components/account-surfaces.css"),
+  ]);
 
   assert.match(pricing, /id="pricing-title"/);
   assert.match(pricing, /aria-label="KovaGPT plans"/);
   assert.match(pricing, /data-pricing-plan=\{name\.toLowerCase\(\)\}/);
   assert.match(pricing, /<article[\s\S]*?<h2[\s\S]*?<button[\s\S]*?<ul/);
-  assert.match(pricing, /md:row-span-7 md:h-full md:grid-rows-subgrid/);
+  assert.match(pricing, /data-ui-reference="chatgpt-pricing-plan-card"/);
+  assert.match(pricing, /md:row-span-6 md:h-full md:grid-rows-subgrid/);
   assert.match(pricing, /type="button"/);
   assert.match(pricing, /inline-flex h-11 w-full/);
-  assert.match(pricing, /shadow-lg shadow-foreground\/10/);
+  assert.match(
+    surfaces,
+    /\.kova-pricing-page \.kova-plan-card\s*\{[^}]*max-width: 384px;[^}]*row-gap: 20px;[^}]*box-shadow: none;/,
+  );
+  assert.match(
+    surfaces,
+    /\.kova-pricing-page \.kova-plan-card:hover\s*\{[^}]*transform: none;[^}]*box-shadow: none;/,
+  );
   assert.doesNotMatch(pricing, /hsl\(var\(--foreground\)/);
 });

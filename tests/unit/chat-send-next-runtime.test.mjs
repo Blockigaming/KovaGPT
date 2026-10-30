@@ -7,6 +7,12 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { deferred, settle } from "../helpers/ui-state-harness.mjs";
 
+// The real primitive supplies geometry; this transparent boundary preserves
+// the caller's events, disabled state, children and ref in the route fixture.
+const Button = React.forwardRef(({ variant: _variant, size: _size, ...props }, ref) =>
+  React.createElement("button", { ...props, ref }),
+);
+
 const helperSource = readFileSync("src/lib/chat-send-next.ts", "utf8");
 const helperJs = ts.transpileModule(helperSource, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
@@ -52,7 +58,7 @@ const unmountEffect = effects.find((effect) =>
 const cancel = find(
   (node) =>
     ts.isJsxElement(node) &&
-    node.openingElement.tagName.getText(ast) === "button" &&
+    node.openingElement.tagName.getText(ast) === "Button" &&
     node.children.some(
       (child) => ts.isJsxText(child) && child.text.includes("Cancel next message"),
     ),
@@ -119,6 +125,7 @@ function fixture() {
   const context = {
     ...helpers,
     React,
+    Button,
     Suspense: React.Suspense,
     SignInButton: ({ children }) => React.cloneElement(children, { "data-auth-dialog": "sign-in" }),
     composerRevisionRef: { current: 0 },
@@ -982,7 +989,7 @@ const quotaFiles = () => [
   },
 ];
 const panelButton = (panel, label) =>
-  panel.props.children.find((child) => child?.type === "button" && child.props.children === label);
+  panel.props.children.find((child) => child?.type === Button && child.props.children === label);
 const restoreButton = (panel) => panelButton(panel, "Restore message");
 const discardButton = (panel) => panelButton(panel, "Discard kept version");
 

@@ -195,7 +195,14 @@ test("Project file migration serializes caps, accounting, and crash recovery", (
   assert.match(maintenance, /assertProjectStoragePath\(item\.projectId, source\.path\)/);
   assert.match(ui, /Files could not be loaded because earlier storage cleanup is incomplete/);
   assert.match(ui, /role="alert"/);
-  assert.match(ui, /className="mt-3 min-h-11"/);
+  assert.match(
+    ui,
+    /<Button className="mt-3" variant="outline" onClick=\{\(\) => void refresh\(\)\}>\s*Retry\s*<\/Button>/,
+  );
+  const button = read("src/components/ui/button.tsx");
+  assert.match(button, /data-ui-reference="chatgpt\.button\.pill"/);
+  assert.match(button, /default: "h-9 /);
+  assert.match(button, /\[@media\(pointer:coarse\)\]:min-h-11/);
 });
 
 test("recovered reservations cannot bypass quota and stale rows remain recoverable", () => {
