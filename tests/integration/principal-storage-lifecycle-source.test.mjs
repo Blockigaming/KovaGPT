@@ -6,12 +6,27 @@ const clerkSource = readFileSync("src/components/auth/ClerkSafe.tsx", "utf8");
 const settingsSource = readFileSync("src/components/SettingsDialog.tsx", "utf8");
 const storageSource = readFileSync("src/lib/principal-browser-storage.mjs", "utf8");
 
+function sourceSection(start, end, from = 0) {
+  const startIndex = clerkSource.indexOf(start, from);
+  const endIndex = clerkSource.indexOf(end, startIndex + start.length);
+  assert.ok(startIndex >= 0 && endIndex > startIndex, `Missing source section: ${start}`);
+  return clerkSource.slice(startIndex, endIndex);
+}
+
+const legacyProviderStart = clerkSource.indexOf("function SupabaseClerkProvider(");
+assert.ok(legacyProviderStart >= 0);
+const legacyHydration = sourceSection(
+  "async function hydrateSession()",
+  "\n    hydrateSession();",
+  legacyProviderStart,
+);
+
 test("auth cleanup is principal-exact and covers every sign-out path", () => {
   assert.match(clerkSource, /clearPrincipalBrowserStorage/);
   assert.match(clerkSource, /browserStorageUserIdRef/);
   assert.match(
-    clerkSource,
-    /if \(disposition\.kind === "terminal"\) \{[\s\S]*?const cleanupIds = \[[\s\S]*?candidate\.user\.id,[\s\S]*?clearBrowserStateFor\(\.\.\.cleanupIds\);[\s\S]*?supabase\.auth\.signOut/,
+    sourceSection("const acceptSession", "\n  useEffect(() => {", legacyProviderStart),
+    /if \(disposition\.kind === "terminal"\) \{[\s\S]*?const cleanupIds = \[[\s\S]*?candidate\.user\.id,[\s\S]*?clearBrowserStateFor\(\.\.\.cleanupIds\);[\s\S]*?await auth\.signOut\(\)[\s\S]*?if \(!current\(\)\) return;[\s\S]*?purgeOwnerlessStateFor\(null\)/,
   );
   assert.match(clerkSource, /if \(!candidate\) \{[\s\S]*?clearBrowserStateFor/);
   assert.match(clerkSource, /onCancel=\{\(\) => void signOut\(\)\}/);
@@ -41,10 +56,10 @@ test("retryable, restore-error, and MFA states never resolve as guest", () => {
     clerkSource,
     /classifyThrownAuthValidationError\(error\)[\s\S]{0,180}markRetryableAuthFailure\(candidate, error, "thrown"\)/,
   );
-  assert.match(clerkSource, /const disposition = classifySessionRestoreError\(error\)/);
+  assert.match(legacyHydration, /const disposition = classifySessionRestoreError\(error\)/);
   assert.match(
-    clerkSource,
-    /if \(disposition\.kind === "terminal"\) \{[\s\S]{0,1200}purgeOwnerlessStateFor\(null\)[\s\S]{0,300}else \{\s*markRetryableAuthFailure\(data\.session, error, "restore"\)/,
+    legacyHydration,
+    /if \(disposition\.kind === "terminal"\) \{[\s\S]*?await auth\.signOut\(\)[\s\S]*?if \(!current\(hydrationValidation\)\) return;[\s\S]*?purgeOwnerlessStateFor\(null\)[\s\S]*?onAuthorityResolved\?\.\(authorityRevision\);\s*\} else \{\s*markRetryableAuthFailure\(data\.session, error, "restore"\);\s*onAuthorityFailed\?\.\(authorityRevision\)/,
   );
   assert.doesNotMatch(clerkSource, /acceptSession\(null\)/);
   assert.match(clerkSource, /setPendingMfaSession\(candidate\);[\s\S]{0,260}setIsLoaded\(false\);/);
@@ -52,27 +67,37 @@ test("retryable, restore-error, and MFA states never resolve as guest", () => {
 });
 
 test("auth events invalidate hydration before stale restore success can commit", () => {
-  const authEventStart = clerkSource.indexOf("supabase.auth.onAuthStateChange");
-  const hydrateStart = clerkSource.indexOf("async function hydrateSession()", authEventStart);
-  const hydrateEnd = clerkSource.indexOf("hydrateSession();", hydrateStart);
-  const authEvent = clerkSource.slice(authEventStart, hydrateStart);
-  const hydrate = clerkSource.slice(hydrateStart, hydrateEnd);
-
-  assert.ok(authEventStart >= 0 && hydrateStart > authEventStart && hydrateEnd > hydrateStart);
+  const authEvent = sourceSection(
+    "const { data: sub } = auth.onAuthStateChange",
+    "async function hydrateSession()",
+    legacyProviderStart,
+  );
+  const validationGuard = sourceSection(
+    "const current = (validation: number) =>",
+    "const config = getSupabaseClientConfigStatus();",
+    legacyProviderStart,
+  );
+  assert.match(
+    validationGuard,
+    /isCurrentAuthValidation\(validation, sessionValidationRef\.current, cancelled\) &&\s*authorityGeneration === kovaAuthGeneration\(\) &&\s*isLegacySessionValidationAllowed\(\)/,
+  );
   assert.match(authEvent, /const eventValidation = \+\+sessionValidationRef\.current/);
   assert.match(
     authEvent,
-    /isCurrentAuthValidation\(eventValidation, sessionValidationRef\.current, cancelled\)[\s\S]{0,100}acceptSession\(newSession\)/,
+    /const eventValidation = \+\+sessionValidationRef\.current;[\s\S]*?window\.setTimeout\(\(\) => \{\s*if \(current\(eventValidation\)\) \{\s*void acceptSession\(newSession\)/,
   );
   assert.match(
-    hydrate,
-    /!isCurrentAuthValidation\([\s\S]{0,160}hydrationValidation,[\s\S]{0,120}sessionValidationRef\.current,[\s\S]{0,80}cancelled[\s\S]{0,100}await acceptSession\(oauthSession\)/,
+    legacyHydration,
+    /if \(!current\(hydrationValidation\)\) return;\s*if \(oauthSession\) \{\s*await acceptSession\(oauthSession\)/,
   );
   assert.match(
-    hydrate,
-    /!isCurrentAuthValidation\([\s\S]{0,160}hydrationValidation,[\s\S]{0,120}sessionValidationRef\.current,[\s\S]{0,80}cancelled[\s\S]{0,100}await acceptSession\(data\.session\)/,
+    legacyHydration,
+    /if \(!current\(hydrationValidation\)\) return;\s*await acceptSession\(data\.session\)/,
   );
-  assert.doesNotMatch(hydrate, /if \(cancelled\) return;\s*await acceptSession\(data\.session\)/);
+  assert.doesNotMatch(
+    legacyHydration,
+    /if \(cancelled\) return;\s*await acceptSession\(data\.session\)/,
+  );
 });
 
 test("first resolution and guest-to-user transitions purge only ownerless private state", () => {
