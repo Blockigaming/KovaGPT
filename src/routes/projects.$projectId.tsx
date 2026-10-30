@@ -186,6 +186,13 @@ function ProjectDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const projectMoreRef = useRef<HTMLButtonElement>(null);
+  const projectSearchUrlRef = useRef<string | undefined>(undefined);
+  const projectSearchTriggerRef = useRef<HTMLElement | null>(null);
+  const openProjectSearch = (trigger: HTMLElement | null) => {
+    projectSearchUrlRef.current = window.location.href;
+    projectSearchTriggerRef.current = trigger;
+    setSearchOpen(true);
+  };
   const projectActionUrlRef = useRef<string | undefined>(undefined);
   const projectActionTriggerRef = useRef<HTMLElement | null>(null);
   const openProjectDelete = (trigger?: HTMLElement) => {
@@ -670,7 +677,7 @@ function ProjectDetailPage() {
               size="icon"
               aria-label="Search this project"
               title="Search this project"
-              onClick={() => setSearchOpen(true)}
+              onClick={(event) => openProjectSearch(event.currentTarget)}
             >
               <Search className="h-4 w-4" aria-hidden="true" />
             </Button>
@@ -687,7 +694,7 @@ function ProjectDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setSearchOpen(true)}>
+                <DropdownMenuItem onSelect={() => openProjectSearch(projectMoreRef.current)}>
                   <Search aria-hidden="true" />
                   Search this project
                 </DropdownMenuItem>
@@ -1064,6 +1071,9 @@ function ProjectDetailPage() {
         projectId={projectId}
         open={searchOpen}
         onOpenChange={setSearchOpen}
+        onReturnFocus={() =>
+          restoreDialogFocus(projectSearchTriggerRef.current, projectSearchUrlRef.current)
+        }
         onNavigate={(kind) => {
           setSearchOpen(false);
           setTab(kind === "chat" ? "chats" : kind === "file" ? "files" : kind);
@@ -3301,11 +3311,13 @@ function SearchDialog({
   open,
   onOpenChange,
   onNavigate,
+  onReturnFocus,
 }: {
   projectId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onNavigate: (kind: SearchResult["kind"]) => void;
+  onReturnFocus: () => void;
 }) {
   const fn = useServerFn(searchProject);
   const [q, setQ] = useState("");
@@ -3340,7 +3352,13 @@ function SearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent
+        className="max-w-lg"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          onReturnFocus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Search this project</DialogTitle>
         </DialogHeader>

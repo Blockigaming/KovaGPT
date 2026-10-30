@@ -114,11 +114,11 @@ test("image surfaces use shared geometry and neutral progress rather than orname
   );
   assert.match(source, /id="image-generating-label"/);
 });
-test("settings keeps its760px content cap below sidebar breakpoint and Work uses shared coarse44px controls", () => {
+test("settings bounds the workspace below its sidebar breakpoint and Work uses shared coarse44px controls", () => {
   const css = read("src/styles/settings-page-layout.css");
   assert.match(
     css,
-    /\.kova-settings-route \.kova-settings-page \.kova-settings-content \{\s*max-width: 760px/,
+    /\.kova-settings-route \.kova-settings-page \.kova-settings-content \{[^}]*max-width: none/,
   );
   assert.match(css, /@container settings \(max-width: 719px\)/);
   const caps = [];
@@ -126,7 +126,8 @@ test("settings keeps its760px content cap below sidebar breakpoint and Work uses
     if (declaration.parent.selector?.includes(".kova-settings-content"))
       caps.push(declaration.value);
   });
-  assert.deepEqual(caps, ["760px"], "The narrow layout inherits the same content cap");
+  assert.deepEqual(caps, ["none"], "Content follows the single bounded settings workspace");
+  assert.match(css, /--page-max: 1080px/);
   const source = read("src/components/WorkExecutionPanel.tsx");
   assert.doesNotMatch(source, /ml-2 rounded border bg-background p-1/);
   assert.match(source, /import \{ Button \} from "@\/components\/ui\/button"/);

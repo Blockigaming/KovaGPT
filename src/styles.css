@@ -461,7 +461,7 @@ body {
 }
 
 /* One consistent and unmistakable keyboard focus treatment. */
-:where(a, button, input, textarea, select, [role="button"], [tabindex]):focus-visible {
+:where(a, button, [role="button"], [tabindex]):not(input):not(textarea):not(select):focus-visible {
   outline: 2px solid var(--ring) !important;
   outline-offset: 2px !important;
   box-shadow: none !important;

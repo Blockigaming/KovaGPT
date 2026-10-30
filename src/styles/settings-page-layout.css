@@ -1,9 +1,9 @@
 /* Full-page presentation of CG-SETTINGS. Modal/mobile geometry is owned by
    settings-reference.css; this route retains its own category picker on phones. */
 .kova-settings-route {
-  --page-max: 1120px;
   container-type: inline-size;
   container-name: settings;
+  --page-max: 1080px;
 }
 .kova-settings-route section.kova-settings-page.kova-settings-dialog {
   position: static;
@@ -13,15 +13,16 @@
   height: auto;
   max-height: none;
   transform: none;
-  overflow: visible;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
   box-shadow: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  background: var(--background);
+  overflow: clip;
 }
 .kova-settings-route .kova-settings-page-header {
   padding-inline: 0;
   text-align: left;
+  padding: 24px 28px 20px;
 }
 .kova-settings-route .kova-settings-page-header > div {
   align-items: flex-start;
@@ -36,23 +37,26 @@
   overflow: visible;
 }
 .kova-settings-route .kova-settings-page .kova-settings-sidebar {
-  position: sticky;
   top: 24px;
-  width: 208px;
   flex: 0 0 208px;
   align-self: flex-start;
-  max-height: calc(100dvh - 48px);
   background: transparent;
+  position: sticky;
+  padding: 20px 12px;
+  width: 216px;
+  flex-basis: 216px;
+  max-height: calc(100dvh - 48px);
 }
 .kova-settings-route .kova-settings-page .kova-settings-content {
-  max-width: 760px;
   overflow: visible;
   background: transparent;
+  max-width: none;
 }
 .kova-settings-route .kova-settings-page .kova-settings-content-header {
   min-height: 56px;
   padding-inline: 0;
-  margin-inline: 24px;
+  padding-top: 14px;
+  margin-inline: 28px;
 }
 .kova-settings-route .kova-settings-page .kova-settings-back {
   display: none;
@@ -90,5 +94,25 @@
   }
   .kova-settings-route .kova-settings-page .kova-settings-content > [role="tabpanel"] {
     padding: 0 0 max(24px, var(--safe-bottom));
+  }
+}
+
+/* A contained settings workspace, with one readable preference column. */
+.kova-settings-reference .kova-settings-nav-item {
+  font-weight: 400;
+  border-radius: 10px;
+}
+.kova-settings-reference .kova-settings-nav-item[data-state="active"] {
+  background: var(--accent);
+  font-weight: 500;
+  box-shadow: none;
+}
+@container settings (max-width: 719px) {
+  .kova-settings-route section.kova-settings-page.kova-settings-dialog {
+    border: 0;
+    border-radius: 0;
+  }
+  .kova-settings-route .kova-settings-page-header {
+    padding: 12px 0 20px;
   }
 }

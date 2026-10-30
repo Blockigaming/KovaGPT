@@ -60,11 +60,11 @@ test("public capability copy excludes retired or unsupported claims", () => {
   const llms = read("public/llms.txt");
   const writer = read("src/routes/ai-writer.tsx");
 
-  assert.match(llms, /Free uses Lite/);
-  assert.match(llms, /Thinking control is an Upgrade to Plus action, not an executable Free mode/);
-  assert.match(llms, /Plus Chat includes Lite, Medium, and Thinking/);
-  assert.match(llms, /same underlying Chat model/);
-  assert.match(llms, /Pro Chat includes Lite, Medium, High, Extra High, Max, and Ultra/);
+  assert.match(llms, /Free users can select Default or Thinking/);
+  assert.match(llms, /Thinking explicitly selects the next reasoning level/);
+  assert.match(llms, /Plus includes Default, Medium, Thinking, and High/);
+  assert.match(llms, /Product labels do not imply separately trained model weights/);
+  assert.match(llms, /Pro additionally includes Extra High, Max, and Ultra/);
   assert.doesNotMatch(llms, /Free includes Lite and Thinking modes/);
   assert.match(llms, /Voice input is not currently part of the supported web product/);
   assert.match(llms, /Scheduled background work and image editing are not currently available/);

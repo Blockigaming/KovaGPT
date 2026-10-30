@@ -134,16 +134,11 @@ for (const theme of themes) {
     await page.keyboard.press("Enter");
     const responseOptions = page.getByRole("dialog", { name: "Response options", exact: true });
     await expect(responseOptions).toBeVisible();
-    const effort = responseOptions.getByRole("region", { name: "Effort", exact: true });
-    await expect(
-      effort.getByText("Your Free plan uses its included setting. Thinking requires a paid plan.", {
-        exact: true,
-      }),
-    ).toBeVisible();
-    await expect(
-      effort.getByRole("button", { name: "Thinking is locked. Open Subscriptions", exact: true }),
-    ).toBeEnabled();
-    await expect(effort.getByRole("combobox")).toHaveCount(0);
+    await expect(responseOptions).toContainText(
+      "Choose your model from the bottom of the message box.",
+    );
+    await expect(responseOptions.getByTestId("thinking-upgrade-button")).toHaveCount(0);
+    await expect(page.locator(".spec400-composer-trailing")).toContainText("Default");
     await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(responseOptions).toBeHidden();

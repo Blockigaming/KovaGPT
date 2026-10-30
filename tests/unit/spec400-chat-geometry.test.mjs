@@ -25,11 +25,11 @@ function panelRadius(rule) {
   assert.equal(rule["border-radius"].important, undefined);
 }
 
-test("the compact ChatGPT composer has one authoritative desktop and touch geometry", () => {
+test("the two-row ChatGPT composer has one authoritative desktop and touch geometry", () => {
   const base = declarations(".spec400-composer");
-  assert.equal(base["min-height"].value, "52px");
-  assert.equal(base.display.value, "grid");
-  assert.equal(base["grid-template-areas"].value, '"tools input trailing"');
+  assert.equal(base["min-height"].value, "148px");
+  assert.equal(base.display.value, "flex");
+  assert.equal(base["flex-direction"].value, "column");
   assert.equal(base["border-radius"].value, "var(--kova-radius-composer, 26px)");
   assert.equal(base["border-radius"].important, undefined);
   assert.match(
@@ -41,7 +41,7 @@ test("the compact ChatGPT composer has one authoritative desktop and touch geome
   const mobile = declarations(".spec400-composer", "(max-width: 1023px), (any-pointer: coarse)");
   assert.equal(mobile.display.value, "flex");
   assert.equal(mobile["flex-direction"].value, "column");
-  assert.equal(mobile["min-height"].value, "0");
+  assert.equal(mobile["min-height"].value, "136px");
   assert.doesNotMatch(composer, /className="kova-composer(?:\s|")/);
 });
 

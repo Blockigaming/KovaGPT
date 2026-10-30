@@ -154,7 +154,7 @@ const rows: Row[] = [
   [
     "Chat & modes",
     "What is Lite mode?",
-    "Lite is the default fastest Chat effort. Free and signed-out users are locked to Lite; Plus and Pro can also select it.",
+    "Default is the fastest Chat setting. Signed-in Free users can also choose Thinking. Plus adds Medium and High; Pro adds Extra High, Max, and Ultra. Signed-out visitors use Default.",
   ],
   [
     "Chat & modes",

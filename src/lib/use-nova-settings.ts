@@ -84,6 +84,29 @@ export function useNovaSettings(userKey: string | null, principalResolved: boole
     applyThemeMode(loaded.mode ?? "system");
   }, [principal, principalResolved, userKey]);
 
+  // Keep an already-open Settings tab in sync with this account's other tabs.
+  useEffect(() => {
+    if (!principalResolved || principal === null) return;
+    const sync = (event: StorageEvent) => {
+      if (
+        event.key !== settingsKey(userKey) ||
+        event.newValue === null ||
+        principalRef.current !== principal
+      )
+        return;
+      const loaded = loadSettings(userKey);
+      setState((previous) => {
+        if (previous.principal !== principal || previous.generation !== generationRef.current)
+          return previous;
+        return JSON.stringify(previous.settings) === JSON.stringify(loaded)
+          ? previous
+          : { ...previous, settings: loaded };
+      });
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [principal, principalResolved, userKey]);
+
   useEffect(() => {
     if (!principalResolved || principal === null) return;
     const reset = (event: Event) => {

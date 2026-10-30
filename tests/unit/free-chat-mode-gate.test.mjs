@@ -20,12 +20,12 @@ const runGate = new Function(
 const getMode = (mode) => ({ id: mode ?? "instant" });
 
 test("Free locked modes return a stable upgrade response before downstream work", async () => {
-  for (const mode of ["medium", "thinking", "high", "extra_high", "max", "ultra"]) {
+  for (const mode of ["medium", "high", "extra_high", "max", "ultra"]) {
     const response = runGate({}, "free", mode, getMode, freeModeUpgradeRequired);
     assert.equal(response.status, 403);
     assert.equal(response.headers.get("Cache-Control"), "no-store");
     assert.deepEqual(await response.json(), {
-      error: "This mode requires a paid plan. Upgrade to use Thinking and higher modes.",
+      error: "This mode requires a paid plan. Upgrade to use this mode.",
       code: "mode_not_entitled",
       upgradeUrl: "/pricing",
       retryable: false,
@@ -33,8 +33,8 @@ test("Free locked modes return a stable upgrade response before downstream work"
   }
 });
 
-test("Free basic, guests and paid tiers retain their existing downstream behavior", () => {
-  for (const mode of [undefined, "instant"]) {
+test("Free Default and Thinking, guests and paid tiers retain their downstream behavior", () => {
+  for (const mode of [undefined, "instant", "thinking"]) {
     assert.equal(runGate({}, "free", mode, getMode, freeModeUpgradeRequired), undefined);
   }
   for (const tier of ["plus", "pro"]) {

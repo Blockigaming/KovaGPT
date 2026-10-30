@@ -74,7 +74,13 @@ for (const theme of ["dark", "light"] as const) {
     }
     await page.goto("/settings/appearance");
     await waitForKovaHydration(page);
-    await expect(page.getByRole("radio", { name: "Dark Default" })).toBeVisible();
+    const themeControl = page.getByRole("combobox", { name: "Theme", exact: true });
+    await expect(themeControl).toBeVisible();
+    await themeControl.click();
+    for (const option of ["Dark", "Light", "System"])
+      await expect(page.getByRole("option", { name: option, exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(themeControl).toBeFocused();
     if (info.project.name.includes("desktop")) {
       await expect(page.locator(".kova-settings-sidebar")).toBeVisible();
       await expect(page.locator(".kova-settings-section-select")).toBeHidden();

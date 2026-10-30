@@ -1,9 +1,7 @@
 import {
   ArrowUp,
-  Brain,
   Mic,
   AudioLines,
-  Lock,
   Paperclip,
   Plus,
   Square,
@@ -68,7 +66,7 @@ import { type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 import type { ComposerToolId, Conversation } from "@/lib/chat-store";
 
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -332,6 +330,8 @@ export function ChatInput({
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const optionsReturnTriggerRef = useRef<HTMLElement | null>(null);
+  const optionsReturnUrlRef = useRef<string | undefined>(undefined);
   const [previewAttachment, setPreviewAttachment] = useState<PendingAttachment | null>(null);
   const [previewOffset, setPreviewOffset] = useState(0);
   const [pastePreviewOpen, setPastePreviewOpen] = useState(false);
@@ -366,6 +366,8 @@ export function ChatInput({
     setContextOpen(false);
     setExpanded(false);
     setOptionsOpen(false);
+    optionsReturnTriggerRef.current = null;
+    optionsReturnUrlRef.current = undefined;
     setPreviewAttachment(null);
     setPreviewOffset(0);
     setPastePreviewOpen(false);
@@ -1285,6 +1287,27 @@ export function ChatInput({
     };
     return (
       <>
+        {mobile && section === "all" && (
+          <div className="kova-composer-primary-actions" aria-label="Message preferences">
+            <button type="button" className={rowClass} onClick={() => openMessageSettings(trigger)}>
+              <Files aria-hidden="true" />
+              Context
+            </button>
+            <button
+              type="button"
+              className={rowClass}
+              onClick={() => {
+                optionsReturnTriggerRef.current = trigger;
+                optionsReturnUrlRef.current = window.location.href;
+                closeActions();
+                setOptionsOpen(true);
+              }}
+            >
+              <SlidersHorizontal aria-hidden="true" />
+              Response options
+            </button>
+          </div>
+        )}
         {section !== "plugins" && (
           <p className="spec400-attachment-limits">
             Text and code: 256 KB. Images: 3 MB. PDF and Office: 10 MB.{" "}
@@ -1820,6 +1843,9 @@ export function ChatInput({
               </button>
             )}
             <Popover open={optionsOpen} onOpenChange={setOptionsOpen}>
+              {optionsReturnTriggerRef.current ? (
+                <PopoverAnchor virtualRef={plusTriggerRef} />
+              ) : null}
               <PopoverTrigger asChild>
                 <button
                   type="button"
@@ -1829,6 +1855,9 @@ export function ChatInput({
                   title="Response format, length, and tone"
                   aria-haspopup="dialog"
                   aria-expanded={optionsOpen}
+                  onClick={() => {
+                    optionsReturnTriggerRef.current = null;
+                  }}
                 >
                   <SlidersHorizontal aria-hidden="true" />
                   <span className="sr-only">Options</span>
@@ -1838,6 +1867,12 @@ export function ChatInput({
                 role="dialog"
                 aria-label="Response options"
                 className="spec400-options-panel"
+                onCloseAutoFocus={(event) => {
+                  if (!optionsReturnTriggerRef.current) return;
+                  event.preventDefault();
+                  restoreDialogFocus(optionsReturnTriggerRef.current, optionsReturnUrlRef.current);
+                  optionsReturnTriggerRef.current = null;
+                }}
                 side="top"
                 align="start"
                 sideOffset={8}
@@ -1920,51 +1955,16 @@ export function ChatInput({
                 ) : (
                   <p>Format, length, and tone preferences are available in Settings → Responses.</p>
                 )}
-                <section className="spec400-effort-options" aria-label="Effort">
-                  <h3>Effort</h3>
-                  {userTier !== "free" && canChangeAgent && mode && onModeChange ? (
-                    <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} />
-                  ) : userTier !== "free" ? (
-                    <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
-                  ) : null}
-                  {userTier === "free" ? (
-                    <>
-                      <p>
-                        Your Free plan uses its included setting. Thinking requires a paid plan.
-                      </p>
-                      <button
-                        type="button"
-                        disabled={!isLoaded}
-                        data-testid="thinking-upgrade-button"
-                        className="spec400-toolbar-button"
-                        aria-label="Thinking is locked. Open Subscriptions"
-                        onClick={() => {
-                          setOptionsOpen(false);
-                          if (!user) {
-                            void navigate({ to: "/pricing" });
-                            return;
-                          }
-                          window.dispatchEvent(
-                            new CustomEvent("kova-open-settings", { detail: { tab: "billing" } }),
-                          );
-                        }}
-                      >
-                        <Brain aria-hidden="true" />
-                        Thinking
-                        <Lock aria-hidden="true" />
-                      </button>
-                    </>
-                  ) : (
-                    <p>
-                      Available effort follows your plan and current model. Automatic effort routing
-                      is not available. Higher effort does not guarantee correctness.
-                    </p>
-                  )}
-                </section>
+                <p>Choose your model from the bottom of the message box.</p>
               </PopoverContent>
             </Popover>
           </div>
           <div className="spec400-composer-trailing">
+            {canChangeAgent && mode && onModeChange ? (
+              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+            ) : (
+              <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
+            )}
             <button
               type="button"
               data-testid="dictate-button"
@@ -2134,7 +2134,7 @@ export function ChatInput({
           onOpenChange={setPlusOpen}
           title="Attach"
           ariaLabel="Attach files and tools"
-          restoreFocus={!contextOpen && !libraryOpen && !signInRequest}
+          restoreFocus={!contextOpen && !libraryOpen && !signInRequest && !optionsOpen}
         >
           <div className="spec400-attach-menu">{renderComposerActions(true)}</div>
         </MobileBottomSheet>

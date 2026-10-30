@@ -104,7 +104,7 @@ test("project detail puts identity before a compact primary action row", () => {
   assert.match(detail, /isOwner && !archived \? "Share project" : "People"/);
   assert.match(
     detail,
-    /<DropdownMenuItem onSelect=\{\(\) => setSearchOpen\(true\)\}>\s*<Search[^>]*\/>\s*Search this project/,
+    /<DropdownMenuItem onSelect=\{\(\) => openProjectSearch\(projectMoreRef.current\)\}>\s*<Search[^>]*\/>\s*Search this project/,
   );
   assert.match(detail, /setTab\("members"\)/);
   assert.match(detail, /setTab\("timers"\)/);

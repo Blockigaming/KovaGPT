@@ -79,19 +79,20 @@ function fixture({ signedIn = true, loaded = true, desktop = true, menuOpen = fa
 }
 
 for (const desktop of [true, false]) {
-  test(`Instant display agrees between Pricing, collapsed trigger and options (${desktop ? "desktop" : "touch"})`, () => {
+  test(`Default display agrees between Pricing, collapsed trigger and options (${desktop ? "desktop" : "touch"})`, () => {
     const closed = fixture({ desktop });
     const open = fixture({ desktop, menuOpen: true });
     const expected = {
-      plus: ["Instant", "Medium", "Thinking"],
-      pro: ["Instant", "Medium", "High", "Extra high", "Max", "Ultra"],
+      free: ["Default", "Thinking"],
+      plus: ["Default", "Medium", "Thinking", "High"],
+      pro: ["Default", "Medium", "Thinking", "High", "Extra high", "Max", "Ultra"],
     };
-    assert.equal(closed.registry.plans.free.features[0], "Instant mode");
-    for (const tier of ["plus", "pro"]) {
+    assert.equal(closed.registry.plans.free.features[0], "Default and Thinking modes");
+    for (const tier of ["free", "plus", "pro"]) {
       for (const placement of ["topbar", "composer"]) {
         for (const compact of [true, false]) {
           const html = closed.render(tier, "instant", placement, compact);
-          assert.match(html, /aria-label="Choose model: KovaGPT Instant"/);
+          assert.match(html, /aria-label="Choose model: KovaGPT Default"/);
           assert.doesNotMatch(html, /\bLite\b|data-testid="model-option-/);
         }
       }
@@ -116,30 +117,30 @@ for (const desktop of [true, false]) {
       }
     }
     const free = open.render("free", "instant", "composer");
-    assert.match(free, /kova-model-static/);
-    assert.doesNotMatch(free, /data-testid="model-option-|model-selector-trigger/);
+    assert.match(free, /model-option-thinking/);
+    assert.match(free, /model-selector-trigger/);
   });
 
-  test(`Plus selected High is displayed as Thinking (${desktop ? "desktop" : "touch"})`, () => {
+  test(`Plus retains High separately from Free Thinking (${desktop ? "desktop" : "touch"})`, () => {
     const f = fixture({ desktop });
     for (const placement of ["topbar", "composer"]) {
       const html = f.render("plus", "high", placement);
-      assert.match(html, /aria-label="Choose model: KovaGPT Thinking"/);
-      assert.doesNotMatch(html, /KovaGPT High/);
+      assert.match(html, /aria-label="Choose model: KovaGPT High"/);
+      assert.doesNotMatch(html, /KovaGPT Thinking/);
     }
     assert.equal(f.modes.getMode("high").id, "high");
     assert.equal(f.modes.getMode("high").label, "High");
-    assert.equal(f.modes.modesForTier("plus")[2].id, "high");
+    assert.equal(f.modes.modesForTier("plus")[3].id, "high");
     assert.equal(
-      f.modes.modesForTier("plus")[2].systemPrompt,
+      f.modes.modesForTier("plus")[3].systemPrompt,
       f.modes.getMode("high").systemPrompt,
     );
   });
-  test(`Pro keeps High and all six authorized modes (${desktop ? "desktop" : "touch"})`, () => {
+  test(`Pro keeps High and all seven authorized modes (${desktop ? "desktop" : "touch"})`, () => {
     const f = fixture({ desktop });
     assert.deepEqual(
       Array.from(f.modes.modesForTier("pro"), (mode) => mode.id),
-      ["instant", "medium", "high", "extra_high", "max", "ultra"],
+      ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"],
     );
     assert.match(f.render("pro", "high"), /aria-label="Choose model: KovaGPT High"/);
   });
@@ -147,7 +148,6 @@ for (const desktop of [true, false]) {
 
 for (const identity of [
   { signedIn: false, loaded: true, tier: "pro" },
-  { signedIn: true, loaded: true, tier: "free" },
   { signedIn: true, loaded: false, tier: "pro" },
 ]) {
   test(`no switchable picker for identity ${JSON.stringify(identity)}`, () => {
@@ -161,7 +161,7 @@ test("public modes contain no retired orphan mode and retain the exact per-tier 
   const { registry } = fixture();
   assert.deepEqual(
     Array.from(registry.modes, (mode) => mode.id),
-    ["instant", "medium", "high", "extra_high", "max", "ultra"],
+    ["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"],
   );
   for (const mode of registry.modes) {
     const tiers = ["free", "plus", "pro"].filter((tier) =>
@@ -172,11 +172,11 @@ test("public modes contain no retired orphan mode and retain the exact per-tier 
   }
   assert.deepEqual(
     Array.from(registry.modesByTier.free, (mode) => mode.label),
-    ["Lite"],
+    ["Lite", "Thinking"],
   );
   assert.deepEqual(
     Array.from(registry.modesByTier.plus, (mode) => mode.label),
-    ["Lite", "Medium", "Thinking"],
+    ["Lite", "Medium", "Thinking", "High"],
   );
   assert.equal(registry.modesByTier.pro.find((mode) => mode.id === "high").label, "High");
 });
@@ -191,24 +191,24 @@ test("published Chat copy does not disguise remaining aggregate limits as unlimi
   }
 });
 
-test("pricing uses public Instant wording with exact tier choices and singular Free mode", () => {
+test("pricing uses public Default wording with exact tier choices and singular Free mode", () => {
   const { registry, modes } = fixture();
-  assert.equal(registry.plans.free.features[0], "Instant mode");
-  assert.equal(registry.plans.plus.features[0], "Instant, Medium, and Thinking modes");
+  assert.equal(registry.plans.free.features[0], "Default and Thinking modes");
+  assert.equal(registry.plans.plus.features[0], "Default, Medium, Thinking, and High modes");
   assert.equal(
     registry.plans.pro.features[0],
-    "Instant, Medium, High, Extra high, Max, and Ultra modes",
+    "Default, Medium, Thinking, High, Extra high, Max, and Ultra modes",
   );
   assert.match(
     registry.plans.plus.description,
-    /^Instant, Medium, Thinking, and Adaptive Memory\./,
+    /^Default, Medium, Thinking, High, and Adaptive Memory\./,
   );
   assert.match(
     registry.plans.pro.description,
-    /^Instant, Medium, High, Extra high, Max, and Ultra\./,
+    /^Default, Medium, Thinking, High, Extra high, Max, and Ultra\./,
   );
-  assert.doesNotMatch(registry.plans.free.features[0], /Thinking/);
-  assert.doesNotMatch(registry.plans.plus.features[0], /High/);
+  assert.match(registry.plans.free.features[0], /Thinking/);
+  assert.match(registry.plans.plus.features[0], /High/);
   for (const tier of ["free", "plus", "pro"]) {
     assert.deepEqual(
       Array.from(registry.modesByTier[tier], (mode) => mode.id),
@@ -248,18 +248,18 @@ test("public mode wording leaves prices, billing identifiers and allowance copy 
   ]);
 });
 
-test("display mapping preserves compatibility catalog, provider prompts and 1/3/6 entitlement identities", () => {
+test("display mapping preserves compatibility catalog, provider prompts and 2/4/7 entitlement identities", () => {
   const f = fixture();
   const before = JSON.stringify(f.modes.MODES);
   for (const tier of ["free", "plus", "pro"]) {
     const allowed = f.modes.modesForTier(tier);
-    assert.equal(allowed.length, { free: 1, plus: 3, pro: 6 }[tier]);
+    assert.equal(allowed.length, { free: 2, plus: 4, pro: 7 }[tier]);
     assert.deepEqual(
       Array.from(allowed, (mode) => mode.id),
       entitlements.MODE_IDS_BY_TIER[tier],
     );
     for (const mode of allowed) {
-      assert.equal(f.displayLabel(mode), mode.id === "instant" ? "Instant" : mode.label);
+      assert.equal(f.displayLabel(mode), mode.id === "instant" ? "Default" : mode.label);
       assert.equal(mode.systemPrompt, f.modes.getMode(mode.id).systemPrompt);
     }
   }
@@ -268,6 +268,12 @@ test("display mapping preserves compatibility catalog, provider prompts and 1/3/
   assert.match(f.modes.getMode("instant").systemPrompt, /Mode: Lite\./);
   // The compatibility catalog used by /modes and llms.txt is outside this UI-label change.
   assert.equal(f.registry.modesByTier.free[0].label, "Lite");
-  assert.match(readFileSync("public/llms.txt", "utf8"), /Free uses Lite/);
-  assert.match(readFileSync("src/routes/getting-started.tsx", "utf8"), /Free includes Instant\./);
+  assert.match(
+    readFileSync("public/llms.txt", "utf8"),
+    /Free users can select Default or Thinking/,
+  );
+  assert.match(
+    readFileSync("src/routes/getting-started.tsx", "utf8"),
+    /Free includes Default and Thinking\./,
+  );
 });

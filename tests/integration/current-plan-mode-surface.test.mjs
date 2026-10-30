@@ -13,29 +13,27 @@ test("current Chat packaging stays consistent across server, picker, composer an
   const study = read("src/components/StudyPanel.tsx");
   const publicCopy = read("public/llms.txt");
 
-  assert.match(entitlements, /free:\s*Object\.freeze\(\["instant"\]\)/);
-  assert.match(entitlements, /plus:\s*Object\.freeze\(\["instant", "medium", "high"\]\)/);
+  assert.match(entitlements, /free:\s*Object\.freeze\(\["instant", "thinking"\]\)/);
   assert.match(
     entitlements,
-    /pro:\s*Object\.freeze\(\["instant", "medium", "high", "extra_high", "max", "ultra"\]\)/,
+    /plus:\s*Object\.freeze\(\["instant", "medium", "thinking", "high"\]\)/,
+  );
+  assert.match(
+    entitlements,
+    /pro:\s*Object\.freeze\(\["instant", "medium", "thinking", "high", "extra_high", "max", "ultra"\]\)/,
   );
   assert.match(entitlements, /if \(tier === "free"\) return "instant"/);
 
   assert.match(modes, /id: "instant",[\s\S]*label: "Lite"/);
-  assert.match(modes, /tier === "plus" && id === "high"[\s\S]*label: "Thinking"/);
-  assert.match(selector, /const locked = !isLoaded \|\| !isSignedIn \|\| userTier === "free"/);
-  assert.match(selector, /isSignedIn && userTier !== "free"/);
-
-  assert.match(composer, /data-testid="thinking-upgrade-button"/);
+  assert.match(selector, /const locked = !isLoaded \|\| !isSignedIn;/);
+  assert.match(selector, /isModeAllowedForTier\(userTier, mode\)/);
+  assert.match(selector, /availableMode.id === "thinking" &&/);
+  assert.match(selector, /<Brain aria-hidden="true"/);
   assert.match(
     composer,
-    /new CustomEvent\("kova-open-settings", \{ detail: \{ tab: "billing" \} \}\)/,
+    /<ModelSelector mode=\{mode\} onChange=\{onModeChange\} userTier=\{userTier\} compact/,
   );
-  assert.match(composer, /<Brain aria-hidden="true" \/>\s*Thinking\s*<Lock aria-hidden="true" \/>/);
-  assert.match(composer, /\{userTier === "free" \? \(\s*<>/);
-  assert.match(composer, /aria-label="Thinking is locked\. Open Subscriptions"/);
-  assert.match(composer, /if \(!user\) \{\s*void navigate\(\{ to: "\/pricing" \}\);\s*return;/);
-  assert.doesNotMatch(composer, /onModeChange\("thinking"\)/);
+  assert.doesNotMatch(composer, /thinking-upgrade-button|Thinking is locked/);
 
   assert.match(
     chat,
@@ -44,5 +42,5 @@ test("current Chat packaging stays consistent across server, picker, composer an
   assert.doesNotMatch(chat, /enforceQuota\(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER\[callerTier\]/);
 
   assert.match(study, /mode: "instant",[\s\S]*clientTool: "study"/);
-  assert.match(publicCopy, /Thinking control is an Upgrade to Plus action/);
+  assert.match(publicCopy, /Free users can select Default or Thinking/);
 });

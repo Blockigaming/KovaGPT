@@ -490,8 +490,9 @@ html[data-kova-density="compact"] .kova-core-page.kova-file-directory .kova-file
 /* The shared parity layer suppresses input outlines. Keep these controls visible
    to keyboard users, including the full 44px checkbox label target. */
 .kova-core-page.kova-file-directory .kova-file-toolbar :is(input, select):focus-visible {
-  outline: 2px solid var(--ring) !important;
-  outline-offset: 2px !important;
+  outline: none !important;
+  border-color: color-mix(in srgb, var(--foreground) 45%, transparent);
+  box-shadow: none;
 }
 .kova-core-page.kova-file-directory .kova-file-selection:focus-within {
   outline: 2px solid var(--ring);

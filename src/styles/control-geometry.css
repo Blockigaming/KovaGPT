@@ -12,12 +12,30 @@
 ) {
   border-radius: var(--kova-radius-input);
 }
-:where(input, textarea, select):not(.kova-composer-input):not(
-    .spec400-composer-input
-  ):focus-visible,
+/* Text fields keep a quiet border change; keyboard users retain a visible focus cue. */
+:is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+    [type="color"]
+  ):not([type="file"]):focus-visible {
+  outline: none !important;
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--foreground) 50%, transparent);
+}
 :where(button, a[role="button"], [role="tab"]):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+.spec400-composer:focus-within {
+  border-color: color-mix(in srgb, var(--foreground) 30%, transparent);
+}
+.spec400-composer-input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+@media (forced-colors: active) {
+  :is(input, textarea, select):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
 }
 /* Native form controls retain their browser events and form participation.
    Their visible geometry and Check path match the shared CG-SDK controls. */
