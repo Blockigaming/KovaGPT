@@ -225,7 +225,7 @@ class RecoveryTests(unittest.TestCase):
         def snap(_):
             class S:
                 id="00000001-00000002-1"
-                def query(self,_):return catalog()
+                def query(self,sql):return [] if sql == m.EXTENSION_DATA_CATALOG_SQL else catalog()
             try:yield S()
             finally:closed.append(True)
         def fixture_crypt(_env,_phrase,src,dest,decrypt=False):
@@ -302,7 +302,7 @@ class RecoveryTests(unittest.TestCase):
         def snap(_):
             class S:
                 id="00000001-00000002-1"
-                def query(self,_):return catalog()
+                def query(self,sql):return [] if sql == m.EXTENSION_DATA_CATALOG_SQL else catalog()
             try:yield S()
             finally:closed.append(True)
         env={"KOVA_AUTH_RECOVERY_CONFIRMATION":"CAPTURE_ONLY","GITHUB_SHA":"a"*40,"KOVA_APPROVED_SOURCE_SHA":"a"*40,"GITHUB_REF":"refs/heads/main","KOVA_AUTH_APPROVED_SOURCE_DATABASE_VERSION":m.BUILD,"KOVA_PRODUCTION_BACKUP_PASSPHRASE":"synthetic-fixture-only-passphrase-at-least32"}
@@ -358,6 +358,8 @@ class RecoveryTests(unittest.TestCase):
             if "has_parameter_privilege" in sql:return b"t"
             if "cron.launch_active_jobs" in sql:return b"off"
             if sql==m.CATALOG_SQL:return m.encoded(c)
+            if sql==m.EMPTY_IDENTITY_SQL:return m.encoded({"database":"postgres","serverAddress":"192.0.2.1",
+                "serverPort":5432,"serverVersionNum":170006,"systemIdentifier":"123","managedRelationsPresent":["auth.users"]})
             self.fail("unexpected DB query")
         with patch.object(m,"attest",return_value=att),patch.object(m,"target_environment",return_value={}),patch.object(m,"client_check"),patch.object(m,"crypt",side_effect=lambda _e,_p,src,dst,decrypt:shutil.copyfile(src,dst)),patch.object(m,"target_observation",return_value={"observed":{"serverVersionNum":170006}}),patch.object(m,"run",side_effect=command),patch.object(m,"psql",side_effect=query),patch.object(m,"row_fingerprints",return_value=rows):
             with self.assertRaisesRegex(m.Stopped,"managed_ddl_baseline_mismatch"):

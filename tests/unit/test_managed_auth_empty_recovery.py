@@ -161,7 +161,7 @@ class EmptyRecoveryTests(unittest.TestCase):
             with self.subTest(stage=stage),self.assertRaisesRegex(m.Stopped,"empty_target_baseline_pin_mismatch"):
                 self.preflight(f)
 
-    def archive_fixture(self):
+    def archive_fixture(self, *, with_extension_data=False):
         c=catalog()
         c["tables"]=[{"schema":"auth","name":n,"kind":"r"} for n in ["identities","sessions","users"]]
         rows=[{"schema":"auth","name":n,"rows":0,"sha256":m.digest(b"")} for n in ["identities","sessions","users"]]
@@ -169,8 +169,23 @@ class EmptyRecoveryTests(unittest.TestCase):
         toc="1; 0 1 TABLE auth users postgres\n2; 0 2 TABLE DATA auth identities postgres\n3; 0 3 TABLE DATA auth sessions postgres\n4; 0 4 TABLE DATA auth users postgres\n"
         files={"full.dump":b"SYNTHETIC-ARCHIVE-NOT-A-REAL-PG-DUMP","schema.sql":schema,"managed-schema.sql":schema,
                "catalog.json":m.encoded(c),"rows.json":m.encoded(rows),"toc.list":toc.encode()}
-        manifest={"format":1,"operation":"complete-managed-auth-database-capture","project":m.PROJECT,
+        if with_extension_data:
+            c["extensions"]=[{"name":"synthetic_extension","version":"1.0","schema":"extensions","owner":"postgres"}]
+            c["tables"].append({"schema":"extensions","name":"queue_metadata","kind":"r"})
+            c["sequences"]=[{"schema":"extensions","name":"queue_sequence"}]
+            c["extensionData"]=[{"schema":"extensions","name":"queue_metadata","kind":"r",
+                "extension":"synthetic_extension","columns":[{"name":"label","generated":"","typeName":"text","defaultExpression":None}],"definition":{"owner":"postgres","sequence":None}},
+                {"schema":"extensions","name":"queue_sequence","kind":"S","extension":"synthetic_extension","columns":[],"definition":{"owner":"postgres","sequence":{"increment":"1"}}}]
+            raw=b"first\nsecond\nthird\nfourth\n"
+            rows.append({"schema":"extensions","name":"queue_metadata","rows":4,"sha256":"d"*64})
+            supplement={"format":1,"tables":[{"schema":"extensions","name":"queue_metadata",
+                "columns":["label"],"copyText":raw.decode(),"sha256":m.digest(raw)}],
+                "sequences":[{"schema":"extensions","name":"queue_sequence","value":"93","called":True}]}
+            files.update({"catalog.json":m.encoded(c),"rows.json":m.encoded(rows),"extension-data.json":m.encoded(supplement)})
+        manifest={"format":2 if with_extension_data else 1,"operation":"complete-managed-auth-database-capture","project":m.PROJECT,
                   "postgresBuild":m.BUILD,"consistentExportedSnapshot":True,"sourceSha":"a"*40,
+                  "extensionTableDataSameExportedSnapshot":True,"sequenceStateTransactionalSnapshot":False,
+                  "sequenceStateCapture":"non-mvcc-high-water-marks",
                   "schemaSha256":m.schema_hash(schema),"managedSchemaSha256":m.schema_hash(schema),
                   "files":[{"name":name,"bytes":len(raw),"sha256":m.digest(raw)} for name,raw in files.items()]}
         files["manifest.json"]=m.encoded(manifest)
@@ -203,6 +218,8 @@ class EmptyRecoveryTests(unittest.TestCase):
                 "serverPort":5432,"serverVersionNum":170006,"systemIdentifier":"123",
                 "managedRelationsPresent":["auth.users"]})
             if sql==m.CATALOG_SQL:return m.encoded(c)
+            if sql==m.EXTENSION_DATA_CATALOG_SQL:return m.encoded(c.get("extensionData",[]))
+            if 'FROM "extensions"."queue_sequence"' in sql:return b'{"value":"93","called":true}\n'
             self.fail("unexpected fixture query")
         for name,value in [("attest",patch.object(m,"attest",return_value=a)),
                            ("target_environment",patch.object(m,"target_environment",return_value={})),
@@ -258,6 +275,50 @@ class EmptyRecoveryTests(unittest.TestCase):
         self.assertTrue(any(a[0]=="pg_restore" and "--section=pre-data" in a for a in calls))
         self.assertFalse(any(a[0]=="psql" for a in calls))
         self.assertFalse((self.root/"expired-data-receipt.json").exists())
+
+    def test_complete_extension_rows_and_sequence_are_imported_once_then_verified(self):
+        f=self.archive_fixture(with_extension_data=True);stack,calls=self.restore_stack(f);imports=[]
+        command=stack.run.side_effect
+        def run(argv,env,**kwargs):
+            if argv[0]=="psql":imports.append(Path(argv[argv.index("--file")+1]).read_bytes())
+            return command(argv,env,**kwargs)
+        with stack:
+            stack.run.side_effect=run
+            receipt=m.restore(f[1],f[0],self.root/"extension-receipt.json")
+            stack.row_fingerprints.assert_called_once()
+        self.assertEqual(len(imports),1)
+        self.assertEqual(imports[0].count(b'COPY "extensions"."queue_metadata" ("label") FROM stdin'),1)
+        self.assertIn(b"first\nsecond\nthird\nfourth\n\\.\n",imports[0])
+        self.assertIn(b"SELECT pg_catalog.setval('extensions.queue_sequence', 93, true);",imports[0])
+        self.assertTrue(receipt["tablesSequencesLargeObjectsVerified"])
+        self.assertFalse(receipt["fullProjectRecoveryQualified"])
+
+    def test_extension_column_drift_stops_before_any_customer_data_import(self):
+        f=self.archive_fixture(with_extension_data=True);stack,calls=self.restore_stack(f)
+        query=stack.psql.side_effect
+        def changed(env,sql,**kwargs):
+            if sql==m.EXTENSION_DATA_CATALOG_SQL:return m.encoded([])
+            return query(env,sql,**kwargs)
+        with stack:
+            stack.psql.side_effect=changed
+            with self.assertRaisesRegex(m.Stopped,"extension_target_definition_mismatch"):
+                m.restore(f[1],f[0],self.root/"extension-drift-receipt.json")
+        self.assertFalse(any(a[0]=="psql" for a in calls))
+        self.assertFalse((self.root/"extension-drift-receipt.json").exists())
+
+    def test_extension_row_loss_or_wrong_sequence_never_produces_recovery_receipt(self):
+        for failure in ["rows","sequence"]:
+            f=self.archive_fixture(with_extension_data=True);stack,calls=self.restore_stack(f)
+            with stack:
+                if failure=="rows":stack.row_fingerprints.return_value=f[4][:-1]
+                else:
+                    query=stack.psql.side_effect
+                    def wrong_sequence(env,sql,**kwargs):
+                        return b'{"value":"92","called":true}\n' if 'FROM "extensions"."queue_sequence"' in sql else query(env,sql,**kwargs)
+                    stack.psql.side_effect=wrong_sequence
+                with self.assertRaisesRegex(m.Stopped,"restored_table_state_mismatch|restored_sequence_state_mismatch"):
+                    m.restore(f[1],f[0],self.root/(failure+"-extension-receipt.json"))
+            self.assertFalse((self.root/(failure+"-extension-receipt.json")).exists())
 
     def test_slow_last_read_cannot_outlive_isolation_at_any_plaintext_or_write_boundary(self):
         for boundary in ["decrypt","schema","data"]:

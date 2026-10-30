@@ -30,7 +30,8 @@ SHA = re.compile(r"[a-f0-9]{64}\Z")
 IDENT = re.compile(r"[a-z_][a-z0-9_]*\Z")
 MANAGED_SCHEMAS = {"auth", "storage", "realtime"}
 BASELINE_SERVICE_TABLES = {("auth", "schema_migrations"), ("storage", "migrations"), ("realtime", "schema_migrations")}
-MEMBERS = {"full.dump", "schema.sql", "managed-schema.sql", "catalog.json", "rows.json", "toc.list", "manifest.json"}
+LEGACY_MEMBERS = {"full.dump", "schema.sql", "managed-schema.sql", "catalog.json", "rows.json", "toc.list", "manifest.json"}
+MEMBERS = LEGACY_MEMBERS | {"extension-data.json"}
 TIMEOUT = 900
 OPERATION_SECONDS = 1500
 DEADLINE = None
@@ -48,7 +49,11 @@ PUBLIC_FAILURE_CODES = frozenset({"explicit_execution_required", "capture_not_en
     "dump_bound_exceeded", "full_table_data_coverage_missing", "materialized_data_coverage_missing",
     "required_schema_missing", "hosted_auth_capture_missing", "row_proof_bound_exceeded",
     "row_proof_invalid", "archive_bound_exceeded", "encryption_roundtrip_mismatch",
-    "operation_deadline_exceeded", "operator_interrupted", "output_exists"})
+    "operation_deadline_exceeded", "operator_interrupted", "output_exists",
+    "extension_data_catalog_rejected", "extension_data_columns_rejected",
+    "extension_copy_data_rejected", "extension_sequence_state_rejected",
+    "extension_data_bound_exceeded", "extension_data_payload_rejected",
+    "extension_data_coverage_missing", "extension_target_definition_mismatch"})
 STDOUT_BYTES = 128 * 1024**2
 MAX_BYTES = 4 * 1024**3
 CANONICAL_PG = "-c TimeZone=UTC -c DateStyle=ISO,YMD -c bytea_output=hex -c extra_float_digits=3"
@@ -328,6 +333,179 @@ SELECT jsonb_build_object(
 )::text;
 """
 
+# pg_dump deliberately excludes extension-owned table contents unless the
+# extension registers them as configuration data; registered tables can also
+# have a row filter. Capture ALL such tables without changing the extension.
+EXTENSION_DATA_CATALOG_SQL = """
+WITH extension_relations AS (
+ SELECT d.objid AS relation_oid,e.extname
+ FROM pg_catalog.pg_depend d
+ JOIN pg_catalog.pg_extension e ON e.oid=d.refobjid
+ WHERE d.classid='pg_class'::regclass AND d.refclassid='pg_extension'::regclass AND d.deptype='e'
+ UNION
+ SELECT seq.objid,e.extname FROM pg_catalog.pg_depend seq
+ JOIN pg_catalog.pg_class sc ON sc.oid=seq.objid AND sc.relkind='S'
+ JOIN pg_catalog.pg_depend parent ON parent.classid='pg_class'::regclass AND parent.objid=seq.refobjid
+  AND parent.refclassid='pg_extension'::regclass AND parent.deptype='e'
+ JOIN pg_catalog.pg_extension e ON e.oid=parent.refobjid
+ WHERE seq.classid='pg_class'::regclass AND seq.refclassid='pg_class'::regclass AND seq.deptype IN ('a','i')
+)
+SELECT coalesce(jsonb_agg(jsonb_build_object(
+ 'schema',n.nspname,'name',c.relname,'kind',c.relkind,'extension',er.extname,
+ 'columns',CASE WHEN c.relkind='r' THEN (SELECT coalesce(jsonb_agg(jsonb_build_object(
+   'name',a.attname,'typeSchema',tn.nspname,'typeName',t.typname,
+   'typeModifier',a.atttypmod,'notNull',a.attnotnull,'identity',a.attidentity,
+   'generated',a.attgenerated,'defaultExpression',pg_catalog.pg_get_expr(ad.adbin,ad.adrelid),
+   'collationSchema',cn.nspname,'collationName',co.collname)
+   ORDER BY a.attnum),'[]') FROM pg_catalog.pg_attribute a
+   JOIN pg_catalog.pg_type t ON t.oid=a.atttypid
+   JOIN pg_catalog.pg_namespace tn ON tn.oid=t.typnamespace
+   LEFT JOIN pg_catalog.pg_collation co ON co.oid=a.attcollation
+   LEFT JOIN pg_catalog.pg_namespace cn ON cn.oid=co.collnamespace
+   LEFT JOIN pg_catalog.pg_attrdef ad ON ad.adrelid=a.attrelid AND ad.adnum=a.attnum
+   WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped) ELSE '[]'::jsonb END,
+ 'definition',jsonb_build_object('owner',pg_catalog.pg_get_userbyid(c.relowner),
+   'acl',c.relacl,'options',c.reloptions,'persistence',c.relpersistence,
+   'rowSecurity',c.relrowsecurity,'forceRowSecurity',c.relforcerowsecurity,'replicaIdentity',c.relreplident,
+   'parents',(SELECT coalesce(jsonb_agg(jsonb_build_object('schema',pn.nspname,'name',pc.relname)
+     ORDER BY i.inhseqno),'[]') FROM pg_catalog.pg_inherits i JOIN pg_catalog.pg_class pc ON pc.oid=i.inhparent
+     JOIN pg_catalog.pg_namespace pn ON pn.oid=pc.relnamespace WHERE i.inhrelid=c.oid),
+   'constraints',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',con.conname,
+     'definition',pg_catalog.pg_get_constraintdef(con.oid),'validated',con.convalidated)
+     ORDER BY con.conname),'[]') FROM pg_catalog.pg_constraint con WHERE con.conrelid=c.oid),
+   'indexes',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',ic.relname,
+     'definition',pg_catalog.pg_get_indexdef(ix.indexrelid),'valid',ix.indisvalid,'ready',ix.indisready)
+     ORDER BY ic.relname),'[]') FROM pg_catalog.pg_index ix JOIN pg_catalog.pg_class ic ON ic.oid=ix.indexrelid WHERE ix.indrelid=c.oid),
+   'triggers',(SELECT coalesce(jsonb_agg(t.body ORDER BY t.body::text),'[]') FROM (
+     SELECT jsonb_build_object('name',CASE WHEN tg.tgisinternal THEN NULL ELSE tg.tgname END,
+       'internal',tg.tgisinternal,'constraint',tc.conname,
+       'definition',CASE WHEN tg.tgisinternal THEN NULL ELSE pg_catalog.pg_get_triggerdef(tg.oid) END,
+       'functionSchema',fn.nspname,'functionName',fp.proname,
+       'functionArguments',pg_catalog.pg_get_function_identity_arguments(fp.oid),
+       'referenceSchema',rn.nspname,'referenceTable',rc.relname,
+       'type',tg.tgtype,'enabled',tg.tgenabled,'deferrable',tg.tgdeferrable,
+       'initiallyDeferred',tg.tginitdeferred,'arguments',encode(tg.tgargs,'hex')) AS body
+     FROM pg_catalog.pg_trigger tg
+     JOIN pg_catalog.pg_proc fp ON fp.oid=tg.tgfoid JOIN pg_catalog.pg_namespace fn ON fn.oid=fp.pronamespace
+     LEFT JOIN pg_catalog.pg_constraint tc ON tc.oid=tg.tgconstraint
+     LEFT JOIN pg_catalog.pg_class rc ON rc.oid=tg.tgconstrrelid
+     LEFT JOIN pg_catalog.pg_namespace rn ON rn.oid=rc.relnamespace
+     WHERE tg.tgrelid=c.oid) t),
+   'policies',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',pol.polname,'command',pol.polcmd,
+     'permissive',pol.polpermissive,'roles',(SELECT coalesce(jsonb_agg(CASE WHEN r=0 THEN 'PUBLIC' ELSE pg_catalog.pg_get_userbyid(r) END ORDER BY CASE WHEN r=0 THEN 'PUBLIC' ELSE pg_catalog.pg_get_userbyid(r) END),'[]') FROM unnest(pol.polroles) r),
+     'using',pg_catalog.pg_get_expr(pol.polqual,pol.polrelid),'check',pg_catalog.pg_get_expr(pol.polwithcheck,pol.polrelid))
+     ORDER BY pol.polname),'[]') FROM pg_catalog.pg_policy pol WHERE pol.polrelid=c.oid),
+   'sequence',(SELECT jsonb_build_object('typeSchema',sn.nspname,'typeName',st.typname,
+     'start',sq.seqstart::text,'increment',sq.seqincrement::text,'minimum',sq.seqmin::text,
+     'maximum',sq.seqmax::text,'cache',sq.seqcache::text,'cycle',sq.seqcycle)
+     FROM pg_catalog.pg_sequence sq JOIN pg_catalog.pg_type st ON st.oid=sq.seqtypid
+     JOIN pg_catalog.pg_namespace sn ON sn.oid=st.typnamespace WHERE sq.seqrelid=c.oid)))
+ ORDER BY n.nspname,c.relname),'[]')::text
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+JOIN extension_relations er ON er.relation_oid=c.oid
+WHERE c.relkind IN ('r','S') AND n.nspname !~ '^pg_' AND n.nspname<>'information_schema';
+"""
+
+
+def extension_entries(catalog):
+    rows = catalog.get("extensionData", [])
+    require(isinstance(rows, list), "extension_data_catalog_rejected")
+    known = {(r["schema"],r["name"]):r for r in catalog["tables"] + catalog["sequences"]}
+    extensions = {r["name"] for r in catalog["extensions"]}
+    keys = set()
+    for row in rows:
+        key = (row.get("schema"),row.get("name"))
+        require(all(isinstance(v,str) and IDENT.fullmatch(v) for v in key)
+                and key not in keys and key in known and row.get("kind") in {"r","S"}
+                and row.get("extension") in extensions and isinstance(row.get("columns"),list),
+                "extension_data_catalog_rejected")
+        require(isinstance(row.get("definition"),dict)
+                and isinstance(row["definition"].get("owner"),str)
+                and (row["kind"] != "S" or isinstance(row["definition"].get("sequence"),dict)),
+                "extension_data_catalog_rejected")
+        require((row["kind"] == "r" and known[key].get("kind") == "r")
+                or (row["kind"] == "S" and key in {(r["schema"],r["name"]) for r in catalog["sequences"]}),
+                "extension_data_catalog_rejected")
+        columns = row["columns"]
+        require(len({c.get("name") for c in columns}) == len(columns)
+                and all(isinstance(c.get("name"),str) and IDENT.fullmatch(c["name"])
+                        and isinstance(c.get("generated"),str) for c in columns)
+                and all("defaultExpression" in c and (c["defaultExpression"] is None
+                        or isinstance(c["defaultExpression"],str)) for c in columns)
+                and (row["kind"] != "r" or any(c["generated"] == "" for c in columns)),
+                "extension_data_columns_rejected")
+        keys.add(key)
+    return rows
+
+
+def capture_extension_data(env, catalog, snapshot):
+    require(re.fullmatch(r"[a-fA-F0-9]+-[a-fA-F0-9]+-\d+", snapshot), "snapshot_rejected")
+    supplement = {"format":1,"tables":[],"sequences":[]}
+    for row in budgeted(extension_entries(catalog)):
+        table = f'"{row["schema"]}"."{row["name"]}"'
+        prefix = "BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\nSET TRANSACTION SNAPSHOT '"+snapshot+"';\n"
+        if row["kind"] == "r":
+            columns = [c["name"] for c in row["columns"] if c["generated"] == ""]
+            sql = prefix+"COPY (SELECT "+",".join('"'+c+'"' for c in columns)+" FROM ONLY "+table+") TO STDOUT WITH (FORMAT text);\nCOMMIT;\n"
+            raw = psql(env, sql)
+            require(isinstance(raw,bytes) and len(raw) <= STDOUT_BYTES and b"\x00" not in raw and b"\r" not in raw
+                    and (not raw or raw.endswith(b"\n")) and b"\\.\n" not in raw.splitlines(keepends=True),
+                    "extension_copy_data_rejected")
+            supplement["tables"].append({"schema":row["schema"],"name":row["name"],
+                                          "columns":columns,"copyText":raw.decode("utf-8"),
+                                          "sha256":digest(raw)})
+        else:
+            sql = prefix+"SELECT jsonb_build_object('value',last_value::text,'called',is_called) FROM "+table+";\nCOMMIT;\n"
+            state = json.loads(psql(env, sql))
+            require(isinstance(state.get("value"),str) and re.fullmatch(r"-?\d+",state["value"])
+                    and type(state.get("called")) is bool,"extension_sequence_state_rejected")
+            supplement["sequences"].append({"schema":row["schema"],"name":row["name"],**state})
+        require(len(encoded(supplement)) <= STDOUT_BYTES,"extension_data_bound_exceeded")
+    return supplement
+
+
+def validate_extension_data(catalog, supplement):
+    require(isinstance(supplement,dict) and set(supplement) == {"format","tables","sequences"}
+            and supplement["format"] == 1 and isinstance(supplement["tables"],list)
+            and isinstance(supplement["sequences"],list),"extension_data_payload_rejected")
+    expected = {kind:{(r["schema"],r["name"]):r for r in extension_entries(catalog) if r["kind"] == kind}
+                for kind in ["r","S"]}
+    for key,kind in [("tables","r"),("sequences","S")]:
+        rows = supplement[key]
+        actual = [(r.get("schema"),r.get("name")) for r in rows]
+        require(len(actual) == len(set(actual)) and set(actual) == set(expected[kind]),
+                "extension_data_coverage_missing")
+        for row in budgeted(rows):
+            definition = expected[kind][(row["schema"],row["name"])]
+            if kind == "r":
+                require(set(row) == {"schema","name","columns","copyText","sha256"}
+                        and row["columns"] == [c["name"] for c in definition["columns"] if c["generated"] == ""]
+                        and isinstance(row["copyText"],str),"extension_data_payload_rejected")
+                raw = row["copyText"].encode("utf-8")
+                require(len(raw) <= STDOUT_BYTES and b"\x00" not in raw and b"\r" not in raw
+                        and (not raw or raw.endswith(b"\n")) and b"\\.\n" not in raw.splitlines(keepends=True)
+                        and digest(raw) == row["sha256"],"extension_copy_data_rejected")
+            else:
+                require(set(row) == {"schema","name","value","called"}
+                        and isinstance(row["value"],str) and re.fullmatch(r"-?\d+",row["value"])
+                        and type(row["called"]) is bool,"extension_sequence_state_rejected")
+    return supplement
+
+
+def extension_restore_sql(catalog, supplement):
+    validate_extension_data(catalog, supplement)
+    out = bytearray(b"\n-- Complete extension table contents; encrypted capture only.\n")
+    for row in budgeted(supplement["tables"]):
+        table = f'"{row["schema"]}"."{row["name"]}"'
+        columns = ",".join('"'+c+'"' for c in row["columns"])
+        out.extend(("COPY "+table+" ("+columns+") FROM stdin WITH (FORMAT text);\n").encode())
+        out.extend(row["copyText"].encode());out.extend(b"\\.\n")
+    for row in budgeted(supplement["sequences"]):
+        out.extend(("SELECT pg_catalog.setval('"+row["schema"]+"."+row["name"]+"', "+row["value"]+", "+str(row["called"]).lower()+");\n").encode())
+    require(len(out) <= STDOUT_BYTES,"extension_data_bound_exceeded")
+    return bytes(out)
+
 
 def identifiers(catalog):
     require(not any(r["kind"] == "f" for r in catalog["tables"]), "foreign_data_recovery_unqualified")
@@ -375,9 +553,12 @@ def toc_entries(text):
     return out
 
 
-def table_coverage(catalog, entries):
+def table_coverage(catalog, entries, supplement=None):
     present = {(e["schema"], e["nameOwner"].split()[0]) for e in entries if e["kind"] == "TABLE DATA"}
     expected = {(r["schema"], r["name"]) for r in catalog["tables"] if r["kind"] == "r"}
+    if supplement is not None:
+        validate_extension_data(catalog, supplement)
+        present |= {(r["schema"],r["name"]) for r in supplement["tables"]}
     require(expected <= present, "full_table_data_coverage_missing")
     materialized = {(r["schema"],r["name"]) for r in catalog["tables"] if r["kind"] == "m" and r.get("populated") is True}
     included = {(e["schema"],e["nameOwner"].split()[0]) for e in entries if e["kind"] == "MATERIALIZED VIEW DATA"}
@@ -434,7 +615,8 @@ def bounded_archive(path, out):
         for member in budgeted(archive):
             require(len(members) < len(MEMBERS), "backup_members_rejected")
             members.append(member)
-        require(len(members) == len(MEMBERS) and {m.name for m in members} == MEMBERS
+        names = {m.name for m in members}
+        require(len(members) == len(names) and names in [LEGACY_MEMBERS,MEMBERS]
                 and all(m.isfile() and 0 < m.size <= (MAX_BYTES if m.name == "full.dump" else 128*1024**2) for m in members)
                 and sum(m.size for m in members) <= MAX_BYTES, "backup_members_rejected")
         for m in budgeted(members):
@@ -471,6 +653,8 @@ def capture(env, output):
                 mark_stage("capture-catalog")
                 catalog = snapshot.query(CATALOG_SQL)
                 identifiers(catalog)
+                catalog["extensionData"] = snapshot.query(EXTENSION_DATA_CATALOG_SQL)
+                extension_entries(catalog)
                 fresh_file(work/"catalog.json", encoded(catalog))
                 mark_stage("capture-dump")
                 run(["pg_dump", "--no-password", "--format=custom", "--snapshot", snapshot.id,
@@ -485,16 +669,21 @@ def capture(env, output):
                 mark_stage("capture-coverage")
                 toc = run(["pg_restore", "--list", str(work/"full.dump")], clean_pg_env(env))
                 fresh_file(work/"toc.list", toc)
-                table_coverage(catalog, toc_entries(toc.decode()))
+                supplement = capture_extension_data(source_env, catalog, snapshot.id)
+                fresh_file(work/"extension-data.json", encoded(supplement))
+                table_coverage(catalog, toc_entries(toc.decode()), supplement)
                 mark_stage("capture-rows")
                 fresh_file(work/"rows.json", encoded(row_fingerprints(source_env, catalog, snapshot.id)))
             mark_stage("capture-package")
             # Hashes and all schema/role/user-derived data stay INSIDE ciphertext.
-            manifest = {"format":1,"operation":"complete-managed-auth-database-capture","project":PROJECT,
+            manifest = {"format":2,"operation":"complete-managed-auth-database-capture","project":PROJECT,
                         "sourceSha":source,"postgresBuild":BUILD,"capturedAt":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),
                         "schemaSha256":schema_hash((work/"schema.sql").read_bytes()),
                         "managedSchemaSha256":schema_hash((work/"managed-schema.sql").read_bytes()),
                         "consistentExportedSnapshot":True,"storageObjectBytesIncluded":False,
+                        "extensionTableDataSameExportedSnapshot":True,
+                        "sequenceStateTransactionalSnapshot":False,
+                        "sequenceStateCapture":"non-mvcc-high-water-marks",
                         "dashboardProviderConfigurationIncluded":False,"postgresRolePasswordsIncluded":False,
                         "hostedMfaRuntimeKeyCustodyVerified":False,
                         "files":[{"name":n,"bytes":(work/n).stat().st_size,"sha256":file_digest(work/n)} for n in sorted(MEMBERS-{"manifest.json"})]}
@@ -521,6 +710,7 @@ def capture(env, output):
             receipt = {"operation":"managed-auth-capture","project":PROJECT,"sourceSha":source,
                        "encryptedSha256":file_digest(encrypted),"encryptedBytes":encrypted.stat().st_size,
                        "completeRequiredDatabaseTableCoverage":True,"consistentSnapshot":True,"encryptedRoundtripVerified":True,
+                       "extensionTableDataSameExportedSnapshot":True,"sequenceStateTransactionalSnapshot":False,
                        "restoreExercised":False,"fullProjectRecoveryQualified":False,
                        "storageObjectBytesBackedUp":False,"providerConfigRecoveryQualified":False,
                        "credentialCustodyQualified":False,"productionMutated":False,"plaintextUploaded":False}
@@ -795,12 +985,14 @@ def baseline_service_data(source_rows, target_rows):
     return skip
 
 
-def data_restore_list(entries, skip_tables):
+def data_restore_list(entries, skip_tables, skip_sequences=frozenset()):
     # SEQUENCE SET entries remain included, even for a skipped service table;
     # all sequence values are restored and checked against captured setval SQL.
     return ("\n".join(e["line"] for e in budgeted(entries)
-                      if not (e["kind"] == "TABLE DATA" and
-                              (e["schema"], e["nameOwner"].split()[0]) in skip_tables)) + "\n").encode()
+                      if not ((e["kind"] == "TABLE DATA" and
+                               (e["schema"], e["nameOwner"].split()[0]) in skip_tables)
+                              or (e["kind"] == "SEQUENCE SET" and
+                                  (e["schema"],e["nameOwner"].split()[0]) in skip_sequences))) + "\n").encode()
 
 
 
@@ -820,6 +1012,34 @@ def sequence_values(sql):
         require(m is not None, "sequence_reconciliation_required")
         out.append({"schema":m[1],"name":m[2],"value":m[3],"called":m[4]=="true"})
     return out
+
+
+def data_sequence_values(path):
+    """Read actual SETVAL commands, never SQL-looking COPY field contents."""
+    values = []
+    copying = False
+    with path.open("rb") as data:
+        while line := data.readline(8*1024**2+1):
+            check_deadline()
+            require(len(line) <= 8*1024**2,"data_record_review_required")
+            if copying:
+                if line.rstrip(b"\r\n") == b"\\.":copying = False
+                continue
+            if line.startswith(b"COPY "):
+                require(re.fullmatch(rb"COPY .+ FROM stdin(?: WITH \(FORMAT text\))?;\r?\n?",line)
+                        is not None,"copy_statement_review_required")
+                copying = True
+            elif line.startswith(b"SELECT pg_catalog.setval("):
+                values.extend(sequence_values(line))
+    require(not copying,"copy_statement_unterminated")
+    return values
+
+
+def restore_write_preflight(env, target, approved, attestation):
+    empty_target_identity(target, approved, require_blank=False)
+    require(psql(target, "SELECT coalesce(current_setting('cron.launch_active_jobs',true),'off');\n").strip()
+            == b"off", "cron_not_disabled")
+    require(attest(env) == attestation, "isolation_attestation_changed")
 
 
 @bounded_operation
@@ -848,22 +1068,37 @@ def restore(env, archive, output):
             # The read-only proof itself can take time. Validate the bound
             # isolation deadline after it, immediately before decryption.
             require(attest(env) == a, "isolation_attestation_changed")
+        else:
+            # Prove the selected managed server and fresh isolation before
+            # decrypting an approved backup on this operator.
+            empty_target_identity(target, approved, require_blank=False)
+            require(attest(env) == a, "isolation_attestation_changed")
         plain = work/"payload.tar"
         crypt(env, phrase, archive, plain, decrypt=True)
         extracted = work/"payload"
         extracted.mkdir(mode=0o700)
         bounded_archive(plain, extracted)
         manifest = json.loads((extracted/"manifest.json").read_bytes())
-        require(manifest.get("format") == 1 and manifest.get("operation") == "complete-managed-auth-database-capture" and manifest.get("project") == PROJECT
+        archive_members = MEMBERS if manifest.get("format") == 2 else LEGACY_MEMBERS
+        require(manifest.get("format") in {1,2} and manifest.get("operation") == "complete-managed-auth-database-capture" and manifest.get("project") == PROJECT
                 and manifest.get("postgresBuild") == BUILD and manifest.get("consistentExportedSnapshot") is True
                 and manifest.get("sourceSha") == env.get("KOVA_APPROVED_BACKUP_SOURCE_SHA")
-                and len(manifest["files"]) == len(MEMBERS)-1
-                and {r["name"] for r in manifest["files"]} == MEMBERS-{"manifest.json"}, "backup_manifest_rejected")
+                and len(manifest["files"]) == len(archive_members)-1
+                and {r["name"] for r in manifest["files"]} == archive_members-{"manifest.json"}
+                and {p.name for p in extracted.iterdir()} == archive_members, "backup_manifest_rejected")
         for row in budgeted(manifest["files"]):
             member = extracted/row["name"]
             require(member.stat().st_size == row["bytes"] and file_digest(member) == row["sha256"], "backup_member_integrity_failed")
         source_catalog = json.loads((extracted/"catalog.json").read_bytes())
         identifiers(source_catalog)
+        supplement = (json.loads((extracted/"extension-data.json").read_bytes())
+                      if manifest["format"] == 2 else None)
+        if supplement is not None:
+            require(manifest.get("extensionTableDataSameExportedSnapshot") is True
+                    and manifest.get("sequenceStateTransactionalSnapshot") is False
+                    and manifest.get("sequenceStateCapture") == "non-mvcc-high-water-marks",
+                    "backup_manifest_rejected")
+            validate_extension_data(source_catalog, supplement)
         if baseline_mode == "managed-baseline":
             proof = target_observation(target, source_catalog)
             require(proof["observed"]["serverVersionNum"] == 170006, "target_postgres_patch_mismatch")
@@ -888,7 +1123,7 @@ def restore(env, archive, output):
             # Never borrow the initialized-baseline omission list.
             skip_tables = set()
         entries = toc_entries((extracted/"toc.list").read_text())
-        table_coverage(source_catalog, entries)
+        table_coverage(source_catalog, entries, supplement)
         selected = work/"schema-restore.list"
         selector = empty_schema_restore_list if baseline_mode == "empty-database" else schema_restore_list
         fresh_file(selected, selector(entries, source_catalog, target_catalog))
@@ -898,24 +1133,33 @@ def restore(env, archive, output):
             fresh_catalog = empty_target_preflight(target, approved, a, work, "before-write")
             require(encoded(fresh_catalog) == encoded(target_catalog), "empty_target_changed")
             role_compatibility(source_catalog, fresh_catalog, a.get("approvedTargetOnlyRoles", []))
-            require(attest(env) == a, "isolation_attestation_changed")
+        restore_write_preflight(env, target, approved, a)
         # Every owner/ACL is retained. Managed definitions are not replayed over
         # the exact matching baseline. Any conflict aborts this transaction.
         run(["pg_restore","--no-password","--exit-on-error","--single-transaction",
              "--section=pre-data","--section=post-data","--use-list",str(selected),
              "--dbname",approved["uri"],str(extracted/"full.dump")],target)
         data_selected = work/"data-restore.list"
-        fresh_file(data_selected, data_restore_list(entries, skip_tables))
+        extension_tables = {(r["schema"],r["name"]) for r in supplement["tables"]} if supplement is not None else set()
+        extension_sequences = {(r["schema"],r["name"]) for r in supplement["sequences"]} if supplement is not None else set()
+        fresh_file(data_selected, data_restore_list(entries, skip_tables | extension_tables, extension_sequences))
         data_sql = work/"data.sql"
         run(["pg_restore","--data-only","--use-list",str(data_selected),"--file",str(data_sql),str(extracted/"full.dump")],target)
-        expected_sequences = []
-        with data_sql.open("rb") as data:
-            while line := data.readline(8*1024**2+1):
-                check_deadline()
-                require(len(line) <= 8*1024**2, "data_record_review_required")
-                if line.startswith(b"SELECT pg_catalog.setval("):
-                    expected_sequences.extend(sequence_values(line))
-        require(len(expected_sequences) == len(source_catalog["sequences"]), "sequence_coverage_missing")
+        if supplement is not None:
+            # The installed extension types, columns and identity/generated
+            # flags must match before importing any supplemental data. Full
+            # post-restore row, sequence and schema verification remains required.
+            target_extension_data = json.loads(psql(target, EXTENSION_DATA_CATALOG_SQL))
+            require(encoded(target_extension_data) == encoded(source_catalog["extensionData"]),
+                    "extension_target_definition_mismatch")
+            extra = extension_restore_sql(source_catalog, supplement)
+            require(data_sql.stat().st_size + len(extra) <= MAX_BYTES,"data_bound_exceeded")
+            with data_sql.open("ab") as data:data.write(extra)
+        expected_sequences = data_sequence_values(data_sql)
+        sequence_keys = [(r["schema"],r["name"]) for r in expected_sequences]
+        require(len(sequence_keys) == len(set(sequence_keys))
+                and set(sequence_keys) == {(r["schema"],r["name"]) for r in source_catalog["sequences"]},
+                "sequence_coverage_missing")
         materialized = materialized_restore_list(entries)
         if materialized:
             matlist, matsql = work/"materialized.list", work/"materialized.sql"
@@ -929,13 +1173,9 @@ def restore(env, archive, output):
                     check_deadline()
         # Import only on the isolated target. SET replication_role suppresses
         # triggers without changing their saved enabled/disabled definitions.
-        if baseline_mode == "empty-database":
-            # Schema restore and SQL generation may outlive the prior check.
-            # Reconfirm isolation and the actual target before customer data.
-            empty_target_identity(target, approved, require_blank=False)
-            require(psql(target, "SELECT coalesce(current_setting('cron.launch_active_jobs',true),'off');\n").strip()
-                    == b"off", "cron_not_disabled")
-            require(attest(env) == a, "isolation_attestation_changed")
+        # Schema restore and SQL generation may outlive the prior check.
+        # Both baseline modes require fresh identity/isolation before data.
+        restore_write_preflight(env, target, approved, a)
         run(["psql","-X","--no-password","--quiet","--single-transaction","--set","ON_ERROR_STOP=1",
              "--command","SET session_replication_role=replica","--file",str(data_sql),
              "--command","SET session_replication_role=origin"],target,output=subprocess.DEVNULL)
