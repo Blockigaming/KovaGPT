@@ -68,8 +68,8 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.match(sidebar, /aria-label=\{`Options for \$\{conversation\.title\}`\}/);
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);
   const order = [
-    'aria-label="Search chats"',
     'aria-label="New chat"',
+    'aria-label="Search chats"',
     'navLink("/images"',
     'navLink("/apps"',
     'aria-label="Workspace destinations"',
