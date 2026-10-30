@@ -19,7 +19,7 @@ import signal
 
 EXPECTED = {
     "database-contract.json": "0a36a0ab88e167f5062712671bc2acf1202c7366de7d897b3732327339fef6ae",
-    "release-migrations.json": "30e7a029f5b81f37a57e56db9e2ee26f39d016403b8f0d5d26fe472b122d18c3",
+    "release-migrations.json": "c7250c74210fd4b99075222eaab09d58164cc6ae2e3be94661b53ab6354c8a69",
     "scripts/release/monthly-intro-lifecycle-guards.mjs": "6b12d22e1b4321b59de5ba4307d564355e2350de23efd3b6c17184a5b0b8139d",
     "supabase/migrations/20261030141704_kova_monthly_intro_lifecycle_forward.sql": "787d04b875dab35224e5f45ec4c0f0d6ca2e1c9aec41cd6992d037a6e6775ecc",
     "tests/unit/monthly-intro-lifecycle-forward.test.mjs": "166d5ead11baaecab6e0349690959ea49523479ac24940369b673722f5f48d19",
