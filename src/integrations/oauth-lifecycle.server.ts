@@ -3,6 +3,7 @@ import { decryptCredential, encryptCredential, sha256 } from "./credential-vault
 import { OAUTH_PROVIDERS, type OAuthProviderId } from "./oauth-providers.server";
 import { normalizeOAuthReturnPath } from "@/lib/oauth-security.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
+import { oauthTokenRequest } from "./oauth-token-request.server.mjs";
 
 const admin = () =>
   createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -114,20 +115,17 @@ export async function completeOAuth(input: {
     .maybeSingle();
   if (!consumed.data) throw new Error("oauth_state_replayed");
   const redirectUri = `${new URL(input.request.url).origin}/api/integrations/oauth/callback/${provider.id}`;
-  const body = new URLSearchParams({
-    grant_type: "authorization_code",
+  const tokenRequest = oauthTokenRequest({
+    providerId: provider.id,
     code: input.code,
-    redirect_uri: redirectUri,
-    client_id: process.env[provider.clientIdEnv]!,
-    client_secret: process.env[provider.clientSecretEnv]!,
+    redirectUri,
+    clientId: process.env[provider.clientIdEnv],
+    clientSecret: process.env[provider.clientSecretEnv],
+    verifier: record.pkce_verifier_ciphertext
+      ? await decryptCredential(record.pkce_verifier_ciphertext)
+      : undefined,
   });
-  if (record.pkce_verifier_ciphertext)
-    body.set("code_verifier", await decryptCredential(record.pkce_verifier_ciphertext));
-  const tokenResponse = await fetch(provider.tokenEndpoint, {
-    method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
+  const tokenResponse = await fetch(provider.tokenEndpoint, tokenRequest);
   if (!tokenResponse.ok) throw new Error(`oauth_exchange_${tokenResponse.status}`);
   const tokens = (await tokenResponse.json()) as TokenPayload;
   if (!tokens.access_token) throw new Error("oauth_access_token_missing");
