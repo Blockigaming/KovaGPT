@@ -20,8 +20,26 @@ spec=importlib.util.spec_from_file_location("synthetic_native_smoke",SCRIPT)
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 o=m.operator
 
+fixture_spec=importlib.util.spec_from_file_location("synthetic_owned_fixture",Path(__file__).with_name("test_owned_noswap_volumes.py"))
+fixture=importlib.util.module_from_spec(fixture_spec);fixture_spec.loader.exec_module(fixture)
+
+
+runtime_bytes=fixture.runtime_bytes
+
 
 class SyntheticTests(unittest.TestCase):
+    def test_new_runtime_and_volume_failures_emit_only_literal_safe_codes(self):
+        for error_type in m.RAM_STOPPED_TYPES:
+            known=error_type("volume_runtime_mount_policy_unqualified")
+            self.assertEqual(m.failure_details(known)["code"],"volume_runtime_mount_policy_unqualified")
+            self.assertEqual(m.safe_exception_type(known),"Stopped")
+            private=error_type("SYNTHETIC_PRIVATE_ROW_SECRET_CANARY")
+            result=m.failure_details(private)
+            self.assertEqual(result["code"],"synthetic_native_unconfirmed")
+            self.assertNotIn("PRIVATE_ROW_SECRET",json.dumps(result))
+        self.assertEqual(m.failure_details(ValueError("volume_runtime_mount_policy_unqualified"))["code"],
+                         "synthetic_native_unconfirmed")
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
         self.env={"KOVA_SYNTHETIC_NATIVE_CONFIRMATION":"SYNTHETIC_ONLY","GITHUB_ACTIONS":"true","RUNNER_OS":"Linux",
@@ -35,12 +53,22 @@ class SyntheticTests(unittest.TestCase):
         p.client_dir=self.root/"client";p.server_dirs={k:self.root/k for k in ["a","b"]}
         p.image_env={"PATH":"/pg/bin"};p.image_volumes=[];p.operator_env={"PATH":"/usr/bin"}
         p.server_image_id="sha256:"+"2"*64
+        fake=fixture.FakeDocker();fake.manager=p.owned_ram;p.test_ram_docker=fake
+        original_run=p.run
+        def run(argv,**kwargs):
+            if argv[:2] in [["docker","volume"],["docker","ps"]]:return 0,fake(argv,timeout=kwargs.get("timeout",90))
+            return original_run(argv,**kwargs)
+        p.run=run
         return p
 
     def info(self,p,key):
         client=key=="client";env={**(p.operator_env if client else p.image_env),"HOME":"/tmp","TZ":"UTC"}
         env["TMPDIR" if client else "PGDATA"]="/work" if client else "/run/server/data"
         memory=(p.resources["clientMemoryMiB"] if client else p.resources["serverMemoryMiB"][key])*1024**2
+        p._container_args(key)
+        volumes=[{"Type":"volume","Name":spec["name"],"Source":spec["mountpoint"],"Driver":"local",
+                  "Destination":spec["destination"],"RW":True,"Propagation":""}
+                 for spec in p.owned_ram().expected_mounts(p.ram_keys[key])]
         return {"Image":p.operator_image_id if client else p.server_image_id,
           "State":{"Running":True,"Pid":4321},"Config":{"Labels":{"kova.empty-probe.owner":p.token},
             "Healthcheck":{"Test":["NONE"]},"Env":[k+"="+v for k,v in env.items()],
@@ -51,9 +79,7 @@ class SyntheticTests(unittest.TestCase):
           "NetworkSettings":{"Ports":{},"Networks":{p.network:{"IPAddress":p.addresses[key][0],
             "GlobalIPv6Address":p.addresses[key][1]}}},
           "Mounts":[{"Type":"bind","Source":str(p.client_dir if client else p.server_dirs[key]),
-            "Destination":"/run/client" if client else "/run/server","RW":False},
-            {"Type":"tmpfs","Destination":"/tmp","RW":True},
-            {"Type":"tmpfs","Destination":"/work" if client else "/run/server/data","RW":True}]}
+            "Destination":"/run/client" if client else "/run/server","RW":False},*volumes]}
 
     def test_only_pr_merge_context_with_no_sensitive_bindings_is_accepted(self):
         self.assertEqual(m.synthetic_context(self.env),"a"*40)
@@ -75,10 +101,13 @@ class SyntheticTests(unittest.TestCase):
             self.assertEqual(args[args.index("--memory")+1],args[args.index("--memory-swap")+1])
             self.assertEqual(args[args.index("--cgroupns")+1],"private")
             mounts=[args[i+1] for i,x in enumerate(args) if x=="--mount"]
-            self.assertEqual(len(mounts),1);self.assertTrue(mounts[0].endswith(",readonly"))
-            temporary=[args[i+1] for i,x in enumerate(args) if x=="--tmpfs"]
-            self.assertTrue(all(",noswap" in x and ",noexec" in x for x in temporary))
-            self.assertTrue(any(x.startswith(("/work:" if key=="client" else "/run/server/data:")) for x in temporary))
+            binds=[value for value in mounts if value.startswith("type=bind,")]
+            self.assertEqual(len(binds),1);self.assertTrue(binds[0].endswith(",readonly"))
+            self.assertNotIn("--tmpfs",args)
+            temporary=p.owned_ram().expected_mounts(p.ram_keys[key])
+            self.assertTrue(all(",noswap," in x["options"]["o"] and ",noexec," in x["options"]["o"] for x in temporary))
+            self.assertEqual({x["destination"] for x in temporary},{"/tmp","/work" if key=="client" else "/run/server/data"})
+            self.assertTrue(all(value.endswith(",volume-nocopy") for value in mounts if value.startswith("type=volume,")))
             self.assertNotIn("docker.sock",str(args));self.assertNotIn("--publish",args)
 
     def test_actual_json_logging_swap_root_mount_or_image_drift_is_rejected(self):
@@ -95,20 +124,134 @@ class SyntheticTests(unittest.TestCase):
                 with self.subTest(key=key,mutation=mutations.index(mutate)),self.assertRaises(m.Stopped):p.verify_container(key,value)
 
     def test_runtime_kernel_checks_use_exact_noswap_no_capability_and_private_data_mounts(self):
-        p=self.probe();calls=[];p.docker=lambda args,**_:(calls.append(args) or (0,b""))
-        for key in ["a","client"]:p.assert_runtime_policy(key)
+        p=self.probe();calls=[]
+        for key in ["a","client"]:
+            p._container_args(key);p.owned_ram().record_activation(p.ram_keys[key])
+        def docker(args,**kwargs):
+            calls.append(args)
+            key=next(key for key in ["a","client"] if p.names[key] in args)
+            return 0,runtime_bytes(p.owned_ram().expected_mounts(p.ram_keys[key]))
+        p.docker=docker
+        for key in ["a","client"]:self.assertTrue(p.assert_runtime_policy(key)["tmpfsNoSwapObserved"])
         for args in calls:
-            script=args[-1]
+            script=args[args.index("-ceu")+1]
             check=subprocess.run(["bash","-n","-c",script],capture_output=True)
             self.assertEqual(check.returncode,0,check.stderr.decode())
-            for required in ["/proc/self/status","NoNewPrivs","CapEff","memory.swap.max","noswap","/proc/mounts"]:
+            for required in ["/proc/self/status","NoNewPrivs","CapEff","memory.swap.max","/proc/self/mountinfo"]:
                 self.assertIn(required,script)
+        p.docker=lambda args,**kwargs:(0,runtime_bytes(p.owned_ram().expected_mounts(p.ram_keys["a"])).replace(b"rw,noswap",b"rw"))
+        with self.assertRaises(o.volume_proof.Stopped):p.assert_runtime_policy("a")
+
+    def test_every_exact_declared_server_image_volume_is_masked_by_owned_ram(self):
+        p=self.probe();p.image_volumes=["/var/lib/postgresql/data","/var/log/postgresql"]
+        args=p._container_args("a")
+        specs=p.owned_ram().expected_mounts(p.ram_keys["a"])
+        self.assertEqual({spec["destination"] for spec in specs},
+                         {"/tmp","/run/server/data",*p.image_volumes})
+        self.assertEqual(len({spec["name"] for spec in specs}),4)
+        self.assertNotIn("--tmpfs",args)
+        self.assertTrue(all(spec["options"]["type"]==spec["options"]["device"]=="tmpfs" for spec in specs))
+        self.assertTrue(all(spec["mode"]=="0700" for spec in specs if spec["destination"]!="/tmp"))
+        actual=self.info(p,"a")
+        p.verify_container("a",actual)
+        actual["Mounts"].append({"Type":"volume","Name":"anonymous","Destination":"/extra","RW":True})
+        with self.assertRaises(m.Stopped):p.verify_container("a",actual)
+
+    def short_probe(self,payload=None):
+        p=self.probe();p.save_state=lambda:None;p.reserve_absent=lambda name:p.containers_reserved.append(name)
+        p.resource_absent=lambda *args,**kwargs:True
+        original_run=p.run;launches=[]
+        def run(argv,**kwargs):
+            if argv[:2]==["docker","run"]:
+                specs=[spec for spec in p.owned_ram().specs.values() if any("src="+spec["name"]+"," in arg for arg in argv)]
+                self.assertTrue(all(spec["activated"] for spec in specs))
+                launches.append(argv)
+                raw=b"KOVA_PRIVATE_RAM_PROOF_BEGIN\n"+runtime_bytes(specs)+b"KOVA_PRIVATE_RAM_PROOF_END\nsynthetic stdout\n"
+                return 0,raw if payload is None else payload
+            return original_run(argv,**kwargs)
+        p.run=run
+        return p,launches
+
+    def test_short_tools_have_distinct_volume_keys_and_prove_kernel_before_returning_stdout(self):
+        p,launches=self.short_probe()
+        for _ in range(2):
+            code,raw=p.docker(["run","--rm","--network","none","--cap-drop","ALL","--security-opt",
+                "no-new-privileges:true","--read-only","--entrypoint","/bin/bash",o.IMAGE,"-ceu",":"])
+            self.assertEqual(code,0);self.assertEqual(raw,b"synthetic stdout\n")
+        self.assertEqual(set(p.owned_ram().specs),{"toolcheck0-tmp","toolcheck1-tmp"})
+        self.assertEqual(len({spec["name"] for spec in p.owned_ram().specs.values()}),2)
+        self.assertEqual(len(p.owned_ram().runtime_records),2)
+        for args in launches:
+            self.assertEqual(args[args.index("--entrypoint")+1],"/bin/bash")
+            self.assertIn("--log-driver",args);self.assertEqual(args[args.index("--log-driver")+1],"none")
+            self.assertNotIn("--privileged",args);self.assertNotIn("--tmpfs",args)
+            self.assertIn("exec \"$@\"",args[args.index("-ceu")+1])
+
+    def test_operator_smoke_initializer_uses_matching_owned_key_and_proven_default_entrypoint(self):
+        p=self.probe();p.save_state=lambda:None;p.reserve_absent=lambda name:p.containers_reserved.append(name)
+        p.resource_absent=lambda *args,**kwargs:True;p.native_tools={"sha256sum":"/server/sha256sum"}
+        prepared_spec=importlib.util.spec_from_file_location("operator_smoke_fixture",Path(__file__).with_name("test_prepare_recovery_operator_image.py"))
+        prepared=importlib.util.module_from_spec(prepared_spec);prepared_spec.loader.exec_module(prepared)
+        expected_smoke=prepared.smoke();native=p.run;launches=[]
+        def run(argv,**kwargs):
+            if argv[:3]==["docker","image","inspect"]:
+                client=argv[-1]==p.operator_image_id
+                return 0,json.dumps([{"Id":p.operator_image_id if client else p.server_image_id,
+                    "Architecture":"amd64","Os":"linux","Config":{"Env":["PATH=/usr/bin"],
+                    "Healthcheck":{"Test":["NONE"]},"Labels":{"org.opencontainers.image.revision":p.source}}}]).encode()
+            if argv[:2]==["docker","run"]:
+                specs=[spec for spec in p.owned_ram().specs.values() if any("src="+spec["name"]+"," in arg for arg in argv)]
+                self.assertTrue(all(spec["activated"] for spec in specs));launches.append(argv)
+                stdout=json.dumps(expected_smoke).encode() if p.operator_image_id in argv else b"f"*64+b"  /bin/bash\n"
+                return 0,b"KOVA_PRIVATE_RAM_PROOF_BEGIN\n"+runtime_bytes(specs)+b"KOVA_PRIVATE_RAM_PROOF_END\n"+stdout
+            return native(argv,**kwargs)
+        p.run=run
+        with patch.object(o.base.Probe,"initialize",return_value=None), \
+             patch.object(o.os,"sysconf",side_effect=lambda key:2**21 if key=="SC_PHYS_PAGES" else 4096):
+            p.initialize()
+        self.assertEqual(set(p.owned_ram().specs),{"toolcheck0-tmp","smoke-tmp"})
+        self.assertEqual(p.operator_smoke,expected_smoke)
+        self.assertEqual(len(p.owned_ram().runtime_records),2)
+        self.assertIn("/opt/kova/scripts/release/recovery-operator-client-smoke.py",launches[-1])
+        self.assertEqual(p.bash_pins["a"],"f"*64)
+
+    def test_unframed_short_run_output_quarantines_activation_and_cannot_claim_cleanup(self):
+        for raw in [b"ordinary stdout",b"KOVA_PRIVATE_RAM_PROOF_BEGIN\nmissing end",
+                    b"KOVA_PRIVATE_RAM_PROOF_BEGIN\nKOVA_PRIVATE_RAM_PROOF_END\nKOVA_PRIVATE_RAM_PROOF_END\n"]:
+            p,_=self.short_probe(raw)
+            with self.subTest(raw=raw),self.assertRaises(m.Stopped):
+                p.docker(["run","--rm","--network","none","--entrypoint","/bin/bash",o.IMAGE,"-ceu",":"])
+            self.assertTrue(all(spec["activated"] for spec in p.owned_ram().specs.values()))
+            self.assertEqual(p.owned_ram().runtime_records,[])
+            self.assertFalse(p.cleanup_storage())
+
+    def test_owned_storage_failure_retains_firewall_and_private_inputs(self):
+        for reason in ["activation-without-proof","foreign-volume","live-volume-reference"]:
+            p=self.probe();p.save_state=lambda:None;p._container_args("client")
+            manager=p.owned_ram();spec=manager.expected_mounts(p.ram_keys["client"])[-1]
+            if reason=="activation-without-proof":manager.record_activation(p.ram_keys["client"])
+            if reason=="foreign-volume":p.test_ram_docker.volumes[spec["name"]]["Labels"]={}
+            if reason=="live-volume-reference":p.test_ram_docker.references=b'{"Names":"synthetic-active-container"}\n'
+            p.firewall_reserved=["iptables"];p.private_root=Path(tempfile.mkdtemp(prefix="kova-empty-123-1-",dir=self.root))
+            sentinel=p.private_root/"synthetic-input";sentinel.write_text("synthetic retained input")
+            native=p.run;calls=[]
+            def run(args,**kwargs):
+                calls.append(args)
+                self.assertFalse(args[:1]==["sudo"],"firewalls/private inputs must remain until storage reconciled")
+                return native(args,**kwargs)
+            p.run=run
+            with self.subTest(reason=reason):
+                self.assertFalse(p.cleanup())
+                self.assertTrue(p.private_root.is_dir());self.assertEqual(sentinel.read_text(),"synthetic retained input")
+                self.assertFalse(any(args[:1]==["sudo"] for args in calls))
 
     def test_server_startup_keeps_logging_collector_off_and_logs_in_tmpfs(self):
         p=self.probe();calls=[]
         p.reserve_absent=lambda *_:None;p.save_state=lambda:None
         p.docker=lambda args,**_:(calls.append(args) or (0,b""));p.inspect=lambda *_:self.info(p,"a")
-        p.namespace_firewall=lambda *_:None;p.assert_runtime_policy=lambda *_:None;p.run=lambda *_args,**_kwargs:(0,b"")
+        p.namespace_firewall=lambda *_:None;p.assert_runtime_policy=lambda *_:None
+        volume_run=p.run
+        p.run=lambda args,**kwargs:volume_run(args,**kwargs) if args[:2] in [["docker","volume"],["docker","ps"]] else (0,b"")
         p.start_container("a")
         script=calls[0][-1]
         result=subprocess.run(["bash","-n","-c",script],capture_output=True)
