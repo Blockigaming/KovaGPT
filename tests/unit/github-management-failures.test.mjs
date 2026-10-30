@@ -88,7 +88,11 @@ function fixture(results, options = {}) {
         ];
       },
     },
-    "@/lib/lockdown-policy.mjs": { assertLockdownAllows: async () => {} },
+    "@/lib/lockdown-policy.mjs": {
+      assertLockdownAllows: async () => {
+        if (options.lockdownError) throw new Error(options.lockdownError);
+      },
+    },
   };
   vm.runInNewContext(compiled, {
     exports,
@@ -294,5 +298,15 @@ test("account discovery cannot silently truncate the owner's connected accounts"
     f.handlers.refreshGitHubInstallations({ context: f.context }),
     /account limit/,
   );
+  assert.equal(f.discoveries.length, 0);
+});
+
+test("Lockdown blocks refresh before reading credentials or calling GitHub", async () => {
+  const f = fixture([], { lockdownError: "connector_read_blocked" });
+  await assert.rejects(
+    f.handlers.refreshGitHubInstallations({ context: f.context }),
+    /connector_read_blocked/,
+  );
+  assert.equal(f.calls.length, 0);
   assert.equal(f.discoveries.length, 0);
 });
