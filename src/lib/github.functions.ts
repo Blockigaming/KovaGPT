@@ -2,11 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  createInstallationToken,
-  decryptSecret,
-  listGitHubAppInstallations,
-} from "@/lib/github-oauth.server";
+import { decryptSecret } from "@/lib/github-oauth.server";
+import { discoverGitHubUserRepositories } from "@/lib/github-user-access.server.mjs";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 /* eslint-disable @typescript-eslint/no-explicit-any -- Mercury tables are available after generated types refresh. */
 export type GitHubManagement = {
@@ -76,92 +73,82 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertLockdownAllows(supabaseAdmin, context.userId, "connector_read");
-    // The App-JWT installation list is deployment-wide. Bind an installation
-    // only after proving that one of this KovaGPT owner's OAuth identities is
-    // either the matching personal account or an active organization admin.
     const accounts = await (supabaseAdmin as any)
       .from("github_accounts")
-      .select("id,github_user_id,token_ciphertext")
+      .select("id,github_user_id,token_ciphertext,token_expires_at")
       .eq("owner_id", context.userId)
+      .eq("auth_type", "oauth")
       .eq("status", "connected")
       .not("token_ciphertext", "is", null)
-      .limit(20);
+      .order("created_at")
+      .limit(21);
     if (accounts.error) throw new Error("Unable to load connected GitHub accounts");
     if (!accounts.data?.length) return { count: 0 };
-    const ownedById = new Map<number, string>(),
-      availableById = new Map<number, any>(),
-      appInstallations = (await listGitHubAppInstallations()) as any[];
-    for (const installation of appInstallations) {
-      for (const account of accounts.data ?? []) {
-        let authorized =
-          installation.account?.type === "User" &&
-          Number(installation.account?.id) === Number(account.github_user_id);
-        if (!authorized && installation.account?.type === "Organization") {
-          const membership = await fetch(
-            `https://api.github.com/user/memberships/orgs/${encodeURIComponent(installation.account.login)}`,
-            {
-              headers: {
-                accept: "application/vnd.github+json",
-                authorization: `Bearer ${await decryptSecret(account.token_ciphertext)}`,
-                "x-github-api-version": "2022-11-28",
-              },
-            },
-          );
-          if (membership.ok) {
-            const access = (await membership.json()) as { state?: string; role?: string };
-            authorized = access.state === "active" && access.role === "admin";
-          }
-        }
-        if (authorized) {
-          ownedById.set(Number(installation.id), account.id);
-          availableById.set(Number(installation.id), installation);
-          break;
-        }
+    if (accounts.data.length > 20) throw new Error("GitHub account limit exceeded");
+    const availableById = new Map<number, any>(),
+      deadline = AbortSignal.timeout(20_000);
+    // Finish all bounded discovery before writing. A user token sees only the
+    // intersection of the App's installation access and that user's access.
+    for (const account of accounts.data) {
+      if (
+        account.token_expires_at &&
+        (!Number.isFinite(Date.parse(account.token_expires_at)) ||
+          Date.parse(account.token_expires_at) <= Date.now() + 30_000)
+      )
+        throw new Error("GitHub reconnect required");
+      const discovered = await discoverGitHubUserRepositories(
+        await decryptSecret(account.token_ciphertext),
+        Number(account.github_user_id),
+        undefined,
+        deadline,
+      );
+      for (const entry of discovered) {
+        if (!availableById.has(entry.installation.id))
+          availableById.set(entry.installation.id, { ...entry, account });
       }
     }
+    async function assertCurrentAccount(account: any) {
+      const current = await (supabaseAdmin as any)
+        .from("github_accounts")
+        .select("id")
+        .eq("owner_id", context.userId)
+        .eq("id", account.id)
+        .eq("status", "connected")
+        .eq("token_ciphertext", account.token_ciphertext)
+        .maybeSingle();
+      if (current.error || !current.data) throw new Error("GitHub account changed; refresh again");
+    }
     const available = [...availableById.values()];
-    for (const installation of available) {
-      const token = await createInstallationToken(installation.id);
+    for (const { installation, repositories, account } of available) {
+      await assertCurrentAccount(account);
       const installationWrite = await (supabaseAdmin as any).from("github_installations").upsert(
         {
           id: installation.id,
-          account_id: ownedById.get(Number(installation.id)),
+          account_id: account.id,
           owner_id: context.userId,
-          organization_id: installation.account?.id,
-          organization_login: installation.account?.login,
+          organization_id: installation.account.id,
+          organization_login: installation.account.login,
           repository_selection: installation.repository_selection,
-          permissions: token.permissions,
-          events: installation.events ?? [],
+          permissions: installation.permissions,
+          events: installation.events,
           suspended_at: installation.suspended_at,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "owner_id,id" },
       );
       if (installationWrite.error) throw new Error("Unable to save GitHub installation");
-      const response = await fetch(
-        `https://api.github.com/installation/repositories?per_page=100`,
-        {
-          headers: {
-            accept: "application/vnd.github+json",
-            authorization: `Bearer ${token.token}`,
-            "x-github-api-version": "2022-11-28",
-          },
-        },
-      );
-      if (!response.ok) throw new Error("Unable to load installation repositories");
-      const payload = (await response.json()) as any;
-      for (const repo of payload.repositories ?? []) {
+      for (const repo of repositories) {
         const repositoryWrite = await (supabaseAdmin as any).from("github_repositories").upsert(
           {
             id: repo.id,
             owner_id: context.userId,
-            account_id: ownedById.get(Number(installation.id)),
+            account_id: account.id,
             installation_id: installation.id,
-            full_name: String(repo.full_name).toLowerCase(),
-            organization_login: repo.owner?.login,
+            full_name: repo.full_name.toLowerCase(),
+            organization_login: repo.owner?.login ?? installation.account.login,
             visibility: repo.visibility,
             default_branch: repo.default_branch,
-            permissions: repo.permissions ?? {},
+            permissions: repo.permissions,
             archived: repo.archived,
             updated_at: new Date().toISOString(),
           },
@@ -169,6 +156,7 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
         );
         if (repositoryWrite.error) throw new Error("Unable to save GitHub repository");
       }
+      await assertCurrentAccount(account);
     }
     return { count: available.length };
   });
