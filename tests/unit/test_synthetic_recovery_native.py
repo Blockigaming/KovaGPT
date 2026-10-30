@@ -396,6 +396,7 @@ class SyntheticTests(unittest.TestCase):
             calls.append(args)
             key=next(k for k in ["a","b","client"] if p.names[k] in args)
             if args[-1:]==["/bin/bash"] and any(x.endswith("/sha") for x in args):return 0,(p.bash_pins[key]+"  /bin/bash\n").encode()
+            if "/dev/udp/" in args[-1]:p.last_stderr=b"KOVA_DNS_SOCKET_READY\nKOVA_DNS_RECEIVE_READY\n"
             if "3" in args:return 124,b""
             return 0,b""
         p.docker=docker
@@ -970,7 +971,8 @@ class SyntheticTests(unittest.TestCase):
     def test_operator_route_denials_use_actual_bash_wording_and_preserve_client_tools_and_udp_guard(self):
         diagnostics=[b"/bin/bash: connect: Network unreachable\n/bin/bash: line 1: /dev/tcp/1.1.1.1/443: Network unreachable\n",
                      b"/bin/bash: connect: Network is unreachable\n",b"/bin/bash: connect: No route to host\n",
-                     b"connection refused",b"permission denied",b"command not found",b"arbitrary failure",b""]
+                     b"connection refused",b"permission denied",b"/bin/bash: connect: Operation not permitted\n",
+                     b"command not found",b"arbitrary failure",b""]
         for diagnostic in diagnostics:
             p=self.probe();p.native_tools={"timeout":"/server/timeout","sha256sum":"/server/sha"}
             p.client_tools={"timeout":"/operator/timeout","sha256sum":"/operator/sha"}
@@ -982,7 +984,9 @@ class SyntheticTests(unittest.TestCase):
                 if any(arg.endswith("/sha") for arg in args):return 0,(p.bash_pins[key]+"  /bin/bash\n").encode()
                 if not any(arg.endswith("/timeout") for arg in args):return 0,b""
                 self.assertTrue(kwargs.get("allow_failure"))
-                if "/dev/udp/" in args[-1]:clock["value"]+=3;return 143,b""
+                if "/dev/udp/" in args[-1]:
+                    p.last_stderr=b"KOVA_DNS_SOCKET_READY\nKOVA_DNS_RECEIVE_READY\n"
+                    clock["value"]+=3;return 143,b""
                 p.last_stderr=diagnostic;return 1,b""
             p.docker=docker
             with self.subTest(diagnostic=diagnostic),patch.object(m.base.time,"monotonic",side_effect=lambda:clock["value"]):
@@ -1056,6 +1060,33 @@ class SyntheticTests(unittest.TestCase):
             p,sql,_=self.tls_fixture(**options)
             with self.subTest(options=options),self.assertRaisesRegex(m.Stopped,error):p.tls_controls("a")
             self.assertFalse(any(text=="SELECT 1;\n" and kwargs=={} for _,text,kwargs in sql))
+
+    def test_operator_uses_shared_fixed_udp_send_guard_for_each_server_and_final_client(self):
+        p=self.probe();p.native_tools={"timeout":"/server/timeout","sha256sum":"/server/sha"}
+        p.client_tools={"timeout":"/operator/timeout","sha256sum":"/operator/sha"}
+        p.bash_pins={"a":"a"*64,"b":"a"*64,"client":"b"*64};p.timeout_control=lambda key,tools:143
+        calls=[]
+        eperm=(b"KOVA_DNS_SOCKET_READY\n/bin/bash: line 1: printf: write error: Operation not permitted\n"
+               b"KOVA_DNS_SEND_FAILED\n")
+        def docker(args,**kwargs):
+            calls.append(args);p.last_stderr=b""
+            key=next(key for key in ["a","b","client"] if p.names[key] in args)
+            if any(arg.endswith("/sha") for arg in args):return 0,(p.bash_pins[key]+"  /bin/bash\n").encode()
+            if not any(arg.endswith("/timeout") for arg in args):return 0,b""
+            if "/dev/udp/" in args[-1]:
+                self.assertEqual(args[-1],m.base.udp_dns_probe_script());p.last_stderr=eperm;return 1,b""
+            p.last_stderr=b"/bin/bash: connect: Network unreachable\n";return 1,b""
+        p.docker=docker
+        with patch.object(m.base.time,"monotonic",side_effect=[0,0.01]*30):
+            self.assertEqual(p.denial_probes([("public-https","1.1.1.1",443)]),18)
+        dns=[row for row in p.network_evidence if row.get("kind")=="docker-dns-udp"]
+        self.assertEqual({row["container"] for row in dns},{"a","b","client"})
+        self.assertTrue(all(row["sendDenied"] and row["replyNotReceived"] and row["denialPhase"]=="send-blocked" for row in dns))
+        udp_calls=[args for args in calls if "/dev/udp/" in args[-1]]
+        self.assertEqual(len(udp_calls),3)
+        self.assertTrue(any(p.names["client"] in args and "/operator/timeout" in args for args in udp_calls))
+        self.assertFalse(any(p.names["client"] in args and "/server/timeout" in args for args in udp_calls))
+        self.assertIs(o.OperatorProbe.udp_dns_denial_command,m.base.Probe.udp_dns_denial_command)
 
 
 if __name__=="__main__":unittest.main()

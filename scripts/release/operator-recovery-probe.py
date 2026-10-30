@@ -454,10 +454,7 @@ while :; do sleep 1; done"""
                 count+=1
             # An actual UDP DNS query must receive no reply; TCP53 alone would
             # not test Docker's embedded UDP resolver escape path.
-            self.docker(["exec",self.names[key],"/bin/bash","-ceu","command -v dd >/dev/null"])
-            dns="exec 3<>/dev/udp/127.0.0.11/53; printf '\\x12\\x34\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01' >&3; exec dd bs=1 count=1 <&3 >/dev/null 2>&1"
-            code=self.timed_denial_command(key,tools,dns,expired)
-            require(code==expired,"embedded_dns_udp_denial_unconfirmed")
+            self.udp_dns_denial_command(key,tools,expired)
             count+=1
         return count
 

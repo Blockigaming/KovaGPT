@@ -17,7 +17,7 @@ import signal
 import socket
 import subprocess
 
-EXPECTED = {'supabase/migrations/20261030163511_kova_work_runtime_forward.sql': '50935857c4564c7b695df43cb3ed8c68fcebc560bc0dcb40177486002dc4b5fa', 'scripts/release/work-runtime-forward-guards.mjs': 'a845dae5bfe0d725a6b3ac5ec16be7c2aecba54fa98260af6fc02bc107dec8cf', 'tests/fixtures/work-runtime-prerequisite-catalog-20261030.json': '13b8daf520686eccaa909a818ae9c3483b84d0edbc7afeae9e16703858dfe23a', 'tests/fixtures/work-runtime-forward-native-smoke-20261030.sql': '694d9c9fb7201ea7f29b7391f62e27eecd2929dad5a05e31ef97004909c10c3a'}
+EXPECTED = {'supabase/migrations/20261030163511_kova_work_runtime_forward.sql': '50935857c4564c7b695df43cb3ed8c68fcebc560bc0dcb40177486002dc4b5fa', 'scripts/release/work-runtime-forward-guards.mjs': 'a845dae5bfe0d725a6b3ac5ec16be7c2aecba54fa98260af6fc02bc107dec8cf', 'tests/fixtures/work-runtime-prerequisite-catalog-20261030.json': '13b8daf520686eccaa909a818ae9c3483b84d0edbc7afeae9e16703858dfe23a', 'tests/fixtures/work-runtime-forward-native-smoke-20261030.sql': 'faf0e8fa168707b2c7418fbfba881b9b87f9ee1fcbdbb2ea7ddf518cbf44abb3'}
 SQL = "tests/fixtures/work-runtime-forward-native-smoke-20261030.sql"
 MIGRATION = "supabase/migrations/20261030163511_kova_work_runtime_forward.sql"
 MARKERS = (

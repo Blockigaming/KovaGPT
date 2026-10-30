@@ -60,6 +60,15 @@ try:
  raise SystemExit(result.returncode)
 finally:os.close(fd)
 """
+DNS_SOCKET_READY=b"KOVA_DNS_SOCKET_READY\n"
+DNS_RECEIVE_READY=b"KOVA_DNS_RECEIVE_READY\n"
+DNS_SEND_FAILED=b"KOVA_DNS_SEND_FAILED\n"
+
+
+def udp_dns_probe_script():
+    # A fixed noncustomer DNS query; markers distinguish failed send from a
+    # successful send whose receiver is subsequently bounded by timeout.
+    return "exec 3<>/dev/udp/127.0.0.11/53; printf 'KOVA_DNS_SOCKET_READY\\n' >&2; if printf '\\x12\\x34\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01' >&3; then printf 'KOVA_DNS_RECEIVE_READY\\n' >&2; exec dd bs=1 count=1 <&3 >/dev/null 2>&1; else printf 'KOVA_DNS_SEND_FAILED\\n' >&2; exit 1; fi"
 
 
 class Stopped(Exception):
@@ -890,6 +899,22 @@ while :; do sleep 1; done"""
                 "outbound_connection_not_denied")
         return code
 
+    def udp_dns_denial_command(self,key,tools,expired):
+        require(type(expired) is int and expired in {124,143},"embedded_dns_udp_denial_unconfirmed")
+        self.docker(["exec",self.names[key],"/bin/bash","-ceu","command -v dd >/dev/null"])
+        code=self.timed_denial_command(key,tools,udp_dns_probe_script(),expired)
+        if code==expired:
+            require(self.last_stderr==DNS_SOCKET_READY+DNS_RECEIVE_READY,"embedded_dns_udp_denial_unconfirmed")
+            phase="receive-timeout"
+        else:
+            expected=(DNS_SOCKET_READY+b"/bin/bash: line 1: printf: write error: Operation not permitted\n"+DNS_SEND_FAILED)
+            require(code==1 and self.last_stderr==expected,"embedded_dns_udp_denial_unconfirmed")
+            phase="send-blocked"
+        self.network_evidence.append({"container":key,"kind":"docker-dns-udp","family":4,"port":53,
+            "addressSha256":digest(b"127.0.0.11"),"denialPhase":phase,"sendDenied":phase=="send-blocked",
+            "replyNotReceived":True})
+        return phase
+
     def denial_probes(self,targets):
         self.stage="actual_egress_denial"
         count=0
@@ -915,10 +940,7 @@ while :; do sleep 1; done"""
                 count+=1
             # An actual UDP DNS query must receive no reply; TCP53 alone would
             # not test Docker's embedded UDP resolver escape path.
-            self.docker(["exec",self.names[key],"/bin/bash","-ceu","command -v dd >/dev/null"])
-            dns="exec 3<>/dev/udp/127.0.0.11/53; printf '\\x12\\x34\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01' >&3; exec dd bs=1 count=1 <&3 >/dev/null 2>&1"
-            code=self.timed_denial_command(key,self.native_tools,dns,expired)
-            require(code==expired,"embedded_dns_udp_denial_unconfirmed")
+            self.udp_dns_denial_command(key,self.native_tools,expired)
             count+=1
         require(len(set(bash_hashes))==1,"server_client_bash_binary_mismatch")
         return count

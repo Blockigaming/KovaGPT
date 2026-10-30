@@ -56,6 +56,17 @@ test("guest Add menu uses one scroll region in a short desktop viewport", async 
   const menu = page.getByRole("dialog", { name: "Attach files and tools", exact: true });
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await input.fill("Keep this guest draft");
+  const coarsePointer = await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches);
+  const attachmentActions = [
+    "Library",
+    "Photos & Files",
+    "Open a project",
+    "Search the web",
+    "Analyze data",
+    "Analyze files",
+    "Drawings",
+    "Create Image",
+  ];
 
   async function expectViewportBounds() {
     const box = await menu.boundingBox();
@@ -88,8 +99,16 @@ test("guest Add menu uses one scroll region in a short desktop viewport", async 
           .map((node) => node === element),
       ),
     ).toEqual([true]);
-    for (const name of ["Library", "Photos & Files", "Drawings", "Create Image"])
-      await expect(menu.getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
+    for (const name of attachmentActions) {
+      const action = menu.getByRole("button", { name, exact: true });
+      await expect(action).toBeInViewport({ ratio: 1 });
+      if (coarsePointer) expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+    if (opening === 0)
+      await page.screenshot({
+        path: info.outputPath("guest-add-menu-initial.png"),
+        animations: "disabled",
+      });
 
     await page.keyboard.press("End");
     const browse = menu.getByRole("link", { name: "Browse all plugins", exact: true });
@@ -100,6 +119,12 @@ test("guest Add menu uses one scroll region in a short desktop viewport", async 
     await expect(drive).toBeInViewport({ ratio: 1 });
     await page.keyboard.press("Home");
     await expect(menu.getByRole("button", { name: "Library", exact: true })).toBeFocused();
+    for (const name of attachmentActions.slice(1)) {
+      await page.keyboard.press("ArrowDown");
+      const action = menu.getByRole("button", { name, exact: true });
+      await expect(action).toBeFocused();
+      await expect(action).toBeInViewport({ ratio: 1 });
+    }
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();
     await expect(trigger).toBeFocused();

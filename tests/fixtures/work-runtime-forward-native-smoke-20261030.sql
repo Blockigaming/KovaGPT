@@ -280,7 +280,7 @@ AS $function$
 begin
   return exists(select 1 from auth.users where id = p_user_id and deleted_at is null);
 end;
-$function$
+$function$;
 
 revoke all on function kova_private.auth_user_exists(uuid) from public,anon,authenticated;grant execute on function kova_private.auth_user_exists(uuid) to service_role;
 CREATE OR REPLACE FUNCTION public.set_project_file_upload_state(p_file_id uuid, p_attempt_id uuid, p_status text)
@@ -331,7 +331,7 @@ BEGIN
 
   RETURN coalesce(changed, false);
 END
-$function$
+$function$;
 
 revoke all on function public.set_project_file_upload_state(uuid,uuid,text) from public,anon,authenticated;grant execute on function public.set_project_file_upload_state(uuid,uuid,text) to service_role;
 CREATE OR REPLACE FUNCTION kova_auth_guard.session_is_active()
@@ -403,7 +403,7 @@ begin
 exception when invalid_text_representation or numeric_value_out_of_range then
   return false;
 end
-$function$
+$function$;
 
 revoke all on function kova_auth_guard.session_is_active() from public;grant execute on function kova_auth_guard.session_is_active() to anon,authenticated,service_role;
 

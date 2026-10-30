@@ -99,6 +99,29 @@ async function claims(db, { owner = USER, owned = false, session = SESSION } = {
   await db.exec("set role authenticated");
 }
 
+test("the actual native fixture bootstraps all captured helper definitions in one SQL batch", async () => {
+  const nativeSql = await readFile(
+    "tests/fixtures/work-runtime-forward-native-smoke-20261030.sql",
+    "utf8",
+  );
+  const start = nativeSql.indexOf("create schema auth;");
+  const end = nativeSql.indexOf("begin read only;");
+  assert.ok(start > 0 && end > start);
+  const db = new PGlite();
+  try {
+    await db.exec(
+      "create role anon;create role authenticated;create role service_role bypassrls;" +
+        nativeSql.slice(start, end),
+    );
+    await db.exec("begin read only;" + (await workRuntimePreflight()) + ";rollback");
+    assert.equal(
+      (await rows(db, "select to_regclass('public.work_execution_runs') as t"))[0].t,
+      null,
+    );
+  } finally {
+    await db.close();
+  }
+});
 test("frozen production prerequisite metadata passes read-only preflight before any Work installation", async () => {
   const db = await fixture({ install: false });
   try {

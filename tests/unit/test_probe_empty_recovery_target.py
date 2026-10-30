@@ -1,10 +1,12 @@
 """Synthetic metadata and mocked commands; never Docker or a live database."""
 import copy
+import fcntl
 import importlib.util
 import json
 import os
 from pathlib import Path
 import socket
+import subprocess
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -477,7 +479,9 @@ class NativeProbeTests(unittest.TestCase):
             if script=="printf 'timeout-control-positive\\n'":return 0,b"timeout-control-positive\n"
             if "timeout-control-started" in script:
                 clock["value"]+=1;return statuses[key],b"timeout-control-started\n"
-            if "/dev/udp/" in script:self.assertIn("exec dd bs=1 count=1",script)
+            if "/dev/udp/" in script:
+                self.assertIn("exec dd bs=1 count=1",script)
+                p.last_stderr=b"KOVA_DNS_SOCKET_READY\nKOVA_DNS_RECEIVE_READY\n"
             clock["value"]+=3;return statuses[key],b""
         p.docker=docker
         targets=[("production-https","1.1.1.1",443),("production-db","2606:4700::1111",5432)]
@@ -490,7 +494,7 @@ class NativeProbeTests(unittest.TestCase):
         self.assertEqual(len([args for args in calls if args[-1:].count("printf 'timeout-control-positive\\n'")]),3)
 
     def test_base_immediate_network_failure_requires_an_actual_route_denial_diagnostic(self):
-        for diagnostic in [b"connection refused",b"arbitrary failure",b""]:
+        for diagnostic in [b"connection refused",b"arbitrary failure",b"/bin/bash: connect: Operation not permitted\n",b""]:
             p=self.probe();p.native_tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
             p.timeout_control=lambda key,tools:143;p.last_stderr=diagnostic
             def docker(args,**_):
@@ -514,7 +518,9 @@ class NativeProbeTests(unittest.TestCase):
                 if "/native/sha" in args:return 0,b"a"*64+b"  /bin/bash\n"
                 if "/native/timeout" not in args:return 0,b""
                 self.assertTrue(kwargs.get("allow_failure"))
-                if "/dev/udp/" in args[-1]:clock["value"]+=3;return 143,b""
+                if "/dev/udp/" in args[-1]:
+                    p.last_stderr=b"KOVA_DNS_SOCKET_READY\nKOVA_DNS_RECEIVE_READY\n"
+                    clock["value"]+=3;return 143,b""
                 p.last_stderr=diagnostic;return 1,b""
             p.docker=docker
             with self.subTest(diagnostic=diagnostic),patch.object(m.time,"monotonic",side_effect=lambda:clock["value"]):
@@ -583,6 +589,106 @@ class NativeProbeTests(unittest.TestCase):
             p,sql,_=self.tls_fixture(**options)
             with self.subTest(options=options),self.assertRaisesRegex(m.Stopped,error):p.tls_controls("a")
             self.assertFalse(any(text=="SELECT 1;\n" and kwargs=={} for _,text,kwargs in sql))
+
+    def udp_fixture(self,*,code,stderr,stdout=b""):
+        p=self.probe();calls=[]
+        def docker(args,**kwargs):
+            calls.append((args,kwargs));p.last_stderr=b""
+            if "/native/timeout" in args:
+                p.last_stderr=stderr;return code,stdout
+            return 0,b""
+        p.docker=docker
+        return p,calls
+
+    def test_udp_fixed_query_accepts_only_marked_send_eperm_or_measured_receive_expiry(self):
+        socket_ready=b"KOVA_DNS_SOCKET_READY\n";receive_ready=b"KOVA_DNS_RECEIVE_READY\n"
+        send_failed=b"KOVA_DNS_SEND_FAILED\n"
+        eperm=b"/bin/bash: line 1: printf: write error: Operation not permitted\n"
+        for code,stderr,elapsed,expired,phase in [(1,socket_ready+eperm+send_failed,0.01,143,"send-blocked"),
+                (124,socket_ready+receive_ready,3,124,"receive-timeout"),
+                (143,socket_ready+receive_ready,3,143,"receive-timeout")]:
+            p,calls=self.udp_fixture(code=code,stderr=stderr)
+            with self.subTest(code=code),patch.object(m.time,"monotonic",side_effect=[0,elapsed]):
+                self.assertEqual(p.udp_dns_denial_command("a",{"timeout":"/native/timeout"},expired),phase)
+            self.assertEqual(calls[0],(["exec",p.names["a"],"/bin/bash","-ceu","command -v dd >/dev/null"],{}))
+            args,kwargs=calls[1]
+            self.assertEqual(args[:-1],["exec",p.names["a"],"/native/timeout","3","/bin/bash","-ceu"])
+            self.assertEqual(kwargs,{"timeout":5,"allow_failure":True})
+            self.assertEqual(args[-1],m.udp_dns_probe_script())
+            self.assertEqual(args[-1].count("exec 3<>/dev/udp/127.0.0.11/53;"),1)
+            self.assertNotIn("\n",args[-1]);self.assertNotIn("/dev/tcp/",args[-1])
+            self.assertIn("\\x07example\\x03com\\x00\\x00\\x01\\x00\\x01",args[-1])
+            self.assertEqual(p.network_evidence,[{"container":"a","kind":"docker-dns-udp","family":4,
+                "port":53,"addressSha256":m.digest(b"127.0.0.11"),"denialPhase":phase,
+                "sendDenied":phase=="send-blocked","replyNotReceived":True}])
+
+    def test_udp_unknown_error_phase_reply_status_stdout_or_fast_expiry_never_counts_as_denial(self):
+        sock=b"KOVA_DNS_SOCKET_READY\n";recv=b"KOVA_DNS_RECEIVE_READY\n";failed=b"KOVA_DNS_SEND_FAILED\n"
+        eperm=b"/bin/bash: line 1: printf: write error: Operation not permitted\n"
+        cases=[(1,eperm,0.01,143,b""),(1,sock+eperm,0.01,143,b""),
+            (1,sock+failed,0.01,143,b""),(1,sock+recv+eperm+failed,0.01,143,b""),
+            (1,sock+eperm.replace(b"Operation not permitted",b"Permission denied")+failed,0.01,143,b""),
+            (1,sock+eperm.replace(b"line 1",b"line 2")+failed,0.01,143,b""),
+            (1,sock+b"/bin/bash: /dev/udp/1.1.1.1/53: Operation not permitted\n"+failed,0.01,143,b""),
+            (1,b"extra\n"+sock+eperm+failed,0.01,143,b""),(1,sock+eperm+failed+b"extra\n",0.01,143,b""),
+            (1,sock+eperm+failed,0.01,143,b"reply"),(0,sock+recv,0.01,143,b""),
+            (127,sock+recv,3,143,b""),(-15,sock+recv,3,143,b""),
+            (143,sock+recv,0.01,143,b""),(143,sock+recv,5,143,b""),
+            (143,sock+recv,3,124,b""),(124,sock+recv,3,143,b""),
+            (143,sock+eperm+failed,3,143,b""),(143,sock,3,143,b""),
+            (143,recv+sock,3,143,b""),(143,sock+recv+b"extra\n",3,143,b"")]
+        for code,stderr,elapsed,expired,stdout in cases:
+            p,_=self.udp_fixture(code=code,stderr=stderr,stdout=stdout)
+            with self.subTest(code=code,stderr=stderr,elapsed=elapsed,expired=expired),\
+                 patch.object(m.time,"monotonic",side_effect=[0,elapsed]),self.assertRaises(m.Stopped):
+                p.udp_dns_denial_command("a",{"timeout":"/native/timeout"},expired)
+            self.assertEqual(p.network_evidence,[])
+        for expired in [True,1,137,"143",None]:
+            p,calls=self.udp_fixture(code=1,stderr=sock+eperm+failed)
+            with self.subTest(expired=expired),self.assertRaisesRegex(m.Stopped,"embedded_dns_udp_denial_unconfirmed"):
+                p.udp_dns_denial_command("a",{"timeout":"/native/timeout"},expired)
+            self.assertEqual(calls,[]);self.assertEqual(p.network_evidence,[])
+
+    def run_udp_send_body_on_local_fd(self,fd):
+        original=m.udp_dns_probe_script();opening="exec 3<>/dev/udp/127.0.0.11/53;"
+        self.assertEqual(original.count(opening),1)
+        script=original.replace(opening,'exec 3>&"$KOVA_UNIT_FD";',1)
+        self.assertNotIn("/dev/udp/",script)
+        # Execute the real phase/send/receive body with only its endpoint open
+        # replaced. Inherited local kernel FDs never perform a DNS/network call.
+        return subprocess.run(["/bin/bash","-ceu",script],pass_fds=(fd,),capture_output=True,timeout=5,
+            env={"PATH":os.environ["PATH"],"LC_ALL":"C","KOVA_UNIT_FD":str(fd)})
+
+    def test_real_bash_sealed_memfd_write_eperm_matches_only_the_exact_send_failure_branch(self):
+        fd=os.memfd_create("kova-synthetic-sealed-dns",os.MFD_ALLOW_SEALING)
+        try:
+            # Linux UAPI F_ADD_SEALS/F_SEAL_WRITE; some Python builds omit the
+            # names although the kernel interface is available.
+            fcntl.fcntl(fd,getattr(fcntl,"F_ADD_SEALS",1033),getattr(fcntl,"F_SEAL_WRITE",0x0008))
+            result=self.run_udp_send_body_on_local_fd(fd)
+            self.assertEqual(os.fstat(fd).st_size,0)
+        finally:os.close(fd)
+        expected=(b"KOVA_DNS_SOCKET_READY\n/bin/bash: line 1: printf: write error: Operation not permitted\n"
+                  b"KOVA_DNS_SEND_FAILED\n")
+        self.assertEqual(result.returncode,1);self.assertEqual(result.stdout,b"");self.assertEqual(result.stderr,expected)
+        p,_=self.udp_fixture(code=result.returncode,stdout=result.stdout,stderr=result.stderr)
+        with patch.object(m.time,"monotonic",side_effect=[0,0.01]):
+            self.assertEqual(p.udp_dns_denial_command("a",{"timeout":"/native/timeout"},143),"send-blocked")
+
+    def test_real_bash_successful_local_socket_send_and_received_byte_is_never_a_dns_denial(self):
+        client,peer=socket.socketpair()
+        with client,peer:
+            peer.settimeout(1);peer.sendall(b"R")
+            result=self.run_udp_send_body_on_local_fd(client.fileno())
+            query=peer.recv(4096)
+        self.assertTrue(query.startswith(b"\x12\x34"));self.assertIn(b"\x07example\x03com\x00",query)
+        self.assertEqual(result.returncode,0);self.assertEqual(result.stdout,b"")
+        self.assertEqual(result.stderr,b"KOVA_DNS_SOCKET_READY\nKOVA_DNS_RECEIVE_READY\n")
+        p,_=self.udp_fixture(code=result.returncode,stdout=result.stdout,stderr=result.stderr)
+        with patch.object(m.time,"monotonic",side_effect=[0,0.01]),\
+             self.assertRaisesRegex(m.Stopped,"outbound_connection_not_denied"):
+            p.udp_dns_denial_command("a",{"timeout":"/native/timeout"},143)
+        self.assertEqual(p.network_evidence,[])
 
 
 if __name__=="__main__":unittest.main()

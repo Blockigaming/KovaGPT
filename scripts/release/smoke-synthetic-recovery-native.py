@@ -89,6 +89,7 @@ SAFE_FAILURE_CODES=frozenset({
     "native_permission_unqualified","native_dependency_unqualified","private_command_output_bound",
     "timeout_control_identity_unconfirmed","timeout_control_positive_unconfirmed",
     "timeout_control_expiry_unconfirmed","outbound_connection_not_denied","numeric_denial_cause_unconfirmed",
+    "embedded_dns_udp_denial_unconfirmed",
 })
 
 
