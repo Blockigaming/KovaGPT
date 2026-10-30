@@ -128,7 +128,7 @@ class OwnedVolumes:
         require(mode == ("1777" if destination == "/tmp" else "0700"), "owned_volume_mode_unqualified")
         inodes = max(4096, min(1048576, size_mib * 1024))
         name = "kova-ram-" + self.run_id + "-" + self.attempt + "-" + self.owner + "-" + key
-        options = {"type": "tmpfs", "device": "tmpfs", "o": "rw,nosuid,nodev,noexec,noswap,size=" + str(size_mib)
+        options = {"type": "tmpfs", "device": "tmpfs", "o": "rw,nosuid,nodev,noexec,noswap,rprivate,size=" + str(size_mib)
                    + "m,uid=" + str(uid) + ",gid=" + str(gid) + ",mode=" + mode + ",nr_inodes=" + str(inodes)}
         return {"key": key, "name": name, "destination": destination, "size_mib": size_mib,
                 "uid": uid, "gid": gid, "mode": mode, "nr_inodes": inodes, "driver": "local",

@@ -86,12 +86,52 @@ class OwnedVolumeTests(unittest.TestCase):
         self.assertEqual(self.manager.state_path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(mount, "type=volume,src=" + spec["name"] + ",dst=/work,volume-nocopy")
         self.assertEqual(spec["options"], {"type": "tmpfs", "device": "tmpfs",
-            "o": "rw,nosuid,nodev,noexec,noswap,size=128m,uid=1001,gid=1001,mode=0700,nr_inodes=131072"})
+            "o": "rw,nosuid,nodev,noexec,noswap,rprivate,size=128m,uid=1001,gid=1001,mode=0700,nr_inodes=131072"})
         self.assertEqual(self.docker.calls[0], ["docker", "volume", "ls", "--format", "{{json .}}"])
         self.assertEqual(spec["phase"], "created"); self.assertFalse(spec["create_pending"])
         self.assertFalse(spec["activated"]); self.assertEqual(spec["runtime"], [])
         self.assertEqual(self.docker.volumes[spec["name"]]["Labels"], self.manager.labels)
         self.assertNotIn("runtimeVerified", spec)
+
+    def test_private_propagation_is_an_exact_local_driver_option_not_volume_bind_options(self):
+        spec=self.create()
+        created=next(c for c in self.docker.calls if c[:3]==["docker","volume","create"])
+        self.assertIn("o="+spec["options"]["o"],created)
+        self.assertEqual(spec["options"]["o"].split(",").count("rprivate"),1)
+        self.assertFalse(any("bind-propagation" in part for part in created))
+        original=copy.deepcopy(self.docker.volumes[spec["name"]])
+        for propagation in ["", "rslave,", "rshared,"]:
+            changed=copy.deepcopy(original)
+            changed["Options"]["o"]=changed["Options"]["o"].replace("rprivate,",propagation)
+            self.docker.volumes[spec["name"]]=changed
+            with self.subTest(propagation=propagation),self.assertRaisesRegex(m.Stopped,"configuration_changed"):
+                self.manager.verify()
+            with self.assertRaisesRegex(m.Stopped,"configuration_changed"):self.manager.cleanup()
+            state=m.private_state(self.manager.state_path)
+            state["specs"]["work"]["options"]=changed["Options"]
+            self.manager.state_path.write_bytes(m.encoded(state))
+            with self.assertRaisesRegex(m.Stopped,"cleanup_recipe_unqualified"):self.restored()
+        self.assertFalse(any(c[:3]==["docker","volume","rm"] for c in self.docker.calls))
+
+    def test_private_construction_does_not_waive_master_only_kernel_failure_or_quarantine(self):
+        # Synthetic mountinfo only: driver options are not a kernel proof.
+        proof_spec=importlib.util.spec_from_file_location("owned_private_runtime",SCRIPT.with_name("noswap-volume-proof.py"))
+        proof=importlib.util.module_from_spec(proof_spec);proof_spec.loader.exec_module(proof)
+        spec=self.create();self.manager.record_activation(["work"])
+        private=runtime_bytes([spec])
+        master=private.replace(b"noexec - tmpfs",b"noexec master:99 - tmpfs")
+        self.assertNotEqual(master,private)
+        with self.assertRaisesRegex(proof.Stopped,"volume_runtime_mount_policy_unqualified") as caught:
+            proof.validate_runtime_proof(master,[spec])
+        observed=proof.safe_mount_policy_observations(caught.exception)
+        self.assertTrue(observed["masterPropagation"]);self.assertFalse(observed["optionalFieldsEmpty"])
+        self.assertTrue(all(observed[k] for k in ["filesystemTmpfs","sourceTmpfs","filesystemRoot","readWrite",
+            "nosuid","nodev","noexec","readOnlyAbsent","noswap"]))
+        with self.assertRaisesRegex(m.Stopped,"activated_runtime_unconfirmed"):self.manager.cleanup()
+        self.assertFalse(any(c[:3]==["docker","volume","rm"] for c in self.docker.calls))
+        verified=proof.validate_runtime_proof(private,[spec])
+        self.manager.record_runtime_proof(verified["records"])
+        self.assertTrue(self.manager.cleanup())
 
     def test_spec_and_mount_views_are_copies_and_reuse_rechecks_exact_identity(self):
         self.create(); exposed = self.manager.specs; exposed["work"]["options"]["device"] = "/host"
