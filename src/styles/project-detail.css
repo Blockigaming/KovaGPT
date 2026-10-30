@@ -1,9 +1,11 @@
-/* A project is a shared workspace: one clear header, compact navigation and
-   familiar resource rows. Permissions and resource actions belong to the route. */
+/* CL-PROJECT: project name/description, conversations and right-side knowledge.
+   Shared controls use CG-SDK. The responsive composition is an adaptation,
+   not a claim about uncaptured authenticated Claude pixels. */
 .kova-project-workspace.spec400-project-detail {
   width: 100%;
   max-width: 1120px;
-  padding: 24px 32px 48px;
+  margin-inline: auto;
+  padding: 32px 32px 48px;
   container-name: project-detail;
   font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
 }
@@ -52,9 +54,9 @@
   min-width: 0;
   margin: 0;
   font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
-  font-size: 28px;
-  font-weight: 500;
-  line-height: 36px;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 38px;
   overflow-wrap: anywhere;
 }
 
@@ -121,17 +123,17 @@
 .kova-project-workspace .spec400-project-navigation [role="tablist"] {
   flex-shrink: 0;
   gap: 4px;
-  min-height: 44px;
+  min-height: 36px;
   padding: 0;
-  border-radius: var(--kova-radius-button);
+  border-radius: 8px;
   background: transparent;
 }
 
 .kova-project-workspace .spec400-project-navigation [role="tab"] {
-  min-height: 44px;
+  min-height: 36px;
   padding-inline: 12px;
   border: 0;
-  border-radius: var(--kova-radius-button);
+  border-radius: 8px;
   color: var(--muted-foreground);
   font-weight: 400;
 }
@@ -151,7 +153,7 @@
 
 .kova-project-workspace .kova-project-tools-trigger {
   gap: 6px;
-  min-height: 44px;
+  min-height: 36px;
   padding-inline: 12px;
   border-radius: var(--kova-radius-button);
   background: transparent;
@@ -176,9 +178,9 @@
 .kova-project-workspace .kova-project-collection-toolbar h2 {
   margin: 0;
   font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
-  line-height: 26px;
+  line-height: 24px;
 }
 
 .kova-project-collection-summary,
@@ -230,7 +232,7 @@
 }
 
 .kova-project-resource-row {
-  min-height: 68px;
+  min-height: 64px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   transition: background-color 120ms ease;
@@ -247,7 +249,7 @@
   gap: 12px;
   width: 100%;
   min-width: 0;
-  min-height: 44px;
+  min-height: 36px;
   padding: 0;
   border-radius: 6px;
   color: var(--foreground);
@@ -318,6 +320,77 @@
 
 .kova-project-workspace .kova-project-instructions {
   padding: 0;
+}
+
+.kova-project-chat-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  align-items: start;
+  gap: 32px;
+}
+.kova-project-knowledge {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--surface-secondary);
+}
+.kova-project-knowledge > h2 {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.kova-project-knowledge > p {
+  margin: 8px 0 16px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 20px;
+}
+.kova-project-knowledge-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 16px;
+  width: 100%;
+  min-height: 64px;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+}
+.kova-project-knowledge-row:hover {
+  color: var(--foreground);
+  background: var(--surface-hover);
+}
+.kova-project-knowledge-row :is(strong, small) {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.kova-project-knowledge-row small {
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+.kova-project-knowledge-row > svg {
+  color: var(--muted-foreground);
+}
+
+@container project-detail (max-width: 960px) {
+  .kova-project-chat-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
 }
 
 .kova-project-workspace .spec400-context-files {
@@ -467,6 +540,13 @@
 @media (prefers-reduced-motion: reduce) {
   .kova-project-resource-row {
     transition: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .kova-project-workspace .spec400-project-navigation :is([role="tablist"], [role="tab"]),
+  .kova-project-workspace :is(.kova-project-tools-trigger, .kova-project-resource-link) {
+    min-height: 44px;
   }
 }
 

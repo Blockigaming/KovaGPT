@@ -274,6 +274,7 @@ export function OnboardingDialog({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && skip()}>
       <DialogContent
+        data-ui-reference="chatgpt.onboarding.dialogcontent"
         className="gap-0 overflow-y-auto p-0 sm:max-w-[30rem] [&>div[aria-hidden]]:mt-2"
         onCloseAutoFocus={(event) => {
           const composer = document.querySelector<HTMLTextAreaElement>(
@@ -311,7 +312,9 @@ export function OnboardingDialog({
           {step === 1 && (
             <div className="grid grid-cols-2 gap-2">
               {USES.map((u) => (
-                <button
+                <Button
+                  variant="outline"
+                  data-ui-reference="chatgpt.onboarding.control"
                   data-kova-button-shape="preserve"
                   type="button"
                   key={u.id}
@@ -320,7 +323,7 @@ export function OnboardingDialog({
                     setPrimaryUse(u.id);
                     setSaveError(null);
                   }}
-                  className={`flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+                  className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
                     primaryUse === u.id
                       ? "border-primary/60 bg-primary/10 text-foreground"
                       : "border-border/70 hover:border-border hover:bg-muted/70"
@@ -328,7 +331,7 @@ export function OnboardingDialog({
                 >
                   <span>{u.label}</span>
                   {primaryUse === u.id ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
-                </button>
+                </Button>
               ))}
             </div>
           )}
@@ -336,7 +339,9 @@ export function OnboardingDialog({
           {step === 2 && (
             <div className="flex flex-col gap-2">
               {STYLES.map((s) => (
-                <button
+                <Button
+                  variant="outline"
+                  data-ui-reference="chatgpt.onboarding.control"
                   data-kova-button-shape="preserve"
                   type="button"
                   key={s.id}
@@ -345,7 +350,7 @@ export function OnboardingDialog({
                     setStyle(s.id);
                     setSaveError(null);
                   }}
-                  className={`flex min-h-14 items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                  className={`h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex min-h-14 items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
                     style === s.id
                       ? "border-primary/60 bg-primary/10"
                       : "border-border/70 hover:border-border hover:bg-muted/70"
@@ -356,7 +361,7 @@ export function OnboardingDialog({
                     <span className="mt-0.5 block text-xs text-muted-foreground">{s.hint}</span>
                   </span>
                   {style === s.id ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
-                </button>
+                </Button>
               ))}
             </div>
           )}
@@ -364,30 +369,34 @@ export function OnboardingDialog({
           {step === 3 && (
             <div className="flex flex-col gap-2 py-2">
               {starters.map((s) => (
-                <button
+                <Button
+                  variant="outline"
+                  data-ui-reference="chatgpt.onboarding.control"
                   data-kova-button-shape="preserve"
                   type="button"
                   key={s}
                   onClick={() => finish(s)}
                   disabled={saving}
-                  className="group min-h-12 rounded-xl border border-border/70 px-3 py-2.5 text-left text-sm transition hover:border-border hover:bg-muted/70 disabled:opacity-60"
+                  className="h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 group min-h-12 rounded-xl border border-border/70 px-3 py-2.5 text-left text-sm transition hover:border-border hover:bg-muted/70 disabled:opacity-60"
                 >
                   <span className="flex items-start gap-2">
                     <Sparkles className="w-3.5 h-3.5 mt-0.5 text-muted-foreground group-hover:text-foreground transition" />
                     <span className="flex-1">{s}</span>
                   </span>
-                </button>
+                </Button>
               ))}
-              <button
+              <Button
+                data-ui-reference="chatgpt.onboarding.control"
+                variant="ghost"
                 type="button"
                 onClick={() => {
                   setRotateKey((n) => n + 1);
                   setSaveError(null);
                 }}
-                className="mt-1 min-h-11 rounded-lg px-2 text-left text-xs text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
+                className="h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 mt-1    text-left text-xs text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
               >
                 Show me different ideas
-              </button>
+              </Button>
             </div>
           )}
 
@@ -396,7 +405,13 @@ export function OnboardingDialog({
               <p ref={saveErrorRef} role="alert" tabIndex={-1} className="text-sm text-destructive">
                 {saveError}
               </p>
-              <Button type="button" variant="ghost" onClick={() => void skip()} disabled={saving}>
+              <Button
+                data-ui-reference="chatgpt.onboarding.control"
+                type="button"
+                variant="ghost"
+                onClick={() => void skip()}
+                disabled={saving}
+              >
                 Skip for now
               </Button>
             </div>
@@ -405,6 +420,7 @@ export function OnboardingDialog({
 
         <DialogFooter className="border-t border-border/60 bg-muted/20 px-5 py-4 sm:justify-between sm:px-6">
           <Button
+            data-ui-reference="chatgpt.onboarding.control"
             variant="ghost"
             onClick={() => {
               setSaveError(null);
@@ -418,6 +434,7 @@ export function OnboardingDialog({
           </Button>
           {step === 1 ? (
             <Button
+              data-ui-reference="chatgpt.onboarding.control"
               onClick={() => {
                 setSaveError(null);
                 setStep(2);
@@ -428,6 +445,7 @@ export function OnboardingDialog({
             </Button>
           ) : step === 2 ? (
             <Button
+              data-ui-reference="chatgpt.onboarding.control"
               onClick={() => {
                 setSaveError(null);
                 setStep(3);
@@ -437,7 +455,11 @@ export function OnboardingDialog({
               Continue
             </Button>
           ) : (
-            <Button onClick={() => finish()} disabled={saving}>
+            <Button
+              data-ui-reference="chatgpt.onboarding.control"
+              onClick={() => finish()}
+              disabled={saving}
+            >
               {saving ? (
                 <span className="spec400-loading-label">
                   <span className="spec400-loading-spinner" aria-hidden="true" />

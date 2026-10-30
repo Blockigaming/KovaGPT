@@ -67,7 +67,9 @@ test("mobile workspaces and settings never overflow", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Open menu" }).click();
-  await page.getByRole("button", { name: "Settings" }).click({ force: true });
+  const navigation = page.getByRole("dialog", { name: "Primary navigation", exact: true });
+  await expect(navigation).toBeVisible();
+  await navigation.getByRole("button", { name: "Settings", exact: true }).click();
   const settings = page.locator(".kova-settings-dialog");
   await expect(settings).toBeVisible();
   const box = await settings.boundingBox();

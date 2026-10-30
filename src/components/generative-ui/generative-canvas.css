@@ -1,6 +1,6 @@
 .kova-generative-canvas {
   --canvas-radius: var(--kova-radius-panel, 20px);
-  --canvas-control-radius: var(--kova-radius-button, 12px);
+  --canvas-control-radius: var(--kova-radius-input, 10px);
   border: 1px solid var(--border);
   border-radius: var(--canvas-radius);
   background: var(--background);
@@ -8,7 +8,7 @@
   margin-block: 16px;
   min-width: 0;
   overflow: hidden;
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--foreground) 4%, transparent);
+  box-shadow: none;
 }
 .kova-generative-canvas-expanded {
   margin: 0;
@@ -23,7 +23,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
 }
 .kova-generative-title {
@@ -41,8 +41,7 @@
   font-size: 11px;
   line-height: 16px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: normal;
   color: var(--muted-foreground);
 }
 .kova-generative-body {
@@ -54,21 +53,11 @@
   flex: 1;
 }
 .kova-generative-canvas button {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--canvas-control-radius);
-  background: var(--background);
-  color: var(--foreground);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 20px;
-  cursor: pointer;
-}
-.kova-generative-canvas button:hover:not(:disabled) {
-  background: var(--accent);
+  max-width: 100%;
+  height: auto;
+  min-height: 36px;
+  padding-block: 8px;
+  white-space: normal;
 }
 .kova-generative-canvas button:disabled {
   opacity: 0.45;
@@ -95,15 +84,6 @@
 .kova-generative-canvas select {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  border: 1px solid var(--border);
-  border-radius: var(--canvas-control-radius);
-  padding: 10px 12px;
-  background: var(--background);
-  color: var(--foreground);
-  font: inherit;
-  font-size: 14px;
-  line-height: 22px;
 }
 .kova-generative-canvas input[type="date"] {
   color-scheme: light;
@@ -322,6 +302,11 @@
   font-size: 12px;
   line-height: 18px;
   color: var(--muted-foreground);
+}
+@media (pointer: coarse) {
+  .kova-generative-canvas button {
+    min-height: 44px;
+  }
 }
 @media (max-width: 600px) {
   .kova-generative-heading {

@@ -112,6 +112,7 @@ export function ControlSheet() {
 
 function ControlSamples() {
   const [count, setCount] = useState(0);
+  const [composerFocusOrigin, setComposerFocusOrigin] = useState("keyboard");
   const [checked, setChecked] = useState(false);
   const [enabled, setEnabled] = useState(true);
   const [rejectCopy, setRejectCopy] = useState(false);
@@ -365,11 +366,21 @@ function ControlSamples() {
         <div className="rounded-[var(--kova-radius-message)] bg-muted p-4">
           User message sample with 20px corners.
         </div>
-        <div className="kova-composer rounded-[var(--kova-radius-composer)] border p-4">
-          <label htmlFor="sample-composer">Composer sample</label>
+        <div
+          className="spec400-composer"
+          data-focus-origin={composerFocusOrigin}
+          onPointerDownCapture={() => setComposerFocusOrigin("pointer")}
+          onKeyDownCapture={(event) => {
+            if (event.key === "Tab") setComposerFocusOrigin("keyboard");
+          }}
+        >
+          <label className="sr-only" htmlFor="sample-composer">
+            Composer sample
+          </label>
           <textarea
             id="sample-composer"
-            className="kova-composer-input block w-full bg-transparent"
+            className="spec400-composer-input"
+            data-multiline="true"
             defaultValue={"A multiline draft\nwith one outer surface"}
           />
         </div>

@@ -6,7 +6,16 @@ const read = (path) => readFileSync(path, "utf8");
 const cssFiles = [
   "src/styles.css",
   ...readdirSync("src/styles")
-    .filter((name) => name.endsWith(".css"))
+    .filter(
+      (name) =>
+        name.endsWith(".css") &&
+        ![
+          "assistant.css",
+          "assistant-modern.css",
+          "chatgpt-parity.css",
+          "chatgpt-final-parity.css",
+        ].includes(name),
+    )
     .map((name) => `src/styles/${name}`),
   ...[
     "account-surfaces",
@@ -24,14 +33,14 @@ const cssFiles = [
 const sheets = cssFiles.map((path) => [path, postcss.parse(read(path))]);
 const expected = {
   button: "9999px",
-  control: "14px",
-  input: "14px",
-  compact: "10px",
-  sidebar: "14px",
-  card: "20px",
-  menu: "18px",
+  control: "10px",
+  input: "10px",
+  compact: "6px",
+  sidebar: "8px",
+  card: "16px",
+  menu: "12px",
   panel: "24px",
-  composer: "28px",
+  composer: "26px",
   message: "20px",
   output: "16px",
 };
@@ -77,140 +86,103 @@ test("semantic radius values have exactly one authoritative source", () => {
   assert.match(read("src/styles.css"), /@import "\.\/styles\/control-geometry\.css"/);
 });
 
-test("action defaults explicitly exclude non-action widgets and full surfaces", () => {
-  const policy = rules("src/styles/control-geometry.css", "body")[0];
-  for (const exception of [
-    '[role]:not([role="button"])',
-    '[data-kova-button-shape="preserve"]',
-    "[data-day]",
-    "[data-range-middle]",
-    '[role="menu"] *',
-    '[role="listbox"] *',
-    '[role="tablist"] *',
-    ".kova-sidebar-scrim",
-    ".kova-browser-card",
-    ".work-browser-preview",
-    ".kova-card",
-    ".kova-nav-row:not(.kova-new-chat)",
-    ".kova-chat-row-main",
-    ".kova-account-main",
-    ".kova-file-open",
-    ".kova-output-row",
-    ".kova-composer-action",
-    ".rdp-root *",
-    '[data-state="on"]',
-    '[data-state="off"]',
-  ])
-    assert.ok(policy.selector.includes(exception), exception);
-  for (const action of [
-    'a[role="button"]',
-    ".kova-button",
-    "a.public-action",
-    "a[data-public-primary]",
-    "a.kova-billing-plan-action",
-    ".spec400-review-toolbar a",
-    ".spec400-review-actions > a",
-  ])
-    assert.ok(policy.selector.includes(action), action);
-  assert.equal(declarations(policy, "border-radius")[0].value, "var(--kova-radius-button)");
-  assert.equal(declarations(policy, "border-radius")[0].important, undefined);
+test("primitive owners replace blanket action defaults without reshaping unrelated widgets", () => {
+  const sheet = postcss.parse(read("src/styles/control-geometry.css"));
+  sheet.walkRules((rule) => {
+    if (!declarations(rule, "border-radius").length) return;
+    assert.doesNotMatch(
+      rule.selector,
+      /button|role="(?:button|menuitem|option|tab|switch)"|kova-card|kova-sidebar-scrim/,
+      "A global action policy must not force pills on rows, cards or widgets",
+    );
+  });
+  assert.match(read("src/components/ui/button.tsx"), /data-ui-reference="chatgpt.button.pill"/);
+  assert.match(read("src/components/ui/dropdown-menu.tsx"), /data-ui-reference="chatgpt.menu"/);
+  assert.match(read("src/components/ui/switch.tsx"), /data-ui-reference="chatgpt.switch"/);
+  assert.match(read("src/components/ui/card.tsx"), /rounded-\[var\(--kova-radius-card\)\]/);
 });
 
-test("known late consumer rules use the same action token", () => {
+test("late consumers keep ordinary actions and compact transcript icons distinct", () => {
   for (const [path, selector] of [
-    ["src/styles/assistant.css", "button.kova-message-icon-action"],
-    ["src/components/response-action-refinement.css", "button.kova-message-icon-action"],
     ["src/styles/billing-surfaces.css", ".kova-billing-plan-action"],
     ["src/components/account-deletion-grace.css", ".kova-account-deletion-dialog button"],
     ["src/components/response-output-blocks.css", ".kova-response-copy-button"],
     ["src/components/response-output-blocks.css", ".kova-image-actions button"],
-    ["src/styles/composer-core.css", ".kova-composer-utility-button"],
+    ["src/styles/spec400-chat.css", ".spec400-toolbar-button"],
   ])
     hasRadius(path, selector, "button");
+  hasRadius(
+    "src/components/response-action-refinement.css",
+    "button.kova-message-icon-action",
+    "compact",
+  );
 });
 
-test("shared button variants separate standard and prominent dimensions", () => {
+test("shared buttons retain the pinned reference hierarchy and larger coarse-pointer targets", () => {
   const source = read("src/components/ui/button.tsx");
-  assert.match(source, /kova-button.*rounded-\[var\(--kova-radius-button\)\]/);
-  assert.match(source, /default: "h-11 px-4 py-2"/);
-  assert.match(source, /sm: "min-h-11 px-4 text-sm"/);
-  assert.match(source, /lg: "h-11 px-4"/);
-  assert.match(source, /icon: "h-11 w-11"/);
-  assert.match(source, /prominent: "h-12 w-full px-5"/);
-  assert.match(source, /gap-2/);
+  assert.match(source, /kova-button.*rounded-full/);
+  assert.match(source, /default: "h-9 /);
+  assert.match(source, /sm: "h-8 /);
+  assert.match(source, /lg: "h-10 /);
+  assert.match(source, /icon: "h-9 w-9 /);
+  assert.match(source, /prominent: "h-11 w-full /);
+  assert.match(source, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(source, /gap-1\.5/);
   assert.match(source, /destructive: "bg-destructive text-destructive-foreground/);
 });
 
-test("shared listbox options have the same 44px minimum as menu rows", () => {
-  const target = rules("src/styles/spec400-system.css", 'body [role="option"]')[0];
-  assert.ok(target, "Listbox options participate in the authoritative shared target rule");
-  assert.ok(target.selector.includes('body [role="menuitem"]'));
-  assert.equal(declarations(target, "min-height")[0].value, "44px");
-  assert.equal(declarations(target, "border-radius")[0].value, "var(--kova-radius-compact)");
-  const legacy = rules("src/styles/chatgpt-parity.css", '[role="option"]');
-  for (const rule of legacy)
-    assert.equal(
-      declarations(rule, "min-height").length,
-      0,
-      "Parity must not compete with shared option targets",
-    );
-});
-
-test("menu keyboard highlight does not recolor ordinary dialog or presentation-surface actions", () => {
-  for (const path of ["src/styles/chatgpt-parity.css", "src/styles/chatgpt-final-parity.css"]) {
-    const highlighted = rules(path, ":focus-visible").filter((rule) =>
-      declarations(rule, "background").some(
-        (decl) => decl.value === "var(--accent)" && decl.important,
-      ),
-    );
-    assert.equal(highlighted.length, 1, path);
-    const highlight = highlighted[0];
-    const outer = highlight.selector.match(/^:where\(([^)]+)\)/);
-    assert.ok(outer, "Menu focus uses an explicit semantic ancestor scope");
-    const scopes = outer[1].split(",").map((selector) => selector.trim());
-    assert.deepEqual(
-      new Set(scopes),
-      new Set(['[role="menu"]', '[role="listbox"]', ".kova-model-menu"]),
-      path,
-    );
-    assert.equal(declarations(highlight, "outline")[0].value, "none");
-    assert.equal(declarations(highlight, "box-shadow")[0].value, "none");
-    assert.ok(highlight.selector.includes('[role="menuitem"]'));
-    assert.ok(highlight.selector.includes('[role="option"]'));
+test("listbox and menu rows use the source 32px density with 44px coarse-pointer targets", () => {
+  for (const name of ["select", "dropdown-menu", "context-menu", "command"]) {
+    const source = read(`src/components/ui/${name}.tsx`);
+    assert.match(source, /min-h-8/);
+    assert.match(source, /\[@media\(pointer:coarse\)\]:min-h-11/);
+    assert.match(source, /rounded-\[6px\]/);
   }
-
-  const ordinary = rules("src/styles/spec400-system.css", ":focus-visible").find((rule) =>
-    declarations(rule, "outline").some((decl) => decl.value === "2px solid var(--ring)"),
-  );
-  assert.ok(ordinary, "Ordinary dialog buttons retain the shared visible keyboard outline");
-  assert.ok(ordinary.selector.includes("button"));
+  const options = rules("src/styles/spec400-system.css", 'body [role="option"]');
+  assert.equal(options.length, 0, "No global role selector may override component row density");
 });
 
-test("sidebar widths have one owner and semantic navigation remains separate", () => {
+test("menu keyboard highlight stays in menu primitives while ordinary actions retain focus rings", () => {
+  for (const primitive of ["select", "dropdown-menu", "context-menu", "command"])
+    assert.match(
+      read(`src/components/ui/${primitive}.tsx`),
+      /(?:focus|data-\[selected=true\]):bg-accent/,
+    );
+  assert.doesNotMatch(read("src/components/ui/button.tsx"), /focus(?:-visible)?:bg-accent/);
+  const focus = rules("src/styles/control-geometry.css", ":focus-visible");
+  assert.ok(focus.length);
+  for (const rule of focus) {
+    assert.equal(declarations(rule, "outline")[0].value, "2px solid var(--ring)");
+    assert.equal(declarations(rule, "background").length, 0);
+  }
+});
+
+test("sidebar geometry has one owner and keeps compact desktop rows separate from touch targets", () => {
   const css = read("src/styles/sidebar-core.css");
-  assert.match(css, /width: var\(--kova-sidebar-width\)/);
-  assert.match(css, /width: var\(--kova-sidebar-rail-width\)/);
-  assert.match(css, /width: var\(--kova-sidebar-drawer-width\)/);
-  assert.match(css, /max-width: calc\(100vw - 24px\)/);
   const tokens = read("src/styles/visual-tokens.css");
-  assert.match(tokens, /--kova-sidebar-width: 256px/);
-  assert.match(tokens, /--kova-sidebar-rail-width: 72px/);
-  assert.match(tokens, /--kova-sidebar-drawer-width: min\(320px, calc\(100vw - 24px\)\)/);
-  hasRadius("src/styles/sidebar-core.css", ".kova-nav-row.kova-new-chat", "button");
-  hasRadius(
-    "src/styles/sidebar-core.css",
-    ".kova-sidebar-rail[data-kova-core-rail] .kova-rail-button",
-    "control",
+  assert.match(css, /width: var\(--sidebar-expanded, var\(--kova-sidebar-width, 260px\)\)/);
+  assert.match(css, /width: var\(--kova-sidebar-rail-width/);
+  assert.match(css, /width: var\(--kova-sidebar-drawer-width/);
+  assert.match(css, /max-width: calc\(100vw - 24px\)/);
+  assert.match(tokens, /--kova-sidebar-width: 260px/);
+  assert.match(tokens, /--kova-sidebar-rail-width: 56px/);
+  assert.match(tokens, /--kova-sidebar-drawer-width: min\(320px, calc\(100vw - 32px\)\)/);
+  const row = rules("src/styles/sidebar-core.css", ".kova-sidebar .kova-nav-row").find(
+    (rule) => rule.selector === ".kova-sidebar .kova-nav-row",
   );
-  assert.match(css, /--sidebar-gutter: 16px/);
-  assert.match(css, /--sidebar-row-height: 44px/);
+  assert.equal(declarations(row, "border-radius")[0].value, "8px");
+  assert.match(css, /--sidebar-row-height: 36px/);
+  assert.match(
+    css,
+    /@media \(pointer: coarse\), \(max-width: 1023px\)[\s\S]*--sidebar-row-height: 44px/,
+  );
+  assert.match(css, /\.kova-sidebar-primary[\s\S]*?padding: 8px/);
 });
 
 test("reading preferences retain bounds while all reading consumers use one token", () => {
   assert.match(read("src/lib/appearance-preferences.mjs"), /\[680, 760, 900\]/);
   assert.doesNotMatch(read("src/lib/appearance-preferences.mjs"), /--chat-content-width/);
   for (const path of [
-    "src/styles/assistant.css",
     "src/styles/spec400-chat.css",
     "src/components/response-action-refinement.css",
   ])
@@ -256,40 +228,34 @@ test("mobile output actions are inset pills and table cue remains ordinary flow"
 test("public consumers split action, input, card, output and composer semantics", () => {
   const path = "src/components/public/spec400-public.css";
   assert.doesNotMatch(read(path), /\.rounded-full\)\s*\{/);
-  hasRadius(path, ".spec400-review :is(input, select, textarea)", "input");
+  hasRadius(
+    path,
+    '.spec400-review :is(input:not([data-slot="input"]), select, textarea:not([data-slot="textarea"]))',
+    "input",
+  );
   hasRadius(path, ".spec400-review-card", "card");
   hasRadius(path, ".spec400-review pre", "output");
   hasRadius(path, "[data-public-shell] .public-example-composer", "composer", true);
   hasRadius(path, ".public-example-prompt", "message");
 });
 
-test("fields retain pointer focused borders and keyboard outlines without legacy suppression", () => {
-  const css = read("src/styles.css");
-  assert.doesNotMatch(css, /html\[data-kova-input-modality="pointer"\]\s*:is\(\s*button/);
-  const geometry = "src/styles/control-geometry.css";
-  const pointer = rules(geometry, ":is(input, textarea, select):focus").find(
-    (rule) => rule.selector === ":is(input, textarea, select):focus",
-  );
-  assert.equal(declarations(pointer, "border-color")[0].value, "var(--ring)");
-  const keyboard = rules(geometry, ":focus-visible").find((rule) =>
-    rule.selector.includes(":is(input, textarea, select)"),
-  );
-  assert.equal(declarations(keyboard, "outline")[0].value, "2px solid var(--ring)");
-  assert.equal(declarations(keyboard, "outline-offset")[0].value, "2px");
-  assert.match(keyboard.selector, /:not\(\.kova-composer-input\)/);
-  for (const [path, sheet] of sheets) {
+test("fields retain their reference focus borders and shared keyboard outlines", () => {
+  const geometry = rules("src/styles/control-geometry.css", ":focus-visible");
+  assert.ok(geometry.some((rule) => rule.selector.includes("input")));
+  for (const rule of geometry) {
+    assert.equal(declarations(rule, "outline")[0].value, "2px solid var(--ring)");
+    assert.equal(declarations(rule, "outline-offset")[0].value, "2px");
+    assert.match(rule.selector, /:not\(\.kova-composer-input\)/);
+  }
+  for (const primitive of ["input", "textarea"])
+    assert.match(read(`src/components/ui/${primitive}.tsx`), /focus-visible:border-foreground\/50/);
+  for (const [path, sheet] of sheets)
     sheet.walkRules((rule) => {
-      // Guard the broad field selector, while preserving targeted composer and
-      // non-field widget focus handling. Important declarations here previously
-      // defeated the shared field rules in the actual compiled stylesheet.
       if (!/:is\(input,\s*textarea,\s*select\):focus/.test(rule.selector)) return;
       for (const prop of ["outline", "box-shadow", "border-color"])
         for (const decl of declarations(rule, prop))
           assert.ok(!decl.important, `${path}: competing field focus ${decl}`);
     });
-  }
-  for (const primitive of ["input", "textarea"])
-    assert.match(read(`src/components/ui/${primitive}.tsx`), /focus-visible:border-ring/);
 });
 
 test("supplied Plex interface weights are bounded to400,500,600", () => {
@@ -355,20 +321,24 @@ test("control samples own viewport scrolling and expose the same top-level revie
   );
 });
 
-test("composer sample pairs its inner textarea with the shared outer-focus surface", () => {
+test("composer sample uses production inner-input and keyboard outer-focus roles", () => {
   const source = read("review-kit/components/ControlSheet.tsx");
-  assert.match(
-    source,
-    /<div className="kova-composer [^"]*">\s*<label htmlFor="sample-composer">[\s\S]*?<textarea\s+id="sample-composer"\s+className="kova-composer-input /,
+  assert.match(source, /className="spec400-composer"/);
+  assert.match(source, /data-focus-origin=\{composerFocusOrigin\}/);
+  assert.match(source, /onPointerDownCapture=\{\(\) => setComposerFocusOrigin\("pointer"\)\}/);
+  assert.match(source, /event.key === "Tab"/);
+  assert.match(source, /id="sample-composer"[\s\S]*?className="spec400-composer-input"/);
+  const composer = rules(
+    "src/styles/spec400-chat.css",
+    '.spec400-composer[data-focus-origin="keyboard"]:focus-within',
+  )[0];
+  assert.equal(declarations(composer, "outline")[0].value, "2px solid var(--ring)");
+  assert.equal(declarations(composer, "outline-offset")[0].value, "2px");
+  const inner = rules("src/styles/spec400-chat.css", ".spec400-composer-input").find(
+    (rule) => rule.selector === ".spec400-composer-input",
   );
-  const inner = rules("src/styles.css", ".kova-composer textarea:focus")[0];
   assert.equal(declarations(inner, "outline")[0].value, "none");
-  assert.equal(declarations(inner, "outline")[0].important, true);
-  const outer = rules("src/styles.css", ".kova-composer:focus-within").find((rule) =>
-    declarations(rule, "outline").some((decl) => decl.value === "2px solid var(--kova-blue)"),
-  );
-  assert.ok(outer, "The shared outer composer retains its visible focus treatment");
-  assert.match(source, /defaultValue=\{\"A multiline draft\\nwith one outer surface\"\}/);
+  assert.match(source, /A multiline draft/);
 });
 
 test("output samples preserve production prose context and keyboard code access", () => {

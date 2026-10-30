@@ -42,7 +42,6 @@ postcss
   .parse(readFileSync("src/styles/visual-tokens.css", "utf8"))
   .walkDecls((decl) => tokens.set(decl.prop, decl.value));
 const property = (rule, name) => rule.nodes.findLast((node) => node.prop === name)?.value;
-const important = (rule, name) => rule.nodes.findLast((node) => node.prop === name)?.important;
 
 test("shortcut defaults include Scheduled tasks, and choices remain stable after reload", () => {
   const storage = memoryStorage();
@@ -151,93 +150,65 @@ test("customization uses labeled native controls, modal Escape handling, reset, 
     ),
   );
   assert.ok(
-    rules.some(
+    sharedRules.some(
       (rule) =>
-        rule.selector.includes(".kova-rail-account:focus-visible") && property(rule, "outline"),
+        rule.selector.includes(".kova-sidebar-rail :is(button, a):focus-visible") &&
+        property(rule, "outline"),
     ),
   );
 });
 
-test("desktop shares the canvas, while the grey phone drawer uses the bounded shared width", () => {
-  const desktop = rules.find(
-    (rule) => rule.parent.type === "root" && rule.selector.includes("[data-state]"),
+test("sidebar colors and bounded drawer width come from one shared owner without important overrides", () => {
+  const desktop = sharedRules.find(
+    (rule) =>
+      rule.parent.type === "root" &&
+      rule.selector.includes(".kova-sidebar[data-kova-core-sidebar]") &&
+      property(rule, "--sidebar-row-height"),
   );
-  assert.equal(property(desktop, "background"), "var(--assistant-canvas, var(--background))");
-  assert.equal(property(desktop, "border-radius"), "0");
-  assert.ok(important(desktop, "background"), "Override the old sidebar parity background");
-  assert.equal(property(desktop, "--sidebar-row-height"), "44px");
-  const mobile = rules.find(
-    (rule) => rule.parent.params === "(max-width: 1023px)" && !rule.selector.startsWith(".dark"),
-  );
-  for (const name of ["width", "min-width", "max-width"])
-    assert.equal(
-      property(mobile, name),
-      undefined,
-      "Refinement must not compete with shared widths",
-    );
-  const sidebar = ":is(.kova-assistant, .kova-app-shell) .kova-sidebar[data-kova-core-sidebar]";
-  const sharedMobile = sharedRules.find(
+  assert.equal(property(desktop, "background"), "var(--sidebar)");
+  assert.equal(property(desktop, "--sidebar-row-height"), "36px");
+  const mobile = sharedRules.find(
     (rule) =>
       rule.parent.params === "(max-width: 1023px)" &&
-      rule.selectors.some((selector) => selector.replace(/\s+/g, " ").trim() === sidebar) &&
-      property(rule, "width"),
+      rule.selector === ".kova-sidebar[data-kova-core-sidebar]",
   );
-  assert.ok(sharedMobile, "The shared sidebar owns the phone width below the desktop breakpoint");
-  assert.equal(property(sharedMobile, "width"), "var(--kova-sidebar-drawer-width)");
-  assert.equal(tokens.get("--kova-sidebar-drawer-width"), "min(320px, calc(100vw - 24px))");
-  assert.equal(property(sharedMobile, "min-width"), "0");
-  assert.equal(property(sharedMobile, "max-width"), "calc(100vw - 24px)");
   assert.equal(
-    property(mobile, "border-radius"),
-    "0 var(--kova-radius-panel) var(--kova-radius-panel) 0",
+    property(mobile, "width"),
+    "var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)))",
   );
-  assert.equal(tokens.get("--kova-radius-panel"), "24px");
-  assert.equal(property(mobile, "background"), "#f3f3f3");
-  assert.ok(important(mobile, "background"));
-  const darkMobile = rules.find(
-    (rule) => rule.parent.params === "(max-width: 1023px)" && rule.selector.startsWith(".dark"),
-  );
-  assert.equal(property(darkMobile, "background"), "#171717");
-  assert.ok(important(darkMobile, "background"));
+  assert.equal(property(mobile, "min-width"), "0");
+  assert.equal(property(mobile, "max-width"), "calc(100vw - 24px)");
+  assert.equal(property(mobile, "border-radius"), "0 24px 24px 0");
+  assert.equal(tokens.get("--kova-sidebar-width"), "260px");
+  assert.equal(tokens.get("--kova-sidebar-rail-width"), "56px");
+  assert.equal(tokens.get("--kova-sidebar-drawer-width"), "min(320px, calc(100vw - 32px))");
   assert.ok(
-    !rules.some((rule) => rule.selector.includes(".kova-sidebar-scrim")),
-    "Refinement must not re-round the full-screen scrim",
+    !rules.some(
+      (rule) =>
+        rule.selector.includes("[data-kova-core-sidebar]") ||
+        rule.selector.includes(".kova-sidebar-rail"),
+    ),
+    "Dialog customization does not compete with navigation geometry",
   );
+  for (const rule of sharedRules)
+    for (const node of rule.nodes)
+      if (node.type === "decl")
+        assert.ok(!node.important, "No sidebar override relies on important specificity");
 });
 
-test("navigation keeps rounded 44px targets and the account outside scrollable shortcuts", () => {
-  const railButton = rules.find((rule) => rule.selector.endsWith(".kova-rail-button"));
-  assert.equal(property(railButton, "min-width"), "44px");
-  assert.equal(property(railButton, "min-height"), "44px");
-  assert.equal(
-    property(railButton, "border-radius"),
-    undefined,
-    "Refinement delegates rail shape to the shared owner",
-  );
-  const scopedRadius = rules.find(
+test("navigation keeps dense desktop rows, touch targets and account outside scrollable shortcuts", () => {
+  const touch = sharedRules.find(
     (rule) =>
-      rule.selector.includes(
-        "nav.kova-sidebar-rail[data-kova-refined-sidebar][data-kova-core-rail][data-state][aria-label]",
-      ) && rule.selector.endsWith(".kova-rail-button[aria-label]"),
+      rule.parent.params === "(pointer: coarse), (max-width: 1023px)" &&
+      rule.selector.includes(".kova-sidebar[data-kova-core-sidebar]") &&
+      property(rule, "--sidebar-row-height"),
   );
-  assert.equal(scopedRadius, undefined, "No obsolete local 8px override may mask the shared shape");
-  const sharedNavigation = sharedRules.find((rule) => rule.selector.endsWith(".kova-rail-button"));
-  assert.ok(sharedNavigation);
-  assert.equal(property(sharedNavigation, "border-radius"), "var(--kova-radius-control)");
-  assert.equal(tokens.get("--kova-radius-control"), "14px");
-  const sharedActions = sharedRules.find((rule) =>
-    rule.selector.includes(".kova-rail-button.kova-new-chat, .kova-rail-customize"),
-  );
-  assert.ok(
-    sharedActions,
-    "Creation/customization actions retain their distinct pill/circle shape",
-  );
-  assert.equal(property(sharedActions, "border-radius"), "var(--kova-radius-button)");
-  assert.equal(tokens.get("--kova-radius-button"), "9999px");
-  const scroll = rules.find((rule) => rule.selector.endsWith(".kova-rail-shortcuts"));
+  assert.equal(property(touch, "--sidebar-row-height"), "44px");
+  assert.equal(property(touch, "--sidebar-button-size"), "44px");
+  const scroll = sharedRules.find((rule) => rule.selector === ".kova-rail-shortcuts");
   assert.equal(property(scroll, "overflow-y"), "auto");
   assert.equal(property(scroll, "min-height"), "0");
-  const account = rules.find((rule) => rule.selector.endsWith(".kova-rail-account"));
+  const account = sharedRules.find((rule) => rule.selector === ".kova-rail-account");
   assert.ok(account);
   assert.match(source, /const canSchedule = signedIn;/);
   assert.match(

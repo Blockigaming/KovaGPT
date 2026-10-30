@@ -4,13 +4,14 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
-  "relative w-full rounded-lg border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7",
+  // SDK Alert outline geometry, adapted to the existing composed-children API.
+  "relative grid w-full grid-cols-1 items-center gap-x-3 rounded-[0.75rem] p-4 text-sm leading-5 has-[>svg]:grid-cols-[20px_minmax(0,1fr)] [&>svg]:col-start-1 [&>svg]:row-span-2 [&>svg]:row-start-1 [&>svg]:size-[20px] [&>svg]:shrink-0 [&>svg+*]:row-start-1 [&>svg~*]:col-start-2 [&>*]:min-w-0",
   {
     variants: {
       variant: {
-        default: "bg-background text-foreground",
-        destructive:
-          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+        default:
+          "bg-transparent text-foreground shadow-[inset_0_0_0_1px_rgb(13_13_13/10%)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/12%)]",
+        destructive: "bg-transparent text-[#e02e2a] shadow-[inset_0_0_0_1px_#e02e2a]",
       },
     },
     defaultVariants: {
@@ -23,7 +24,13 @@ const Alert = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
 >(({ className, variant, ...props }, ref) => (
-  <div ref={ref} role="alert" className={cn(alertVariants({ variant }), className)} {...props} />
+  <div
+    ref={ref}
+    role="alert"
+    data-ui-reference="chatgpt.alert.outline"
+    className={cn(alertVariants({ variant }), className)}
+    {...props}
+  />
 ));
 Alert.displayName = "Alert";
 
@@ -31,7 +38,11 @@ const AlertTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<H
   ({ className, ...props }, ref) => (
     <h5
       ref={ref}
-      className={cn("mb-1 font-medium leading-none tracking-tight", className)}
+      data-slot="alert-title"
+      className={cn(
+        "font-semibold leading-5 [text-wrap:pretty] [&+[data-slot=alert-description]]:mt-[2px]",
+        className,
+      )}
       {...props}
     />
   ),
@@ -42,7 +53,12 @@ const AlertDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("text-sm [&_p]:leading-relaxed", className)} {...props} />
+  <div
+    ref={ref}
+    data-slot="alert-description"
+    className={cn("text-sm leading-5 [text-wrap:pretty] [&_p]:leading-5", className)}
+    {...props}
+  />
 ));
 AlertDescription.displayName = "AlertDescription";
 

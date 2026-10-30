@@ -40,7 +40,14 @@ function fixture({ loaded = true } = {}) {
   };
   const picker = loadUiModule("src/components/ui/searchable-picker.tsx", {
     react: pickerHooks.react,
-    "lucide-react": primitives(["Check", "ChevronDown"]),
+    "./reference-icons": primitives(["Check", "ChevronDown"]),
+    "./select": primitives([
+      "Select",
+      "SelectContent",
+      "SelectItem",
+      "SelectTrigger",
+      "SelectValue",
+    ]),
     "./command": primitives([
       "Command",
       "CommandEmpty",
@@ -58,6 +65,9 @@ function fixture({ loaded = true } = {}) {
         ...hooks.react,
         useMemo: (fn, deps) => hooks.react.useCallback(fn, deps)(),
       },
+      "@/components/ui/button": { Button: "button" },
+      "@/components/ui/input": { Input: "input" },
+      "@/components/ui/textarea": { Textarea: "textarea" },
       "@tanstack/react-router": { createFileRoute: () => (config) => config },
       "@tanstack/react-start": { useServerFn: () => () => assert.fail("Unexpected Library write") },
       "lucide-react": primitives([
@@ -292,37 +302,29 @@ test("unresolved auth disables the picker and Rewrite, and account changes retai
   f.unmount();
 });
 
-test("tone and Rewrite reuse 44px targets, semantic tokens and the themed menu instead of a native popup", () => {
+test("tone and Rewrite delegate control geometry to the shared themed primitives", () => {
   const f = fixture();
   const picker = f.control();
   const rewrite = f.button("Rewrite");
-  const group = elements(
-    f.render(),
-    (node) =>
-      node.type === "div" &&
-      find(node, "button").some((button) => text(button).trim() === "Rewrite") &&
-      find(node, f.control().type).length === 1,
-  ).at(-1);
-  for (const node of [picker, rewrite, group]) {
-    assert.match(node.props.className, /\bmin-h-11\b/);
-    assert.match(node.props.className, /\brounded-md\b/);
-    assert.doesNotMatch(node.props.className, /rounded-full/);
-  }
   assert.match(picker.props.className, /\bmin-w-11\b/);
-  assert.match(rewrite.props.className, /\bmin-w-11\b/);
-  const styles = readFileSync("src/styles.css", "utf8");
-  const spec = readFileSync("src/styles/spec400-system.css", "utf8");
-  assert.match(styles, /--radius-md: var\(--kova-radius-input\)/);
+  assert.equal(rewrite.props.variant, "ghost");
+  assert.equal(rewrite.props.type, "button");
+  assert.doesNotMatch(rewrite.props.className, /(?:^|\s)(?:min-h-|h-|rounded-)/);
+  const route = readFileSync("src/routes/write.tsx", "utf8");
+  assert.match(route, /import \{ Button \} from "@\/components\/ui\/button"/);
+  assert.match(route, /import \{ SearchablePicker \} from "@\/components\/ui\/searchable-picker"/);
   const geometry = readFileSync("src/styles/visual-tokens.css", "utf8");
-  assert.match(geometry, /--kova-radius-input: 14px/);
-  assert.match(geometry, /--kova-radius-compact: 10px/);
-  assert.match(spec, /\.spec400-searchable-picker \[cmdk-input\] \{\s*min-height: 44px/);
-  for (const file of ["popover", "command"]) {
+  assert.match(geometry, /--kova-radius-input: 10px/);
+  assert.match(geometry, /--kova-radius-compact: 6px/);
+  for (const file of ["popover", "command"])
     assert.match(
       readFileSync(`src/components/ui/${file}.tsx`, "utf8"),
       /bg-popover[\s\S]*text-popover-foreground/,
     );
-  }
+  assert.match(
+    readFileSync("src/components/ui/command.tsx", "utf8"),
+    /\[@media\(pointer:coarse\)\]:min-h-11/,
+  );
   f.unmount();
 });
 
@@ -338,7 +340,8 @@ test("Writer footer version/export actions match ordinary control typography, pa
   ];
   for (const loaded of [false, true]) {
     const f = fixture({ loaded });
-    const reference = f.button("Download .md").props.className.split(/\s+/);
+    const reference = f.button("Download .md");
+    assert.equal(reference.props.variant, "outline");
     for (const label of labels) {
       const control = f.button(label);
       assert.ok(control, label);
@@ -347,23 +350,24 @@ test("Writer footer version/export actions match ordinary control typography, pa
       assert.equal(typeof control.props.onClick, "function", label);
       const classes = control.props.className.split(/\s+/);
       for (const token of [
-        "min-h-11",
         "border",
         "border-border",
         "bg-background",
-        "px-3",
-        "py-1.5",
         "text-xs",
         "font-medium",
         "hover:bg-accent",
         "disabled:opacity-50",
       ]) {
-        assert.ok(reference.includes(token), `reference ${token}`);
+        assert.ok(reference.props.className.split(/\s+/).includes(token), `reference ${token}`);
         assert.ok(classes.includes(token), `${label}: ${token}`);
       }
-      assert.ok(classes.includes("rounded-md"), label);
+      assert.equal(control.props.variant, reference.props.variant, label);
+      assert.doesNotMatch(
+        control.props.className,
+        /(?:^|\s)(?:min-h-|h-|rounded-|px-|py-)/,
+        `${label}: geometry comes from the shared Button`,
+      );
       assert.ok(!classes.includes("underline"), label);
-      assert.ok(!classes.includes("rounded-full"), label);
     }
     assert.deepEqual(f.requests, []);
     f.unmount();

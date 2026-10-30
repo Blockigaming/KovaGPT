@@ -1,3 +1,6 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import {
@@ -700,6 +703,7 @@ function ArtifactEditorSession({
     <div
       ref={resultRootRef}
       className={`kova-result-editor ${embedded ? "kova-result-embedded" : ""}`}
+      data-ui-reference="claude.artifacts.editor"
     >
       <div className="kova-result-surface">
         <header className="kova-result-heading">
@@ -719,7 +723,10 @@ function ArtifactEditorSession({
                   : "This session only"}
             </p>
           </div>
-          <button
+          <Button
+            data-ui-reference="claude.artifacts.toolbar-button"
+            size="icon"
+            variant="ghost"
             type="button"
             ref={resultCloseRef}
             onClick={(event) => requestClose(event.currentTarget)}
@@ -727,10 +734,17 @@ function ArtifactEditorSession({
             aria-label="Close result"
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </header>
-        <div className="kova-result-toolbar" role="toolbar" aria-label="Result actions">
-          <button
+        <div
+          className="kova-result-toolbar"
+          data-ui-reference="claude.artifacts.toolbar"
+          role="toolbar"
+          aria-label="Result actions"
+        >
+          <Button
+            data-ui-reference="claude.artifacts.toolbar-button"
+            variant="ghost"
             type="button"
             onClick={() => {
               setMode("edit");
@@ -740,8 +754,10 @@ function ArtifactEditorSession({
           >
             <Pencil />
             Edit
-          </button>
-          <button
+          </Button>
+          <Button
+            data-ui-reference="claude.artifacts.toolbar-button"
+            variant="ghost"
             type="button"
             onClick={(event) => {
               if (!historyActiveRef.current || historyScopeRef.current !== resultScope) return;
@@ -764,13 +780,19 @@ function ArtifactEditorSession({
           >
             <History />
             Versions
-          </button>
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button type="button" ref={exportTriggerRef} disabled={exporting}>
+              <Button
+                data-ui-reference="claude.artifacts.toolbar-button"
+                variant="ghost"
+                type="button"
+                ref={exportTriggerRef}
+                disabled={exporting}
+              >
                 <Download />
                 {exporting ? "Exporting…" : "Export"}
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onSelect={exportDocument}>
@@ -802,16 +824,25 @@ function ArtifactEditorSession({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <button type="button" onClick={() => setShareSnapshot(value)}>
+          <Button
+            data-ui-reference="claude.artifacts.toolbar-button"
+            variant="ghost"
+            type="button"
+            onClick={() => setShareSnapshot(value)}
+          >
             <Share2 />
             Share
-          </button>
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button type="button">
+              <Button
+                data-ui-reference="claude.artifacts.toolbar-button"
+                variant="ghost"
+                type="button"
+              >
                 <MoreHorizontal />
                 More
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               {onResetLayout && (
@@ -855,13 +886,31 @@ function ArtifactEditorSession({
           </DropdownMenu>
         </div>
         <div className="kova-result-secondary-toolbar">
-          <button type="button" onClick={undo} disabled={!undoStack.length} aria-label="Undo">
+          <Button
+            data-ui-reference="claude.artifacts.toolbar-button"
+            size="icon"
+            variant="ghost"
+            type="button"
+            onClick={undo}
+            disabled={!undoStack.length}
+            aria-label="Undo"
+          >
             <Undo2 />
-          </button>
-          <button type="button" onClick={redo} disabled={!redoStack.length} aria-label="Redo">
+          </Button>
+          <Button
+            data-ui-reference="claude.artifacts.toolbar-button"
+            size="icon"
+            variant="ghost"
+            type="button"
+            onClick={redo}
+            disabled={!redoStack.length}
+            aria-label="Redo"
+          >
             <Redo2 />
-          </button>
-          <button
+          </Button>
+          <Button
+            data-ui-reference="claude.artifacts.toolbar-button"
+            variant="ghost"
             type="button"
             onClick={() => {
               setOutlineOpen((value) => !value);
@@ -872,9 +921,11 @@ function ArtifactEditorSession({
           >
             <ListTree />
             Outline
-          </button>
+          </Button>
           {kind === "website" && (
-            <button
+            <Button
+              data-ui-reference="claude.artifacts.toolbar-button"
+              variant="ghost"
               type="button"
               onClick={() => {
                 setMode("preview");
@@ -883,7 +934,7 @@ function ArtifactEditorSession({
             >
               <Eye />
               Run preview
-            </button>
+            </Button>
           )}
           <span role="status" className="ml-auto text-xs text-muted-foreground">
             {canPersistVersions && !collaboration.ready && !collaboration.error
@@ -907,14 +958,15 @@ function ArtifactEditorSession({
                 <p role="alert" className="min-w-0 flex-1 text-destructive">
                   {message}
                 </p>
-                <button
+                <Button
+                  variant="ghost"
                   type="button"
-                  className="min-h-11 shrink-0 rounded-lg px-3"
+                  className="shrink-0"
                   aria-label={`Dismiss ${action} error`}
                   onClick={() => actionFeedback.clear(action)}
                 >
                   Dismiss
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -923,20 +975,21 @@ function ArtifactEditorSession({
           {outlineOpen ? (
             <aside className="kova-result-inspector" aria-label="Document outline">
               <h2 className="mb-2 text-sm font-semibold">Outline</h2>
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 onClick={() => setOutlineOpen(false)}
-                className="mb-2 min-h-11 px-3"
+                className="mb-2"
               >
                 Close outline
-              </button>
+              </Button>
               <label className="relative mb-2 block">
                 <span className="sr-only">Search outline</span>
                 <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
-                <input
+                <Input
                   value={outlineQuery}
                   onChange={(event) => setOutlineQuery(event.target.value)}
-                  className="h-8 w-full rounded-lg border bg-background pl-7 pr-2 text-xs"
+                  className="w-full border bg-background pl-7 pr-2 text-xs"
                   placeholder="Find heading"
                 />
               </label>
@@ -944,6 +997,7 @@ function ArtifactEditorSession({
                 filteredOutline.map((item) => (
                   <button
                     data-kova-button-shape="preserve"
+                    data-ui-reference="claude.artifacts.outline-row"
                     key={`${item.line}-${item.label}`}
                     className="block w-full truncate rounded px-2 py-1.5 text-left text-xs hover:bg-accent"
                     style={{ paddingLeft: `${item.depth * 8}px` }}
@@ -999,7 +1053,7 @@ function ArtifactEditorSession({
               </div>
             ) : (
               <div className="flex-1 flex flex-col min-h-0">
-                <textarea
+                <Textarea
                   ref={textareaRef}
                   readOnly={Boolean(
                     canPersistVersions && remoteSnapshot && !remoteSnapshot.canEdit,
@@ -1130,9 +1184,10 @@ function ArtifactEditorSession({
                       <div className="text-[11px] text-muted-foreground">
                         {new Date(version.savedAt).toLocaleTimeString()}
                       </div>
-                      <button
+                      <Button
+                        variant="ghost"
                         type="button"
-                        className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium"
+                        className="mt-2 inline-flex items-center gap-2 text-sm font-medium"
                         onClick={async () => {
                           if (!historyVisibleRef.current) return;
                           const ticket = actionFeedback.begin("version");
@@ -1181,7 +1236,7 @@ function ArtifactEditorSession({
                         }}
                       >
                         <GitCompare className="h-3 w-3" /> Preview version
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -1240,16 +1295,17 @@ function ArtifactEditorSession({
                   <label htmlFor={commentFieldId} className="mt-3 block text-sm font-medium">
                     Comment
                   </label>
-                  <textarea
+                  <Textarea
                     ref={commentInputRef}
                     id={commentFieldId}
                     value={commentDraft}
                     onChange={(event) => setCommentDraft(event.target.value)}
-                    className="mt-3 min-h-20 w-full rounded-lg border bg-background p-2 text-xs"
+                    className="mt-3 min-h-20 w-full border bg-background text-xs"
                     placeholder="Comment on the document or current selection"
                     aria-label="Artifact comment"
                   />
-                  <button
+                  <Button
+                    variant="default"
                     disabled={!commentDraft.trim()}
                     onClick={() => {
                       if (!commentDraft.trim() || commentDraftRef.current !== commentDraft) return;
@@ -1269,10 +1325,10 @@ function ArtifactEditorSession({
                       ]);
                       setCommentDraft("");
                     }}
-                    className="mt-2 min-h-11 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
+                    className="mt-2 bg-foreground text-xs text-background disabled:opacity-50"
                   >
                     Add comment
-                  </button>
+                  </Button>
                   {comments.length === 0 ? (
                     <p className="mt-4 text-xs text-muted-foreground">No comments yet.</p>
                   ) : (
@@ -1288,7 +1344,8 @@ function ArtifactEditorSession({
                             </blockquote>
                           )}
                           <p>{comment.body}</p>
-                          <button
+                          <Button
+                            variant="ghost"
                             onClick={(event) =>
                               setDeleteCommentTarget({
                                 id: comment.id,
@@ -1298,10 +1355,10 @@ function ArtifactEditorSession({
                                 url: window.location.href,
                               })
                             }
-                            className="mt-2 min-h-11 text-destructive"
+                            className="mt-2 text-destructive"
                           >
                             Delete comment
-                          </button>
+                          </Button>
                         </li>
                       ))}
                     </ul>
@@ -1322,12 +1379,13 @@ function ArtifactEditorSession({
                 ? "Another editor saved changes. Your draft is preserved; copy it before loading the current version."
                 : collaboration.error}
             </span>
-            <button className="min-h-11 rounded-lg border px-4" onClick={() => void copy(value)}>
+            <Button variant="outline" className="border" onClick={() => void copy(value)}>
               Copy my draft
-            </button>
+            </Button>
             {collaboration.conflict ? (
-              <button
-                className="min-h-11 rounded-lg border px-4"
+              <Button
+                variant="outline"
+                className="border"
                 onClick={(event) => {
                   const content = collaboration.adopt();
                   if (content !== null) {
@@ -1353,11 +1411,11 @@ function ArtifactEditorSession({
                 }}
               >
                 Load current version
-              </button>
+              </Button>
             ) : (
-              <button className="min-h-11 rounded-lg border px-4" onClick={collaboration.retry}>
+              <Button variant="outline" className="border" onClick={collaboration.retry}>
                 Reconnect
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -1372,7 +1430,8 @@ function ArtifactEditorSession({
                 Compare current with{" "}
                 {versions.find((version) => version.id === compareVersion)?.label}
               </h2>
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 onClick={(event) => {
                   if (
@@ -1387,13 +1446,14 @@ function ArtifactEditorSession({
                   compareReturnRef.current = null;
                   setCompareVersion(null);
                 }}
-                className="min-h-9 rounded-lg px-3 text-xs hover:bg-accent"
+                className="text-xs hover:bg-accent"
               >
                 Close preview
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
                 type="button"
-                className="min-h-11 rounded-lg border px-3 text-sm"
+                className="border text-sm"
                 disabled={canPersistVersions && !remoteSnapshot?.canEdit}
                 onClick={() => {
                   const version = versions.find((item) => item.id === compareVersion);
@@ -1409,7 +1469,7 @@ function ArtifactEditorSession({
                 }}
               >
                 Restore this version
-              </button>
+              </Button>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               <section>
@@ -1431,7 +1491,8 @@ function ArtifactEditorSession({
         {copyError && (
           <div role="alert" className="border-t p-3 text-sm">
             Couldn’t copy.{" "}
-            <button
+            <Button
+              variant="link"
               type="button"
               className="underline"
               onClick={() => {
@@ -1443,7 +1504,7 @@ function ArtifactEditorSession({
               }}
             >
               Select the result to copy manually
-            </button>
+            </Button>
           </div>
         )}
         <div className="flex flex-wrap items-center gap-3 border-t p-3 text-xs text-muted-foreground">
@@ -1514,9 +1575,10 @@ function ArtifactEditorSession({
             <pre className="max-h-80 overflow-auto whitespace-pre-wrap font-sans text-sm">
               {shareSnapshot}
             </pre>
-            <button
+            <Button
+              variant="outline"
               type="button"
-              className="min-h-11 rounded-lg border px-4"
+              className="border"
               onClick={async () => {
                 try {
                   if (navigator.share)
@@ -1535,7 +1597,7 @@ function ArtifactEditorSession({
               {typeof navigator !== "undefined" && typeof navigator.share === "function"
                 ? "Share this snapshot"
                 : "Copy this snapshot"}
-            </button>
+            </Button>
           </DialogContent>
         </Dialog>
       )}
@@ -1598,26 +1660,24 @@ function ArtifactEditorSession({
               {actionFeedback.errors.export}
             </p>
           ) : null}
-          <button
-            type="button"
-            className="min-h-11 rounded-lg border px-4"
-            onClick={exportDocument}
-          >
+          <Button variant="outline" type="button" className="border" onClick={exportDocument}>
             Download current draft
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             ref={keepEditingRef}
-            className="min-h-11 rounded-lg border px-4"
+            className="border"
             onClick={() => {
               if (closeReviewReturnRef.current === closeReviewOrigin) setCloseReview(false);
             }}
           >
             Keep editing
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
-            className="min-h-11 rounded-lg border px-4"
+            className="border"
             onClick={() => {
               if (
                 closeReviewOrigin &&
@@ -1630,7 +1690,7 @@ function ArtifactEditorSession({
             }}
           >
             Close without keeping changes
-          </button>
+          </Button>
         </DialogContent>
       </Dialog>
     </>

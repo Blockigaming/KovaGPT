@@ -3,7 +3,10 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 
-export const origin = "http://127.0.0.1:4189";
+const applicationUrl = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:4189");
+if (!["http:", "https:"].includes(applicationUrl.protocol))
+  throw new Error("PLAYWRIGHT_BASE_URL must use HTTP or HTTPS");
+export const origin = applicationUrl.origin;
 export const owner = "22222222-2222-4222-8222-222222222222";
 export const chatA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 export const chatB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";

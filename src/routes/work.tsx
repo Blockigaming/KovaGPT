@@ -1,3 +1,6 @@
+import "@/styles/spec400-management.css";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
   Select,
@@ -295,7 +298,11 @@ function WorkRoute() {
   }
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-[1600px] p-3" aria-label="Work center">
+      <main
+        className="kova-work-page"
+        aria-label="Work center"
+        data-ui-reference="chatgpt.agent.workspace"
+      >
         {isLoaded && isSignedIn ? (
           <div className="mb-3 hidden justify-center lg:flex">
             <WorkspaceModeSwitch active="work" className="flex" />
@@ -312,20 +319,27 @@ function WorkRoute() {
           />
         )}
         <div className="flex h-[calc(100dvh-12rem)] min-h-[32rem] gap-3">
-          <aside className="hidden w-72 shrink-0 overflow-y-auto rounded-3xl border bg-card p-3 md:block">
+          <aside className="kova-work-history hidden md:block">
             <div className="mb-3 flex items-center justify-between px-2">
               <h1 className="text-xl font-semibold">Work</h1>
               <RealtimeReadiness resource="Work" />
-              <button onClick={() => void loadRuns()} aria-label="Refresh runs">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => void loadRuns()}
+                aria-label="Refresh runs"
+              >
                 <RefreshCw className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
             {runs.map((run) => (
               <button
                 data-kova-button-shape="preserve"
                 key={run.id}
                 onClick={() => selectRun(run.id)}
-                className={`mb-2 w-full rounded-2xl border p-3 text-left ${selected === run.id ? "border-primary bg-primary/5" : ""}`}
+                className="kova-work-history-row"
+                aria-pressed={selected === run.id}
+                data-ui-reference="chatgpt.sidebar.conversation-row"
               >
                 <span className="flex items-center gap-2 text-sm font-medium capitalize">
                   <i
@@ -344,7 +358,7 @@ function WorkRoute() {
           </aside>
           <section
             ref={workListStatusRef}
-            className="min-w-0 flex-1 overflow-hidden rounded-3xl border bg-card"
+            className="kova-work-surface"
             role="region"
             aria-label="Work list status"
             aria-busy={loading && !preparedDraft}
@@ -376,20 +390,22 @@ function WorkRoute() {
                     </pre>
                   </details>
                   <div className="mt-6 flex flex-wrap gap-2">
-                    <button
+                    <Button
+                      variant="default"
                       type="button"
                       onClick={continuePreparedDraftInChat}
-                      className="min-h-11 rounded-xl bg-foreground px-4 text-sm font-medium text-background"
+                      className="bg-foreground text-sm font-medium text-background"
                     >
                       Continue in chat
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="outline"
                       type="button"
                       onClick={() => setDraftState({ principal, draft: null })}
-                      className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium"
+                      className="border border-border text-sm font-medium"
                     >
                       View historical runs
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -423,13 +439,14 @@ function WorkRoute() {
                     </div>
                     <div className="flex gap-2">
                       {!terminal.has(detail.run.status) && (
-                        <button
+                        <Button
+                          variant="ghost"
                           onClick={() => void cancelRun()}
                           className="work-action text-destructive"
                         >
                           <Square />
                           Cancel
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -452,18 +469,20 @@ function WorkRoute() {
                   <nav className="mt-4 flex gap-1 overflow-x-auto" aria-label="Work views">
                     {(["graph", "timeline", "evidence", "deliverables", "approvals"] as const).map(
                       (value) => (
-                        <button
-                          data-kova-button-shape="preserve"
+                        <Button
+                          variant={tab === value ? "secondary" : "ghost"}
+                          data-ui-reference="chatgpt.segmented-control.option"
+                          aria-pressed={tab === value}
                           key={value}
                           onClick={() => setTab(value)}
-                          className={`min-h-10 shrink-0 rounded-full px-4 text-sm capitalize ${tab === value ? "bg-foreground text-background" : "hover:bg-muted"}`}
+                          className="shrink-0 capitalize"
                         >
                           {value}
                           {value === "approvals" &&
                           detail.approvals.some((a) => a.status === "pending")
                             ? " •"
                             : ""}
-                        </button>
+                        </Button>
                       ),
                     )}
                   </nav>
@@ -541,15 +560,23 @@ function DependencyGraph({ detail }: { detail: WorkDetail }) {
           </p>
         </div>
         <div className="flex gap-1" aria-label="Graph controls">
-          <button className="work-icon" onClick={() => setScale((s) => Math.max(0.6, s - 0.1))}>
+          <Button
+            variant="ghost"
+            className="work-icon"
+            onClick={() => setScale((s) => Math.max(0.6, s - 0.1))}
+          >
             −
-          </button>
-          <button className="work-icon" onClick={() => setScale((s) => Math.min(1.6, s + 0.1))}>
+          </Button>
+          <Button
+            variant="ghost"
+            className="work-icon"
+            onClick={() => setScale((s) => Math.min(1.6, s + 0.1))}
+          >
             +
-          </button>
-          <button className="work-small" onClick={fit}>
+          </Button>
+          <Button variant="ghost" className="work-small" onClick={fit}>
             Fit
-          </button>
+          </Button>
         </div>
       </div>
       <div
@@ -723,13 +750,15 @@ function DependencyGraph({ detail }: { detail: WorkDetail }) {
           className="fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto rounded-t-3xl border bg-card p-5 shadow-2xl md:inset-y-4 md:left-auto md:right-4 md:max-h-none md:w-[26rem] md:rounded-3xl"
           aria-label="Specialist inspector"
         >
-          <button
+          <Button
+            size="icon"
+            variant="ghost"
             className="absolute right-4 top-4"
             onClick={() => setSelected(null)}
             aria-label="Close specialist inspector"
           >
             <X />
-          </button>
+          </Button>
           <h3 className="pr-8 text-lg font-semibold">{specialist.name}</h3>
           <p className="capitalize text-sm text-muted-foreground">
             {specialist.status} · {specialist.events} actions
@@ -837,8 +866,8 @@ function Evidence({ detail }: { detail: WorkDetail }) {
         <div className="flex flex-wrap gap-2">
           <label className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4" />
-            <input
-              className="min-h-10 rounded-xl border pl-9 pr-3"
+            <Input
+              className="min-h-10 border pl-9 pr-3"
               placeholder="Search evidence"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -973,8 +1002,8 @@ function Deliverables({
     <section>
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="font-semibold">Deliverables</h3>
-        <input
-          className="min-h-10 rounded-xl border px-3"
+        <Input
+          className="min-h-10 border"
           placeholder="Search deliverables"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -1008,24 +1037,35 @@ function Deliverables({
                     );
                   }}
                 >
-                  <input
+                  <Input
                     autoFocus
                     aria-label="Deliverable title"
                     maxLength={160}
                     value={renameValue}
                     onChange={(event) => setRenameValue(event.target.value)}
                     onKeyDown={(event) => event.key === "Escape" && setRenamingId(null)}
-                    className="h-10 min-w-0 flex-1 rounded-lg border bg-background px-3 text-sm"
+                    className="min-w-0 flex-1 border bg-background text-sm"
                   />
-                  <button className="work-small" type="submit" disabled={!renameValue.trim()}>
+                  <Button
+                    variant="ghost"
+                    className="work-small"
+                    type="submit"
+                    disabled={!renameValue.trim()}
+                  >
                     Save
-                  </button>
-                  <button className="work-small" type="button" onClick={() => setRenamingId(null)}>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="work-small"
+                    type="button"
+                    onClick={() => setRenamingId(null)}
+                  >
                     Cancel
-                  </button>
+                  </Button>
                 </form>
               ) : (
-                <button
+                <Button
+                  variant="ghost"
                   className="work-small"
                   onClick={() => {
                     setRenameValue(item.title);
@@ -1033,17 +1073,19 @@ function Deliverables({
                   }}
                 >
                   Rename
-                </button>
+                </Button>
               )}
-              <button
+              <Button
+                variant="ghost"
                 className="work-small"
                 onClick={() =>
                   void action(() => duplicate({ data: { id: item.id } }), "Duplicated")
                 }
               >
                 Duplicate
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 className="work-small"
                 onClick={() =>
                   void versions({ data: { id: item.id } })
@@ -1052,8 +1094,9 @@ function Deliverables({
                 }
               >
                 Versions
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 className="work-small"
                 onClick={() =>
                   void action(async () => {
@@ -1064,8 +1107,9 @@ function Deliverables({
               >
                 <Download />
                 Download
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 className="work-small text-destructive"
                 onClick={() =>
                   void action(() => remove({ data: { id: item.id } }), "Moved to deleted items")
@@ -1073,7 +1117,7 @@ function Deliverables({
               >
                 <Trash2 />
                 Delete
-              </button>
+              </Button>
             </div>
           </article>
         ))}
@@ -1102,9 +1146,14 @@ function Deliverables({
                   Compare integrity and metadata before restoring.
                 </p>
               </div>
-              <button onClick={() => setHistory(null)} aria-label="Close version history">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setHistory(null)}
+                aria-label="Close version history"
+              >
                 <X />
-              </button>
+              </Button>
             </div>
             <div className="mt-4 space-y-3">
               {history.map((version, index) => (
@@ -1118,7 +1167,8 @@ function Deliverables({
                         {new Date(version.createdAt).toLocaleString()}
                       </time>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
                       className="work-small"
                       onClick={() =>
                         void action(
@@ -1128,7 +1178,7 @@ function Deliverables({
                       }
                     >
                       Restore
-                    </button>
+                    </Button>
                   </div>
                   <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">
                     SHA-256 {version.integrityHash}
@@ -1186,10 +1236,14 @@ function Approvals({ detail, refresh }: { detail: WorkDetail; refresh: () => Pro
                 <p className="mt-1 text-sm text-muted-foreground">Destination: {a.destination}</p>
                 {a.status === "pending" && (
                   <div className="mt-3 flex gap-2">
-                    <button className="work-small text-destructive" onClick={() => void deny(a.id)}>
+                    <Button
+                      variant="ghost"
+                      className="work-small text-destructive"
+                      onClick={() => void deny(a.id)}
+                    >
                       <X />
                       Deny
-                    </button>
+                    </Button>
                     <span className="self-center text-xs text-muted-foreground">
                       Approval is disabled while execution is unavailable.
                     </span>

@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import assert from "node:assert/strict";
+import postcss from "postcss";
 
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const topbar = await readFile("src/components/MobileTopBar.tsx", "utf8");
@@ -15,20 +16,49 @@ const feedbackBatch = await readFile("src/lib/feedback-batch.ts", "utf8");
 const confirmDialog = await readFile("src/components/ConfirmActionDialog.tsx", "utf8");
 const tokens = await readFile("src/styles/visual-tokens.css", "utf8");
 const sidebarStyles = await readFile("src/styles/sidebar-core.css", "utf8");
+function sidebarRule(selector, media) {
+  const found = [];
+  postcss.parse(sidebarStyles).walkRules(selector, (rule) => {
+    if (
+      media === undefined
+        ? rule.parent.type === "root"
+        : rule.parent.type === "atrule" &&
+          rule.parent.name === "media" &&
+          rule.parent.params === media
+    )
+      found.push(
+        Object.fromEntries(
+          rule.nodes.filter((node) => node.type === "decl").map((node) => [node.prop, node.value]),
+        ),
+      );
+  });
+  assert.equal(found.length, 1, `one geometry owner for ${selector}`);
+  return found[0];
+}
 test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focus trap", () => {
   assert.match(sidebar, /data-kova-core-sidebar=""/);
-  assert.match(tokens, /--kova-sidebar-width: 256px;/);
-  assert.match(
-    sidebarStyles,
-    /\.kova-sidebar\[data-kova-core-sidebar\]\s*\{\s*width: var\(--kova-sidebar-width\);/,
+  assert.match(tokens, /--kova-sidebar-width: 260px;/);
+  assert.match(sidebar, /const EXPANDED_WIDTH = 260;/);
+  assert.equal(
+    sidebarRule(".kova-sidebar[data-kova-core-sidebar]").width,
+    "var(--sidebar-expanded, var(--kova-sidebar-width, 260px))",
   );
-  assert.match(tokens, /--kova-sidebar-rail-width: 72px;/);
-  assert.match(
-    sidebarStyles,
-    /\.kova-sidebar-rail\[data-kova-core-rail\]\s*\{\s*width: var\(--kova-sidebar-rail-width\);/,
+  assert.match(tokens, /--kova-sidebar-rail-width: 56px;/);
+  assert.equal(
+    sidebarRule(".kova-sidebar-rail[data-kova-core-rail]").width,
+    "var(--kova-sidebar-rail-width, 56px)",
   );
-  assert.match(sidebar, /collapsed \? "lg:!w-0"/);
-  assert.match(sidebar, /min\(88vw,320px\)/);
+  const closed = sidebarRule('.kova-sidebar[data-kova-core-sidebar][data-state="closed"]');
+  assert.equal(closed.width, "0");
+  assert.equal(closed["min-width"], "0");
+  assert.equal(closed.visibility, "hidden");
+  assert.equal(closed["pointer-events"], "none");
+  assert.match(sidebar, /data-state=\{open \? "open" : "closed"\}/);
+  assert.match(tokens, /--kova-sidebar-drawer-width: min\(320px, calc\(100vw - 32px\)\);/);
+  assert.equal(
+    sidebarRule(".kova-sidebar[data-kova-core-sidebar]", "(max-width: 1023px)").width,
+    "var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)))",
+  );
   assert.match(sidebar, /document\.body\.style\.overflow = "hidden"/);
   assert.match(sidebar, /event\.key === "Escape"/);
   assert.match(sidebar, /aria-label="Primary navigation"/);
@@ -38,9 +68,8 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.match(sidebar, /aria-label=\{`Options for \$\{conversation\.title\}`\}/);
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);
   const order = [
+    'aria-label="Search chats"',
     'aria-label="New chat"',
-    "<span>Search</span>",
-    'navLink("/", "Chat"',
     'navLink("/images"',
     'navLink("/apps"',
     'aria-label="Workspace destinations"',
@@ -52,17 +81,18 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   ];
   let cursor = -1;
   for (const marker of order) {
-    const next = sidebar.indexOf(marker);
+    const next = sidebar.slice(sidebar.indexOf("<aside")).indexOf(marker);
     assert.ok(next > cursor, `${marker} should appear after previous nav marker`);
     cursor = next;
   }
 
-  assert.match(sidebar, /navLink\("\/apps", "Plugins", PluginsGlyph\)/);
+  assert.match(sidebar, /navLink\("\/apps", "Connections", PluginsGlyph\)/);
+  assert.match(sidebar, /closeAfterMobileNavigation\("\/"\);\s+onNew\(\);/);
 });
 
 test("mobile header and sidebar controls meet touch and accessible-name contracts", () => {
   assert.match(topbar, /min-h-14/);
-  const menuButton = topbar.match(/<button\b[^>]*aria-label="Open menu"[^>]*>/u)?.[0] ?? "";
+  const menuButton = topbar.match(/<Button\b[^>]*aria-label="Open menu"[^>]*>/u)?.[0] ?? "";
   const menuClasses = new Set(menuButton.match(/className="([^"]*)"/u)?.[1].split(/\s+/u));
   assert.ok(menuClasses.has("w-11"), "menu button must retain its 44px width");
   assert.ok(menuClasses.has("h-11"), "menu button must retain its 44px height");

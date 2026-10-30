@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { NovaLogo } from "@/components/NovaLogo";
-import { Loader2, KeyRound } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   clearPasswordRecoveryFlow,
@@ -262,16 +262,17 @@ function ResetPassword() {
   };
 
   return (
-    <div className="kova-auth-page min-h-screen flex items-center justify-center px-4 py-8 bg-background">
-      <div className="kova-auth-surface w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <div
+      data-ui-reference="chatgpt-auth-recovery"
+      className="kova-auth-page min-h-screen flex items-center justify-center px-4 py-8 bg-background"
+    >
+      <div className="kova-auth-surface w-full max-w-[400px] px-6 py-8">
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center mb-3">
-            <KeyRound className="w-6 h-6" />
-          </div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">Set a new password</h1>
-          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
-            <NovaLogo decorative className="w-4 h-4" /> KovaGPT account recovery
-          </p>
+          <NovaLogo mark className="mb-6 h-8 w-8" />
+          <h1 className="text-[32px] font-medium leading-[38px] tracking-[-0.02em]">
+            Set a new password
+          </h1>
+          <p className="mt-2 text-sm leading-5 text-muted-foreground">KovaGPT account recovery</p>
         </div>
 
         {!ready ? (

@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { Button } from "@/components/ui/button";
 import { acceptMessageVersion, listMessageVersions } from "@/lib/chat-workspace.functions";
 import { localVersions, saveLocalVersion } from "@/lib/local-chat-workspace.mjs";
 import { safeBrowserStorage } from "@/lib/principal-browser-storage.mjs";
@@ -154,13 +155,9 @@ export function MessageVersionHistoryDialog({
             <p role="alert" className="text-sm text-destructive">
               {error}
             </p>
-            <button
-              type="button"
-              onClick={() => void load()}
-              className="min-h-11 rounded-lg border border-border px-4 text-sm font-medium hover:bg-accent"
-            >
+            <Button type="button" variant="outline" onClick={() => void load()}>
               Try again
-            </button>
+            </Button>
           </div>
         ) : entries.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -185,20 +182,21 @@ export function MessageVersionHistoryDialog({
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
                         onClick={() => setExpanded(expanded === entry.id ? null : entry.id)}
-                        className="min-h-11 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                        className="text-muted-foreground"
                         aria-expanded={expanded === entry.id}
                       >
                         {expanded === entry.id ? "Hide preview" : "Preview version"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="outline"
                         onClick={() => void restore(entry)}
                         disabled={restoring !== null || isCurrent || expanded !== entry.id}
                         aria-busy={restoring === entry.id}
-                        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
                       >
                         {restoring === entry.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -206,7 +204,7 @@ export function MessageVersionHistoryDialog({
                           <RotateCcw className="h-3.5 w-3.5" />
                         )}
                         Restore
-                      </button>
+                      </Button>
                     </div>
                   </div>
                   {entry.instruction && (

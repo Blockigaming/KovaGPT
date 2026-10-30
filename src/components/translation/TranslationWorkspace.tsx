@@ -1,3 +1,5 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { useRef, useState } from "react";
 import { ArrowLeftRight, Check, Copy, Loader2, Paperclip, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -39,7 +41,7 @@ function LanguageSelect({
         }
         searchLabel={`Search ${label.toLowerCase()}s`}
         emptyText="No languages found."
-        className="min-h-11 w-full rounded-lg border border-border bg-background px-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-5 [&>svg]:w-5"
+        className=" w-full  border border-border bg-background  text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-5 [&>svg]:w-5"
       />
     </div>
   );
@@ -201,15 +203,18 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
   return (
     <AppShell>
       <main
+        data-ui-reference="gemini.canvas.translation"
         id="main-content"
         tabIndex={-1}
-        className="min-h-full bg-background px-4 pb-12 pt-12 sm:px-6 sm:pt-16 lg:px-8"
+        className={
+          "kova-tool-page " + "min-h-full bg-background px-4 pb-12 pt-12 sm:px-6 sm:pt-16 lg:px-8"
+        }
       >
         <div className="mx-auto w-full max-w-4xl">
           <p className="sr-only" role="status" aria-live="polite">
             {announcement}
           </p>
-          <header className="text-center">
+          <header className={"kova-tool-heading " + "text-center"}>
             <h1 className="text-2xl leading-8 font-semibold tracking-normal sm:text-[28px] sm:leading-9">
               {title}
             </h1>
@@ -231,15 +236,17 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                   setAnnouncement("");
                 }}
               />
-              <button
+              <Button
+                variant="outline"
+                size="icon"
                 type="button"
                 aria-label="Swap source and target languages"
                 disabled={sourceLanguage === "Detect language"}
                 onClick={swap}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border hover:bg-muted disabled:opacity-35"
+                className="grid   shrink-0 place-items-center  border border-border hover:bg-muted disabled:opacity-35"
               >
                 <ArrowLeftRight aria-hidden="true" className="h-5 w-5" />
-              </button>
+              </Button>
               <LanguageSelect
                 label="Target language"
                 value={targetLanguage}
@@ -257,7 +264,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                 <label htmlFor="translation-source" className="sr-only">
                   Source content to translate
                 </label>
-                <textarea
+                <Textarea
                   id="translation-source"
                   aria-label="Source content to translate"
                   dir="auto"
@@ -281,19 +288,22 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                     className="sr-only"
                     onChange={(event) => void importFile(event.target.files?.[0])}
                   />
-                  <button
+                  <Button
+                    variant="outline"
+                    size="icon"
                     type="button"
                     onClick={() => fileRef.current?.click()}
                     aria-label="Add files and more"
-                    className="grid h-11 w-11 place-items-center rounded-lg border border-border hover:bg-muted"
+                    className="grid   place-items-center  border border-border hover:bg-muted"
                   >
                     <Paperclip aria-hidden="true" className="h-5 w-5" />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="default"
                     type="button"
                     disabled={!source.trim() || Boolean(busy)}
                     onClick={() => void run()}
-                    className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-lg bg-foreground px-4 text-sm font-medium text-background disabled:opacity-30"
+                    className="ml-auto inline-flex  items-center gap-2  bg-foreground  text-sm font-medium text-background disabled:opacity-30"
                   >
                     {busy === "translate" ? (
                       <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
@@ -301,7 +311,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                       <Sparkles aria-hidden="true" className="h-5 w-5" />
                     )}
                     Translate
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -309,7 +319,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                 <label htmlFor="translation-output" className="sr-only">
                   Translation
                 </label>
-                <textarea
+                <Textarea
                   id="translation-output"
                   aria-label="Translation"
                   dir="auto"
@@ -318,12 +328,13 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                   placeholder="Translation"
                   className="h-full min-h-64 w-full resize-y bg-transparent px-5 pb-16 pt-5 text-[15px] leading-7 outline-none placeholder:text-muted-foreground"
                 />
-                <button
+                <Button
+                  variant="outline"
                   type="button"
                   aria-label="Copy translation"
                   disabled={!translation}
                   onClick={() => void copy()}
-                  className="absolute bottom-3 right-3 inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 text-sm hover:bg-muted disabled:opacity-35"
+                  className="absolute bottom-3 right-3 inline-flex  items-center gap-2  border border-border bg-background  text-sm hover:bg-muted disabled:opacity-35"
                 >
                   {copied ? (
                     <Check aria-hidden="true" className="h-5 w-5" />
@@ -331,7 +342,7 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
                     <Copy aria-hidden="true" className="h-5 w-5" />
                   )}
                   {copied ? "Copied" : "Copy"}
-                </button>
+                </Button>
               </div>
             </div>
           </section>
@@ -347,18 +358,21 @@ export function TranslationWorkspace({ pair }: { pair?: TranslationPair }) {
 
           <section aria-label="Refine translation" className="mt-5 grid gap-2 sm:grid-cols-3">
             {refinements.map((item) => (
-              <button
+              <Button
+                variant="outline"
+                data-ui-reference="gemini.canvas.refinement-card"
+                data-kova-button-shape="preserve"
                 key={item.id}
                 type="button"
                 disabled={!translation || Boolean(busy)}
                 onClick={() => void run(item.id)}
-                className="min-h-20 rounded-lg border border-border bg-background px-4 py-3 text-left disabled:opacity-45 enabled:hover:bg-muted"
+                className="h-auto min-h-20 w-full flex-col items-start justify-start gap-1 whitespace-normal rounded-[var(--kova-radius-card)] border border-border bg-background px-4 py-3 text-left disabled:opacity-45 enabled:hover:bg-muted"
               >
                 <span className="block text-sm font-medium">{item.title}</span>
-                <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                <span className="block text-xs leading-5 text-muted-foreground">
                   {item.description}
                 </span>
-              </button>
+              </Button>
             ))}
           </section>
 

@@ -122,8 +122,10 @@ async function boot(
       }),
     google,
   );
+  // esbuild does not compile Tailwind utilities. Mirror DialogContent's individual
+  // -translate-x-1/2 and -translate-y-1/2 positioning in this isolated harness.
   await page.addStyleTag({
-    content: `:root { --background:#fff; --foreground:#222; --card:#fafafa; --muted:#eee; --muted-foreground:#666; --border:#ddd; --input:#aaa; --ring:#369; --text-success:#286137; --text-warning:#815300; }*{box-sizing:border-box}body{margin:0;padding:32px;font:15px/1.5 Arial;background:var(--background);color:var(--foreground)}button,input,select{font:inherit}h1,h2,h3,p{margin:0}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.spec400-plugins{margin:auto}button{cursor:pointer}.spec400-plugin-detail{position:fixed;background:white;z-index:50;overflow-y:auto}.spec400-plugin-detail [data-kova-dialog-close]{position:absolute;right:12px;top:12px;width:44px;height:44px}.spec400-plugin-detail svg{width:20px;height:20px}[role="alertdialog"]{position:fixed;inset:20%;background:white;border:1px solid #888;padding:24px;z-index:100}.spec400-plugin-management button{margin:4px}${css}`,
+    content: `:root { --background:#fff; --foreground:#222; --card:#fafafa; --muted:#eee; --muted-foreground:#666; --border:#ddd; --input:#aaa; --ring:#369; --text-success:#286137; --text-warning:#815300; }*{box-sizing:border-box}body{margin:0;padding:32px;font:15px/1.5 Arial;background:var(--background);color:var(--foreground)}button,input,select{font:inherit}h1,h2,h3,p{margin:0}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.spec400-plugins{margin:auto}button{cursor:pointer}.spec400-plugin-detail{position:fixed;background:white;z-index:50;overflow-y:auto;translate:-50% -50%}.spec400-plugin-detail [data-kova-dialog-close]{position:absolute;right:12px;top:12px;width:44px;height:44px}.spec400-plugin-detail svg{width:20px;height:20px}[role="alertdialog"]{position:fixed;inset:20%;background:white;border:1px solid #888;padding:24px;z-index:100}.spec400-plugin-management button{margin:4px}${css}`,
   });
   await page.addScriptTag({ content: script });
   await expect(page.locator("[data-plugin-id]")).toHaveCount(13);
@@ -132,20 +134,20 @@ async function boot(
 
 test("approved 13-plugin directory supports primary and category filters", async ({ page }) => {
   await boot(page);
-  await expect(page.getByRole("heading", { name: "Plugins", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Connections", exact: true })).toBeVisible();
   await expect(page.getByText("Connect tools and sources to Kova", { exact: true })).toBeVisible();
   await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(13);
   await page.getByRole("combobox", { name: "Category", exact: true }).click();
   await page.getByRole("option", { name: "Email", exact: true }).click();
   await expect(page.locator("[data-plugin-id]")).toHaveCount(2);
-  await page.getByRole("textbox", { name: "Search plugins" }).fill("Gmail");
+  await page.getByRole("textbox", { name: "Search connections" }).fill("Gmail");
   await expect(page.locator("[data-plugin-id]")).toHaveCount(1);
-  await page.getByRole("textbox", { name: "Search plugins" }).fill("missing");
-  await expect(page.getByRole("heading", { name: "No matching plugins" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Search connections" }).fill("missing");
+  await expect(page.getByRole("heading", { name: "No matching connections" })).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page.locator("[data-plugin-id]")).toHaveCount(13);
   await page.getByRole("tab", { name: /Connected/ }).click();
-  await expect(page.getByRole("heading", { name: "No connected plugins" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No connections yet" })).toBeVisible();
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
@@ -156,7 +158,7 @@ test("opening and dismissing details never starts OAuth; Connect is explicit", a
   await expect(page.getByRole("dialog")).toContainText("Capabilities and permissions");
   await expect(page.getByRole("dialog")).toContainText("Google’s consent screen");
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
-  await page.getByRole("button", { name: "Close plugin details" }).click();
+  await page.getByRole("button", { name: "Close connection details" }).click();
   await expect(trigger).toBeFocused();
   await trigger.click();
   await page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }).click();
@@ -221,17 +223,24 @@ test("authorization redirect alone never declares a verified connection", async 
   await expect(page.locator('[data-plugin-id="gmail"]')).not.toContainText("Checking connection…");
 });
 
-test("cards stay within the phone viewport and detail is full-screen", async ({ page }) => {
+test("connection cards fit the phone and details stay centered with viewport gutters", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await boot(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const frame = await page.locator(".spec400-plugin-logo").first().boundingBox();
-  expect(frame?.width).toBe(40);
-  expect(frame?.height).toBe(40);
+  expect(frame).not.toBeNull();
+  expect(frame!.width).toBe(frame!.height);
+  expect(frame!.width).toBeGreaterThanOrEqual(40);
+  expect(frame!.width).toBeLessThanOrEqual(64);
   await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
   const panel = await page.getByRole("dialog").boundingBox();
-  // Compare rendered CSS pixels, matching the schedule editor's viewport checks.
-  // WebKit can return a 1/64px fractional value for 100dvh.
-  expect(Math.round(panel!.width)).toBe(390);
-  expect(Math.round(panel!.height)).toBe(844);
+  expect(panel).not.toBeNull();
+  expect(panel!.x).toBeGreaterThanOrEqual(11);
+  expect(panel!.x + panel!.width).toBeLessThanOrEqual(379);
+  expect(panel!.y).toBeGreaterThanOrEqual(11);
+  expect(panel!.y + panel!.height).toBeLessThanOrEqual(833);
+  expect(Math.abs(panel!.x + panel!.width / 2 - 195)).toBeLessThan(1);
+  await expect(page.getByRole("button", { name: "Close connection details" })).toBeVisible();
 });

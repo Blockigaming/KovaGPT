@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { Input } from "@/components/ui/input";
 import {
   formatPdfPageNumbers,
   type PdfExtractionMetadata,
@@ -68,8 +69,7 @@ export function ComposerPdfPages({
       {available.length > 0 && (
         <>
           <label htmlFor={`${id}-range`}>Text pages to send</label>
-          <input
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-base"
+          <Input
             id={`${id}-range`}
             type="text"
             value={input}

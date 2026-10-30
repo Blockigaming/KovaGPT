@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
@@ -121,19 +122,25 @@ function getActiveSeoState(matches: readonly SeoMatch[]) {
 
 function NotFoundComponent() {
   return (
-    <main id="main-content" tabIndex={-1} className="kova-state-screen">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="kova-state-screen"
+      data-ui-reference="chatgpt.error-state"
+    >
       <section className="kova-state-panel" aria-labelledby="not-found-title">
         <p className="kova-state-eyebrow">404 · KovaGPT</p>
         <h1 id="not-found-title">This page isn’t available</h1>
         <p>The page you're looking for doesn't exist or has been moved.</p>
         <div className="kova-state-actions">
-          <button
+          <Button
             type="button"
+            variant="outline"
             className="kova-state-secondary"
             onClick={() => window.history.back()}
           >
             Back
-          </button>
+          </Button>
           <Link to="/" className="kova-state-primary">
             Go to chat
           </Link>
@@ -146,7 +153,12 @@ function NotFoundComponent() {
 function ErrorComponent({ reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
-    <main id="main-content" tabIndex={-1} className="kova-state-screen">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="kova-state-screen"
+      data-ui-reference="chatgpt.error-state"
+    >
       <section className="kova-state-panel" aria-labelledby="route-error-title">
         <p className="kova-state-eyebrow">KovaGPT workspace</p>
         <h1 id="route-error-title">This page couldn’t load</h1>
@@ -155,7 +167,7 @@ function ErrorComponent({ reset }: ErrorComponentProps) {
           happening, contact support and describe what you were doing.
         </p>
         <div className="kova-state-actions">
-          <button
+          <Button
             type="button"
             onClick={async () => {
               try {
@@ -167,7 +179,7 @@ function ErrorComponent({ reset }: ErrorComponentProps) {
             className="kova-state-primary"
           >
             Retry
-          </button>
+          </Button>
           <a href="/" className="kova-state-secondary">
             Return home
           </a>
@@ -200,7 +212,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         },
         {
           name: "theme-color",
-          content: "#0a0a0a",
+          content: "#212121",
           media: "(prefers-color-scheme: dark)",
         },
         { name: "color-scheme", content: "light dark" },
@@ -239,16 +251,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { rel: "icon", type: "image/png", sizes: "64x64", href: "/kova-favicon-20260807.png" },
         { rel: "shortcut icon", type: "image/png", href: "/kova-favicon-20260807.png" },
         { rel: "apple-touch-icon", sizes: "180x180", href: "/kova-touch-icon-20260807.png" },
-        { rel: "preconnect", href: "https://fonts.googleapis.com" },
-        {
-          rel: "preconnect",
-          href: "https://fonts.gstatic.com",
-          crossOrigin: "anonymous",
-        },
-        {
-          rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
-        },
       ],
       scripts: indexable
         ? [

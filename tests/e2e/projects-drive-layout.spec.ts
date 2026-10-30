@@ -125,7 +125,11 @@ for (const theme of ["light", "dark"] as const) {
       const box = await button.boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-      expect(box!.height).toBeGreaterThanOrEqual(44);
+      const minimum = await page.evaluate(() =>
+        matchMedia("(pointer: coarse)").matches ? 44 : 36,
+      );
+      await expect(button).toHaveAttribute("data-ui-reference", "chatgpt.button.pill");
+      expect(box!.height).toBeGreaterThanOrEqual(minimum);
     }
     if (page.viewportSize()!.width < 768) {
       const description = await directory.locator(".kova-page-description").boundingBox();

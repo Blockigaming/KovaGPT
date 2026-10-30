@@ -9,7 +9,7 @@ const hook = source.slice(
   source.indexOf("function ChatsTab("),
 );
 const restore = readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace(
-  "export function",
+  /^export function/gm,
   "function",
 );
 const compiled = ts.transpileModule(`${restore}\n${hook}\nreturn useProjectChatMoveFocus;`, {

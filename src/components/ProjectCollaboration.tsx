@@ -1,3 +1,6 @@
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -148,7 +151,10 @@ function ProjectCollaborationSession({
     }
   };
   return (
-    <section aria-labelledby="collaboration-heading">
+    <section
+      data-ui-reference="chatgpt.team-settings.section"
+      aria-labelledby="collaboration-heading"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 id="collaboration-heading" className="font-semibold">
@@ -160,18 +166,21 @@ function ProjectCollaborationSession({
           </p>
         </div>
         <CollaborationStatus {...presence} />
-        <button
+        <Button
+          data-ui-reference="chatgpt.team-settings.control"
+          variant="ghost"
           aria-pressed={onlyMentions}
           onClick={() => setOnlyMentions((v) => !v)}
-          className={`min-h-10 rounded-lg border px-3 text-sm ${onlyMentions ? "bg-foreground text-background" : ""}`}
+          className={`  border  text-sm ${onlyMentions ? "bg-foreground text-background" : ""}`}
         >
           <AtSign className="mr-1 inline h-4 w-4" />
           My mentions
-        </button>
+        </Button>
       </div>
       {!readOnly && role !== "viewer" && !denied ? (
         <div className="mt-4 rounded-2xl border p-4">
-          <textarea
+          <Textarea
+            data-ui-reference="chatgpt.team-settings.textarea"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             maxLength={4000}
@@ -203,10 +212,11 @@ function ProjectCollaborationSession({
                     key={member.user_id}
                     className="flex min-h-10 items-center gap-2 rounded-lg px-2 hover:bg-accent"
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
+                      data-ui-reference="chatgpt.checkbox"
+
                       checked={mentions.includes(member.user_id)}
-                      onChange={() =>
+                      onCheckedChange={() =>
                         setMentions((all) =>
                           all.includes(member.user_id)
                             ? all.filter((id) => id !== member.user_id)
@@ -224,14 +234,16 @@ function ProjectCollaborationSession({
                 ))}
               </div>
             </details>
-            <button
+            <Button
+              data-ui-reference="chatgpt.team-settings.control"
+              variant="default"
               disabled={sending || !body.trim()}
               onClick={submit}
-              className="ml-auto inline-flex min-h-10 items-center gap-2 rounded-lg bg-foreground px-3 text-sm text-background disabled:opacity-50"
+              className="ml-auto inline-flex  items-center gap-2  bg-foreground  text-sm text-background disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
               {sending ? "Posting…" : "Post"}
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
@@ -248,12 +260,14 @@ function ProjectCollaborationSession({
       ) : error ? (
         <div role="alert" className="mt-4 rounded-xl border border-destructive/40 p-3">
           {error}
-          <button
-            className="ml-3 min-h-9 underline"
+          <Button
+            data-ui-reference="chatgpt.team-settings.control"
+            variant="link"
+            className="ml-3  underline"
             onClick={() => void refresh().catch(() => toast.error("Reconnect failed."))}
           >
             Reconnect
-          </button>
+          </Button>
         </div>
       ) : visible.length === 0 ? (
         <div className="mt-4 rounded-2xl border p-8 text-center">
@@ -291,13 +305,16 @@ function ProjectCollaborationSession({
                   )}
                 </div>
                 {!readOnly && (comment.author_id === userId || role === "owner") && (
-                  <button
+                  <Button
+                    data-ui-reference="chatgpt.team-settings.control"
+                    variant="destructive"
+                    size="icon"
                     aria-label="Delete comment"
                     onClick={() => setDeletingComment(comment)}
-                    className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                    className="grid   place-items-center  text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </Button>
                 )}
               </div>
             </li>

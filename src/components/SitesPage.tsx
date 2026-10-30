@@ -6,6 +6,7 @@ import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { SITE_LIMITS, siteUuid } from "@/lib/sites-policy.mjs";
 import {
@@ -20,7 +21,10 @@ export default function SitesPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   return (
     <AppShell>
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+      <main
+        data-ui-reference="claude.artifacts.sites"
+        className={"kova-tool-page " + "mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6"}
+      >
         <WorkspacePageHeader
           icon={Globe}
           title="Sites"
@@ -294,12 +298,14 @@ function SitesContent({ userId }: { userId: string }) {
             <p role="status">Loading Sites…</p>
           ) : index.sites?.length ? (
             index.sites.map((item) => (
-              <button
+              <Button
+                variant="ghost"
+                data-ui-reference="claude.artifacts.card"
                 data-kova-button-shape="preserve"
                 key={item.id}
                 type="button"
                 disabled={busy}
-                className={`w-full rounded-xl border p-3 text-left ${selected === item.id ? "bg-muted" : "hover:bg-muted/50"}`}
+                className={`kova-tool-card-action h-auto w-full whitespace-normal rounded-[var(--kova-radius-card)] border text-left ${selected === item.id ? "bg-muted" : "hover:bg-muted/50"}`}
                 onClick={() => void refresh(item.id)}
               >
                 <span className="block font-medium">{item.title}</span>
@@ -310,13 +316,13 @@ function SitesContent({ userId }: { userId: string }) {
                       : "Private publication"
                     : "Unpublished"}
                 </span>
-              </button>
+              </Button>
             ))
           ) : (
             <p className="text-sm text-muted-foreground">Your saved Sites will appear here.</p>
           )}
         </aside>
-        <section className="space-y-5 rounded-2xl border p-5">
+        <section className={"kova-tool-panel " + "space-y-5 rounded-2xl border p-5"}>
           {selected && !site ? (
             <p role="status">Loading Site…</p>
           ) : (
@@ -434,25 +440,27 @@ function SitesContent({ userId }: { userId: string }) {
                   </div>
                   <div className="space-y-3 border-t pt-5">
                     <h2 className="font-semibold">Versions and publishing</h2>
-                    {workspace?.versions?.map((item) => (
-                      <label
-                        key={item.id}
-                        className="flex items-center gap-3 rounded-lg border p-3 text-sm"
-                      >
-                        <input
-                          type="radio"
-                          name="site-version"
-                          checked={version === item.id}
-                          onChange={() => setVersion(item.id)}
-                          disabled={busy}
-                        />
-                        <span className="flex-1">
-                          {new Date(item.created_at).toLocaleString()} · {item.file_count} files ·{" "}
-                          {Math.ceil(item.size_bytes / 1024)} KB
-                          {site.published_version_id === item.id ? " · Published" : ""}
-                        </span>
-                      </label>
-                    ))}
+                    <RadioGroup
+                      name="site-version"
+                      aria-label="Site version"
+                      value={version ?? ""}
+                      onValueChange={(next) => setVersion(next)}
+                      disabled={busy}
+                    >
+                      {workspace?.versions?.map((item) => (
+                        <label
+                          key={item.id}
+                          className="flex items-center gap-3 rounded-xl border p-3 text-sm"
+                        >
+                          <RadioGroupItem value={item.id} />
+                          <span className="flex-1">
+                            {new Date(item.created_at).toLocaleString()} · {item.file_count} files ·{" "}
+                            {Math.ceil(item.size_bytes / 1024)} KB
+                            {site.published_version_id === item.id ? " · Published" : ""}
+                          </span>
+                        </label>
+                      ))}
+                    </RadioGroup>
                     <div className="flex flex-wrap gap-2">
                       <Button
                         variant="outline"

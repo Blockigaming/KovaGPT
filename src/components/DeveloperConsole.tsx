@@ -34,14 +34,15 @@ export function DeveloperConsole() {
   return (
     <aside
       data-slot="developer-console"
+      data-ui-reference="chatgpt-canvas-inspector"
       className="fixed inset-y-3 right-3 z-[100] flex w-[min(94vw,34rem)] flex-col overflow-hidden rounded-[var(--kova-radius-panel)] border border-border bg-popover text-popover-foreground shadow-[var(--shadow-floating)] [font-family:var(--font-ui,var(--font-sans))]"
       role="dialog"
       aria-modal="true"
       aria-label="KovaGPT developer console"
     >
-      <header className="grid shrink-0 grid-cols-[20px_minmax(0,1fr)_44px] items-start gap-x-3 gap-y-2 border-b border-border p-4 sm:p-6">
+      <header className="grid shrink-0 grid-cols-[20px_minmax(0,1fr)_44px] items-start gap-x-3 gap-y-2 border-b border-border p-5">
         <Activity className="mt-1 h-5 w-5" />
-        <h2 className="min-w-0 text-2xl font-normal leading-tight [font-family:var(--font-display,Georgia,serif)]">
+        <h2 className="min-w-0 text-2xl font-medium leading-7 [font-family:var(--font-ui,ui-sans-serif,system-ui,sans-serif)]">
           Platform Inspector
         </h2>
         <span className="col-start-2 row-start-2 justify-self-start rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
@@ -56,7 +57,7 @@ export function DeveloperConsole() {
           <X className="h-5 w-5" />
         </button>
       </header>
-      <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto overscroll-contain p-4 sm:grid-cols-2 sm:p-6">
+      <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto overscroll-contain p-5 sm:grid-cols-2">
         <section>
           <h3 className="flex items-center gap-2 font-medium">
             <Boxes className="h-4 w-4" />

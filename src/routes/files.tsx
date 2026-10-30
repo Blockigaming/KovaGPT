@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import "@/styles/file-directories.css";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { File, Files, HardDrive, Search } from "lucide-react";
@@ -6,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { listMyLibrary, type LibraryItem } from "@/lib/library.functions";
 import {
   addManyToContextPack,
@@ -100,12 +102,13 @@ function FilesPage() {
         id="main-content"
         tabIndex={-1}
         aria-busy={isLoading || undefined}
-        className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6"
+        className="kova-page kova-secondary-page kova-core-page kova-file-directory kova-files-page"
+        data-ui-reference="chatgpt.library.files"
       >
         <WorkspacePageHeader
           icon={Files}
           title="Files"
-          description="Search upload history, identify duplicates, and reuse durable Library files."
+          description="Find your files and reuse them across chats and projects."
         />
         {isLoading ? (
           <section
@@ -170,22 +173,24 @@ function FilesPage() {
             <div className="mb-4 flex gap-2">
               <label className="relative flex-1">
                 <span className="sr-only">Search files</span>
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <input
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="h-10 w-full rounded-xl border bg-background pl-9"
+                  className="w-full pl-9"
                   placeholder="Search files"
                 />
               </label>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 type="button"
                 aria-pressed={duplicates}
                 onClick={() => setDuplicates((v) => !v)}
-                className={`min-h-10 rounded-xl border px-3 text-sm ${duplicates ? "bg-foreground text-background" : ""}`}
+                className={`border px-3 text-sm ${duplicates ? "bg-accent text-foreground" : ""}`}
               >
                 Duplicates
-              </button>
+              </Button>
             </div>
             {selected.length ? (
               <div
@@ -195,14 +200,18 @@ function FilesPage() {
               >
                 <span className="text-sm font-medium">{selected.length} files selected</span>
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     type="button"
                     onClick={() => setSelected([])}
-                    className="min-h-10 rounded-lg px-3 text-sm hover:bg-accent"
+                    className="px-3 text-sm hover:bg-accent"
                   >
                     Clear
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     type="button"
                     onClick={() =>
                       addManyToContextPack(
@@ -217,10 +226,10 @@ function FilesPage() {
                         userKey,
                       )
                     }
-                    className="min-h-10 rounded-lg bg-foreground px-3 text-sm text-background"
+                    className="bg-foreground px-3 text-sm text-background"
                   >
                     Add selection to Context Pack
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : null}
@@ -255,19 +264,22 @@ function FilesPage() {
               <ul className="divide-y rounded-2xl border">
                 {visible.map((item) => (
                   <li key={item.id} className="flex items-center gap-3 p-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(item.id)}
-                      onChange={() =>
-                        setSelected((current) =>
-                          current.includes(item.id)
-                            ? current.filter((id) => id !== item.id)
-                            : [...current, item.id],
-                        )
-                      }
-                      aria-label={`Select ${item.file_name ?? item.title}`}
-                      className="h-4 w-4"
-                    />
+                    <label className="kova-file-selection">
+                      <input
+                        data-ui-reference="chatgpt.checkbox"
+                        type="checkbox"
+                        checked={selected.includes(item.id)}
+                        onChange={() =>
+                          setSelected((current) =>
+                            current.includes(item.id)
+                              ? current.filter((id) => id !== item.id)
+                              : [...current, item.id],
+                          )
+                        }
+                        aria-label={`Select ${item.file_name ?? item.title}`}
+                        className="kova-native-check"
+                      />
+                    </label>
                     <File className="h-5 w-5 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium">{item.file_name ?? item.title}</div>
@@ -284,7 +296,9 @@ function FilesPage() {
                       </span>
                     )}
                     <div className="hidden gap-1 md:flex">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() =>
                           openInWork(
                             {
@@ -296,11 +310,13 @@ function FilesPage() {
                             userKey,
                           )
                         }
-                        className="min-h-10 rounded-lg px-2 text-xs hover:bg-accent"
+                        className="px-2 text-xs hover:bg-accent"
                       >
                         Work
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() =>
                           continueInChat(
                             {
@@ -312,11 +328,13 @@ function FilesPage() {
                             userKey,
                           )
                         }
-                        className="min-h-10 rounded-lg px-2 text-xs hover:bg-accent"
+                        className="px-2 text-xs hover:bg-accent"
                       >
                         Ask Kova
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() =>
                           addToContextPack(
                             {
@@ -328,10 +346,10 @@ function FilesPage() {
                             userKey,
                           )
                         }
-                        className="min-h-10 rounded-lg px-2 text-xs hover:bg-accent"
+                        className="px-2 text-xs hover:bg-accent"
                       >
                         Add to context
-                      </button>
+                      </Button>
                     </div>
                     <Link
                       to="/library"

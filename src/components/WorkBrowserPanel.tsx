@@ -1,3 +1,5 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -199,7 +201,11 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
     setTarget("");
   }
   return (
-    <section aria-label="Private Work browser" className="work-browser-panel">
+    <section
+      aria-label="Private Work browser"
+      className="work-browser-panel"
+      data-ui-reference="chatgpt.agent.browser-card"
+    >
       <div className="work-browser-heading">
         <h4>
           <Monitor aria-hidden="true" /> Cloud browser
@@ -211,6 +217,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       <button
         type="button"
         className="work-browser-preview"
+        data-ui-reference="chatgpt.agent.browser-preview"
         aria-label={controlsOpen ? "Hide browser controls" : "Open browser controls"}
         aria-expanded={controlsOpen}
         aria-controls={controlsId}
@@ -250,7 +257,8 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       {session && (
         <div className="work-browser-actions">
           {session.mode === "agent" ? (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               disabled={disabled}
               onClick={() => {
@@ -260,20 +268,26 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
               className="work-browser-primary-action"
             >
               Take over
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               disabled={disabled}
               onClick={() => void command("release")}
               className="work-browser-primary-action"
             >
               Return control
-            </button>
+            </Button>
           )}
-          <button type="button" disabled={busy || checking} onClick={() => void command("close")}>
+          <Button
+            variant="ghost"
+            type="button"
+            disabled={busy || checking}
+            onClick={() => void command("close")}
+          >
             End session
-          </button>
+          </Button>
         </div>
       )}
       {session?.mode === "takeover" && (
@@ -302,14 +316,15 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
           {error}
         </p>
       )}
-      <button
+      <Button
+        variant="link"
         type="button"
         disabled={busy || checking}
         onClick={() => void refresh()}
         className="work-browser-refresh text-sm underline"
       >
         {checking ? "Checking browser status…" : "Refresh browser status"}
-      </button>
+      </Button>
       {controlsOpen && (
         <div id={controlsId} className="work-browser-controls">
           <p className="text-sm text-muted-foreground">
@@ -324,22 +339,23 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
             <div className="flex flex-wrap items-end gap-2">
               <label className="flex-1 text-sm">
                 Reviewed website URL
-                <input
+                <Input
                   type="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   maxLength={2048}
-                  className="block w-full rounded border bg-background p-2"
+                  className="block w-full border bg-background"
                 />
               </label>
-              <button
+              <Button
+                variant="outline"
                 type="button"
                 disabled={disabled || !url}
                 onClick={() => void command("open", { url })}
-                className="rounded border px-3 py-2"
+                className="border"
               >
                 Open and take over
-              </button>
+              </Button>
             </div>
           )}
           {session && (
@@ -349,27 +365,30 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
               </p>
               {session.mode === "takeover" && (
                 <div className="work-browser-actions">
-                  <button
+                  <Button
+                    variant="ghost"
                     type="button"
                     disabled={disabled}
                     onClick={() => void command("snapshot")}
                   >
                     Read current page
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     type="button"
                     disabled={disabled}
                     onClick={() => void command("scroll", { delta: 800 })}
                   >
                     Scroll down
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     type="button"
                     disabled={disabled}
                     onClick={() => void command("scroll", { delta: -800 })}
                   >
                     Scroll up
-                  </button>
+                  </Button>
                 </div>
               )}
               {view && session.mode === "takeover" && (
@@ -403,7 +422,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
                   {view.nodes?.find((node) => node.id === target)?.editable && (
                     <label className="block text-sm">
                       Enter text privately
-                      <input
+                      <Input
                         type={
                           view.nodes?.find((node) => node.id === target)?.inputType === "password"
                             ? "password"
@@ -413,7 +432,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         maxLength={4000}
-                        className="mt-1 block w-full rounded border bg-background p-2"
+                        className="mt-1 block w-full border bg-background"
                       />
                     </label>
                   )}
@@ -423,33 +442,36 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {view.nodes?.find((node) => node.id === target)?.editable && (
-                      <button
+                      <Button
+                        variant="outline"
                         type="button"
                         disabled={disabled || !target}
                         onClick={() => void command("fill", { view: view.view, target, text })}
-                        className="rounded border px-3 py-2"
+                        className="border"
                       >
                         Fill selected field
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
+                      variant="outline"
                       type="button"
                       disabled={disabled || !target}
                       onClick={() => void command("click", { view: view.view, target })}
-                      className="rounded border px-3 py-2"
+                      className="border"
                     >
                       Click selected control
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="outline"
                       type="button"
                       disabled={disabled || !target}
                       onClick={() =>
                         void command("press", { view: view.view, target, key: "Enter" })
                       }
-                      className="rounded border px-3 py-2"
+                      className="border"
                     >
                       Press Enter on selected control
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

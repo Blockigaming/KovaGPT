@@ -153,7 +153,12 @@ export function ErrorState({
       )}
       {onRetry && (
         <div className="mt-4">
-          <Button size="sm" variant="outline" onClick={onRetry}>
+          <Button
+            data-ui-reference="chatgpt.error.action"
+            size="sm"
+            variant="outline"
+            onClick={onRetry}
+          >
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Try again
           </Button>
         </div>
@@ -198,16 +203,17 @@ export class AppErrorBoundary extends Component<
               try again.
             </p>
             <div className="kova-state-actions">
-              <button
+              <Button
+                variant="default"
                 type="button"
-                className="kova-state-primary"
+                data-ui-reference="chatgpt.error.retry"
                 onClick={() => window.location.reload()}
               >
                 Reload workspace
-              </button>
-              <a className="kova-state-secondary" href="/">
-                Return home
-              </a>
+              </Button>
+              <Button asChild variant="outline" data-ui-reference="chatgpt.error.home">
+                <a href="/">Return home</a>
+              </Button>
             </div>
           </section>
         </main>

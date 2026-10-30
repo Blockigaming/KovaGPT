@@ -29,7 +29,7 @@ const expected = [
 
 const render = (name, props = {}) => renderToStaticMarkup(createElement(glyphs[name], props));
 
-test("custom sidebar glyphs preserve all eleven exports without icon-package geometry", () => {
+test("pinned SDK sidebar glyphs preserve all eleven exports without a runtime icon dependency", () => {
   assert.deepEqual(Object.keys(glyphs).sort(), [...expected].sort());
   assert.doesNotMatch(source, /@phosphor-icons|lucide-react/);
   const shapes = expected.map((name) => render(name).replace(/^<svg[^>]*>|<\/svg>$/g, ""));
@@ -40,13 +40,14 @@ test("custom sidebar glyphs preserve all eleven exports without icon-package geo
   );
 });
 
-test("sidebar glyphs share a square optical grid and rounded current-color strokes", () => {
+test("sidebar glyphs preserve the official filled current-color geometry on a square optical grid", () => {
   for (const name of expected) {
     const markup = render(name);
     assert.match(markup, /^<svg[^>]*width="20"[^>]*height="20"/);
     assert.match(markup, /viewBox="0 0 24 24"/);
-    assert.match(markup, /fill="none" stroke="currentColor" stroke-width="1.7"/);
-    assert.match(markup, /stroke-linecap="round" stroke-linejoin="round"/);
+    assert.match(markup, /fill="currentColor"/);
+    assert.match(markup, /data-ui-reference="chatgpt-sdk-icon"/);
+    assert.match(markup, /data-icon-source="[A-Za-z]+"/);
     assert.match(markup, /data-kova-navigation-glyph=""/);
     assert.doesNotMatch(markup, /<image|<use|<filter|<mask|<text|#[a-fA-F0-9]{3,8}/);
   }
@@ -63,46 +64,23 @@ test("glyphs remain decorative and non-focusable while preserving caller props",
   }
 });
 
-test("sidebar glyphs retain shared rounded strokes with a scoped modern optical weight", () => {
-  const css = postcss.parse(readFileSync("src/styles/sidebar-personalization.css", "utf8"));
+test("one sidebar optical-size rule preserves the upstream filled paths without injecting strokes", () => {
   const rules = [];
-  css.walkRules((rule) => {
-    if (rule.selector.includes("[data-kova-navigation-glyph]")) rules.push(rule);
+  postcss.parse(readFileSync("src/styles/sidebar-core.css", "utf8")).walkRules((rule) => {
+    if (rule.selector === "[data-kova-navigation-glyph]") rules.push(rule);
   });
-  assert.equal(rules.length, 2);
+  assert.equal(rules.length, 1);
   const declarations = Object.fromEntries(
     rules[0].nodes.filter((node) => node.type === "decl").map(({ prop, value }) => [prop, value]),
   );
-  assert.equal(declarations.width, "22px");
-  assert.equal(declarations.height, "22px");
-  assert.equal(declarations.stroke, "currentColor");
-  // The unchanged SVG presentation attribute is an unstyled optical fallback;
-  // the shared CSS token owns the painted navigation stroke.
-  assert.equal(declarations["stroke-width"], "var(--kova-icon-stroke, 2)");
-  const strokes = [];
-  postcss
-    .parse(readFileSync("src/styles/spec400-system.css", "utf8"))
-    .walkDecls("--kova-icon-stroke", ({ value }) => strokes.push(value));
-  assert.deepEqual(strokes, ["2"], "One canonical stroke token supplies the 2px contract");
-  const shared = [];
-  postcss.parse(readFileSync("src/styles/sidebar-core.css", "utf8")).walkRules((rule) => {
-    if (rule.selector.endsWith(".kova-sidebar-icon svg")) shared.push(rule);
-  });
-  assert.equal(shared.length, 1);
-  assert.equal(
-    shared[0].nodes.findLast((node) => node.prop === "stroke-width")?.value,
-    "var(--kova-icon-stroke, 2)",
+  assert.equal(declarations.width, "20px");
+  assert.equal(declarations.height, "20px");
+  assert.equal(declarations.stroke, undefined);
+  assert.equal(declarations["stroke-width"], undefined);
+  assert.match(source, /0f00143c7a639906f1621fe58e1b6be7b5bea46d/);
+  assert.ok(
+    !readFileSync("src/styles/sidebar-personalization.css", "utf8").includes(
+      "[data-kova-navigation-glyph]",
+    ),
   );
-  assert.equal(declarations["stroke-linecap"], "round");
-  assert.equal(declarations["stroke-linejoin"], "round");
-  const modern = rules[1];
-  assert.match(modern.selector, /\.kova-assistant/);
-  assert.match(modern.selector, /kova-app-shell/);
-  assert.match(modern.selector, /\[data-ui="modern"\]/);
-  const modernDeclarations = Object.fromEntries(
-    modern.nodes.filter((node) => node.type === "decl").map(({ prop, value }) => [prop, value]),
-  );
-  assert.equal(modernDeclarations.width, "20px");
-  assert.equal(modernDeclarations.height, "20px");
-  assert.equal(modernDeclarations["stroke-width"], "1.7");
 });

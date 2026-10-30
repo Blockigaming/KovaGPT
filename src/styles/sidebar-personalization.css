@@ -1,602 +1,113 @@
-/* Owner sidebar refinement: a shared desktop canvas and a distinct phone drawer.
-   Extra scope keeps legacy shell layers from changing this component's geometry. */
-:is(.kova-assistant, .kova-app-shell)
-  :is(
-    .kova-sidebar[data-kova-core-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail]
-  )[data-kova-refined-sidebar][data-state] {
-  --sidebar-row-height: 44px;
-
-  background: var(--assistant-canvas, var(--background)) !important;
-  border-radius: 0;
-  border-right-color: transparent !important;
-}
-
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar[data-kova-refined-sidebar][data-kova-core-sidebar]
-  :is(.kova-sidebar-inner, .kova-sidebar-header, .kova-sidebar-footer) {
-  background: inherit;
-}
-
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar[data-kova-refined-sidebar][data-kova-core-sidebar]
-  :is(.kova-header-button, .kova-account-action, .kova-chat-options) {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  flex: 0 0 44px;
-}
-
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar[data-kova-refined-sidebar][data-kova-core-sidebar]
-  :is(.kova-chat-row, .kova-chat-row-main) {
-  min-height: 44px;
-  height: 44px;
-}
-
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar-rail[data-kova-refined-sidebar][data-kova-core-rail] {
-  gap: 8px;
-}
-
-.kova-sidebar-rail[data-kova-refined-sidebar] .kova-rail-shortcuts {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-height: 0;
-  width: 100%;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-}
-
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar-rail[data-kova-refined-sidebar][data-kova-core-rail]
-  .kova-rail-button {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
-  flex: 0 0 44px;
-  color: var(--muted-foreground);
-}
-/* Shared rail geometry is owned by sidebar-core.css. */
-
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar-rail[data-kova-refined-sidebar][data-kova-core-rail]
-  .kova-rail-button:is(:hover, [aria-current="page"]) {
-  background: var(--sidebar-active);
-  color: var(--foreground);
-}
-
-:is(.kova-assistant, .kova-app-shell)
-  :is(.kova-sidebar, .kova-sidebar-rail)[data-kova-refined-sidebar]
-  :is(.kova-sidebar-icon, .kova-rail-button)
-  svg {
-  width: 22px;
-  height: 22px;
-  stroke-width: var(--kova-icon-stroke, 2);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-:is(.kova-assistant, .kova-app-shell)
-  .kova-sidebar-rail[data-kova-refined-sidebar][data-kova-core-rail]
-  .kova-rail-button
-  svg {
-  stroke-width: 2;
-}
-
-.kova-sidebar-rail[data-kova-refined-sidebar] .kova-rail-account {
-  margin-top: 4px;
-}
-
-.kova-sidebar-rail[data-kova-refined-sidebar] .kova-rail-account:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
+/* Native sidebar dialogs use ChatGPT's shared dialog/form controls.
+   Sidebar and rail geometry lives exclusively in sidebar-core.css. */
+.kova-rename-dialog,
 .kova-sidebar-personalization {
-  width: min(420px, calc(100vw - 32px));
+  box-sizing: border-box;
+  width: min(450px, calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
   margin: auto;
-  padding: 20px;
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid var(--border);
-  border-radius: var(--kova-radius-panel);
-  background: var(--background);
+  border-radius: 24px;
+  padding: 20px;
   color: var(--foreground);
-  box-shadow: 0 16px 64px #0003;
+  background: var(--popover);
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  box-shadow: var(--shadow-floating);
 }
-
+.kova-rename-dialog::backdrop,
 .kova-sidebar-personalization::backdrop {
-  background: #0007;
+  background: #0008;
 }
-
 .kova-sidebar-personalization-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
-
-.kova-sidebar-personalization h2 {
-  font-size: 18px;
-  font-weight: 600;
+.kova-sidebar-personalization h2,
+.kova-rename-dialog h2 {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 28px;
 }
-
-.kova-sidebar-personalization-heading button {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  place-items: center;
-  border-radius: var(--kova-radius-button);
-}
-
-.kova-sidebar-personalization svg {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  stroke-width: var(--kova-icon-stroke, 2);
-}
-
 .kova-sidebar-personalization p {
   color: var(--muted-foreground);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 20px;
 }
-
-.kova-sidebar-personalization fieldset {
-  min-width: 0;
-  margin: 20px 0 14px;
-}
-
-.kova-sidebar-personalization legend {
-  margin-bottom: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted-foreground);
-}
-
-.kova-sidebar-shortcut-choice {
-  display: flex;
-  min-height: 48px;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: var(--kova-radius-sidebar);
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.kova-sidebar-shortcut-choice > span {
-  flex: 1;
-}
-
-.kova-sidebar-shortcut-choice input {
+.kova-sidebar-personalization svg {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  accent-color: var(--foreground);
 }
-
-.kova-sidebar-personalization button:not([role="switch"]):hover,
+.kova-sidebar-personalization fieldset {
+  min-width: 0;
+  margin: 20px 0 12px;
+}
+.kova-sidebar-personalization legend {
+  margin-bottom: 8px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+.kova-sidebar-shortcut-choice {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
 .kova-sidebar-shortcut-choice:hover {
-  background: var(--sidebar-hover);
+  background: var(--accent);
 }
-
-.kova-sidebar-personalization button:focus-visible,
-.kova-sidebar-shortcut-choice:focus-within {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+.kova-sidebar-shortcut-choice > span {
+  min-width: 0;
+  flex: 1;
 }
-
 .kova-sidebar-personalization .kova-sidebar-personalization-note {
   font-size: 12px;
+  line-height: 16px;
 }
-
 .kova-sidebar-personalization .kova-sidebar-personalization-error {
   margin-top: 12px;
   color: var(--destructive);
 }
-
 .kova-sidebar-personalization-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   margin-top: 20px;
 }
-
-.kova-sidebar-personalization-actions button {
+.kova-sidebar-shortcut-choice:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-rename-dialog input {
   min-height: 44px;
-  padding: 10px 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--kova-radius-button);
-  font-size: 14px;
-}
-
-.kova-sidebar-personalization-actions button:last-child {
-  background: var(--foreground);
-  color: var(--background);
-}
-
-@media (max-width: 1023px) {
-  :is(.kova-assistant, .kova-app-shell)
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state] {
-    border-radius: 0 var(--kova-radius-panel) var(--kova-radius-panel) 0;
-    background: #f3f3f3 !important;
-  }
-
-  .dark
-    :is(.kova-assistant, .kova-app-shell)
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state] {
-    background: #171717 !important;
-  }
-}
-
-/* Original navigation glyphs share a consistent, rounded optical weight. */
-:is(.kova-assistant, .kova-app-shell) [data-kova-navigation-glyph] {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  color: currentColor;
-  stroke: currentColor;
-  stroke-width: var(--kova-icon-stroke, 2);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-:is(.kova-assistant, .kova-app-shell)
-  :is(.kova-sidebar, .kova-sidebar-rail)[data-kova-refined-sidebar]
-  :is(.kova-new-chat, .kova-rail-customize)
-  svg {
-  width: 20px;
-  height: 20px;
-}
-
-/* Main assistant navigation: the unfilled compose action and quiet history of ChatGPT.
-   Width, drawer visibility and scrolling remain owned by the shared sidebar. */
-:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] {
-  --chat-nav-surface: #f9f9f9;
-  --chat-nav-hover: rgb(0 0 0 / 5%);
-  --chat-nav-selected: rgb(0 0 0 / 7%);
-  --chat-nav-muted: #676767;
-  --chat-nav-line: rgb(0 0 0 / 7%);
-}
-.dark :is(.kova-assistant, .kova-app-shell)[data-ui="modern"] {
-  --chat-nav-surface: #171717;
-  --chat-nav-hover: rgb(255 255 255 / 5%);
-  --chat-nav-selected: rgb(255 255 255 / 8%);
-  --chat-nav-muted: #a3a3a3;
-  --chat-nav-line: rgb(255 255 255 / 6%);
-}
-/* Recover the assistant's type stack from the legacy navigation font override. */
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  ) {
-  --chat-body-font: inherit;
-  --font-sans: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif);
-  --sidebar-icon-slot: 20px;
-  font-family: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif) !important;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  :is(.kova-sidebar-brand, button, input, textarea, select, summary, a) {
-  font-family: var(--chat-body-font, ui-sans-serif, system-ui, sans-serif) !important;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  :is(.kova-sidebar-icon, .kova-rail-button, .kova-header-button, .kova-chat-options)
-  svg {
-  width: 20px;
-  height: 20px;
-  stroke-width: 1.7;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  [data-kova-navigation-glyph] {
-  width: 20px;
-  height: 20px;
-  stroke-width: 1.7;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  :is(.kova-header-button, .kova-chat-options, .kova-rail-button) {
-  color: var(--chat-nav-muted);
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  :is(.kova-header-button, .kova-chat-options, .kova-rail-button):hover {
-  background: var(--chat-nav-hover);
-  color: var(--foreground);
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  [aria-current="page"] {
-  color: var(--foreground);
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  [aria-current="page"]::before {
-  content: none;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  .kova-sidebar-brand {
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  :is(.kova-sidebar-brand, .kova-sidebar-toggle)
-  > .kova-logo {
-  width: 24px;
-  height: 24px;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  .kova-sidebar-primary {
-  padding: 8px 12px;
-  gap: 3px;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-nav-row {
-  gap: 12px !important;
-  padding-inline: 12px !important;
-  font-size: 14px !important;
-  font-weight: 400;
-  color: var(--foreground);
-  border-radius: 10px;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-nav-row:is(:hover, .is-active) {
-  background: var(--chat-nav-hover);
-  color: var(--foreground);
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-nav-row.is-active {
-  background: var(--chat-nav-selected) !important;
-  font-weight: 500;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-nav-row.is-active::before {
-  content: none;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-nav-row.kova-new-chat {
-  justify-content: flex-start;
-  margin-bottom: 0;
-  padding-inline: 12px !important;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--foreground);
-  font-weight: 500;
-  box-shadow: none;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-nav-row.kova-new-chat:hover {
-  background: var(--chat-nav-hover);
-  color: var(--foreground);
-  filter: none;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-sidebar-history {
-  margin-top: 0;
-  padding: 8px 12px 16px;
-  border-top: 0;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-sidebar-history
-  h2 {
-  color: var(--chat-nav-muted) !important;
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  letter-spacing: 0 !important;
-  text-transform: none !important;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  :is(.kova-sidebar-empty, .kova-account-copy small) {
-  color: var(--chat-nav-muted);
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-sidebar-empty {
-  font-size: 12px;
-  line-height: 1.65;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-chat-row-main {
-  font-size: 13px;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-sidebar-help {
-  padding: 8px 12px 0;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-sidebar-footer {
-  padding-inline: 12px;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  :is(.kova-account-main, .kova-chat-row):hover {
-  background: var(--chat-nav-hover);
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  [aria-current="page"].kova-rail-button {
-  background: var(--chat-nav-selected);
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  .kova-sidebar-search {
-  border-color: var(--chat-nav-line);
-  background: var(--chat-nav-hover);
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  .kova-sidebar-search:focus-visible {
-  border-color: var(--ring);
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  :is(.kova-sidebar-inner, .kova-sidebar-header, .kova-sidebar-footer) {
-  background: var(--chat-nav-surface);
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  :is(
-    .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar],
-    .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar]
-  )
-  .kova-sidebar-header {
-  padding-inline: 16px 6px;
-}
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
-body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
-  --sidebar-hover: var(--chat-nav-hover);
-  --sidebar-active: var(--chat-nav-selected);
-  background: var(--chat-nav-surface) !important;
-  border-right-color: var(--chat-nav-line) !important;
-}
-.dark
-  body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar][data-state],
-.dark
-  body
-  :is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar-rail[data-kova-core-rail][data-kova-refined-sidebar][data-state] {
-  background: var(--chat-nav-surface) !important;
-}
-
-/* The assistant keeps navigation identity and account actions compact without
-   changing the shared drawer's width, visibility or focus ownership. */
-:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-header-button[aria-expanded="true"] {
-  color: var(--foreground);
-  background: var(--chat-nav-selected);
-}
-
-:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-sidebar-brand {
-  line-height: 1.2;
-}
-
-:is(.kova-assistant, .kova-app-shell)[data-ui="modern"]
-  .kova-sidebar[data-kova-core-sidebar][data-kova-refined-sidebar]
-  .kova-sidebar-footer
-  .kova-sign-in {
   width: 100%;
-  min-height: 44px;
-  font-size: 13px;
-  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--foreground);
+  background: var(--background);
+  font-size: 14px;
+  line-height: 20px;
 }
-
-:is(.kova-assistant, .kova-app-shell)[data-ui="modern"] .spec400-mobile-page-title {
-  font-size: 15px;
-  line-height: 22px;
-  letter-spacing: -0.02em;
+@media (pointer: coarse), (max-width: 1023px) {
+  .kova-sidebar-shortcut-choice {
+    min-height: 44px;
+  }
+  .kova-rename-dialog input {
+    font-size: 16px;
+    line-height: 24px;
+  }
 }

@@ -703,11 +703,16 @@ test("task deletion names its target, keeps failure in the dialog, and returns f
   assert.deepEqual(f.focused, ["project-tasks"]);
 });
 
-test("44px non-drag task controls use the same guarded reorder and reconciliation", async () => {
+test("shared icon task controls retain 44px coarse targets and guarded reorder reconciliation", async () => {
   const f = fixture();
   await f.finishList();
   const up = () => f.findAll((node) => node.props["aria-label"] === "Move Task b up")[0];
-  assert.match(up().props.className, /h-11 w-11/);
+  assert.equal(up().type, "Button");
+  assert.equal(up().props.size, "icon");
+  assert.equal(up().props.variant, "ghost");
+  const button = readFileSync("src/components/ui/button.tsx", "utf8");
+  assert.match(button, /icon: "h-9 w-9 p-0 \[@media\(pointer:coarse\)\]:min-w-11"/);
+  assert.match(button, /\[@media\(pointer:coarse\)\]:min-h-11/);
   assert.equal(
     f.findAll((node) => node.props["aria-label"] === "Move Task a up")[0].props.disabled,
     true,

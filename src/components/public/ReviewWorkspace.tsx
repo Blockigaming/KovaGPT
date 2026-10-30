@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -54,7 +57,12 @@ export function ReviewDirectory({ family }: { family?: string }) {
   );
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="spec400-review">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="spec400-review"
+        data-ui-reference="chatgpt-settings-form"
+      >
         <p className="spec400-eyebrow">Local interface review</p>
         <h1>{family === "assistant" ? "Persistent assistant review" : "Additional page review"}</h1>
         <p className="spec400-lede">
@@ -71,9 +79,27 @@ export function ReviewDirectory({ family }: { family?: string }) {
                 connecting any service.
               </p>
               <div className="spec400-review-actions">
-                <Link to={"/review/assistant-profile" as never}>Configure an assistant</Link>
-                <Link to={"/review/assistant-teach" as never}>Preview task instructions</Link>
-                <Link to="/">Open existing Chat</Link>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+                >
+                  <Link to={"/review/assistant-profile" as never}>Configure an assistant</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+                >
+                  <Link to={"/review/assistant-teach" as never}>Preview task instructions</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+                >
+                  <Link to="/">Open existing Chat</Link>
+                </Button>
               </div>
             </div>
             <div>
@@ -93,7 +119,7 @@ export function ReviewDirectory({ family }: { family?: string }) {
         <div className="spec400-review-toolbar">
           <label>
             Search review pages
-            <input
+            <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               type="search"
@@ -128,9 +154,27 @@ export function ReviewDirectory({ family }: { family?: string }) {
         </div>
         {family === "legal" && (
           <nav className="spec400-review-actions" aria-label="Existing legal information">
-            <Link to="/terms">Existing Terms</Link>
-            <Link to="/privacy">Existing Privacy information</Link>
-            <Link to={"/policies" as never}>Policy directory</Link>
+            <Button
+              asChild
+              variant="outline"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+            >
+              <Link to="/terms">Existing Terms</Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+            >
+              <Link to="/privacy">Existing Privacy information</Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+            >
+              <Link to={"/policies" as never}>Policy directory</Link>
+            </Button>
           </nav>
         )}
         <p role="status">{pages.length} review pages</p>
@@ -151,14 +195,17 @@ export function ReviewDirectory({ family }: { family?: string }) {
         {!pages.length && (
           <section className="spec400-review-card">
             <h2>No matching review pages</h2>
-            <button
+            <Button
+              variant="outline"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+              type="button"
               onClick={() => {
                 setQuery("");
                 setGroup("all");
               }}
             >
               Clear filters
-            </button>
+            </Button>
           </section>
         )}
         {family === "assistant" && (
@@ -178,7 +225,12 @@ export function ReviewWorkspace({ page }: { page: ReviewPage }) {
   if (!isLoaded)
     return (
       <PublicShell>
-        <main id="main-content" className="spec400-review" tabIndex={-1}>
+        <main
+          id="main-content"
+          className="spec400-review"
+          data-ui-reference="chatgpt-settings-form"
+          tabIndex={-1}
+        >
           <h1>{page.title}</h1>
           <p role="status">Loading account context…</p>
         </main>
@@ -332,7 +384,12 @@ export function ReviewWorkspaceBody({ page, principal }: { page: ReviewPage; pri
   };
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="spec400-review">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="spec400-review"
+        data-ui-reference="chatgpt-settings-form"
+      >
         <nav aria-label="Breadcrumb">
           <Link to={"/review" as never}>Review pages</Link>
           <span aria-hidden="true"> / </span>
@@ -367,7 +424,7 @@ export function ReviewWorkspaceBody({ page, principal }: { page: ReviewPage; pri
               {page.family === "legal"
                 ? "Questions for document review"
                 : "Additional review notes"}
-              <textarea
+              <Textarea
                 rows={4}
                 value={draft.notes}
                 onChange={(event) => update("notes", event.target.value)}
@@ -376,12 +433,35 @@ export function ReviewWorkspaceBody({ page, principal }: { page: ReviewPage; pri
             </label>
           )}
           <div className="spec400-review-actions">
-            <button onClick={save}>Save local draft</button>
-            <button onClick={restore}>Restore saved draft</button>
-            <button ref={resetTriggerRef} onClick={() => setReset(true)}>
+            <Button
+              variant="default"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+              type="button"
+              onClick={save}
+            >
+              Save local draft
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+              type="button"
+              onClick={restore}
+            >
+              Restore saved draft
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+              type="button"
+              ref={resetTriggerRef}
+              onClick={() => setReset(true)}
+            >
               Reset draft
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+              type="button"
               ref={previewTriggerRef}
               onClick={() => {
                 setPreviewExpanded(true);
@@ -389,7 +469,7 @@ export function ReviewWorkspaceBody({ page, principal }: { page: ReviewPage; pri
               }}
             >
               Preview draft
-            </button>
+            </Button>
           </div>
           <p>
             Drafts remain account-scoped in this session. Save retains a draft in this browser tab
@@ -427,7 +507,10 @@ export function ReviewWorkspaceBody({ page, principal }: { page: ReviewPage; pri
             <h2 id="review-reset-title">Reset this draft?</h2>
             <p>This clears current unsaved fields. A saved browser-tab draft is unchanged.</p>
             <div className="spec400-review-actions">
-              <button
+              <Button
+                variant="outline"
+                className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+                type="button"
                 ref={resetCancelRef}
                 onClick={() => {
                   setReset(false);
@@ -435,8 +518,11 @@ export function ReviewWorkspaceBody({ page, principal }: { page: ReviewPage; pri
                 }}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
+                className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+                type="button"
                 onClick={() => {
                   inMemoryDrafts.delete(draftKey);
                   setDraft(empty(page));
@@ -450,7 +536,7 @@ export function ReviewWorkspaceBody({ page, principal }: { page: ReviewPage; pri
                 }}
               >
                 Reset current draft
-              </button>
+              </Button>
             </div>
           </section>
         )}
@@ -467,16 +553,33 @@ export function ReviewWorkspaceBody({ page, principal }: { page: ReviewPage; pri
             <p>This content is not submitted or publicly shared.</p>
             <pre tabIndex={0}>{content}</pre>
             <div className="spec400-review-actions">
-              <button onClick={copy}>Copy draft</button>
-              <button onClick={download}>Download draft JSON</button>
-              <button
+              <Button
+                variant="default"
+                className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+                type="button"
+                onClick={copy}
+              >
+                Copy draft
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+                type="button"
+                onClick={download}
+              >
+                Download draft JSON
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-auto min-h-9 max-w-full whitespace-normal py-2"
+                type="button"
                 onClick={() => {
                   setPreview(false);
                   previewTriggerRef.current?.focus();
                 }}
               >
                 Close preview
-              </button>
+              </Button>
             </div>
           </details>
         )}

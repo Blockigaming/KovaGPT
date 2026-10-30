@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -597,9 +599,13 @@ export function KovaMaps() {
   if (!MAPS_RELEASE_APPROVED) {
     return (
       <main
+        data-ui-reference="gemini.maps.canvas"
         id="main-content"
         tabIndex={-1}
-        className="grid h-full min-h-0 flex-1 place-items-center bg-background p-8 text-center"
+        className={
+          "kova-tool-map " +
+          "grid h-full min-h-0 flex-1 place-items-center bg-background p-8 text-center"
+        }
       >
         <div role="alert" className="max-w-md rounded-2xl border bg-card p-6 shadow-xl">
           <MapPin className="mx-auto mb-3 h-7 w-7 text-primary" />
@@ -612,9 +618,10 @@ export function KovaMaps() {
 
   return (
     <main
+      data-ui-reference="gemini.maps.canvas"
       id="main-content"
       tabIndex={-1}
-      className="relative h-full min-h-0 flex-1 overflow-hidden bg-background"
+      className={"kova-tool-map " + "relative h-full min-h-0 flex-1 overflow-hidden bg-background"}
     >
       <div
         ref={containerRef}
@@ -638,7 +645,7 @@ export function KovaMaps() {
       ) : null}
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-10 p-3 pt-[max(.75rem,env(safe-area-inset-top))] sm:p-5">
-        <div className="pointer-events-auto mx-auto max-w-2xl rounded-2xl border border-border/70 bg-background/90 p-2 shadow-xl backdrop-blur-xl">
+        <div className="kova-map-search pointer-events-auto mx-auto max-w-2xl rounded-2xl border border-border/70 bg-background/90 p-2 shadow-xl backdrop-blur-xl">
           <form
             className="flex min-w-0 items-center gap-2"
             onSubmit={(event) => {
@@ -647,7 +654,7 @@ export function KovaMaps() {
             }}
           >
             <Sparkles className="ml-2 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-            <input
+            <Input
               value={query}
               onChange={(event) => {
                 actionGenerationRef.current += 1;
@@ -659,16 +666,18 @@ export function KovaMaps() {
               }}
               placeholder="Ask Kova about Maps"
               aria-label="Ask Kova about Maps"
-              className="h-11 min-w-0 flex-1 bg-transparent px-1 text-base outline-none placeholder:text-muted-foreground"
+              className=" min-w-0 flex-1 bg-transparent px-1 text-base outline-none placeholder:text-muted-foreground"
             />
-            <button
+            <Button
+              variant="default"
+              size="icon"
               type="submit"
               disabled={searching || !mapActionsReady}
               aria-label="Search maps"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
+              className="grid   shrink-0 place-items-center  bg-primary text-primary-foreground transition hover:brightness-110 disabled:opacity-60"
             >
               <ArrowUp className="h-5 w-5" />
-            </button>
+            </Button>
           </form>
           {inlineError ? (
             <p role="alert" className="px-3 pb-1 pt-2 text-sm text-destructive">
@@ -678,16 +687,19 @@ export function KovaMaps() {
           {results.length > 1 ? (
             <div className="mt-1 max-h-36 overflow-y-auto border-t px-1 pt-1">
               {results.map((place) => (
-                <button
+                <Button
+                  variant="ghost"
+                  data-ui-reference="chatgpt.source.result-row"
+                  data-kova-button-shape="preserve"
                   key={place.id}
                   type="button"
                   disabled={!mapActionsReady}
                   onClick={() => void selectPlace(place)}
-                  className="flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted"
+                  className="kova-tool-row-action flex h-auto w-full items-start gap-2 whitespace-normal rounded-xl text-left text-sm hover:bg-muted"
                 >
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <span className="line-clamp-2">{place.name}</span>
-                </button>
+                </Button>
               ))}
             </div>
           ) : null}
@@ -696,7 +708,12 @@ export function KovaMaps() {
 
       <div className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-3 z-10 flex max-w-[calc(100%-1.5rem)] items-end gap-2 sm:bottom-5 sm:left-5">
         {selected ? (
-          <section className="max-w-sm rounded-2xl border border-border/70 bg-background/92 p-4 shadow-xl backdrop-blur-xl">
+          <section
+            className={
+              "kova-tool-panel " +
+              "max-w-sm rounded-2xl border border-border/70 bg-background/92 p-4 shadow-xl backdrop-blur-xl"
+            }
+          >
             <div className="flex gap-3">
               <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
               <div className="min-w-0">
@@ -705,53 +722,59 @@ export function KovaMaps() {
                   {selected.type.replaceAll("_", " ")} · {selected.latitude.toFixed(5)},{" "}
                   {selected.longitude.toFixed(5)}
                 </p>
-                <button
+                <Button
+                  variant="default"
                   type="button"
                   onClick={askKova}
                   disabled={!mapActionsReady || viewSettling || !view}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground disabled:opacity-60"
+                  className="mt-3 inline-flex items-center gap-1.5  bg-primary   text-xs font-medium text-primary-foreground disabled:opacity-60"
                 >
                   <Sparkles className="h-3.5 w-3.5" /> Ask Kova with map context
-                </button>
+                </Button>
               </div>
             </div>
           </section>
         ) : null}
         <div className="flex shrink-0 flex-col gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             type="button"
             onClick={locate}
             disabled={!mapActionsReady}
             aria-label="Use my current location"
             title="Use my current location"
-            className="grid h-10 w-10 place-items-center rounded-xl border bg-background/92 shadow-lg backdrop-blur"
+            className="grid   place-items-center  border bg-background/92 shadow-lg backdrop-blur"
           >
             <LocateFixed className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             onClick={toggle3d}
             disabled={!mapActionsReady}
             aria-pressed={threeD}
             aria-label={threeD ? "Switch to 2D" : "Switch to 3D"}
-            className="grid h-10 w-10 place-items-center rounded-xl border bg-background/92 shadow-lg backdrop-blur"
+            className="grid   place-items-center  border bg-background/92 shadow-lg backdrop-blur"
           >
             {threeD ? (
               <Building2 className="h-4 w-4 text-primary" />
             ) : (
               <Layers3 className="h-4 w-4" />
             )}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
             type="button"
             onClick={toggleStyle}
             disabled={!mapActionsReady}
             aria-pressed={satellite}
             aria-label={satellite ? "Show street map" : "Show satellite imagery"}
-            className="grid h-10 w-10 place-items-center rounded-xl border bg-background/92 shadow-lg backdrop-blur"
+            className="grid   place-items-center  border bg-background/92 shadow-lg backdrop-blur"
           >
             <Satellite className={satellite ? "h-4 w-4 text-primary" : "h-4 w-4"} />
-          </button>
+          </Button>
         </div>
       </div>
     </main>

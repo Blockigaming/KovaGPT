@@ -48,7 +48,7 @@ function fixture(overrides = {}) {
   const deleteAccountReturnRef = { current: null };
   const currentAuthUserKeyRef = { current: "owner-a" };
   const restoreSource = readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace(
-    "export function",
+    /^export function/gm,
     "function",
   );
   const restoreDialogFocus = compile(`${restoreSource}; return restoreDialogFocus;`, { window });

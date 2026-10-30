@@ -2,16 +2,25 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const read = (name) => readFileSync(`src/components/${name}.tsx`, "utf8");
-test("standard buttons and dialog Close use20px glyphs and44px targets", () => {
-  assert.match(read("ui/button"), /\[&_svg\]:size-5/);
+test("shared buttons and dialog Close follow SDK icon sizes and retain coarse targets", () => {
+  const button = read("ui/button");
+  assert.ok(button.includes("[&_svg]:size-[18px]"));
+  assert.ok(button.includes("[&_svg]:size-5"), "The prominent button has a 20px icon");
+  assert.ok(button.includes("[@media(pointer:coarse)]:min-h-11"));
   const dialog = read("ui/dialog");
-  assert.match(dialog, /<X className="h-5 w-5"/);
-  assert.doesNotMatch(dialog, /sm:h-10 sm:w-10/);
+  for (const token of [
+    '<X className="h-[18px] w-[18px]"',
+    "h-8 w-8",
+    "[@media(pointer:coarse)]:h-11",
+    "[@media(pointer:coarse)]:w-11",
+  ])
+    assert.ok(dialog.includes(token), token);
 });
-test("standard dialog padding is24px and footer adds8px to the16px parent gap", () => {
+test("shared dialog uses source 20px padding with a wrapping8px footer gap", () => {
   const dialog = read("ui/dialog");
-  assert.match(dialog, /p-6 pb-\[calc\(1.5rem\+env\(safe-area-inset-bottom\)\)\]/);
-  assert.match(dialog, /mt-2 flex min-w-0 flex-col-reverse/);
+  assert.match(dialog, /bg-popover p-5 text-popover-foreground/);
+  assert.match(dialog, /flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap/);
+  assert.ok(dialog.includes("max-w-[450px]"));
 });
 test("temporary-chat context uses a semantic book rather than sparkle decoration", () => {
   const dialog = read("TemporaryChatStartDialog");

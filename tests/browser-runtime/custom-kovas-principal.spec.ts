@@ -20,6 +20,7 @@ const result = await build({
     loader: "tsx",
   },
   alias: { "@": `${root}/src` },
+  loader: { ".css": "empty" },
   bundle: true,
   write: false,
   platform: "browser",

@@ -64,8 +64,7 @@
   text-decoration: underline;
 }
 .kova-core-header a:focus-visible,
-.kova-core-footer a:focus-visible,
-.kova-settings-help-links a:focus-visible {
+.kova-core-footer a:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
@@ -124,144 +123,15 @@
   outline-offset: 3px;
 }
 .kova-auth-page main {
-  max-width: 440px;
-}
-[role="dialog"].kova-settings-dialog.is-authenticated {
-  width: min(calc(100vw - 32px), 1008px) !important;
-  max-width: 1008px !important;
-  height: min(86dvh, 720px);
-  max-height: 86dvh !important;
-  border-radius: var(--kova-radius-panel);
-}
-[role="dialog"].kova-settings-dialog.is-authenticated > [data-kova-dialog-close] {
-  left: auto;
-  right: 16px;
-  top: 16px;
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: var(--kova-radius-button);
-  background: transparent;
-  box-shadow: none;
-}
-[role="dialog"].kova-settings-dialog.is-authenticated > [data-kova-dialog-close] svg {
-  width: 20px;
-  height: 20px;
-}
-[role="dialog"].kova-settings-dialog.is-authenticated > [data-kova-dialog-close]:hover {
-  background: transparent;
-  opacity: 0.65;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-sidebar {
-  width: 240px;
-  flex-basis: 240px;
-  padding: 20px 12px 14px;
-  background: var(--surface-modal);
-}
-[role="dialog"].kova-settings-dialog .kova-settings-sidebar-top {
-  height: 0;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-search {
-  height: 42px;
-  margin-bottom: 18px;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-search input {
-  border-radius: var(--kova-radius-input);
-  background: transparent;
-  padding-left: 38px;
-  font-size: 14px;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-search > svg {
-  left: 12px;
-  width: 17px;
-  height: 17px;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-nav-group {
-  padding-inline: 12px;
-  font-size: 11px;
-  letter-spacing: 0.01em;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-nav-item {
-  min-height: 40px;
-  gap: 10px;
-  padding: 8px 12px;
-  font-size: 14px;
-  border-radius: var(--kova-radius-sidebar);
-  background: transparent;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-nav-item svg {
-  width: 19px;
-  height: 19px;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-nav-item[aria-selected="true"] {
-  background: transparent;
-  box-shadow: inset 2px 0 currentColor;
-  font-weight: 600;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-nav-item:active {
-  transform: none;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-content-header {
-  min-height: 60px;
-  margin: 0 24px;
-  padding-right: 38px;
-  gap: 12px;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-content-header h2 {
-  font-size: var(--layout-title-size);
-  line-height: var(--layout-title-line);
-  font-weight: 500;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-content-header p {
-  font-size: 12px;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-content > [role="tabpanel"] {
-  padding: 20px !important;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-content > [role="tabpanel"] h3 {
-  font-size: 16px;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-help-links {
-  display: grid;
-  gap: 8px;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-help-links p {
-  margin-bottom: 12px;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-help-links a {
-  display: flex;
-  min-height: 48px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid var(--border);
-  font-size: 14px;
-}
-[role="dialog"].kova-settings-dialog .kova-settings-help-links a svg {
-  width: 16px;
-  height: 16px;
-}
-.kova-settings-row {
-  min-height: 64px;
-  padding: 12px 16px;
-  gap: 24px;
-  border: 1px solid var(--border);
-  border-radius: var(--kova-radius-sidebar);
-}
-.kova-settings-content > [role="tabpanel"] > section + section {
-  margin-top: var(--layout-section-gap);
-}
-.kova-settings-row label {
-  font-size: 14px;
-  line-height: 18px;
+  max-width: 400px;
 }
 .kova-pricing-page .kova-plan-card {
   min-width: 0;
   --surface-card-radius: var(--kova-radius-card);
   width: 100%;
   max-width: 384px;
-  padding: 23px 23px 25px;
-  row-gap: 24px;
+  padding: 24px;
+  row-gap: 20px;
   box-shadow: none;
   background: transparent;
 }
@@ -272,10 +142,13 @@
 }
 .kova-pricing-page .kova-plan-card:hover {
   transform: none;
+  box-shadow: none;
 }
 .kova-pricing-page .kova-plan-card h2 {
-  font-size: 18px;
-  line-height: 32px;
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 500;
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
 }
 .kova-pricing-page .kova-plan-card button {
   height: auto;
@@ -295,49 +168,8 @@
   .kova-core-header nav a {
     padding-inline: 10px;
   }
-  [role="dialog"].kova-settings-dialog.is-authenticated {
-    width: 100vw !important;
-    max-width: none !important;
-    height: 100dvh;
-    max-height: 100dvh !important;
-    border-radius: var(--kova-radius-panel);
-  }
-  [role="dialog"].kova-settings-dialog .kova-settings-sidebar {
-    width: 100%;
-    flex-basis: auto;
-    padding: 68px 16px 20px;
-  }
-  [role="dialog"].kova-settings-dialog .kova-settings-search {
-    height: 44px;
-    margin-right: 0;
-  }
-  [role="dialog"].kova-settings-dialog .kova-settings-search input {
-    font-size: 16px;
-  }
-  [role="dialog"].kova-settings-dialog .kova-settings-nav-item {
-    min-height: 44px;
-    font-size: 15px;
-  }
-  [role="dialog"].kova-settings-dialog .kova-settings-content-header {
-    margin-inline: 16px;
-    min-height: 78px;
-    padding: 12px 44px 12px 0;
-  }
-  [role="dialog"].kova-settings-dialog .kova-settings-content-header h2 {
-    font-size: 18px;
-    line-height: 28px;
-  }
-  [role="dialog"].kova-settings-dialog .kova-settings-content > [role="tabpanel"] {
-    padding: 20px 16px max(24px, env(safe-area-inset-bottom)) !important;
-  }
-  [role="dialog"].kova-settings-dialog.is-authenticated > [data-kova-dialog-close] {
-    top: max(16px, env(safe-area-inset-top));
-    width: 44px;
-    height: 44px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
-  [role="dialog"].kova-settings-dialog *,
   .kova-auth-surface *,
   .kova-auth-page * {
     transition-duration: 0ms !important;
@@ -360,8 +192,77 @@
   overflow-wrap: anywhere;
 }
 
-@media (min-width: 640px) {
-  .kova-auth-surface .kova-auth-body button.h-14 {
-    min-height: 56px;
-  }
+/* ChatGPT authentication form: one 48px control size throughout every step. */
+.kova-auth-surface :is(h1, h2),
+.kova-auth-page h1 {
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+}
+.kova-auth-dialog-heading,
+.kova-auth-dialog-body {
+  width: min(100%, 352px);
+  margin-inline: auto;
+}
+.kova-auth-surface .kova-auth-body :is(input, button),
+.kova-auth-page main input,
+.kova-auth-page main > button,
+.kova-auth-page main form > button[type="submit"] {
+  min-height: 48px;
+  font-size: 16px;
+  line-height: 24px;
+}
+.kova-auth-surface .kova-auth-body input,
+.kova-auth-page main input {
+  border-radius: var(--kova-radius-button);
+  padding-inline-start: 16px;
+}
+.kova-auth-surface .kova-auth-dialog-description {
+  line-height: 20px;
+}
+.kova-auth-surface input {
+  height: 48px;
+  border-radius: var(--kova-radius-button);
+  padding-inline: 16px;
+  font-size: 16px;
+  line-height: 24px;
+}
+.kova-auth-surface form > button,
+.kova-auth-surface > button:not([data-kova-dialog-close]) {
+  min-height: 48px;
+}
+.kova-auth-surface .kova-auth-body input[aria-invalid="true"],
+.kova-auth-page main input[aria-invalid="true"] {
+  border-color: var(--destructive);
+}
+
+/* ChatGPT pricing: plain plan names, aligned prices and a shared action row. */
+.kova-pricing-page #pricing-title {
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 42px;
+  letter-spacing: -0.02em;
+}
+.kova-pricing-page .kova-pricing-offer h2 {
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.kova-pricing-page .kova-pricing-offer p {
+  font-size: 12px;
+  line-height: 18px;
+}
+.kova-pricing-page .kova-plan-card :is(p, li) {
+  font-size: 14px;
+  line-height: 20px;
+}
+.kova-pricing-page .kova-plan-card p > span {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.kova-auth-page > .kova-auth-surface {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }

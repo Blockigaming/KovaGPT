@@ -1,3 +1,5 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { Search } from "lucide-react";
@@ -78,6 +80,7 @@ export function WorkspaceSearch({ userId }: { userId: string }) {
   }
   return (
     <section
+      data-ui-reference="chatgpt.search.workspace"
       data-slot="workspace-search"
       className="mt-6 rounded-[var(--kova-radius-card)] border border-border bg-card p-4 [font-family:var(--font-ui,var(--font-sans))] sm:p-6"
       aria-labelledby="workspace-search-title"
@@ -97,7 +100,7 @@ export function WorkspaceSearch({ userId }: { userId: string }) {
         <label className="sr-only" htmlFor="workspace-search-query">
           Search your saved workspace
         </label>
-        <input
+        <Input
           id="workspace-search-query"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -105,17 +108,18 @@ export function WorkspaceSearch({ userId }: { userId: string }) {
           maxLength={500}
           required
           placeholder="Find the launch plan or related work…"
-          className="min-h-11 min-w-0 flex-1 rounded-[var(--kova-radius-input)] border border-border bg-background px-4 py-2 text-sm"
+          className="min-w-0 flex-1"
         />
-        <button
+        <Button
+          variant="outline"
           type="submit"
           data-slot="workspace-search-submit"
           disabled={Boolean(visible?.busy) || query.trim().length < 2}
-          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-border px-4 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          className="shrink-0"
         >
           <Search className="h-4 w-4" />
           Search
-        </button>
+        </Button>
       </form>
       {visible?.busy && (
         <p role="status" className="mt-3 text-sm">

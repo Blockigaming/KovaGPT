@@ -17,7 +17,7 @@ async function expectEmptyWorkspaceLandmarks(page: Page) {
   const navigationTitle = page.locator("[data-kova-navigation-heading]");
   await expect(navigationTitle).toHaveAttribute("role", "heading");
   await expect(navigationTitle).toHaveAttribute("aria-level", "1");
-  await expect(navigationTitle).toHaveText("Kova GPT");
+  await expect(navigationTitle).toHaveText("KovaGPT");
   if (page.viewportSize()!.width < 1024) await expect(navigationTitle).toBeVisible();
   else await expect(navigationTitle).toBeHidden();
 }
@@ -41,7 +41,13 @@ test("empty workspace remains contained and composer focus is deliberate", async
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await expectEmptyWorkspaceLandmarks(page);
   await expect(composer).toBeVisible();
-  await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
+  const send = page.getByRole("button", { name: "Send message", exact: true, includeHidden: true });
+  await expect(send).toBeHidden();
+  await expect(send).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Voice", exact: true })).toBeVisible();
+  const coarseComposer = await page.evaluate(
+    () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
+  );
   await expect(composer).toHaveCSS("outline-style", "none");
 
   await focusComposerByKeyboard(page);
@@ -69,7 +75,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
   expect(focused.outlineColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.outlineColor).not.toBe(focused.color);
 
-  if (page.viewportSize()!.width >= 1024) {
+  {
     const metrics = await composer.evaluate((element) => {
       const bounds = (selector: string) => {
         const box = element.querySelector(selector)?.getBoundingClientRect();
@@ -80,28 +86,34 @@ test("empty workspace remains contained and composer focus is deliberate", async
         width: shell.width,
         height: shell.height,
         axisWidth: element.parentElement!.getBoundingClientRect().width,
-        readingWidth: Number.parseFloat(
-          getComputedStyle(element).getPropertyValue("--kova-reading-width"),
+        composerWidth: Number.parseFloat(
+          getComputedStyle(element).getPropertyValue("--kova-composer-width"),
         ),
         input: bounds(".spec400-composer-input"),
-        toolbar: bounds(".spec400-composer-toolbar"),
+        coarse: matchMedia("(any-pointer: coarse)").matches,
         attach: bounds('[aria-label="Attach"]'),
         send: bounds('[aria-label="Send message"]'),
       };
     });
     expect(metrics.width).toBeCloseTo(metrics.axisWidth, 1);
-    expect(metrics.width).toBeLessThanOrEqual(metrics.readingWidth);
-    expect(metrics.width).toBeGreaterThanOrEqual(640);
-    expect(metrics.height).toBeGreaterThanOrEqual(128);
-    expect(metrics.height).toBeLessThanOrEqual(136);
-    expect(metrics.input!.height).toBeGreaterThanOrEqual(48);
-    expect(metrics.input!.bottom).toBeLessThanOrEqual(metrics.toolbar!.y);
-    expect(metrics.attach!.width).toBeGreaterThanOrEqual(44);
-    expect(metrics.attach!.height).toBeGreaterThanOrEqual(44);
-    expect(metrics.send!.width).toBe(44);
-    expect(metrics.send!.height).toBe(44);
+    expect(metrics.width).toBeLessThanOrEqual(metrics.composerWidth);
+    if (page.viewportSize()!.width >= 1024) expect(metrics.width).toBeGreaterThanOrEqual(640);
+    expect(metrics.height).toBeCloseTo(coarseComposer ? 100 : 52, 0);
+    expect(metrics.input!.height).toBeGreaterThanOrEqual(26);
+    const control = coarseComposer ? 44 : 36;
+    expect(metrics.attach!.width).toBe(control);
+    expect(metrics.attach!.height).toBe(control);
+    expect(metrics.send!.width).toBe(control);
+    expect(metrics.send!.height).toBe(control);
     expect(metrics.attach!.y).toBeCloseTo(metrics.send!.y, 1);
+    if (coarseComposer) expect(metrics.input!.bottom).toBeLessThanOrEqual(metrics.attach!.y);
+    else {
+      expect(metrics.input!.y).toBeGreaterThanOrEqual(metrics.attach!.y);
+      expect(metrics.input!.bottom).toBeLessThanOrEqual(metrics.attach!.bottom);
+    }
+  }
 
+  if (!coarseComposer) {
     const attach = page.getByRole("button", { name: "Attach", exact: true });
     await attach.click();
     const menu = page.getByRole("dialog", { name: "Attach files and tools", exact: true });
@@ -137,7 +149,11 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 11);
     const fileAction = menu.getByRole("button", { name: "Photos & Files", exact: true });
     await expect(fileAction).toBeVisible();
-    expect((await fileAction.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    // The SDK entrance scales the entire menu. Measure the target after that
+    // native animation has settled, preserving the 36px fine-pointer minimum.
+    await expect
+      .poll(async () => (await fileAction.boundingBox())?.height ?? 0)
+      .toBeGreaterThanOrEqual(36);
     const menuControls = menu.locator("button:not(:disabled),a[href]");
     await page.keyboard.press("Home");
     await expect(menuControls.first()).toBeFocused();
@@ -182,16 +198,16 @@ test("empty workspace remains contained and composer focus is deliberate", async
       });
     return {
       display: style.display,
-      flexWrap: style.flexWrap,
-      justifyContent: style.justifyContent,
+      flexDirection: style.flexDirection,
+      alignItems: style.alignItems,
       gap: style.gap,
       visibleLabels,
     };
   });
   expect(starterLayout.display).toBe("flex");
-  expect(starterLayout.flexWrap).toBe("wrap");
-  expect(starterLayout.justifyContent).toBe("center");
-  expect(starterLayout.gap).toBe("8px");
+  expect(starterLayout.flexDirection).toBe("column");
+  expect(starterLayout.alignItems).toBe("stretch");
+  expect(starterLayout.gap).toBe("0px");
   expect(starterLayout.visibleLabels).toHaveLength(3);
   expect(starterLayout.visibleLabels.map((label) => label.text)).toEqual([
     "Write something",
@@ -207,7 +223,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(label.target.width).toBeGreaterThanOrEqual(44);
     expect(label.target.height).toBeGreaterThanOrEqual(44);
     expect(label.target.height).toBeCloseTo(44, 1);
-    expect(label.target.radius).toBeGreaterThanOrEqual(label.target.height / 2);
+    expect(label.target.radius).toBe(6);
   }
   await input.clear();
   await page.getByRole("button", { name: "Start with Write something", exact: true }).click();
@@ -273,29 +289,18 @@ for (const theme of ["light", "dark"] as const) {
     });
 
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-    let rasterLogoRequests = 0;
-    const rasterLogoResponses: boolean[] = [];
-    page.on("response", (response) => {
-      if (new URL(response.url()).pathname === "/kova-logo.png") {
-        rasterLogoResponses.push(response.ok());
-      }
-    });
-    await page.route("**/kova-logo.png*", (route) => {
-      rasterLogoRequests += 1;
-      return route.continue();
-    });
     await page.addInitScript((selectedTheme) => {
       localStorage.setItem("kova-theme-mode", selectedTheme);
       localStorage.setItem("kova-sidebar-open", "1");
     }, theme);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const usesInter = await page.evaluate(async () => {
+    const uiFont = await page.evaluate(async () => {
       await document.fonts.ready;
-      return Array.from(document.fonts).some(
-        (face) => face.family.replaceAll('"', "") === "Inter" && face.status === "loaded",
-      );
+      return getComputedStyle(document.querySelector('textarea[aria-label="Message KovaGPT"]')!)
+        .fontFamily;
     });
+    expect(uiFont).toContain("system-ui");
 
     await expectEmptyWorkspaceLandmarks(page);
     const optionsTrigger = page.getByRole("button", { name: "Options", exact: true });
@@ -348,50 +353,47 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".kova-user-message")).toHaveCount(0);
     await input.clear();
     await input.blur();
-    // The shared owner asset belongs to the single sidebar brand. It is
-    // decorative beside the visible name, with no duplicate greeting/fallback.
-    const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand");
-    await expect(sidebarBrand).toHaveCount(1);
-    const brandLogo = sidebarBrand.locator("img.kova-logo");
-    await expect(brandLogo).toHaveCount(1);
-    await expect(brandLogo).toHaveAttribute("src", "/kova-logo.png");
-    await expect(brandLogo).toHaveAttribute("alt", "");
-    await expect(brandLogo).toHaveAttribute("aria-hidden", "true");
-    await expect(brandLogo).toHaveAttribute("data-logo-variant", "standard");
-    expect(await brandLogo.getAttribute("role")).toBeNull();
-    expect(await brandLogo.getAttribute("aria-label")).toBeNull();
+    await page.mouse.move(page.viewportSize()!.width - 2, page.viewportSize()!.height - 2);
     await expect
       .poll(() =>
-        brandLogo.evaluate((image: HTMLImageElement) =>
-          Boolean(image.complete && image.naturalWidth > 0 && image.naturalHeight > 0),
-        ),
+        page
+          .locator(".kova-home-starter")
+          .evaluateAll((buttons) =>
+            buttons.every(
+              (button) => !button.matches(":hover") && !button.contains(document.activeElement),
+            ),
+          ),
       )
       .toBe(true);
-    await expect(sidebarBrand.locator("svg.kova-logo")).toHaveCount(0);
+    // Guest navigation uses a plain text wordmark. The decorative owner mark
+    // is reserved for the authenticated collapsed rail and account surfaces.
+    const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand");
+    await expect(sidebarBrand).toHaveCount(1);
+    await expect(sidebarBrand).toHaveText("KovaGPT");
+    await expect(sidebarBrand.locator("img,svg")).toHaveCount(0);
+    await expect(page.locator(".kova-sidebar-rail")).toHaveCount(0);
     await expect(page.locator(".kova-greeting-mark .kova-logo")).toHaveCount(0);
+    const ownerAsset = await page.request.get("/kova-logo.png");
+    expect(ownerAsset.ok()).toBe(true);
+    expect(ownerAsset.headers()["content-type"]).toContain("image/png");
+    expect((await ownerAsset.body()).byteLength).toBeGreaterThan(0);
     if (page.viewportSize()!.width >= 1024) {
       await expect(page.getByRole("main")).toHaveAttribute("data-sidebar", "open");
       await expect(sidebarBrand).toBeVisible();
-      await expect(sidebarBrand).toHaveText("Kova GPT");
     }
-    expect(rasterLogoRequests).toBeGreaterThanOrEqual(1);
-    expect(rasterLogoResponses.length).toBeGreaterThanOrEqual(1);
-    expect(rasterLogoResponses.every(Boolean)).toBe(true);
+    // The production Vite alias must render the pinned source glyph adapter.
+    await expect(page.locator('[data-product-icon="Mic"]').first()).toHaveAttribute(
+      "data-ui-reference",
+      "chatgpt.sdk.icon.Mic",
+    );
     expect(hydrationErrors).toEqual([]);
-    await expect(page).toHaveScreenshot(
-      `guest-core-shell-${theme}-${usesInter ? "inter" : "fallback"}.png`,
-      {
-        animations: "disabled",
-        caret: "hide",
-        maxDiffPixelRatio: 0.005,
-        scale: "css",
-      },
-    );
-    await captureCandidateVisual(
-      page,
-      testInfo,
-      `guest-core-shell-${theme}-${usesInter ? "inter" : "fallback"}`,
-    );
+    await expect(page).toHaveScreenshot(`guest-core-shell-${theme}-system.png`, {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixelRatio: 0.005,
+      scale: "css",
+    });
+    await captureCandidateVisual(page, testInfo, `guest-core-shell-${theme}-system`);
     // The locked effort affordance leads to its real upgrade destination and
     // never masquerades as an available guest model selector.
     await optionsTrigger.click();
@@ -424,13 +426,25 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
     page.getByRole("button", { name: "Options", exact: true }),
     page.getByRole("button", { name: "Dictate", exact: true }),
     page.getByRole("button", { name: "Voice", exact: true }),
-    page.getByRole("button", { name: "Send message" }),
   ]) {
     const actionBox = await action.first().boundingBox();
     expect(actionBox).not.toBeNull();
     expect(actionBox!.width).toBeGreaterThanOrEqual(44);
     expect(actionBox!.height).toBeGreaterThanOrEqual(44);
   }
+
+  const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  await expect(
+    page.getByRole("button", { name: "Send message", includeHidden: true }),
+  ).toBeHidden();
+  await input.fill("Review a draft target");
+  const send = page.getByRole("button", { name: "Send message", exact: true });
+  await expect(send).toBeEnabled();
+  const sendBox = (await send.boundingBox())!;
+  expect(sendBox.width).toBe(44);
+  expect(sendBox.height).toBe(44);
+  await expect(page.getByRole("button", { name: "Voice", exact: true })).toBeHidden();
+  await input.clear();
 
   await page.getByRole("button", { name: "Attach", exact: true }).click();
   const sheet = page.getByTestId("mobile-bottom-sheet");
@@ -495,7 +509,11 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   await expect(page.locator(".kova-assistant-message")).toBeVisible();
   const prompt = page.locator(".kova-user-message");
   const promptBox = (await prompt.boundingBox())!;
-  const promptColumn = (await prompt.locator("..").boundingBox())!;
+  const promptColumn = (await prompt
+    .locator(
+      "xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' kova-message-reading-column ')][1]",
+    )
+    .boundingBox())!;
   // A short prompt should occupy only its content and sit at the end of the
   // reading column, leaving the assistant's reply a distinct visual turn.
   expect(promptBox.width).toBeLessThan(promptColumn.width);

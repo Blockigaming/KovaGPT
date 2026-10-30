@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
-import { Circle } from "lucide-react";
+import { Circle } from "./reference-icons";
 
 import { cn } from "@/lib/utils";
 
@@ -18,15 +18,17 @@ const RadioGroupItem = React.forwardRef<
 >(({ className, ...props }, ref) => {
   return (
     <RadioGroupPrimitive.Item
+      data-slot="radio-group-item"
+      data-ui-reference="chatgpt.radio-group"
       ref={ref}
       className={cn(
-        "aspect-square h-4 w-4 rounded-full border border-primary text-primary shadow-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 disabled:cursor-not-allowed disabled:opacity-50",
+        "relative aspect-square h-4 w-4 rounded-full border border-input bg-transparent text-primary shadow-none cursor-pointer transition-colors duration-150 hover:border-foreground/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary before:absolute before:inset-0 before:content-[''] [@media(pointer:coarse)]:before:-inset-3.5",
         className,
       )}
       {...props}
     >
       <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-        <Circle className="h-3.5 w-3.5 fill-primary" />
+        <Circle className="h-1.5 w-1.5 fill-primary-foreground text-primary-foreground" />
       </RadioGroupPrimitive.Indicator>
     </RadioGroupPrimitive.Item>
   );

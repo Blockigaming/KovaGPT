@@ -5,6 +5,7 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PublicFooter } from "@/components/PublicFooter";
+import { Button } from "@/components/ui/button";
 import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
 
 const navigation = [
@@ -46,7 +47,7 @@ function PublicNavigationLink({
         mobile
           ? `flex min-h-11 min-w-0 max-w-full items-center rounded-xl px-3 py-2.5 text-[0.9375rem] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
               currentSection
-                ? "bg-foreground text-background"
+                ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`
           : `inline-flex min-h-11 min-w-0 max-w-full items-center rounded-xl px-3 py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
@@ -109,7 +110,10 @@ export function PublicHeader() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-40 flex max-h-screen min-w-0 flex-col border-b border-border/70 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur-xl [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-dvh supports-[backdrop-filter]:bg-background/80">
+    <header
+      data-ui-reference="grok-public-navigation"
+      className="kova-public-header sticky top-0 z-40 flex max-h-screen min-w-0 flex-col border-b border-border bg-background pt-[env(safe-area-inset-top)] [overflow-wrap:anywhere] supports-[height:100dvh]:max-h-dvh"
+    >
       <nav
         className="mx-auto flex min-h-16 w-full min-w-0 max-w-7xl shrink-0 flex-wrap items-center gap-2 sm:gap-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]"
         aria-label="Public navigation"
@@ -128,17 +132,19 @@ export function PublicHeader() {
           ))}
         </div>
 
-        <Link
-          to="/"
-          className="kova-button ml-1 hidden min-h-11 min-w-0 max-w-full items-center justify-center rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex"
+        <Button
+          asChild
+          className="ml-1 hidden h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center lg:inline-flex"
         >
-          Open KovaGPT
-        </Link>
+          <Link to="/">Open KovaGPT</Link>
+        </Button>
 
-        <button
+        <Button
           ref={menuButtonRef}
           type="button"
-          className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+          variant="ghost"
+          size="icon"
+          className="ml-auto lg:hidden"
           aria-label={open ? "Close navigation" : "Open navigation"}
           aria-controls="public-mobile-navigation"
           aria-expanded={open}
@@ -149,14 +155,14 @@ export function PublicHeader() {
           ) : (
             <Menu className="h-5 w-5" aria-hidden="true" />
           )}
-        </button>
+        </Button>
       </nav>
 
       {open ? (
         <nav
           id="public-mobile-navigation"
           tabIndex={-1}
-          className="min-h-0 overflow-y-auto overscroll-contain border-t border-border/70 bg-background pb-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-3 shadow-lg lg:hidden"
+          className="min-h-0 overflow-y-auto overscroll-contain border-t border-border bg-background pb-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-3 lg:hidden"
           aria-label="Mobile public navigation"
         >
           <div className="mx-auto grid max-w-7xl gap-1">
@@ -169,13 +175,14 @@ export function PublicHeader() {
                 onNavigate={(event) => closeAfterMobileNavigation(event, item.to)}
               />
             ))}
-            <Link
-              to="/"
-              onClick={(event) => closeAfterMobileNavigation(event, "/")}
-              className="kova-button mt-2 inline-flex min-h-11 min-w-0 max-w-full items-center justify-center rounded-full bg-foreground px-5 py-2.5 text-center text-sm font-medium text-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            <Button
+              asChild
+              className="mt-2 h-auto min-h-9 min-w-0 max-w-full whitespace-normal text-center"
             >
-              Open KovaGPT
-            </Link>
+              <Link to="/" onClick={(event) => closeAfterMobileNavigation(event, "/")}>
+                Open KovaGPT
+              </Link>
+            </Button>
           </div>
         </nav>
       ) : null}
@@ -208,6 +215,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
     <div
       ref={shellRef}
       data-public-shell
+      data-ui-reference="grok-public-shell"
       data-ui="modern"
       className="flex min-h-[100dvh] min-w-0 flex-col bg-background text-foreground"
     >

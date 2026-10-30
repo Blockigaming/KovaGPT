@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { choosePickerValue } from "./select-control";
 const owner = "22222222-2222-4222-8222-222222222222",
   projectId = "11111111-1111-4111-8111-111111111111";
 const choices = [
@@ -114,7 +115,7 @@ test("Work submits the displayed model mode and effort and shows the saved selec
   await panel.getByRole("combobox", { name: "Reasoning effort", exact: true }).click();
   await page.getByRole("option", { name: "high", exact: true }).click();
   await panel.getByLabel("Objective", { exact: true }).fill("Prepare the quarterly report");
-  await panel.getByLabel("Save output files in Project").selectOption(projectId);
+  await choosePickerValue(page, panel.getByLabel("Save output files in Project"), projectId);
   await panel.getByRole("button", { name: "Start work", exact: true }).click();
   await expect.poll(() => requests.length).toBe(1);
   expect(requests[0].input).toMatchObject({ mode: "thinking", reasoningEffort: "high", projectId });

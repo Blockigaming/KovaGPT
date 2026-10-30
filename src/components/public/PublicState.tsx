@@ -15,8 +15,9 @@ export function PublicState({
   return (
     <section
       data-public-state={kind}
+      data-ui-reference="chatgpt-empty-state"
       aria-busy={kind === "loading" ? true : undefined}
-      className="mx-auto w-full min-w-0 max-w-2xl rounded-3xl border border-border bg-card p-6 [overflow-wrap:anywhere] sm:p-10"
+      className="mx-auto w-full min-w-0 max-w-2xl py-10 text-center [overflow-wrap:anywhere] sm:py-16"
     >
       <div
         role={kind === "error" ? "alert" : "status"}

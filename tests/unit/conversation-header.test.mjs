@@ -680,13 +680,18 @@ test("file menu handoff opens Outputs only after the closing menu releases focus
   }
 });
 
-test("phone action disc keeps its full touch target while reducing visible fill", () => {
-  const css = readFileSync("src/styles/composer-core.css", "utf8");
-  assert.match(css, /--composer-control: 44px !important/);
+test("composer action disc uses a compact desktop control and full phone target", () => {
+  const css = readFileSync("src/styles/spec400-chat.css", "utf8");
   assert.match(
     css,
-    /border: 4px solid transparent !important;\s*background-clip: padding-box !important/,
+    /\.spec400-send-button \{\s*min-width: 36px;\s*min-height: 36px;\s*width: 36px;\s*height: 36px/,
   );
+  assert.match(
+    css,
+    /@media \(max-width: 1023px\), \(any-pointer: coarse\)[\s\S]*\.spec400-send-button \{\s*min-width: 44px;\s*width: 44px;\s*height: 44px;\s*min-height: 44px/,
+  );
+  assert.match(css, /\.spec400-send-button \{[^}]*border-radius: 50%/);
+  assert.doesNotMatch(css, /border: 4px solid transparent !important/);
 });
 
 test("phone secondary actions stay in the same menu and Back restores the primary view", () => {

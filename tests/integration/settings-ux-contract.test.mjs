@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import ts from "typescript";
+import postcss from "postcss";
 import { parseAllowedBillingPortalUrl } from "../../src/lib/billing-portal-url.mjs";
 
 const settingsSource = await readFile(
@@ -20,6 +21,37 @@ const parsedModel = ts.createSourceFile(
   ts.ScriptKind.TS,
 );
 const stylesSource = await readFile(new URL("../../src/styles.css", import.meta.url), "utf8");
+const settingsStylesSource = await readFile(
+  new URL("../../src/styles/settings-reference.css", import.meta.url),
+  "utf8",
+);
+const settingsPageStylesSource = await readFile(
+  new URL("../../src/styles/settings-page-layout.css", import.meta.url),
+  "utf8",
+);
+const styleRule = (source, selector, media = null) => {
+  const matches = [];
+  postcss.parse(source).walkRules((rule) => {
+    const selectors = rule.selectors.map((value) => value.replace(/\s+/g, " "));
+    if (!selectors.includes(selector)) return;
+    if (
+      media === null
+        ? rule.parent.type === "root"
+        : rule.parent.type === "atrule" &&
+          rule.parent.name === "media" &&
+          rule.parent.params === media
+    )
+      matches.push(rule);
+  });
+  assert.equal(matches.length, 1, `Expected one ${selector} rule in ${media ?? "the base layer"}`);
+  const rule = matches[0];
+  return {
+    rule,
+    declarations: Object.fromEntries(
+      rule.nodes.filter((node) => node.type === "decl").map((node) => [node.prop, node.value]),
+    ),
+  };
+};
 const browserSource = await readFile(
   new URL("../e2e/settings-theme-transition.spec.ts", import.meta.url),
   "utf8",
@@ -159,8 +191,13 @@ test("signed-in settings uses searchable navigation and a purpose-built mobile d
   assert.match(settingsSource, /aria-label="Back to settings"/);
   assert.match(settingsSource, /setMobileHome\(false\)/);
   assert.match(settingsSource, /closeLabel="Close settings"/);
-  assert.match(stylesSource, /\.kova-settings-sidebar\.mobile-hidden/);
-  assert.match(stylesSource, /\.kova-settings-content\.mobile-hidden/);
+  assert.match(settingsSource, /import "@\/styles\/settings-reference\.css"/);
+  const hidden = styleRule(
+    settingsStylesSource,
+    '[role="dialog"].kova-settings-dialog :is(.kova-settings-sidebar, .kova-settings-content).mobile-hidden',
+    "(max-width: 767px)",
+  ).declarations;
+  assert.equal(hidden.display, "none");
 });
 
 test("settings navigation is centralized and routes every rendered category", () => {
@@ -296,36 +333,81 @@ test("data controls avoid internal migration language", () => {
 });
 
 test("theme changes cannot interpolate the Settings surface colors", () => {
-  const rule = [...stylesSource.matchAll(/\.kova-settings-dialog\s*\{([\s\S]*?)\}/g)]
-    .map((match) => match[1])
-    .find((candidate) => candidate.includes("transition-property"));
-  assert.ok(rule, "expected the scoped Settings dialog rule");
-  assert.match(rule, /background-color:\s*var\(--surface-modal\)/);
-  assert.match(rule, /color:\s*var\(--popover-foreground\)/);
-  assert.match(rule, /transition-property:\s*opacity,\s*transform\s*;/);
+  const { declarations, rule } = styleRule(settingsStylesSource, ".kova-settings-reference");
+  assert.equal(declarations.background, "var(--surface-modal)");
+  assert.equal(declarations.color, "var(--popover-foreground)");
+  assert.equal(declarations["transition-property"], "opacity, transform");
   assert.doesNotMatch(
-    rule,
+    rule.toString(),
     /transition-property:[^;]*(?:all|background|color|border)/,
     "Settings theme colors must switch atomically instead of interpolating",
   );
-  assert.match(settingsSource, /kova-settings-surface[^"]*bg-\[var\(--surface-modal\)\]/);
+  assert.match(
+    settingsSource,
+    /kova-settings-dialog kova-settings-reference[^`]*bg-\[var\(--surface-modal\)\]/,
+  );
+  assert.doesNotMatch(stylesSource, /\.kova-settings-dialog\s*\{/);
 });
 
-test("workspace sizing is authenticated-only and mobile safe areas are applied once", () => {
-  assert.match(
-    stylesSource,
-    /\.kova-settings-dialog\.is-authenticated\s*\{[\s\S]*?width: min\(92vw, 1280px\)/,
-  );
-  assert.match(
-    stylesSource,
-    /@media \(max-width: 767px\)[\s\S]*?\.kova-settings-dialog\s*\{[\s\S]*?width: 100vw !important;[\s\S]*?height: 100dvh !important;/,
-  );
-  const finalMobileRules = stylesSource.slice(
-    stylesSource.lastIndexOf("@media (max-width: 767px)"),
-  );
-  assert.doesNotMatch(
-    finalMobileRules,
-    /\.kova-settings-(?:sidebar|content-header|content > \[role="tabpanel"\])[^}]*var\(--safe-(?:top|bottom)\)/s,
+test("authenticated modal sizing, full-page Settings, and phone safe-area ownership stay distinct", () => {
+  const auth = styleRule(
+    settingsStylesSource,
+    '[role="dialog"].kova-settings-dialog.is-authenticated',
+  ).declarations;
+  assert.equal(auth.width, "min(calc(100vw - 32px), 1008px)");
+  assert.equal(auth.height, "min(86dvh, 720px)");
+  assert.equal(auth["max-height"], "86dvh");
+  assert.match(settingsSource, /const Surface = page \? SettingsPageContent : DialogContent/);
+  assert.match(settingsSource, /loggedIn \? "is-authenticated" : "is-guest"/);
+  const page = styleRule(
+    settingsPageStylesSource,
+    ".kova-settings-route section.kova-settings-page.kova-settings-dialog",
+  ).declarations;
+  assert.equal(page.position, "static");
+  assert.equal(page.width, "100%");
+  assert.equal(page.height, "auto");
+  assert.equal(page["max-height"], "none");
+  assert.equal(page.background, "transparent");
+  for (const selector of [
+    '[role="dialog"].kova-settings-dialog',
+    '[role="dialog"].kova-settings-dialog.is-authenticated',
+  ]) {
+    const { rule, declarations } = styleRule(settingsStylesSource, selector, "(max-width: 767px)");
+    for (const [property, value] of Object.entries({
+      inset: "0",
+      width: "100vw",
+      height: "100dvh",
+      transform: "none",
+      translate: "none",
+    }))
+      assert.equal(declarations[property], value);
+    for (const edge of ["top", "bottom"])
+      assert.deepEqual(
+        rule.nodes.filter((node) => node.prop === `padding-${edge}`).map((node) => node.value),
+        [`var(--safe-${edge})`],
+        `The fullscreen dialog owns its ${edge} inset exactly once`,
+      );
+  }
+  const sidebar = styleRule(
+    settingsStylesSource,
+    '[role="dialog"].kova-settings-dialog .kova-settings-sidebar',
+    "(max-width: 767px)",
+  ).declarations;
+  const header = styleRule(
+    settingsStylesSource,
+    ".kova-settings-reference .kova-settings-content-header",
+    "(max-width: 767px)",
+  ).declarations;
+  assert.doesNotMatch(`${sidebar.padding} ${header.padding}`, /--safe-(?:top|bottom)/);
+  const panel = styleRule(
+    settingsStylesSource,
+    '.kova-settings-reference .kova-settings-content > [role="tabpanel"]',
+    "(max-width: 767px)",
+  ).declarations;
+  assert.equal(
+    panel.padding,
+    "0 16px max(24px, var(--safe-bottom))",
+    "Scrollable content retains its minimum bottom spacing independently of the fullscreen inset",
   );
 });
 

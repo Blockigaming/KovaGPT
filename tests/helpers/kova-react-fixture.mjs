@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import { fixtureElement, nativeControlModules } from "./native-control-bindings.mjs";
 
 export const nodes = (node) =>
   !node || typeof node !== "object"
@@ -27,7 +28,10 @@ export function reactFixture(path, select, options = {}) {
     calls = [];
   let cursor = 0,
     tree;
-  const jsx = (type, props) => ({ type, props: props ?? {} });
+  const jsx = (type, props) => {
+    const element = fixtureElement(type, props ?? {});
+    return { type: element.type, props: element.props };
+  };
   const react = {
     createContext: (value) => ({ Provider: "context-provider", value }),
     useContext: (context) => context.value,
@@ -78,8 +82,7 @@ export function reactFixture(path, select, options = {}) {
     react,
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": {},
-    "@/components/ui/button": { Button: "button" },
-    "@/components/ui/input": { Input: "input" },
+    ...nativeControlModules,
     "@/components/ui/label": { Label: "label" },
     sonner: {
       toast: {

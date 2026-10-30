@@ -22,6 +22,7 @@ function fixture(options = {}) {
     {
       globals: { AbortController, document },
       modules: {
+        "@/components/ui/checkbox": { Checkbox: "input" },
         "@/components/ui/dialog": Object.fromEntries(
           [
             "Dialog",
@@ -74,7 +75,7 @@ function fixture(options = {}) {
       await rendered.flush();
     },
     confirm: async () => {
-      rendered.find("input").props.onChange({ target: { checked: true } });
+      rendered.find("input").props.onCheckedChange(true);
       await rendered.flush();
     },
   };

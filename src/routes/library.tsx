@@ -60,6 +60,7 @@ import {
   SlidersHorizontal,
   Star,
   Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -349,14 +350,14 @@ function LibraryImageDownloadAction({ item }: { item: LibItem }) {
     return (
       <DropdownMenuItem asChild>
         <a href={image.url} target="_blank" rel="noopener noreferrer">
-          <Download className="mr-2 h-4 w-4" /> Open or download
+          <Download className="h-4 w-4" /> Open or download
         </a>
       </DropdownMenuItem>
     );
   }
   return (
     <DropdownMenuItem disabled>
-      <Download className="mr-2 h-4 w-4" />
+      <Download className="h-4 w-4" />
       {image.loading ? "Preparing image…" : "Image unavailable"}
     </DropdownMenuItem>
   );
@@ -1427,13 +1428,15 @@ function LibraryPage() {
   const renderActions = (item: LibItem) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
+          data-ui-reference="chatgpt.library.item-menu"
           ref={(button) => {
             if (button) deleteActionButtonsRef.current.set(item.id, button);
             else deleteActionButtonsRef.current.delete(item.id);
           }}
-          className="flex h-11 w-11 items-center justify-center rounded-[var(--kova-radius-input)] hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={`Actions for ${item.title}`}
           onFocus={(event) => {
             previewReturnFocusRef.current = event.currentTarget;
@@ -1443,7 +1446,7 @@ function LibraryPage() {
           }}
         >
           <MoreHorizontal className="h-4 w-4" />
-        </button>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
@@ -1454,10 +1457,10 @@ function LibraryPage() {
           const renameHandoff = renameMenuHandoffRef.current.delete(item.id);
           if (deleteHandoff || versionHandoff || renameHandoff) event.preventDefault();
         }}
-        className="w-64 [&_[role=menuitem]]:min-h-11 [&_[role=menuitem]]:pl-8 [&_[role=menuitem]>svg]:absolute [&_[role=menuitem]>svg]:left-2 [&_[role=menuitem]>svg]:top-1/2 [&_[role=menuitem]>svg]:mr-0 [&_[role=menuitem]>svg]:-translate-y-1/2"
+        className="w-64"
       >
         <DropdownMenuItem onClick={() => openItemPreview(item)}>
-          <Eye className="mr-2 h-4 w-4" /> Preview
+          <Eye className="h-4 w-4" /> Preview
         </DropdownMenuItem>
         {isSignedIn && userKey && principal && libraryItemDetailPath(item) ? (
           <DropdownMenuItem
@@ -1479,11 +1482,11 @@ function LibraryPage() {
         ) : null}
         {isSignedIn && libraryItemDetailPath(item) ? (
           <DropdownMenuItem onClick={() => void copyItemLink(item)}>
-            <LinkIcon className="mr-2 h-4 w-4" /> Copy link
+            <LinkIcon className="h-4 w-4" /> Copy link
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem onClick={() => void withItem(item, reuseInChat)}>
-          <MessageSquarePlus className="mr-2 h-4 w-4" /> Reuse in chat
+          <MessageSquarePlus className="h-4 w-4" /> Reuse in chat
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => void withItem(item, (value) => openInWork(toHandoff(value), userKey))}
@@ -1598,7 +1601,7 @@ function LibraryPage() {
                 .finally(() => pageRequests.current.delete(controller));
             }}
           >
-            <Download className="mr-2 h-4 w-4" /> Download original
+            <Download className="h-4 w-4" /> Download original
           </DropdownMenuItem>
         ) : item.work_output === true ? (
           <WorkOutputDownloadAction id={item.id} />
@@ -1607,13 +1610,12 @@ function LibraryPage() {
         ) : safeNavigationUrl(item.file_url) ? (
           <DropdownMenuItem asChild>
             <a href={safeNavigationUrl(item.file_url)!} target="_blank" rel="noopener noreferrer">
-              <Download className="mr-2 h-4 w-4" /> Open or download
+              <Download className="h-4 w-4" /> Open or download
             </a>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem onClick={() => toggleFavorite(item.id)}>
-          <Star className="mr-2 h-4 w-4" />{" "}
-          {visibleFavorites.has(item.id) ? "Unfavorite" : "Favorite"}
+          <Star className="h-4 w-4" /> {visibleFavorites.has(item.id) ? "Unfavorite" : "Favorite"}
         </DropdownMenuItem>
         {!item.id.startsWith("workspace:") ? (
           <>
@@ -1623,7 +1625,7 @@ function LibraryPage() {
               onClick={() => remove(item.id)}
               className="text-destructive focus:text-destructive"
             >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
+              <Trash2 className="h-4 w-4" /> Delete
             </DropdownMenuItem>
           </>
         ) : null}
@@ -1661,6 +1663,7 @@ function LibraryPage() {
       <label className="kova-library-select kova-file-selection">
         <span className="sr-only">Select {item.title}</span>
         <input
+          data-ui-reference="chatgpt.checkbox"
           type="checkbox"
           checked={selectedItem}
           onChange={() =>
@@ -1670,7 +1673,7 @@ function LibraryPage() {
                 : [...current, item.id],
             )
           }
-          className="h-4 w-4"
+          className="kova-native-check"
         />
       </label>
     ) : null;
@@ -1682,6 +1685,7 @@ function LibraryPage() {
           className="kova-row kova-file-row"
           data-library-item={item.item_type}
           data-selected={selectedItem}
+          data-ui-reference="chatgpt.library.file-row"
         >
           <span
             className="kova-file-type-icon"
@@ -1691,7 +1695,12 @@ function LibraryPage() {
             {image ? <ImageIcon aria-hidden="true" /> : <FileText aria-hidden="true" />}
           </span>
           <div className="kova-file-row-name">
-            <button type="button" title={item.title} onClick={openPreview}>
+            <button
+              type="button"
+              title={item.title}
+              onClick={openPreview}
+              data-kova-button-shape="preserve"
+            >
               <span className="spec400-library-row-title">{item.title}</span>
               {metadata.filename !== item.title ? (
                 <span className="kova-file-row-type" title={metadata.filename}>
@@ -1724,19 +1733,29 @@ function LibraryPage() {
         className="group kova-card kova-file-card"
         data-library-item={item.item_type}
         data-selected={selectedItem}
+        data-ui-reference="chatgpt.library.file-card"
       >
-        <button type="button" title={item.title} className="kova-file-open" onClick={openPreview}>
+        <button
+          type="button"
+          title={item.title}
+          className="kova-file-open"
+          onClick={openPreview}
+          data-kova-button-shape="preserve"
+        >
+          <span className="kova-file-preview" aria-hidden="true">
+            {image ? (
+              <LibraryImageMedia item={item} className="h-full w-full object-cover" />
+            ) : (
+              <FileText className="h-8 w-8" />
+            )}
+          </span>
           <span className="kova-file-title-line">
             <span
               className="kova-file-type-icon"
               data-kind={image ? "image" : "document"}
               aria-hidden="true"
             >
-              {image ? (
-                <LibraryImageMedia item={item} className="h-full w-full object-cover" />
-              ) : (
-                <FileText />
-              )}
+              {image ? <ImageIcon /> : <FileText />}
             </span>
             <span className="kova-file-title">{item.title}</span>
           </span>
@@ -1770,11 +1789,12 @@ function LibraryPage() {
         tabIndex={-1}
         className="kova-page kova-secondary-page kova-core-page kova-directory kova-file-directory kova-library-page spec400-management spec400-library"
         aria-labelledby="library-title"
+        data-ui-reference="chatgpt.library"
       >
         <WorkspacePageHeader
           title="Library"
           titleId="library-title"
-          description="Stored files and saved outputs in one place."
+          description="Your uploaded files and saved creations."
           actions={
             principalReady ? (
               <>
@@ -1803,7 +1823,7 @@ function LibraryPage() {
               </p>
             </div>
             <SignInButton mode="modal">
-              <Button size="sm" className="min-h-11 shrink-0">
+              <Button size="sm" className="shrink-0">
                 Sign in
               </Button>
             </SignInButton>
@@ -1829,7 +1849,7 @@ function LibraryPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="mt-3 min-h-11"
+                      className="mt-3"
                       onClick={() => void loadShares()}
                     >
                       Retry
@@ -1861,7 +1881,7 @@ function LibraryPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="min-h-11 shrink-0"
+                                className="shrink-0"
                                 onClick={(event) => {
                                   sharedPreviewReturnFocusRef.current = event.currentTarget;
                                   setSharedPreview(share);
@@ -1896,7 +1916,7 @@ function LibraryPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="min-h-11 shrink-0"
+                                  className="shrink-0"
                                   disabled={revokingShareId === share.id}
                                   onClick={() => setPendingRevokeShare(share)}
                                 >
@@ -1970,7 +1990,7 @@ function LibraryPage() {
             <Button
               type="button"
               variant="ghost"
-              className="min-h-11 self-start"
+              className="self-start"
               ref={trashTriggerRef}
               onClick={() => {
                 const origin = {
@@ -2030,7 +2050,7 @@ function LibraryPage() {
             <Button
               size="sm"
               variant="outline"
-              className="kova-directory-refresh min-h-11"
+              className="kova-directory-refresh"
               aria-label="Refresh Library"
               title="Refresh Library"
               onClick={() => {
@@ -2136,7 +2156,7 @@ function LibraryPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-11 w-11 shrink-0 rounded-full"
+                  className="shrink-0 rounded-full"
                   aria-label="Show favorites"
                   aria-pressed={filter === "favorites"}
                   onClick={() => setFilter(filter === "favorites" ? "all" : "favorites")}
@@ -2156,6 +2176,7 @@ function LibraryPage() {
                 </Select>
                 <div className="kova-file-view-toggle" role="group" aria-label="Library view">
                   <button
+                    data-ui-reference="chatgpt.library.view-switch"
                     type="button"
                     className={`kova-icon-button min-h-11 min-w-11 ${view === "grid" ? "bg-[var(--surface-selected)]" : ""}`}
                     onClick={() => setView("grid")}
@@ -2180,16 +2201,53 @@ function LibraryPage() {
             {(filter !== "all" || sourceFilter !== "all" || dateFilter !== "all" || query) && (
               <div className="spec400-filter-chips" aria-label="Active filters">
                 {filter !== "all" && (
-                  <button onClick={() => setFilter("all")}>Type: {filter} ×</button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="max-w-full"
+                    onClick={() => setFilter("all")}
+                  >
+                    <span className="truncate">Type: {filter}</span>
+                    <X aria-hidden="true" />
+                  </Button>
                 )}
                 {sourceFilter !== "all" && (
-                  <button onClick={() => setSourceFilter("all")}>Source: {sourceFilter} ×</button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="max-w-full"
+                    onClick={() => setSourceFilter("all")}
+                  >
+                    <span className="truncate">Source: {sourceFilter}</span>
+                    <X aria-hidden="true" />
+                  </Button>
                 )}
                 {dateFilter !== "all" && (
-                  <button onClick={() => setDateFilter("all")}>Last {dateFilter} days ×</button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="max-w-full"
+                    onClick={() => setDateFilter("all")}
+                  >
+                    <span className="truncate">Last {dateFilter} days</span>
+                    <X aria-hidden="true" />
+                  </Button>
                 )}
-                {query && <button onClick={() => setQuery("")}>Search: {query} ×</button>}
-                <button
+                {query && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="max-w-full"
+                    onClick={() => setQuery("")}
+                  >
+                    <span className="truncate">Search: {query}</span>
+                    <X aria-hidden="true" />
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="max-w-full"
                   onClick={() => {
                     setFilter("all");
                     setSourceFilter("all");
@@ -2199,7 +2257,7 @@ function LibraryPage() {
                   }}
                 >
                   Clear filters
-                </button>
+                </Button>
               </div>
             )}
             <div className="kova-file-filters" role="group" aria-label="Library filters">
@@ -2230,7 +2288,7 @@ function LibraryPage() {
               <Button
                 size="sm"
                 variant="ghost"
-                className="min-h-11"
+
                 onClick={() => setSelected([])}
               >
                 Clear
@@ -2239,7 +2297,7 @@ function LibraryPage() {
                 type="button"
                 size="sm"
                 variant="outline"
-                className="min-h-11"
+
                 disabled={!principal || selectedDurableIds.length === 0 || folderBusy || loading}
                 onClick={() => {
                   const details = foldersDetailsRef.current;
@@ -2262,7 +2320,7 @@ function LibraryPage() {
                 type="button"
                 size="sm"
                 variant="outline"
-                className="min-h-11"
+
                 disabled={!principalReady || folderBusy || bulkDeleteBusy || loading}
                 onClick={(event) => {
                   if (!principal || !principalReady || libraryCleared || !selected.length) return;
@@ -2278,12 +2336,12 @@ function LibraryPage() {
                   setDownloadTarget(origin);
                 }}
               >
-                <Download className="mr-2 h-5 w-5" aria-hidden="true" /> Download
+                <Download className="h-5 w-5" aria-hidden="true" /> Download
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                className="min-h-11"
+
                 onClick={() => {
                   if (!favoritesReady || !favoritesKey) return;
                   const next = new Set(visibleFavorites);
@@ -2301,7 +2359,7 @@ function LibraryPage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="min-h-11"
+
                 onClick={() =>
                   void (async () => {
                     const owner = userKey,
@@ -2350,7 +2408,7 @@ function LibraryPage() {
               <Button
                 size="sm"
                 variant="destructive"
-                className="min-h-11"
+
                 disabled={folderBusy || bulkDeleteBusy}
                 onClick={(event) => void deleteSelected(false, selected, event.currentTarget)}
               >
@@ -2371,7 +2429,7 @@ function LibraryPage() {
             </p>
             <Button
               ref={retryButtonRef}
-              className="mt-4 min-h-11"
+              className="mt-4"
               onClick={(event) => {
                 if (folderBusy) return;
                 const trigger = event.currentTarget;
@@ -2437,7 +2495,7 @@ function LibraryPage() {
             {query || filter !== "all" || folderScope !== "all" ? (
               <Button
                 variant="outline"
-                className="mt-5 min-h-11"
+                className="mt-5"
                 onClick={() => {
                   setQuery("");
                   setFilter("all");
@@ -2688,16 +2746,16 @@ function LibraryPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="min-h-11"
+
                           onClick={() => void copyItemLink(visiblePreviewItem)}
                         >
-                          <LinkIcon aria-hidden="true" className="mr-1.5 h-4 w-4" /> Copy link
+                          <LinkIcon aria-hidden="true" className="h-4 w-4" /> Copy link
                         </Button>
                       ) : null}
                       <Button
                         size="sm"
                         variant="outline"
-                        className="min-h-11"
+
                         onClick={() => reuseInChat(visiblePreviewItem)}
                       >
                         Reuse in chat
@@ -2833,15 +2891,15 @@ function LibraryPage() {
                     <div className="flex flex-wrap gap-2">
                       {detail.status === "signed-out" ? (
                         <SignInButton mode="modal">
-                          <Button className="min-h-11">Sign in</Button>
+                          <Button>Sign in</Button>
                         </SignInButton>
                       ) : null}
                       {detail.status === "error" || detail.status === "unavailable" ? (
-                        <Button variant="outline" className="min-h-11" onClick={detail.retry}>
+                        <Button variant="outline" onClick={detail.retry}>
                           Try again
                         </Button>
                       ) : null}
-                      <Button variant="outline" className="min-h-11" onClick={closeItemPreview}>
+                      <Button variant="outline" onClick={closeItemPreview}>
                         Back to Library
                       </Button>
                     </div>

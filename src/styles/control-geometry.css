@@ -1,105 +1,108 @@
-/* Ordinary actions share the Button primitive's pill contract. This is a
-   semantic default, without important declarations or specificity escalation.
-   Full surfaces, navigation rows, menus and widgets retain their own geometry. */
-body
-  :is(
-    button,
-    a[role="button"],
-    .kova-button,
-    a.public-action,
-    a[data-public-primary],
-    a.kova-billing-plan-action,
-    .spec400-review-toolbar a,
-    .spec400-review-actions > a
-  ):not(
-    :where(
-      [role]:not([role="button"]),
-      [data-kova-button-shape="preserve"],
-      [data-day],
-      [data-range-middle],
-      [role="menu"] *,
-      [role="listbox"] *,
-      [role="tablist"] *,
-      .kova-file-view-toggle *,
-      .kova-file-filters *,
-      .spec400-inspector-tabs *,
-      .public-example-options *,
-      .rdp-root *,
-      .kova-sidebar-scrim,
-      .kova-browser-card,
-      .work-browser-preview,
-      .kova-card,
-      .kova-project-card,
-      .kova-directory-row,
-      .kova-connector-card,
-      .kova-plan-card,
-      .kova-image-preset,
-      .kova-state-panel,
-      .spec400-review-card,
-      .kova-nav-row:not(.kova-new-chat),
-      .kova-chat-row-main,
-      .kova-account-main,
-      .kova-settings-nav-item,
-      .kova-file-open,
-      .kova-output-row,
-      .spec400-task-title,
-      .spec400-recent-work > button,
-      .kova-composer-action,
-      .kova-composer-plugin,
-      .spec400-attachment-inspect,
-      .spec400-context-inspect,
-      .spec400-chip-inspect,
-      [data-state="on"],
-      [data-state="off"]
-    )
-  ) {
-  border-radius: var(--kova-radius-button);
+/* Native fields share ChatGPT's input role. Buttons, rows, and cards own their shape. */
+:where(input, textarea, select) {
+  font-family: var(--font-ui);
+  color: var(--foreground);
 }
-:is(
-  [role="menuitem"],
-  [role="menuitemcheckbox"],
-  [role="menuitemradio"],
-  [role="option"],
-  .kova-select-item,
-  .kova-dropdown-item,
-  .kova-composer-action,
-  .kova-composer-plugin
-) {
-  border-radius: var(--kova-radius-compact);
-}
-:is(
-  [role="menu"],
-  [role="listbox"],
-  .kova-composer-menu,
-  .kova-profile-menu,
-  .kova-dropdown-content,
-  .kova-select-content
-) {
-  border-radius: var(--kova-radius-menu);
-}
-:is(
+:where(
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not(
       [type="file"]
-    ),
+    ):not([type="hidden"]),
   select,
   textarea:not(.kova-composer-input):not(.spec400-composer-input)
 ) {
   border-radius: var(--kova-radius-input);
 }
-:is(input, textarea, select):focus {
-  border-color: var(--ring);
-}
-/* The composer owns its one outer focus treatment; do not draw a second box. */
-:is(input, textarea, select):not(.kova-composer-input):not(.spec400-composer-input):focus-visible {
+:where(input, textarea, select):not(.kova-composer-input):not(
+    .spec400-composer-input
+  ):focus-visible,
+:where(button, a[role="button"], [role="tab"]):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-button[data-day] {
-  border-radius: var(--kova-radius-compact);
+/* Native form controls retain their browser events and form participation.
+   Their visible geometry and Check path match the shared CG-SDK controls. */
+:root {
+  --kova-native-check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' fill-rule='evenodd' d='M18.063 5.674a1 1 0 0 1 .263 1.39l-7.5 11a1 1 0 0 1-1.533.143l-4.5-4.5a1 1 0 1 1 1.414-1.414l3.647 3.647 6.82-10.003a1 1 0 0 1 1.39-.263Z' clip-rule='evenodd'/%3E%3C/svg%3E");
 }
-button[data-range-middle="true"] {
-  border-radius: 0;
+:root.dark {
+  --kova-native-check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' fill-rule='evenodd' d='M18.063 5.674a1 1 0 0 1 .263 1.39l-7.5 11a1 1 0 0 1-1.533.143l-4.5-4.5a1 1 0 1 1 1.414-1.414l3.647 3.647 6.82-10.003a1 1 0 0 1 1.39-.263Z' clip-rule='evenodd'/%3E%3C/svg%3E");
 }
-[role="checkbox"] {
+input[type="checkbox"]:not([aria-hidden="true"]),
+input[type="radio"]:not([aria-hidden="true"]) {
+  appearance: none;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1px solid var(--input);
   border-radius: 4px;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+  cursor: pointer;
+}
+input[type="checkbox"]:not([aria-hidden="true"]):checked,
+input[type="checkbox"]:not([aria-hidden="true"]):indeterminate,
+input[type="radio"]:not([aria-hidden="true"]):checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+input[type="checkbox"]:not([aria-hidden="true"]):checked {
+  background-image: var(--kova-native-check-mark);
+}
+input[type="checkbox"]:not([aria-hidden="true"]):indeterminate {
+  background-image: linear-gradient(var(--primary-foreground), var(--primary-foreground));
+  background-size: 10px 2px;
+}
+input[type="radio"]:not([aria-hidden="true"]) {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  border-radius: 50%;
+}
+input[type="radio"]:not([aria-hidden="true"]):checked {
+  background-image: radial-gradient(circle, var(--primary-foreground) 3px, transparent 3px);
+  background-size: 6px 6px;
+}
+input[type="checkbox"]:not([aria-hidden="true"]):disabled,
+input[type="radio"]:not([aria-hidden="true"]):disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+@media (forced-colors: active) {
+  input[type="checkbox"]:not([aria-hidden="true"]),
+  input[type="radio"]:not([aria-hidden="true"]) {
+    appearance: auto;
+    background-image: none;
+    forced-color-adjust: auto;
+  }
+}
+.kova-profile-disabled-outline:disabled {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+@media (pointer: coarse) {
+  label:has(input[type="checkbox"]:not([aria-hidden="true"])),
+  label:has(input[type="radio"]:not([aria-hidden="true"])) {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+@media (pointer: coarse) {
+  .work-action,
+  .work-small,
+  .work-icon {
+    min-height: 44px;
+  }
+  .work-icon {
+    min-width: 44px;
+  }
 }

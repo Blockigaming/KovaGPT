@@ -1,10 +1,6 @@
-/* Public-only primitives. Do not alter the authenticated workspace cascade. */
+/* Grok public-page composition; controls inherit the pinned ChatGPT Apps SDK tokens.
+   Reference geometry not observed in a capture remains an implementation choice. */
 [data-public-shell] {
-  --background: #fff;
-  --foreground: #111;
-  --muted: #f7f7f7;
-  --muted-foreground: #5d5d5d;
-  --border: #e8e8e8;
   --kova-public-header-height: 6rem;
   --kova-public-reading-width: 68ch;
   --public-page-width: 72rem;
@@ -80,8 +76,7 @@
   color: var(--foreground);
   border-color: var(--border);
 }
-[data-public-shell]
-  :is(.public-action, .public-example-options button, .public-table-scroll):focus-visible {
+[data-public-shell] :is(.public-action, .public-table-scroll):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
@@ -108,19 +103,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
-}
-[data-public-shell] .public-example-options button {
-  min-height: 2.75rem;
-  padding: 0.625rem 1rem;
-  border-radius: 999px;
-  font-size: 0.875rem;
-  color: var(--muted-foreground);
-  cursor: pointer;
-}
-[data-public-shell] .public-example-options button[aria-pressed="true"] {
-  background: var(--background);
-  color: var(--foreground);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 5%);
 }
 [data-public-shell] .public-example-conversation {
   display: grid;
@@ -347,7 +329,7 @@
   background: var(--background);
   border: 1px solid var(--border);
   border-bottom: 0;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 5%);
+  box-shadow: none;
 }
 [data-public-shell] .public-illustration-label {
   color: var(--muted-foreground);
@@ -727,7 +709,7 @@
   margin: 0 auto;
   border-radius: var(--kova-radius-card);
   background: var(--background);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 10%);
+  box-shadow: none;
 }
 [data-public-shell] .public-example-sidebar {
   display: flex;
@@ -767,14 +749,6 @@
 }
 [data-public-shell] .public-example-toolbar h2 {
   font-size: 0.8125rem;
-}
-[data-public-shell] .public-example-options button {
-  font-size: 0.75rem;
-  padding: 0.5rem 0.75rem;
-}
-[data-public-shell] .public-example-options button[aria-pressed="true"] {
-  background: var(--muted);
-  box-shadow: none;
 }
 [data-public-shell] .public-example-conversation {
   min-height: 24rem;
@@ -920,12 +894,4 @@
   [data-public-shell] .public-example-composer {
     margin-inline: 1rem;
   }
-}
-
-.dark [data-public-shell] {
-  --background: #171717;
-  --foreground: #f5f5f5;
-  --muted: #222;
-  --muted-foreground: #b4b4b4;
-  --border: #383838;
 }

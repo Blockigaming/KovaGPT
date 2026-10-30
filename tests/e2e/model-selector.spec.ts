@@ -25,27 +25,28 @@ test("Free chat has no model picker and Thinking is an upgrade action", async ({
   expect(chatRequests).toBe(0);
 });
 
-test("Plus model selector exposes Lite Medium and Thinking using the High route", async ({
+test("Plus model selector exposes Instant Medium and Thinking using the High route", async ({
   page,
 }) => {
   await installAuthenticatedFixture(page, { tier: "plus" });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
 
-  const viewport = page.viewportSize();
-  const width = viewport?.width ?? 0;
+  const useSheet = await page.evaluate(
+    () => window.innerWidth < 1024 || window.matchMedia("(pointer: coarse)").matches,
+  );
   await openResponseOptions(page);
   const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
   await expect(trigger).toBeVisible();
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
 
-  const optionRoot =
-    width < 1200
-      ? page.locator('[data-testid="mobile-bottom-sheet"]')
-      : page.getByRole("dialog", { name: "Choose model" });
+  const optionRoot = useSheet
+    ? page.locator('[data-testid="mobile-bottom-sheet"]')
+    : page.getByRole("dialog", { name: "Choose model" });
   await expect(optionRoot).toBeVisible({ timeout: 3000 });
   await expect(optionRoot.getByTestId("model-option-instant")).toBeVisible();
+  await expect(optionRoot.getByTestId("model-option-instant")).toHaveText("Instant");
   await expect(optionRoot.getByTestId("model-option-medium")).toBeVisible();
   await expect(optionRoot.getByTestId("model-option-high")).toContainText("Thinking");
   await expect(optionRoot.getByTestId("model-option-thinking")).toHaveCount(0);
@@ -59,7 +60,7 @@ test("Plus model selector exposes Lite Medium and Thinking using the High route"
   await expect(optionRoot.getByTestId("model-option-high")).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Escape");
   await expect(optionRoot).toHaveCount(0);
-  if (width >= 1200) {
+  if (!useSheet) {
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
     await expect(trigger).toBeFocused();
   }

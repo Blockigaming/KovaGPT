@@ -67,7 +67,10 @@ export function DeveloperFilesPanel({ userId, projectId }: { userId: string; pro
     }
   };
   return (
-    <section className="space-y-3 rounded-xl border p-5">
+    <section
+      data-ui-reference="chatgpt-settings-form"
+      className="space-y-3 rounded-2xl border border-border p-5"
+    >
       <h2 className="text-lg font-semibold">Developer files</h2>
       <p className="text-sm text-muted-foreground">
         Private text, Markdown, CSV and JSON files for this developer project. Upload through the

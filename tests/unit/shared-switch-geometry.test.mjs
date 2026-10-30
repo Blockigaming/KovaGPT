@@ -43,13 +43,13 @@ function markup(props = {}) {
 // Real React/Radix server markup plus source CSS/utility arithmetic. These tests
 // do not measure native layout, pointer hit testing, or keyboard event dispatch.
 for (const checked of [false, true]) {
-  test(`${checked ? "on" : "off"} switch separates a real 44px target from its horizontal track`, () => {
+  test(`${checked ? "on" : "off"} switch separates compact and coarse targets from the exact SDK painted track`, () => {
     const { root, track, thumb, html } = markup({ checked, "aria-label": "Use saved memory" });
     for (const token of [
-      "h-11",
-      "w-11",
-      "min-h-11",
-      "min-w-11",
+      "h-8",
+      "w-8",
+      "[@media(pointer:coarse)]:min-h-11",
+      "[@media(pointer:coarse)]:min-w-11",
       "shrink-0",
       "items-center",
       "justify-center",
@@ -58,31 +58,36 @@ for (const checked of [false, true]) {
       "bg-transparent",
     ])
       assert.ok(tokens(root).includes(token), token);
-    for (const token of ["h-5", "w-9", "shrink-0", "border-2", "rounded-full"])
+    for (const token of ["h-[19px]", "w-8", "shrink-0", "rounded-full"])
       assert.ok(tokens(track).includes(token), token);
-    for (const token of ["h-4", "w-4", "shrink-0", "rounded-full"])
+    for (const token of [
+      "h-[13px]",
+      "w-[13px]",
+      "left-[3px]",
+      "top-[3px]",
+      "shrink-0",
+      "rounded-full",
+    ])
       assert.ok(tokens(thumb).includes(token), token);
-    const length = (tag, axis) =>
-      Number(
-        tokens(tag)
-          .find((v) => v.startsWith(`${axis}-`))
-          .split("-")
-          .at(-1),
-      ) * 4;
+    const length = (tag, axis) => {
+      const token = tokens(tag).find((value) => value.startsWith(`${axis}-`));
+      const literal = token.match(/-\[(\d+)px\]$/);
+      return literal ? Number(literal[1]) : Number(token.split("-").at(-1)) * 4;
+    };
     const target = { width: length(root, "w"), height: length(root, "h") };
     const visible = { width: length(track, "w"), height: length(track, "h") };
     const state = checked ? "checked" : "unchecked";
     const travelToken = tokens(thumb).find((token) =>
       token.startsWith(`data-[state=${state}]:translate-x-`),
     );
-    const travel = Number(travelToken.split("-").at(-1)) * 4;
-    const border = 2;
-    assert.deepEqual(target, { width: 44, height: 44 });
-    assert.deepEqual(visible, { width: 36, height: 20 });
-    assert.equal(length(thumb, "h"), visible.height - border * 2);
-    assert.equal(length(thumb, "w"), 16);
-    assert.equal(travel, checked ? visible.width - border * 2 - length(thumb, "w") : 0);
-    assert.ok(travel + length(thumb, "w") <= visible.width - border * 2);
+    const travel = checked ? Number(travelToken.match(/\[(\d+)px\]$/)[1]) : 0;
+    const inset = 3;
+    assert.deepEqual(target, { width: 32, height: 32 });
+    assert.deepEqual(visible, { width: 32, height: 19 });
+    assert.equal(length(thumb, "h"), visible.height - inset * 2);
+    assert.equal(length(thumb, "w"), 13);
+    assert.equal(travel, checked ? visible.width - inset * 2 - length(thumb, "w") : 0);
+    assert.ok(travel + length(thumb, "w") <= visible.width - inset * 2);
     assert.match(html, /data-slot="switch-track"[^>]*><span[^>]*data-slot="switch-thumb"/);
     assert.equal(attr(root, "role"), "switch");
     assert.equal(attr(root, "type"), "button");
@@ -96,13 +101,21 @@ for (const checked of [false, true]) {
   });
 }
 
-test("track and thumb retain semantic colors and keyboard focus stays on the Radix target", () => {
+test("track and thumb retain pinned SDK state colors and keyboard focus stays on the Radix target", () => {
   const { root, track, thumb } = markup();
   assert.ok(tokens(root).includes("group/switch"));
-  assert.ok(tokens(track).includes("group-data-[state=checked]/switch:bg-primary"));
-  assert.ok(tokens(track).includes("group-data-[state=unchecked]/switch:bg-input"));
+  for (const token of [
+    "bg-[#dfdfdf]",
+    "dark:bg-[#414141]",
+    "group-data-[state=checked]/switch:bg-[#181818]",
+    "dark:group-data-[state=checked]/switch:bg-[#0285ff]",
+  ])
+    assert.ok(tokens(track).includes(token), token);
   assert.ok(tokens(thumb).includes("bg-white"));
-  assert.ok(tokens(thumb).includes("data-[state=checked]:bg-primary-foreground"));
+  assert.ok(
+    !tokens(thumb).some((token) => token.includes("state=checked]:bg-")),
+    "The source thumb stays white in both states",
+  );
   for (const token of [
     "focus-visible:ring-2",
     "focus-visible:ring-ring",
@@ -151,18 +164,13 @@ test("props, event callbacks, and ref pass to the same Radix Root without a seco
   assert.doesNotMatch(source, /onClick=|onKeyDown=|onPointerDown=|useState|useEffect/);
 });
 
-test("Settings retains the real mobile button minimum and no dialog-only pseudo target or thumb override", () => {
-  const settings = postcss.parse(read("src/components/account-surfaces.css"));
-  settings.walkRules((rule) => assert.doesNotMatch(rule.selector, /\[role=["']switch["']\]/));
-  const sheet = postcss.parse(read("src/styles.css"));
-  const rules = [];
-  sheet.walkRules((rule) => {
-    if (rule.selectors.includes(".kova-settings-dialog button")) rules.push(rule);
-  });
-  const mobile = rules.find((rule) => rule.parent.params === "(max-width: 1023px)");
-  assert.ok(mobile);
-  assert.equal(mobile.nodes.find((node) => node.prop === "min-height").value, "44px");
-  assert.ok(mobile.selectors.includes(".kova-secondary-page button"));
+test("Settings delegates switch geometry to its real Radix target without pseudo targets", () => {
+  for (const path of ["src/components/account-surfaces.css", "src/styles.css"]) {
+    const sheet = postcss.parse(read(path));
+    sheet.walkRules((rule) => assert.doesNotMatch(rule.selector, /\[role=["']switch["']\]/));
+  }
+  assert.ok(source.includes("[@media(pointer:coarse)]:min-h-11"));
+  assert.ok(source.includes("[@media(pointer:coarse)]:min-w-11"));
   assert.doesNotMatch(source, /before:|after:|max-h-5|min-h-5/);
 });
 
@@ -176,19 +184,16 @@ test("sidebar layout grows only label text and leaves switch track, thumb, and h
     rules.some((rule) => rule.selector === ".kova-sidebar-shortcut-choice span"),
     false,
   );
-  assert.ok(
-    rules.some((rule) =>
-      rule.selectors.includes('.kova-sidebar-personalization button:not([role="switch"]):hover'),
-    ),
-  );
+  assert.ok(rules.some((rule) => rule.selector === ".kova-sidebar-shortcut-choice:hover"));
+  assert.ok(rules.some((rule) => rule.selector === ".kova-sidebar-shortcut-choice:focus-within"));
   assert.equal(
-    rules.some((rule) => rule.selectors.includes(".kova-sidebar-personalization button:hover")),
+    rules.some((rule) => /switch-track|switch-thumb|button:hover/.test(rule.selector)),
     false,
+    "The label row cannot repaint the control's independent children",
   );
-  assert.ok(
-    rules.some((rule) =>
-      rule.selectors.includes(".kova-sidebar-personalization button:focus-visible"),
-    ),
+  assert.match(
+    read("src/styles/control-geometry.css"),
+    /:where\(button, a\[role="button"\], \[role="tab"\]\):focus-visible/,
   );
 });
 

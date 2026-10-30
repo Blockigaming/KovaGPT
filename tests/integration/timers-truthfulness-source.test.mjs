@@ -17,7 +17,9 @@ test("the timer launcher is reachable, responsive, and exposes usable touch targ
   assert.match(widget, /max-h-\[calc\(100dvh-12rem-var\(--safe-top\)-var\(--safe-bottom\)\)\]/);
   assert.match(appShell, /WorkspacePageUtilities.Provider/);
   assert.match(widget, /overflow-y-auto/);
-  assert.ok((widget.match(/min-h-11/g) ?? []).length >= 4);
+  assert.ok((widget.match(/<Button\b/g) ?? []).length >= 4);
+  assert.match(read("src/components/ui/button.tsx"), /pointer:coarse/);
+  assert.match(read("src/components/ui/button.tsx"), /min-h-11/);
   assert.match(widget, /mobileSidebarOpen \? "max-lg:invisible" : ""/);
   assert.match(appShell, /mobileSidebarOpen=\{sidebarOpen\}/);
   assert.match(widget, /panelRef\.current\?\.focus\(\)/);

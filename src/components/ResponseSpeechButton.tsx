@@ -3,6 +3,7 @@ import { Loader2, Square, Volume2 } from "lucide-react";
 import { authFetch } from "@/lib/auth-fetch";
 import { createSpeechPlayback } from "@/lib/speech-playback.mjs";
 import { PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT } from "@/lib/principal-browser-storage.mjs";
+import { Button } from "@/components/ui/button";
 
 const errors: Record<string, string> = {
   speech_unauthorized: "Sign in with a verified account to read aloud.",
@@ -80,13 +81,15 @@ export function ResponseSpeechButton({
   };
   return (
     <span className="inline-flex shrink-0 items-center gap-2">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={() => void click()}
         aria-label={busy ? "Stop reading aloud" : "Read aloud"}
         title={busy ? "Stop reading aloud" : "Read aloud"}
         aria-pressed={busy}
-        className="inline-flex items-center gap-1.5 rounded-lg p-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="text-xs text-muted-foreground"
       >
         {state === "loading" ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -96,7 +99,7 @@ export function ResponseSpeechButton({
           <Volume2 className="h-4 w-4" />
         )}
         {busy ? "Stop" : "Read aloud"}
-      </button>
+      </Button>
       <span role="status" className={error ? "text-xs text-destructive" : "sr-only"}>
         {error ||
           (state === "loading" ? "Loading audio" : state === "playing" ? "Reading aloud" : "")}

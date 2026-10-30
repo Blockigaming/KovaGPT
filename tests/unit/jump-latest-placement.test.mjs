@@ -9,7 +9,8 @@ test("jump control anchors above the growing composer instead of viewport coordi
     source.indexOf("{editingMessage?.conversationId"),
   );
   assert.match(button, /absolute bottom-full/);
-  assert.match(button, /mb-2 min-h-11/);
+  assert.match(button, /<Button\s+variant="ghost"\s+size="sm"/);
+  assert.match(button, /z-20 mb-2 -translate-x-1\/2/);
   assert.doesNotMatch(button, /fixed|bottom-28/);
   assert.match(button, /el.scrollTo\(\{ top: el.scrollHeight, behavior: "smooth" \}\)/);
 });

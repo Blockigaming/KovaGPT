@@ -1,9 +1,11 @@
-/* Grok's editorial spacing and Claude's display hierarchy, with shared pill actions. */
+/* Reference ownership: Grok public-page layout and headings; ChatGPT Apps SDK
+   controls; Claude help/article reading layouts. Each named surface chooses one
+   layout instead of combining the products within an individual component. */
 [data-public-shell] {
   font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
-  font-size: 15px;
-  line-height: 22px;
-  --public-section-space: clamp(40px, 5vw, 72px);
+  font-size: 14px;
+  line-height: 20px;
+  --public-section-space: clamp(48px, 6vw, 80px);
   --public-page-width: 1120px;
   --kova-public-header-height: 72px;
 }
@@ -12,17 +14,17 @@
   --public-page-width: inherit;
 }
 [data-public-shell] :is(main h1, .public-hero h1, .legal-hero h1) {
-  font-family: var(--font-reading, Georgia, "Times New Roman", serif);
-  font-size: clamp(32px, 4vw, 48px);
-  line-height: 1.15;
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: clamp(36px, 5vw, 60px);
+  line-height: 1.1;
   font-weight: 400;
   letter-spacing: -0.025em;
   text-wrap: balance;
 }
 [data-public-shell] :is(main h2, .public-section-heading h2) {
-  font-family: var(--font-reading, Georgia, "Times New Roman", serif);
-  font-size: 26px;
-  line-height: 1.25;
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: 32px;
+  line-height: 38px;
   font-weight: 400;
   letter-spacing: -0.02em;
 }
@@ -33,7 +35,7 @@
   font-weight: 600;
 }
 [data-public-shell] :is(main p, main li) {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 24px;
 }
 [data-public-shell]
@@ -59,7 +61,7 @@
   outline-offset: 3px;
 }
 [data-public-shell] :is(a, button, input, textarea, select) {
-  transition-duration: 120ms;
+  transition-duration: 150ms;
 }
 [data-public-shell] main > section > .max-w-7xl:not(.public-highlights-grid) {
   padding-block: var(--public-section-space);
@@ -92,9 +94,6 @@
 }
 [data-public-shell] .public-section-heading {
   margin-bottom: 24px;
-}
-[data-public-shell] .public-example-options button {
-  min-height: 44px;
 }
 [data-public-shell] .public-example-caption {
   font-size: 13px;
@@ -183,7 +182,9 @@
   gap: 8px;
   margin-bottom: 16px;
 }
-[data-public-shell] .spec400-review :is(input, select, textarea) {
+[data-public-shell]
+  .spec400-review
+  :is(input:not([data-slot="input"]), select, textarea:not([data-slot="textarea"])) {
   width: 100%;
   border: 1px solid var(--border);
   background: var(--background);
@@ -198,7 +199,11 @@
 }
 [data-public-shell]
   .spec400-review
-  :is(button, .spec400-review-toolbar a, .spec400-review-actions > a) {
+  :is(
+    button:not([data-slot]),
+    .spec400-review-toolbar a:not([data-slot]),
+    .spec400-review-actions > a:not([data-slot])
+  ) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -225,12 +230,6 @@
   flex-direction: row;
   align-items: start;
   min-height: 44px;
-}
-[data-public-shell] .spec400-review input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  margin-top: 2px;
-  flex-shrink: 0;
 }
 [data-public-shell] .spec400-review pre {
   white-space: pre-wrap;
@@ -348,11 +347,13 @@
 [data-public-shell] .spec400-call-indicator {
   display: grid;
   place-items: center;
-  min-height: 160px;
+  width: 128px;
+  height: 128px;
+  min-height: 128px;
   font-size: 48px;
   background: var(--muted);
-  border-radius: var(--kova-radius-card);
-  margin-block: 24px;
+  border-radius: 50%;
+  margin: 24px auto;
 }
 [data-public-shell] .spec400-composition-large {
   width: 100%;
@@ -411,5 +412,108 @@
     font-size: 32px;
     line-height: 38px;
     letter-spacing: -0.025em;
+  }
+}
+
+/* Claude Help Center: one reading column, quiet article rows and compact search. */
+[data-public-shell] .kova-help-center > header h1,
+[data-public-shell] .kova-help-article h1 {
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 42px;
+  letter-spacing: -0.02em;
+}
+[data-public-shell] .kova-help-center #answers-heading,
+[data-public-shell] .kova-help-article h2 {
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 28px;
+}
+[data-public-shell] .kova-help-center [aria-label="Help categories"] {
+  gap: 8px;
+}
+[data-public-shell] .kova-help-center [aria-label="Help categories"] button {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+[data-public-shell] .kova-help-center article button[aria-controls] {
+  padding-inline: 0;
+}
+[data-public-shell] .kova-help-center article > [role="region"] {
+  padding-inline: 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+@media (max-width: 639px) {
+  [data-public-shell] .kova-help-center > header h1,
+  [data-public-shell] .kova-help-article h1 {
+    font-size: 32px;
+    line-height: 38px;
+  }
+}
+
+/* Claude documentation: headings and text share a constrained reading measure. */
+[data-public-shell] [data-ui-reference="claude-documentation"] > section > div {
+  max-width: 960px;
+}
+[data-public-shell] [data-ui-reference="claude-documentation"] h1 {
+  font-size: 36px;
+  line-height: 42px;
+}
+[data-public-shell] [data-ui-reference="claude-documentation"] > section:nth-child(2) > div {
+  display: block;
+  background: transparent;
+}
+[data-public-shell]
+  [data-ui-reference="claude-documentation"]
+  > section:nth-child(2)
+  > div
+  > section {
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--border);
+  padding: 32px 0;
+}
+[data-public-shell] [data-ui-reference="claude-documentation"] h2 {
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 28px;
+}
+[data-public-shell] [data-ui-reference="chatgpt-settings-form"] h1 {
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 38px;
+}
+[data-public-shell] [data-ui-reference="chatgpt-settings-form"] > section > div {
+  max-width: 1120px;
+}
+@media (max-width: 639px) {
+  [data-public-shell] [data-ui-reference="claude-documentation"] h1 {
+    font-size: 32px;
+    line-height: 38px;
+  }
+}
+
+/* Native developer/review fields use the same SDK form control contract. */
+[data-ui-reference="chatgpt-settings-form"]
+  :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select):not([data-slot]) {
+  min-height: 44px;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-input);
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: 14px;
+  line-height: 20px;
+  padding: 10px 12px;
+  box-shadow: none;
+}
+@media (max-width: 767px) {
+  [data-ui-reference="chatgpt-settings-form"]
+    :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select):not([data-slot]) {
+    font-size: 16px;
+    line-height: 24px;
   }
 }

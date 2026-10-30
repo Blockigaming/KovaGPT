@@ -1,3 +1,5 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -389,9 +391,15 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
   }
   const summary = state ? studySummary(state) : null,
     card = state?.deck.cards[cardIndex];
-  const buttonClass = "min-h-11 rounded-lg border px-3 py-2 text-sm";
+  const buttonClass = "border text-sm";
   return (
-    <section ref={sectionRef} tabIndex={-1} className="space-y-5" aria-label="Study practice">
+    <section
+      data-ui-reference="chatgpt.study.practice"
+      ref={sectionRef}
+      tabIndex={-1}
+      className={"kova-tool-panel " + "space-y-5"}
+      aria-label="Study practice"
+    >
       <div>
         <h2 className="text-xl font-semibold">Practice and flashcards</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -402,18 +410,18 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
       <div className="grid gap-3">
         <label className="grid gap-1 text-sm">
           Learning goal
-          <input
+          <Input
             maxLength={500}
             value={goal}
             onChange={(event) => setGoal(event.target.value)}
-            className="min-h-11 rounded-lg border bg-background px-3"
+            className="  border bg-background "
             placeholder="What do you want to understand?"
           />
         </label>
         <label className="grid gap-1 text-sm">
           Depth
           <Select value={depth} onValueChange={setDepth}>
-            <SelectTrigger aria-label="Depth" className="min-h-11">
+            <SelectTrigger aria-label="Depth" className="">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -425,13 +433,13 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
         </label>
         <label className="grid gap-1 text-sm">
           Notes or an explanation to practice
-          <textarea
+          <Textarea
             aria-label="Notes or an explanation to practice"
             rows={5}
             maxLength={20000}
             value={material}
             onChange={(event) => setMaterial(event.target.value)}
-            className="w-full rounded-lg border bg-background p-3"
+            className="w-full  border bg-background "
             placeholder="Paste your notes, or use a chat explanation of your file or image."
           />
         </label>
@@ -481,7 +489,7 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
               value={mode}
               onValueChange={(value) => setMode(value as "quiz" | "flashcard")}
             >
-              <SelectTrigger aria-label="Practice style" className="min-h-11 w-auto">
+              <SelectTrigger aria-label="Practice style" className=" w-auto">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -495,26 +503,42 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
             {!answered && mode === "quiz" && (
               <div className="grid gap-2">
                 {card.choices.map((choice, index) => (
-                  <button
+                  <Button
+                    variant="ghost"
+                    data-ui-reference="chatgpt.study.answer-option"
+                    data-kova-button-shape="preserve"
                     type="button"
                     key={index}
-                    className={buttonClass + " text-left"}
+                    className={
+                      buttonClass +
+                      " kova-tool-answer-option h-auto whitespace-normal rounded-xl text-left"
+                    }
                     onClick={() => answer({ answer: index, recalled: null })}
                   >
                     {choice}
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
             {!revealed && (
               <div className="flex flex-wrap gap-2">
-                <button type="button" className={buttonClass} onClick={() => setHint(true)}>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  className={buttonClass}
+                  onClick={() => setHint(true)}
+                >
                   Show a hint
-                </button>
+                </Button>
                 {mode === "flashcard" && (
-                  <button type="button" className={buttonClass} onClick={() => setRevealed(true)}>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    className={buttonClass}
+                    onClick={() => setRevealed(true)}
+                  >
                     Reveal answer
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
@@ -536,30 +560,33 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
             )}
             {revealed && !answered && mode === "flashcard" && (
               <div className="flex flex-wrap gap-2">
-                <button
+                <Button
+                  variant="ghost"
                   type="button"
                   className={buttonClass}
                   onClick={() => answer({ answer: null, recalled: false })}
                 >
                   Practice again
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   type="button"
                   className={buttonClass}
                   onClick={() => answer({ answer: null, recalled: true })}
                 >
                   I recalled it
-                </button>
+                </Button>
               </div>
             )}
             {answered && (
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 className={buttonClass}
                 onClick={() => resetCard(nextStudyCard(state, cardIndex))}
               >
                 Next card
-              </button>
+              </Button>
             )}
           </fieldset>
           <p className="text-xs text-muted-foreground">
@@ -623,14 +650,20 @@ function StudySession({ ownerId, temporary = false, source = "" }: Props) {
           <ul className="space-y-2">
             {records.map((row) => (
               <li key={row.id}>
-                <button
+                <Button
+                  variant="ghost"
+                  data-ui-reference="chatgpt.study.saved-practice-row"
+                  data-kova-button-shape="preserve"
                   type="button"
                   disabled={busy || Boolean(pendingSave)}
-                  className={buttonClass + " w-full text-left"}
+                  className={
+                    buttonClass +
+                    " kova-tool-row-action h-auto w-full whitespace-normal rounded-xl text-left"
+                  }
                   onClick={() => void open(row)}
                 >
                   {row.title ?? "Saved practice"}
-                </button>
+                </Button>
               </li>
             ))}
           </ul>

@@ -1,3 +1,5 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -39,6 +41,7 @@ function DeveloperConsole() {
   if (isSignedIn && user?.id) return <OwnedDeveloperConsole key={user.id} userId={user.id} />;
   return (
     <PublicPageView
+      reference="chatgpt-settings-form"
       eyebrow="Developers"
       title="Developer console"
       summary="Manage your developer workspace."
@@ -128,10 +131,10 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
     concurrent: Number(concurrent),
   });
   const selected = data?.balances.find((row) => row.id === account);
-  const fieldClass =
-    "mt-1 block min-h-11 w-full rounded-md border border-border bg-background px-3";
+  const fieldClass = "mt-1 block w-full";
   return (
     <PublicPageView
+      reference="chatgpt-settings-form"
       eyebrow="Developers"
       title="Developer console"
       summary="Manage scoped keys, spending limits, and prepaid API usage."
@@ -165,7 +168,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
             <h2 className="text-lg font-semibold">Create a credit account</h2>
             <label className="block">
               Account name
-              <input
+              <Input
                 required
                 maxLength={80}
                 value={name}
@@ -175,7 +178,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
             </label>
             <label className="block">
               Billing currency (three-letter code)
-              <input
+              <Input
                 required
                 pattern="[A-Z]{3}"
                 maxLength={3}
@@ -254,7 +257,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
               ].map(([label, value, setter]) => (
                 <label key={String(label)} className="block">
                   {String(label)}
-                  <input
+                  <Input
                     className={fieldClass}
                     type="number"
                     required
@@ -316,7 +319,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
             </fieldset>
             <label className="block">
               Key name
-              <input
+              <Input
                 maxLength={80}
                 className={fieldClass}
                 value={name}
@@ -344,7 +347,7 @@ function OwnedDeveloperConsole({ userId }: { userId: string }) {
                   Save this key in your server’s secret manager. It is shown once and expires in 89
                   days.
                 </p>
-                <textarea readOnly aria-label="New API key" value={secret} className={fieldClass} />
+                <Textarea readOnly aria-label="New API key" value={secret} className={fieldClass} />
                 <Button onClick={() => setSecret("")}>Hide key</Button>
               </div>
             )}

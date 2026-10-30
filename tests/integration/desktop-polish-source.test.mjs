@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import assert from "node:assert/strict";
+import postcss from "postcss";
 
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const input = await readFile("src/components/ChatInput.tsx", "utf8");
@@ -10,29 +11,56 @@ const tokens = await readFile("src/styles/visual-tokens.css", "utf8");
 const sidebarStyles = await readFile("src/styles/sidebar-core.css", "utf8");
 const composerStyles = await readFile("src/styles/spec400-chat.css", "utf8");
 const messageStyles = await readFile("src/components/response-action-refinement.css", "utf8");
+const sidebarSheet = postcss.parse(sidebarStyles);
+const sidebarRule = (selector) => {
+  const matches = sidebarSheet.nodes.filter(
+    (node) => node.type === "rule" && node.selector === selector,
+  );
+  assert.equal(matches.length, 1, `One top-level rule must own ${selector}`);
+  return matches[0];
+};
+const declarationValues = (rule, property) =>
+  rule.nodes
+    .filter((node) => node.type === "decl" && node.prop === property)
+    .map((node) => node.value);
 
 test("desktop sidebar fully collapses and has one contained close trigger", () => {
-  assert.match(tokens, /--kova-sidebar-width: 256px;/);
-  assert.match(tokens, /--kova-sidebar-rail-width: 72px;/);
-  assert.match(
-    sidebarStyles,
-    /\.kova-sidebar\[data-kova-core-sidebar\]\s*\{\s*width: var\(--kova-sidebar-width\);/,
-  );
-  assert.match(
-    sidebarStyles,
-    /\.kova-sidebar-rail\[data-kova-core-rail\]\s*\{\s*width: var\(--kova-sidebar-rail-width\);/,
-  );
-  assert.match(sidebar, /collapsed \? "lg:!w-0"/);
+  assert.match(tokens, /--kova-sidebar-width: 260px;/);
+  assert.match(tokens, /--kova-sidebar-rail-width: 56px;/);
+  assert.match(sidebar, /const EXPANDED_WIDTH = 260;/);
+  const expanded = sidebarRule(".kova-sidebar[data-kova-core-sidebar]");
+  const rail = sidebarRule(".kova-sidebar-rail[data-kova-core-rail]");
+  assert.deepEqual(declarationValues(expanded, "width"), [
+    "var(--sidebar-expanded, var(--kova-sidebar-width, 260px))",
+  ]);
+  assert.deepEqual(declarationValues(rail, "width"), ["var(--kova-sidebar-rail-width, 56px)"]);
+  for (const selector of [
+    ".kova-sidebar[data-kova-core-sidebar]",
+    ".kova-sidebar-rail[data-kova-core-rail]",
+  ]) {
+    const closed = sidebarRule(`${selector}[data-state="closed"]`);
+    for (const [property, value] of [
+      ["width", "0"],
+      ["min-width", "0"],
+      ["visibility", "hidden"],
+      ["pointer-events", "none"],
+    ])
+      assert.deepEqual(declarationValues(closed, property), [value]);
+  }
+  const primaryNavigation = sidebar.match(/<aside\b[^>]*>/)?.[0];
+  assert.ok(primaryNavigation, "Sidebar collapse state belongs to the primary landmark");
+  assert.match(primaryNavigation, /data-state=\{open \? "open" : "closed"\}/);
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
   assert.match(sidebar, /aria-label="Expand sidebar"/);
-  assert.match(sidebar, /inert=\{collapsed \? true : undefined\}/);
+  assert.match(primaryNavigation, /inert=\{collapsed \? true : undefined\}/);
 });
 
 test("chat and composer use one stable readable measure", () => {
   assert.match(input, /className="spec400-composer"/);
   assert.doesNotMatch(input, /data-sidebar=closed.*max-w-\[52rem\]/);
   assert.doesNotMatch(message, /data-sidebar=closed.*max-w-\[52rem\]/);
-  assert.match(tokens, /--kova-reading-width: 760px;/);
+  assert.match(tokens, /--kova-reading-width: 768px;/);
+  assert.match(tokens, /--kova-composer-width: 768px;/);
   assert.match(message, /kova-message-reading-column/);
   assert.match(message, /import "\.\/response-action-refinement\.css"/);
   assert.match(
@@ -41,7 +69,11 @@ test("chat and composer use one stable readable measure", () => {
   );
   assert.match(
     composerStyles,
-    /\.spec400-chat-input\s*\{[^}]*max-width: var\(--kova-reading-width\);/,
+    /\.spec400-chat-input\s*\{[^}]*max-width: var\(--kova-composer-width, 768px\);/,
+  );
+  assert.match(
+    composerStyles,
+    /\.spec400-composer-dock > \.spec400-chat-input > \*\s*\{[^}]*width: min\(100%, var\(--kova-reading-width\)\);/,
   );
 });
 

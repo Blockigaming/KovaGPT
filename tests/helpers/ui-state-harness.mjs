@@ -3,10 +3,11 @@
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
+import { fixtureElement, nativeControlModules } from "./native-control-bindings.mjs";
 
 export const jsxRuntime = {
-  jsx: (type, props, key) => ({ type, props: props ?? {}, key }),
-  jsxs: (type, props, key) => ({ type, props: props ?? {}, key }),
+  jsx: (type, props, key) => fixtureElement(type, props ?? {}, key),
+  jsxs: (type, props, key) => fixtureElement(type, props ?? {}, key),
   Fragment: Symbol("Fragment"),
 };
 
@@ -28,6 +29,7 @@ export function loadUiModule(path, dependencies, globals = {}) {
     require(id) {
       if (id === "react/jsx-runtime") return jsxRuntime;
       if (Object.hasOwn(dependencies, id)) return dependencies[id];
+      if (Object.hasOwn(nativeControlModules, id)) return nativeControlModules[id];
       throw new Error(`Unexpected dependency ${id} in ${path}`);
     },
     console,

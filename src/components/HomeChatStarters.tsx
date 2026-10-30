@@ -21,13 +21,16 @@ const EMPTY_STATE_STARTERS = [
 ] as const;
 
 /**
- * Empty-state prompt chips shown under the centered composer.
- * Visual treatment is owned by the parity CSS layer so light/dark and
- * mobile density stay consistent with the rest of the product.
+ * ChatGPT's vertical suggested-prompt rows beneath the empty composer.
+ * A selection only fills an empty draft; it never submits or replaces work.
  */
 export function HomeChatStarters({ setInput }: { setInput: Dispatch<SetStateAction<string>> }) {
   return (
-    <div className="spec400-starter-actions" aria-label="Start a draft">
+    <div
+      className="spec400-starter-actions"
+      aria-label="Start a draft"
+      data-ui-reference="chatgpt-suggested-prompts"
+    >
       {EMPTY_STATE_STARTERS.map(({ label, prompt, icon: Icon }) => (
         <button
           key={label}

@@ -40,7 +40,8 @@ test("alert content has explicit scrollable height limits on both legacy and dyn
     );
     for (const token of [
       "h-auto",
-      "min-h-11",
+      "min-h-9",
+      "[@media(pointer:coarse)]:min-h-11",
       "max-w-full",
       "whitespace-normal",
       "ref={ref}",
@@ -60,7 +61,7 @@ test("select collision bounds do not replace item-aligned placement or caller ha
   assert.doesNotMatch(select, /min-w-\[var\(--radix-select-trigger-width\)\]/);
   assert.match(
     select,
-    /min-w-0 cursor-default select-none items-center \[overflow-wrap:anywhere\]/,
+    /min-w-0 cursor-pointer select-none items-center \[overflow-wrap:anywhere\]/,
   );
 });
 

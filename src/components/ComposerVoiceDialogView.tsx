@@ -173,6 +173,7 @@ export function ComposerVoiceDialogView({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="kova-voice-dialog"
+        data-ui-reference="chatgpt-separate-voice"
         data-voice-availability={availability}
         data-voice-phase={phase}
         data-voice-review={hasTranscript || Boolean(audioPlayer) ? "true" : "false"}
@@ -193,18 +194,10 @@ export function ComposerVoiceDialogView({
             {ready && !contentFirst && (
               <svg
                 className="kova-voice-mark"
-                viewBox="0 0 240 200"
-                fill="none"
+                viewBox="0 0 200 200"
                 aria-hidden="true"
                 focusable="false"
-              >
-                <path d="M45 84C39 94 39 106 45 116" />
-                <path d="M76 55C59 79 59 121 76 145" />
-                <path d="M108 33C80 67 80 133 108 167" />
-                <path d="M140 39C114 73 114 127 140 161" />
-                <path d="M171 61C153 85 153 115 171 139" />
-                <path d="M200 86C195 95 195 105 200 114" />
-              </svg>
+              />
             )}
             <h2 className="kova-voice-heading">{title}</h2>
             <DialogDescription

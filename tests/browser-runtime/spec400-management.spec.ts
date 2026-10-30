@@ -122,26 +122,29 @@ test("Tasks discards late resource pages and resets private state on account cha
 }) => {
   await mount(page);
   await page.getByText("Connected sources and event filters", { exact: true }).click();
-  await page
-    .getByLabel("Task background approval")
-    .selectOption("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  await page.getByRole("combobox", { name: "Task background approval", exact: true }).click();
+  await page.getByRole("option", { name: "github · Saved account", exact: true }).nth(0).click();
   await page.getByRole("button", { name: "Browse readable sources" }).click();
-  await page
-    .getByLabel("Task background approval")
-    .selectOption("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+  await page.getByRole("combobox", { name: "Task background approval", exact: true }).click();
+  await page.getByRole("option", { name: "github · Saved account", exact: true }).nth(1).click();
   await page.getByRole("button", { name: "Browse readable sources" }).click();
   await page.evaluate(() => {
     const pending = (window as unknown as TaskBrowserWindow).fixture.pending;
     pending[1].resolve({ items: [{ id: "new/repo", label: "Current source" }], nextCursor: null });
   });
-  await expect(page.getByLabel("Connected source")).toContainText("Current source");
+  await page.getByRole("combobox", { name: "Connected source", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Current source", exact: true })).toBeVisible();
   await page.evaluate(() => {
     (window as unknown as TaskBrowserWindow).fixture.pending[0].resolve({
       items: [{ id: "private/repo", label: "Stale private source" }],
       nextCursor: null,
     });
   });
-  await expect(page.getByLabel("Connected source")).not.toContainText("Stale private source");
+  await expect(page.getByRole("option", { name: "Stale private source", exact: true })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("option", { name: "Current source", exact: true })).toBeVisible();
+  await page.getByRole("option", { name: "Current source", exact: true }).press("Escape");
   await page.evaluate(() => (window as unknown as TaskBrowserWindow).fixture.switchUser());
   await expect(page.getByLabel("Title", { exact: true })).toHaveValue("New account draft");
   await expect(page.locator("body")).not.toContainText("Current source");
@@ -175,9 +178,8 @@ test("selected Gmail event controls capture the approved account and disappear o
   await mount(page);
   await page.getByRole("combobox", { name: "Run when", exact: true }).click();
   await page.getByRole("option", { name: "A connected event matches", exact: true }).click();
-  await page
-    .getByLabel("Task background approval")
-    .selectOption("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+  await page.getByRole("combobox", { name: "Task background approval", exact: true }).click();
+  await page.getByRole("option", { name: "gmail · Saved account", exact: true }).click();
   await expect(page.getByRole("region", { name: "Gmail event delivery" })).toBeVisible();
   await expect.poll(() => requests.length).toBe(1);
   expect(requests[0]).toEqual({
@@ -236,13 +238,18 @@ test("spec400 schedule dialog preserves edited prompt when discard is canceled",
   );
 });
 
-test("spec400 schedule editor is 560px desktop and fullscreen at 320px", async ({ page }) => {
+test("schedule editor keeps desktop width and rounded phone viewport gutters", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await mount(page);
   const desktop = await page.getByRole("dialog").boundingBox();
   expect(Math.round(desktop!.width)).toBe(560);
   await page.setViewportSize({ width: 320, height: 700 });
   const mobile = await page.getByRole("dialog").boundingBox();
-  expect(Math.round(mobile!.width)).toBe(320);
-  expect(Math.round(mobile!.height)).toBe(700);
+  expect(mobile).not.toBeNull();
+  expect(mobile!.x).toBeGreaterThanOrEqual(11);
+  expect(mobile!.x + mobile!.width).toBeLessThanOrEqual(309);
+  expect(mobile!.y).toBeGreaterThanOrEqual(11);
+  expect(mobile!.y + mobile!.height).toBeLessThanOrEqual(689);
+  expect(Math.abs(mobile!.x + mobile!.width / 2 - 160)).toBeLessThan(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

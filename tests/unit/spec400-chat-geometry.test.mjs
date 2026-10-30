@@ -25,29 +25,33 @@ function panelRadius(rule) {
   assert.equal(rule["border-radius"].important, undefined);
 }
 
-test("spec400 composer uses the shared composer geometry without legacy pill selectors", () => {
+test("the compact ChatGPT composer has one authoritative desktop and touch geometry", () => {
   const base = declarations(".spec400-composer");
-  assert.equal(base["min-height"].value, "128px");
-  assert.equal(base["border-radius"].value, "var(--kova-radius-composer)");
+  assert.equal(base["min-height"].value, "52px");
+  assert.equal(base.display.value, "grid");
+  assert.equal(base["grid-template-areas"].value, '"tools input trailing"');
+  assert.equal(base["border-radius"].value, "var(--kova-radius-composer, 26px)");
   assert.equal(base["border-radius"].important, undefined);
   assert.match(
     readFileSync("src/styles/visual-tokens.css", "utf8"),
-    /--kova-radius-composer:\s*28px;/,
+    /--kova-radius-composer:\s*26px;/,
   );
-  const empty = declarations(
-    '.spec400-chat-input[data-composer-surface="empty"] .spec400-composer',
-  );
-  assert.equal(empty["min-height"].value, "160px");
-  const mobile = declarations(".spec400-composer", "(max-width: 1023px)");
-  assert.equal(mobile["min-height"].value, "120px");
+  const empty = declarations('.spec400-chat-input[data-composer-surface="empty"]');
+  assert.equal(empty["padding-bottom"].value, "0");
+  const mobile = declarations(".spec400-composer", "(max-width: 1023px), (any-pointer: coarse)");
+  assert.equal(mobile.display.value, "flex");
+  assert.equal(mobile["flex-direction"].value, "column");
+  assert.equal(mobile["min-height"].value, "0");
   assert.doesNotMatch(composer, /className="kova-composer(?:\s|")/);
 });
 
-test("spec400 viewport panels retain shared corners while outranking historic size caps", () => {
-  assert.match(
-    css,
-    /\.kova-assistant section\.kova-empty-chat > div\.kova-empty-chat-content\s*\{[^}]*padding-block:\s*32px !important/s,
-  );
+test("home has one content layout while viewport panels retain bounded shared corners", () => {
+  const home = declarations(".kova-assistant .kova-empty-chat-content");
+  assert.equal(home.flex.value, "none");
+  assert.equal(home["justify-content"].value, "flex-start");
+  assert.equal(home.padding.value, "0");
+  assert.equal(home["max-width"].value, "var(--kova-composer-width, 768px)");
+  assert.equal(home.padding.important, undefined);
   const context = declarations("body .spec400-context-drawer[data-kova-dialog-surface]");
   panelRadius(context);
   assert.equal(context["max-width"].value, "300px");

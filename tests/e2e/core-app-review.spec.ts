@@ -13,12 +13,13 @@ async function openSidebar(page: Page) {
   const navigation = page
     .getByRole("navigation", { name: "Primary navigation", exact: true })
     .or(page.getByRole("dialog", { name: "Primary navigation", exact: true }));
-  if (await navigation.isVisible()) return;
+  if (await navigation.isVisible()) return navigation;
   const opener = page
     .getByRole("button", { name: /^(Open menu|Open sidebar|Expand sidebar|Toggle sidebar)$/ })
     .filter({ visible: true });
   if (await opener.count()) await opener.first().click();
   await expect(navigation).toBeVisible();
+  return navigation;
 }
 
 async function expectReadableFilter(tab: Locator) {
@@ -72,11 +73,8 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await openResponseOptions(page);
   await expect(page.getByTestId("model-selector-trigger").filter({ visible: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await openSidebar(page);
-  await page
-    .getByRole("navigation", { name: "KovaGPT features", exact: true })
-    .getByRole("button", { name: "Search", exact: true })
-    .click();
+  const sidebar = await openSidebar(page);
+  await sidebar.getByRole("button", { name: "Search chats", exact: true }).click();
   const search = page.getByRole("combobox", {
     name: "Search workspace, commands, and chats",
     exact: true,
@@ -151,20 +149,20 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await capture(page, info, "tasks");
 
   await openSidebar(page);
-  await page.getByRole("link", { name: "Plugins", exact: true }).click();
+  await page.getByRole("link", { name: "Connections", exact: true }).click();
   await expect(
-    page.getByRole("main").getByRole("heading", { name: "Plugins", exact: true }),
+    page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("main").getByRole("heading", { name: "Plugins", exact: true }),
+    page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
-  await page.getByPlaceholder("Search plugins").fill("Gmail");
+  await page.getByPlaceholder("Search connections").fill("Gmail");
   await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
   const plugin = page.getByRole("dialog", { name: "Gmail", exact: true });
   await expect(plugin).toContainText("Capabilities and permissions");
   await capture(page, info, "plugins-details");
   await page.keyboard.press("Escape");
-  await page.getByPlaceholder("Search plugins").fill("");
+  await page.getByPlaceholder("Search connections").fill("");
   await capture(page, info, "plugins");
 
   await openSidebar(page);
@@ -198,7 +196,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
 
   await openSidebar(page);
   await page.getByRole("button", { name: "Account menu", exact: true }).click();
-  await expect(page.getByRole("menuitem", { name: "Billing", exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Subscriptions", exact: true })).toBeVisible();
   await page.getByRole("menuitem", { name: "Help", exact: true }).click();
   await expect(
     page.getByRole("main").getByRole("heading", { name: "How can we help?" }),
@@ -229,6 +227,8 @@ test("dark task filter keeps a readable selected label", async ({ page }, info) 
 test("project sections and account settings remain navigable and cancel safely", async ({
   page,
 }, info) => {
+  // This compound journey uses the same budget as the dedicated core review lane.
+  test.setTimeout(60_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await coreFixture(page, "dark");
@@ -310,11 +310,12 @@ test("project sections and account settings remain navigable and cancel safely",
     await expect(page.getByRole("option", { name: "Responses", exact: true })).toHaveCount(0);
     await page.keyboard.press("Escape");
   }
-  await openSidebar(page);
-  await page
-    .getByRole("navigation", { name: "KovaGPT features" })
-    .getByRole("link", { name: "Chat", exact: true })
+  const sidebar = await openSidebar(page);
+  await sidebar
+    .getByRole("navigation", { name: "KovaGPT features", exact: true })
+    .getByRole("button", { name: "New chat", exact: true })
     .click();
+  await expect(page).toHaveURL(/\/$/u);
   await expect(settings).toBeHidden();
   expect(errors).toEqual([]);
 });

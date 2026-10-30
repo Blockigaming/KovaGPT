@@ -13,9 +13,9 @@ test("connected apps and scheduled tasks expose truthful signed-out states", asy
   await page.goto("/apps", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(
-    page.getByRole("main").getByRole("heading", { name: "Plugins", exact: true }),
+    page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sign in to connect plugins" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to connect tools" })).toBeVisible();
 
   await page.goto("/scheduled-tasks", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);

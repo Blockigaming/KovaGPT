@@ -276,12 +276,12 @@ jobs:
 
   browser:
     if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
-    name: Browser (${{ matrix.id }})
+    name: ${{ matrix.check_name }}
     needs: [verify, public-surface]
     runs-on: ubuntu-latest
-    # The five-viewport phone group is projected to need about 54 minutes.
-    # Preserve every test and the other groups' 45-minute budget.
-    timeout-minutes: ${{ matrix.id == 'phone' && 60 || 45 }}
+    # The phone group covers five viewports and more than 1,100 cases.
+    # Keep the complete matrix and per-test limits within this wall-clock budget.
+    timeout-minutes: 45
     env:
       KOVA_BROWSER_PREVIEW: "node"
       KOVA_BROWSER_SUITE: "core"
@@ -289,24 +289,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - id: phone
+          - id: phone-a
+            check_name: Phone shard (phone-a)
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
-            shard: 1/1
+            shard: 1/2
+          - id: phone-b
+            check_name: Phone shard (phone-b)
+            projects: >-
+              --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+            shard: 2/2
           - id: tablet
+            check_name: Browser (tablet)
             projects: >-
               --project=tablet-768x1024 --project=phone-landscape-844x390 --project=tablet-1024x768
             shard: 1/1
           - id: desktop-1280
+            check_name: Browser (desktop-1280)
             projects: --project=desktop-1280x800
             shard: 1/1
           - id: desktop-1440-a
+            check_name: Browser (desktop-1440-a)
             projects: --project=desktop-1440x900
             shard: 1/2
           - id: desktop-1440-b
+            check_name: Browser (desktop-1440-b)
             projects: --project=desktop-1440x900
             shard: 2/2
           - id: desktop-1728
+            check_name: Browser (desktop-1728)
             projects: --project=desktop-1728x1117
             shard: 1/1
     steps:
@@ -349,6 +360,18 @@ jobs:
             test-results
             playwright-report
           if-no-files-found: ignore
+
+  phone-coverage:
+    if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    name: Browser (phone)
+    needs: [verify, browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require all browser shards to finish successfully
+        env:
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        run: test "$BROWSER_RESULT" = success
 
   release-e2e:
     if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_ci == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)

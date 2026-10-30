@@ -80,8 +80,8 @@ for (const theme of ["light", "dark"] as const) {
     const rows = page.locator(".kova-file-row");
     await expect(rows).toHaveCount(2);
     await expect(rows.first()).toContainText("Long filename that wraps naturally");
-    await expect(page.getByRole("button", { name: "Source: manual ×", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Last 90 days ×", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Source: manual", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Last 90 days", exact: true })).toBeVisible();
     await page.reload();
     await waitForKovaHydration(page);
     await expect(sort).toContainText("Name");
@@ -129,7 +129,10 @@ for (const theme of ["light", "dark"] as const) {
     ]) {
       const control = settings.getByRole("combobox", { name: label, exact: true });
       await choose(page, control, option);
-      await expect(control).toHaveCSS("height", "44px");
+      const targetHeight = await page.evaluate(() =>
+        matchMedia("(pointer: coarse)").matches ? "44px" : "36px",
+      );
+      await expect(control).toHaveCSS("height", targetHeight);
     }
     const artifact = settings.getByRole("combobox", { name: "Artifact defaults", exact: true });
     if (page.viewportSize()!.width >= 1440) {

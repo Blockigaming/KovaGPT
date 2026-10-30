@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ArrowLeft, ChevronDown, LifeBuoy, Mail, Search, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, LifeBuoy, Mail, Plus, Search, X } from "lucide-react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,33 +102,40 @@ function CategoryFilters({
 }) {
   const visible = expanded ? HELP_CATEGORIES : PRIMARY_CATEGORIES;
   const buttonClass = (selected: boolean) =>
-    `h-11 shrink-0 rounded-full border px-4 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${selected ? "border-foreground bg-foreground text-background" : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"}`;
+    selected ? "border-foreground bg-foreground text-background" : "text-muted-foreground";
   return (
     <div
       aria-label="Help categories"
       className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
     >
-      <button
+      <Button
+        variant="outline"
         className={buttonClass(active === null)}
         aria-pressed={active === null}
         onClick={() => onChange(null)}
       >
         All
-      </button>
+      </Button>
       {visible.map((category) => (
-        <button
+        <Button
+          variant="outline"
           key={category}
           className={buttonClass(active === category)}
           aria-pressed={active === category}
           onClick={() => onChange(active === category ? null : category)}
         >
           {category}
-        </button>
+        </Button>
       ))}
       {!expanded && (
-        <button className={buttonClass(false)} onClick={onExpanded} aria-expanded={false}>
-          More <span aria-hidden="true">+</span>
-        </button>
+        <Button
+          variant="outline"
+          className={buttonClass(false)}
+          onClick={onExpanded}
+          aria-expanded={false}
+        >
+          More <Plus aria-hidden="true" />
+        </Button>
       )}
     </div>
   );
@@ -149,7 +156,8 @@ function FaqRow({
   return (
     <article
       id={`faq-${faq.id}`}
-      className="overflow-hidden rounded-2xl border border-border/80 bg-card transition-colors hover:border-border"
+      data-ui-reference="claude-help-article-row"
+      className="overflow-hidden border-b border-border transition-colors"
     >
       <h3>
         <button
@@ -162,7 +170,7 @@ function FaqRow({
           className="flex min-h-20 w-full items-start gap-4 px-5 py-4 text-left outline-none transition-colors hover:bg-accent/35 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-6 sm:py-5"
         >
           <span className="min-w-0 flex-1">
-            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <span className="mb-1 block text-xs font-normal text-muted-foreground">
               <Highlight text={faq.category} query={query} />
             </span>
             <span className="block text-[15px] font-medium leading-6 text-foreground sm:text-base">
@@ -215,9 +223,10 @@ function HelpPage() {
   return (
     <PublicShell>
       <main
+        data-ui-reference="claude-help-center"
         id="main-content"
         tabIndex={-1}
-        className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16 pt-6 sm:px-6 sm:pb-24 sm:pt-10"
+        className="kova-help-center mx-auto w-full max-w-5xl flex-1 px-4 pb-16 pt-6 sm:px-6 sm:pb-24 sm:pt-10"
       >
         <div className="mb-7 flex items-center justify-between gap-4">
           <Link
@@ -234,7 +243,7 @@ function HelpPage() {
           </a>
         </div>
         <header className="mx-auto mb-9 max-w-3xl text-center sm:mb-11">
-          <p className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <LifeBuoy className="size-4 text-primary" /> KovaGPT Help Center
           </p>
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">How can we help?</h1>
@@ -251,17 +260,19 @@ function HelpPage() {
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search help…"
               aria-label="Search help"
-              className="h-14 rounded-2xl border-border bg-card pl-12 pr-14 text-base shadow-sm focus-visible:ring-2"
+              className="h-12 rounded-xl border-border bg-muted pl-12 pr-14 text-base focus-visible:ring-2"
             />
             {query && (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 type="button"
                 onClick={() => setQuery("")}
                 aria-label="Clear search"
-                className="absolute right-1.5 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="size-4" />
-              </button>
+              </Button>
             )}
           </div>
           <p className="mt-2 text-left text-xs text-muted-foreground">
@@ -296,7 +307,7 @@ function HelpPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-border px-5 py-12 text-center">
+            <div className="px-5 py-12 text-center">
               <Search className="mx-auto size-6 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold [overflow-wrap:anywhere]">
                 No answers found for “{query}”

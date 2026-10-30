@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -100,13 +101,14 @@ export function AgentAnalyticsDialog({
               </SelectContent>
             </Select>
           </label>
-          <button
+          <Button
+            variant="outline"
             disabled={!data}
             onClick={download}
-            className="min-h-10 rounded-lg border px-3 text-sm disabled:opacity-40"
+            className="border text-sm disabled:opacity-40"
           >
             Export metadata CSV
-          </button>
+          </Button>
         </div>
         {loading ? (
           <p role="status" className="rounded-xl bg-muted p-4">

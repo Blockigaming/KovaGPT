@@ -59,7 +59,7 @@ function focusFixture() {
   const item = { id: "hubspot", label: "HubSpot" };
   const selections = [];
   const restoreSource = readFileSync("src/lib/dialog-return-focus.ts", "utf8").replace(
-    "export function",
+    /^export function/gm,
     "function",
   );
   const restoreDialogFocus = compile(`${restoreSource}; return restoreDialogFocus;`, { window });
@@ -82,7 +82,7 @@ function focusFixture() {
         (attribute) =>
           ts.isJsxAttribute(attribute) &&
           attribute.name.getText(parsed) === "closeLabel" &&
-          attribute.initializer?.text === "Close plugin details",
+          attribute.initializer?.text === "Close connection details",
       ),
   );
   assert.equal(detailDialogs.length, 1, "Expected the named provider-details dialog");

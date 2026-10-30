@@ -1,3 +1,4 @@
+import { Input } from "@/components/ui/input";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
@@ -279,8 +280,8 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
               ? "Describe the image or product you want to find"
               : "What are you looking for?"}
           </span>
-          <input
-            className="w-full rounded-lg border bg-background p-3"
+          <Input
+            className="w-full  border bg-background "
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             maxLength={300}
@@ -309,8 +310,8 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
               <span className="text-sm font-medium">
                 City, neighborhood, or place (entered manually)
               </span>
-              <input
-                className="w-full rounded-lg border bg-background p-3"
+              <Input
+                className="w-full  border bg-background "
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 maxLength={160}
@@ -367,7 +368,7 @@ function DiscoverySession({ userId, initialMode }: { userId: string; initialMode
         {results?.map((result) => (
           <article
             key={`${result.url}:${result.imageUrl ?? ""}`}
-            className="space-y-3 rounded-xl border p-5"
+            className={"kova-tool-panel " + "space-y-3 rounded-xl border p-5"}
           >
             <div>
               <p className="text-xs text-muted-foreground">Source: {result.source}</p>

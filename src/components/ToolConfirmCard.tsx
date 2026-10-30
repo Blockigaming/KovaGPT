@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, X, Loader2, Mail, Calendar, FileEdit, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -291,16 +292,16 @@ export function ToolConfirmCard({
       )}
       {!isTerminal && (
         <div className="mt-3 flex gap-2">
-          <button
+          <Button
+            variant="default"
             onClick={(event) => void decide("confirm", event.currentTarget)}
             aria-describedby={hasFeedback ? feedbackId : undefined}
             disabled={!!busy}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50"
           >
             {busy === "confirm" ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <Loader2 className="animate-spin" aria-hidden="true" />
             ) : (
-              <Check className="h-5 w-5" aria-hidden="true" />
+              <Check aria-hidden="true" />
             )}
             {reconnectRetry
               ? "Retry"
@@ -309,20 +310,20 @@ export function ToolConfirmCard({
                 : confirm.tool === "gmail_send"
                   ? "Send"
                   : "Confirm"}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             onClick={(event) => void decide("cancel", event.currentTarget)}
             aria-describedby={hasFeedback ? feedbackId : undefined}
             disabled={!!busy}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-accent disabled:opacity-50"
           >
             {busy === "cancel" ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <Loader2 className="animate-spin" aria-hidden="true" />
             ) : (
-              <X className="h-5 w-5" aria-hidden="true" />
+              <X aria-hidden="true" />
             )}
             Cancel
-          </button>
+          </Button>
         </div>
       )}
     </div>

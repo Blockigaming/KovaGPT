@@ -5,7 +5,6 @@ import { modeDisplayLabel } from "@/lib/mode-display-label";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { NovaLogo } from "@/components/NovaLogo";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 /**
@@ -80,12 +79,12 @@ export function ResponsiveModelSelector({
   };
 
   const triggerClass =
-    "kova-model-trigger inline-flex min-h-11 max-w-full items-center gap-2 py-2 font-medium transition-colors duration-100 [font-family:var(--font-ui,var(--font-sans))] " +
+    "kova-model-trigger inline-flex max-w-full items-center gap-2 font-medium transition-colors duration-100 [font-family:var(--font-ui,var(--font-sans))] " +
     (topbar
       ? useSheet
-        ? "rounded-full bg-transparent px-3 text-[15px] active:bg-accent"
-        : "rounded-full bg-transparent px-3 text-[15px] hover:bg-accent"
-      : "rounded-full bg-transparent " +
+        ? "bg-transparent px-3 text-lg active:bg-accent"
+        : "bg-transparent px-3 text-lg hover:bg-accent"
+      : "bg-transparent " +
         (useSheet ? "active:bg-accent " : "hover:bg-accent ") +
         (compact ? "px-3 text-sm" : "px-4 text-[15px]"));
 
@@ -140,9 +139,8 @@ export function ResponsiveModelSelector({
     return (
       <span
         data-slot="model-selector-label"
-        className="kova-model-static inline-flex min-h-11 min-w-0 select-none items-center gap-2 px-3 text-[15px] font-semibold tracking-[-0.015em] text-foreground [font-family:var(--font-ui,var(--font-sans))]"
+        className="kova-model-static inline-flex min-h-11 min-w-0 select-none items-center px-3 text-lg font-semibold tracking-[-0.015em] text-foreground [font-family:var(--font-ui,var(--font-sans))]"
       >
-        <NovaLogo decorative className="h-6 w-6" />
         <span className="truncate leading-none">Kova GPT</span>
       </span>
     );
@@ -168,10 +166,10 @@ export function ResponsiveModelSelector({
             aria-controls={!useSheet && open ? menuId : undefined}
             data-testid="model-selector-trigger"
             data-slot="model-selector-trigger"
+            data-ui-reference="chatgpt-model-selector"
             className={triggerClass}
           >
-            {topbar ? <NovaLogo decorative className="h-6 w-6" /> : null}
-            <span className={(useSheet ? "truncate " : "") + "leading-none text-muted-foreground"}>
+            <span className={(useSheet ? "truncate " : "") + "leading-none text-foreground"}>
               {compact ? (
                 modeDisplayLabel(current)
               ) : (
@@ -197,7 +195,7 @@ export function ResponsiveModelSelector({
               if (next) setOpen(true);
               else closeAndRestoreFocus();
             }}
-            title="Intelligence"
+            title="Models"
             ariaLabel="Choose model"
           >
             <div className="flex flex-col gap-1">{options}</div>
@@ -233,7 +231,7 @@ export function ResponsiveModelSelector({
             }}
           >
             <div className="shrink-0 px-3 pb-1.5 pt-2 text-xs font-medium text-muted-foreground">
-              Intelligence
+              Models
             </div>
             <div
               data-testid="model-options-scroll"

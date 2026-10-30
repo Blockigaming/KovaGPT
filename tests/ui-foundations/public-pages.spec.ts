@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 // Trace settings are worker-scoped; keep this at file level. Coverage JSON and
 // failure screenshots retain evidence without thousands of catalog snapshots.
-test.use({ trace: "off" });
+test.use({ trace: "off", hasTouch: false });
 
 const viewports = [
   { width: 320, height: 568 },
@@ -40,6 +40,34 @@ async function horizontalFailures(page: Page): Promise<string[]> {
   });
 }
 
+async function verifyEnterpriseDialog(page: Page, pointer: "fine" | "coarse", enlarged: boolean) {
+  await expect
+    .poll(() => page.evaluate(() => matchMedia("(pointer: coarse)").matches))
+    .toBe(pointer === "coarse");
+  await page.getByTestId("trigger").click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  const submit = dialog.getByRole("button", { name: "Contact sales", exact: true });
+  await submit.scrollIntoViewIfNeeded();
+  await expect(submit).toHaveAttribute("data-slot", "button");
+  await expect(submit).toHaveAttribute("data-size", "default");
+  // DialogFooter preserves the canonical minimum while allowing text to wrap.
+  // Both rem-based targets scale at 200% root text.
+  const minimumHeight = (pointer === "coarse" ? 44 : 36) * (enlarged ? 2 : 1);
+  await expect(submit).toHaveCSS("min-height", `${minimumHeight}px`);
+  const actualHeight = (await submit.boundingBox())!.height;
+  expect(actualHeight).toBeGreaterThanOrEqual(minimumHeight);
+  if (!enlarged) expect(actualHeight).toBe(minimumHeight);
+  expect(await horizontalFailures(page), "enterprise dialog").toEqual([]);
+  // Deliberately leave required fields empty: no email draft is opened.
+  await submit.click();
+  await expect(dialog.locator("input:invalid").first()).toBeFocused();
+  await expect(dialog.getByRole("status")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page.getByTestId("trigger")).toBeFocused();
+}
+
 for (const viewport of viewports) {
   for (const dark of [false, true]) {
     for (const enlarged of [false, true]) {
@@ -66,24 +94,29 @@ for (const viewport of viewports) {
         }
         await page.goto("/?surface=enterprise");
         await theme(page, dark, enlarged);
-        await page.getByTestId("trigger").click();
-        const dialog = page.getByRole("dialog");
-        await expect(dialog).toBeVisible();
-        const submit = dialog.getByRole("button", { name: "Contact sales", exact: true });
-        await submit.scrollIntoViewIfNeeded();
-        expect((await submit.boundingBox())!.height).toBeGreaterThanOrEqual(43);
-        expect(await horizontalFailures(page), "enterprise dialog").toEqual([]);
-        // Deliberately leave required fields empty: no email draft is opened.
-        await submit.click();
-        await expect(dialog.locator("input:invalid").first()).toBeFocused();
-        await expect(dialog.getByRole("status")).toHaveCount(0);
-        await page.keyboard.press("Escape");
-        await expect(dialog).toBeHidden();
-        await expect(page.getByTestId("trigger")).toBeFocused();
+        await verifyEnterpriseDialog(page, "fine", enlarged);
       });
     }
   }
 }
+
+test.describe("canonical enterprise button with a coarse pointer", () => {
+  test.use({ hasTouch: true });
+  for (const dark of [false, true]) {
+    for (const enlarged of [false, true]) {
+      test(`${dark ? "dark" : "light"} ${enlarged ? "200%" : "100%"} text`, async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.emulateMedia({
+          reducedMotion: "reduce",
+          colorScheme: dark ? "dark" : "light",
+        });
+        await page.goto("/?surface=enterprise");
+        await theme(page, dark, enlarged);
+        await verifyEnterpriseDialog(page, "coarse", enlarged);
+      });
+    }
+  }
+});
 
 test.describe("every declared public detail record", () => {
   // Each record is rendered from its real registry data. Per-case coverage JSON

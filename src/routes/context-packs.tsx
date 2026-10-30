@@ -1,3 +1,7 @@
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -418,8 +422,11 @@ function ContextPacksPage() {
   };
   return (
     <AppShell>
-      <main className="mx-auto min-w-0 w-full max-w-5xl px-4 py-7 sm:px-6">
-        <header>
+      <main
+        data-ui-reference="claude.project.knowledge"
+        className={"kova-tool-page " + "mx-auto min-w-0 w-full max-w-5xl px-4 py-7 sm:px-6"}
+      >
+        <header className="kova-tool-heading">
           <div className="flex items-center gap-2">
             <Boxes className="h-5 w-5" />
             <h1 className="text-2xl font-semibold">Context Packs</h1>
@@ -440,32 +447,32 @@ function ContextPacksPage() {
           </div>
         ) : (
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
-            <section className="min-w-0 rounded-2xl border p-4">
+            <section className={"kova-tool-panel " + "min-w-0 rounded-2xl border p-4"}>
               <h2 className="font-semibold">Build a pack</h2>
               <div className="mt-3 grid gap-3">
-                <input
+                <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   maxLength={120}
-                  className="min-w-0 w-full h-11 rounded-xl border bg-background px-3"
+                  className="min-w-0 w-full   border bg-background "
                   placeholder="Pack name"
                   aria-label="Pack name"
                 />
-                <textarea
+                <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   maxLength={500}
-                  className="min-w-0 w-full min-h-20 rounded-xl border bg-background p-3"
+                  className="min-w-0 w-full min-h-20  border bg-background "
                   placeholder="What is this context for?"
                   aria-label="Pack description"
                 />
                 <label className="relative min-w-0">
                   <span className="sr-only">Search available context</span>
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <input
+                  <Input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="h-10 w-full rounded-xl border bg-background pl-9"
+                    className=" w-full  border bg-background pl-9"
                     placeholder="Search chats, files, Library, projects"
                   />
                 </label>
@@ -476,10 +483,10 @@ function ContextPacksPage() {
                     visibleCandidates.map((item) => (
                       <li key={item.key}>
                         <label className="flex min-h-12 cursor-pointer items-center gap-3 p-3 hover:bg-accent">
-                          <input
-                            type="checkbox"
+                          <Checkbox
+                            data-ui-reference="chatgpt.checkbox"
                             checked={selected.includes(item.key)}
-                            onChange={() =>
+                            onCheckedChange={() =>
                               setSelected((all) =>
                                 all.includes(item.key)
                                   ? all.filter((key) => key !== item.key)
@@ -506,14 +513,15 @@ function ContextPacksPage() {
               <p className="mt-3 text-sm text-muted-foreground" role="status">
                 {selected.length} context items selected
               </p>
-              <button
+              <Button
+                variant="default"
                 disabled={creating || !name.trim() || !selected.length}
                 onClick={submit}
-                className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-foreground px-4 text-background disabled:opacity-50"
+                className="mt-4 inline-flex  items-center gap-2  bg-foreground  text-background disabled:opacity-50"
               >
                 <Plus className="h-4 w-4" />
                 {creating ? "Saving…" : "Save context pack"}
-              </button>
+              </Button>
             </section>
             <section className="min-w-0 [overflow-wrap:anywhere]">
               <h2 ref={savedListHeadingRef} tabIndex={-1} className="font-semibold">
@@ -537,13 +545,15 @@ function ContextPacksPage() {
                         {pack.description || `${pack.items.length} context items`}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <button
+                        <Button
+                          variant="default"
                           onClick={() => attachPack(pack)}
-                          className="min-h-10 rounded-lg bg-foreground px-3 text-sm text-background"
+                          className="  bg-foreground  text-sm text-background"
                         >
                           Use in new chat
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="outline"
                           onClick={() => {
                             const handoff = writePrincipalHandoff(
                               safeBrowserStorage("sessionStorage"),
@@ -569,11 +579,12 @@ function ContextPacksPage() {
                             }
                             navigate({ to: "/work" });
                           }}
-                          className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
+                          className="  border  text-sm hover:bg-accent"
                         >
                           Use in Work
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="outline"
                           onClick={() => {
                             const handoff = writePrincipalHandoff(
                               safeBrowserStorage("sessionStorage"),
@@ -589,11 +600,13 @@ function ContextPacksPage() {
                             }
                             navigate({ to: "/" });
                           }}
-                          className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
+                          className="  border  text-sm hover:bg-accent"
                         >
                           Use in Search
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
                           aria-label={`Delete ${pack.name}`}
                           disabled={deleting}
                           aria-busy={deleting || undefined}
@@ -613,10 +626,10 @@ function ContextPacksPage() {
                               url: window.location.href,
                             });
                           }}
-                          className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-50"
+                          className="grid   place-items-center  text-destructive hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-50"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   ))}

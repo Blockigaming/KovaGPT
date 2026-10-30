@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useRef, useState } from "react";
 import { ChatMessage } from "./ChatMessage";
 import type { Message, PendingConfirm } from "@/lib/chat-store";
@@ -114,7 +116,11 @@ export default function CustomKovaPreview({
     );
   }
   return (
-    <section className="space-y-3 rounded-xl border p-4" aria-label="Kova preview">
+    <section
+      data-ui-reference="chatgpt.gpts.preview"
+      className="space-y-3 rounded-xl border p-4"
+      aria-label="Kova preview"
+    >
       <h2 className="font-semibold">Preview the saved version</h2>
       <p className="text-sm text-muted-foreground">
         Preview conversations stay temporary. They do not enter history or create memory.
@@ -130,14 +136,18 @@ export default function CustomKovaPreview({
       </label>
       <div className="flex flex-wrap gap-2">
         {starters.map((s, i) => (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
+            data-kova-button-shape="preserve"
+            data-ui-reference="chatgpt.gpts.starter-card"
             key={i}
-            className="rounded border px-2 py-1 text-sm"
+            className="h-auto min-h-8 max-w-full whitespace-normal rounded-[var(--kova-radius-card)] px-3 py-2 text-left"
             disabled={busy}
             onClick={() => void send(s)}
           >
             {s}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="max-h-[50vh] overflow-y-auto">
@@ -167,36 +177,39 @@ export default function CustomKovaPreview({
       >
         <label className="block text-sm">
           Preview message
-          <textarea
-            className="min-h-20 w-full rounded border bg-background p-2"
+          <Textarea
+            className="min-h-20"
             maxLength={32000}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={busy}
           />
         </label>
-        <button
-          className="rounded bg-primary px-3 py-2 text-primary-foreground"
+        <Button
+          variant="default"
+
           disabled={busy || !input.trim()}
         >
           Send preview
-        </button>
+        </Button>
         {busy && (
-          <button type="button" onClick={stop} className="ml-2 underline">
+          <Button variant="ghost" size="sm" type="button" onClick={stop} className="ml-2">
             Stop
-          </button>
+          </Button>
         )}
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           type="button"
           onClick={() => {
             stop();
             setMessages([]);
             setError("");
           }}
-          className="ml-3 underline"
+          className="ml-2"
         >
           Clear preview
-        </button>
+        </Button>
       </form>
     </section>
   );

@@ -1,3 +1,5 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -110,7 +112,11 @@ function OmegaPage() {
   if (!isLoaded)
     return (
       <AppShell>
-        <main className="p-6" aria-label="Loading Omega">
+        <main
+          data-ui-reference="chatgpt.workspace.settings"
+          className={"kova-tool-page " + "p-6"}
+          aria-label="Loading Omega"
+        >
           <div className="h-48 animate-pulse rounded-2xl bg-muted" />
         </main>
       </AppShell>
@@ -118,22 +124,31 @@ function OmegaPage() {
   if (!isSignedIn)
     return (
       <AppShell>
-        <main className="mx-auto max-w-xl p-8 text-center">
+        <main
+          data-ui-reference="chatgpt.workspace.settings"
+          className={"kova-tool-page " + "mx-auto max-w-xl p-8 text-center"}
+        >
           <h1 className="text-2xl font-semibold">Omega Control Center</h1>
           <p className="mt-2 text-muted-foreground">
             Sign in to prepare account-scoped platform integrations.
           </p>
           <SignInButton mode="modal">
-            <button className="mt-5 min-h-11 rounded-full bg-foreground px-5 text-sm font-medium text-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Button
+              variant="default"
+              className="mt-5   bg-foreground px-5 text-sm font-medium text-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               Sign in to Omega
-            </button>
+            </Button>
           </SignInButton>
         </main>
       </AppShell>
     );
   return (
     <AppShell>
-      <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
+      <main
+        data-ui-reference="chatgpt.workspace.settings"
+        className={"kova-tool-page " + "mx-auto w-full max-w-6xl px-4 py-7 sm:px-6"}
+      >
         <WorkspacePageHeader
           icon={Bot}
           title="Omega Control Center"
@@ -143,18 +158,24 @@ function OmegaPage() {
           state={runnerState === "unavailable" ? "runner-unavailable" : runnerState}
           onRetry={refresh}
         />
-        <div className="my-5 flex gap-1 overflow-x-auto" role="tablist" aria-label="Omega systems">
+        <div
+          data-ui-reference="chatgpt.tabs.segmented"
+          className={"kova-tool-tabs " + "my-5 flex gap-1 overflow-x-auto"}
+          role="tablist"
+          aria-label="Omega systems"
+        >
           {tabs.map(([id, label, Icon]) => (
-            <button
+            <Button
+              variant="ghost"
               key={id}
               role="tab"
               aria-selected={tab === id}
               onClick={() => setTab(id)}
-              className={`flex min-h-10 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm ${tab === id ? "bg-foreground text-background" : "hover:bg-accent"}`}
+              className={`flex  shrink-0 items-center gap-2  border  text-sm ${tab === id ? "bg-foreground text-background" : "hover:bg-accent"}`}
             >
               <Icon className="h-4 w-4" />
               {label}
-            </button>
+            </Button>
           ))}
         </div>
         {tab === "collaboration" ? (
@@ -191,7 +212,7 @@ function CollaborationPanel() {
           ["Typing", "Indicators expire when the adapter disconnects"],
           ["Conflicts", "Local, remote, and manual merge strategies are supported"],
         ].map(([title, text]) => (
-          <article key={title} className="rounded-xl border p-4">
+          <article key={title} className={"kova-tool-panel " + "rounded-xl border p-4"}>
             <h3 className="font-medium">{title}</h3>
             <p className="mt-1 text-xs text-muted-foreground">{text}</p>
           </article>
@@ -243,14 +264,15 @@ function ExecutionPanel() {
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {states.map((state) => (
-            <button
+            <Button
+              variant="outline"
               key={state}
               disabled={!canTransitionAgent(current, state)}
               onClick={() => setCurrent(state)}
-              className="min-h-10 rounded-lg border px-3 text-xs enabled:hover:bg-accent disabled:opacity-40"
+              className="  border  text-xs enabled:hover:bg-accent disabled:opacity-40"
             >
               {state.replaceAll("_", " ")}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -284,10 +306,10 @@ function EnterprisePanel({ scope }: { scope: string }) {
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-sm">
           Organization name
-          <input
+          <Input
             value={draft.organizationName}
             onChange={(e) => setDraft({ ...draft, organizationName: e.target.value })}
-            className="mt-1 h-10 w-full rounded-lg border bg-background px-3"
+            className="mt-1  w-full  border bg-background "
           />
         </label>
         <label className="text-sm">
@@ -310,38 +332,35 @@ function EnterprisePanel({ scope }: { scope: string }) {
         </label>
         <label className="text-sm">
           Retention days
-          <input
+          <Input
             type="number"
             min={1}
             value={draft.retentionDays}
             onChange={(e) => setDraft({ ...draft, retentionDays: Number(e.target.value) })}
-            className="mt-1 h-10 w-full rounded-lg border bg-background px-3"
+            className="mt-1  w-full  border bg-background "
           />
         </label>
         <label className="text-sm">
           SSO domain
-          <input
+          <Input
             value={draft.ssoDomain}
             onChange={(e) => setDraft({ ...draft, ssoDomain: e.target.value })}
-            className="mt-1 h-10 w-full rounded-lg border bg-background px-3"
+            className="mt-1  w-full  border bg-background "
           />
         </label>
         <label className="text-sm sm:col-span-2">
           SCIM endpoint
-          <input
+          <Input
             value={draft.scimEndpoint}
             onChange={(e) => setDraft({ ...draft, scimEndpoint: e.target.value })}
             placeholder="https://"
-            className="mt-1 h-10 w-full rounded-lg border bg-background px-3"
+            className="mt-1  w-full  border bg-background "
           />
         </label>
       </div>
-      <button
-        onClick={save}
-        className="mt-4 min-h-10 rounded-lg border px-4 text-sm hover:bg-accent"
-      >
+      <Button variant="outline" onClick={save} className="mt-4   border  text-sm hover:bg-accent">
         Save local configuration draft
-      </button>
+      </Button>
       <p className="mt-2 text-xs text-muted-foreground">
         Invitations, teams, audit retention, SSO verification, and SCIM provisioning remain disabled
         until an organization backend validates this configuration.
@@ -385,27 +404,28 @@ function McpPanel({ scope }: { scope: string }) {
       </h2>
       <div className="mt-3">{unavailable("MCP discovery")}</div>
       <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
-        <input
+        <Input
           aria-label="Server name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Server name"
-          className="h-10 rounded-lg border bg-background px-3"
+          className="  border bg-background "
         />
-        <input
+        <Input
           aria-label="HTTPS endpoint"
           value={endpoint}
           onChange={(e) => setEndpoint(e.target.value)}
           placeholder="https://server.example/mcp"
-          className="h-10 rounded-lg border bg-background px-3"
+          className="  border bg-background "
         />
-        <button
+        <Button
+          variant="outline"
           disabled={!name.trim() || !endpoint.trim()}
           onClick={add}
-          className="min-h-10 rounded-lg border px-4 text-sm disabled:opacity-40"
+          className="  border  text-sm disabled:opacity-40"
         >
           Add unverified draft
-        </button>
+        </Button>
       </div>
       <ul className="mt-4 space-y-2">
         {servers.map((server) => (
@@ -418,16 +438,17 @@ function McpPanel({ scope }: { scope: string }) {
               </span>
             </span>
             <span className="rounded-full bg-amber-500/10 px-2 py-1 text-xs">Unverified</span>
-            <button
+            <Button
+              variant="ghost"
               onClick={() => {
                 const next = servers.filter((item) => item.id !== server.id);
                 setServers(next);
                 saveOmega(scope, "mcp", next);
               }}
-              className="p-2 text-xs"
+              className=" text-xs"
             >
               Remove
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
@@ -563,24 +584,25 @@ function AgentPanel() {
         </div>
       </dl>
       <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
-        <input
+        <Input
           aria-label="Agent name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Agent name"
-          className="h-10 rounded-lg border bg-background px-3"
+          className="  border bg-background "
         />
-        <input
+        <Input
           aria-label="Agent instructions"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Instructions"
-          className="h-10 rounded-lg border bg-background px-3"
+          className="  border bg-background "
         />
-        <button
+        <Button
+          variant="outline"
           disabled={saving || !name.trim() || !prompt.trim()}
           onClick={() => void add()}
-          className="min-h-10 rounded-lg border px-4 text-sm disabled:opacity-40"
+          className="  border  text-sm disabled:opacity-40"
         >
           {saving ? (
             <span className="spec400-loading-label">
@@ -590,16 +612,17 @@ function AgentPanel() {
           ) : (
             "Save agent"
           )}
-        </button>
+        </Button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          className="min-h-10 rounded-lg border px-3 text-sm"
+        <Button
+          variant="outline"
+          className="  border  text-sm"
           onClick={() => fileRef.current?.click()}
         >
           <Upload className="mr-2 inline h-4 w-4" />
           Import agent
-        </button>
+        </Button>
         <input
           ref={fileRef}
           className="sr-only"
@@ -646,15 +669,19 @@ function AgentPanel() {
                 {new Date(agent.updated_at).toLocaleDateString()}
               </p>
               <div className="mt-3 flex gap-1">
-                <button
-                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="grid   place-items-center  hover:bg-accent"
                   aria-label={`Analytics for ${agent.name}`}
                   onClick={() => setAnalyticsAgent(agent)}
                 >
                   <BarChart3 className="h-4 w-4" />
-                </button>
-                <button
-                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="grid   place-items-center  hover:bg-accent"
                   aria-label={`Edit ${agent.name}`}
                   onClick={() => {
                     setSelected(agent);
@@ -662,9 +689,11 @@ function AgentPanel() {
                   }}
                 >
                   <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="grid   place-items-center  hover:bg-accent"
                   aria-label={`Version history for ${agent.name}`}
                   onClick={() => {
                     setSelected(agent);
@@ -672,9 +701,11 @@ function AgentPanel() {
                   }}
                 >
                   <History className="h-4 w-4" />
-                </button>
-                <button
-                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="grid   place-items-center  hover:bg-accent"
                   aria-label={`Export ${agent.name}`}
                   onClick={() => {
                     const blob = new Blob([JSON.stringify(exportAgent(agent), null, 2)], {
@@ -693,9 +724,11 @@ function AgentPanel() {
                   }}
                 >
                   <Download className="h-4 w-4" />
-                </button>
-                <button
-                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="grid   place-items-center  hover:bg-accent"
                   aria-label={`Duplicate ${agent.name}`}
                   onClick={async () => {
                     try {
@@ -710,9 +743,10 @@ function AgentPanel() {
                   }}
                 >
                   <Copy className="h-4 w-4" />
-                </button>
-                <button
-                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="grid   place-items-center  hover:bg-accent"
                   aria-label={`${agent.archived_at ? "Restore" : "Archive"} ${agent.name}`}
                   onClick={async () => {
                     const archived = !agent.archived_at;
@@ -738,7 +772,7 @@ function AgentPanel() {
                   ) : (
                     <Archive className="h-4 w-4" />
                   )}
-                </button>
+                </Button>
               </div>
             </li>
           ))
@@ -844,13 +878,14 @@ function PipelinePanel({ scope }: { scope: string }) {
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         {nodeTypes.map((type) => (
-          <button
+          <Button
+            variant="outline"
             key={type}
             onClick={() => add(type)}
-            className="min-h-10 rounded-lg border px-3 text-xs hover:bg-accent"
+            className="  border  text-xs hover:bg-accent"
           >
             Add {type}
-          </button>
+          </Button>
         ))}
       </div>
       <ol className="mt-4 flex gap-2 overflow-x-auto pb-2">

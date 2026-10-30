@@ -2,6 +2,7 @@ import { NovaLogo } from "@/components/NovaLogo";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/PublicShell";
 import { PublicAction, PublicHero } from "@/components/public/PublicSections";
+import { Button } from "@/components/ui/button";
 import { ArrowUp, FileText, MessageSquare, Plus, Search } from "lucide-react";
 
 const examples = [
@@ -33,7 +34,12 @@ export function ProductOverview() {
   const example = examples[selected];
   return (
     <PublicShell>
-      <main id="main-content" tabIndex={-1} className="public-overview">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="public-overview"
+        data-ui-reference="grok-product-overview"
+      >
         <PublicHero eyebrow="" title={<>Chat, learn and create in KovaGPT.</>} description="">
           <PublicAction to="/">Open KovaGPT</PublicAction>
           <PublicAction to="/download" secondary>
@@ -41,7 +47,11 @@ export function ProductOverview() {
           </PublicAction>
         </PublicHero>
 
-        <section className="public-workflow-example" aria-labelledby="workflow-example-title">
+        <section
+          className="public-workflow-example"
+          data-ui-reference="chatgpt-conversation-example"
+          aria-labelledby="workflow-example-title"
+        >
           <aside className="public-example-sidebar" aria-hidden="true">
             <span className="public-example-sidebar-brand">
               <NovaLogo decorative className="h-6 w-6" /> KovaGPT
@@ -67,15 +77,17 @@ export function ProductOverview() {
               <h2 id="workflow-example-title">One conversation. Many possibilities.</h2>
               <div className="public-example-options" role="group" aria-label="Choose an example">
                 {examples.map((item, index) => (
-                  <button
+                  <Button
                     key={item.label}
                     type="button"
+                    variant={selected === index ? "secondary" : "ghost"}
+                    size="sm"
                     aria-pressed={selected === index}
                     aria-controls="workflow-example-content"
                     onClick={() => setSelected(index)}
                   >
                     {item.label}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

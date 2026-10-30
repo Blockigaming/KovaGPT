@@ -31,7 +31,14 @@ function fixture(count = 8) {
   const window = { location: { href: "https://kova.test/library" } };
   const pickerModule = loadUiModule("src/components/ui/searchable-picker.tsx", {
     react: pickerHooks.react,
-    "lucide-react": primitiveNames(["Check", "ChevronDown"]),
+    "./reference-icons": primitiveNames(["Check", "ChevronDown"]),
+    "./select": primitiveNames([
+      "Select",
+      "SelectContent",
+      "SelectItem",
+      "SelectTrigger",
+      "SelectValue",
+    ]),
     "./command": primitiveNames([
       "Command",
       "CommandEmpty",
@@ -146,7 +153,7 @@ function fixture(count = 8) {
 }
 
 for (const count of [0, 7, 8]) {
-  test(`${count} real folders preserves the seven-folder native/search threshold and Unfiled`, async () => {
+  test(`${count} real folders preserves the seven-folder themed/search threshold and Unfiled`, async () => {
     const f = fixture(count);
     await f.ready();
     assert.equal(f.picker().props.options.length, count);
@@ -154,10 +161,10 @@ for (const count of [0, 7, 8]) {
     assert.equal(f.picker().props.value, "");
     assert.equal(f.picker().props.disabled, false);
     const tree = f.pickerTree();
-    assert.equal(tree.type, count > 7 ? "Popover" : "select");
+    assert.equal(tree.type, count > 7 ? "Popover" : "Select");
     if (count <= 7) {
-      assert.equal(elements(tree, (node) => node.type === "option").length, count + 1);
-      assert.equal(elements(tree, (node) => node.type === "option")[0].props.value, "");
+      assert.equal(elements(tree, (node) => node.type === "SelectItem").length, count + 1);
+      assert.equal(elements(tree, (node) => node.type === "SelectItem")[0].props.value, "option:");
     }
   });
 }

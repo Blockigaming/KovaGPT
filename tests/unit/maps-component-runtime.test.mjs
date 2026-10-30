@@ -171,6 +171,8 @@ function fixture({ approved = true, lockdown = false } = {}) {
     },
     "@tanstack/react-router": { useNavigate: () => (value) => calls.push(["navigate", value]) },
     "lucide-react": {},
+    "@/components/ui/button": { Button: "button" },
+    "@/components/ui/input": { Input: "input" },
     "maplibre-gl/dist/maplibre-gl.css": {},
     "@/components/auth/ClerkSafe": { useUser: () => user },
     "@/lib/maps-release-gate": {

@@ -67,6 +67,9 @@ globalThis.startLifetime = () => () => undefined;`);
 const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
   helpers,
   React,
+  // This reused send fixture does not render controls; keep its transparent
+  // shared Button dependency bound while exercising the actual chat callbacks.
+  Button: "button",
   renderToStaticMarkup,
   deferred,
   settle,
@@ -203,6 +206,7 @@ function bridgeFixture({ active = null } = {}) {
     editingMessage: null,
     attachments: [],
     canWriteChatHistory: () => true,
+    historyReady: true,
     principalReady: true,
     isSignedIn: true,
     userKey: "owner-a",
@@ -260,7 +264,12 @@ function bridgeFixture({ active = null } = {}) {
     },
     loadChatHistoryDevice: async (owner) => ({ ownerId: owner }),
     CHAT_HISTORY_CHANGED_EVENT: "history-changed",
-    window: { addEventListener() {}, removeEventListener() {} },
+    scheduleDialogFocusReturn() {},
+    window: {
+      location: { href: "https://local.invalid/" },
+      addEventListener() {},
+      removeEventListener() {},
+    },
   };
   context.voiceTurnModule = Promise.resolve({
     awaitSavedComposerVoiceTurn: context.awaitSavedComposerVoiceTurn,
@@ -414,6 +423,29 @@ test("the actual route eligibility refuses pending attachments and retains compl
   assert.equal(f.state.items.length, 0);
   f.context.attachments = [{ status: "complete" }];
   assert.equal(f.context.readEligible(), true);
+});
+
+test("Voice waits for the same initialized history boundary as Send before opening a session", () => {
+  const f = bridgeFixture();
+  // A not-yet-registered lazy controller can still report writable. It does not
+  // qualify an empty Voice session before the owner's device snapshot is ready.
+  f.context.historyReady = false;
+  f.context.composerVoiceEligible = f.context.readEligible();
+  assert.equal(f.context.composerVoiceEligible, false);
+  f.context.change("voice");
+  assert.equal(f.state.mode, null);
+  assert.equal(f.state.items.length, 0);
+  assert.equal(f.state.sends.length, 0);
+  assert.equal(f.context.composerVoiceSessionRef.current, null);
+
+  f.context.historyReady = true;
+  f.context.composerVoiceEligible = f.context.readEligible();
+  assert.equal(f.context.composerVoiceEligible, true);
+  f.context.change("voice");
+  assert.equal(f.state.mode, "voice");
+  assert.equal(f.state.items.length, 1);
+  assert.equal(f.state.sends.length, 0, "Opening never submits a provider request");
+  assert.equal(f.context.composerVoiceSessionRef.current.ownerId, "owner-a");
 });
 
 test("stale chat voice cancellation disposes its own request without clearing destination tool, queue or notice", async () => {

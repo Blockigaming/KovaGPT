@@ -18,8 +18,8 @@ export function SignUpPrompt({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm rounded-[28px] border-border/70 p-7 shadow-2xl">
-        <DialogHeader>
+      <DialogContent data-ui-reference="chatgpt.auth.sign-in-prompt">
+        <DialogHeader className="text-center">
           <div className="flex justify-center mb-2">
             <NovaLogo className="w-8 h-8" />
           </div>
@@ -31,19 +31,32 @@ export function SignUpPrompt({
         </DialogHeader>
         <div className="flex flex-col gap-2 mt-2">
           <SignInButton mode="modal">
-            <Button className="h-11 w-full rounded-full">Log in</Button>
+            <Button
+              size="prominent"
+              data-ui-reference="chatgpt.auth.sign-in-prompt.action"
+              className=" w-full "
+            >
+              Log in
+            </Button>
           </SignInButton>
           <SignUpButton mode="modal">
-            <Button variant="outline" className="h-11 w-full rounded-full">
+            <Button
+              size="prominent"
+              data-ui-reference="chatgpt.auth.sign-in-prompt.action"
+              variant="outline"
+              className=" w-full "
+            >
               Sign up
             </Button>
           </SignUpButton>
-          <button
+          <Button
+            data-ui-reference="chatgpt.auth.sign-in-prompt.action"
+            variant="link"
             onClick={() => onOpenChange(false)}
             className="text-xs text-muted-foreground hover:underline mt-1"
           >
             Maybe later
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

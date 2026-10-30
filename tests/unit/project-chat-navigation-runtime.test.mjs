@@ -494,10 +494,15 @@ const destinations = (count = 2) =>
     archived_at: null,
   }));
 
-test("Move to project is a 44px pointer control with searchable eligible destinations and confirmed refresh", async () => {
+test("Move to project uses the shared icon Button with searchable eligible destinations and confirmed refresh", async () => {
   const f = moveFixture();
   const trigger = f.find((node) => node.props["aria-label"] === "Move Shared chat to project")[0];
-  assert.match(trigger.props.className, /h-11 w-11/);
+  assert.equal(trigger.type, "Button");
+  assert.equal(trigger.props.size, "icon");
+  assert.equal(trigger.props.variant, "ghost");
+  const button = readFileSync("src/components/ui/button.tsx", "utf8");
+  assert.match(button, /icon: "h-9 w-9 p-0 \[@media\(pointer:coarse\)\]:min-w-11"/);
+  assert.match(button, /\[@media\(pointer:coarse\)\]:min-h-11/);
   f.open();
   await f.finishList([
     ...destinations(8),

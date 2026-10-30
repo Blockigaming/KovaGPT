@@ -20,44 +20,56 @@ const props = {
 };
 const classes = (node) => node.props.className.split(/\s+/);
 
+const nodes = (value) =>
+  value && typeof value === "object"
+    ? [value, ...value.children.flat(Infinity).flatMap(nodes)]
+    : [];
+const contents = (value) =>
+  value && typeof value === "object"
+    ? value.children.flat(Infinity).map(contents).join("")
+    : value == null || typeof value === "boolean"
+      ? ""
+      : String(value);
+const priceRow = (card) =>
+  card.children.find((child) => child?.props?.className?.includes("md:min-h-[3.25rem]"));
+
 test("stacked phone cards use natural rows and reserve alignment only from md", () => {
   const card = PlanCard(props);
   assert.ok(classes(card).includes("grid"));
-  for (const utility of ["row-span-7", "h-full", "grid-rows-subgrid"]) {
+  for (const utility of ["h-full", "grid-rows-subgrid"]) {
     assert.ok(!classes(card).includes(utility));
     assert.ok(classes(card).includes(`md:${utility}`));
   }
+  assert.ok(!classes(card).some((value) => /^row-span-/.test(value)));
+  assert.ok(classes(card).includes("md:row-span-6"));
   assert.ok(classes(card).includes("rounded-2xl"));
-  assert.ok(classes(card.children[0]).includes("hidden"));
-  assert.ok(classes(card.children[0]).includes("md:flex"));
-  assert.ok(!classes(card.children[1]).includes("mt-3"));
-  assert.ok(classes(card.children[1]).includes("md:mt-3"));
   assert.match(
     css,
     /@media \(max-width: 767px\)\s*\{\s*\.kova-pricing-page \.kova-plan-card\s*\{\s*row-gap: 16px;/,
   );
 });
 
-test("popular badge remains visible and price, features, and CTA behavior survive compact layout", () => {
+test("plain plan cards retain the plan name, price, features and CTA behavior", () => {
   const onCta = () => {};
   const card = PlanCard({ ...props, highlight: true, ctaDisabled: true, onCta });
-  const badge = card.children[0];
-  assert.ok(classes(badge).includes("flex"));
-  assert.ok(!classes(badge).includes("hidden"));
-  assert.equal(badge.props["aria-hidden"], false);
-  assert.equal(badge.children[0].children[0], "MOST POPULAR");
-  assert.equal(card.children[2].children[0].children[0].children[0], "$0");
-  const button = card.children.find((child) => child.type === "button");
+  const descendants = nodes(card);
+  assert.equal(contents(descendants.find((child) => child.type === "h2")), "Free");
+  assert.ok(contents(priceRow(card)).includes("$0"));
+  assert.ok(!contents(card).includes("MOST POPULAR"), "Plan choices use plain reference titles");
+  const button = descendants.find((child) => child.type === "button");
   assert.equal(button.props.onClick, onCta);
   assert.equal(button.props.disabled, true);
-  assert.equal(button.children[0], "Get started");
+  assert.equal(contents(button), "Get started");
   assert.ok(classes(button).includes("h-11"));
-  assert.equal(card.children.find((child) => child.type === "ul").children[0].length, 2);
+  assert.deepEqual(descendants.filter((child) => child.type === "li").map(contents), [
+    "Feature one",
+    "Feature two",
+  ]);
 });
 
 test("shared desktop price rows top-align primary prices regardless of the tax notice", () => {
-  const free = PlanCard(props).children[2];
-  const paid = PlanCard({ ...props, name: "Plus", price: "$16", taxNotice: true }).children[2];
+  const free = priceRow(PlanCard(props));
+  const paid = priceRow(PlanCard({ ...props, name: "Plus", price: "$16", taxNotice: true }));
   for (const row of [free, paid]) {
     assert.ok(classes(row).includes("justify-start"));
     assert.ok(!classes(row).includes("justify-end"));

@@ -1266,7 +1266,17 @@ test("presentation boundary cannot initiate media, requests, storage or timers",
     /authFetch|getUserMedia|MediaRecorder|localStorage|sessionStorage|\bfetch\s*\(|setTimeout|setInterval|useEffect|useLayoutEffect/,
   );
   const styles = readFileSync("src/components/composer-voice.css", "utf8");
-  assert.doesNotMatch(styles, /@keyframes|animation\s*:/);
+  const restingOrb = styles.match(/\.kova-voice-mark\s*\{([^}]+)\}/)?.[1];
+  assert.ok(restingOrb);
+  assert.doesNotMatch(restingOrb, /animation\s*:/, "Idle voice never pretends to be recording");
+  assert.match(
+    styles,
+    /\.kova-voice-dialog:is\(\[data-voice-phase="recording"\], \[data-voice-phase="speaking"\]\)[\s\S]*?\.kova-voice-mark\s*\{[^}]*animation:/,
+  );
+  assert.match(
+    styles,
+    /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.kova-voice-mark\s*\{\s*animation: none/,
+  );
   assert.match(styles, /safe-area-inset-top/);
   assert.match(styles, /safe-area-inset-bottom/);
   assert.match(styles, /focus-visible/);

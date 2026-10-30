@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "./reference-icons";
 
 import { cn } from "@/lib/utils";
 
@@ -18,9 +18,10 @@ const SelectTrigger = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Trigger
     data-slot="select-trigger"
+    data-ui-reference="chatgpt.select-control"
     ref={ref}
     className={cn(
-      "font-[family-name:var(--font-ui)] flex h-11 w-full min-w-0 max-w-full items-center justify-between gap-2 whitespace-nowrap rounded-[var(--kova-radius-input)] border border-input bg-background px-3 py-2 text-sm shadow-none ring-offset-background cursor-pointer data-[placeholder]:text-muted-foreground focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:min-w-0 [&>span]:line-clamp-1 [&>span]:text-start",
+      "font-[family-name:var(--font-ui)] flex h-9 w-full min-w-0 max-w-full items-center justify-between gap-2 whitespace-nowrap rounded-[8px] border border-input bg-transparent px-3 py-0 text-base font-medium leading-5 shadow-none ring-offset-background cursor-pointer transition-colors duration-150 hover:border-foreground/25 data-[placeholder]:text-muted-foreground focus-visible:outline-none focus-visible:border-foreground/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm [@media(pointer:coarse)]:min-h-11 [&>span]:min-w-0 [&>span]:line-clamp-1 [&>span]:text-start",
       className,
     )}
     {...props}
@@ -68,21 +69,23 @@ const SelectContent = React.forwardRef<
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       data-slot="select-content"
+      data-ui-reference="chatgpt.menu.select"
       ref={ref}
       className={cn(
-        "font-[family-name:var(--font-ui)] relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-[var(--kova-radius-menu)] border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--radix-select-content-transform-origin)",
+        "font-[family-name:var(--font-ui)] relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-hidden rounded-[var(--kova-radius-menu)] border border-border bg-popover text-popover-foreground shadow-[var(--shadow-floating)] transition-[opacity,transform] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:duration-[350ms] data-[state=closed]:duration-200 origin-(--radix-select-content-transform-origin)",
         position === "popper" &&
           "min-w-[min(var(--radix-select-trigger-width,8rem),var(--radix-select-content-available-width,100vw),calc(100vw-1rem))] max-w-[min(var(--radix-select-content-available-width,100vw),calc(100vw-1rem))] data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className,
       )}
       position={position}
       collisionPadding={collisionPadding}
+      {...(position === "popper" ? { updatePositionStrategy: "always" as const } : {})}
       {...props}
     >
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          "p-2",
+          "p-1.5",
           position === "popper" && "h-[var(--radix-select-trigger-height)] w-full min-w-0",
         )}
       >
@@ -100,7 +103,7 @@ const SelectLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn("px-3 py-2 text-xs font-medium text-muted-foreground", className)}
+    className={cn("px-2 py-1.5 text-xs font-medium text-muted-foreground", className)}
     {...props}
   />
 ));
@@ -112,9 +115,11 @@ const SelectItem = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Item
     data-slot="select-item"
+    data-ui-reference="chatgpt.menu.select-item"
+    data-select-value={props.value}
     ref={ref}
     className={cn(
-      "relative flex min-h-11 w-full min-w-0 cursor-default select-none items-center [overflow-wrap:anywhere] rounded-[var(--kova-radius-compact)] py-2 pl-3 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex min-h-8 w-full min-w-0 cursor-pointer select-none items-center [overflow-wrap:anywhere] rounded-[6px] py-1.5 pl-2 pr-8 text-sm leading-5 outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [@media(pointer:coarse)]:min-h-11",
       className,
     )}
     {...props}
@@ -135,7 +140,7 @@ const SelectSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Separator
     ref={ref}
-    className={cn("-mx-1 my-1 h-px bg-muted", className)}
+    className={cn("-mx-1.5 my-1.5 h-px bg-border", className)}
     {...props}
   />
 ));

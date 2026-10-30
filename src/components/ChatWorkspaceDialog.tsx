@@ -1,3 +1,6 @@
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { Loader2, Pin, PinOff, Sliders } from "lucide-react";
@@ -80,6 +83,7 @@ export function ChatWorkspaceDialog(props: WorkspaceProps) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent
+        data-ui-reference="claude.project-instructions.dialogcontent"
         className="sm:max-w-[640px]"
         onCloseAutoFocus={(event) => {
           if (props.returnFocusUrl === undefined) return;
@@ -508,19 +512,21 @@ function ChatWorkspaceContents({
         className="flex gap-1 rounded-full bg-muted/50 p-1"
       >
         {(["rules", "files"] as Tab[]).map((value) => (
-          <button
+          <Button
+            data-ui-reference="claude.project-instructions.control"
+            variant="ghost"
             key={value}
             ref={value === "files" ? filesTabRef : undefined}
             type="button"
             role="tab"
             aria-selected={tab === value}
             onClick={() => setTab(value)}
-            className={`min-h-11 flex-1 rounded-full px-3 text-sm font-medium transition ${
+            className={` flex-1   text-sm font-medium transition ${
               tab === value ? "bg-background shadow-sm" : "text-muted-foreground"
             }`}
           >
             {value === "rules" ? "Rules" : "Pinned files"}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -542,13 +548,14 @@ function ChatWorkspaceContents({
               <label htmlFor="chat-rules" className="text-xs font-medium text-muted-foreground">
                 Rules for this chat (highest priority)
               </label>
-              <textarea
+              <Textarea
+                data-ui-reference="claude.project-instructions.textarea"
                 id="chat-rules"
                 value={instructions}
                 onChange={(event) => setInstructions(event.target.value.slice(0, MAX_RULES_LENGTH))}
                 rows={6}
                 placeholder="Always answer in British English and keep responses under 150 words."
-                className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/30"
+                className="w-full resize-y  border border-border bg-background   text-sm outline-none focus:border-foreground/30"
               />
               <p className="text-xs text-muted-foreground">
                 {instructions.length.toLocaleString()} / {MAX_RULES_LENGTH.toLocaleString()}{" "}
@@ -556,35 +563,40 @@ function ChatWorkspaceContents({
                 instructions.
               </p>
               <label className="flex min-h-11 items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+                <Checkbox
+                  data-ui-reference="chatgpt.checkbox"
+
                   checked={enabled}
-                  onChange={(event) => {
-                    setEnabled(event.target.checked);
-                    void persistRules(event.target.checked);
+                  onCheckedChange={(checked) => {
+                    setEnabled(checked === true);
+                    void persistRules(checked === true);
                   }}
                   className="h-4 w-4"
                 />
                 Use these rules for new messages
               </label>
               <div className="flex flex-wrap gap-2">
-                <button
+                <Button
+                  data-ui-reference="claude.project-instructions.control"
+                  variant="default"
                   type="button"
                   onClick={() => void persistRules()}
                   disabled={saving || !chatId}
                   aria-busy={saving}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
+                  className="inline-flex  items-center gap-2  bg-foreground  text-sm font-medium text-background transition hover:opacity-90 disabled:opacity-50"
                 >
                   {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save rules
-                </button>
-                <button
+                </Button>
+                <Button
+                  data-ui-reference="claude.project-instructions.control"
+                  variant="outline"
                   type="button"
                   onClick={() => void reset()}
                   disabled={saving || (!instructions && !enabled)}
-                  className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium hover:bg-accent disabled:opacity-50"
+                  className="inline-flex  items-center  border border-border  text-sm font-medium hover:bg-accent disabled:opacity-50"
                 >
                   Clear
-                </button>
+                </Button>
               </div>
               {!isSignedIn && !temporary && (
                 <p className="text-xs text-muted-foreground">
@@ -644,7 +656,9 @@ function ChatWorkspaceContents({
                           )}
                         </div>
                         <div className="flex gap-1">
-                          <button
+                          <Button
+                            data-ui-reference="claude.project-instructions.control"
+                            variant="outline"
                             ref={(element) => {
                               if (element) inspectButtonsRef.current.set(pin.id, element);
                               else inspectButtonsRef.current.delete(pin.id);
@@ -661,11 +675,13 @@ function ChatWorkspaceContents({
                               void loadPins();
                             }}
                             aria-label={`Inspect ${pinName(pin)}`}
-                            className="inline-flex min-h-11 items-center rounded-full border border-border px-3 text-sm font-medium hover:bg-accent"
+                            className="inline-flex  items-center  border border-border  text-sm font-medium hover:bg-accent"
                           >
                             Inspect
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            data-ui-reference="claude.project-instructions.control"
+                            variant="outline"
                             ref={(element) => {
                               if (element) unpinButtonsRef.current.set(pin.id, element);
                               else unpinButtonsRef.current.delete(pin.id);
@@ -674,7 +690,7 @@ function ChatWorkspaceContents({
                             onClick={(event) => void removePin(pin, event.currentTarget)}
                             disabled={pinBusy !== null}
                             aria-busy={pinBusy === pin.id}
-                            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
+                            className="inline-flex  items-center gap-1.5  border border-border  text-sm font-medium hover:bg-accent disabled:opacity-50"
                             aria-label={`Unpin ${pinName(pin)}`}
                           >
                             {pinBusy === pin.id ? (
@@ -683,7 +699,7 @@ function ChatWorkspaceContents({
                               <PinOff className="h-3.5 w-3.5" />
                             )}
                             Unpin
-                          </button>
+                          </Button>
                         </div>
                       </li>
                     );
@@ -700,16 +716,18 @@ function ChatWorkspaceContents({
                     ` ${context.skippedCount} pinned item(s) omitted by the context budget; their details are not available in this preview.`}
                 </p>
               )}
-              <button
+              <Button
+                data-ui-reference="claude.project-instructions.control"
+                variant="outline"
                 ref={libraryButtonRef}
                 type="button"
                 onClick={(event) => void loadLibrary(event.currentTarget)}
                 disabled={libraryLoading}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
+                className="inline-flex  items-center justify-center gap-2  border border-border  text-sm font-medium hover:bg-accent disabled:opacity-50"
               >
                 <Pin className="h-4 w-4" />{" "}
                 {libraryOpen ? "Refresh Library choices" : "Choose a Library item to pin"}
-              </button>
+              </Button>
               {libraryOpen && (
                 <div
                   ref={libraryResultsRef}
@@ -726,13 +744,15 @@ function ChatWorkspaceContents({
                   ) : libraryError ? (
                     <div role="alert" className="text-sm text-destructive">
                       <p>{libraryError}</p>
-                      <button
+                      <Button
+                        data-ui-reference="claude.project-instructions.control"
+                        variant="link"
                         type="button"
                         onClick={(event) => void loadLibrary(event.currentTarget)}
-                        className="min-h-11 underline"
+                        className=" underline"
                       >
                         Retry Library choices
-                      </button>
+                      </Button>
                     </div>
                   ) : library.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
@@ -751,12 +771,14 @@ function ChatWorkspaceContents({
                           .filter((item) => !pinnedIds.has(item.id))
                           .map((item) => (
                             <li key={item.id}>
-                              <button
+                              <Button
+                                data-ui-reference="claude.project-instructions.control"
+                                variant="ghost"
                                 type="button"
                                 onClick={() => void addPin(item)}
                                 disabled={pinBusy !== null}
                                 aria-busy={pinBusy === item.id}
-                                className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-sm hover:bg-accent disabled:opacity-50"
+                                className="h-auto min-h-9 whitespace-normal rounded-[var(--kova-radius-compact)] py-2.5 flex  w-full items-center gap-2   text-left text-sm hover:bg-accent disabled:opacity-50"
                               >
                                 {pinBusy === item.id ? (
                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -764,7 +786,7 @@ function ChatWorkspaceContents({
                                   <Pin className="h-3.5 w-3.5" />
                                 )}
                                 <span className="truncate">{item.title}</span>
-                              </button>
+                              </Button>
                             </li>
                           ))}
                       </ul>
@@ -786,14 +808,16 @@ function ChatWorkspaceContents({
           {pinError && (
             <div role="alert" className="text-sm text-destructive">
               <p>{pinError}</p>
-              <button
+              <Button
+                data-ui-reference="claude.project-instructions.control"
+                variant="link"
                 type="button"
                 onClick={(event) => void loadPins(event.currentTarget)}
                 disabled={pinsLoading}
-                className="min-h-11 underline"
+                className=" underline"
               >
                 Retry pinned context
-              </button>
+              </Button>
             </div>
           )}
           {pinActionError && (
@@ -810,6 +834,7 @@ function ChatWorkspaceContents({
         }}
       >
         <DialogContent
+          data-ui-reference="claude.project-instructions.dialogcontent"
           closeLabel="Close pinned context"
           onCloseAutoFocus={(event) => {
             event.preventDefault();
@@ -847,13 +872,15 @@ function ChatWorkspaceContents({
             ) : pinError ? (
               <div role="alert" className="text-sm text-destructive">
                 <p>{pinError}</p>
-                <button
+                <Button
+                  data-ui-reference="claude.project-instructions.control"
+                  variant="link"
                   type="button"
                   onClick={(event) => void loadPins(event.currentTarget, true)}
-                  className="min-h-11 underline"
+                  className=" underline"
                 >
                   Retry inspection
-                </button>
+                </Button>
               </div>
             ) : inspectedItem ? (
               <>
@@ -903,28 +930,34 @@ function ChatWorkspaceContents({
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
+            <Button
+              data-ui-reference="claude.project-instructions.control"
+              variant="outline"
               type="button"
               onClick={closeInspection}
-              className="min-h-11 rounded-full border border-border px-4 text-sm font-medium hover:bg-accent"
+              className="  border border-border  text-sm font-medium hover:bg-accent"
             >
               Close inspection
-            </button>
-            <button
+            </Button>
+            <Button
+              data-ui-reference="claude.project-instructions.control"
+              variant="outline"
               type="button"
               onClick={(event) => void loadPins(event.currentTarget, true)}
               disabled={pinsLoading || pinBusy !== null}
-              className="min-h-11 rounded-full border border-border px-4 text-sm font-medium hover:bg-accent disabled:opacity-50"
+              className="  border border-border  text-sm font-medium hover:bg-accent disabled:opacity-50"
             >
               Refresh context
-            </button>
+            </Button>
             {inspectedPin && (
-              <button
+              <Button
+                data-ui-reference="claude.project-instructions.control"
+                variant="outline"
                 type="button"
                 onClick={(event) => void removePin(inspectedPin, event.currentTarget, true)}
                 disabled={pinBusy !== null}
                 aria-busy={pinBusy === inspectedPin.id}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium hover:bg-accent disabled:opacity-50"
+                className="inline-flex  items-center gap-2  border border-border  text-sm font-medium hover:bg-accent disabled:opacity-50"
               >
                 {pinBusy === inspectedPin.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -932,7 +965,7 @@ function ChatWorkspaceContents({
                   <PinOff className="h-4 w-4" />
                 )}{" "}
                 Unpin from this chat
-              </button>
+              </Button>
             )}
           </div>
         </DialogContent>

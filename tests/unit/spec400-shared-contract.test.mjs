@@ -11,24 +11,24 @@ test("400 owner requirements remain intact with the color override", () => {
   );
   assert.match(ledger.override, /9cc coloring/);
 });
-test("shared specification does not replace the baseline palette", () => {
+test("shared specification leaves the canonical ChatGPT palette and geometry in visual tokens", () => {
   const css = read("src/styles/spec400-system.css");
   for (const token of ["background", "foreground", "primary", "accent", "card", "sidebar"])
     assert.doesNotMatch(css, new RegExp(`--${token}\\s*:`));
   const geometry = read("src/styles/visual-tokens.css");
   assert.doesNotMatch(css, /--(?:radius|kova-radius-[a-z-]+|kova-sidebar(?:-rail)?-width)\s*:/);
   assert.match(geometry, /--radius: var\(--kova-radius-card\)/);
-  assert.match(geometry, /--kova-radius-card:\s*20px;/);
-  assert.match(geometry, /--kova-sidebar-width:\s*256px;/);
-  assert.match(geometry, /--kova-sidebar-rail-width:\s*72px;/);
+  assert.match(geometry, /--kova-radius-card:\s*16px;/);
+  assert.match(geometry, /--kova-sidebar-width:\s*260px;/);
+  assert.match(geometry, /--kova-sidebar-rail-width:\s*56px;/);
   const sidebar = read("src/styles/sidebar-core.css");
   assert.match(
     sidebar,
-    /\.kova-sidebar\[data-kova-core-sidebar\]\s*\{\s*width: var\(--kova-sidebar-width\);\s*min-width: var\(--kova-sidebar-width\)/,
+    /width: var\(--sidebar-expanded, var\(--kova-sidebar-width, 260px\)\);\s*min-width: var\(--sidebar-expanded, var\(--kova-sidebar-width, 260px\)\)/,
   );
   assert.match(
     sidebar,
-    /\.kova-sidebar-rail\[data-kova-core-rail\]\s*\{\s*width: var\(--kova-sidebar-rail-width\);\s*min-width: var\(--kova-sidebar-rail-width\)/,
+    /width: var\(--kova-sidebar-rail-width, 56px\);\s*min-width: var\(--kova-sidebar-rail-width, 56px\)/,
   );
 });
 test("all six locally hosted IBM font files are actual WOFF2 assets", () => {
@@ -62,16 +62,17 @@ test("settings sections are routable and appearance remains principal scoped", (
   assert.match(read("src/components/AppearanceSettings.tsx"), /Cross-device sync is\s+unavailable/);
 });
 test("expanded navigation does not retain a hidden rail width and fonts are scoped", () => {
-  const css = read("src/styles/spec400-system.css");
+  const css = read("src/styles/sidebar-core.css");
   assert.match(
     css,
-    /\.kova-sidebar-rail\[data-kova-core-rail\]\[data-state="closed"\] \{\s*display: none !important/,
+    /\.kova-sidebar-rail\[data-kova-core-rail\]\[data-state="closed"\] \{\s*width: 0;\s*min-width: 0;\s*padding-inline: 0;\s*visibility: hidden;\s*pointer-events: none/,
   );
-  assert.match(css, /--chat-body-font: var\(--font-ui, ui-sans-serif, system-ui, sans-serif\)/);
-  assert.match(css, /--font-sans: var\(--font-ui, ui-sans-serif, system-ui, sans-serif\)/);
+  const tokens = read("src/styles/visual-tokens.css");
+  assert.match(tokens, /--chat-body-font: var\(--font-ui\)/);
+  assert.match(tokens, /--font-sans: var\(--font-ui\)/);
   assert.match(
     read("src/styles/visual-tokens.css"),
-    /--font-ui: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif/,
+    /--font-ui:\s*ui-sans-serif, -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial/,
   );
   assert.match(
     read("src/components/Sidebar.tsx"),

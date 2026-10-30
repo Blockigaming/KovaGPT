@@ -137,7 +137,7 @@ test("auth dialog has one semantic title, one contained close target, and Escape
   const describedBy = await dialog.getAttribute("aria-describedby");
   expect(describedBy).toBeTruthy();
   await expect(page.locator(`[id="${describedBy}"]`)).toContainText(
-    "Continue with your configured sign-in method.",
+    "Welcome back. Log in to continue.",
   );
 
   const providerFeedback = dialog.getByText(

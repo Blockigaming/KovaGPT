@@ -42,9 +42,9 @@ test("signed-out workspace discovery keeps focused hierarchy and truthful contro
   await waitForKovaHydration(page);
   await expectOneMainWithoutOverflow(page);
   await expect(
-    page.getByRole("main").getByRole("heading", { name: "Plugins", exact: true }),
+    page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
-  const pluginSearch = page.getByPlaceholder("Search plugins", { exact: true });
+  const pluginSearch = page.getByPlaceholder("Search connections", { exact: true });
   await expect(pluginSearch).toBeVisible();
   await pluginSearch.fill("Gmail");
   await expect(page.getByRole("button", { name: "Connect Gmail", exact: true })).toBeVisible();

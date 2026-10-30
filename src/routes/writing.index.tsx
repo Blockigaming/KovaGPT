@@ -21,9 +21,10 @@ function WritingIndex() {
   return (
     <AppShell>
       <main
+        data-ui-reference="claude.artifacts.directory"
         id="main-content"
         tabIndex={-1}
-        className="min-h-full bg-background px-4 pb-16 pt-14 sm:px-6 lg:px-8"
+        className={"kova-tool-page " + "min-h-full bg-background px-4 pb-16 pt-14 sm:px-6 lg:px-8"}
       >
         <div className="mx-auto w-full max-w-5xl">
           <div className="mx-auto max-w-2xl text-center">

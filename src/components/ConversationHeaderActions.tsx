@@ -15,6 +15,7 @@ import {
   Paperclip,
   ArrowLeft,
   Files,
+  PanelRightOpen,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { exportConversationMarkdown, type Conversation } from "@/lib/chat-store";
@@ -64,20 +65,7 @@ function focusAfterRemoval() {
 }
 
 function OutputsIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <circle cx="5" cy="6" r="2.6" />
-      <circle cx="5" cy="18" r="2.6" />
-      <path d="M12 6h9M12 18h9" />
-    </svg>
-  );
+  return <PanelRightOpen aria-hidden="true" />;
 }
 
 function downloadOutput(output: ConversationOutput) {

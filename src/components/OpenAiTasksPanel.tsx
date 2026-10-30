@@ -1,3 +1,5 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -156,8 +158,8 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
               </p>
               <label className="block text-sm">
                 What should it do?
-                <textarea
-                  className="mt-1 block min-h-28 w-full rounded-lg border bg-background p-2"
+                <Textarea
+                  className="mt-1 block min-h-28 w-full border bg-background"
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   maxLength={8000}
@@ -165,21 +167,23 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
                 />
               </label>
               <div className="flex flex-wrap gap-2">
-                <button
+                <Button
+                  variant="default"
                   type="submit"
-                  className="min-h-11 rounded-lg bg-primary px-4 text-sm text-primary-foreground disabled:opacity-40"
+                  className="bg-primary text-sm text-primary-foreground disabled:opacity-40"
                   disabled={running || !input.trim() || !availability[operation]}
                 >
                   {running ? "Running task…" : "Run task"}
-                </button>
+                </Button>
                 {running && (
-                  <button
+                  <Button
+                    variant="outline"
                     type="button"
-                    className="min-h-11 rounded-lg border px-4 text-sm"
+                    className="border text-sm"
                     onClick={() => active.current?.abort()}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>

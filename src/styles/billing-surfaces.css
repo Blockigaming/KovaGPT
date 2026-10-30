@@ -226,17 +226,17 @@
   display: flex;
   width: fit-content;
   max-width: 100%;
-  min-height: 52px;
+  min-height: 48px;
   height: auto;
   margin-bottom: 24px;
   gap: 4px;
   padding: 4px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--kova-radius-button);
-  background: var(--surface-secondary);
+  background: var(--muted);
 }
 .kova-billing-tabs [role="tab"] {
-  min-height: 44px;
+  min-height: 40px;
   padding: 8px 16px;
   border-radius: var(--kova-radius-button);
   font-weight: 400;
@@ -300,15 +300,15 @@ body .kova-settings-dialog .kova-billing-workspace > [role="tabpanel"].kova-bill
   border-color: var(--foreground);
 }
 .kova-billing-plan-card h4 {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 400;
+  font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
+  font-size: 24px;
+  font-weight: 500;
   line-height: 28px;
 }
 .kova-billing-plan-price strong {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 500;
-  line-height: 40px;
+  line-height: 42px;
   font-variant-numeric: tabular-nums;
 }
 .kova-billing-plan-price span,

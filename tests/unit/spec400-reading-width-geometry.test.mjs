@@ -5,7 +5,7 @@ import postcss from "postcss";
 import { applyReadingPreferences } from "../../src/lib/appearance-preferences.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
-const assistant = postcss.parse(read("src/styles/assistant.css"));
+const workspace = postcss.parse(read("src/styles/spec400-chat.css"));
 const response = postcss.parse(read("src/components/response-action-refinement.css"));
 const rule = (sheet, selector) => {
   const matches = [];
@@ -18,7 +18,7 @@ const declaration = (node, property) => {
   assert.equal(declarations.length, 1, `Expected one ${property} declaration`);
   return declarations[0].value;
 };
-const message = rule(assistant, ".kova-assistant .kova-message");
+const message = rule(response, ".kova-message[data-message-role]");
 const column = rule(response, ".kova-message-reading-column");
 
 // Evaluate only the length arithmetic used by these source declarations. This
@@ -67,26 +67,19 @@ function length(expression, variables, available) {
   );
 }
 
-test("transcript and composer use the shared reading-width token", () => {
+test("the active transcript and conversation composer use the selected reading-width token", () => {
   const outerWidth = declaration(message, "max-width");
   assert.match(outerWidth, /var\(--kova-reading-width\)/);
   assert.doesNotMatch(outerWidth, /--chat-readable|--kova-content-max/);
   assert.equal(declaration(column, "width"), "100%");
   assert.equal(declaration(column, "min-width"), "0");
+  assert.equal(column.parent.type, "root", "The current unlayered column owns readable width");
   assert.equal(
-    column.parent.type,
-    "root",
-    "Unlayered column width must beat the legacy 48rem rule",
+    declaration(rule(workspace, ".spec400-composer-dock > .spec400-chat-input > *"), "width"),
+    "min(100%, var(--kova-reading-width))",
   );
-  assert.equal(
-    declaration(rule(assistant, ".kova-assistant .kova-chat-column"), "max-width"),
-    "var(--kova-reading-width)",
-  );
-  assistant.walkAtRules("container", (node) => {
-    if (node.params === "chat-canvas (min-width: 856px)") {
-      assert.doesNotMatch(node.toString(), /\.kova-message\b/);
-    }
-  });
+  assert.equal(declaration(message, "margin-inline"), "auto");
+  assert.match(read("src/components/ActiveChatTranscript.tsx"), /data-chat-transcript="true"/);
 });
 
 test("composer and transcript edges agree for classic and overlay scrollbars without clipping focus or Jump", () => {
@@ -95,7 +88,10 @@ test("composer and transcript edges agree for classic and overlay scrollbars wit
   const input = rule(chat, ".spec400-composer-dock > .spec400-chat-input");
   const content = rule(chat, ".spec400-composer-dock > .spec400-chat-input > *");
   assert.equal(
-    declaration(rule(assistant, ".kova-assistant .kova-conversation-scroll"), "scrollbar-gutter"),
+    declaration(
+      rule(response, ".kova-conversation-scroll[data-chat-transcript]"),
+      "scrollbar-gutter",
+    ),
     "stable",
   );
   assert.equal(declaration(input, "scrollbar-gutter"), "stable");

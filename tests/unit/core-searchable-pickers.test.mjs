@@ -54,7 +54,7 @@ const options = (count) =>
     label: `Choice ${index + 1}`,
   }));
 
-test("short dynamic lists remain native; the eighth real choice enables search", () => {
+test("short dynamic lists use the themed select; the eighth real choice enables search", () => {
   for (const count of [0, 3, 4, 7, 8]) {
     const render = harness(pickerPath, "SearchablePicker");
     const changes = [];
@@ -70,10 +70,19 @@ test("short dynamic lists remain native; the eighth real choice enables search",
       "aria-invalid": true,
     });
     if (count <= 7) {
-      assert.equal(tree.type, "select");
-      assert.equal(find(tree, "option").length, count + 1);
-      tree.props.onChange({ target: { value: "id-2" } });
-      assert.deepEqual(changes, ["id-2"]);
+      assert.equal(tree.type, "Select");
+      assert.equal(find(tree, "select").length, 0);
+      assert.equal(find(tree, "SelectItem").length, count + 1);
+      const trigger = find(tree, "SelectTrigger")[0];
+      assert.equal(trigger.props.id, "source-picker");
+      assert.equal(trigger.props["aria-label"], "Connected source");
+      assert.equal(trigger.props["aria-describedby"], "source-help source-error");
+      assert.equal(trigger.props["aria-invalid"], true);
+      tree.props.onValueChange("option:");
+      assert.deepEqual(changes, [""]);
+      if (count === 0) continue;
+      tree.props.onValueChange("option:id-2");
+      assert.deepEqual(changes, ["", "id-2"]);
     } else {
       assert.equal(tree.type, "Popover");
       assert.equal(find(tree, "select").length, 0);
@@ -134,6 +143,51 @@ test("search matches visible labels, keeps duplicate-label ids distinct and mark
   assert.deepEqual(changes, ["second"]);
 });
 
+test("short themed lists preserve empty values and duplicate labels, reject disabled or unknown choices, and restore focus deliberately", () => {
+  const render = harness(pickerPath, "SearchablePicker");
+  const changes = [];
+  const props = {
+    options: [
+      { value: "", label: "No project" },
+      { value: "option:project-a", label: "Shared label" },
+      { value: "project-b", label: "Shared label" },
+      { value: "locked", label: "Unavailable", disabled: true },
+    ],
+    value: "",
+    onValueChange: (value) => changes.push(value),
+    searchLabel: "Choose a project",
+    restoreFocusOnSelect: false,
+  };
+  let tree = render(props);
+  assert.equal(tree.props.value, "option:");
+  const items = find(tree, "SelectItem");
+  assert.deepEqual(
+    items.map((item) => item.props.value),
+    ["option:", "option:option:project-a", "option:project-b", "option:locked"],
+  );
+  assert.equal(items[3].props.disabled, true);
+  let prevented = 0;
+  const event = { preventDefault: () => prevented++ };
+  find(tree, "SelectContent")[0].props.onCloseAutoFocus(event);
+  assert.equal(prevented, 0);
+  tree.props.onValueChange("option:locked");
+  tree.props.onValueChange("not-an-option");
+  assert.deepEqual(changes, []);
+  tree.props.onValueChange("option:option:project-a");
+  tree.props.onValueChange("option:project-b");
+  tree.props.onValueChange("option:");
+  assert.deepEqual(changes, ["option:project-a", "project-b", ""]);
+  find(tree, "SelectContent")[0].props.onCloseAutoFocus(event);
+  assert.equal(prevented, 1);
+  tree.props.onOpenChange(true);
+  find(tree, "SelectContent")[0].props.onCloseAutoFocus(event);
+  assert.equal(prevented, 1);
+  tree = render({ ...props, disabled: true });
+  assert.equal(tree.props.disabled, true);
+  tree.props.onValueChange("option:project-b");
+  assert.deepEqual(changes, ["option:project-a", "project-b", ""]);
+});
+
 test("optional direction reaches short controls and portalled lists without changing default selection or focus", () => {
   for (const dir of [undefined, "ltr", "rtl"]) {
     for (const count of [7, 8]) {
@@ -148,9 +202,10 @@ test("optional direction reaches short controls and portalled lists without chan
         onValueChange: (value) => changes.push(value),
       });
       if (count === 7) {
-        assert.equal(tree.type, "select");
+        assert.equal(tree.type, "Select");
         assert.equal(tree.props.dir, dir);
-        tree.props.onChange({ target: { value: "id-1" } });
+        assert.equal(find(tree, "SelectContent")[0].props.dir, dir);
+        tree.props.onValueChange("option:id-1");
       } else {
         assert.equal(find(tree, "button")[0].props.dir, dir);
         const content = find(tree, "PopoverContent")[0];
@@ -372,6 +427,7 @@ const branches = (count) =>
   }));
 function branchHarness(mobile, messages = []) {
   return harness("src/components/ChatBranchBar.tsx", "ChatBranchBar", {
+    "@/components/ui/button": { Button: "button" },
     "@/hooks/use-mobile": { useLayout: () => ({ isMobile: mobile }) },
     sonner: {
       toast: {
@@ -510,15 +566,13 @@ test("shared menu checkmarks preserve Radix radio semantics and item indicators"
   }
 });
 
-test("searchable selector geometry overrides legacy unlayered menu minimums", () => {
-  const css = readFileSync("src/styles/spec400-system.css", "utf8");
-  assert.match(css, /\.spec400-searchable-picker\s*\{[^}]*padding: 8px/s);
-  assert.match(
-    css,
-    /\.spec400-searchable-picker \[cmdk-input\]\s*\{[^}]*min-height: 44px;[^}]*height: 44px/s,
-  );
-  assert.match(
-    css,
-    /\.spec400-searchable-picker \[cmdk-item\],[\s\S]*?\.spec400-branch-options \[role="option"\]\s*\{[^}]*min-height: 44px/s,
-  );
+test("searchable selectors retain the reference row density and coarse-pointer targets", () => {
+  const command = source("src/components/ui/command.tsx");
+  const picker = source(pickerPath);
+  assert.match(command, /min-h-8/);
+  assert.match(command, /rounded-\[6px\]/);
+  assert.match(command, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(picker, /className="min-h-8 \[@media\(pointer:coarse\)\]:min-h-11"/);
+  const css = source("src/styles/spec400-system.css");
+  assert.doesNotMatch(css, /body \[role="option"\][^{]*\{[^}]*min-height:\s*44px/s);
 });

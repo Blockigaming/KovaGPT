@@ -18,10 +18,10 @@ test("workspace discovery routes expose one deliberate main landmark contract", 
   }
 });
 
-test("apps and plugins use one name and one truthful signed-out action", () => {
-  assert.match(routes.apps, /title="Plugins"/);
+test("Connections uses one page name and one truthful signed-out action", () => {
+  assert.match(routes.apps, /title="Connections"/);
   assert.match(routes.apps, /\{!isLoaded \? \([\s\S]*\{!isSignedIn && \(/);
-  assert.match(routes.apps, /Sign in to connect plugins/);
+  assert.match(routes.apps, /Sign in to connect tools/);
   assert.match(
     routes.apps,
     /<SignInButton mode="modal">\s*<Button variant="outline">Sign in<\/Button>/,
@@ -29,7 +29,7 @@ test("apps and plugins use one name and one truthful signed-out action", () => {
   assert.doesNotMatch(routes.apps, /FILTER_CATEGORIES|You haven't connected any apps/);
   assert.match(routes.apps, /GitHub connection status is unavailable/);
   assert.match(routes.apps, /min-h-11/);
-  assert.match(routes.apps, /role="status" aria-label="Loading plugins"/);
+  assert.match(routes.apps, /role="status" aria-label="Loading connections"/);
   assert.doesNotMatch(routes.apps, /aria-busy=\{!isLoaded \|\| undefined\}/);
 });
 

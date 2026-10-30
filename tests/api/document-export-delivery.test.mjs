@@ -298,6 +298,31 @@ function serverFixture(handler) {
   ).default;
 }
 
+test("failure pages allow only their exact trusted CSS while the final wrapper keeps default-deny", async () => {
+  const server = serverFixture((req) => send(req));
+  for (const [response, expectedPolicies] of [
+    [await send(request({ format: "invalid" })), 1],
+    [await server.fetch(request({ format: "invalid" }), {}, {}), 2],
+  ]) {
+    assert.equal(response.status, 400);
+    const html = await response.text();
+    const styles = [...html.matchAll(/<style>([\s\S]*?)<\/style>/gu)];
+    assert.equal(styles.length, 1);
+    const styleHash = createHash("sha256").update(styles[0][1]).digest("base64");
+    const policies = response.headers.get("content-security-policy").split(/,\s*(?=default-src )/u);
+    assert.equal(policies.length, expectedPolicies);
+    assert.equal(policies[0], `default-src 'none'; sandbox; style-src 'sha256-${styleHash}'`);
+    if (expectedPolicies === 2) {
+      assert.match(policies[1], /^default-src 'self';/u);
+      assert.match(policies[1], /style-src 'self' 'unsafe-inline'/u);
+    }
+    assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("set-cookie"), null);
+    assert.doesNotMatch(html, /<script|<iframe|<form|style=/iu);
+  }
+});
+
 test("final server wrapper retains only exact restrictive export POST policies and exact bytes", async () => {
   const server = serverFixture((req) => send(req));
   const response = await server.fetch(request(), {}, {});

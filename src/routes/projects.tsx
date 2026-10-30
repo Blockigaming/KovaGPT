@@ -870,10 +870,13 @@ function ProjectsPage() {
         aria-busy={isLoading || undefined}
         className="kova-page kova-secondary-page kova-core-page kova-directory kova-file-directory kova-projects-page kova-project-directory spec400-management spec400-projects pb-24 lg:pb-8"
         data-project-view={view}
+        data-ui-reference="claude.projects.directory"
       >
         <WorkspacePageHeader
           icon={FolderKanban}
           title="Projects"
+          reference="claude.projects.header"
+          readingTitle
           titleId="projects-title"
           description="Keep related chats, files, and instructions together."
           actions={
@@ -881,7 +884,7 @@ function ProjectsPage() {
               <div className="kova-project-header-actions flex flex-wrap gap-2">
                 <Button
                   variant="outline"
-                  className="kova-project-templates min-h-11"
+                  className="kova-project-templates"
                   aria-label="Project templates"
                   title="Project templates"
                   onClick={(event) => {
@@ -898,9 +901,9 @@ function ProjectsPage() {
                 </Button>
                 <Button
                   onClick={(event) => openCreate(event.currentTarget)}
-                  className="kova-project-create min-h-11"
+                  className="kova-project-create"
                 >
-                  <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                  <Plus className="h-4 w-4" aria-hidden="true" />
                   New project
                 </Button>
               </div>
@@ -926,19 +929,19 @@ function ProjectsPage() {
                   <div className="kova-project-invite-actions">
                     <Button
                       size="sm"
-                      className="min-h-11"
+
                       onClick={() => handleAccept(inv.invite_id)}
                     >
-                      <Check className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
+                      <Check className="w-3.5 h-3.5" aria-hidden="true" />
                       Accept
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="min-h-11"
+
                       onClick={() => handleDecline(inv.invite_id)}
                     >
-                      <XIcon className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
+                      <XIcon className="w-3.5 h-3.5" aria-hidden="true" />
                       Decline
                     </Button>
                   </div>
@@ -949,7 +952,10 @@ function ProjectsPage() {
         )}
 
         {isSignedIn && (isLoading || projects.length > 0) && (
-          <div className="kova-project-file-browser kova-project-directory-tools">
+          <div
+            className="kova-project-file-browser kova-project-directory-tools"
+            data-ui-reference="chatgpt.library.collection-controls"
+          >
             <p id="project-sort-explanation" className="sr-only">
               Last opened uses project visits on this device. Projects not opened here fall back to
               last activity.
@@ -1094,7 +1100,7 @@ function ProjectsPage() {
               Organize your conversations, files, and instructions in one place.
             </p>
             <SignInButton mode="modal">
-              <Button className="min-h-11">Sign in</Button>
+              <Button>Sign in</Button>
             </SignInButton>
           </section>
         ) : loadError ? (
@@ -1122,8 +1128,8 @@ function ProjectsPage() {
             description="Create a project to keep related chats, files, and instructions together."
             tip="Create one project for each long-running goal or team workspace."
             action={
-              <Button className="min-h-11" onClick={(event) => openCreate(event.currentTarget)}>
-                <Plus className="w-4 h-4 mr-1.5" />
+              <Button onClick={(event) => openCreate(event.currentTarget)}>
+                <Plus className="w-4 h-4" />
                 Create project
               </Button>
             }
@@ -1303,12 +1309,12 @@ function ProjectsPage() {
                       >
                         {p.pinned_at ? (
                           <>
-                            <PinOff className="w-4 h-4 mr-2" />
+                            <PinOff className="w-4 h-4" />
                             Unpin
                           </>
                         ) : (
                           <>
-                            <Pin className="w-4 h-4 mr-2" />
+                            <Pin className="w-4 h-4" />
                             Pin to top
                           </>
                         )}
@@ -1321,14 +1327,14 @@ function ProjectsPage() {
                           deletingProjectIds.has(p.id)
                         }
                       >
-                        <Pencil className="w-4 h-4 mr-2" />
+                        <Pencil className="w-4 h-4" />
                         Rename
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDuplicate(p)}
                         disabled={Boolean(p.deletion_requested_at) || deletingProjectIds.has(p.id)}
                       >
-                        <CopyIcon className="w-4 h-4 mr-2" />
+                        <CopyIcon className="w-4 h-4" />
                         Duplicate
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -1341,12 +1347,12 @@ function ProjectsPage() {
                       >
                         {p.archived_at ? (
                           <>
-                            <ArchiveRestore className="w-4 h-4 mr-2" />
+                            <ArchiveRestore className="w-4 h-4" />
                             Restore
                           </>
                         ) : (
                           <>
-                            <Archive className="w-4 h-4 mr-2" />
+                            <Archive className="w-4 h-4" />
                             Archive
                           </>
                         )}
@@ -1357,7 +1363,7 @@ function ProjectsPage() {
                         disabled={p.role !== "owner" || deletingProjectIds.has(p.id)}
                         className="text-foreground focus:text-foreground"
                       >
-                        <Trash2 className="w-4 h-4 mr-2 text-destructive" />
+                        <Trash2 className="w-4 h-4 text-destructive" />
                         {p.deletion_requested_at ? "Retry deletion" : "Delete"}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -1416,7 +1422,6 @@ function ProjectsPage() {
                     action={
                       query ? (
                         <Button
-                          className="min-h-11"
                           variant="outline"
                           onClick={() => {
                             setQuery("");

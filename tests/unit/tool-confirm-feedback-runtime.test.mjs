@@ -318,24 +318,35 @@ test("Cancel after B failure resolves only that action and removes obsolete reco
   });
 });
 
-test("action controls use 44px targets, 8px corners, 20px icons, and 16px pending spinners", async () => {
+test("confirmation actions inherit shared pill geometry, 36px/44px targets and one icon size owner", async () => {
   const pending = deferred();
   const f = fixture(() => pending.promise);
   const b = f.mount(reviewChatActionConfirmations()[1]);
+  const primitive = readFileSync("src/components/ui/button.tsx", "utf8");
+  assert.match(primitive, /rounded-full/);
+  assert.match(primitive, /default: "h-9 px-\[15\.96px\] py-0"/);
+  assert.match(primitive, /\[@media\(pointer:coarse\)\]:min-h-11/);
+  assert.match(primitive, /\[&_svg\]:size-\[18px\]/);
+  assert.deepEqual(
+    b.buttons().map((button) => button.props.variant),
+    ["default", "outline"],
+  );
   for (const button of b.buttons()) {
-    assert.match(button.props.className, /\bmin-h-11\b/);
-    assert.match(button.props.className, /\brounded-lg\b/);
-    assert.doesNotMatch(button.props.className, /rounded-full|py-1\.5/);
+    assert.equal(button.props.className, undefined, "Consumer leaves control geometry to Button");
     const icon = elements(button, (item) => ["Check", "X"].includes(item.type))[0];
-    assert.match(icon.props.className, /\bh-5 w-5\b/);
+    assert.ok(icon);
+    assert.equal(icon.props.className, undefined, "Shared Button owns the 18px icon scale");
   }
   b.click("Confirm");
   const spinner = elements(b.tree, (item) => item.type === "Loader2")[0];
-  assert.match(spinner.props.className, /\bh-4 w-4\b/);
+  assert.equal(spinner.props.className, "animate-spin");
   pending.resolve(response({ ok: false, error: REVIEW_CHAT_ACTION_RECONNECT }, 400));
   await f.flush();
   assert.deepEqual(b.buttons().map(label), ["Retry", "Cancel"]);
-  for (const button of b.buttons()) assert.match(button.props.className, /\bmin-h-11\b/);
+  assert.deepEqual(
+    b.buttons().map((button) => button.props.variant),
+    ["default", "outline"],
+  );
 });
 
 test("late action feedback never steals focus from a later input, navigation, or hidden card", async () => {

@@ -96,7 +96,10 @@ test("public header wraps without losing navigation destinations or bounded cont
     assert.ok(text(link).trim());
     includesClasses(link, ["min-h-11", "min-w-0", "max-w-full", "py-2.5"]);
   }
-  includesClasses(f.attachToggle(tree), ["h-11", "w-11", "shrink-0"]);
+  const toggle = f.attachToggle(tree);
+  assert.equal(toggle.props.variant, "ghost");
+  assert.equal(toggle.props.size, "icon");
+  includesClasses(toggle, ["ml-auto", "lg:hidden"]);
 });
 
 test("mobile public navigation is scrollable and Escape closes it and restores toggle focus", () => {

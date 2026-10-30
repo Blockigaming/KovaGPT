@@ -5,6 +5,7 @@ import test from "node:test";
 
 const root = process.cwd();
 const writeRoute = readFileSync(join(root, "src/routes/write.tsx"), "utf8");
+const sharedButton = readFileSync(join(root, "src/components/ui/button.tsx"), "utf8");
 const exportCommon = readFileSync(join(root, "src/lib/writing-export/common.ts"), "utf8");
 
 test("writing drafts surface persistence failures without crossing principals", () => {
@@ -37,7 +38,9 @@ test("writing copy and download controls expose failure states and safe URL life
     exportCommon,
     /window\.setTimeout\(\(\) => URL\.revokeObjectURL\(completedUrl\), 1_000\)/,
   );
-  assert.ok((writeRoute.match(/min-h-11/g) ?? []).length >= 12);
+  assert.match(writeRoute, /import \{ Button \} from "@\/components\/ui\/button"/);
+  assert.ok((writeRoute.match(/<Button\b/g) ?? []).length >= 12);
+  assert.match(sharedButton, /\[@media\(pointer:coarse\)\]:min-h-11/);
   assert.match(writeRoute, /aria-busy=\{!documentReady\}/);
   assert.match(writeRoute, /Loading document/);
 });

@@ -39,7 +39,14 @@ const sidebarEffect = actualEffect("src/components/Sidebar.tsx", "const escape =
 function fixture(commandOpen) {
   const windowListeners = [],
     documentListeners = [];
-  const state = { closed: 0, opened: 0, sidebarToggles: 0, sidebarFocus: 0, overlayKeys: 0 };
+  const state = {
+    closed: 0,
+    opened: 0,
+    newChats: 0,
+    sidebarToggles: 0,
+    sidebarFocus: 0,
+    overlayKeys: 0,
+  };
   class Element {
     constructor(overlay = false) {
       this.overlay = overlay;
@@ -88,7 +95,9 @@ function fixture(commandOpen) {
     openCommandPalette() {
       state.opened++;
     },
-    newChat() {},
+    startNewChat() {
+      state.newChats++;
+    },
     swipeToggleRef: {
       current() {
         state.sidebarToggles++;
@@ -201,4 +210,14 @@ test("public Ctrl+K remains available and both registered phases clean up", () =
   f.cleanup();
   assert.equal(f.windowListeners.length, 0);
   assert.equal(f.documentListeners.length, 0);
+});
+
+test("New chat keyboard shortcuts invoke the navigation-aware user action once", () => {
+  for (const modifier of ["ctrlKey", "metaKey"]) {
+    const f = fixture(false);
+    const event = f.key({ key: "o", shiftKey: true, [modifier]: true });
+    assert.equal(f.state.newChats, 1);
+    assert.equal(event.defaultPrevented, true);
+    assert.equal(f.state.sidebarToggles, 0);
+  }
 });

@@ -352,8 +352,8 @@ test("verified disconnected providers alone produce a zero count and disconnecte
   const f = countFixture();
   assert.equal(f.connectionCountState, "ready");
   assert.equal(f.connectedCountLabel, 0);
-  assert.match(textOf(f.summary()), /0 plugins/);
-  assert.match(textOf(f.empty()), /No connected plugins/);
+  assert.match(textOf(f.summary()), /0 connections/);
+  assert.match(textOf(f.empty()), /No connections yet/);
 });
 
 for (const [name, overrides, expected] of [
@@ -375,12 +375,12 @@ for (const [name, overrides, expected] of [
     "Unavailable",
   ],
 ]) {
-  test(`${name} does not claim Connected 0 or No connected plugins`, () => {
+  test(`${name} does not claim Connected 0 or No connections yet`, () => {
     const f = countFixture(overrides);
     assert.equal(f.connectedCountLabel, expected);
     assert.equal(f.connectedStatusUnverified, true);
-    assert.doesNotMatch(textOf(f.summary()), /0 plugins/);
-    assert.doesNotMatch(textOf(f.empty()), /No connected plugins|connect an account/);
+    assert.doesNotMatch(textOf(f.summary()), /0 connections/);
+    assert.doesNotMatch(textOf(f.empty()), /No connections yet|connect an account/);
   });
 }
 
@@ -410,7 +410,7 @@ test("All retains its catalog result count while Connected is unverified", () =>
     filtered: [{}, {}],
   });
   assert.equal(f.connectedStatusUnverified, false);
-  assert.match(textOf(f.summary()), /2 plugins/);
+  assert.match(textOf(f.summary()), /2 connections/);
 });
 
 test("verified connected providers report their real total without planned plugins affecting availability", () => {

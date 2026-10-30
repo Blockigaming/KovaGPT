@@ -10,8 +10,8 @@
 .kova-conversation-share,
 .kova-conversation-icon {
   display: inline-flex;
-  min-height: 44px;
-  min-width: 44px;
+  min-height: 36px;
+  min-width: 36px;
   align-items: center;
   justify-content: center;
   border-radius: var(--kova-radius-button);
@@ -22,9 +22,17 @@
 }
 .kova-conversation-share {
   gap: 8px;
-  padding: 0 10px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
+}
+@media (max-width: 1023px), (any-pointer: coarse) {
+  .kova-conversation-share,
+  .kova-conversation-icon {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 .kova-conversation-actions svg {
   width: 20px;
@@ -58,28 +66,28 @@
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  padding: 12px;
-  box-shadow: 0 8px 30px rgb(0 0 0 / 12%);
+  padding: 6px;
+  box-shadow: var(--shadow-floating);
 }
 .kova-conversation-menu {
-  width: 288px;
+  width: 256px;
 }
 .kova-conversation-submenu {
   width: 280px;
 }
 .kova-conversation-menu [role="menuitem"],
 .kova-conversation-submenu [role="menuitem"] {
-  min-height: 44px;
-  padding: 10px 16px;
-  gap: 14px;
+  min-height: 32px;
+  padding: 6px 8px;
+  gap: 6px;
   border-radius: var(--kova-radius-compact);
-  font-size: 15px;
-  line-height: 1.4;
+  font-size: 14px;
+  line-height: 20px;
 }
 .kova-conversation-menu [role="menuitem"] > svg,
 .kova-conversation-submenu [role="menuitem"] > svg {
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
 }
 .kova-conversation-menu [role="separator"] {
   margin: 8px;
@@ -448,18 +456,14 @@
   display: none;
 }
 
-/* Phone overflow follows the compact, floating reference surface. */
+/* ChatGPT overflow menu: one opaque neutral surface on desktop and phone. */
 .kova-conversation-menu-phone {
-  width: clamp(220px, 59vw, 260px);
-  padding: 12px 10px;
+  width: min(256px, calc(100vw - 24px));
+  padding: 6px;
   border-radius: var(--kova-radius-menu);
-  background: color-mix(in srgb, var(--popover) 89%, transparent);
-  backdrop-filter: blur(24px) saturate(115%);
-  -webkit-backdrop-filter: blur(24px) saturate(115%);
-  border-color: color-mix(in srgb, var(--foreground) 12%, transparent);
-  box-shadow:
-    0 14px 45px rgb(0 0 0 / 18%),
-    inset 0 1px 0 rgb(255 255 255 / 5%);
+  background: var(--popover);
+  border-color: var(--border);
+  box-shadow: var(--shadow-floating);
 }
 .kova-conversation-menu-title {
   padding: 0 14px 8px;
@@ -472,14 +476,14 @@
 }
 .kova-conversation-menu-phone [role="menuitem"] {
   min-height: 44px;
-  padding: 8px 14px;
-  gap: 14px;
-  font-size: 16px;
+  padding: 6px 8px;
+  gap: 6px;
+  font-size: 14px;
   border-radius: var(--kova-radius-compact);
 }
 .kova-conversation-menu-phone [role="menuitem"] > svg {
-  width: 21px;
-  height: 21px;
+  width: 20px;
+  height: 20px;
 }
 .kova-conversation-menu-phone .kova-mobile-secondary {
   display: none;
@@ -506,4 +510,11 @@
   line-height: 1.5;
   overflow-wrap: anywhere;
   margin-top: 4px;
+}
+
+@media (max-width: 1023px), (any-pointer: coarse) {
+  .kova-conversation-menu [role="menuitem"],
+  .kova-conversation-submenu [role="menuitem"] {
+    min-height: 44px;
+  }
 }

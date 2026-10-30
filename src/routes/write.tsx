@@ -1,3 +1,6 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -432,11 +435,12 @@ function WritePage() {
   };
 
   const actionButton = (action: Action, label: string, Icon: typeof Sparkles = Sparkles) => (
-    <button
+    <Button
+      variant="outline"
       type="button"
       onClick={() => run(action)}
       disabled={!!busy || !documentReady}
-      className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+      className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium hover:bg-accent disabled:opacity-50"
     >
       {busy === action ? (
         <Loader2 className="h-3 w-3 animate-spin" />
@@ -444,13 +448,14 @@ function WritePage() {
         <Icon className="h-3 w-3" />
       )}
       {label}
-    </button>
+    </Button>
   );
 
   return (
     <AppShell>
       <div
-        className="mx-auto flex h-full w-full max-w-4xl flex-col px-4 py-6 sm:px-8 sm:py-10"
+        data-ui-reference="claude.artifacts.document"
+        className="kova-tool-page mx-auto flex h-full w-full max-w-4xl flex-col px-4 py-6 sm:px-8 sm:py-10"
         aria-busy={!documentReady}
       >
         {!documentReady && (
@@ -459,7 +464,7 @@ function WritePage() {
           </div>
         )}
         <div className="mb-4 flex items-center justify-between gap-3">
-          <input
+          <Input
             value={visibleTitle}
             disabled={!documentReady}
             onChange={(e) => {
@@ -467,7 +472,7 @@ function WritePage() {
               setTitle(e.target.value);
               setDirty(true);
             }}
-            className="min-h-11 min-w-0 flex-1 bg-transparent text-2xl font-semibold outline-none placeholder:text-muted-foreground sm:text-3xl"
+            className="min-w-0 flex-1 border-0 rounded-none bg-transparent px-0 shadow-none focus-visible:ring-0 text-2xl font-semibold outline-none placeholder:text-muted-foreground sm:text-3xl"
             placeholder="Untitled document"
             aria-label="Document title"
           />
@@ -491,14 +496,15 @@ function WritePage() {
               onValueChange={setTone}
               searchLabel="Search tones"
               emptyText="No tones found."
-              className="min-h-11 min-w-11 rounded-md bg-background px-2 py-1 text-xs text-foreground"
+              className=" min-w-11  bg-background  py-1 text-xs text-foreground"
               aria-label="Tone"
             />
-            <button
+            <Button
+              variant="ghost"
               type="button"
               onClick={() => run("tone")}
               disabled={!!busy || !documentReady}
-              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-50"
+              className="inline-flex   items-center gap-1    text-xs font-medium text-foreground hover:bg-accent disabled:opacity-50"
             >
               {busy === "tone" ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -506,32 +512,34 @@ function WritePage() {
                 <Sparkles className="h-3 w-3" />
               )}
               Rewrite
-            </button>
+            </Button>
           </div>
           {undoStack.length > 0 && (
-            <button
+            <Button
+              variant="ghost"
               type="button"
               onClick={undo}
-              className="ml-auto inline-flex min-h-11 items-center text-xs text-muted-foreground hover:text-foreground"
+              className="ml-auto inline-flex  items-center text-xs text-muted-foreground hover:text-foreground"
             >
               Undo AI change
-            </button>
+            </Button>
           )}
         </div>
 
         <div className="mb-3 flex items-center gap-2">
-          <input
+          <Input
             value={custom}
             disabled={!documentReady}
             onChange={(e) => setCustom(e.target.value)}
             placeholder="Custom instruction - e.g. 'rewrite as a cover letter'"
-            className="min-h-11 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
+            className=" flex-1  border border-border bg-background   text-sm outline-none focus:border-foreground/40"
           />
-          <button
+          <Button
+            variant="default"
             type="button"
             onClick={() => run("custom")}
             disabled={!!busy || !custom.trim() || !documentReady}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
+            className="inline-flex  items-center gap-1.5  bg-foreground   text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
           >
             {busy === "custom" ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -539,10 +547,10 @@ function WritePage() {
               <Sparkles className="h-3 w-3" />
             )}
             Apply
-          </button>
+          </Button>
         </div>
 
-        <textarea
+        <Textarea
           ref={textareaRef}
           value={visibleText}
           disabled={!documentReady}
@@ -555,7 +563,7 @@ function WritePage() {
           onKeyUp={captureSelection}
           onMouseUp={captureSelection}
           placeholder="Start writing… Highlight text to transform only that section."
-          className="min-h-[45vh] flex-1 w-full resize-none rounded-xl border border-border bg-background p-4 text-[15px] leading-relaxed outline-none focus:border-foreground/40 sm:p-6 sm:text-base sm:leading-8"
+          className="min-h-[45vh] flex-1 w-full resize-none  border border-border bg-background p-4 text-[15px] leading-relaxed outline-none focus:border-foreground/40 sm:p-6 sm:text-base sm:leading-8"
           spellCheck
           aria-label="Document content"
         />
@@ -570,29 +578,32 @@ function WritePage() {
         </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
+          <Button
+            variant="outline"
             type="button"
             onClick={copy}
             disabled={!documentReady || !text}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
             {copied ? "Copied" : "Copy"}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             onClick={download}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             <Download className="h-3 w-3" />
             Download .md
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             onClick={save}
             disabled={saving || !documentReady}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             <Bookmark className={`h-3 w-3 ${saved ? "fill-current" : ""}`} />
             {saved ? (
@@ -605,67 +616,74 @@ function WritePage() {
             ) : (
               "Save to Library"
             )}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             onClick={() => setClearOpen(true)}
             disabled={!documentReady || !text.trim()}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+            className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
           >
             <Eraser className="h-3 w-3" />
             Clear
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             onClick={saveVersion}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             Save version
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             onClick={restoreLatestVersion}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             Restore latest
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             onClick={() => void exportDocument("docx")}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             Download DOCX
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
             type="button"
             onClick={() => void exportDocument("pdf")}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             Download PDF
-          </button>
+          </Button>
           {(["xlsx", "pptx"] as const).map((format) => (
-            <button
+            <Button
+              variant="outline"
               key={format}
               type="button"
               onClick={() => void exportDocument(format)}
               disabled={!documentReady}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+              className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium hover:bg-accent disabled:opacity-50"
             >
               Download {format.toUpperCase()}
-            </button>
+            </Button>
           ))}
-          <button
+          <Button
+            variant="outline"
             type="button"
             onClick={() => void exportDocument("html")}
             disabled={!documentReady}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            className="inline-flex  items-center gap-1.5  border border-border bg-background   text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
             Download HTML
-          </button>
+          </Button>
           <div className="ml-auto text-xs text-muted-foreground sm:hidden">
             {words.toLocaleString()} words
           </div>

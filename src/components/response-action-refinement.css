@@ -1,17 +1,65 @@
-/* Specification controls remain usable on every pointer type. */
+/* ChatGPT transcript: quiet icon actions below a flat answer, with the user's
+   compact neutral bubble aligned to the opposite edge of the reading column. */
 .kova-message {
   scroll-margin-top: 80px;
+}
+.kova-message[data-message-role] {
+  /* The preference measures readable content; its safe gutters remain outside. */
+  max-width: min(
+    100%,
+    calc(
+      var(--kova-reading-width) + max(var(--chat-gutter), var(--safe-left)) +
+        max(var(--chat-gutter), var(--safe-right))
+    )
+  );
+  padding-inline: max(var(--chat-gutter), var(--safe-left))
+    max(var(--chat-gutter), var(--safe-right));
+  margin-inline: auto;
+}
+.kova-conversation-scroll[data-chat-transcript] {
+  scrollbar-gutter: stable;
+}
+.kova-thinking-indicator {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+}
+.kova-message-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+}
+.kova-message-actions button.kova-message-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+}
+.kova-message-actions button.kova-message-source-toggle {
+  width: auto;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--kova-radius-button);
+  background: var(--background);
 }
 :is(.kova-assistant, .kova-project-chat)
   .kova-message-actions.kova-response-action-bar
   button.kova-message-icon-action {
-  width: 44px !important;
-  height: 44px !important;
-  min-width: 44px !important;
-  min-height: 44px !important;
-  flex-basis: 44px !important;
-  border-radius: var(--kova-radius-button);
-  padding: 12px !important;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  flex-basis: 32px;
+  border-radius: var(--kova-radius-compact);
+  padding: 7px;
 }
 .kova-selection-actions button {
   min-height: 44px;
@@ -28,6 +76,7 @@
   right: 0;
   top: 0;
   transform: none;
+  translate: none;
   width: min(420px, 100vw);
   max-width: none;
   height: 100dvh;
@@ -58,16 +107,38 @@
   max-width: var(--kova-reading-width);
 }
 .kova-message .kova-user-message-group {
-  max-width: 100%;
-  align-items: flex-start;
+  width: fit-content;
+  max-width: min(80%, 640px);
+  align-items: flex-end;
 }
 .kova-message .kova-user-message {
   border-radius: var(--kova-radius-message);
   max-width: 100%;
+  border: 0;
+  background: var(--surface-secondary);
+  font-family: var(--font-ui);
+  line-height: 1.5;
 }
 .kova-message-actions svg {
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+@media (max-width: 767px) {
+  .kova-message .kova-user-message-group {
+    max-width: 90%;
+  }
+}
+@media (any-pointer: coarse), (max-width: 1023px) {
+  :is(.kova-assistant, .kova-project-chat)
+    .kova-message-actions.kova-response-action-bar
+    button.kova-message-icon-action {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    flex-basis: 44px;
+    padding: 12px;
+  }
 }
 
 /* Beat the shared full-viewport menu cap: upward menus only own the space

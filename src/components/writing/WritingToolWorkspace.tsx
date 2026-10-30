@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -88,7 +90,7 @@ function SelectControl({
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger
         aria-label={label}
-        className="w-auto border-transparent bg-transparent px-3 shadow-none hover:bg-accent"
+        className="w-auto border-transparent bg-transparent  shadow-none hover:bg-accent"
       >
         <SelectValue />
       </SelectTrigger>
@@ -252,9 +254,10 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
   return (
     <AppShell>
       <main
+        data-ui-reference="claude.artifacts.writing"
         id="main-content"
         tabIndex={-1}
-        className="min-h-full bg-background px-4 pb-12 pt-4 sm:px-6 lg:px-8"
+        className={"kova-tool-page " + "min-h-full bg-background px-4 pb-12 pt-4 sm:px-6 lg:px-8"}
       >
         <div className="mx-auto w-full max-w-[760px]">
           <p className="sr-only" role="status" aria-live="polite">
@@ -290,7 +293,7 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
             <label htmlFor="writing-input" className="sr-only">
               Text for {tool.title}
             </label>
-            <textarea
+            <Textarea
               id="writing-input"
               value={text}
               maxLength={MAX_INPUT_CHARACTERS}
@@ -314,13 +317,14 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                 className="sr-only"
                 onChange={(event) => void importFile(event.target.files?.[0])}
               />
-              <button
+              <Button
+                variant="ghost"
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl px-2 text-sm font-medium hover:bg-black/[0.045] dark:hover:bg-white/[0.07]"
+                className="inline-flex  items-center gap-2   text-sm font-medium hover:bg-black/[0.045] dark:hover:bg-white/[0.07]"
               >
                 <Paperclip aria-hidden="true" className="h-4 w-4" /> Upload
-              </button>
+              </Button>
               <Link
                 to="/library"
                 className="inline-flex min-h-10 items-center gap-2 rounded-xl px-2 text-sm font-medium hover:bg-black/[0.045] dark:hover:bg-white/[0.07]"
@@ -368,19 +372,20 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                   />
                 </>
               )}
-              <button
+              <Button
+                variant="default"
                 type="button"
                 aria-label={`Run ${tool.title}`}
                 disabled={!text.trim() || busy}
                 onClick={() => void run()}
-                className="ml-auto grid h-9 w-9 shrink-0 place-items-center rounded-full bg-foreground text-background transition-opacity disabled:cursor-not-allowed disabled:opacity-30"
+                className="ml-auto grid   shrink-0 place-items-center  bg-foreground text-background transition-opacity disabled:cursor-not-allowed disabled:opacity-30"
               >
                 {busy ? (
                   <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
                 ) : (
                   <ArrowUp aria-hidden="true" className="h-4 w-4" />
                 )}
-              </button>
+              </Button>
             </div>
           </section>
 
@@ -403,15 +408,19 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
           {result && (
             <section
               aria-label="Result"
-              className="mt-6 rounded-2xl border border-border bg-background p-5 shadow-sm"
+              className={
+                "kova-tool-panel " +
+                "mt-6 rounded-2xl border border-border bg-background p-5 shadow-sm"
+              }
             >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold">Result</h2>
                 <div className="flex gap-1">
-                  <button
+                  <Button
+                    variant="ghost"
                     type="button"
                     onClick={() => void copyResult()}
-                    className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm hover:bg-muted"
+                    className="inline-flex  items-center gap-2   text-sm hover:bg-muted"
                   >
                     {copied ? (
                       <Check aria-hidden="true" className="h-4 w-4" />
@@ -419,19 +428,21 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                       <Copy aria-hidden="true" className="h-4 w-4" />
                     )}
                     {copied ? "Copied" : "Copy"}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     type="button"
                     onClick={() => {
                       setResult("");
                       setError("");
                       setAnnouncement("");
                     }}
-                    className="grid h-9 w-9 place-items-center rounded-lg hover:bg-muted"
+                    className="grid   place-items-center  hover:bg-muted"
                     aria-label="Clear result"
                   >
                     <RotateCcw aria-hidden="true" className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
               <p className="break-words whitespace-pre-wrap text-[15px] leading-7">{result}</p>
@@ -444,7 +455,10 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
             </h2>
             <div className="grid gap-2 sm:grid-cols-3">
               {tool.suggestions.map((suggestion) => (
-                <button
+                <Button
+                  variant="outline"
+                  data-ui-reference="claude.artifacts.suggestion-card"
+                  data-kova-button-shape="preserve"
                   key={suggestion}
                   type="button"
                   onClick={() => {
@@ -454,10 +468,10 @@ export function WritingToolWorkspace({ tool }: { tool: WritingTool }) {
                     setError("");
                     setAnnouncement("");
                   }}
-                  className="min-h-16 rounded-2xl border border-border bg-background px-4 py-3 text-left text-sm leading-5 transition-colors hover:bg-muted"
+                  className="h-auto min-h-16 w-full justify-start whitespace-normal rounded-[var(--kova-radius-card)] border border-border bg-background px-4 py-3 text-left text-sm leading-5 transition-colors hover:bg-muted"
                 >
                   {suggestion}
-                </button>
+                </Button>
               ))}
             </div>
           </section>

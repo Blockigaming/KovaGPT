@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
+import { choosePickerValue } from "./select-control";
 type TaskBrowserFixture = {
   calls: Array<{ name: string; data: Record<string, unknown> }>;
   pending: Array<{
@@ -111,18 +112,27 @@ test("Tasks discards late resource pages and resets private state on account cha
 }) => {
   await mount(page);
   await page.getByText("Connected sources and event filters", { exact: true }).click();
-  await page
-    .getByLabel("Task background approval")
-    .selectOption("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+  await choosePickerValue(
+    page,
+    page.getByRole("combobox", { name: "Task background approval", exact: true }),
+    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  );
   await page.getByRole("button", { name: "Browse readable sources" }).click();
-  await page
-    .getByLabel("Task background approval")
-    .selectOption("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+  await choosePickerValue(
+    page,
+    page.getByRole("combobox", { name: "Task background approval", exact: true }),
+    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  );
   await page.getByRole("button", { name: "Browse readable sources" }).click();
   await page.evaluate(() => {
     const pending = (window as unknown as TaskBrowserWindow).fixture.pending;
     pending[1].resolve({ items: [{ id: "new/repo", label: "Current source" }], nextCursor: null });
   });
+  await choosePickerValue(
+    page,
+    page.getByRole("combobox", { name: "Connected source", exact: true }),
+    "new/repo",
+  );
   await expect(page.getByLabel("Connected source")).toContainText("Current source");
   await page.evaluate(() => {
     (window as unknown as TaskBrowserWindow).fixture.pending[0].resolve({
@@ -131,6 +141,11 @@ test("Tasks discards late resource pages and resets private state on account cha
     });
   });
   await expect(page.getByLabel("Connected source")).not.toContainText("Stale private source");
+  await page.getByRole("combobox", { name: "Connected source", exact: true }).click();
+  await expect(page.getByRole("option", { name: "Stale private source", exact: true })).toHaveCount(
+    0,
+  );
+  await page.keyboard.press("Escape");
   await page.evaluate(() => (window as unknown as TaskBrowserWindow).fixture.switchUser());
   await expect(page.getByLabel("Title", { exact: true })).toHaveValue("New account draft");
   await expect(page.locator("body")).not.toContainText("Current source");
@@ -164,9 +179,11 @@ test("selected Gmail event controls capture the approved account and disappear o
   await mount(page);
   await page.getByRole("combobox", { name: "Run when", exact: true }).click();
   await page.getByRole("option", { name: "A connected event matches", exact: true }).click();
-  await page
-    .getByLabel("Task background approval")
-    .selectOption("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+  await choosePickerValue(
+    page,
+    page.getByRole("combobox", { name: "Task background approval", exact: true }),
+    "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+  );
   await expect(page.getByRole("region", { name: "Gmail event delivery" })).toBeVisible();
   await expect.poll(() => requests.length).toBe(1);
   expect(requests[0]).toEqual({

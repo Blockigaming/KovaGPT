@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Sparkles, Zap, Crown, Building2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
@@ -194,6 +194,7 @@ function PricingPage() {
       <main
         id="main-content"
         tabIndex={-1}
+        data-ui-reference="chatgpt-pricing"
         className="kova-secondary-page kova-pricing-page mx-auto w-full max-w-6xl flex-1 px-5 py-14 sm:px-6 sm:py-20"
       >
         <section aria-labelledby="pricing-title" className="mx-auto max-w-3xl text-center">
@@ -212,7 +213,7 @@ function PricingPage() {
 
         <section
           aria-label="First-month offer"
-          className="mx-auto mt-8 max-w-3xl space-y-3 rounded-2xl border border-border p-4 text-sm leading-6"
+          className="kova-pricing-offer mx-auto mt-8 max-w-3xl space-y-2 border-y border-border py-4 text-sm leading-6"
         >
           <h2 className="font-semibold">First-month offer</h2>
           <p>{MONTHLY_INTRO_NOTE}</p>
@@ -226,7 +227,6 @@ function PricingPage() {
           className="mt-12 grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-4"
         >
           <PlanCard
-            icon={Sparkles}
             name={CAPABILITY_REGISTRY.plans.free.name}
             price={displayPrice(CAPABILITY_REGISTRY.plans.free.monthlyPriceUsd)}
             period="forever"
@@ -237,7 +237,6 @@ function PricingPage() {
           />
 
           <PlanCard
-            icon={Zap}
             name={CAPABILITY_REGISTRY.plans.plus.name}
             price={displayPrice(CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd)}
             period="/ month"
@@ -254,7 +253,6 @@ function PricingPage() {
           />
 
           <PlanCard
-            icon={Crown}
             name={CAPABILITY_REGISTRY.plans.pro.name}
             price={displayPrice(CAPABILITY_REGISTRY.plans.pro.monthlyPriceUsd)}
             period="/ month"
@@ -270,7 +268,6 @@ function PricingPage() {
           />
 
           <PlanCard
-            icon={Building2}
             name={CAPABILITY_REGISTRY.enterprise.name}
             price={CAPABILITY_REGISTRY.enterprise.priceLabel}
             period="annual agreement"
@@ -377,7 +374,6 @@ function PricingPage() {
 }
 
 type CardProps = {
-  icon?: React.ComponentType<{ className?: string }>;
   name: string;
   price: string;
   period: string;
@@ -394,7 +390,6 @@ type CardProps = {
 };
 
 function PlanCard({
-  icon: Icon,
   name,
   price,
   period,
@@ -413,35 +408,21 @@ function PlanCard({
     <article
       id={name.toLowerCase()}
       data-pricing-plan={name.toLowerCase()}
-      className={`kova-plan-card relative grid rounded-2xl md:row-span-7 md:h-full md:grid-rows-subgrid border p-6 transition-colors ${
+      data-ui-reference="chatgpt-pricing-plan-card"
+      className={`kova-plan-card relative grid rounded-2xl md:row-span-6 md:h-full md:grid-rows-subgrid border p-6 ${
         enterprise
           ? "border-foreground/25 bg-card"
           : highlight
-            ? "border-foreground bg-card shadow-lg shadow-foreground/10"
+            ? "border-foreground bg-card"
             : "border-border bg-card"
       }`}
     >
-      <div
-        className={`${highlight ? "flex" : "hidden md:flex"} h-6 items-center justify-center`}
-        aria-hidden={!highlight}
-      >
-        {highlight ? (
-          <span className="rounded-full bg-foreground px-3 py-1 text-xs font-semibold text-background">
-            MOST POPULAR
-          </span>
-        ) : null}
-      </div>
-      <div className="flex items-center gap-2.5 md:mt-3">
-        {Icon ? (
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted">
-            <Icon className="h-4 w-4" aria-hidden="true" />
-          </span>
-        ) : null}
-        <h2 className="text-xl font-semibold">{name}</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-2xl font-medium">{name}</h2>
       </div>
       <div className="flex flex-col justify-start md:min-h-[3.25rem]">
         <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-          <span className="text-4xl font-bold leading-none">{price}</span>
+          <span className="text-[40px] font-medium leading-[48px]">{price}</span>
           <span className="text-sm leading-5 text-muted-foreground">{period}</span>
         </div>
         {taxNotice ? (

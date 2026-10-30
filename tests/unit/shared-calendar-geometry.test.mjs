@@ -27,9 +27,11 @@ function loadComponent(path, dependencies = {}) {
   );
   return module.exports;
 }
+const icons = loadComponent("src/components/ui/reference-icons.tsx");
 const button = loadComponent("src/components/ui/button.tsx");
 const { Calendar } = loadComponent("src/components/ui/calendar.tsx", {
   "@/components/ui/button": button,
+  "./reference-icons": icons,
 });
 const attribute = (tag, name) => tag.match(new RegExp(`${name}="([^"]*)"`))?.[1];
 const classes = (tag) => attribute(tag, "class")?.split(/\s+/) ?? [];
@@ -50,7 +52,14 @@ test("calendar navigation uses ordinary icon targets while the header reserves t
   const html = markup();
   for (const name of ["rdp-button_previous", "rdp-button_next"]) {
     const nav = hasClass(html, name);
-    for (const token of ["h-11", "w-11", "p-0"]) assert.ok(classes(nav).includes(token), token);
+    for (const token of [
+      "h-9",
+      "w-9",
+      "p-0",
+      "[@media(pointer:coarse)]:min-h-11",
+      "[@media(pointer:coarse)]:min-w-11",
+    ])
+      assert.ok(classes(nav).includes(token), token);
     assert.equal(attribute(nav, "type"), "button");
     assert.ok(attribute(nav, "aria-label"));
     assert.ok(!classes(nav).some((token) => /^(?:h|w)-\(--cell-size\)$/.test(token)));
@@ -70,7 +79,8 @@ test("calendar dropdown headers keep the nav height and bounded-month disabled s
   const previous = hasClass(html, "rdp-button_previous");
   assert.equal(attribute(previous, "aria-disabled"), "true");
   assert.equal(attribute(previous, "tabindex"), "-1");
-  assert.ok(classes(previous).includes("h-11"));
+  assert.ok(classes(previous).includes("h-9"));
+  assert.ok(classes(previous).includes("[@media(pointer:coarse)]:min-h-11"));
   assert.ok(tags(html, "select").length >= 2, "The actual month/year selectors remain present");
 });
 
