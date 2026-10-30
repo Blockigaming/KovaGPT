@@ -11,9 +11,11 @@ import json
 import os
 from pathlib import Path
 import re
+import resource
 import secrets
 import shutil
 import signal
+import subprocess
 import tempfile
 
 HERE=Path(__file__).resolve().parent
@@ -24,6 +26,80 @@ require=base.require;Stopped=base.Stopped
 FIXTURE_OWNER="synthetic_extension_owner"
 FIXTURE_EXTENSIONS=("pgcrypto","vector")
 FORBIDDEN_PREFIXES=("KOVA_PRODUCTION_","APPROVED_ISOLATED_","KOVA_AUTH_RESTORE_","KOVA_AUTH_BACKUP_")
+BUILD_STAGES=frozenset({"setup","git","pull","inspect","context","build","final-inspect","cleanup"})
+MAX_COMMAND_OUTPUT_BYTES=8*1024**2
+MAX_DIAGNOSTIC_BYTES=4096
+SAFE_FAILURE_CODES=frozenset({
+    "synthetic_native_unconfirmed","synthetic_native_smoke_failed","synthetic_native_interrupted",
+    "synthetic_pr_context_required","synthetic_source_pin_required","sensitive_input_in_synthetic_smoke",
+    "synthetic_run_identity_required","synthetic_runner_temp_required","synthetic_receipt_path_unqualified",
+    "nonroot_host_runner_required","synthetic_checkout_mismatch","synthetic_image_attempt_already_reserved",
+    "synthetic_image_state_owner_changed","synthetic_operator_image_unqualified",
+    "synthetic_image_cleanup_state_unqualified","synthetic_build_completion_unknown",
+    "synthetic_cleanup_unconfirmed","synthetic_owned_cleanup_unconfirmed",
+    "generic_source_file_unqualified","generic_dockerfile_unqualified","base_image_identity_unconfirmed",
+    "official_ubuntu_amd64_digest_unconfirmed","generic_image_cleanup_identity_unconfirmed",
+    "foreign_image_cleanup_forbidden","generic_image_cleanup_unconfirmed",
+    "synthetic_command_nonzero_exit","synthetic_command_timeout","synthetic_command_os_error",
+    "synthetic_command_signaled","synthetic_command_output_bound",
+})
+
+
+def diagnostic_secrets(env):
+    # Values are retained only in this private process for redaction. They are
+    # never included in a subprocess environment, receipt or exception string.
+    names=re.compile(r"TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTHORIZATION|API_KEY|PRIVATE_KEY|ACCESS_KEY|PROXY",re.I)
+    return tuple(sorted({value for key,value in env.items() if names.search(key)
+                         and isinstance(value,str) and value},key=len,reverse=True))
+
+
+def safe_diagnostic(raw,secrets_to_hide=(),limit=MAX_DIAGNOSTIC_BYTES):
+    text=raw.decode("utf-8",errors="replace")
+    for secret in secrets_to_hide:text=text.replace(secret,"[redacted]")
+    # Do this before truncation so a secret spanning the tail boundary cannot
+    # have its suffix exposed. Strip terminal controls rather than executing them.
+    text=re.sub(r"\x1b\][^\x07]*(?:\x07|\x1b\\)","",text)
+    text=re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]","",text)
+    for secret in secrets_to_hide:text=text.replace(secret,"[redacted]")
+    text=re.sub(r"(?i)\b([a-z][a-z0-9+.-]*://)[^\s/@]+(?::[^\s/@]*)?@",r"\1[redacted]@",text)
+    text=re.sub(r"(?i)(authorization\s*[:=]\s*(?:bearer\s+)?)[^\s\"']+",r"\1[redacted]",text)
+    text=re.sub(r"(?i)([?&](?:token|secret|password|key|credential|signature)=)[^&\s\"']+",r"\1[redacted]",text)
+    text=re.sub(r"\b(?:sk-(?:proj-)?[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9_]{12,}|github_pat_[A-Za-z0-9_]{12,}|AKIA[A-Z0-9]{16})\b","[redacted]",text)
+    text=text.replace("\r","\n")
+    text="".join(c if c=="\n" or 32<=ord(c)<=126 else "?" for c in text)
+    return text.encode("ascii")[-limit:].decode("ascii") if limit else ""
+
+
+def bounded_diagnostic_child():
+    resource.setrlimit(resource.RLIMIT_FSIZE,(MAX_COMMAND_OUTPUT_BYTES,MAX_COMMAND_OUTPUT_BYTES))
+
+
+class SyntheticCommandFailure(Stopped):
+    def __init__(self,code,details,*,completed):
+        super().__init__(code);self.details=details;self.completed=completed
+
+
+def failure_details(error,stage="setup"):
+    code=str(error) if isinstance(error,(Stopped,builder.Stopped)) else "synthetic_native_unconfirmed"
+    code=code if code in SAFE_FAILURE_CODES else "synthetic_native_unconfirmed"
+    value={"code":code,"stage":stage if stage in BUILD_STAGES else "setup"}
+    if isinstance(error,SyntheticCommandFailure):value["command"]=error.details
+    return value
+
+
+def preserve_primary_failure(result,error,stage="setup"):
+    primary=failure_details(error,stage)
+    result["syntheticNativeProofComplete"]=False
+    result.setdefault("primaryFailure",primary)
+    result.setdefault("errorCode",result["primaryFailure"]["code"])
+    result.setdefault("failedStage",result["primaryFailure"]["stage"])
+
+
+def preserve_cleanup_failure(result,details):
+    result["syntheticNativeProofComplete"]=False
+    result["cleanupFailure"]={"code":"synthetic_cleanup_unconfirmed",**details}
+    # Cleanup must never erase the actual earlier failing operation.
+    result.setdefault("errorCode","synthetic_cleanup_unconfirmed")
 
 
 def synthetic_context(env):
@@ -59,9 +135,44 @@ class SyntheticBuilder(builder.Builder):
         self.source=source;self.env={k:v for k,v in env.items() if k in builder.SAFE_HOST_ENV}
         self.temp=root;self.owner=secrets.token_hex(12);self.tag="kova-recovery-operator:"+self.owner
         self.image_id=None;self.output=None;self.build_invoked=False;self.build_returned=False
+        self.build_stage="setup";self._diagnostic_secrets=diagnostic_secrets(env)
         self.state=root/("kova-synthetic-image-owned-"+run+"-"+attempt+".json")
         require(not self.state.exists(),"synthetic_image_attempt_already_reserved")
         self.write_state(run,attempt)
+
+    def set_build_stage(self,stage):
+        require(stage in BUILD_STAGES,"synthetic_native_unconfirmed")
+        self.build_stage=stage
+
+    def command(self,argv,*,timeout=120):
+        """Bounded diagnostic override for this credential-free subclass only."""
+        stage=getattr(self,"build_stage","cleanup")
+        stage=stage if stage in BUILD_STAGES else "setup"
+        with tempfile.TemporaryFile() as out,tempfile.TemporaryFile() as err:
+            status="exit";exit_code=None;os_error=None
+            try:
+                result=subprocess.run(argv,stdout=out,stderr=err,env=self.env,timeout=timeout,
+                                      check=False,preexec_fn=bounded_diagnostic_child)
+                exit_code=result.returncode
+                if exit_code<0:status="signal"
+            except subprocess.TimeoutExpired:status="timeout"
+            except OSError as error:status="os-error";os_error=error.errno
+            out_size,err_size=out.tell(),err.tell()
+            out.seek(0);err.seek(0)
+            stdout=out.read(MAX_COMMAND_OUTPUT_BYTES+1);stderr=err.read(MAX_COMMAND_OUTPUT_BYTES+1)
+            bounded=out_size<=MAX_COMMAND_OUTPUT_BYTES and err_size<=MAX_COMMAND_OUTPUT_BYTES
+            completed=status=="exit"
+            if completed and exit_code==0 and bounded:return stdout
+            code={"exit":"synthetic_command_nonzero_exit","signal":"synthetic_command_signaled",
+                  "timeout":"synthetic_command_timeout","os-error":"synthetic_command_os_error"}[status]
+            if not bounded:code="synthetic_command_output_bound"
+            hidden=getattr(self,"_diagnostic_secrets",diagnostic_secrets(self.env))
+            stderr_tail=safe_diagnostic(stderr,hidden)
+            stdout_tail=safe_diagnostic(stdout,hidden,MAX_DIAGNOSTIC_BYTES-len(stderr_tail.encode("ascii")))
+            details={"stage":stage,"status":status,"completed":completed,"exitCode":exit_code,
+                     "outputWithinBound":bounded,"stderrTail":stderr_tail,"stdoutTail":stdout_tail}
+            if status=="os-error":details["osErrorNumber"]=os_error
+            raise SyntheticCommandFailure(code,details,completed=completed)
 
     def write_state(self,run,attempt):
         value={"format":1,"source":self.source,"run":run,"attempt":attempt,"uid":os.getuid(),
@@ -76,18 +187,28 @@ class SyntheticBuilder(builder.Builder):
 
     def build(self):
         require(os.getuid()!=0,"nonroot_host_runner_required")
+        self.set_build_stage("git")
         require(self.command(["git","rev-parse","HEAD"]).decode().strip()==self.source,
                 "synthetic_checkout_mismatch")
+        self.set_build_stage("pull")
         self.command(["docker","pull","--platform","linux/amd64",builder.BASE_TAG],timeout=300)
+        self.set_build_stage("inspect")
         measured,_=builder.measured_base(json.loads(self.command(["docker","image","inspect",builder.BASE_TAG])))
+        self.set_build_stage("context")
         with tempfile.TemporaryDirectory(prefix="synthetic-operator-context-",dir=self.temp) as folder:
             os.chmod(folder,0o700);builder.source_context(folder)
             _,run,attempt,_=identities_from_builder(self)
+            self.set_build_stage("build")
             self.build_invoked=True;self.write_state(run,attempt)
-            self.command(["docker","build","--platform","linux/amd64","--no-cache","--pull=false",
+            try:
+                self.command(["docker","build","--platform","linux/amd64","--no-cache","--pull=false",
                 "--build-arg","BASE_IMAGE="+measured,"--build-arg","SOURCE_SHA="+self.source,
-                "--label","org.kova.recovery.owner="+self.owner,"--tag",self.tag,folder],timeout=900)
+                    "--label","org.kova.recovery.owner="+self.owner,"--tag",self.tag,folder],timeout=900)
+            except SyntheticCommandFailure as error:
+                if error.completed:self.build_returned=True;self.write_state(run,attempt)
+                raise
             self.build_returned=True;self.write_state(run,attempt)
+        self.set_build_stage("final-inspect")
         info=json.loads(self.command(["docker","image","inspect",self.tag]))[0]
         self.image_id=info.get("Id")
         require(re.fullmatch(r"sha256:[a-f0-9]{64}",self.image_id or "")
@@ -211,13 +332,12 @@ class SyntheticProbe(operator.OperatorProbe):
                 syntheticBaselineFingerprints=snapshots[0]["fingerprints"])
             self.stage="synthetic_complete"
         except Exception as error:
-            result["syntheticNativeProofComplete"]=False
-            result["errorCode"]=str(error) if isinstance(error,Stopped) else "synthetic_native_unconfirmed"
+            preserve_primary_failure(result,error)
             result["failedStage"]=self.stage
         finally:
             result["nativeResourcesCleanupConfirmed"]=self.cleanup()
             if not result["nativeResourcesCleanupConfirmed"]:
-                result["syntheticNativeProofComplete"]=False;result["errorCode"]="synthetic_owned_cleanup_unconfirmed"
+                preserve_cleanup_failure(result,{"native":{"code":"synthetic_owned_cleanup_unconfirmed"}})
             result["nativeCommandCount"]=self.command_count
         return result
 
@@ -228,11 +348,16 @@ def identities_from_builder(value):
     return value.source,state["run"],state["attempt"],value.temp
 
 
-def cleanup_all(env):
-    try:native=operator.cleanup_operator_state(env,context_validator=synthetic_context)
-    except Exception:native=False
-    try:image=cleanup_image_from_state(env) if native else False
-    except Exception:image=False
+def cleanup_all(env,*,details=None):
+    failures=details if details is not None else {}
+    try:
+        native=operator.cleanup_operator_state(env,context_validator=synthetic_context)
+        if not native:failures["native"]={"code":"synthetic_owned_cleanup_unconfirmed","stage":"cleanup"}
+    except Exception as error:native=False;failures["native"]=failure_details(error,"cleanup")
+    try:
+        image=cleanup_image_from_state(env) if native else False
+        if native and not image:failures["image"]={"code":"synthetic_cleanup_unconfirmed","stage":"cleanup"}
+    except Exception as error:image=False;failures["image"]=failure_details(error,"cleanup")
     return bool(native),bool(image)
 
 
@@ -249,6 +374,7 @@ def cleanup_image_from_state(env):
             and (not state["buildInvoked"] or state["buildReturned"]),"synthetic_build_completion_unknown")
     b=object.__new__(SyntheticBuilder);b.owner=state["owner"];b.tag=state["tag"];b.image_id=None
     b.env={k:v for k,v in env.items() if k in builder.SAFE_HOST_ENV}
+    b.build_stage="cleanup";b._diagnostic_secrets=diagnostic_secrets(env)
     return b.cleanup_image()
 
 
@@ -260,8 +386,10 @@ def main():
     args=parser.parse_args();require(args.execute != args.cleanup_only,"synthetic_operation_selection")
     source,run,attempt,root=identities(os.environ)
     if args.cleanup_only:
-        native,image=cleanup_all(os.environ)
-        require(native and image,"synthetic_cleanup_unconfirmed")
+        details={};native,image=cleanup_all(os.environ,details=details)
+        if not (native and image):
+            print(json.dumps({"ok":False,"error":"synthetic_cleanup_unconfirmed","cleanupFailure":details,"sourceProof":False},separators=(",",":")))
+            raise SystemExit(1)
         print('{"ok":true,"syntheticOwnedCleanupConfirmed":true}');return
     output=Path(args.output or "")
     require(output.is_absolute() and output.name=="receipt.json" and output.resolve().is_relative_to(root)
@@ -275,17 +403,17 @@ def main():
         build=SyntheticBuilder(os.environ);image_id=build.build()
         p=SyntheticProbe(os.environ,output,operator_image_id=image_id);result=p.execute_synthetic()
     except Exception as error:
-        result["syntheticNativeProofComplete"]=False
-        result["errorCode"]=str(error) if isinstance(error,(Stopped,builder.Stopped)) else "synthetic_native_unconfirmed"
-        result["failedStage"]="synthetic_build_or_setup"
+        preserve_primary_failure(result,error,getattr(build,"build_stage","setup"))
     finally:
-        native,image=cleanup_all(os.environ)
+        details={};native,image=cleanup_all(os.environ,details=details)
         result["cleanupConfirmed"]=bool(native and image)
-        if not result["cleanupConfirmed"]:result["syntheticNativeProofComplete"]=False;result["errorCode"]="synthetic_cleanup_unconfirmed"
+        if not result["cleanupConfirmed"]:preserve_cleanup_failure(result,details)
         result["checkedAtUtc"]=datetime.now(timezone.utc).isoformat()
         output.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
         base.write_private(output,base.encoded(result))
-    require(result["syntheticNativeProofComplete"] and result["cleanupConfirmed"],"synthetic_native_smoke_failed")
+    if not (result["syntheticNativeProofComplete"] and result["cleanupConfirmed"]):
+        print(json.dumps({k:result[k] for k in ["errorCode","primaryFailure","cleanupFailure","sourceProof"] if k in result},separators=(",",":")))
+        raise SystemExit(1)
     print('{"ok":true,"syntheticNativeProofWritten":true,"sourceProof":false,"restoreQualified":false}')
 
 
@@ -293,6 +421,6 @@ if __name__=="__main__":
     def interrupted(*_):raise Stopped("synthetic_native_interrupted")
     signal.signal(signal.SIGTERM,interrupted);signal.signal(signal.SIGINT,interrupted)
     try:main()
-    except Exception:
-        print('{"ok":false,"error":"synthetic_native_smoke_unqualified","sourceProof":false}')
+    except Exception as error:
+        print(json.dumps({"ok":False,"error":"synthetic_native_smoke_unqualified","primaryFailure":failure_details(error),"sourceProof":False},separators=(",",":")))
         raise SystemExit(1)

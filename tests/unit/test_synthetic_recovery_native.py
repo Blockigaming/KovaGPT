@@ -1,10 +1,14 @@
 """Synthetic guard/recipe tests; no Docker, source endpoint, data or restore."""
 import copy
+import errno
+import io
 import importlib.util
 import json
 import os
 from pathlib import Path
 import subprocess
+import sys
+from contextlib import redirect_stdout
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -205,6 +209,137 @@ class SyntheticTests(unittest.TestCase):
         self.assertFalse(any("auth.users" in sql or "pg_authid" in sql for sql in calls))
         fixture["available"].pop()
         with self.assertRaisesRegex(m.Stopped,"synthetic_image_fixture_unavailable"):p.derive_image_fixture()
+
+    def test_generic_context_modes_allow_nonroot_reads_without_copying_private_inputs(self):
+        source=self.root/"generic-source";source.mkdir(mode=0o700)
+        for name in m.builder.FILES:(source/name).write_text("generic public fixture\n")
+        (source/"recovery-operator-client.Dockerfile").write_text("FROM public-fixture\n")
+        private=source/"private-input.json";private.write_text("SYNTHETIC_PRIVATE_INPUT_NEVER_COPY");private.chmod(0o600)
+        context=self.root/"generic-context";context.mkdir(mode=0o700)
+        previous=os.umask(0o077)
+        try:
+            with patch.object(m.builder,"SOURCE",source):hashes=m.builder.source_context(context)
+        finally:os.umask(previous)
+        self.assertEqual(context.stat().st_mode&0o777,0o700)
+        self.assertEqual((context/"source").stat().st_mode&0o777,0o755)
+        self.assertEqual(set(x.name for x in (context/"source").iterdir()),set(m.builder.FILES))
+        for path in [context/"Dockerfile",*((context/"source").iterdir())]:
+            self.assertEqual(path.stat().st_mode&0o777,0o644)
+            self.assertNotIn("SYNTHETIC_PRIVATE_INPUT",path.read_text())
+        self.assertEqual(private.stat().st_mode&0o777,0o600)
+        self.assertEqual(set(hashes),set(m.builder.FILES)|{"recovery-operator-client.Dockerfile"})
+
+    def test_completed_command_diagnostic_preserves_actual_exit_and_redacts_environment_credentials(self):
+        secret="SYNTHETIC_RUNTIME_TOKEN_NEVER_ECHO"
+        b=m.SyntheticBuilder({**self.env,"ACTIONS_RUNTIME_TOKEN":secret})
+        b.set_build_stage("build");seen=[]
+        def command(argv,**kwargs):
+            seen.append(kwargs["env"])
+            kwargs["stderr"].write(("Docker build failed: missing signed repository\n"+secret+
+                "\nhttps://alice:password@registry.invalid/v2/\nAuthorization: Bearer unknown-token\n").encode())
+            return subprocess.CompletedProcess(argv,17)
+        with patch.object(m.subprocess,"run",side_effect=command),self.assertRaises(m.SyntheticCommandFailure) as caught:
+            b.command(["docker","build","public-context"])
+        error=caught.exception;details=error.details
+        self.assertTrue(error.completed);self.assertEqual(details["exitCode"],17)
+        self.assertEqual(details["stage"],"build");self.assertEqual(details["status"],"exit")
+        self.assertIn("missing signed repository",details["stderrTail"])
+        rendered=json.dumps(details)
+        for value in [secret,"alice:password","unknown-token"]:self.assertNotIn(value,rendered)
+        self.assertNotIn("ACTIONS_RUNTIME_TOKEN",seen[0])
+        self.assertEqual(str(error),"synthetic_command_nonzero_exit")
+
+    def test_unknown_command_timeout_os_error_or_signal_remains_distinct_and_uncompleted(self):
+        b=m.SyntheticBuilder(self.env);b.set_build_stage("pull")
+        failures=[(subprocess.TimeoutExpired(["docker"],1),"timeout",None),
+                  (OSError(errno.ENOENT,"SYNTHETIC_PRIVATE_EXCEPTION_TEXT"),"os-error",None),
+                  (subprocess.CompletedProcess(["docker"],-9),"signal",-9)]
+        for answer,status,exit_code in failures:
+            def command(_argv,**kwargs):
+                kwargs["stderr"].write(b"safe native diagnostic\n")
+                if isinstance(answer,Exception):raise answer
+                return answer
+            with self.subTest(status=status),patch.object(m.subprocess,"run",side_effect=command), \
+                 self.assertRaises(m.SyntheticCommandFailure) as caught:
+                b.command(["docker","pull","public"])
+            self.assertFalse(caught.exception.completed)
+            self.assertEqual(caught.exception.details["status"],status)
+            self.assertEqual(caught.exception.details["exitCode"],exit_code)
+            self.assertNotIn("SYNTHETIC_PRIVATE_EXCEPTION",json.dumps(caught.exception.details))
+
+    def test_diagnostic_bounds_strip_controls_and_redact_before_truncating(self):
+        secret="SYNTHETIC_BOUNDARY_SECRET"
+        value=m.safe_diagnostic(("x"*5000+"\x1b[31m"+secret+"\x1b[0m end").encode(),(secret,))
+        self.assertLessEqual(len(value.encode()),m.MAX_DIAGNOSTIC_BYTES)
+        self.assertNotIn(secret,value);self.assertNotIn("\x1b",value)
+        self.assertNotIn("SECRET",m.safe_diagnostic((secret+"end").encode(),(secret,),7))
+        b=m.SyntheticBuilder(self.env);b.set_build_stage("inspect")
+        def command(argv,**kwargs):
+            kwargs["stderr"].write(b"z"*(m.MAX_COMMAND_OUTPUT_BYTES+1))
+            return subprocess.CompletedProcess(argv,1)
+        with patch.object(m.subprocess,"run",side_effect=command),self.assertRaises(m.SyntheticCommandFailure) as caught:
+            b.command(["docker","image","inspect","public"])
+        self.assertEqual(str(caught.exception),"synthetic_command_output_bound")
+        details=caught.exception.details
+        self.assertFalse(details["outputWithinBound"])
+        self.assertLessEqual(len(details["stderrTail"])+len(details["stdoutTail"]),m.MAX_DIAGNOSTIC_BYTES)
+        with patch.object(m.resource,"setrlimit") as limit:m.bounded_diagnostic_child()
+        limit.assert_called_once_with(m.resource.RLIMIT_FSIZE,(m.MAX_COMMAND_OUTPUT_BYTES,m.MAX_COMMAND_OUTPUT_BYTES))
+
+    def test_every_build_phase_is_pinpointed_and_completed_build_exit_can_be_cleaned(self):
+        for index,stage in enumerate(["git","pull","inspect","context","build","final-inspect"],2):
+            env={**self.env,"GITHUB_RUN_ATTEMPT":str(index)};b=m.SyntheticBuilder(env)
+            def command(argv,**_kwargs):
+                if b.build_stage==stage:
+                    raise m.SyntheticCommandFailure("synthetic_command_nonzero_exit",
+                        {"stage":stage,"status":"exit","exitCode":1,"completed":True,
+                         "outputWithinBound":True,"stderrTail":"safe phase failure","stdoutTail":""},completed=True)
+                if b.build_stage=="git":return (b.source+"\n").encode()
+                if b.build_stage=="inspect":return json.dumps([{"Id":"sha256:"+"b"*64,"Architecture":"amd64",
+                    "Os":"linux","RepoDigests":["ubuntu@sha256:"+"b"*64]}]).encode()
+                return b""
+            def context(_folder):
+                if stage=="context":raise m.builder.Stopped("generic_source_file_unqualified")
+            actual_uid=os.getuid();uid_calls={"n":0}
+            def first_nonroot_guard():
+                uid_calls["n"]+=1
+                return 1001 if uid_calls["n"]==1 else actual_uid
+            with self.subTest(stage=stage),patch.object(b,"command",side_effect=command), \
+                 patch.object(m.os,"getuid",side_effect=first_nonroot_guard),patch.object(m.builder,"source_context",side_effect=context), \
+                 self.assertRaises((m.Stopped,m.builder.Stopped)) as caught:
+                b.build()
+            self.assertEqual(b.build_stage,stage)
+            self.assertEqual(m.failure_details(caught.exception,b.build_stage)["stage"],stage)
+            state=json.loads(b.state.read_bytes())
+            self.assertEqual(state["buildInvoked"],stage in {"build","final-inspect"})
+            self.assertEqual(state["buildReturned"],stage in {"build","final-inspect"})
+
+    def test_primary_failure_survives_cleanup_failure_in_written_receipt_and_log(self):
+        output=self.root/"failure-proof"/"receipt.json"
+        failure=m.SyntheticCommandFailure("synthetic_command_nonzero_exit",
+            {"stage":"pull","status":"exit","exitCode":23,"completed":True,
+             "outputWithinBound":True,"stderrTail":"actual safe Docker error","stdoutTail":""},completed=True)
+        class Build:
+            build_stage="pull"
+            def build(self):raise failure
+        def cleanup(_env,*,details=None):
+            details["image"]={"code":"synthetic_build_completion_unknown","stage":"cleanup"}
+            return True,False
+        capture=io.StringIO()
+        with patch.dict(os.environ,self.env,clear=True),patch.object(m,"SyntheticBuilder",return_value=Build()), \
+             patch.object(m,"cleanup_all",side_effect=cleanup), \
+             patch.object(sys,"argv",["smoke","--execute","--output",str(output)]), \
+             redirect_stdout(capture),self.assertRaises(SystemExit) as caught:
+            m.main()
+        self.assertEqual(caught.exception.code,1)
+        receipt=json.loads(output.read_bytes())
+        self.assertEqual(receipt["errorCode"],"synthetic_command_nonzero_exit")
+        self.assertEqual(receipt["primaryFailure"]["command"]["exitCode"],23)
+        self.assertEqual(receipt["primaryFailure"]["stage"],"pull")
+        self.assertEqual(receipt["cleanupFailure"]["image"]["code"],"synthetic_build_completion_unknown")
+        self.assertIn("actual safe Docker error",capture.getvalue())
+        self.assertFalse(receipt["cleanupConfirmed"]);self.assertFalse(receipt["syntheticNativeProofComplete"])
+        self.assertFalse(receipt["sourceProof"])
 
     def test_memory_policy_rejects_data_plane_larger_than_limit(self):
         p=self.probe();resources=copy.deepcopy(p.resources);resources["clientTmpfsMiB"]=768

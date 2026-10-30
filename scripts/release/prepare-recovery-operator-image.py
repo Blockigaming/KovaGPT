@@ -79,15 +79,18 @@ def measured_base(info):
 
 def source_context(directory):
     """Only the reviewed generic source allowlist enters Docker build context."""
-    path=Path(directory);(path/"source").mkdir(mode=0o700)
+    path=Path(directory);(path/"source").mkdir(mode=0o755)
+    # COPY preserves these reviewed public-code modes into the nonroot image;
+    # the enclosing host context stays private and contains no runtime inputs.
+    (path/"source").chmod(0o755)
     source_hashes={}
     for name in FILES:
         item=SOURCE/name
         require(item.is_file() and not item.is_symlink(),"generic_source_file_unqualified")
-        shutil.copyfile(item,path/"source"/name);source_hashes[name]=file_sha(item)
+        shutil.copyfile(item,path/"source"/name);(path/"source"/name).chmod(0o644);source_hashes[name]=file_sha(item)
     dockerfile=SOURCE/"recovery-operator-client.Dockerfile"
     require(dockerfile.is_file() and not dockerfile.is_symlink(),"generic_dockerfile_unqualified")
-    shutil.copyfile(dockerfile,path/"Dockerfile")
+    shutil.copyfile(dockerfile,path/"Dockerfile");(path/"Dockerfile").chmod(0o644)
     source_hashes["recovery-operator-client.Dockerfile"]=file_sha(dockerfile)
     return source_hashes
 
