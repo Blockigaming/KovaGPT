@@ -1,12 +1,92 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { isIP } from "node:net";
 import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
+import { validateObservation } from "../../scripts/release/verify-isolated-restore-target.mjs";
 
 const sql = readFileSync(
   new URL("../../scripts/release/empty-restore-target-catalog.sql", import.meta.url),
   "utf8",
 );
+
+test("all recovery address projections return bare hosts without relaxing exact target identity", async (t) => {
+  const db = await PGlite.create();
+  t.after(() => db.close());
+  const version = (await db.query("SHOW server_version_num")).rows[0].server_version_num;
+  t.diagnostic(
+    `Embedded PostgreSQL ${version}; this fixture is not native PostgreSQL 17 qualification.`,
+  );
+  const projections = [];
+  for (const [name, count] of [
+    ["probe-empty-recovery-target.py", 1],
+    ["operator-recovery-probe.py", 1],
+    ["managed-auth-recovery.py", 2],
+    ["verify-isolated-restore-target.mjs", 1],
+  ]) {
+    const source = readFileSync(new URL(`../../scripts/release/${name}`, import.meta.url), "utf8");
+    const matches = [
+      ...source.matchAll(
+        /'(?:address|serverAddress)',\s*(host\(inet_server_addr\(\)\)|inet_server_addr\(\)::text)/g,
+      ),
+    ];
+    assert.equal(matches.length, count, name);
+    for (const match of matches) {
+      assert.equal(match[1], "host(inet_server_addr())", name);
+      projections.push(match[1]);
+    }
+  }
+  assert.equal(projections.length, 5);
+  for (const address of ["172.30.240.2", "fd68:6b6f:7661:240::2"]) {
+    const approved = {
+      database: "postgres",
+      expectedIp: address,
+      port: 5432,
+      expectedSystemId: "123456789",
+    };
+    const observation = {
+      database: "postgres",
+      serverAddress: address,
+      serverPort: 5432,
+      systemIdentifier: "123456789",
+      serverVersionNum: 170006,
+      authUsers: 0,
+      authIdentities: 0,
+      authSessions: 0,
+      storageBuckets: 0,
+      storageObjects: 0,
+      applicationRelations: 0,
+      extensions: [],
+    };
+    for (const projection of projections) {
+      const expression = projection.replace("inet_server_addr()", "$1::inet");
+      const value = (
+        await db.query(`SELECT ${expression} AS projected, $1::inet::text AS legacy`, [address])
+      ).rows[0];
+      assert.equal(value.projected, address);
+      assert.ok(isIP(value.projected));
+      assert.equal(value.legacy, `${address}/${isIP(address) === 4 ? 32 : 128}`);
+      assert.equal(isIP(value.legacy), 0);
+      assert.equal(
+        validateObservation({ ...observation, serverAddress: value.projected }, approved, [])
+          .serverAddress,
+        address,
+      );
+      assert.throws(() =>
+        validateObservation({ ...observation, serverAddress: value.legacy }, approved, []),
+      );
+    }
+    for (const changed of [
+      { serverAddress: address === "172.30.240.2" ? "172.30.240.3" : "fd68:6b6f:7661:240::3" },
+      { serverAddress: `${address}/24` },
+      { systemIdentifier: "987654321" },
+      { serverPort: 5433 },
+      { database: "other" },
+      { authUsers: 1 },
+    ])
+      assert.throws(() => validateObservation({ ...observation, ...changed }, approved, []));
+  }
+});
 
 test("empty-target census retains unknown objects and binds extension internals conservatively", async (t) => {
   // These are disposable embedded PostgreSQL fixtures, never production or a

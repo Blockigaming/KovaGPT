@@ -353,7 +353,7 @@ while :; do sleep 1; done"""
 
     def tls_controls(self,target):
         self.stage="native_tls_controls"
-        identity="SELECT jsonb_build_object('address',inet_server_addr()::text,'version',current_setting('server_version_num')::integer,'systemIdentifier',(SELECT system_identifier::text FROM pg_control_system()),'tls',(SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()))::text;\n"
+        identity="SELECT jsonb_build_object('address',host(inet_server_addr()),'version',current_setting('server_version_num')::integer,'systemIdentifier',(SELECT system_identifier::text FROM pg_control_system()),'tls',(SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()))::text;\n"
         values=[]
         for family in [4,6]:
             _,raw=self.client_sql(target,identity,family=family)

@@ -856,7 +856,7 @@ def target_environment(env, approved):
 
 def target_observation(env, source_catalog):
     sql = """BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
-SELECT jsonb_build_object('database',current_database(),'serverAddress',inet_server_addr()::text,
+SELECT jsonb_build_object('database',current_database(),'serverAddress',host(inet_server_addr()),
 'serverPort',inet_server_port(),'serverVersionNum',current_setting('server_version_num')::int,
 'systemIdentifier',(SELECT system_identifier::text FROM pg_control_system()),
 'authUsers',(SELECT count(*)::int FROM auth.users),'authIdentities',(SELECT count(*)::int FROM auth.identities),
@@ -986,7 +986,7 @@ def empty_schema_restore_list(entries, source_catalog, target_catalog):
 
 EMPTY_IDENTITY_SQL = """BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 SELECT jsonb_build_object(
- 'database',current_database(),'serverAddress',inet_server_addr()::text,
+ 'database',current_database(),'serverAddress',host(inet_server_addr()),
  'serverPort',inet_server_port(),'serverVersionNum',current_setting('server_version_num')::int,
  'systemIdentifier',(SELECT system_identifier::text FROM pg_control_system()),
  'managedRelationsPresent',(SELECT coalesce(jsonb_agg(name ORDER BY name),'[]')

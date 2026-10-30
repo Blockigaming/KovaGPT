@@ -30,7 +30,7 @@ WITH application_relations AS (
 )
 SELECT jsonb_build_object(
   'database', current_database(),
-  'serverAddress', inet_server_addr()::text,
+  'serverAddress', host(inet_server_addr()),
   'serverPort', inet_server_port(),
   'serverVersionNum', current_setting('server_version_num')::int,
   'systemIdentifier', (SELECT system_identifier::text FROM pg_control_system()),

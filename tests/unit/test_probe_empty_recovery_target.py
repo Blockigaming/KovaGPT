@@ -502,5 +502,67 @@ class NativeProbeTests(unittest.TestCase):
                 p.denial_probes([("production-https","1.1.1.1",443)])
             self.assertFalse(any(r.get("connectDenied") for r in p.network_evidence))
 
+    def tls_fixture(self,*,mutation=None,bad_host=(1,b"server certificate does not match host"),
+                    bad_ca=(1,b"certificate verify failed")):
+        p=self.probe();p.native_tools={"timeout":"/native/timeout"};sql_calls=[];tcp_calls=[]
+        rows={family:{"address":p.addresses["a"][family==6],"version":170006,
+                      "systemIdentifier":"123456789","tls":True} for family in [4,6]}
+        if mutation:
+            family,key,value=mutation;rows[family][key]=value
+        def client_sql(target,sql,**kwargs):
+            sql_calls.append((target,sql,kwargs))
+            if "inet_server_addr()" in sql:
+                self.assertIn("'address',host(inet_server_addr())",sql)
+                self.assertNotIn("inet_server_addr()::text",sql)
+                return 0,json.dumps(rows[kwargs["family"]]).encode()
+            if kwargs.get("host")=="wrong-host.invalid":
+                p.last_stderr=bad_host[1];return bad_host[0],b""
+            if kwargs.get("ca")=="/run/client/wrong-ca.crt":
+                p.last_stderr=bad_ca[1];return bad_ca[0],b""
+            return 0,b"1\n"
+        p.client_sql=client_sql;p.docker=lambda args,**kwargs:(tcp_calls.append((args,kwargs)) or (0,b""))
+        return p,sql_calls,tcp_calls
+
+    def test_base_actual_tls_controls_project_plain_hosts_and_keep_dual_stack_and_certificate_controls(self):
+        p,sql,tcp=self.tls_fixture()
+        self.assertEqual(p.tls_controls("a"),"123456789")
+        self.assertEqual([kwargs["family"] for _,_,kwargs in sql[:2]],[4,6])
+        self.assertEqual(len(tcp),2)
+        for family,(args,kwargs) in zip([4,6],tcp):
+            self.assertEqual(args,["exec",p.names["client"],"/native/timeout","3","/bin/bash","-ceu",
+                "exec 3<>/dev/tcp/"+p.addresses["a"][family==6]+"/5432"])
+            self.assertEqual(kwargs,{"timeout":5})
+        self.assertEqual(sql[2][2],{"host":"wrong-host.invalid","allow_failure":True})
+        self.assertEqual(sql[3][2],{"ca":"/run/client/wrong-ca.crt","allow_failure":True})
+        self.assertEqual(sql[4],("a","SELECT 1;\n",{}))
+
+    def test_base_actual_tls_controls_reject_wrong_or_prefixed_addresses_tls_version_and_cluster_drift(self):
+        for family,wrong in [(4,"172.30.240.99"),(6,"fd68:6b6f:7661:240::99")]:
+            for key,value,error in [("address",wrong,m.Stopped),("tls",False,m.Stopped),
+                    ("version",170007,m.Stopped),("systemIdentifier","not-a-cluster-id",m.Stopped)]:
+                p,sql,_=self.tls_fixture(mutation=(family,key,value))
+                with self.subTest(family=family,key=key),self.assertRaises(error):p.tls_controls("a")
+                self.assertFalse(any(kwargs.get("allow_failure") for _,_,kwargs in sql))
+            p,_,_=self.tls_fixture();prefixed=p.addresses["a"][family==6]+("/32" if family==4 else "/128")
+            p,sql,_=self.tls_fixture(mutation=(family,"address",prefixed))
+            # The producer must emit host(); the verifier never strips a mask
+            # from an arbitrary response and accepts it as the pinned address.
+            with self.subTest(family=family,prefix=True),self.assertRaises(ValueError):p.tls_controls("a")
+            self.assertFalse(any(kwargs.get("allow_failure") for _,_,kwargs in sql))
+        p,_,tcp=self.tls_fixture(mutation=(6,"systemIdentifier","987654321"))
+        with self.assertRaisesRegex(m.Stopped,"target_cluster_changed"):p.tls_controls("a")
+        self.assertEqual(len(tcp),2)
+
+    def test_base_actual_tls_controls_require_both_negative_certificate_operations_to_fail_for_the_right_reason(self):
+        cases=[({"bad_host":(0,b"does not match")},"wrong_hostname_rejection_unconfirmed"),
+            ({"bad_host":(1,b"connection failed")},"wrong_hostname_rejection_unconfirmed"),
+            ({"bad_ca":(0,b"certificate verify failed")},"wrong_ca_rejection_unconfirmed"),
+            ({"bad_ca":(1,b"connection failed")},"wrong_ca_rejection_unconfirmed"),
+            ({"bad_ca":(1,b"certificate expired")},"wrong_ca_rejection_unconfirmed")]
+        for options,error in cases:
+            p,sql,_=self.tls_fixture(**options)
+            with self.subTest(options=options),self.assertRaisesRegex(m.Stopped,error):p.tls_controls("a")
+            self.assertFalse(any(text=="SELECT 1;\n" and kwargs=={} for _,text,kwargs in sql))
+
 
 if __name__=="__main__":unittest.main()
