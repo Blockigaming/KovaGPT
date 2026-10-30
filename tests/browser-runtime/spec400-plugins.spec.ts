@@ -132,15 +132,16 @@ async function boot(
     content: `:root { --background:#fff; --foreground:#222; --card:#fafafa; --muted:#eee; --muted-foreground:#666; --border:#ddd; --input:#aaa; --ring:#369; --text-success:#286137; --text-warning:#815300; }*{box-sizing:border-box}body{margin:0;padding:32px;font:15px/1.5 Arial;background:var(--background);color:var(--foreground)}button,input,select{font:inherit}h1,h2,h3,p{margin:0}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.spec400-plugins{margin:auto}button{cursor:pointer}.spec400-plugin-detail{position:fixed;background:white;z-index:50;overflow-y:auto;translate:-50% -50%}.spec400-plugin-detail [data-kova-dialog-close]{position:absolute;right:12px;top:12px;width:44px;height:44px}.spec400-plugin-detail svg{width:20px;height:20px}[role="alertdialog"]{position:fixed;inset:20%;background:white;border:1px solid #888;padding:24px;z-index:100}.spec400-plugin-management button{margin:4px}${css}`,
   });
   await page.addScriptTag({ content: script });
-  await expect(page.locator("[data-plugin-id]")).toHaveCount(13);
+  await expect(page.locator("[data-plugin-id]")).toHaveCount(12);
   await expect(page.locator('[data-plugin-id="gmail"]')).not.toContainText("Checking connection…");
 }
 
-test("approved 13-plugin directory supports primary and category filters", async ({ page }) => {
+test("approved 12-plugin directory supports primary and category filters", async ({ page }) => {
   await boot(page);
   await expect(page.getByRole("heading", { name: "Connections", exact: true })).toBeVisible();
   await expect(page.getByText("Connect tools and sources to Kova", { exact: true })).toBeVisible();
-  await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(13);
+  await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(12);
+  await expect(page.locator('[data-plugin-id="hubspot"]')).toHaveCount(0);
   await page.getByRole("combobox", { name: "Category", exact: true }).click();
   await page.getByRole("option", { name: "Email", exact: true }).click();
   await expect(page.locator("[data-plugin-id]")).toHaveCount(2);
@@ -149,7 +150,7 @@ test("approved 13-plugin directory supports primary and category filters", async
   await page.getByRole("textbox", { name: "Search connections" }).fill("missing");
   await expect(page.getByRole("heading", { name: "No matching connections" })).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(page.locator("[data-plugin-id]")).toHaveCount(13);
+  await expect(page.locator("[data-plugin-id]")).toHaveCount(12);
   await page.getByRole("tab", { name: /Connected/ }).click();
   await expect(page.getByRole("heading", { name: "No connections yet" })).toBeVisible();
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
