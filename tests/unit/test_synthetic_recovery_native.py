@@ -1,10 +1,12 @@
 """Synthetic guard/recipe tests; no Docker, source endpoint, data or restore."""
 import copy
 import errno
+import hashlib
 import io
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -286,10 +288,104 @@ class SyntheticTests(unittest.TestCase):
         with patch.object(m.resource,"setrlimit") as limit:m.bounded_diagnostic_child()
         limit.assert_called_once_with(m.resource.RLIMIT_FSIZE,(m.MAX_COMMAND_OUTPUT_BYTES,m.MAX_COMMAND_OUTPUT_BYTES))
 
+    def test_basic_quoted_headers_standalone_bearer_and_common_query_tokens_are_redacted(self):
+        basic="U1lOVEhFVElDX0NBTkFSWQ==";bearer="SYNTHETIC_BEARER_CANARY";query="SYNTHETIC_QUERY_CANARY"
+        cases=[f"Authorization: Basic {basic}\n",f'curl -H "Authorization: Basic {basic}"\n',
+            f'"Authorization": "Basic {basic}"\n',f'\\"Authorization\\": \\"Basic {basic}\\"\n',
+            f"Proxy-Authorization: Basic {basic}\n  {basic}\n",f"Bearer {bearer}\n",f'Bearer "{bearer}"\n',
+            f"https://registry.invalid/?access_token={query}&api_key={query}\n",
+            f"https://registry.invalid/?Access-Token={query}#id_token={query}\n"]
+        for raw in cases:
+            with self.subTest(raw=raw):
+                result=m.safe_diagnostic((raw+"actual safe Docker error\n").encode())
+                for secret in [basic,bearer,query]:self.assertNotIn(secret,result)
+                self.assertIn("actual safe Docker error",result)
+
+    def test_buildkit_markers_only_trust_executed_lines_before_large_error_frame(self):
+        actual=(b"#7 [2/4] RUN printf '%s\\n' 'KOVA_OPERATOR_STAGE=build-temporary-clean'\n"
+          b"#7 0.100 KOVA_OPERATOR_STAGE=ubuntu-release-read\n"
+          b"#7 0.101 KOVA_OPERATOR_STAGE=ubuntu-release-guard\n"
+          b"#7 0.102 KOVA_OPERATOR_STAGE=ubuntu-architecture-guard\n"
+          b"#7 0.103 KOVA_OPERATOR_STAGE=not-an-allowed-stage\n")
+        frame=b"Dockerfile:12\n--------------------\n"+b"".join(
+            ("  42 | >>> printf '%s\\n' 'KOVA_OPERATOR_STAGE="+stage+"'; \\\n").encode()
+            for stage in sorted(m.DOCKER_BUILD_STAGES))*8
+        raw=actual+frame+b"#7 ERROR: process did not complete successfully: exit code: 1\n"
+        observed=m.observed_docker_build_stages(raw)
+        self.assertEqual(observed["observedStage"],"ubuntu-architecture-guard")
+        self.assertEqual(observed["lastStage"],"ubuntu-architecture-guard")
+        self.assertEqual(observed["observedStageCount"],3)
+        self.assertIsNone(m.observed_docker_build_stages(frame)["observedStage"])
+        self.assertIsNone(m.observed_docker_build_stages(
+            b"#7 0.104 printf '%s\\n' 'KOVA_OPERATOR_STAGE=apt-cache-clean'\n"
+            b"#7 0.105 + printf KOVA_OPERATOR_STAGE=apt-cache-clean\n")["observedStage"])
+        b=m.SyntheticBuilder(self.env);b.set_build_stage("build")
+        def command(argv,**kwargs):
+            kwargs["stderr"].write(raw)
+            return subprocess.CompletedProcess(argv,1)
+        with patch.object(m.subprocess,"run",side_effect=command),self.assertRaises(m.SyntheticCommandFailure) as caught:
+            b.command(["docker","build","--progress=plain","public-context"])
+        details=caught.exception.details
+        self.assertEqual(details["observedStage"],"ubuntu-architecture-guard")
+        self.assertNotIn("#7 0.102 KOVA_OPERATOR_STAGE=ubuntu-architecture-guard",details["stderrTail"])
+        self.assertLessEqual(len(details["stderrTail"])+len(details["stdoutTail"]),m.MAX_DIAGNOSTIC_BYTES)
+
+    def test_docker_stage_markers_precede_guards_and_do_not_change_original_commands(self):
+        source=m.HERE.joinpath("recovery-operator-client.Dockerfile").read_text()
+        stages=set(re.findall(r"KOVA_OPERATOR_STAGE=([a-z0-9-]+)",source))
+        self.assertEqual(stages,m.DOCKER_BUILD_STAGES)
+        body=source.split("RUN ",1)[1].split("\nCOPY ",1)[0]
+        checked=subprocess.run(["bash","-n","-c",body.replace("\\\n"," ")],capture_output=True)
+        self.assertEqual(checked.returncode,0,checked.stderr.decode())
+        lines=body.splitlines()
+        for i,line in enumerate(lines):
+            stripped=line.strip()
+            if stripped.startswith(("[[", "if grep", "grep -q")):
+                self.assertRegex(lines[i-1],r"printf '%s\\n' 'KOVA_OPERATOR_STAGE=[a-z0-9-]+';")
+        for stage,predicate in [
+            ("pgdg-key-count-guard",'assert sum(x[0]=="pub" for x in rows)==1'),
+            ("pgdg-key-fingerprint-guard",'assert next(x[9] for x in rows if x[0]=="fpr")=="B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8"')]:
+            self.assertIn('print("KOVA_OPERATOR_STAGE='+stage+'",flush=True);'+predicate,body)
+        # This normalized public recipe hash pins EVERY original command, guard,
+        # signing fingerprint and URL, excluding only the new fixed markers.
+        stripped=[];inside_case=False
+        for line in lines:
+            command=line.rstrip().removesuffix(chr(92)).strip()
+            if command=='case "$package" in':inside_case=True;continue
+            if inside_case:
+                if command=='esac;':inside_case=False;continue
+                self.assertRegex(command,r"^(?:bash|ca-certificates|coreutils|curl|gnupg|nodejs|python3)\) printf '%s\\n' 'KOVA_OPERATOR_STAGE=[a-z0-9-]+';;$")
+                continue
+            if re.fullmatch(r"printf '%s\\n' 'KOVA_OPERATOR_STAGE=[a-z0-9-]+';",command):continue
+            line=re.sub(r'print\("KOVA_OPERATOR_STAGE=[a-z0-9-]+",flush=True\);',"",line)
+            line=line.replace("if grep -Eiq '^(Trusted|Allow-Insecure):[[:space:]]*yes' /etc/apt/sources.list.d/ubuntu.sources; then exit 1; fi;",
+                              "! grep -Eiq '^(Trusted|Allow-Insecure):[[:space:]]*yes' /etc/apt/sources.list.d/ubuntu.sources;")
+            stripped.append(line)
+        normalized=" ".join("\n".join(stripped).replace("\\\n"," ").split())
+        self.assertEqual(hashlib.sha256(normalized.encode()).hexdigest(),
+                         "d830f8159ff4b57a8ef9923c04f5bf6d0ab66b8c8bb8c9e551cb624a92dd1c8c")
+
+    def test_unsigned_apt_source_guard_actually_aborts_under_errexit(self):
+        source=m.HERE.joinpath("recovery-operator-client.Dockerfile").read_text()
+        line=next(line for line in source.splitlines() if line.strip().startswith("if grep -Eiq"))
+        self.assertIn("then exit 1; fi;",line)
+        self.assertNotIn("    ! grep -Eiq",source)
+        command=line.strip().removesuffix(chr(92)).strip().replace("/etc/apt/sources.list.d/ubuntu.sources",'"$1"')
+        fixture=self.root/"synthetic-apt.sources"
+        for value,rejected in [("Trusted: yes\n",True),("Allow-Insecure:\tyes\n",True),
+                               ("trusted: YES\n",True),("Trusted: no\n",False),("Types: deb\n",False)]:
+            fixture.write_text(value)
+            result=subprocess.run(["bash","-o","pipefail","-ceu",command+" printf accepted", "canary",str(fixture)],capture_output=True)
+            with self.subTest(value=value):
+                self.assertEqual(result.returncode!=0,rejected)
+                self.assertEqual(b"accepted" not in result.stdout,rejected)
+
     def test_every_build_phase_is_pinpointed_and_completed_build_exit_can_be_cleaned(self):
         for index,stage in enumerate(["git","pull","inspect","context","build","final-inspect"],2):
             env={**self.env,"GITHUB_RUN_ATTEMPT":str(index)};b=m.SyntheticBuilder(env)
+            commands=[]
             def command(argv,**_kwargs):
+                commands.append(argv)
                 if b.build_stage==stage:
                     raise m.SyntheticCommandFailure("synthetic_command_nonzero_exit",
                         {"stage":stage,"status":"exit","exitCode":1,"completed":True,
@@ -309,6 +405,7 @@ class SyntheticTests(unittest.TestCase):
                  self.assertRaises((m.Stopped,m.builder.Stopped)) as caught:
                 b.build()
             self.assertEqual(b.build_stage,stage)
+            if stage=="final-inspect":self.assertTrue(any(a[:2]==["docker","build"] and "--progress=plain" in a for a in commands))
             self.assertEqual(m.failure_details(caught.exception,b.build_stage)["stage"],stage)
             state=json.loads(b.state.read_bytes())
             self.assertEqual(state["buildInvoked"],stage in {"build","final-inspect"})

@@ -27,6 +27,49 @@ FIXTURE_OWNER="synthetic_extension_owner"
 FIXTURE_EXTENSIONS=("pgcrypto","vector")
 FORBIDDEN_PREFIXES=("KOVA_PRODUCTION_","APPROVED_ISOLATED_","KOVA_AUTH_RESTORE_","KOVA_AUTH_BACKUP_")
 BUILD_STAGES=frozenset({"setup","git","pull","inspect","context","build","final-inspect","cleanup"})
+DOCKER_BUILD_STAGES=frozenset({
+    "apt-cache-clean",
+    "build-temporary-clean",
+    "pg17-candidate-query",
+    "pg17-client-install",
+    "pg17-version-guard",
+    "pgdg-index-refresh",
+    "pgdg-key-count-guard",
+    "pgdg-key-directory",
+    "pgdg-key-download",
+    "pgdg-key-fingerprint-guard",
+    "pgdg-key-read",
+    "pgdg-source-write",
+    "sbom-directory",
+    "sbom-package-query",
+    "sbom-release-copy",
+    "ubuntu-architecture-guard",
+    "ubuntu-candidate-bash",
+    "ubuntu-candidate-ca-certificates",
+    "ubuntu-candidate-coreutils",
+    "ubuntu-candidate-curl",
+    "ubuntu-candidate-gnupg",
+    "ubuntu-candidate-nodejs",
+    "ubuntu-candidate-python3",
+    "ubuntu-enable-https",
+    "ubuntu-index-refresh",
+    "ubuntu-insecure-source-guard",
+    "ubuntu-legacy-sources-empty-guard",
+    "ubuntu-official-uris-guard",
+    "ubuntu-package-candidate-query",
+    "ubuntu-package-list",
+    "ubuntu-package-loop",
+    "ubuntu-package-select",
+    "ubuntu-package-version-guard",
+    "ubuntu-packages-install",
+    "ubuntu-release-guard",
+    "ubuntu-release-read",
+    "ubuntu-scope-signing-key",
+    "ubuntu-signed-by-guard",
+    "ubuntu-source-count-guard",
+    "ubuntu-source-glob",
+    "ubuntu-sources-present-guard",
+})
 MAX_COMMAND_OUTPUT_BYTES=8*1024**2
 MAX_DIAGNOSTIC_BYTES=4096
 SAFE_FAILURE_CODES=frozenset({
@@ -62,12 +105,27 @@ def safe_diagnostic(raw,secrets_to_hide=(),limit=MAX_DIAGNOSTIC_BYTES):
     text=re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]","",text)
     for secret in secrets_to_hide:text=text.replace(secret,"[redacted]")
     text=re.sub(r"(?i)\b([a-z][a-z0-9+.-]*://)[^\s/@]+(?::[^\s/@]*)?@",r"\1[redacted]@",text)
-    text=re.sub(r"(?i)(authorization\s*[:=]\s*(?:bearer\s+)?)[^\s\"']+",r"\1[redacted]",text)
-    text=re.sub(r"(?i)([?&](?:token|secret|password|key|credential|signature)=)[^&\s\"']+",r"\1[redacted]",text)
+    text=re.sub(r"(?im)(\b(?:proxy-)?authorization\b(?:\\?[\"'])?[ \t]*[:=][ \t]*)[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*",r"\1[redacted]",text)
+    text=re.sub(r"(?i)\bbearer[ \t]+[\"']?[^\s\"'<>]+","Bearer [redacted]",text)
+    text=re.sub(r"(?i)([?&#](?:access[_-]?token|refresh[_-]?token|id[_-]?token|api[_-]?key|client[_-]?secret|token|secret|password|key|credential|signature|authorization|auth|x-amz-(?:credential|signature|security-token))=)[^&\s\"']+",r"\1[redacted]",text)
     text=re.sub(r"\b(?:sk-(?:proj-)?[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9_]{12,}|github_pat_[A-Za-z0-9_]{12,}|AKIA[A-Z0-9]{16})\b","[redacted]",text)
     text=text.replace("\r","\n")
     text="".join(c if c=="\n" or 32<=ord(c)<=126 else "?" for c in text)
     return text.encode("ascii")[-limit:].decode("ascii") if limit else ""
+
+
+def observed_docker_build_stages(stderr):
+    # Only BuildKit's actual plain progress output is evidence. Dockerfile
+    # frames, RUN command echoes, xtrace and unknown strings are not markers.
+    observed=[]
+    for line in stderr.splitlines():
+        match=re.fullmatch(rb"#[0-9]+[ \t]+[0-9]+(?:\.[0-9]+)?[ \t]+KOVA_OPERATOR_STAGE=([a-z0-9-]+)",line)
+        if match:
+            stage=match[1].decode("ascii")
+            if stage in DOCKER_BUILD_STAGES:observed.append(stage)
+    last=observed[-1] if observed else None
+    return {"observedStage":last,"lastStage":last,"observedStages":observed[-64:],
+            "observedStageCount":len(observed)}
 
 
 def bounded_diagnostic_child():
@@ -172,6 +230,10 @@ class SyntheticBuilder(builder.Builder):
             details={"stage":stage,"status":status,"completed":completed,"exitCode":exit_code,
                      "outputWithinBound":bounded,"stderrTail":stderr_tail,"stdoutTail":stdout_tail}
             if status=="os-error":details["osErrorNumber"]=os_error
+            if stage=="build" and argv[:2]==["docker","build"]:
+                # Parse the complete bounded capture, before the 4KiB tail can
+                # hide early executed guards behind a large Dockerfile frame.
+                details.update(observed_docker_build_stages(stderr))
             raise SyntheticCommandFailure(code,details,completed=completed)
 
     def write_state(self,run,attempt):
@@ -201,7 +263,7 @@ class SyntheticBuilder(builder.Builder):
             self.set_build_stage("build")
             self.build_invoked=True;self.write_state(run,attempt)
             try:
-                self.command(["docker","build","--platform","linux/amd64","--no-cache","--pull=false",
+                self.command(["docker","build","--progress=plain","--platform","linux/amd64","--no-cache","--pull=false",
                 "--build-arg","BASE_IMAGE="+measured,"--build-arg","SOURCE_SHA="+self.source,
                     "--label","org.kova.recovery.owner="+self.owner,"--tag",self.tag,folder],timeout=900)
             except SyntheticCommandFailure as error:
