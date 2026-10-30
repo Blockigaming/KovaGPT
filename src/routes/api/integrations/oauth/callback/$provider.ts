@@ -18,7 +18,7 @@ export const Route = createFileRoute("/api/integrations/oauth/callback/$provider
         const target = new URL("/apps", url.origin);
         const redirect = (location: URL) =>
           redirectClearingOauthCookie(location, INTEGRATION_OAUTH_COOKIE);
-        if (!(provider in OAUTH_PROVIDERS)) {
+        if (!Object.hasOwn(OAUTH_PROVIDERS, provider)) {
           target.searchParams.set("integration_error", "unsupported_provider");
           return redirect(target);
         }

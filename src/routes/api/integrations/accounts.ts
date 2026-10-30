@@ -12,23 +12,31 @@ export const Route = createFileRoute("/api/integrations/accounts")({
         const { data, error } = await db
           .from("integration_linked_accounts")
           .select(
-            "id, provider_id, account_label, status, granted_scopes, token_expires_at, health_checked_at, last_success_at, last_error_code, created_at",
+            "id, provider_id, account_label, status, granted_scopes, token_expires_at, health_checked_at, last_success_at, last_error_code, created_at, updated_at",
           )
           .eq("owner_id", auth.userId)
+          .is("workspace_id", null)
           .is("deleted_at", null)
           .order("created_at", { ascending: false });
-        if (error) return Response.json({ error: "accounts_unavailable" }, { status: 500 });
-        return Response.json({
-          configuredProviders: configuredOAuthProviders().map(
-            ({ id, name, requiredScopes, optionalScopes }) => ({
-              id,
-              name,
-              requiredScopes,
-              optionalScopes,
-            }),
-          ),
-          accounts: data ?? [],
-        });
+        if (error)
+          return Response.json(
+            { error: "accounts_unavailable" },
+            { status: 503, headers: { "Cache-Control": "no-store" } },
+          );
+        return Response.json(
+          {
+            configuredProviders: configuredOAuthProviders().map(
+              ({ id, name, requiredScopes, optionalScopes }) => ({
+                id,
+                name,
+                requiredScopes,
+                optionalScopes,
+              }),
+            ),
+            accounts: data ?? [],
+          },
+          { headers: { "Cache-Control": "no-store" } },
+        );
       },
     },
   },

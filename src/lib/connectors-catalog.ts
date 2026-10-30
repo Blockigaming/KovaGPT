@@ -1,3 +1,5 @@
+import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
+
 // Catalog of connectable services shown in Apps and Settings.
 //
 // TRUTHFULNESS CONTRACT
@@ -85,7 +87,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Outlook",
     description: "Read Microsoft Outlook mail.",
     category: "Email",
-    status: "planned",
+    status: "setup_required",
     domain: "outlook.com",
   },
   {
@@ -117,7 +119,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "OneDrive",
     description: "Reference files from OneDrive.",
     category: "Storage & Files",
-    status: "planned",
+    status: "setup_required",
     domain: "onedrive.live.com",
   },
   {
@@ -173,7 +175,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Notion",
     description: "Read and update Notion pages.",
     category: "Notes & Docs",
-    status: "planned",
+    status: "setup_required",
     domain: "notion.so",
   },
   {
@@ -237,7 +239,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Slack",
     description: "Read channels and DMs you allow.",
     category: "Communication",
-    status: "planned",
+    status: "setup_required",
     domain: "slack.com",
   },
   {
@@ -245,7 +247,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Microsoft Teams",
     description: "Read Teams chats.",
     category: "Communication",
-    status: "planned",
+    status: "setup_required",
     domain: "teams.microsoft.com",
   },
   {
@@ -301,7 +303,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Linear",
     description: "Read issues and projects.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "linear.app",
   },
   {
@@ -2965,10 +2967,13 @@ export const GOOGLE_CONNECT_IDS: ReadonlySet<string> = new Set([
 ]);
 
 /** The connect mechanism actually implemented for an entry, if any. */
-export function connectorConnectFlow(item: ConnectorItem): "google-oauth" | "github-app" | null {
+export function connectorConnectFlow(
+  item: ConnectorItem,
+): "google-oauth" | "github-app" | "provider-oauth" | null {
   if (item.status !== "live" && item.status !== "setup_required") return null;
   if (GOOGLE_CONNECT_IDS.has(item.id)) return "google-oauth";
   if (item.id === "github") return "github-app";
+  if (CONNECTION_FLOWS[item.id]) return "provider-oauth";
   return null;
 }
 

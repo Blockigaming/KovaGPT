@@ -3,6 +3,12 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 import { deferred, settle } from "../helpers/ui-state-harness.mjs";
+import {
+  CONNECTION_FLOWS,
+  canReadConnection,
+  connectionAccounts,
+  hasConnectionScopes,
+} from "../../src/integrations/connection-flows.mjs";
 
 const source = readFileSync("src/routes/apps.tsx", "utf8");
 const file = ts.createSourceFile(
@@ -298,6 +304,16 @@ function countFixture(overrides = {}) {
   const ids = ["google", "gmail", "google-drive", "google-calendar", "github"];
   const deps = {
     React,
+    CONNECTION_FLOWS,
+    canReadConnection,
+    connectionAccounts,
+    hasConnectionScopes,
+    configuredOf: () => false,
+    otherConnections: {
+      data: { accounts: [], configuredProviders: [] },
+      loading: false,
+      error: false,
+    },
     WORKING_IDS: new Set(ids),
     isLoaded: true,
     isSignedIn: true,

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import * as flows from "../../src/integrations/connection-flows.mjs";
 function load(path, modules = {}) {
   const source = readFileSync(path, "utf8");
   const code = ts.transpileModule(source, {
@@ -15,7 +16,9 @@ function load(path, modules = {}) {
   });
   return exports;
 }
-const original = load("src/lib/connectors-catalog.ts");
+const original = load("src/lib/connectors-catalog.ts", {
+  "@/integrations/connection-flows.mjs": flows,
+});
 const provenance = JSON.parse(readFileSync("src/assets/plugins/provenance.json", "utf8"));
 const assetModules = Object.fromEntries(
   provenance.assets.map((asset) => [
@@ -24,6 +27,7 @@ const assetModules = Object.fromEntries(
   ]),
 );
 const review = load("src/lib/plugin-review-catalog.ts", {
+  "@/integrations/connection-flows.mjs": flows,
   "./connectors-catalog": original,
   ...assetModules,
 });
@@ -51,7 +55,7 @@ test("launch review includes exactly 13 providers, preserving original catalog i
   for (const item of review.LAUNCH_PLUGIN_REVIEW_CATALOG) {
     if (item.connector.id !== "sharepoint")
       assert.equal(item.connector, original.getConnector(item.connector.id));
-    else assert.equal(item.connector.status, "planned");
+    else assert.equal(item.connector.status, "setup_required");
     assert.equal("connected" in item, false);
     assert.equal("connectionState" in item, false);
   }

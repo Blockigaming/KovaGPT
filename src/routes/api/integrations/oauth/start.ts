@@ -19,8 +19,9 @@ export const Route = createFileRoute("/api/integrations/oauth/start")({
           provider?: string;
           optionalScopes?: string[];
           returnPath?: string;
+          existingAccountId?: string;
         } | null;
-        if (!body?.provider || !(body.provider in OAUTH_PROVIDERS))
+        if (!body?.provider || !Object.hasOwn(OAUTH_PROVIDERS, body.provider))
           return Response.json({ error: "unsupported_provider" }, { status: 400 });
         try {
           const browserNonce = crypto.randomUUID();
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/api/integrations/oauth/start")({
             browserNonce,
             optionalScopes: body.optionalScopes,
             returnPath: body.returnPath,
+            existingAccountId: body.existingAccountId,
           });
           return Response.json(result, {
             headers: {
