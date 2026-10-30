@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { isModeAllowedForTier } from "../../src/lib/mode-entitlements.mjs";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
 
 const modes = [
-  { id: "instant", label: "Instant" },
+  { id: "instant", label: "Default" },
   { id: "medium", label: "Medium" },
+  { id: "thinking", label: "Thinking" },
   { id: "high", label: "High" },
   { id: "extra_high", label: "Extra high" },
   { id: "max", label: "Max" },
@@ -41,13 +43,17 @@ function fixture(initial = {}) {
       modules: {
         "@/lib/modes": {
           MODES: modes,
+          isModeAllowedForTier,
           versionGroupsForTier: (tier) => [
-            { id: "current", label: "Current", modes: modes.slice(0, tier === "pro" ? 6 : 3) },
+            {
+              id: "current",
+              label: "Current",
+              modes: modes.filter((mode) => isModeAllowedForTier(tier, mode.id)),
+            },
           ],
         },
         "@/lib/mode-display-label": {
-          modeDisplayLabel: (mode) =>
-            mode.id === "high" && config.userTier === "plus" ? "Thinking" : mode.label,
+          modeDisplayLabel: (mode) => mode.label,
         },
         "@/hooks/use-mobile": { useLayout: () => config },
         "@/components/auth/ClerkSafe": { useUser: () => config },
@@ -187,11 +193,7 @@ test("touch layout retains the same trigger reference and the existing modal-she
   );
 });
 
-for (const identity of [
-  { isLoaded: true, isSignedIn: false },
-  { isLoaded: true, userTier: "free" },
-  { isLoaded: false },
-]) {
+for (const identity of [{ isLoaded: true, isSignedIn: false }, { isLoaded: false }]) {
   test(`locked identity never mounts a switchable picker: ${JSON.stringify(identity)}`, async () => {
     const f = fixture(identity);
     await f.flush();
@@ -204,3 +206,20 @@ for (const identity of [
     else assert.deepEqual(f.changes, []);
   });
 }
+
+test("signed-in Free keeps Default and Thinking switchable and resets a stale paid choice", async () => {
+  const f = fixture({ userTier: "free", mode: "high" });
+  await f.flush();
+  assert.deepEqual(f.changes, ["instant"]);
+  f.open();
+  await f.flush();
+  const options = f.nodes().filter((node) => node.props?.["data-slot"] === "model-selector-option");
+  assert.deepEqual(
+    options.map((node) => node.props["data-testid"]),
+    ["model-option-instant", "model-option-thinking"],
+  );
+  f.find("button", (node) => node.props["data-testid"] === "model-option-thinking").props.onClick();
+  await f.flush();
+  assert.equal(f.trigger().props["aria-label"], "Choose model: KovaGPT Thinking");
+  assert.deepEqual(f.changes, ["instant", "thinking"]);
+});

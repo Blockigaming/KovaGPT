@@ -93,7 +93,7 @@ test("active focus rules use native focus-visible and retain visible keyboard ou
   });
   assert.ok(focusRules.some((rule) => rule.selector.includes("input")));
   assert.ok(focusRules.some((rule) => rule.selector.includes("button")));
-  for (const rule of focusRules) {
+  for (const rule of focusRules.filter((rule) => rule.selector.includes("button"))) {
     assert.ok(
       rule.nodes.some((node) => node.prop === "outline" && node.value === "2px solid var(--ring)"),
     );
@@ -103,6 +103,19 @@ test("active focus rules use native focus-visible and retain visible keyboard ou
       "Keyboard focus must not recolor ordinary dialog actions",
     );
   }
+  const fields = focusRules.find(
+    (rule) => rule.selector.startsWith(":is(input") && rule.parent.type === "root",
+  );
+  assert.ok(fields.nodes.some((node) => node.prop === "outline" && node.value === "none"));
+  assert.ok(
+    fields.nodes.some((node) => node.prop === "border-color" && node.value.includes("50%")),
+  );
+  const forced = focusRules.find(
+    (rule) => rule.parent.type === "atrule" && rule.parent.params === "(forced-colors: active)",
+  );
+  assert.ok(
+    forced.nodes.some((node) => node.prop === "outline" && node.value === "2px solid Highlight"),
+  );
   assert.match(
     readFileSync("src/components/conversation-header.css", "utf8"),
     /button:focus-visible/,

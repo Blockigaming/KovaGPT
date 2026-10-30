@@ -59,7 +59,10 @@ test("settings sections are routable and appearance remains principal scoped", (
   const hook = read("src/lib/use-nova-settings.ts");
   assert.match(hook, /principalRef\.current !== principal/);
   assert.match(hook, /saveStoredSettings\(userKey/);
-  assert.match(read("src/components/AppearanceSettings.tsx"), /Cross-device sync is\s+unavailable/);
+  assert.match(
+    read("src/components/AppearanceSettings.tsx"),
+    /Saved automatically for this account on this device/,
+  );
 });
 test("expanded navigation does not retain a hidden rail width and fonts are scoped", () => {
   const css = read("src/styles/sidebar-core.css");
