@@ -29,7 +29,12 @@ BASE_TAG="ubuntu:24.04"
 KEY_FINGERPRINT="B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8"
 UBUNTU_KEY_FINGERPRINT="F6ECB3762474EDA9D21B7022871920D1991BC93C"
 FILES=["managed-auth-recovery.py","managed-auth-recovery-target.mjs","verify-isolated-restore-target.mjs",
-       "empty-restore-target-catalog.sql","recovery-operator-client-smoke.py","run-isolated-recovery-client.py"]
+       "empty-restore-target-catalog.sql","recovery-operator-client-smoke.py","run-isolated-recovery-client.py",
+       "extension-semantic-capture.py","extension-routine-type-payloads.py",
+       "extension-routine-type-hash-query.py","extension-relation-payloads.py",
+       "extension-relation-query-hooks.py","pg17-extension-relation-manifest.json",
+       "canonicalize-pg17-extension-nodes.py","pg17-extension-node-schema.json",
+       "extension-regclass-datum-byteorder-audit.sql"]
 SAFE_HOST_ENV={"PATH","HOME","LANG","LC_ALL","TZ","TMPDIR","HTTP_PROXY","HTTPS_PROXY","ALL_PROXY",
                "NO_PROXY","http_proxy","https_proxy","all_proxy","no_proxy","SSL_CERT_FILE","SSL_CERT_DIR"}
 SENSITIVE_KEYS={"KOVA_PRODUCTION_DATABASE_URL","KOVA_PRODUCTION_BACKUP_PASSPHRASE","PGPASSWORD",
@@ -105,7 +110,8 @@ def check_smoke(value):
             and all(value.get(k) is True for k in ["nonroot","nativePythonEngineImport","nativeNodeDestinationGuard",
                        "nativeFileBoundLauncherImport","nodePasswordOverrideRejected","syntheticGpgRoundtrip",
                        "wrongGpgPassphraseRejected","readonlyRootObserved","noNewPrivilegesObserved",
-                       "capabilitiesDroppedObserved","tmpfsNoSwapObserved","memorySwapDisabledObserved"])
+                       "capabilitiesDroppedObserved","tmpfsNoSwapObserved","memorySwapDisabledObserved",
+                       "nativeSemanticDependencyClosureLoaded"])
             and all(value.get(k) is False for k in ["actualTargetConnected","customerRowsUsed","restorePerformed"]),
             "native_client_smoke_unqualified")
     require(len(value.get("tools",[]))==9 and {r.get("name") for r in value.get("tools",[])}==

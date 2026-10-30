@@ -28,7 +28,7 @@ def smoke():
                   "sha256":"a"*64} for n in names],"packageInventorySha256":m.sha(b"synthetic\n"),
         "installedPackageCount":1,"signedInReleaseFiles":[{"name":"synthetic_InRelease","sha256":"b"*64}],
         "nativePythonEngineImport":True,"nativeNodeDestinationGuard":True,"nodePasswordOverrideRejected":True,
-        "nativeFileBoundLauncherImport":True,"readonlyRootObserved":True,"noNewPrivilegesObserved":True,
+        "nativeFileBoundLauncherImport":True,"nativeSemanticDependencyClosureLoaded":True,"readonlyRootObserved":True,"noNewPrivilegesObserved":True,
         "capabilitiesDroppedObserved":True,"tmpfsNoSwapObserved":True,"memorySwapDisabledObserved":True,
         "syntheticGpgRoundtrip":True,"wrongGpgPassphraseRejected":True,"actualTargetConnected":False,
         "customerRowsUsed":False,"restorePerformed":False}
@@ -98,6 +98,24 @@ class PreparationTests(unittest.TestCase):
                        lambda v:v["tools"][0].update(sha256="invalid"),lambda v:v["tools"].append(v["tools"][0]),
                        lambda v:v.update(signedInReleaseFiles=[])]:
             value=smoke();mutate(value)
+            with self.assertRaises(m.Stopped):m.check_smoke(value)
+
+    def test_final_format3_runtime_has_exact_generic_dependency_closure(self):
+        spec=importlib.util.spec_from_file_location("native_client_smoke",m.SOURCE/"recovery-operator-client-smoke.py")
+        client=importlib.util.module_from_spec(spec);spec.loader.exec_module(client)
+        spec=importlib.util.spec_from_file_location("semantic_capture",m.SOURCE/"extension-semantic-capture.py")
+        semantic=importlib.util.module_from_spec(spec);spec.loader.exec_module(semantic)
+        self.assertEqual(set(m.FILES),set(client.SOURCE_NAMES))
+        self.assertEqual(set(m.FILES)-set(semantic.HELPERS),{
+            "managed-auth-recovery.py","managed-auth-recovery-target.mjs","verify-isolated-restore-target.mjs",
+            "empty-restore-target-catalog.sql","recovery-operator-client-smoke.py","run-isolated-recovery-client.py"})
+        self.assertEqual(set(semantic.source_files()),set(semantic.HELPERS))
+        self.assertTrue(semantic.audit_body().endswith(";"))
+        options=semantic.relations.capture_query_options(semantic.core,semantic.generator)
+        self.assertIn("pg_extension",options["manifests"])
+        self.assertIn("PRIVATE_GHA_CAPTURE_ONLY",semantic.generator.build_capture_all_private_wire_query(**options))
+        for field in ["nativeSemanticDependencyClosureLoaded"]:
+            value=smoke();value.pop(field)
             with self.assertRaises(m.Stopped):m.check_smoke(value)
 
     def test_final_smoke_container_is_nonroot_readonly_unprivileged_networkless_and_healthcheck_off(self):
