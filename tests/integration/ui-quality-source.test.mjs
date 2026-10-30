@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import postcss from "postcss";
+import ts from "typescript";
 
 const styles = await readFile("src/styles.css", "utf8");
 const coreStyles = await readFile("src/styles/core-system.css", "utf8");
@@ -308,10 +309,22 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.doesNotMatch(composer, /outlineWidth:\s*"2px"/);
   assert.doesNotMatch(composer, /outlineColor:\s*"currentColor"/);
   assert.match(composer, /surface\?: "empty" \| "conversation"/);
+  const syntax = ts.createSourceFile(
+    "ChatInput.tsx",
+    composer,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  const positionedPopovers = [];
+  const visit = (node) => {
+    if (ts.isJsxOpeningElement(node) && node.tagName.getText(syntax) === "PopoverContent")
+      positionedPopovers.push(node.attributes.getText(syntax));
+    ts.forEachChild(node, visit);
+  };
+  visit(syntax);
   for (const className of ["kova-composer-menu spec400-attach-menu", "spec400-options-panel"]) {
-    const popover = [...composer.matchAll(/<PopoverContent([\s\S]*?)>/g)].find(([, props]) =>
-      props.includes(`className="${className}"`),
-    )?.[1];
+    const popover = positionedPopovers.find((props) => props.includes(`className="${className}"`));
     assert.ok(popover, `${className} retains its positioned popover`);
     assert.match(popover, /side="top"/);
     assert.match(popover, /sideOffset=\{8\}/);
@@ -319,7 +332,10 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   }
   assert.match(composer, /\{showAddMenu && isMobileLayout && \(\s*<MobileBottomSheet/);
   assert.match(composer, /ariaLabel="Attach files and tools"/);
-  assert.match(composer, /restoreFocus=\{!contextOpen && !libraryOpen && !signInRequest\}/);
+  assert.match(
+    composer,
+    /restoreFocus=\{!contextOpen && !libraryOpen && !signInRequest && !optionsOpen\}/,
+  );
   assert.match(composerStyles, /\.spec400-toolbar-button,[\s\S]*?min-height: 44px;/);
   assert.match(composer, /\["ArrowDown", "ArrowUp", "Home", "End"\]\.includes\(event\.key\)/);
   assert.match(composer, /button:not\(:disabled\),a\[href\]/);
