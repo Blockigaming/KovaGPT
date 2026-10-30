@@ -53,6 +53,20 @@ class Transport:
 
 
 class GoogleForwardOperatorTests(unittest.TestCase):
+    def test_native_pg17_prerequisite_is_verified_without_credentials_and_precedes_transport(self):
+        workflow = (ROOT / ".github/workflows/google-connection-forward.yml").read_text()
+        source, operator = workflow.split("  source-tests:", 1)[1].split("  google-forward-only:", 1)
+        self.assertIn("bash scripts/release/ensure-pg17-client.sh", source)
+        self.assertLess(operator.index("bash scripts/release/ensure-pg17-client.sh"), operator.index("KOVA_PRODUCTION_DATABASE_URL:"))
+        installer = (ROOT / "scripts/release/ensure-pg17-client.sh").read_text()
+        self.assertIn("B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8", installer)
+        self.assertIn("https://apt.postgresql.org/pub/repos/apt", installer)
+        self.assertIn("signed-by=", installer)
+        self.assertIn("postgresql-client-17", installer)
+        self.assertNotIn("allow-unauthenticated", installer)
+        self.assertNotIn("trusted=yes", installer)
+        self.assertNotIn("secrets.", source)
+
     def test_untrusted_pull_request_tests_cannot_receive_the_production_connection(self):
         workflow = (ROOT / ".github/workflows/google-connection-forward.yml").read_text()
         source_tests = workflow.split("  source-tests:", 1)[1].split("  google-forward-only:", 1)[0]
