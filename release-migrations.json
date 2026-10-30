@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 197,
-  "latest": "20261028213000_kova_owned_google_attachment_guard.sql",
+  "count": 198,
+  "latest": "20261030132255_google_connection_lifecycle_forward.sql",
   "migrations": [
     {
       "order": 1,
@@ -4102,6 +4102,39 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 198,
+      "filename": "20261030132255_google_connection_lifecycle_forward.sql",
+      "timestamp": "20261030132255",
+      "sha256": "4fde05fe365efabf0f5466640dc7ea07e8182864b4529dc7def2a71a4e82c3e2",
+      "tables": [
+        "google_connection_preferences",
+        "google_oauth_attempts",
+        "google_oauth_exchange_receipts",
+        "google_oauth_subject_cleanup"
+      ],
+      "functions": [
+        "google_connection_rpc",
+        "google_connection_core_rpc",
+        "google_connection_rpc",
+        "google_oauth_exchange_rpc"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "google_connection_preferences",
+        "google_oauth_attempts",
+        "google_oauth_exchange_receipts",
+        "google_oauth_subject_cleanup"
+      ],
+      "policies": [],
+      "indexes": [
+        "google_connections_owner",
+        "google_oauth_attempts_owner_expiry",
+        "google_oauth_exchange_cleanup"
+      ]
     }
   ]
 }
