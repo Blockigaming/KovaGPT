@@ -87,6 +87,12 @@ SAFE_FAILURE_CODES=frozenset({
     "synthetic_command_signaled","synthetic_command_output_bound",
     "native_command_failed","native_command_unconfirmed","native_extension_preload_unqualified",
     "native_permission_unqualified","native_dependency_unqualified","private_command_output_bound",
+    "operator_tmpfs_options_unqualified","operator_tmpfs_owner_unqualified",
+    "operator_tmpfs_destination_unqualified","operator_tmpfs_state_unqualified",
+    "operator_tmpfs_census_unqualified","operator_tmpfs_identity_unqualified",
+    "operator_tmpfs_mountpoint_unqualified","operator_tmpfs_name_not_absent",
+    "operator_tmpfs_reservation_changed","operator_tmpfs_duplicate_destination",
+    "operator_tmpfs_removal_unconfirmed",
 })
 
 

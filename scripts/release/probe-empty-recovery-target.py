@@ -625,6 +625,7 @@ while :; do sleep 1; done"""
                "privateRoot":str(self.private_root) if self.private_root else None,
                "pgUid":self.pg_uid,"pgGid":self.pg_gid,"uid":self.uid,"gid":self.gid,
                "cleanupConfirmed":self.cleanup_confirmed}
+        if hasattr(self,"tmpfs_volumes"):state["tmpfsVolumes"]=self.checked_tmpfs_specs(self.tmpfs_volumes)
         if self.state_path.exists():
             old=json.loads(private_file(self.state_path).read_bytes())
             require(all(old.get(k)==state[k] for k in ["token","source","runId","attempt"]),"owned_state_conflict")
@@ -922,9 +923,14 @@ while :; do sleep 1; done"""
                             and self.resource_absent(self.network,network=True),"owned_network_removal_unconfirmed")
                 network_gone=True
             except Exception:safe=False;network_gone=False
+        volumes_gone=True
+        if hasattr(self,"cleanup_tmpfs_volumes"):
+            try:volumes_gone=self.cleanup_tmpfs_volumes(containers_gone)
+            except Exception:volumes_gone=False
+            if not volumes_gone:safe=False
         # Keep both firewall layers and private backing files if a live target
         # or an uncertain daemon operation cannot yet be reconciled.
-        for tool in reversed(self.firewall_reserved) if containers_gone and network_gone else []:
+        for tool in reversed(self.firewall_reserved) if containers_gone and network_gone and volumes_gone else []:
             base=["sudo","-n",tool,"-w","5"]
             try:
                 jump=["DOCKER-USER","-i",self.bridge,"-m","comment","--comment",self.token,"-j",self.chain]
@@ -952,7 +958,7 @@ while :; do sleep 1; done"""
                 require(not any(len(tokens)>=2 and tokens[1]==self.chain for tokens in after)
                         and ["-A",*jump] not in after,"owned_firewall_chain_removal_unconfirmed")
             except Exception:safe=False
-        if self.private_root and containers_gone and network_gone:
+        if self.private_root and containers_gone and network_gone and volumes_gone:
             try:
                 root=Path(self.private_root)
                 if root.exists():

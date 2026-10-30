@@ -49,6 +49,26 @@ def environment(values):
     return out
 
 
+def checked_tmpfs_options(options):
+    """Only bounded private tmpfs mounts; never pass arbitrary driver options."""
+    require(isinstance(options,str),"operator_tmpfs_options_unqualified")
+    parts=options.split(",")
+    require(len(parts)==len(set(parts)) and set(parts)>={"rw","nosuid","nodev","noexec","noswap"},
+            "operator_tmpfs_options_unqualified")
+    values={}
+    for part in parts:
+        if part in {"rw","nosuid","nodev","noexec","noswap"}:continue
+        pair=part.split("=",1)
+        require(len(pair)==2 and pair[0] in {"mode","uid","gid","size"} and pair[0] not in values,
+                "operator_tmpfs_options_unqualified")
+        values[pair[0]]=pair[1]
+    require(values.get("mode") in {"0700","1777"} and re.fullmatch(r"[1-9][0-9]{0,4}m",values.get("size",""))
+            and 1<=int(values["size"][:-1])<=32768,"operator_tmpfs_options_unqualified")
+    require(all(re.fullmatch(r"(?:0|[1-9][0-9]{0,9})",values[k]) and int(values[k])<2**31
+                for k in ["uid","gid"] if k in values),"operator_tmpfs_options_unqualified")
+    return values
+
+
 class OperatorProbe(base.Probe):
     """Reuse with a reviewed exact OCI ID; source/restore gates remain external."""
     def __init__(self,metadata,env,output,*,operator_image_id,operator_source_sha=None,resources=None):
@@ -56,10 +76,12 @@ class OperatorProbe(base.Probe):
         self.configure_operator(operator_image_id,operator_source_sha or self.source,resources)
 
     def configure_operator(self,image_id,source_sha,resources=None):
+        require(not getattr(self,"tmpfs_volumes",{}),"operator_tmpfs_state_unqualified")
         require(re.fullmatch(r"sha256:[a-f0-9]{64}",image_id or "")
                 and re.fullmatch(r"[a-f0-9]{40}",source_sha or ""),"operator_image_pin_required")
         self.operator_image_id=image_id;self.operator_source_sha=source_sha
         self.client_tools={};self.operator_env={};self.bash_pins={};self.operator_smoke=None
+        self.tmpfs_volumes={}
         self.server_image_id=None
         self.names.update({key:"kova-empty-"+key+"-"+self.token for key in ["smoke","toolcheck"]})
         self.state_path=self.runner_temp/("kova-operator-owned-"+self.run_id+"-"+self.attempt+".json")
@@ -91,7 +113,108 @@ class OperatorProbe(base.Probe):
                   "--memory","768m","--memory-swap","768m",
                   "--tmpfs","/tmp:rw,nosuid,nodev,noexec,noswap,mode=1777,size=128m",
                   *self.labels(),*args[1:]]
+            for path in self.image_volumes:
+                if path!="/tmp":args[1:1]=["--tmpfs",path+":rw,nosuid,nodev,noexec,noswap,mode=0700,size=128m"]
+        if args[:1]==["run"]:args=self.owned_tmpfs_run_args(args)
         return super().docker(args,**kwargs)
+
+    def tmpfs_spec(self,container_name,mount):
+        keys=[key for key,name in self.names.items() if name==container_name]
+        require(len(keys)==1 and keys[0] in {"a","b","client","smoke","toolcheck"},
+                "operator_tmpfs_owner_unqualified")
+        require(isinstance(mount,str) and mount.count(":")==1,"operator_tmpfs_destination_unqualified")
+        destination,options=mount.split(":",1)
+        require(re.fullmatch(r"/[A-Za-z0-9_./-]+",destination) and ".." not in destination
+                and destination not in {"/","/proc","/sys","/dev"}
+                and not destination.startswith(("/proc/","/sys/","/dev/")),
+                "operator_tmpfs_destination_unqualified")
+        checked_tmpfs_options(options)
+        suffix=digest(destination.encode())[:12]
+        return {"name":"kova-empty-tmpfs-"+self.token+"-"+keys[0]+"-"+suffix,
+                "containerKey":keys[0],"destination":destination,"options":options}
+
+    def checked_tmpfs_specs(self,values):
+        require(isinstance(values,dict) and len(values)<=64,"operator_tmpfs_state_unqualified")
+        for name,spec in values.items():
+            require(isinstance(spec,dict) and set(spec)=={"name","containerKey","destination","options"}
+                    and spec.get("containerKey") in self.names,"operator_tmpfs_state_unqualified")
+            expected=self.tmpfs_spec(self.names[spec["containerKey"]],spec["destination"]+":"+spec["options"])
+            require(spec==expected and name==spec["name"],"operator_tmpfs_state_unqualified")
+        return values
+
+    def tmpfs_volume_absent(self,name):
+        # Inspect exit1 also means daemon failure; only a complete successful
+        # census establishes absence before creation or after removal.
+        code,raw=super().docker(["volume","ls","--format","{{json .}}"])
+        require(code==0,"operator_tmpfs_census_unqualified")
+        names=[]
+        for line in raw.splitlines():
+            row=json.loads(line);value=row.get("Name")
+            require(isinstance(value,str) and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*",value),
+                    "operator_tmpfs_census_unqualified")
+            names.append(value)
+        return name not in names
+
+    def inspect_tmpfs_volume(self,spec):
+        _,raw=super().docker(["volume","inspect",spec["name"]])
+        values=json.loads(raw)
+        require(isinstance(values,list) and len(values)==1,"operator_tmpfs_identity_unqualified")
+        value=values[0];labels=value.get("Labels") or {}
+        require(value.get("Name")==spec["name"] and value.get("Driver")=="local" and value.get("Scope")=="local"
+                and value.get("Options")=={"type":"tmpfs","device":"tmpfs","o":spec["options"]}
+                and self.owned_labels(labels)
+                and labels.get("kova.empty-probe.container")==spec["containerKey"]
+                and labels.get("kova.empty-probe.destination")==digest(spec["destination"].encode()),
+                "operator_tmpfs_identity_unqualified")
+        mountpoint=value.get("Mountpoint","")
+        require(isinstance(mountpoint,str) and Path(mountpoint).is_absolute()
+                and Path(mountpoint).name=="_data" and Path(mountpoint).parent.name==spec["name"]
+                and not any(p in Path(mountpoint).parts for p in ["..","proc","sys"]),
+                "operator_tmpfs_mountpoint_unqualified")
+        return mountpoint
+
+    def reserve_tmpfs_volume(self,spec):
+        name=spec["name"]
+        if name not in self.tmpfs_volumes:
+            require(self.tmpfs_volume_absent(name),"operator_tmpfs_name_not_absent")
+            self.tmpfs_volumes[name]=spec
+            # Reservation must survive uncertain create/run completion.
+            self.save_state()
+            super().docker(["volume","create","--driver","local",*self.labels(),
+                "--label","kova.empty-probe.container="+spec["containerKey"],
+                "--label","kova.empty-probe.destination="+digest(spec["destination"].encode()),
+                "--opt","type=tmpfs","--opt","device=tmpfs","--opt","o="+spec["options"],name])
+        require(self.tmpfs_volumes[name]==spec,"operator_tmpfs_reservation_changed")
+        self.inspect_tmpfs_volume(spec)
+
+    def owned_tmpfs_run_args(self,args):
+        require("--name" in args,"operator_tmpfs_owner_unqualified")
+        name=args[args.index("--name")+1]
+        out=[];seen=set();i=0
+        while i<len(args):
+            if args[i]!="--tmpfs":out.append(args[i]);i+=1;continue
+            spec=self.tmpfs_spec(name,args[i+1])
+            require(spec["destination"] not in seen,"operator_tmpfs_duplicate_destination")
+            seen.add(spec["destination"]);self.reserve_tmpfs_volume(spec)
+            # local driver passes noswap to Linux; --tmpfs rejects that valid
+            # kernel option. Never use a plaintext disk volume or host bind.
+            out += ["--mount","type=volume,src="+spec["name"]+",dst="+spec["destination"]+",volume-nocopy"]
+            i+=2
+        return out
+
+    def cleanup_tmpfs_volumes(self,containers_gone):
+        values=self.checked_tmpfs_specs(self.tmpfs_volumes)
+        if values and not containers_gone:return False
+        safe=True
+        for name,spec in reversed(list(values.items())):
+            try:
+                if self.tmpfs_volume_absent(name):continue
+                self.inspect_tmpfs_volume(spec)
+                # No force/prune: Docker must refuse any still-attached volume.
+                super().docker(["volume","rm",name],timeout=30)
+                require(self.tmpfs_volume_absent(name),"operator_tmpfs_removal_unconfirmed")
+            except Exception:safe=False
+        return safe
 
     def labels(self):
         out=[]
@@ -152,7 +275,7 @@ class OperatorProbe(base.Probe):
                 mount=args[i+1];destination=mount.split(":",1)[0]
                 if key=="client" and destination!="/tmp":i+=2;continue
                 mount += ",noswap"
-                if destination=="/tmp":mount += ",size=128m"
+                mount += ",size=128m"
                 out += ["--tmpfs",mount];i+=2;continue
             if args[i]=="--mount" and key!="client":
                 out += ["--mount",args[i+1]+",readonly"];i+=2;continue
@@ -166,7 +289,8 @@ class OperatorProbe(base.Probe):
 
     def assert_runtime_policy(self,key):
         # Read kernel observations, never infer noswap/capabilities from recipe.
-        required="/tmp /work" if key=="client" else "/tmp /run/server/data"
+        expected=self._container_args(key)
+        mounts=[self.tmpfs_spec(self.names[key],expected[i+1]) for i,arg in enumerate(expected) if arg=="--tmpfs"]
         script="""uid=$(id -u); [[ "$uid" != 0 ]]
 cap=missing; nnp=missing
 while IFS=: read -r field value; do
@@ -174,17 +298,29 @@ while IFS=: read -r field value; do
 done < /proc/self/status
 [[ "$cap" == 0000000000000000 && "$nnp" == 1 ]]
 read -r swap < /sys/fs/cgroup/memory.swap.max; [[ "$swap" == 0 ]]
-root_seen=0; tmp_seen=0; work_seen=0; data_seen=0
+memory="$1"; shift; read -r maximum < /sys/fs/cgroup/memory.max; [[ "$maximum" == "$memory" ]]
+root_seen=0
 while read -r source destination type options rest; do
  if [[ "$destination" == / ]]; then [[ ",$options," == *,ro,* ]]; root_seen=1; fi
- case "$destination" in /tmp|/work|/run/server/data)
-  [[ "$type" == tmpfs && ",$options," == *,nosuid,* && ",$options," == *,nodev,* && ",$options," == *,noexec,* && ",$options," == *,noswap,* ]]
-  case "$destination" in /tmp) tmp_seen=1;; /work) work_seen=1;; /run/server/data) data_seen=1;; esac;; esac
 done < /proc/mounts
-[[ "$root_seen" == 1 && "$tmp_seen" == 1 ]]
+[[ "$root_seen" == 1 ]]
+while [[ "$#" -gt 0 ]]; do
+ wanted="$1"; limit="$2"; shift 2; seen=0
+ while read -r source destination type options rest; do
+  if [[ "$destination" == "$wanted" ]]; then
+   [[ "$type" == tmpfs && ",$options," == *,nosuid,* && ",$options," == *,nodev,* && ",$options," == *,noexec,* && ",$options," == *,noswap,* ]]
+   [[ ",$options," =~ ,size=([0-9]+)k, ]]
+   [[ "${BASH_REMATCH[1]}" -gt 0 && "${BASH_REMATCH[1]}" -le "$limit" ]]
+   seen=$((seen+1))
+  fi
+ done < /proc/mounts
+ [[ "$seen" == 1 ]]
+done
 """
-        script += '[[ "$work_seen" == 1 ]]' if key=="client" else '[[ "$data_seen" == 1 ]]'
-        self.docker(["exec",self.names[key],"/bin/bash","-ceu",script])
+        memory=(self.resources["clientMemoryMiB"] if key=="client" else self.resources["serverMemoryMiB"][key])*1024**2
+        arguments=[str(memory)]
+        for spec in mounts:arguments += [spec["destination"],str(int(checked_tmpfs_options(spec["options"])["size"][:-1])*1024)]
+        self.docker(["exec",self.names[key],"/bin/bash","-ceu",script,"--",*arguments])
 
     def consumer_proof(self,target):
         proof=super().consumer_proof(target)
@@ -246,10 +382,19 @@ while :; do sleep 1; done"""
         expected_destination="/run/client" if key=="client" else "/run/server"
         require(len(binds)==1 and binds[0].get("Source")==expected_source
                 and binds[0].get("Destination")==expected_destination and binds[0].get("RW") is False
-                and all(m.get("Type") in {"bind","tmpfs"} for m in info.get("Mounts",[])),
+                and all(m.get("Type") in {"bind","volume"} for m in info.get("Mounts",[])),
                 "unexpected_container_mount")
         require(info["Config"].get("Healthcheck",{}).get("Test")==["NONE"],"image_healthcheck_not_disabled")
-        require(any(m.get("Type")=="tmpfs" and m.get("Destination")== ("/work" if key=="client" else "/run/server/data") and m.get("RW") is True for m in info.get("Mounts",[])),"private_tmpfs_data_plane_missing")
+        specs=[self.tmpfs_spec(self.names[key],expected[i+1]) for i,arg in enumerate(expected) if arg=="--tmpfs"]
+        volumes=[m for m in info.get("Mounts",[]) if m.get("Type")=="volume"]
+        require(len(specs)==len(volumes),"private_tmpfs_data_plane_missing")
+        for spec in specs:
+            require(self.tmpfs_volumes.get(spec["name"])==spec,"operator_tmpfs_reservation_changed")
+            mountpoint=self.inspect_tmpfs_volume(spec)
+            matches=[m for m in volumes if m.get("Name")==spec["name"]]
+            require(len(matches)==1 and matches[0].get("Destination")==spec["destination"]
+                    and matches[0].get("Driver")=="local" and matches[0].get("Source")==mountpoint
+                    and matches[0].get("RW") is True,"private_tmpfs_data_plane_missing")
         environment=dict(x.split("=",1) for x in info["Config"].get("Env",[]) if "=" in x)
         allowed={**(self.operator_env if key=="client" else self.image_env),"HOME":"/tmp","TZ":"UTC"}
         if key=="client":allowed["TMPDIR"]="/work"
@@ -277,7 +422,7 @@ while :; do sleep 1; done"""
 
     def tls_controls(self,target):
         self.stage="native_tls_controls"
-        identity="SELECT jsonb_build_object('address',inet_server_addr()::text,'version',current_setting('server_version_num')::integer,'systemIdentifier',(SELECT system_identifier::text FROM pg_control_system()),'tls',(SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()))::text;\n"
+        identity="SELECT jsonb_build_object('address',host(inet_server_addr()),'version',current_setting('server_version_num')::integer,'systemIdentifier',(SELECT system_identifier::text FROM pg_control_system()),'tls',(SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()))::text;\n"
         values=[]
         for family in [4,6]:
             _,raw=self.client_sql(target,identity,family=family)
@@ -405,5 +550,6 @@ def cleanup_operator_state(env, *, context_validator=base.checked_context):
     p.containers_reserved=state["containersReserved"];p.firewall_reserved=state["firewallReserved"];p.network_reserved=state["networkReserved"]
     p.private_root=Path(state["privateRoot"]) if state.get("privateRoot") else None
     p.pg_uid=state.get("pgUid");p.pg_gid=state.get("pgGid");p.uid=state["uid"];p.gid=state["gid"]
+    p.tmpfs_volumes=p.checked_tmpfs_specs(state.get("tmpfsVolumes",{}))
     p.command_count=0;p.last_stderr=b"";p.cleanup_confirmed=False
     return p.cleanup()

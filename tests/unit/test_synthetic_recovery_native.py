@@ -41,6 +41,10 @@ class SyntheticTests(unittest.TestCase):
         client=key=="client";env={**(p.operator_env if client else p.image_env),"HOME":"/tmp","TZ":"UTC"}
         env["TMPDIR" if client else "PGDATA"]="/work" if client else "/run/server/data"
         memory=(p.resources["clientMemoryMiB"] if client else p.resources["serverMemoryMiB"][key])*1024**2
+        args=p._container_args(key)
+        specs=[p.tmpfs_spec(p.names[key],args[i+1]) for i,value in enumerate(args) if value=="--tmpfs"]
+        p.tmpfs_volumes.update({spec["name"]:spec for spec in specs})
+        p.inspect_tmpfs_volume=lambda spec:"/docker/volumes/"+spec["name"]+"/_data"
         return {"Image":p.operator_image_id if client else p.server_image_id,
           "State":{"Running":True,"Pid":4321},"Config":{"Labels":{"kova.empty-probe.owner":p.token},
             "Healthcheck":{"Test":["NONE"]},"Env":[k+"="+v for k,v in env.items()],
@@ -52,8 +56,8 @@ class SyntheticTests(unittest.TestCase):
             "GlobalIPv6Address":p.addresses[key][1]}}},
           "Mounts":[{"Type":"bind","Source":str(p.client_dir if client else p.server_dirs[key]),
             "Destination":"/run/client" if client else "/run/server","RW":False},
-            {"Type":"tmpfs","Destination":"/tmp","RW":True},
-            {"Type":"tmpfs","Destination":"/work" if client else "/run/server/data","RW":True}]}
+            *[{"Type":"volume","Name":spec["name"],"Driver":"local","Destination":spec["destination"],
+               "Source":p.inspect_tmpfs_volume(spec),"RW":True} for spec in specs]]}
 
     def test_only_pr_merge_context_with_no_sensitive_bindings_is_accepted(self):
         self.assertEqual(m.synthetic_context(self.env),"a"*40)
@@ -98,7 +102,7 @@ class SyntheticTests(unittest.TestCase):
         p=self.probe();calls=[];p.docker=lambda args,**_:(calls.append(args) or (0,b""))
         for key in ["a","client"]:p.assert_runtime_policy(key)
         for args in calls:
-            script=args[-1]
+            script=args[args.index("-ceu")+1]
             check=subprocess.run(["bash","-n","-c",script],capture_output=True)
             self.assertEqual(check.returncode,0,check.stderr.decode())
             for required in ["/proc/self/status","NoNewPrivs","CapEff","memory.swap.max","noswap","/proc/mounts"]:
@@ -637,6 +641,136 @@ class SyntheticTests(unittest.TestCase):
     def test_image_environment_rejects_duplicates_and_source_or_provider_keys(self):
         for values in [["PATH=a","PATH=b"],["KOVA_PRODUCTION_DATABASE_URL=synthetic"],["OPENAI_API_KEY=synthetic"]]:
             with self.assertRaises(m.Stopped):o.environment(values)
+
+    def test_owned_volume_conversion_keeps_kernel_noswap_without_docker_tmpfs_parser(self):
+        p=self.probe();calls=[];p.reserve_tmpfs_volume=lambda spec:calls.append(spec)
+        args=p._container_args("client")
+        converted=p.owned_tmpfs_run_args(args)
+        self.assertNotIn("--tmpfs",converted)
+        self.assertEqual({s["destination"] for s in calls},{"/tmp","/work"})
+        self.assertTrue(all("noswap" in s["options"].split(",") for s in calls))
+        mounts=[converted[i+1] for i,value in enumerate(converted) if value=="--mount"]
+        self.assertEqual(sum(x.startswith("type=volume,") and x.endswith(",volume-nocopy") for x in mounts),2)
+        self.assertEqual(sum(x.startswith("type=bind,") and x.endswith(",readonly") for x in mounts),1)
+        self.assertNotIn("--privileged",converted);self.assertNotIn("docker.sock",str(converted))
+
+    def test_tmpfs_specs_reject_missing_noswap_unbounded_or_host_mount_options(self):
+        p=self.probe();good="/work:rw,nosuid,nodev,noexec,noswap,mode=0700,size=128m"
+        for invalid in [good.replace(",noswap",""),good.replace(",size=128m",""),
+          good.replace("128m","32769m"),good+",device=/etc",good.replace("0700","0777"),
+          good.replace("/work:","/proc/data:"),good.replace("/work:","/../work:"),
+          good+",size=128m",good.replace("128m","1g")]:
+            with self.subTest(value=invalid),self.assertRaises(m.Stopped):p.tmpfs_spec(p.names["client"],invalid)
+        with self.assertRaises(m.Stopped):p.tmpfs_spec("foreign-container",good)
+
+    def volume_info(self,p,spec):
+        labels={p.labels()[i+1].split("=",1)[0]:p.labels()[i+1].split("=",1)[1]
+                for i,value in enumerate(p.labels()) if value=="--label"}
+        labels.update({"kova.empty-probe.container":spec["containerKey"],
+                       "kova.empty-probe.destination":o.digest(spec["destination"].encode())})
+        return {"Name":spec["name"],"Driver":"local","Scope":"local","Labels":labels,
+                "Options":{"type":"tmpfs","device":"tmpfs","o":spec["options"]},
+                "Mountpoint":"/docker/volumes/"+spec["name"]+"/_data"}
+
+    def test_volume_reservation_is_saved_before_uncertain_create_and_never_claims_cleanup(self):
+        p=self.probe();spec=p.tmpfs_spec(p.names["client"],"/work:rw,nosuid,nodev,noexec,noswap,mode=0700,size=128m")
+        events=[];p.tmpfs_volume_absent=lambda name:True
+        p.save_state=lambda:events.append(("saved",copy.deepcopy(p.tmpfs_volumes)))
+        def docker(args,**_):
+            events.append(("command",args));raise m.Stopped("native_command_unconfirmed")
+        with patch.object(o.base.Probe,"docker",side_effect=docker),self.assertRaises(m.Stopped):p.reserve_tmpfs_volume(spec)
+        self.assertEqual(events[0],("saved",{spec["name"]:spec}))
+        create=events[1][1]
+        self.assertEqual(create[:4],["volume","create","--driver","local"])
+        self.assertIn("type=tmpfs",create);self.assertIn("device=tmpfs",create)
+        self.assertIn("o="+spec["options"],create)
+        self.assertEqual(p.tmpfs_volumes[spec["name"]],spec)
+
+    def test_volume_identity_rejects_disk_driver_foreign_owner_and_option_drift(self):
+        p=self.probe();spec=p.tmpfs_spec(p.names["client"],"/work:rw,nosuid,nodev,noexec,noswap,mode=0700,size=128m")
+        original=self.volume_info(p,spec)
+        mutations=[lambda v:v.update(Driver="nfs"),lambda v:v.update(Name="other"),
+          lambda v:v["Options"].update(device="/dev/sda"),lambda v:v["Options"].update(type="ext4"),
+          lambda v:v["Options"].update(o=spec["options"].replace(",noswap","")),
+          lambda v:v["Labels"].update({"kova.empty-probe.source":"f"*40}),
+          lambda v:v["Labels"].update({"kova.empty-probe.destination":"0"*64}),
+          lambda v:v.update(Mountpoint="/host/secret"),lambda v:v.update(Scope="global")]
+        with patch.object(o.base.Probe,"docker",return_value=(0,json.dumps([original]).encode())):
+            self.assertEqual(p.inspect_tmpfs_volume(spec),original["Mountpoint"])
+        for mutation in mutations:
+            value=copy.deepcopy(original);mutation(value)
+            with self.subTest(case=mutations.index(mutation)), \
+                 patch.object(o.base.Probe,"docker",return_value=(0,json.dumps([value]).encode())),self.assertRaises(m.Stopped):
+                p.inspect_tmpfs_volume(spec)
+
+    def test_volume_absence_requires_complete_successful_daemon_census(self):
+        p=self.probe()
+        with patch.object(o.base.Probe,"docker",side_effect=m.Stopped("native_command_unconfirmed")),self.assertRaises(m.Stopped):
+            p.tmpfs_volume_absent("owned")
+        with patch.object(o.base.Probe,"docker",return_value=(1,b"")),self.assertRaises(m.Stopped):
+            p.tmpfs_volume_absent("owned")
+        with patch.object(o.base.Probe,"docker",return_value=(0,b'{"Name":"owned"}\n')):
+            self.assertFalse(p.tmpfs_volume_absent("owned"));self.assertTrue(p.tmpfs_volume_absent("absent"))
+
+    def test_cleanup_refuses_foreign_or_attached_volumes_and_never_uses_force_or_prune(self):
+        p=self.probe();spec=p.tmpfs_spec(p.names["client"],"/work:rw,nosuid,nodev,noexec,noswap,mode=0700,size=128m")
+        p.tmpfs_volumes={spec["name"]:spec};calls=[]
+        p.tmpfs_volume_absent=lambda name:False
+        p.inspect_tmpfs_volume=lambda spec:None
+        with patch.object(o.base.Probe,"docker",side_effect=lambda args,**_:calls.append(args) or (_ for _ in ()).throw(m.Stopped("in_use"))):
+            self.assertFalse(p.cleanup_tmpfs_volumes(True))
+        self.assertEqual(calls,[["volume","rm",spec["name"]]])
+        calls.clear();self.assertFalse(p.cleanup_tmpfs_volumes(False));self.assertFalse(calls)
+        def foreign(spec):raise m.Stopped("operator_tmpfs_identity_unqualified")
+        p.inspect_tmpfs_volume=foreign
+        with patch.object(o.base.Probe,"docker",side_effect=lambda args,**_:calls.append(args)):
+            self.assertFalse(p.cleanup_tmpfs_volumes(True))
+        self.assertFalse(calls)
+
+    def test_cleanup_requires_positive_post_removal_absence(self):
+        p=self.probe();spec=p.tmpfs_spec(p.names["client"],"/work:rw,nosuid,nodev,noexec,noswap,mode=0700,size=128m")
+        p.tmpfs_volumes={spec["name"]:spec};p.inspect_tmpfs_volume=lambda spec:None
+        with patch.object(o.base.Probe,"docker",return_value=(0,b"")):
+            p.tmpfs_volume_absent=lambda name:False
+            self.assertFalse(p.cleanup_tmpfs_volumes(True))
+            values=iter([False,True]);p.tmpfs_volume_absent=lambda name:next(values)
+            self.assertTrue(p.cleanup_tmpfs_volumes(True))
+
+    def test_volume_failure_preserves_private_backing_files_and_is_recorded_in_crash_state(self):
+        p=self.probe();p.private_root=self.root/"private";p.private_root.mkdir()
+        spec=p.tmpfs_spec(p.names["client"],"/work:rw,nosuid,nodev,noexec,noswap,mode=0700,size=128m")
+        p.tmpfs_volumes={spec["name"]:spec};p.cleanup_tmpfs_volumes=lambda gone:False
+        self.assertFalse(p.cleanup());self.assertTrue(p.private_root.exists())
+        self.assertEqual(json.loads(p.state_path.read_bytes())["tmpfsVolumes"],p.tmpfs_volumes)
+
+    def test_crash_state_rejects_another_attempt_or_arbitrary_volume(self):
+        p=self.probe();p.uid=os.getuid();spec=p.tmpfs_spec(p.names["client"],"/work:rw,nosuid,nodev,noexec,noswap,mode=0700,size=128m")
+        p.tmpfs_volumes={spec["name"]:spec};p.save_state()
+        state=json.loads(p.state_path.read_bytes());bad=copy.deepcopy(spec);bad["name"]="foreign-data"
+        state["tmpfsVolumes"]={"foreign-data":bad};p.state_path.write_bytes(o.encoded(state));p.state_path.chmod(0o600)
+        with self.assertRaisesRegex(m.Stopped,"operator_tmpfs_state_unqualified"):
+            o.cleanup_operator_state(self.env,context_validator=m.synthetic_context)
+
+    def test_actual_kernel_runtime_check_requires_noswap_every_mount_and_bounded_memory(self):
+        p=self.probe();calls=[];p.docker=lambda args,**_:(calls.append(args) or (0,b""))
+        p.assert_runtime_policy("client");args=calls[0];script=args[args.index("-ceu")+1]
+        paths={"/proc/self/status":self.root/"status","/proc/mounts":self.root/"mounts",
+               "/sys/fs/cgroup/memory.swap.max":self.root/"swap","/sys/fs/cgroup/memory.max":self.root/"memory"}
+        for src,dst in paths.items():script=script.replace(src,str(dst))
+        script="id() { printf '1001\\n'; };\n"+script
+        paths["/proc/self/status"].write_text("CapEff:\t0000000000000000\nNoNewPrivs:\t1\n")
+        paths["/sys/fs/cgroup/memory.swap.max"].write_text("0\n")
+        paths["/sys/fs/cgroup/memory.max"].write_text(str(768*1024**2)+"\n")
+        good="overlay / overlay ro 0 0\ntmpfs /tmp tmpfs rw,nosuid,nodev,noexec,noswap,size=131072k 0 0\ntmpfs /work tmpfs rw,nosuid,nodev,noexec,noswap,size=131072k 0 0\n"
+        command=["bash","-ceu",script,"--",*args[args.index("--")+1:]]
+        paths["/proc/mounts"].write_text(good)
+        self.assertEqual(subprocess.run(command,capture_output=True).returncode,0)
+        for bad in [good.replace(",noswap",""),good.replace("size=131072k","size=131073k"),
+                    good.replace("overlay ro","overlay rw"),good+good.splitlines()[-1]+"\n"]:
+            paths["/proc/mounts"].write_text(bad)
+            self.assertNotEqual(subprocess.run(command,capture_output=True).returncode,0)
+        paths["/proc/mounts"].write_text(good);paths["/sys/fs/cgroup/memory.swap.max"].write_text("1\n")
+        self.assertNotEqual(subprocess.run(command,capture_output=True).returncode,0)
 
 
 if __name__=="__main__":unittest.main()
