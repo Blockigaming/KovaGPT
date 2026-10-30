@@ -96,6 +96,7 @@ export function AppShell({
   // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
   // narrow viewports; on desktop we restore the persisted user preference.
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarPreferenceRestored, setSidebarPreferenceRestored] = useState(false);
   const sidebarKeyboardFocusRef = useRef(false);
   useEffect(() => {
     if (!sidebarOpen || !sidebarKeyboardFocusRef.current) return;
@@ -111,15 +112,17 @@ export function AppShell({
       /* ignore */
     }
     setSidebarOpen(saved === null ? true : saved === "1");
+    setSidebarPreferenceRestored(true);
   }, []);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    if (!sidebarPreferenceRestored || typeof window === "undefined" || window.innerWidth < 1024)
+      return;
     try {
       localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0");
     } catch {
       /* ignore */
     }
-  }, [sidebarOpen]);
+  }, [sidebarOpen, sidebarPreferenceRestored]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
