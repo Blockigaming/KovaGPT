@@ -93,6 +93,8 @@ SAFE_FAILURE_CODES=frozenset({
     "operator_tmpfs_mountpoint_unqualified","operator_tmpfs_name_not_absent",
     "operator_tmpfs_reservation_changed","operator_tmpfs_duplicate_destination",
     "operator_tmpfs_removal_unconfirmed",
+    "timeout_control_identity_unconfirmed","timeout_control_positive_unconfirmed",
+    "timeout_control_expiry_unconfirmed","outbound_connection_not_denied",
 })
 
 

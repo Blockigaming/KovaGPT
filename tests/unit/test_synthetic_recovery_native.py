@@ -7,6 +7,7 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -133,6 +134,7 @@ class SyntheticTests(unittest.TestCase):
         p=self.probe();p.native_tools={"timeout":"/server/timeout","sha256sum":"/server/sha"}
         p.client_tools={"timeout":"/operator/timeout","sha256sum":"/operator/sha"}
         p.bash_pins={"a":"a"*64,"b":"a"*64,"client":"b"*64};calls=[]
+        p.timeout_control=lambda key,tools:124
         def docker(args,**_):
             calls.append(args)
             key=next(k for k in ["a","b","client"] if p.names[k] in args)
@@ -140,7 +142,8 @@ class SyntheticTests(unittest.TestCase):
             if "3" in args:return 124,b""
             return 0,b""
         p.docker=docker
-        self.assertGreater(p.denial_probes([("synthetic","1.1.1.1",443),("synthetic","2606:4700::1111",443)]),0)
+        with patch.object(o.time,"monotonic",side_effect=[x for _ in range(40) for x in (0,3)]):
+            self.assertGreater(p.denial_probes([("synthetic","1.1.1.1",443),("synthetic","2606:4700::1111",443)]),0)
         self.assertTrue(any(p.names["client"] in a and "/operator/timeout" in a for a in calls))
         self.assertFalse(any(p.names["client"] in a and "/server/timeout" in a for a in calls))
         def wrong_hash(args,**_):
@@ -771,6 +774,52 @@ class SyntheticTests(unittest.TestCase):
             self.assertNotEqual(subprocess.run(command,capture_output=True).returncode,0)
         paths["/proc/mounts"].write_text(good);paths["/sys/fs/cgroup/memory.swap.max"].write_text("1\n")
         self.assertNotEqual(subprocess.run(command,capture_output=True).returncode,0)
+
+    def test_timeout_control_proves_actual_host_implementation_without_version_flag(self):
+        p=self.probe();timeout=shutil.which("timeout");sha=shutil.which("sha256sum")
+        self.assertIsNotNone(timeout);self.assertIsNotNone(sha)
+        def command(args,**kwargs):
+            value=subprocess.run(args[2:],capture_output=True,timeout=kwargs.get("timeout",5))
+            return value.returncode,value.stdout
+        p.docker=command
+        status=p.timeout_control("a",{"timeout":timeout,"sha256sum":sha})
+        self.assertIn(status,{124,143});self.assertIn("a",p.timeout_pins)
+        self.assertTrue(p.network_evidence[-1]["positiveControlPassed"])
+        self.assertTrue(p.network_evidence[-1]["expiryControlPassed"])
+
+    def test_timeout_expiry_must_be_measured_and_preserve_fast_positive_control(self):
+        tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
+        for status,output,elapsed,positive in [(143,b"timeout-control-started\n",0.1,True),
+          (127,b"timeout-control-started\n",1,True),(124,b"unexpected\n",1,True),
+          (124,b"timeout-control-started\n",1,False)]:
+            p=self.probe()
+            def command(args,**_):
+                if "/native/sha" in args:return 0,b"a"*64+b"  /native/timeout\n"
+                if "printf 'timeout-control-positive\\n'" in args:return (0,b"timeout-control-positive\n") if positive else (1,b"")
+                return status,output
+            p.docker=command
+            with self.subTest(status=status,elapsed=elapsed,positive=positive), \
+                 patch.object(o.time,"monotonic",side_effect=[0,elapsed]),self.assertRaises(m.Stopped):
+                p.timeout_control("a",tools)
+
+    def test_timeout_client_pin_and_changed_server_binary_are_rejected(self):
+        p=self.probe();p.operator_smoke={"tools":[{"name":"timeout","sha256":"a"*64}]}
+        p.docker=lambda args,**_:(0,b"b"*64+b"  /native/timeout\n")
+        tools={"timeout":"/native/timeout","sha256sum":"/native/sha"}
+        with self.assertRaisesRegex(m.Stopped,"timeout_control_identity_unconfirmed"):p.timeout_control("client",tools)
+        p.timeout_pins["a"]="a"*64
+        with self.assertRaisesRegex(m.Stopped,"timeout_control_identity_unconfirmed"):p.timeout_control("a",tools)
+
+    def test_route_timeout_status_is_accepted_only_for_measured_proven_implementation(self):
+        tools={"timeout":"/native/timeout"}
+        for code,out,elapsed,expected,accept in [(143,b"",3,143,True),(124,b"",3,124,True),
+          (143,b"",0.1,143,False),(143,b"",3,124,False),(0,b"",0.1,124,False),
+          (127,b"",3,124,False),(124,b"data",3,124,False)]:
+            p=self.probe();p.docker=lambda args,**_:(code,out)
+            with self.subTest(code=code,elapsed=elapsed,expected=expected),patch.object(o.time,"monotonic",side_effect=[0,elapsed]):
+                if accept:self.assertEqual(p.timed_denial_command("a",tools,"network-control",expected),code)
+                else:
+                    with self.assertRaises(m.Stopped):p.timed_denial_command("a",tools,"network-control",expected)
 
 
 if __name__=="__main__":unittest.main()
