@@ -42,7 +42,10 @@ const PREMIUM_MODES = new Set(["max", "ultra"]);
  * @param {boolean} [deepMode]
  */
 export function freeModeUpgradeRequired(tier, mode, deepMode = false) {
-  return tier === "free" && (deepMode || !["instant", "auto", "default", "fast"].includes(mode));
+  return (
+    tier === "free" &&
+    (deepMode || !["instant", "thinking", "auto", "default", "fast"].includes(mode))
+  );
 }
 
 // Signals that extra reasoning will noticeably improve the answer. Length is

@@ -91,3 +91,46 @@
     padding: 16px;
   }
 }
+
+.kova-preference-list {
+  display: grid;
+}
+.kova-preference-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.kova-preference-row:first-child {
+  padding-top: 0;
+}
+.kova-preference-row > div:first-child {
+  min-width: 0;
+}
+.kova-preference-row p {
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.kova-preference-row [data-slot="select-trigger"] {
+  width: 156px;
+  flex: none;
+  background: var(--surface-secondary);
+}
+.kova-appearance-settings > .kova-appearance-preview {
+  margin-top: 24px;
+  padding: 20px;
+  border-color: var(--border-subtle);
+  background: var(--surface-secondary);
+}
+@media (max-width: 479px) {
+  .kova-preference-row {
+    gap: 12px;
+  }
+  .kova-preference-row [data-slot="select-trigger"] {
+    width: 128px;
+  }
+}

@@ -66,13 +66,12 @@ export async function chooseSettingsSection(page: Page, section: string) {
     "Data control": "Privacy",
     General: "Responses",
     Personalization: "Profile",
-    Subscriptions: "Billing",
+    Subscriptions: "Subscriptions",
+    Billing: "Subscriptions",
+    "Safety & security": "Security",
     Apps: "Connections",
   };
   const secondary: Record<string, string> = {
-    Storage: "Privacy",
-    Memory: "Privacy",
-    "Safety & security": "Privacy",
     "Keyboard shortcuts": "Responses",
     Email: "Profile",
     Location: "Privacy",

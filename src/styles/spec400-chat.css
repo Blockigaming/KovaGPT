@@ -1,6 +1,4 @@
-/* ChatGPT composer: the observed desktop empty state is one 52px row,
-   with 36px icon controls and an 8px optical inset. Attachments and multiline
-   drafts grow into the same two-row surface rather than reserving empty space. */
+/* Two-row composer: a clear writing area above a stable action row. */
 .spec400-chat-input {
   width: 100%;
   max-width: var(--kova-composer-width, 768px);
@@ -11,15 +9,14 @@
   --composer-compact-padding: 7px;
   --composer-compact-gap: 8px;
   position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: "tools input trailing";
-  align-items: center;
-  min-height: 52px;
-  padding: var(--composer-compact-padding);
-  gap: var(--composer-compact-gap);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 148px;
+  padding: 16px 12px 10px;
+  gap: 12px;
   border: 1px solid var(--composer-border, transparent);
-  border-radius: var(--kova-radius-composer, 26px);
+  border-radius: 28px;
   background: var(--composer-background, var(--surface-secondary));
   color: var(--foreground);
 }
@@ -34,8 +31,8 @@
   grid-area: input;
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 36px;
-  padding-right: 0;
+  min-height: 64px;
+  padding: 0 8px;
 }
 .spec400-composer-input {
   display: block;
@@ -51,7 +48,9 @@
   font: inherit;
   font-size: 1rem;
   line-height: 26px;
-  outline: none;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 0;
 }
 .spec400-composer-input::placeholder,
 .spec400-expanded-textarea::placeholder {
@@ -67,7 +66,7 @@
   min-width: 0;
 }
 .spec400-composer-toolbar {
-  display: contents;
+  display: flex;
   justify-content: space-between;
   align-items: center;
   flex: none;
@@ -75,12 +74,13 @@
 }
 .spec400-composer-tools {
   grid-area: tools;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   flex-wrap: nowrap;
 }
 .spec400-composer-trailing {
   grid-area: trailing;
   flex: none;
+  margin-left: auto;
 }
 .spec400-composer:has(
   .spec400-composer-input[data-multiline="true"],
@@ -547,9 +547,9 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    min-height: 0;
+    min-height: 136px;
     padding: 12px;
-    gap: 4px;
+    gap: 8px;
   }
   .spec400-composer-toolbar {
     display: flex;
@@ -559,8 +559,8 @@
     max-height: 144px;
   }
   .spec400-input-region {
-    min-height: 26px;
-    padding-right: 44px;
+    min-height: 56px;
+    padding-right: 32px;
   }
   .spec400-toolbar-icon,
   .spec400-expand-input {
@@ -967,5 +967,46 @@ body .spec400-context-drawer[data-kova-dialog-surface] {
   }
   .kova-assistant .kova-greeting h1 {
     font-size: 28px;
+  }
+}
+
+/* The picker is part of the action row, aligned with Dictate and Voice/Send. */
+.spec400-composer-trailing .kova-model-trigger,
+.spec400-composer-trailing .kova-model-static {
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+@media (max-width: 479px) {
+  .spec400-composer {
+    padding: 14px 8px 8px;
+    border-radius: 24px;
+  }
+  .spec400-composer-toolbar {
+    gap: 2px;
+  }
+  .spec400-composer-tools {
+    gap: 0;
+  }
+  .spec400-composer-tools .spec400-toolbar-icon {
+    width: 36px;
+    min-width: 36px;
+    padding: 8px;
+  }
+  .spec400-composer-trailing {
+    gap: 0;
+  }
+  .spec400-composer-trailing .kova-model-trigger {
+    gap: 4px;
+    padding-inline: 6px;
+  }
+}
+
+@media (max-width: 379px) {
+  .spec400-composer-tools > [aria-label="Context"],
+  .spec400-composer-tools > [aria-label="Options"] {
+    display: none;
   }
 }

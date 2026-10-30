@@ -232,11 +232,12 @@ test("canonical reference styles own shell and composer contracts without retire
     );
   });
   const surface = declarations(composerStyles, ".spec400-composer");
-  assert.equal(surface.display, "grid");
-  assert.equal(surface["grid-template-columns"], "auto minmax(0, 1fr) auto");
-  assert.equal(surface["grid-template-areas"], '"tools input trailing"');
-  assert.equal(surface["min-height"], "52px");
-  assert.equal(surface["border-radius"], "var(--kova-radius-composer, 26px)");
+  assert.equal(surface.display, "flex");
+  assert.equal(surface["flex-direction"], "column");
+  assert.equal(surface["grid-template-columns"], undefined);
+  assert.equal(surface["grid-template-areas"], undefined);
+  assert.equal(surface["min-height"], "148px");
+  assert.equal(surface["border-radius"], "28px");
   assert.equal(surface.background, "var(--composer-background, var(--surface-secondary))");
   assert.equal(surface.outline, undefined, "an idle composer has no permanent outline");
   assert.equal(

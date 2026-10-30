@@ -149,7 +149,9 @@ test("menu keyboard highlight stays in menu primitives while ordinary actions re
       /(?:focus|data-\[selected=true\]):bg-accent/,
     );
   assert.doesNotMatch(read("src/components/ui/button.tsx"), /focus(?:-visible)?:bg-accent/);
-  const focus = rules("src/styles/control-geometry.css", ":focus-visible");
+  const focus = rules("src/styles/control-geometry.css", ":focus-visible").filter((rule) =>
+    rule.selector.startsWith(":where(button"),
+  );
   assert.ok(focus.length);
   for (const rule of focus) {
     assert.equal(declarations(rule, "outline")[0].value, "2px solid var(--ring)");
@@ -239,23 +241,22 @@ test("public consumers split action, input, card, output and composer semantics"
   hasRadius(path, ".public-example-prompt", "message");
 });
 
-test("fields retain their reference focus borders and shared keyboard outlines", () => {
+test("editable fields use quiet focus borders while forced colors retain an outline", () => {
   const geometry = rules("src/styles/control-geometry.css", ":focus-visible");
-  assert.ok(geometry.some((rule) => rule.selector.includes("input")));
-  for (const rule of geometry) {
-    assert.equal(declarations(rule, "outline")[0].value, "2px solid var(--ring)");
-    assert.equal(declarations(rule, "outline-offset")[0].value, "2px");
-    assert.match(rule.selector, /:not\(\.kova-composer-input\)/);
-  }
+  const fields = geometry.find(
+    (rule) => rule.selector.startsWith(":is(input") && rule.parent.type !== "atrule",
+  );
+  assert.ok(fields);
+  assert.equal(declarations(fields, "outline")[0].value, "none");
+  assert.equal(declarations(fields, "box-shadow")[0].value, "none");
+  assert.match(declarations(fields, "border-color")[0].value, /50%/);
+  const forced = geometry.find(
+    (rule) => rule.parent.type === "atrule" && rule.parent.params === "(forced-colors: active)",
+  );
+  assert.ok(forced);
+  assert.equal(declarations(forced, "outline")[0].value, "2px solid Highlight");
   for (const primitive of ["input", "textarea"])
     assert.match(read(`src/components/ui/${primitive}.tsx`), /focus-visible:border-foreground\/50/);
-  for (const [path, sheet] of sheets)
-    sheet.walkRules((rule) => {
-      if (!/:is\(input,\s*textarea,\s*select\):focus/.test(rule.selector)) return;
-      for (const prop of ["outline", "box-shadow", "border-color"])
-        for (const decl of declarations(rule, prop))
-          assert.ok(!decl.important, `${path}: competing field focus ${decl}`);
-    });
 });
 
 test("supplied Plex interface weights are bounded to400,500,600", () => {

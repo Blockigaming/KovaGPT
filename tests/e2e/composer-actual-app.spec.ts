@@ -423,73 +423,34 @@ test("voice stays disconnected while typing, attachments and Stop retain their c
   await expect(voice).toBeVisible();
   await geometry(page);
 
-  await openResponseOptions(page);
-  const upgrade = page.getByRole("button", {
-    name: "Thinking is locked. Open Subscriptions",
-    exact: true,
-  });
-  await upgrade.click();
-  await expect(page.locator(".kova-settings-dialog .kova-billing-details")).toBeVisible();
-  await expect(page).toHaveURL(`${origin}/settings/billing`);
+  const picker = page.getByTestId("model-selector-trigger").filter({ visible: true });
+  await picker.click();
+  await page.getByTestId("model-option-thinking").click();
+  await expect(picker).toContainText("Thinking");
 });
 
 for (const theme of ["light", "dark"] as const) {
-  test(`${theme}: Free composer uses quiet pointer focus and locked Thinking opens Subscriptions`, async ({
+  test(`${theme}: Free composer keeps a quiet writing surface and offers Thinking`, async ({
     page,
   }, info) => {
     await fixture(page, theme);
     await page.goto("/");
     await waitForKovaHydration(page);
     const input = page.getByRole("textbox", { name: "Message KovaGPT" });
-    const composer = page.locator(".spec400-composer");
-    const thinking = page.getByTestId("thinking-upgrade-button");
-    await expect(input).toBeEnabled();
-    await expect(page.getByRole("button", { name: "Model availability", exact: true })).toHaveCount(
-      0,
-    );
-    await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
-    const restingBorder = await composer.evaluate((node) => getComputedStyle(node).borderColor);
-    const restingShadow = await composer.evaluate((node) => getComputedStyle(node).boxShadow);
     await input.click();
-    await expect(composer).toHaveAttribute("data-focus-origin", "pointer");
-    await expect(composer).toHaveCSS("border-color", restingBorder);
-    await expect(composer).toHaveCSS("outline-style", "none");
-    await expect(composer).toHaveCSS("box-shadow", restingShadow);
-    await input.fill("Keep this draft while checking my plan");
-    await openResponseOptions(page);
-    await expect(thinking.getByText("Thinking", { exact: true })).toBeVisible();
-    await expect(thinking.locator('svg[data-product-icon="Lock"]')).toBeVisible();
-    await expect(thinking).toHaveAttribute("aria-label", "Thinking is locked. Open Subscriptions");
+    await expect(input).toHaveCSS("outline-style", "none");
+    await input.fill("Keep this draft while choosing Thinking");
+    const picker = page.getByTestId("model-selector-trigger").filter({ visible: true });
+    await picker.click();
+    await expect(page.getByTestId("model-option-thinking")).toBeVisible();
+    await page.getByTestId("model-option-thinking").click();
+    await expect(picker).toContainText("Thinking");
+    await expect(input).toHaveValue("Keep this draft while choosing Thinking");
     await geometry(page);
     await page.screenshot({
       path: info.outputPath(`free-pointer-${theme}.png`),
       animations: "disabled",
     });
-    await page
-      .getByRole("dialog", { name: "Response options", exact: true })
-      .getByRole("combobox", { name: "Format", exact: true })
-      .focus();
-    for (let index = 0; index < 3; index++) await page.keyboard.press("Tab");
-    await expect(thinking).toBeFocused();
-    await expect(thinking).toHaveCSS("outline-style", "solid");
-    await page.screenshot({
-      path: info.outputPath(`free-keyboard-${theme}.png`),
-      animations: "disabled",
-    });
-    await thinking.click();
-    const settings = page.locator(".kova-settings-dialog");
-    await expect(settings.locator(".kova-billing-details")).toBeVisible();
-    await expect(page).toHaveURL(`${origin}/settings/billing`);
-    await page.screenshot({
-      path: info.outputPath(`thinking-subscriptions-${theme}.png`),
-      animations: "disabled",
-    });
-    await page.goBack();
-    await waitForKovaHydration(page);
-    await expect(input).toHaveValue("Keep this draft while checking my plan");
-    await input.click();
-    await expect(composer).toHaveCSS("border-color", restingBorder);
-    await expect(composer).toHaveCSS("outline-style", "none");
   });
 }
 
@@ -499,20 +460,14 @@ for (const tier of ["plus", "pro"] as const) {
     await page.goto("/");
     await waitForKovaHydration(page);
     await expect(page.getByTestId("thinking-upgrade-button")).toHaveCount(0);
-    await openResponseOptions(page);
     const picker = page.getByTestId("model-selector-trigger").filter({ visible: true });
     await expect(picker).toBeVisible();
     await picker.click();
-    await expect(page.getByTestId("model-option-high")).toHaveText(
-      tier === "plus" ? "Thinking" : "High",
-    );
+    await expect(page.getByTestId("model-option-high")).toHaveText("High");
     await expect(page.getByTestId("model-option-ultra")).toHaveCount(tier === "pro" ? 1 : 0);
     await page.getByTestId("model-option-high").click();
-    await expect(picker).toHaveAttribute(
-      "aria-label",
-      `Choose model: KovaGPT ${tier === "plus" ? "Thinking" : "High"}`,
-    );
-    await expect(picker).toContainText(tier === "plus" ? "Thinking" : "High");
+    await expect(picker).toHaveAttribute("aria-label", `Choose model: KovaGPT ${"High"}`);
+    await expect(picker).toContainText("High");
     await page.keyboard.press("Escape");
     await geometry(page);
     await page.screenshot({

@@ -1002,13 +1002,16 @@ export function SettingsDialog({
         { v: "personalization", label: "Profile", icon: User2 },
         { v: "appearance", label: "Appearance", icon: Palette },
         { v: "general", label: "Responses", icon: Sparkles },
+        { v: "memory", label: "Memory", icon: Brain },
+        { v: "security", label: "Security", icon: ShieldCheck },
+        { v: "storage", label: "Storage", icon: HardDrive },
         { v: "notifications", label: "Notifications", icon: Bell },
         { v: "linked", label: "Connections", icon: Link2 },
         { v: "data", label: "Privacy", icon: ShieldCheck },
         { v: "usage", label: "Usage", icon: BarChart3 },
         {
           v: "billing",
-          label: "Billing",
+          label: "Subscriptions",
           icon: CreditCard,
           keywords: ["subscription", "plan", "payment", "invoice"],
         },
@@ -1030,7 +1033,9 @@ export function SettingsDialog({
     parental: "data",
     family: "linked",
   };
-  const parentTab = secondaryParents[tab];
+  const parentTab = pageGroups.some((group) => group.tabs.some((item) => item.v === tab))
+    ? undefined
+    : secondaryParents[tab];
   const secondaryTabs = TAB_GROUPS.flatMap((group) => group.tabs).filter(
     (item) =>
       secondaryParents[item.v] === tab && !["memory", "security", "storage"].includes(item.v),
@@ -1047,7 +1052,10 @@ export function SettingsDialog({
     );
   const matchingSecondaryTabs = normalizedQuery
     ? TAB_GROUPS.flatMap((group) => group.tabs).filter(
-        (item) => secondaryParents[item.v] && matchesSettingsQuery(item),
+        (item) =>
+          secondaryParents[item.v] &&
+          !allTabs.some((primary) => primary.v === item.v) &&
+          matchesSettingsQuery(item),
       )
     : [];
   const hasSettingsMatches =

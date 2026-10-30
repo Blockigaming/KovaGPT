@@ -167,11 +167,11 @@ const LEGACY_ALIAS: Record<string, ModeId> = {
   kova_o3: "medium",
 };
 
-/** Exact model menus promised by each plan. Pro intentionally replaces Thinking with deeper tiers. */
+/** Exact model menus promised by each plan. Each upgrade adds choices while preserving Default and Thinking. */
 export function modesForTier(tier: Tier): Mode[] {
   return MODE_IDS_BY_TIER[tier].map((id) => {
     const mode = MODES.find((candidate) => candidate.id === id)!;
-    return tier === "plus" && id === "high" ? { ...mode, label: "Thinking" } : mode;
+    return mode;
   });
 }
 

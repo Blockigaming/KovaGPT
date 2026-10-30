@@ -307,17 +307,10 @@ for (const theme of ["light", "dark"] as const) {
     await optionsTrigger.click();
     const responseOptions = page.getByRole("dialog", { name: "Response options", exact: true });
     await expect(responseOptions).toBeVisible();
-    const effort = responseOptions.getByRole("region", { name: "Effort", exact: true });
-    await expect(
-      effort.getByText("Your Free plan uses its included setting. Thinking requires a paid plan.", {
-        exact: true,
-      }),
-    ).toBeVisible();
-    await expect(
-      effort.getByRole("button", { name: "Thinking is locked. Open Subscriptions", exact: true }),
-    ).toBeEnabled();
-    await expect(effort.getByRole("combobox")).toHaveCount(0);
-    await expect(effort.getByRole("button", { expanded: false })).toHaveCount(0);
+    await expect(responseOptions).toContainText(
+      "Choose your model from the bottom of the message box.",
+    );
+    await expect(responseOptions.getByTestId("thinking-upgrade-button")).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(responseOptions).toBeHidden();
     await expect(optionsTrigger).toBeFocused();
@@ -395,14 +388,8 @@ for (const theme of ["light", "dark"] as const) {
       scale: "css",
     });
     await captureCandidateVisual(page, testInfo, `guest-core-shell-${theme}-system`);
-    // The locked effort affordance leads to its real upgrade destination and
-    // never masquerades as an available guest model selector.
-    await optionsTrigger.click();
-    await page
-      .getByRole("dialog", { name: "Response options", exact: true })
-      .getByRole("button", { name: "Thinking is locked. Open Subscriptions", exact: true })
-      .click();
-    await expect(page).toHaveURL(/\/pricing(?:[?#]|$)/);
+    await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toHaveCount(0);
+    await expect(page.locator(".spec400-composer-trailing")).toContainText("Default");
   });
 }
 

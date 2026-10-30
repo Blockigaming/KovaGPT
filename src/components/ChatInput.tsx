@@ -1,9 +1,7 @@
 import {
   ArrowUp,
-  Brain,
   Mic,
   AudioLines,
-  Lock,
   Paperclip,
   Plus,
   Square,
@@ -1285,6 +1283,25 @@ export function ChatInput({
     };
     return (
       <>
+        {mobile && section === "all" && (
+          <div className="kova-composer-primary-actions" aria-label="Message preferences">
+            <button type="button" className={rowClass} onClick={() => openMessageSettings(trigger)}>
+              <Files aria-hidden="true" />
+              Context
+            </button>
+            <button
+              type="button"
+              className={rowClass}
+              onClick={() => {
+                closeActions();
+                setOptionsOpen(true);
+              }}
+            >
+              <SlidersHorizontal aria-hidden="true" />
+              Response options
+            </button>
+          </div>
+        )}
         {section !== "plugins" && (
           <p className="spec400-attachment-limits">
             Text and code: 256 KB. Images: 3 MB. PDF and Office: 10 MB.{" "}
@@ -1920,51 +1937,16 @@ export function ChatInput({
                 ) : (
                   <p>Format, length, and tone preferences are available in Settings → Responses.</p>
                 )}
-                <section className="spec400-effort-options" aria-label="Effort">
-                  <h3>Effort</h3>
-                  {userTier !== "free" && canChangeAgent && mode && onModeChange ? (
-                    <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} />
-                  ) : userTier !== "free" ? (
-                    <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
-                  ) : null}
-                  {userTier === "free" ? (
-                    <>
-                      <p>
-                        Your Free plan uses its included setting. Thinking requires a paid plan.
-                      </p>
-                      <button
-                        type="button"
-                        disabled={!isLoaded}
-                        data-testid="thinking-upgrade-button"
-                        className="spec400-toolbar-button"
-                        aria-label="Thinking is locked. Open Subscriptions"
-                        onClick={() => {
-                          setOptionsOpen(false);
-                          if (!user) {
-                            void navigate({ to: "/pricing" });
-                            return;
-                          }
-                          window.dispatchEvent(
-                            new CustomEvent("kova-open-settings", { detail: { tab: "billing" } }),
-                          );
-                        }}
-                      >
-                        <Brain aria-hidden="true" />
-                        Thinking
-                        <Lock aria-hidden="true" />
-                      </button>
-                    </>
-                  ) : (
-                    <p>
-                      Available effort follows your plan and current model. Automatic effort routing
-                      is not available. Higher effort does not guarantee correctness.
-                    </p>
-                  )}
-                </section>
+                <p>Choose your model from the bottom of the message box.</p>
               </PopoverContent>
             </Popover>
           </div>
           <div className="spec400-composer-trailing">
+            {canChangeAgent && mode && onModeChange ? (
+              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+            ) : (
+              <ComposerModelStatus visible={showModelStatus && isLoaded && Boolean(user)} />
+            )}
             <button
               type="button"
               data-testid="dictate-button"

@@ -340,7 +340,7 @@
   width: 18px;
   height: 18px;
 }
-.kova-settings-reference :is(button, a, input, textarea, [role="combobox"]):focus-visible {
+.kova-settings-reference :is(button, a, [role="combobox"]):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }

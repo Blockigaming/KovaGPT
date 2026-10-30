@@ -8,9 +8,9 @@ const source = readFileSync(
   "utf8",
 );
 test("onboarding describes the canonical Free mode boundary", () => {
-  assert.deepEqual(MODE_IDS_BY_TIER.free, ["instant"]);
-  assert.match(source, /Free includes Instant\. Thinking requires an upgrade\./);
-  assert.doesNotMatch(source, /Free includes Instant and Thinking/);
+  assert.deepEqual(MODE_IDS_BY_TIER.free, ["instant", "thinking"]);
+  assert.match(source, /Free includes Default and Thinking\./);
+  assert.doesNotMatch(source, /Thinking requires an upgrade/);
 });
 test("onboarding points daily usage to the existing Usage section", () => {
   assert.match(source, /Settings → Usage/);
