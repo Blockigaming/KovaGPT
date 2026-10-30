@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
+import { openResponseOptions } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
 
 async function expectRestingComposer(page: Page) {
@@ -69,7 +70,18 @@ for (const theme of ["dark", "light"] as const) {
     await expect(dialog).toBeHidden();
     await expect(input).toHaveValue("Keep the original requirement.\nAdd this detail.");
     await expect(expand).toBeFocused();
-    await page.getByRole("button", { name: "Context", exact: true }).click();
+    const contextTrigger = page.getByRole("button", { name: "Context", exact: true });
+    const contextReturn = (await contextTrigger.isVisible())
+      ? contextTrigger
+      : page.getByRole("button", { name: "Attach", exact: true });
+    if (await contextTrigger.isVisible()) await contextTrigger.click();
+    else {
+      await contextReturn.click();
+      await page
+        .getByTestId("mobile-bottom-sheet")
+        .getByRole("button", { name: "Context", exact: true })
+        .click();
+    }
     const context = page.getByRole("dialog", { name: "Context", exact: true });
     await expect(context).toBeVisible();
     for (const heading of [
@@ -83,8 +95,8 @@ for (const theme of ["dark", "light"] as const) {
     const contextBox = await context.boundingBox();
     expect(contextBox!.width).toBe(viewport.width < 768 ? viewport.width : 300);
     await context.getByRole("button", { name: "Close Context", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Context", exact: true })).toBeFocused();
-    await page.getByRole("button", { name: "Options", exact: true }).click();
+    await expect(contextReturn).toBeFocused();
+    await openResponseOptions(page);
     const options = page.getByRole("dialog", { name: "Response options", exact: true });
     await expect(options).toBeVisible();
     for (const [label, choice] of [
@@ -99,6 +111,8 @@ for (const theme of ["dark", "light"] as const) {
       await expect(trigger).toBeFocused();
     }
     await page.keyboard.press("Escape");
+    if (page.viewportSize()!.width < 380)
+      await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeFocused();
     await expect(input).toHaveValue("Keep the original requirement.\nAdd this detail.");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
