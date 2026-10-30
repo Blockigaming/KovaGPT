@@ -11,7 +11,6 @@ import githubLogo from "../assets/plugins/github.svg";
 import linearLogo from "../assets/plugins/linear.svg";
 import slackLogo from "../assets/plugins/slack.svg";
 import salesforceLogo from "../assets/plugins/salesforce.svg";
-import hubspotLogo from "../assets/plugins/hubspot.svg";
 
 /** Package-sourced brand assets; license and trademark provenance are recorded alongside the SVGs. */
 export const PLUGIN_BRAND_ASSET_URLS: Readonly<Record<string, string>> = {
@@ -27,7 +26,6 @@ export const PLUGIN_BRAND_ASSET_URLS: Readonly<Record<string, string>> = {
   linear: linearLogo,
   slack: slackLogo,
   salesforce: salesforceLogo,
-  hubspot: hubspotLogo,
 };
 
 /** Presentation-only launch review metadata. Never an authorization/connection registry. */
@@ -184,13 +182,6 @@ export const LAUNCH_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
       "write",
       "Proposed: update selected Salesforce records after review; scope unconfirmed",
     ),
-  ]),
-  entry("hubspot", [
-    proposed(
-      "read",
-      "Proposed: read selected HubSpot contacts, companies and deals; scope unconfirmed",
-    ),
-    proposed("write", "Proposed: update selected HubSpot records after review; scope unconfirmed"),
   ]),
 ];
 

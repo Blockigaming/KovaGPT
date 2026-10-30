@@ -40,10 +40,9 @@ const expected = [
   "linear",
   "slack",
   "salesforce",
-  "hubspot",
 ];
 
-test("launch review includes exactly 13 providers, preserving original catalog identity", () => {
+test("launch review includes exactly 12 providers, preserving original catalog identity", () => {
   assert.deepEqual(
     review.LAUNCH_PLUGIN_REVIEW_CATALOG.map((item) => item.connector.id),
     expected,
@@ -105,7 +104,7 @@ test("source-backed capabilities name existing local code and never imply grante
 });
 
 test("all launch marks use verified local assets with preserved package provenance", () => {
-  assert.equal(Object.keys(review.PLUGIN_BRAND_ASSET_URLS).length, 13);
+  assert.equal(Object.keys(review.PLUGIN_BRAND_ASSET_URLS).length, 12);
   for (const item of review.LAUNCH_PLUGIN_REVIEW_CATALOG) {
     const asset = provenance.assets.find(
       (asset) =>
