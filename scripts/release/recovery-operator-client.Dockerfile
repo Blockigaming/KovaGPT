@@ -18,7 +18,7 @@ RUN printf '%s\n' 'KOVA_OPERATOR_STAGE=ubuntu-release-read'; \
     printf '%s\n' 'KOVA_OPERATOR_STAGE=ubuntu-sources-present-guard'; \
     [[ -f /etc/apt/sources.list.d/ubuntu.sources ]]; \
     printf '%s\n' 'KOVA_OPERATOR_STAGE=ubuntu-legacy-sources-empty-guard'; \
-    [[ ! -s /etc/apt/sources.list ]]; \
+    if [[ -e /etc/apt/sources.list || -L /etc/apt/sources.list ]]; then [[ -f /etc/apt/sources.list && ! -L /etc/apt/sources.list ]]; awk '/^[[:space:]]*($|#)/ {next} {exit 1}' /etc/apt/sources.list; fi; \
     printf '%s\n' 'KOVA_OPERATOR_STAGE=ubuntu-source-glob'; \
     sources=(/etc/apt/sources.list.d/*); \
     printf '%s\n' 'KOVA_OPERATOR_STAGE=ubuntu-source-count-guard'; \

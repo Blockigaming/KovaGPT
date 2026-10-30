@@ -340,7 +340,7 @@ class SyntheticTests(unittest.TestCase):
         lines=body.splitlines()
         for i,line in enumerate(lines):
             stripped=line.strip()
-            if stripped.startswith(("[[", "if grep", "grep -q")):
+            if stripped.startswith(("[[", "if [[", "if grep", "grep -q")):
                 self.assertRegex(lines[i-1],r"printf '%s\\n' 'KOVA_OPERATOR_STAGE=[a-z0-9-]+';")
         for stage,predicate in [
             ("pgdg-key-count-guard",'assert sum(x[0]=="pub" for x in rows)==1'),
@@ -360,10 +360,39 @@ class SyntheticTests(unittest.TestCase):
             line=re.sub(r'print\("KOVA_OPERATOR_STAGE=[a-z0-9-]+",flush=True\);',"",line)
             line=line.replace("if grep -Eiq '^(Trusted|Allow-Insecure):[[:space:]]*yes' /etc/apt/sources.list.d/ubuntu.sources; then exit 1; fi;",
                               "! grep -Eiq '^(Trusted|Allow-Insecure):[[:space:]]*yes' /etc/apt/sources.list.d/ubuntu.sources;")
+            line=line.replace("if [[ -e /etc/apt/sources.list || -L /etc/apt/sources.list ]]; then [[ -f /etc/apt/sources.list && ! -L /etc/apt/sources.list ]]; awk '/^[[:space:]]*($|#)/ {next} {exit 1}' /etc/apt/sources.list; fi;",
+                              "[[ ! -s /etc/apt/sources.list ]];")
             stripped.append(line)
         normalized=" ".join("\n".join(stripped).replace("\\\n"," ").split())
         self.assertEqual(hashlib.sha256(normalized.encode()).hexdigest(),
                          "d830f8159ff4b57a8ef9923c04f5bf6d0ab66b8c8bb8c9e551cb624a92dd1c8c")
+
+    def test_legacy_apt_sources_accepts_only_absent_empty_comments_or_blank_lines(self):
+        source=m.HERE.joinpath("recovery-operator-client.Dockerfile").read_text()
+        line=next(line for line in source.splitlines() if line.strip().startswith("if [[ -e /etc/apt/sources.list"))
+        command=line.strip().removesuffix(chr(92)).strip().replace("/etc/apt/sources.list",'"$1"')
+        fixture=self.root/"synthetic-legacy-sources.list"
+        def execute():
+            return subprocess.run(["bash","-o","pipefail","-ceu",command+" printf accepted", "canary",str(fixture)],capture_output=True)
+        absent=execute()
+        self.assertEqual(absent.returncode,0)
+        self.assertEqual(absent.stdout,b"accepted")
+        for value,rejected in [("",False),("\n \t\n",False),("# official source moved\n   # comment\n",False),
+                               ("deb http://archive.ubuntu.com/ubuntu noble main\n",True),
+                               ("\tdeb-src https://archive.ubuntu.com/ubuntu noble main\n",True),
+                               (" # comment\nUNREVIEWED_ENTRY\n",True),("Types: deb\n",True)]:
+            fixture.write_text(value)
+            result=execute()
+            with self.subTest(value=value):
+                self.assertEqual(result.returncode!=0,rejected)
+                self.assertEqual(result.stdout,b"" if rejected else b"accepted")
+        fixture.unlink();fixture.mkdir()
+        self.assertNotEqual(execute().returncode,0)
+        fixture.rmdir();target=self.root/"synthetic-legacy-target";target.write_text("# harmless\n")
+        fixture.symlink_to(target)
+        self.assertNotEqual(execute().returncode,0)
+        fixture.unlink();fixture.symlink_to(self.root/"synthetic-absent-target")
+        self.assertNotEqual(execute().returncode,0)
 
     def test_unsigned_apt_source_guard_actually_aborts_under_errexit(self):
         source=m.HERE.joinpath("recovery-operator-client.Dockerfile").read_text()
