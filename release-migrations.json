@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 197,
-  "latest": "20261028213000_kova_owned_google_attachment_guard.sql",
+  "count": 198,
+  "latest": "20261029235133_kova_production_subscription_summary_read_only_forward.sql",
   "migrations": [
     {
       "order": 1,
@@ -4096,6 +4096,20 @@
         "first_release_guard_owned_attachment",
         "first_release_check_google_attachment"
       ],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 198,
+      "filename": "20261029235133_kova_production_subscription_summary_read_only_forward.sql",
+      "timestamp": "20261029235133",
+      "sha256": "8856b46715d701be07cdccadfc833ef22659ee80ff71459f4f7ad53513af1cd4",
+      "tables": [],
+      "functions": ["user_subscription_summary", "current_subscription_summary"],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
