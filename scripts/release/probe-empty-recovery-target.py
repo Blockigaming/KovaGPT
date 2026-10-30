@@ -638,7 +638,7 @@ while :; do sleep 1; done"""
         values={"PGHOST":host or self.hosts[target],"PGHOSTADDR":ip,"PGPORT":"5432","PGDATABASE":"postgres",
                 "PGUSER":OPERATOR,"PGSSLMODE":"verify-full","PGSSLROOTCERT":ca,
                 "PGPASSFILE":"/run/client/pgpass","PGCONNECT_TIMEOUT":"3",
-                "PGOPTIONS":"-c TimeZone=UTC -c DateStyle=ISO,YMD -c bytea_output=hex -c extra_float_digits=3 -c default_transaction_read_only=on"}
+                "PGOPTIONS":recovery.CANONICAL_PG+" -c default_transaction_read_only=on","PGCLIENTENCODING":"UTF8"}
         for key,value in values.items():flags += ["--env",key+"="+value]
         return self.docker(flags+[self.names["client"],self.native_tools["psql"],"-X","--no-password","--quiet",
             "--tuples-only","--no-align","--set","ON_ERROR_STOP=1","--set","VERBOSITY=sqlstate","--file","-"],

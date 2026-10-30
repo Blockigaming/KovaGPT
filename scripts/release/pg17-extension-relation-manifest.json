@@ -1,0 +1,2770 @@
+{
+  "catalogs": {
+    "pg_am": {
+      "amhandler": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_proc",
+        "type": "regproc"
+      },
+      "amname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "amtype": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      }
+    },
+    "pg_amop": {
+      "amopfamily": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_opfamily",
+        "type": "oid"
+      },
+      "amoplefttype": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "amopmethod": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_am",
+        "type": "oid"
+      },
+      "amopopr": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_operator",
+        "type": "oid"
+      },
+      "amoppurpose": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "amoprighttype": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "amopsortfamily": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_opfamily",
+        "type": "oid"
+      },
+      "amopstrategy": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      }
+    },
+    "pg_amproc": {
+      "amproc": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_proc",
+        "type": "regproc"
+      },
+      "amprocfamily": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_opfamily",
+        "type": "oid"
+      },
+      "amproclefttype": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "amprocnum": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "amprocrighttype": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      }
+    },
+    "pg_attrdef": {
+      "adbin": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": true,
+        "type": "pg_node_tree"
+      },
+      "adnum": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "adrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      }
+    },
+    "pg_attribute": {
+      "attacl": {
+        "dimensions": 1,
+        "kind": "acl",
+        "not_null": false,
+        "type": "_aclitem"
+      },
+      "attalign": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "attbyval": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "attcacheoff": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int4"
+      },
+      "attcollation": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_collation",
+        "type": "oid"
+      },
+      "attcompression": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "attfdwoptions": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": false,
+        "type": "_text"
+      },
+      "attgenerated": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "atthasdef": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "atthasmissing": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "attidentity": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "attinhcount": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "attisdropped": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "attislocal": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "attlen": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "attmissingval": {
+        "dimensions": 0,
+        "kind": "unsupported_nullable",
+        "not_null": false,
+        "type": "anyarray"
+      },
+      "attname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "attndims": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "attnotnull": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "attnum": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "attoptions": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": false,
+        "type": "_text"
+      },
+      "attrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "attstattarget": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": false,
+        "type": "int2"
+      },
+      "attstorage": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "atttypid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "atttypmod": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int4"
+      }
+    },
+    "pg_cast": {
+      "castcontext": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "castfunc": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_proc",
+        "type": "oid"
+      },
+      "castmethod": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "castsource": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "casttarget": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      }
+    },
+    "pg_class": {
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      },
+      "relacl": {
+        "dimensions": 1,
+        "kind": "acl",
+        "not_null": false,
+        "type": "_aclitem"
+      },
+      "relallvisible": {
+        "dimensions": 0,
+        "kind": "excluded_physical",
+        "not_null": true,
+        "reason": "visibility map page count",
+        "type": "int4"
+      },
+      "relam": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_am",
+        "type": "oid"
+      },
+      "relchecks": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "relfilenode": {
+        "dimensions": 0,
+        "kind": "excluded_physical",
+        "not_null": true,
+        "reason": "cluster-local storage identifier",
+        "type": "oid"
+      },
+      "relforcerowsecurity": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "relfrozenxid": {
+        "dimensions": 0,
+        "kind": "excluded_physical",
+        "not_null": true,
+        "reason": "cluster-local transaction freeze horizon",
+        "type": "xid"
+      },
+      "relhasindex": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "relhasrules": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "relhassubclass": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "relhastriggers": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "relispartition": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "relispopulated": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "relisshared": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "relkind": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "relminmxid": {
+        "dimensions": 0,
+        "kind": "excluded_physical",
+        "not_null": true,
+        "reason": "cluster-local multixact horizon",
+        "type": "xid"
+      },
+      "relname": {
+        "dimensions": 0,
+        "kind": "conditional_owned_name",
+        "not_null": true,
+        "type": "name"
+      },
+      "relnamespace": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_namespace",
+        "type": "oid"
+      },
+      "relnatts": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "reloftype": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "reloptions": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": false,
+        "type": "_text"
+      },
+      "relowner": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_authid",
+        "type": "oid"
+      },
+      "relpages": {
+        "dimensions": 0,
+        "kind": "excluded_physical",
+        "not_null": true,
+        "reason": "planner storage page estimate",
+        "type": "int4"
+      },
+      "relpartbound": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": false,
+        "type": "pg_node_tree"
+      },
+      "relpersistence": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "relreplident": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "relrewrite": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "relrowsecurity": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "reltablespace": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_tablespace",
+        "type": "oid"
+      },
+      "reltoastrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "reltuples": {
+        "dimensions": 0,
+        "kind": "excluded_physical",
+        "not_null": true,
+        "reason": "planner row estimate",
+        "type": "float4"
+      },
+      "reltype": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_type",
+        "type": "oid"
+      }
+    },
+    "pg_constraint": {
+      "conbin": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": false,
+        "type": "pg_node_tree"
+      },
+      "condeferrable": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "condeferred": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "conexclop": {
+        "dimensions": 1,
+        "kind": "array_ref",
+        "not_null": false,
+        "optional": false,
+        "ref": "pg_operator",
+        "type": "_oid"
+      },
+      "confdelsetcols": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": false,
+        "type": "_int2"
+      },
+      "confdeltype": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "conffeqop": {
+        "dimensions": 1,
+        "kind": "array_ref",
+        "not_null": false,
+        "optional": false,
+        "ref": "pg_operator",
+        "type": "_oid"
+      },
+      "confkey": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": false,
+        "type": "_int2"
+      },
+      "confmatchtype": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "confrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "confupdtype": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "conindid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "coninhcount": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "conislocal": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "conkey": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": false,
+        "type": "_int2"
+      },
+      "conname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "connamespace": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_namespace",
+        "type": "oid"
+      },
+      "connoinherit": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "conparentid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_constraint",
+        "type": "oid"
+      },
+      "conpfeqop": {
+        "dimensions": 1,
+        "kind": "array_ref",
+        "not_null": false,
+        "optional": false,
+        "ref": "pg_operator",
+        "type": "_oid"
+      },
+      "conppeqop": {
+        "dimensions": 1,
+        "kind": "array_ref",
+        "not_null": false,
+        "optional": false,
+        "ref": "pg_operator",
+        "type": "_oid"
+      },
+      "conrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "contype": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "contypid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "convalidated": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      }
+    },
+    "pg_depend": {
+      "classid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "deptype": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "objid": {
+        "class_field": "classid",
+        "dimensions": 0,
+        "kind": "polymorphic_ref",
+        "not_null": true,
+        "subid_field": "objsubid",
+        "type": "oid"
+      },
+      "objsubid": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int4"
+      },
+      "refclassid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "refobjid": {
+        "class_field": "refclassid",
+        "dimensions": 0,
+        "kind": "polymorphic_ref",
+        "not_null": true,
+        "subid_field": "refobjsubid",
+        "type": "oid"
+      },
+      "refobjsubid": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int4"
+      }
+    },
+    "pg_description": {
+      "classoid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "description": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "text"
+      },
+      "objoid": {
+        "class_field": "classoid",
+        "dimensions": 0,
+        "kind": "polymorphic_ref",
+        "not_null": true,
+        "subid_field": "objsubid",
+        "type": "oid"
+      },
+      "objsubid": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int4"
+      }
+    },
+    "pg_extension": {
+      "extcondition": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": false,
+        "type": "_text"
+      },
+      "extconfig": {
+        "dimensions": 1,
+        "kind": "array_ref",
+        "not_null": false,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "_oid"
+      },
+      "extname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "extnamespace": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_namespace",
+        "type": "oid"
+      },
+      "extowner": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_authid",
+        "type": "oid"
+      },
+      "extrelocatable": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "extversion": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "text"
+      },
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      }
+    },
+    "pg_index": {
+      "indcheckxmin": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indclass": {
+        "dimensions": 1,
+        "kind": "array_ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_opclass",
+        "type": "oidvector"
+      },
+      "indcollation": {
+        "dimensions": 1,
+        "kind": "array_ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_collation",
+        "type": "oidvector"
+      },
+      "indexprs": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": false,
+        "type": "pg_node_tree"
+      },
+      "indexrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "indimmediate": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indisclustered": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indisexclusion": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indislive": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indisprimary": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indisready": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indisreplident": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indisunique": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indisvalid": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indkey": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": true,
+        "type": "int2vector"
+      },
+      "indnatts": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "indnkeyatts": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "indnullsnotdistinct": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "indoption": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": true,
+        "type": "int2vector"
+      },
+      "indpred": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": false,
+        "type": "pg_node_tree"
+      },
+      "indrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      }
+    },
+    "pg_inherits": {
+      "inhdetachpending": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "inhparent": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "inhrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "inhseqno": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int4"
+      }
+    },
+    "pg_init_privs": {
+      "classoid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "initprivs": {
+        "dimensions": 1,
+        "kind": "acl",
+        "not_null": true,
+        "type": "_aclitem"
+      },
+      "objoid": {
+        "class_field": "classoid",
+        "dimensions": 0,
+        "kind": "polymorphic_ref",
+        "not_null": true,
+        "subid_field": "objsubid",
+        "type": "oid"
+      },
+      "objsubid": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int4"
+      },
+      "privtype": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      }
+    },
+    "pg_language": {
+      "lanacl": {
+        "dimensions": 1,
+        "kind": "acl",
+        "not_null": false,
+        "type": "_aclitem"
+      },
+      "laninline": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_proc",
+        "type": "oid"
+      },
+      "lanispl": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "lanname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "lanowner": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_authid",
+        "type": "oid"
+      },
+      "lanplcallfoid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_proc",
+        "type": "oid"
+      },
+      "lanpltrusted": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "lanvalidator": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_proc",
+        "type": "oid"
+      },
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      }
+    },
+    "pg_namespace": {
+      "nspacl": {
+        "dimensions": 1,
+        "kind": "acl",
+        "not_null": false,
+        "type": "_aclitem"
+      },
+      "nspname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "nspowner": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_authid",
+        "type": "oid"
+      },
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      }
+    },
+    "pg_opclass": {
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      },
+      "opcdefault": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "opcfamily": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_opfamily",
+        "type": "oid"
+      },
+      "opcintype": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "opckeytype": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "opcmethod": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_am",
+        "type": "oid"
+      },
+      "opcname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "opcnamespace": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_namespace",
+        "type": "oid"
+      },
+      "opcowner": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_authid",
+        "type": "oid"
+      }
+    },
+    "pg_operator": {
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      },
+      "oprcanhash": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "oprcanmerge": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "oprcode": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_proc",
+        "type": "regproc"
+      },
+      "oprcom": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_operator",
+        "type": "oid"
+      },
+      "oprjoin": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_proc",
+        "type": "regproc"
+      },
+      "oprkind": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "oprleft": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "oprname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "oprnamespace": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_namespace",
+        "type": "oid"
+      },
+      "oprnegate": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_operator",
+        "type": "oid"
+      },
+      "oprowner": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_authid",
+        "type": "oid"
+      },
+      "oprrest": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_proc",
+        "type": "regproc"
+      },
+      "oprresult": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_type",
+        "type": "oid"
+      },
+      "oprright": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_type",
+        "type": "oid"
+      }
+    },
+    "pg_opfamily": {
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      },
+      "opfmethod": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_am",
+        "type": "oid"
+      },
+      "opfname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "opfnamespace": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_namespace",
+        "type": "oid"
+      },
+      "opfowner": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_authid",
+        "type": "oid"
+      }
+    },
+    "pg_partitioned_table": {
+      "partattrs": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": true,
+        "type": "int2vector"
+      },
+      "partclass": {
+        "dimensions": 1,
+        "kind": "array_ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_opclass",
+        "type": "oidvector"
+      },
+      "partcollation": {
+        "dimensions": 1,
+        "kind": "array_ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_collation",
+        "type": "oidvector"
+      },
+      "partdefid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "partexprs": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": false,
+        "type": "pg_node_tree"
+      },
+      "partnatts": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "partrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "partstrat": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      }
+    },
+    "pg_policy": {
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      },
+      "polcmd": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "polname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "polpermissive": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "polqual": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": false,
+        "type": "pg_node_tree"
+      },
+      "polrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "polroles": {
+        "dimensions": 1,
+        "kind": "array_ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_authid",
+        "type": "_oid"
+      },
+      "polwithcheck": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": false,
+        "type": "pg_node_tree"
+      }
+    },
+    "pg_rewrite": {
+      "ev_action": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": true,
+        "type": "pg_node_tree"
+      },
+      "ev_class": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "ev_enabled": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "ev_qual": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": true,
+        "type": "pg_node_tree"
+      },
+      "ev_type": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "is_instead": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      },
+      "rulename": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      }
+    },
+    "pg_seclabel": {
+      "classoid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "label": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "text"
+      },
+      "objoid": {
+        "class_field": "classoid",
+        "dimensions": 0,
+        "kind": "polymorphic_ref",
+        "not_null": true,
+        "subid_field": "objsubid",
+        "type": "oid"
+      },
+      "objsubid": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int4"
+      },
+      "provider": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "text"
+      }
+    },
+    "pg_sequence": {
+      "seqcache": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int8"
+      },
+      "seqcycle": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "seqincrement": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int8"
+      },
+      "seqmax": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int8"
+      },
+      "seqmin": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int8"
+      },
+      "seqrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "seqstart": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int8"
+      },
+      "seqtypid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_type",
+        "type": "oid"
+      }
+    },
+    "pg_shdepend": {
+      "classid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "dbid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_database",
+        "type": "oid"
+      },
+      "deptype": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "objid": {
+        "class_field": "classid",
+        "dimensions": 0,
+        "kind": "polymorphic_ref",
+        "not_null": true,
+        "subid_field": "objsubid",
+        "type": "oid"
+      },
+      "objsubid": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int4"
+      },
+      "refclassid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "refobjid": {
+        "class_field": "refclassid",
+        "dimensions": 0,
+        "kind": "polymorphic_ref",
+        "not_null": true,
+        "subid_field": null,
+        "type": "oid"
+      }
+    },
+    "pg_trigger": {
+      "oid": {
+        "dimensions": 0,
+        "kind": "self",
+        "not_null": true,
+        "type": "oid"
+      },
+      "tgargs": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bytea"
+      },
+      "tgattr": {
+        "dimensions": 1,
+        "kind": "array_scalar",
+        "not_null": true,
+        "type": "int2vector"
+      },
+      "tgconstraint": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_constraint",
+        "type": "oid"
+      },
+      "tgconstrindid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "tgconstrrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "tgdeferrable": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "tgenabled": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "char"
+      },
+      "tgfoid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_proc",
+        "type": "oid"
+      },
+      "tginitdeferred": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "tgisinternal": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "bool"
+      },
+      "tgname": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "name"
+      },
+      "tgnargs": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      },
+      "tgnewtable": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": false,
+        "type": "name"
+      },
+      "tgoldtable": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": false,
+        "type": "name"
+      },
+      "tgparentid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": true,
+        "ref": "pg_trigger",
+        "type": "oid"
+      },
+      "tgqual": {
+        "dimensions": 0,
+        "kind": "node",
+        "not_null": false,
+        "type": "pg_node_tree"
+      },
+      "tgrelid": {
+        "dimensions": 0,
+        "kind": "ref",
+        "not_null": true,
+        "optional": false,
+        "ref": "pg_class",
+        "type": "oid"
+      },
+      "tgtype": {
+        "dimensions": 0,
+        "kind": "scalar",
+        "not_null": true,
+        "type": "int2"
+      }
+    }
+  },
+  "foreignKeys": [
+    {
+      "catalog": "pg_am",
+      "column_names": ["amhandler"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_proc",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_amop",
+      "column_names": ["amopfamily"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_opfamily",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_amop",
+      "column_names": ["amoplefttype"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_amop",
+      "column_names": ["amopmethod"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_am",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_amop",
+      "column_names": ["amopopr"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_operator",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_amop",
+      "column_names": ["amoprighttype"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_amop",
+      "column_names": ["amopsortfamily"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_opfamily",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_amproc",
+      "column_names": ["amproc"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_proc",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_amproc",
+      "column_names": ["amprocfamily"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_opfamily",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_amproc",
+      "column_names": ["amproclefttype"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_amproc",
+      "column_names": ["amprocrighttype"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_attrdef",
+      "column_names": ["adrelid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_attrdef",
+      "column_names": ["adrelid", "adnum"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_attribute",
+      "referenced_columns": ["attrelid", "attnum"]
+    },
+    {
+      "catalog": "pg_attribute",
+      "column_names": ["attcollation"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_collation",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_attribute",
+      "column_names": ["attrelid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_attribute",
+      "column_names": ["atttypid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_cast",
+      "column_names": ["castfunc"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_proc",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_cast",
+      "column_names": ["castsource"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_cast",
+      "column_names": ["casttarget"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_class",
+      "column_names": ["relam"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_am",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_class",
+      "column_names": ["relnamespace"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_namespace",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_class",
+      "column_names": ["reloftype"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_class",
+      "column_names": ["relowner"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_authid",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_class",
+      "column_names": ["relrewrite"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_class",
+      "column_names": ["reltablespace"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_tablespace",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_class",
+      "column_names": ["reltoastrelid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_class",
+      "column_names": ["reltype"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["conexclop"],
+      "is_array": true,
+      "is_opt": false,
+      "referenced_catalog": "pg_operator",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["conffeqop"],
+      "is_array": true,
+      "is_opt": false,
+      "referenced_catalog": "pg_operator",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["confrelid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["confrelid", "confkey"],
+      "is_array": true,
+      "is_opt": false,
+      "referenced_catalog": "pg_attribute",
+      "referenced_columns": ["attrelid", "attnum"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["conindid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["connamespace"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_namespace",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["conparentid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_constraint",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["conpfeqop"],
+      "is_array": true,
+      "is_opt": false,
+      "referenced_catalog": "pg_operator",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["conppeqop"],
+      "is_array": true,
+      "is_opt": false,
+      "referenced_catalog": "pg_operator",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["conrelid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["conrelid", "conkey"],
+      "is_array": true,
+      "is_opt": true,
+      "referenced_catalog": "pg_attribute",
+      "referenced_columns": ["attrelid", "attnum"]
+    },
+    {
+      "catalog": "pg_constraint",
+      "column_names": ["contypid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_depend",
+      "column_names": ["classid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_depend",
+      "column_names": ["refclassid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_description",
+      "column_names": ["classoid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_extension",
+      "column_names": ["extconfig"],
+      "is_array": true,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_extension",
+      "column_names": ["extnamespace"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_namespace",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_extension",
+      "column_names": ["extowner"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_authid",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_index",
+      "column_names": ["indclass"],
+      "is_array": true,
+      "is_opt": false,
+      "referenced_catalog": "pg_opclass",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_index",
+      "column_names": ["indcollation"],
+      "is_array": true,
+      "is_opt": true,
+      "referenced_catalog": "pg_collation",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_index",
+      "column_names": ["indexrelid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_index",
+      "column_names": ["indrelid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_index",
+      "column_names": ["indrelid", "indkey"],
+      "is_array": true,
+      "is_opt": true,
+      "referenced_catalog": "pg_attribute",
+      "referenced_columns": ["attrelid", "attnum"]
+    },
+    {
+      "catalog": "pg_inherits",
+      "column_names": ["inhparent"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_inherits",
+      "column_names": ["inhrelid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_init_privs",
+      "column_names": ["classoid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_language",
+      "column_names": ["laninline"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_proc",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_language",
+      "column_names": ["lanowner"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_authid",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_language",
+      "column_names": ["lanplcallfoid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_proc",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_language",
+      "column_names": ["lanvalidator"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_proc",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_namespace",
+      "column_names": ["nspowner"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_authid",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_opclass",
+      "column_names": ["opcfamily"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_opfamily",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_opclass",
+      "column_names": ["opcintype"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_opclass",
+      "column_names": ["opckeytype"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_opclass",
+      "column_names": ["opcmethod"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_am",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_opclass",
+      "column_names": ["opcnamespace"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_namespace",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_opclass",
+      "column_names": ["opcowner"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_authid",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_operator",
+      "column_names": ["oprcode"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_proc",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_operator",
+      "column_names": ["oprcom"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_operator",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_operator",
+      "column_names": ["oprjoin"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_proc",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_operator",
+      "column_names": ["oprleft"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_operator",
+      "column_names": ["oprnamespace"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_namespace",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_operator",
+      "column_names": ["oprnegate"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_operator",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_operator",
+      "column_names": ["oprowner"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_authid",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_operator",
+      "column_names": ["oprrest"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_proc",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_operator",
+      "column_names": ["oprresult"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_operator",
+      "column_names": ["oprright"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_opfamily",
+      "column_names": ["opfmethod"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_am",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_opfamily",
+      "column_names": ["opfnamespace"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_namespace",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_opfamily",
+      "column_names": ["opfowner"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_authid",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_partitioned_table",
+      "column_names": ["partclass"],
+      "is_array": true,
+      "is_opt": false,
+      "referenced_catalog": "pg_opclass",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_partitioned_table",
+      "column_names": ["partcollation"],
+      "is_array": true,
+      "is_opt": true,
+      "referenced_catalog": "pg_collation",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_partitioned_table",
+      "column_names": ["partdefid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_partitioned_table",
+      "column_names": ["partrelid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_partitioned_table",
+      "column_names": ["partrelid", "partattrs"],
+      "is_array": true,
+      "is_opt": true,
+      "referenced_catalog": "pg_attribute",
+      "referenced_columns": ["attrelid", "attnum"]
+    },
+    {
+      "catalog": "pg_policy",
+      "column_names": ["polrelid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_policy",
+      "column_names": ["polroles"],
+      "is_array": true,
+      "is_opt": true,
+      "referenced_catalog": "pg_authid",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_rewrite",
+      "column_names": ["ev_class"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_seclabel",
+      "column_names": ["classoid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_sequence",
+      "column_names": ["seqrelid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_sequence",
+      "column_names": ["seqtypid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_type",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_shdepend",
+      "column_names": ["classid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_shdepend",
+      "column_names": ["dbid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_database",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_shdepend",
+      "column_names": ["refclassid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_trigger",
+      "column_names": ["tgconstraint"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_constraint",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_trigger",
+      "column_names": ["tgconstrindid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_trigger",
+      "column_names": ["tgconstrrelid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_trigger",
+      "column_names": ["tgfoid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_proc",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_trigger",
+      "column_names": ["tgparentid"],
+      "is_array": false,
+      "is_opt": true,
+      "referenced_catalog": "pg_trigger",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_trigger",
+      "column_names": ["tgrelid"],
+      "is_array": false,
+      "is_opt": false,
+      "referenced_catalog": "pg_class",
+      "referenced_columns": ["oid"]
+    },
+    {
+      "catalog": "pg_trigger",
+      "column_names": ["tgrelid", "tgattr"],
+      "is_array": true,
+      "is_opt": false,
+      "referenced_catalog": "pg_attribute",
+      "referenced_columns": ["attrelid", "attnum"]
+    }
+  ],
+  "format": 1,
+  "physicalExclusions": {
+    "relallvisible": "visibility map page count",
+    "relfilenode": "cluster-local storage identifier",
+    "relfrozenxid": "cluster-local transaction freeze horizon",
+    "relminmxid": "cluster-local multixact horizon",
+    "relpages": "planner storage page estimate",
+    "reltuples": "planner row estimate"
+  },
+  "postgresVersion": "17.6",
+  "sourceHeaders": {
+    "pg_am": {
+      "sha256": "f00986a5e6e4336226e19950207a88335911f8a0648a9f73ff45dbee875f5e02",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_am.h"
+    },
+    "pg_amop": {
+      "sha256": "2840a93848d3935302f747c627b9a18223e4d5cc5f4956b7b37e4f89f938af1e",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_amop.h"
+    },
+    "pg_amproc": {
+      "sha256": "7ed19707fd2ab43df603eb8179971cf2c63bf1759110e7fa93595e66746fe9c6",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_amproc.h"
+    },
+    "pg_attrdef": {
+      "sha256": "cf4b846d4bc535d7e134de6699c720d55d715fe54aded8ab971bbdb49b936f9e",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_attrdef.h"
+    },
+    "pg_attribute": {
+      "sha256": "4a69eb6f6c33ee5ef9a430c54a0ca89616a438e8d3f2d1e4fc3b2ae157b787b8",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_attribute.h"
+    },
+    "pg_cast": {
+      "sha256": "990c67a4cf7db5e09efee699efdc38bdd1ac98d242f0b5de33aa20675280aa47",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_cast.h"
+    },
+    "pg_class": {
+      "sha256": "73c01054a2143dadd120dc91d7325d1100f05ef18d484df07d32f3afcb2aefb9",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_class.h"
+    },
+    "pg_constraint": {
+      "sha256": "041176b239b730edb2869b6fb029ac3cf3404cdce3e67d38ffbbdb29e7025aa9",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_constraint.h"
+    },
+    "pg_depend": {
+      "sha256": "d02194f2ca79e858a1102ecc63f466bbf16970dc331306dfb0ac9e96fdfa9811",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_depend.h"
+    },
+    "pg_description": {
+      "sha256": "8097e06efa48cca3c00bc1766075288598fc06c0bb0d393c586e04e94d71b2ae",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_description.h"
+    },
+    "pg_extension": {
+      "sha256": "509e249eedcb4dda683fd7de4b8b53aad48af249a04fca03a8fe848275e1d0f6",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_extension.h"
+    },
+    "pg_index": {
+      "sha256": "e5171b9406064dda6144bc7b49a0a0a5c6771d4687eb7b48926d5a393536ff23",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_index.h"
+    },
+    "pg_inherits": {
+      "sha256": "c8abbed743b762e3fd877f1bac15c02a95a11fae5891ea3c752f8b3e2f5c97ae",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_inherits.h"
+    },
+    "pg_init_privs": {
+      "sha256": "b7b9d0bfeea92792418de6fcbc0260d7fa9d926967a7c289d448f7e4b0b24fe4",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_init_privs.h"
+    },
+    "pg_language": {
+      "sha256": "c7639882a007e89420ac3d112449fd0f82e1b478c3c87d8e8d1546e6e599a92e",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_language.h"
+    },
+    "pg_namespace": {
+      "sha256": "d38eadf27557d4a623943ec64e0c25c572df0c61987bdfa981066ee9b5dae299",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_namespace.h"
+    },
+    "pg_opclass": {
+      "sha256": "956d9c8b392c101101d725c6443ef59ce5816fa51444fc6c607d629daafd620a",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_opclass.h"
+    },
+    "pg_operator": {
+      "sha256": "0dc28f0dbea90998cdff539513c518ef5368e9e0bd2861a5c86aa7ff3b6117fa",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_operator.h"
+    },
+    "pg_opfamily": {
+      "sha256": "79a13503269bde080bb93dd4ac0a72fc320edd0739cb7eac6c299f05a47031d0",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_opfamily.h"
+    },
+    "pg_partitioned_table": {
+      "sha256": "302cdb6d2dd3753519de280e11374f3a58f70c08b60802173d00035899ee809e",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_partitioned_table.h"
+    },
+    "pg_policy": {
+      "sha256": "05d13e9da64adbd5c44829c5f2ecd0f1cf810c6aeeafe8a07145185bd4d4163b",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_policy.h"
+    },
+    "pg_rewrite": {
+      "sha256": "8cd49e6b967e9de7530d198da50424329cc5817b038f96722897dd72e3411344",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_rewrite.h"
+    },
+    "pg_seclabel": {
+      "sha256": "74aef6f046ae224ac0f4c70c2ab0032f1e8138d84ac2e9b0f28303eb37bd5b2a",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_seclabel.h"
+    },
+    "pg_sequence": {
+      "sha256": "d2ae8028d34e8f95fb41a38edbec581b5fef9cd02568d936e192c33631aedbb4",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_sequence.h"
+    },
+    "pg_shdepend": {
+      "sha256": "871b46d0177af03d2a789698443ba1ced1935742fdae22c9096090d4aaa51cfd",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_shdepend.h"
+    },
+    "pg_trigger": {
+      "sha256": "0af10c93a46d4eddd91a162bd8dee29f72707dcf767361210241c4513b58a944",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/catalog/pg_trigger.h"
+    }
+  }
+}

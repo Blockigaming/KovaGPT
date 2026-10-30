@@ -79,7 +79,18 @@ test("extension COPY preserves real text, arrays, bytea, generated values and se
   // The nonextension child is restored by the main pg_dump data path.
   await target.query("INSERT INTO extension_fixture.child VALUES('child physical row')");
   const sql = python("print(json.dumps(m.EXTENSION_DATA_CATALOG_SQL))", null);
-  const decode = async (db) => JSON.parse(Object.values((await db.query(sql)).rows[0])[0]);
+  const decodeRaw = async (db) => JSON.parse(Object.values((await db.query(sql)).rows[0])[0]);
+  await source.exec("SET search_path=extension_fixture,public");
+  await target.exec("SET search_path=public");
+  assert.notDeepEqual(await decodeRaw(source), await decodeRaw(target));
+  assert.ok(
+    python("print(json.dumps(m.CANONICAL_PG))", null).includes("-c search_path=pg_catalog"),
+  );
+  const decode = async (db) =>
+    db.transaction(async (tx) => {
+      await tx.exec("SET TRANSACTION READ ONLY; SET LOCAL search_path=pg_catalog;");
+      return JSON.parse(Object.values((await tx.query(sql)).rows[0])[0]);
+    });
   const metadata = await decode(source);
   assert.deepEqual(await decode(target), metadata);
   assert.ok(metadata.some((r) => r.name === "records_id_seq" && r.kind === "S"));
