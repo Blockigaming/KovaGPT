@@ -120,6 +120,44 @@ function fixture(mode = "dual", probe = () => Response.json({ session: null })) 
     },
   };
 }
+test("hosted auth validation and OAuth exchange remain usable while ordinary data dispatch stays fenced", async () => {
+  const f = fixture("dual");
+  f.browser.setLegacySessionValidationPending(true);
+  assert.equal(await f.browser.resolveKovaSessionAuthority(), null);
+  assert.equal(f.browser.isKovaSessionActive(), true, "owned-null does not release the data fence");
+  assert.equal(f.browser.isLegacySessionValidationAllowed(), true);
+  const bridge = f.client.getLegacyAuthValidationClient();
+  assert.deepEqual(
+    Object.keys(bridge).sort(),
+    [
+      "getAuthenticatorAssuranceLevel",
+      "getSession",
+      "getUser",
+      "onAuthStateChange",
+      "signOut",
+    ].sort(),
+  );
+  assert.equal((await bridge.getSession()).data.session.user.id, "legacy-owner");
+  assert.equal(
+    (await f.client.supabase.auth.getSession()).data.session,
+    null,
+    "normal authFetch/token acquisition cannot receive the pending hosted token",
+  );
+  const context = await f.client.resolveLegacyAuthContext();
+  context.assertCurrent();
+  const returned = await f.oauth.completeOAuthSessionFromUrl("pending validation");
+  assert.equal(returned.user.id, "legacy-owner");
+  assert.equal(
+    f.browser.isKovaSessionActive(),
+    true,
+    "OAuth completion cannot release provider validation",
+  );
+  f.browser.setLegacySessionValidationPending(false);
+  assert.equal(f.browser.isKovaSessionActive(), false);
+  f.browser.setKovaSessionActive(true);
+  assert.throws(() => context.assertCurrent(), /auth_authority_changed/);
+  assert.throws(() => f.client.getLegacyAuthValidationClient(), /auth_authority_changed/);
+});
 for (const kind of ["pkce", "implicit"])
   test(`dual ${kind}: wait for the shared cookie decision, scrub credentials and use the hosted client exactly once`, async () => {
     let release;

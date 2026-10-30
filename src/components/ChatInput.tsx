@@ -141,6 +141,8 @@ type ComposerAction = {
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "web_search", label: "Search the web", icon: Globe },
   { id: "image", label: "Create Image", icon: ImagePlus },
+  { id: "data_analysis", label: "Analyze data", icon: Brain },
+  { id: "file_analysis", label: "Analyze files", icon: FileText },
 ];
 
 const TEXT_LIKE_EXT =
@@ -626,6 +628,28 @@ export function ChatInput({
     return false;
   };
 
+  const requireAnalysisInput = () => {
+    const tool = selectedToolRef.current;
+    if (tool !== "data_analysis" && tool !== "file_analysis") return true;
+    if (!requireFileAccount()) return false;
+    if (
+      tool === "file_analysis" &&
+      !composerStateRef.current.attachments.some(
+        (attachment) =>
+          attachment.kind === "text_file" &&
+          attachment.status !== "uploading" &&
+          attachment.status !== "failed" &&
+          Boolean(attachment.textContent?.trim()),
+      )
+    ) {
+      const message = "Attach a text file or a document with extracted text to analyze files.";
+      setUploadAnnouncement(message);
+      toast.error(message);
+      return false;
+    }
+    return true;
+  };
+
   const triggerSubmit = () => {
     if (disabled || sendDisabled || submittingRef.current || isStreaming || pasteOffer) return;
     if (!online) return;
@@ -637,6 +661,7 @@ export function ChatInput({
       toast.error(blockedAttachmentMessage);
       return;
     }
+    if (!requireAnalysisInput()) return;
     submittingRef.current = true;
     setUploadAnnouncement("Sending message…");
     try {
@@ -681,6 +706,7 @@ export function ChatInput({
       setUploadAnnouncement(blockedAttachmentMessage);
       return;
     }
+    if (!requireAnalysisInput()) return;
     nextSubmittingRef.current = true;
     try {
       if (onSendNext(selectedToolRef.current, event?.currentTarget))
@@ -1331,6 +1357,25 @@ export function ChatInput({
                 <span>Search the web</span>
               </button>
             )}
+            {section === "all" &&
+              COMPOSER_TOOLS.filter(
+                (tool) => tool.id === "data_analysis" || tool.id === "file_analysis",
+              ).map((tool) => (
+                <button
+                  key={tool.id}
+                  type="button"
+                  className={rowClass}
+                  disabled={!isLoaded || !onToolSelect || disabled || isStreaming}
+                  aria-pressed={selectedTool === tool.id}
+                  onClick={() => {
+                    if (!requireFileAccount(trigger)) return;
+                    chooseTool(tool);
+                  }}
+                >
+                  <tool.icon aria-hidden="true" />
+                  <span>{tool.label}</span>
+                </button>
+              ))}
             {!mobile && section === "all" && (
               <>
                 <button

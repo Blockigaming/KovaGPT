@@ -49,6 +49,7 @@ function fixture(
     attachmentChanges = [],
     choosers = [],
     submissions = [],
+    submittedTools = [],
     toolChanges = [];
   const scopes = new Map();
   let props = {
@@ -66,9 +67,16 @@ function fixture(
       props.attachments = value;
       dirty = true;
     },
-    onSubmit: () => submissions.push(true),
+    onSubmit: (tool) => {
+      submissions.push(true);
+      submittedTools.push(tool);
+    },
     onStop() {},
-    onToolSelect: (tool) => toolChanges.push(tool),
+    onToolSelect: (tool) => {
+      toolChanges.push(tool);
+      props.selectedTool = tool;
+      dirty = true;
+    },
     ...initial,
   };
   const react = {
@@ -222,6 +230,7 @@ function fixture(
     attachmentChanges,
     choosers,
     submissions,
+    submittedTools,
     toolChanges,
     nodes: () => nodes(tree),
     root: () => tree.props,
@@ -233,6 +242,11 @@ function fixture(
     input: () => nodes(tree).find((node) => node.type === "textarea").props,
     async click(label) {
       await button(label).onClick();
+      await flush();
+    },
+    async update(next) {
+      Object.assign(props, next);
+      dirty = true;
       await flush();
     },
     async account(next) {
@@ -575,4 +589,204 @@ test("all-failed and failed-plus-blank PDF errors retain observations, block sen
     assert.deepEqual(f.quotas, []);
     assert.equal(f.button("Send message").disabled, true);
   }
+});
+
+for (const [label, tool] of [
+  ["Analyze data", "data_analysis"],
+  ["Analyze files", "file_analysis"],
+]) {
+  test(`${label} is selectable on desktop and phone and hands the explicit tool to Send`, async () => {
+    for (const layout of [
+      { isDesktop: true, isMobile: false, interaction: "pointer" },
+      { isDesktop: false, isMobile: true, interaction: "touch" },
+    ]) {
+      const f = fixture(
+        {
+          attachments:
+            tool === "file_analysis"
+              ? [
+                  {
+                    kind: "text_file",
+                    name: "Data.csv",
+                    dataUrl: "",
+                    status: "complete",
+                    textContent: "item,value\napple,3",
+                  },
+                ]
+              : [],
+        },
+        { isLoaded: true, user: { id: "owner-a" } },
+        layout,
+      );
+      await f.click(label);
+      assert.deepEqual(f.toolChanges, [tool]);
+      assert.equal(f.button(label)["aria-pressed"], true);
+      await f.click("Send message");
+      assert.deepEqual(f.submittedTools, [tool]);
+      assert.deepEqual([f.quotas, f.saves, f.reads], [[], [], []]);
+    }
+  });
+
+  test(`guests cannot select or submit ${label}, including a queued draft`, async () => {
+    const f = fixture();
+    await f.click(label);
+    assert.ok(f.signIn());
+    assert.deepEqual(f.toolChanges, []);
+    const submitted = fixture({ selectedTool: tool });
+    await submitted.click("Send message");
+    assert.ok(submitted.signIn());
+    assert.deepEqual(submitted.submittedTools, []);
+    const queued = [];
+    const next = fixture({
+      selectedTool: tool,
+      isStreaming: true,
+      onSendNext: (value) => {
+        queued.push(value);
+        return true;
+      },
+    });
+    await next.click("Send next");
+    assert.ok(next.signIn());
+    assert.deepEqual(queued, []);
+    assert.equal(next.input().value, "Keep my draft");
+  });
+}
+
+test("Analyze files rejects missing, failed, pending, image and opaque attachments without changing the draft", async () => {
+  for (const attachments of [
+    [],
+    [{ kind: "text_file", name: "Blank.txt", dataUrl: "", status: "complete", textContent: "  " }],
+    [
+      {
+        kind: "text_file",
+        name: "Pending.txt",
+        dataUrl: "",
+        status: "uploading",
+        textContent: "data",
+      },
+    ],
+    [{ kind: "text_file", name: "Failed.txt", dataUrl: "", status: "failed", textContent: "data" }],
+    [
+      {
+        kind: "image",
+        name: "Photo.png",
+        dataUrl: "data:image/png;base64,AAAA",
+        status: "complete",
+      },
+    ],
+    [
+      {
+        kind: "library_file",
+        name: "Opaque.pdf",
+        dataUrl: "",
+        libraryItemId: "file-id",
+        status: "complete",
+      },
+    ],
+  ]) {
+    const f = fixture(
+      { selectedTool: "file_analysis", attachments },
+      { isLoaded: true, user: { id: "owner-a" } },
+    );
+    await f.click("Send message");
+    assert.deepEqual(f.submittedTools, []);
+    assert.equal(f.input().value, "Keep my draft");
+    assert.deepEqual(f.attachmentChanges, []);
+    assert.match(text(f.nodes()), /Attach a text file|Wait for|Remove or retry/);
+  }
+});
+
+test("removing a file also blocks a stale Send callback and queued file analysis", async () => {
+  const attachment = {
+    kind: "text_file",
+    name: "Data.csv",
+    dataUrl: "",
+    status: "complete",
+    textContent: "x,y\n1,2",
+  };
+  const f = fixture(
+    { selectedTool: "file_analysis", attachments: [attachment] },
+    { isLoaded: true, user: { id: "owner-a" } },
+  );
+  const staleSend = f.button("Send message").onClick;
+  await f.click("Remove Data.csv");
+  staleSend();
+  await f.flush();
+  assert.deepEqual(f.submittedTools, []);
+  assert.match(text(f.nodes()), /Attach a text file/);
+  const queued = [];
+  const next = fixture(
+    {
+      selectedTool: "file_analysis",
+      attachments: [attachment],
+      isStreaming: true,
+      onSendNext: (tool) => {
+        queued.push(tool);
+        return true;
+      },
+    },
+    { isLoaded: true, user: { id: "owner-a" } },
+  );
+  const staleNext = next.button("Send next").onClick;
+  await next.click("Remove Data.csv");
+  staleNext();
+  await next.flush();
+  assert.deepEqual(queued, []);
+  await next.update({ attachments: [attachment] });
+  await next.click("Send next");
+  assert.deepEqual(queued, ["file_analysis"]);
+});
+
+test("analysis selection toggles off and data analysis queues without any file or new allowance", async () => {
+  const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
+  await f.click("Analyze data");
+  await f.click("Analyze data");
+  assert.deepEqual(f.toolChanges, ["data_analysis", null]);
+  await f.click("Send message");
+  assert.deepEqual(f.submittedTools, [null]);
+  const queued = [];
+  const next = fixture(
+    {
+      selectedTool: "data_analysis",
+      isStreaming: true,
+      onSendNext: (tool) => {
+        queued.push(tool);
+        return true;
+      },
+    },
+    { isLoaded: true, user: { id: "owner-a" } },
+  );
+  await next.click("Send next");
+  assert.deepEqual(queued, ["data_analysis"]);
+  assert.deepEqual([next.quotas, next.saves, next.reads], [[], [], []]);
+});
+
+test("stale analysis Send and queued Send callbacks cannot run for a replacement account", async () => {
+  const f = fixture({ selectedTool: "data_analysis" }, { isLoaded: true, user: { id: "owner-a" } });
+  const staleSend = f.button("Send message").onClick;
+  await f.account({ isLoaded: true, user: { id: "owner-b" } });
+  staleSend();
+  await f.flush();
+  assert.deepEqual(f.submittedTools, []);
+  await f.click("Send message");
+  assert.deepEqual(f.submittedTools, ["data_analysis"]);
+  const queued = [];
+  const next = fixture(
+    {
+      selectedTool: "data_analysis",
+      isStreaming: true,
+      onSendNext: (tool) => {
+        queued.push(tool);
+        return true;
+      },
+    },
+    { isLoaded: true, user: { id: "owner-a" } },
+  );
+  const staleNext = next.button("Send next").onClick;
+  await next.account({ isLoaded: true, user: { id: "owner-b" } });
+  staleNext();
+  await next.flush();
+  assert.deepEqual(queued, []);
+  await next.click("Send next");
+  assert.deepEqual(queued, ["data_analysis"]);
 });

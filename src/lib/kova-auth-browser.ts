@@ -54,6 +54,19 @@ const compiledBrowserAuthMode =
 // prevents a stale legacy localStorage token from briefly loading a different
 // account while the preferred Kova principal is still unresolved.
 let kovaSessionActive = browserKovaAuthMode() !== "supabase";
+let legacySessionValidationPending = false;
+
+// A null owned-cookie probe does not validate the hosted SDK's current user.
+// Keep ordinary data dispatch fenced until that separate validation finishes.
+export function setLegacySessionValidationPending(pending: boolean): void {
+  if (legacySessionValidationPending === pending) return;
+  legacySessionValidationPending = pending;
+  if (pending) clearKovaAuthCache();
+}
+
+export function isLegacySessionValidationAllowed(): boolean {
+  return browserKovaAuthMode() !== "kova" && !kovaSessionActive;
+}
 
 export function browserKovaAuthMode(): "supabase" | "dual" | "kova" {
   const value = compiledBrowserAuthMode.slice("kova-browser-auth-mode:".length);
@@ -125,7 +138,7 @@ export function clearKovaAuthCache(): void {
 }
 
 export function isKovaSessionActive(): boolean {
-  return kovaSessionActive;
+  return kovaSessionActive || legacySessionValidationPending;
 }
 
 export async function fetchKovaSession(): Promise<KovaBrowserPrincipal | null> {
