@@ -33,12 +33,12 @@ const cssFiles = [
 const sheets = cssFiles.map((path) => [path, postcss.parse(read(path))]);
 const expected = {
   button: "9999px",
-  control: "10px",
-  input: "10px",
-  compact: "6px",
-  sidebar: "8px",
+  control: "12px",
+  input: "14px",
+  compact: "10px",
+  sidebar: "12px",
   card: "16px",
-  menu: "12px",
+  menu: "16px",
   panel: "24px",
   composer: "26px",
   message: "20px",

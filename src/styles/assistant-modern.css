@@ -3,9 +3,9 @@
 body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="modern"]),
 :is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="modern"] {
   --assistant-canvas: #ffffff;
-  --assistant-panel: #f9f9f9;
+  --assistant-panel: #ffffff;
   --assistant-card: #ffffff;
-  --assistant-line: #e5e5e5;
+  --assistant-line: #ebebeb;
   --assistant-muted: #6b6b6b;
   --assistant-focus: #717171;
   --assistant-accent: #0d0d0d;
@@ -46,7 +46,7 @@ body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="mod
   --user-bubble: #f4f4f4;
   --modern-shadow: 0 2px 8px #00000005;
   --chat-body-font: var(--font-ui);
-  --chat-greeting-font: var(--font-reading);
+  --chat-greeting-font: var(--font-ui);
   --chat-reading-font: var(--font-reading);
   --font-sans: var(--chat-body-font);
   --font-display: var(--font-ui);
@@ -58,21 +58,21 @@ body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="mod
 .dark body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="modern"]),
 .dark :is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="modern"] {
   --assistant-canvas: #212121;
-  --assistant-panel: #171717;
-  --assistant-card: #2f2f2f;
-  --assistant-line: #424242;
-  --assistant-muted: #b4b4b4;
+  --assistant-panel: #212121;
+  --assistant-card: #2b2b2b;
+  --assistant-line: #383838;
+  --assistant-muted: #a3a3a3;
   --assistant-focus: #b4b4b4;
   --assistant-accent: #ffffff;
   --assistant-accent-ink: #212121;
   --foreground: #ececec;
   --secondary: #303030;
   --muted: #363636;
-  --accent: #424242;
+  --accent: #303030;
   --sidebar-hover: #212121;
   --sidebar-active: #2b2b2b;
   --user-bubble: #303030;
-  --modern-shadow: none;
+  --modern-shadow: 0 2px 6px #0000000a;
 }
 
 .kova-assistant[data-ui="modern"] .kova-chat-main {
@@ -131,18 +131,18 @@ body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="mod
 .kova-assistant[data-ui="modern"] section.kova-empty-chat .kova-greeting h1 {
   padding: 0;
   font-family: var(--chat-greeting-font);
-  font-size: clamp(28px, 2.6vw, 38px);
-  font-weight: 400;
+  font-size: clamp(26px, 2.3vw, 32px);
+  font-weight: 500;
   line-height: 1.2;
   letter-spacing: -0.025em !important;
   text-align: center;
 }
 
 .kova-assistant[data-ui="modern"] .spec400-composer {
-  min-height: 128px;
+  min-height: 112px;
   padding: 12px;
   gap: 4px;
-  border-color: var(--assistant-line);
+  border-color: color-mix(in srgb, var(--foreground) 8%, transparent);
   background: var(--assistant-card);
   box-shadow: var(--modern-shadow);
   transition:
@@ -153,7 +153,7 @@ body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="mod
 .kova-assistant[data-ui="modern"]
   .spec400-chat-input[data-composer-surface="empty"]
   .spec400-composer {
-  min-height: 128px;
+  min-height: 112px;
 }
 
 .kova-assistant[data-ui="modern"] .spec400-composer[data-focus-origin="keyboard"]:focus-within {
@@ -176,7 +176,7 @@ body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="mod
 }
 
 .kova-assistant[data-ui="modern"] .spec400-composer-tools {
-  gap: 4px;
+  gap: 2px;
 }
 
 .kova-assistant[data-ui="modern"]
@@ -203,6 +203,21 @@ body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="mod
   color: var(--assistant-muted);
   font-size: 13px;
   font-weight: 500;
+}
+
+/* Keep secondary tools quiet; accessible labels and hover titles name them. */
+.kova-assistant[data-ui="modern"]
+  .spec400-composer-tools
+  > .spec400-toolbar-button:is([aria-label="Context"], [aria-label="Options"]) {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+}
+.kova-assistant[data-ui="modern"]
+  .spec400-composer-tools
+  > .spec400-toolbar-button:is([aria-label="Context"], [aria-label="Options"])
+  > span:not(.spec400-context-count) {
+  display: none;
 }
 
 /* Voice actions use the same optical grid as Attach and Send. Their accessible
@@ -270,12 +285,14 @@ body:has(:is(.kova-assistant, .kova-app-shell, [data-public-shell])[data-ui="mod
   max-width: 100%;
   min-height: 44px;
   padding: 8px 14px;
-  border: 1px solid var(--assistant-line);
-  border-radius: 999px;
-  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
   color: var(--assistant-muted);
   text-align: center;
-  transition: background-color 120ms ease;
+  transition:
+    background-color var(--kova-motion-fast) ease,
+    color var(--kova-motion-fast) ease;
 }
 
 .kova-assistant[data-ui="modern"] .kova-home-starter:hover {

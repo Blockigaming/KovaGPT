@@ -151,7 +151,7 @@ test("choosing a paid option preserves its route ID, closes the picker and resto
   f.runFrames();
   assert.deepEqual(f.changes, ["medium"]);
   assert.equal(f.find("popover").props.open, false);
-  assert.equal(f.trigger().props["aria-label"], "Choose model: Kova GPT Medium");
+  assert.equal(f.trigger().props["aria-label"], "Choose model: KovaGPT Medium");
   assert.deepEqual(
     f.focused.map((options) => options.preventScroll),
     [true],

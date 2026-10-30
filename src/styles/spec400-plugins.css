@@ -13,11 +13,36 @@
   border: 0;
 }
 .spec400-plugin-tabs[role="tablist"] {
+  display: flex;
   width: fit-content;
   max-width: 100%;
+  height: auto;
+  min-height: 48px;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  border: 0;
+  background: var(--muted);
 }
 .spec400-plugin-tabs [role="tab"] {
+  position: relative;
+  min-height: 44px;
+  padding: 0 12px;
   gap: 8px;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  background: transparent;
+  box-shadow: none;
+  font-size: 14px;
+}
+.spec400-plugin-tabs [role="tab"][data-state="active"] {
+  color: var(--foreground);
+  background: var(--surface-app);
+  box-shadow: 0 1px 3px #0000000a;
+}
+.spec400-plugin-tabs [role="tab"][data-state="active"]::after {
+  content: none;
 }
 .spec400-plugin-tabs [role="tab"] span {
   min-width: 22px;
@@ -104,7 +129,7 @@
 .spec400-plugin-card-heading > div {
   min-width: 0;
 }
-.spec400-plugin-card h2 {
+.spec400-plugins .spec400-plugin-card h2 {
   color: var(--foreground);
   font-size: 16px;
   line-height: 24px;
@@ -140,9 +165,9 @@
 .spec400-plugin-purpose {
   flex: 1;
   margin: 0;
-  min-height: 44px;
+  min-height: 22px;
   color: var(--muted-foreground);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 22px;
 }
 .spec400-plugin-card-footer {

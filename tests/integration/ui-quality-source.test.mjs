@@ -85,7 +85,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
     coreStyles,
     /@media \(prefers-reduced-transparency: reduce\)[\s\S]*?\.kova-composer-menu\)[\s\S]*?background: var\(--background\) !important;/,
   );
-  assert.match(home, /const greeting = "What are you working on\?"/);
+  assert.match(home, /const greeting = "How can I help today\?"/);
   assert.match(openingTag(home, "h1", /id="chat-greeting"/), /id="chat-greeting"/);
   assert.match(home, /id="chat-greeting"[^>]*>\s*\{greeting\}\s*<\/h1>/);
   assert.match(composer, /COMPOSER_TOOLS/);
@@ -138,15 +138,21 @@ test("core chat surfaces use shared workspace primitives", () => {
   assert.doesNotMatch(logo, /<svg|onError=/);
   assert.doesNotMatch(styles, /\.kova-logo-mark\s*\{[\s\S]*?mask: url/);
   const sidebarBrand = sidebar.match(
-    /<span\b[^>]*className="kova-sidebar-brand"[^>]*>([\s\S]*?)<\/span>/,
+    /<span\b[^>]*className="kova-sidebar-brand[^"]*"[^>]*>([\s\S]*?)<\/span>/,
   )?.[1];
-  assert.equal(sidebarBrand?.trim(), "KovaGPT", "expanded navigation keeps one plain brand label");
-  const railLogo = openingTag(sidebar, "NovaLogo", /decorative/);
+  assert.ok(sidebarBrand, "expanded navigation keeps one brand label");
+  assert.match(sidebarBrand, /<NovaLogo decorative className="h-6 w-6" \/>/);
+  assert.equal(sidebarBrand.replace(/<NovaLogo[^>]*\/>/, "").trim(), "KovaGPT");
+  const railSource = sidebar.slice(
+    sidebar.indexOf('aria-label="Collapsed navigation"'),
+    sidebar.indexOf("<aside"),
+  );
+  const railLogo = openingTag(railSource, "NovaLogo", /decorative/);
   assert.match(railLogo, /className="h-6 w-6"/);
   assert.equal(
     (sidebar.match(/<NovaLogo\b/g) ?? []).length,
-    1,
-    "only the collapsed rail needs a mark",
+    2,
+    "expanded navigation and collapsed rail each have one decorative owner mark",
   );
   assert.doesNotMatch(home, /<NovaLogo|kova-greeting-mark/);
   assert.match(publicSite, /<PublicShell>/);
@@ -166,10 +172,10 @@ test("core chat surfaces use shared workspace primitives", () => {
     /\bdecorative\b/,
     "the standalone recovery mark keeps its accessible name",
   );
-  // Guest navigation deliberately uses a text wordmark. Its browser contract
-  // checks that shape and fetches the real owner asset without inventing an img.
+  // Guest navigation uses the owner mark with the wordmark; the browser
+  // contract verifies its decorative semantics and fetches the real asset.
   assert.match(uiQuality, /await expect\(sidebarBrand\)\.toHaveText\("KovaGPT"\)/);
-  assert.match(uiQuality, /sidebarBrand\.locator\("img,svg"\)\)\.toHaveCount\(0\)/);
+  assert.match(uiQuality, /sidebarBrand\.locator\("img"\)\)\.toHaveCount\(1\)/);
   assert.match(uiQuality, /const ownerAsset = await page\.request\.get\("\/kova-logo\.png"\)/);
   assert.match(uiQuality, /expect\(ownerAsset\.ok\(\)\)\.toBe\(true\)/);
   assert.match(uiQuality, /ownerAsset\.headers\(\)\["content-type"\]\)\.toContain\("image\/png"\)/);

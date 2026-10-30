@@ -206,8 +206,7 @@ function PricingPage() {
             Upgrade your plan
           </h1>
           <p className="mx-auto max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-            Choose the plan that fits how you work. Provider-dependent features require their
-            services to be configured and available.
+            Choose the plan that fits how you work. Some features depend on connected services.
           </p>
         </section>
 
@@ -217,9 +216,14 @@ function PricingPage() {
         >
           <h2 className="font-semibold">First-month offer</h2>
           <p>{MONTHLY_INTRO_NOTE}</p>
-          <p>{INTRODUCTORY_OFFER_CHECKOUT_REVIEW}</p>
-          <p className="text-muted-foreground">{INTRODUCTORY_OFFER_HISTORY}</p>
-          <p className="text-muted-foreground">{INTRODUCTORY_OFFER_EXISTING}</p>
+          <details className="text-muted-foreground">
+            <summary className="cursor-pointer py-2 text-sm">Offer details and eligibility</summary>
+            <div className="space-y-3 pt-2">
+              <p>{INTRODUCTORY_OFFER_CHECKOUT_REVIEW}</p>
+              <p>{INTRODUCTORY_OFFER_HISTORY}</p>
+              <p>{INTRODUCTORY_OFFER_EXISTING}</p>
+            </div>
+          </details>
         </section>
 
         <section

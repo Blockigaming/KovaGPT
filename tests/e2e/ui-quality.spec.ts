@@ -11,7 +11,7 @@ async function expectEmptyWorkspaceLandmarks(page: Page) {
   await expect(page.getByRole("main")).toHaveCount(1);
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(
-    page.getByRole("heading", { level: 1, name: "What are you working on?", exact: true }),
+    page.getByRole("heading", { level: 1, name: "How can I help today?", exact: true }),
   ).toBeVisible();
   // The mobile page title is a separate navigation destination heading.
   const navigationTitle = page.locator("[data-kova-navigation-heading]");
@@ -223,7 +223,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(label.target.width).toBeGreaterThanOrEqual(44);
     expect(label.target.height).toBeGreaterThanOrEqual(44);
     expect(label.target.height).toBeCloseTo(44, 1);
-    expect(label.target.radius).toBe(6);
+    expect(label.target.radius).toBe(10);
   }
   await input.clear();
   await page.getByRole("button", { name: "Start with Write something", exact: true }).click();
@@ -365,12 +365,13 @@ for (const theme of ["light", "dark"] as const) {
           ),
       )
       .toBe(true);
-    // Guest navigation uses a plain text wordmark. The decorative owner mark
-    // is reserved for the authenticated collapsed rail and account surfaces.
+    // Navigation uses one decorative owner mark beside the KovaGPT wordmark.
     const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand");
     await expect(sidebarBrand).toHaveCount(1);
     await expect(sidebarBrand).toHaveText("KovaGPT");
-    await expect(sidebarBrand.locator("img,svg")).toHaveCount(0);
+    await expect(sidebarBrand.locator("img")).toHaveCount(1);
+    await expect(sidebarBrand.locator("img")).toHaveAttribute("src", "/kova-logo.png");
+    await expect(sidebarBrand.locator("img")).toHaveAttribute("alt", "");
     await expect(page.locator(".kova-sidebar-rail")).toHaveCount(0);
     await expect(page.locator(".kova-greeting-mark .kova-logo")).toHaveCount(0);
     const ownerAsset = await page.request.get("/kova-logo.png");
@@ -410,7 +411,7 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(
-    page.getByRole("heading", { level: 1, name: "What are you working on?", exact: true }),
+    page.getByRole("heading", { level: 1, name: "How can I help today?", exact: true }),
   ).toBeVisible();
 
   const composer = page.locator(".spec400-composer");

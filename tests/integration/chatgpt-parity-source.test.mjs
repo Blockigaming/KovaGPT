@@ -91,7 +91,7 @@ test("secondary navigation remains discoverable without active unavailable desti
 });
 
 test("Chat uses the current greeting and reports model availability truthfully", () => {
-  assert.match(route, /const greeting = "What are you working on\?";/);
+  assert.match(route, /const greeting = "How can I help today\?";/);
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /KovaGPT can make mistakes\. Check important info\./);
   assert.doesNotMatch(route, /ConversationOutline/);
@@ -125,7 +125,8 @@ test("empty chat offers draft starters and scopes recent work to signed-in histo
   assert.doesNotMatch(starters, /onSubmit|\.submit\(/);
   assert.match(route, /\{isLoaded && isSignedIn && historyConversations\.length > 0 \? \(/);
   assert.match(route, /Continue working/);
-  assert.match(route, /Sign in to save chats and attach files/);
+  assert.doesNotMatch(route, /Sign in to save chats and attach files/);
+  assert.match(route, /<SignInButton mode="modal">/);
 });
 
 test("signed-in onboarding hands real choices to the authenticated composer", () => {

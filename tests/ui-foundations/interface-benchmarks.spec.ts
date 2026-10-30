@@ -10,7 +10,7 @@ for (const width of [390, 1440]) {
         theme,
       );
       const hero = page.locator(".public-hero h1");
-      await expect(hero).toHaveCSS("font-weight", "400");
+      await expect(hero).toHaveCSS("font-weight", "500");
       await expect(page.locator(".public-hero")).toHaveAttribute(
         "data-ui-reference",
         "grok-editorial-hero",
@@ -114,7 +114,7 @@ for (const width of [320, 390, 768, 1440]) {
       );
       const hero = page.getByRole("heading", { level: 1 });
       await expect(hero).toHaveText("Chat, learn and create in KovaGPT.");
-      await expect(hero).toHaveCSS("font-weight", "400");
+      await expect(hero).toHaveCSS("font-weight", "500");
       await expect(page.locator(".public-hero")).toHaveAttribute(
         "data-ui-reference",
         "grok-editorial-hero",

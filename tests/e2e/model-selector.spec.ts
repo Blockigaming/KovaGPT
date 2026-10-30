@@ -54,7 +54,7 @@ test("Plus model selector exposes Instant Medium and Thinking using the High rou
 
   await optionRoot.getByTestId("model-option-high").click();
   await expect(optionRoot).toHaveCount(0);
-  await expect(trigger).toHaveAttribute("aria-label", "Choose model: Kova GPT Thinking");
+  await expect(trigger).toHaveAttribute("aria-label", "Choose model: KovaGPT Thinking");
   await expect(trigger).toContainText("Thinking");
   await trigger.click();
   await expect(optionRoot.getByTestId("model-option-high")).toHaveAttribute("aria-pressed", "true");
@@ -81,7 +81,7 @@ test("Pro picker keeps all six modes and the High label", async ({ page }) => {
   }
   await expect(page.getByTestId("model-option-high")).toHaveText("High");
   await page.getByTestId("model-option-high").click();
-  await expect(trigger).toHaveAttribute("aria-label", "Choose model: Kova GPT High");
+  await expect(trigger).toHaveAttribute("aria-label", "Choose model: KovaGPT High");
   await expect(page.getByTestId("thinking-upgrade-button")).toHaveCount(0);
 });
 
@@ -177,6 +177,6 @@ test.describe("short desktop model picker", () => {
     await expect(picker).toHaveCount(0);
     await expect(responseOptions).toBeVisible();
     await expect(trigger).toBeFocused();
-    await expect(trigger).toHaveAttribute("aria-label", "Choose model: Kova GPT Medium");
+    await expect(trigger).toHaveAttribute("aria-label", "Choose model: KovaGPT Medium");
   });
 });

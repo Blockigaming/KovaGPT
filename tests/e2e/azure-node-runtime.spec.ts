@@ -57,7 +57,7 @@ test("home hydrates and serves its scripts and styles from the Node origin", asy
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(
-    page.getByRole("heading", { level: 1, name: "What are you working on?", exact: true }),
+    page.getByRole("heading", { level: 1, name: "How can I help today?", exact: true }),
   ).toBeVisible();
   const assets = await page
     .locator('script[src], link[rel="stylesheet"]')

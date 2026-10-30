@@ -327,7 +327,7 @@ test("the actual workspace uses specified heading, surface, control and icon geo
   const structural = readFileSync("src/styles/spec400-system.css", "utf8");
   assert.match(theme, /--radius-lg: var\(--kova-radius-control\)/);
   assert.match(theme, /--radius-xl: var\(--kova-radius-card\)/);
-  assert.match(tokens, /:root\s*\{[^}]*--kova-radius-control: 10px;/s);
+  assert.match(tokens, /:root\s*\{[^}]*--kova-radius-control: 12px;/s);
   assert.match(tokens, /:root\s*\{[^}]*--kova-radius-card: 16px;/s);
   assert.doesNotMatch(structural, /:root:root|--(?:radius|kova-radius-[a-z-]+)\s*:/);
   for (const control of elements(f.render(), (node) => node.type === "button")) {

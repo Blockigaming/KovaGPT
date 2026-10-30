@@ -37,7 +37,7 @@ test("required model-selector coverage uses an isolated authenticated fixture an
     );
   }
   assert.match(modelSelectorSpec, /thinking-upgrade-button/u);
-  assert.match(modelSelectorSpec, /Choose model: Kova GPT Thinking/u);
+  assert.match(modelSelectorSpec, /Choose model: KovaGPT Thinking/u);
   assert.match(modelSelectorSpec, /model-option-high/u);
   assert.match(modelSelectorSpec, /expect\(chatRequests\)\.toBe\(0\)/u);
   assert.doesNotMatch(modelSelectorSpec, /test(?:Info)?\.(?:skip|fixme)/u);

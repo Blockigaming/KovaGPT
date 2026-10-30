@@ -209,8 +209,8 @@ test("Kovas header, scope buttons and labelled search use shared controls withou
     }
   }
   const css = readFileSync("src/styles/visual-tokens.css", "utf8");
-  assert.match(css, /:root\s*\{[^}]*--kova-radius-compact:\s*6px;/);
-  assert.match(css, /:root\s*\{[^}]*--kova-radius-input:\s*10px;/);
+  assert.match(css, /:root\s*\{[^}]*--kova-radius-compact:\s*10px;/);
+  assert.match(css, /:root\s*\{[^}]*--kova-radius-input:\s*14px;/);
 });
 
 for (const owned of [false, true]) {

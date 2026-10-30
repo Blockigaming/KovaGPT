@@ -15,17 +15,17 @@
 }
 [data-public-shell] :is(main h1, .public-hero h1, .legal-hero h1) {
   font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
-  font-size: clamp(36px, 5vw, 60px);
-  line-height: 1.1;
-  font-weight: 400;
+  font-size: clamp(30px, 3.5vw, 44px);
+  line-height: 1.15;
+  font-weight: 500;
   letter-spacing: -0.025em;
   text-wrap: balance;
 }
 [data-public-shell] :is(main h2, .public-section-heading h2) {
   font-family: var(--font-ui, ui-sans-serif, system-ui, sans-serif);
-  font-size: 32px;
-  line-height: 38px;
-  font-weight: 400;
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 500;
   letter-spacing: -0.02em;
 }
 [data-public-shell] :is(main h3) {

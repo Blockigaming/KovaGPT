@@ -104,7 +104,7 @@ const labeledSelect = (f, label) =>
 test("live appearance preview uses selected reading size, capped width, density, button state and motion", async () => {
   const f = appearanceFixture();
   assert.match(f.text(), /Live appearance preview/);
-  assert.match(f.text(), /Original palette/);
+  assert.doesNotMatch(f.text(), /Original palette|Accent presets are unavailable/);
   assert.match(f.text(), /device’s reduced-motion setting always takes priority/);
   assert.equal(
     f.find("p", (n) => n.props.className === "kova-appearance-preview-prose").props.style.fontSize,
@@ -330,7 +330,7 @@ test("Settings utility and narrow headings use a page-only alignment rule; previ
   const layout = readFileSync("src/styles/settings-page-layout.css", "utf8");
   const preview = readFileSync("src/styles/appearance-settings.css", "utf8");
   assert.match(route, /<AppShell utilitiesInHeader hideUtilities>/);
-  assert.match(layout, /@container settings \(max-width: 959px\)/);
+  assert.match(layout, /@container settings \(max-width: 719px\)/);
   assert.match(
     layout,
     /\.kova-settings-content-header\s*\{\s*padding-inline: 0;\s*margin-inline: 0;/,

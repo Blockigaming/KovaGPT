@@ -75,7 +75,10 @@ function fixture(options = {}) {
     onNew: () => calls.push(["new"]),
     onToggle: () => calls.push(["toggle"]),
     onOpenWorkspaceSearch: () => calls.push(["search"]),
-    setSearchOpen: (value) => calls.push(["local-search", value]),
+    setSearchOpen: (value) =>
+      calls.push(["local-search", typeof value === "function" ? value(false) : value]),
+    searchOpen: false,
+    closeAfterMobileNavigation: () => {},
     onOpenSettings: (tab) => calls.push(["settings", tab]),
     openRailPersonalization: (target) => calls.push(["customize", target]),
     requestAnimationFrame: (fn) => fn(),
@@ -104,16 +107,19 @@ function fixture(options = {}) {
   deps.railLink = compile(`return (${variable("railLink")});`, deps);
   const tree = compile(`return (${rail});`, deps);
   const find = (label) => all(tree).find((node) => node.props["aria-label"] === label);
-  return { tree, calls, deps, find };
+  const searchNode = nodes.find(
+    (node) =>
+      ts.isJsxElement(node) &&
+      node.openingElement.tagName.getText(file) === "button" &&
+      node.openingElement.attributes.properties.some(
+        (attribute) =>
+          attribute.name?.text === "aria-label" && attribute.initializer?.text === "Search chats",
+      ),
+  );
+  const search = compile(`return (${searchNode.getText(file)});`, deps);
+  return { tree, calls, deps, find, search };
 }
-const primaryLabels = [
-  "New chat",
-  "Search",
-  "Projects",
-  "Scheduled tasks",
-  "Library",
-  "Connections",
-];
+const primaryLabels = ["New chat", "Chat", "Projects", "Scheduled tasks", "Library", "Connections"];
 const controls = (tree) => all(tree).filter(({ type }) => type === "button" || type === "Link");
 
 for (const choices of [
@@ -131,7 +137,7 @@ for (const choices of [
       controls(f.find("Primary destinations"))
         .filter(({ type }) => type === "Link")
         .map(({ props }) => props.to),
-      ["/projects", "/scheduled-tasks", "/library", "/apps"],
+      ["/", "/projects", "/scheduled-tasks", "/library", "/apps"],
     );
     for (const label of primaryLabels)
       assert.equal(controls(f.tree).filter(({ props }) => props["aria-label"] === label).length, 1);
@@ -199,7 +205,7 @@ for (const [path, label] of [
 test("New chat, Search, customization and Settings invoke their existing callbacks once", () => {
   const f = fixture();
   f.find("New chat").props.onClick();
-  f.find("Search").props.onClick();
+  f.search.props.onClick();
   const opener = {};
   f.find("Customize sidebar").props.onClick({ currentTarget: opener });
   f.find("Settings").props.onClick();
@@ -208,8 +214,8 @@ test("New chat, Search, customization and Settings invoke their existing callbac
 
 test("Search without a workspace callback opens the existing chat search", () => {
   const f = fixture({ onOpenWorkspaceSearch: undefined });
-  f.find("Search").props.onClick();
-  assert.deepEqual(f.calls, [["local-search", true], ["toggle"]]);
+  f.search.props.onClick();
+  assert.deepEqual(f.calls, [["local-search", true]]);
 });
 
 test("optional switches preserve legacy stored primary IDs without migration or destructive reset", () => {
@@ -286,7 +292,8 @@ test("every collapsed action is wrapped in the shared pointer-and-keyboard Toolt
 test("rail keeps one 56px width owner, a 64px header and a 24px owner logo", () => {
   const f = fixture();
   assert.equal(f.find("Collapsed navigation").props.className, "kova-sidebar-rail");
-  assert.equal(fixture({ path: "/" }).find("Chat"), undefined);
+  assert.equal(fixture({ path: "/" }).find("Chat").props.to, "/");
+  assert.equal(f.find("Search"), undefined, "Search has one expanded-sidebar control");
   const header = all(f.tree).find(
     ({ type, props }) => type === "div" && props.className?.includes("h-16"),
   );
