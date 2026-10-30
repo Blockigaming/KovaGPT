@@ -41,29 +41,33 @@ export async function revealSidebar(page: Page) {
 
 export async function openCurrentSettings(page: Page) {
   await waitForKovaHydration(page);
-  const navigation = await revealSidebar(page);
-  const account = navigation.getByRole("button", { name: "Account menu", exact: true });
-  if (await account.count()) {
-    try {
-      await account.click({ timeout: 4_000 });
-    } catch (error) {
-      // A desktop sidebar can finish restoring its saved state after the
-      // navigation first becomes visible. If it collapses during the click,
-      // use the real Settings control on the newly visible rail.
-      const railSettings = page
-        .getByRole("navigation", { name: "Collapsed navigation", exact: true })
-        .getByRole("button", { name: "Settings", exact: true });
-      if (!(await railSettings.isVisible())) throw error;
-      await railSettings.click();
-      const surface = page.locator(".kova-settings-dialog");
-      await expect(surface).toBeVisible();
-      return surface;
-    }
-    await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
-  } else {
-    await navigation.getByRole("button", { name: "Settings", exact: true }).click();
-  }
   const surface = page.locator(".kova-settings-dialog");
+  if (await surface.isVisible()) return surface;
+  const navigation = page
+    .getByRole("navigation", { name: "Primary navigation", exact: true })
+    .or(page.getByRole("dialog", { name: "Primary navigation", exact: true }));
+  const railSettings = page
+    .getByRole("navigation", { name: "Collapsed navigation", exact: true })
+    .getByRole("button", { name: "Settings", exact: true });
+  const account = navigation.getByRole("button", { name: "Account menu", exact: true });
+  try {
+    await revealSidebar(page);
+    // Authentication can replace the guest Settings button with Account menu.
+    // Resolve either real control at click time instead of branching on count().
+    await account
+      .or(navigation.getByRole("button", { name: "Settings", exact: true }))
+      .filter({ visible: true })
+      .first()
+      .click({ timeout: 4_000 });
+  } catch (error) {
+    // Only use the rail once the expanded navigation is actually gone. During
+    // its animation the rail can still be visible underneath the open footer.
+    if ((await navigation.isVisible()) || !(await railSettings.isVisible())) throw error;
+    await railSettings.click({ timeout: 4_000 });
+  }
+  const menuSettings = page.getByRole("menuitem", { name: "Settings", exact: true });
+  await expect(surface.or(menuSettings).filter({ visible: true }).first()).toBeVisible();
+  if (!(await surface.isVisible())) await menuSettings.click();
   await expect(surface).toBeVisible();
   return surface;
 }
