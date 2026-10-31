@@ -37,6 +37,7 @@ function client({ fetcher = async () => Response.json({}), sessionUser = () => o
       Headers,
       TextDecoder,
       URL,
+      URLSearchParams,
       AbortSignal,
       AbortController,
       setTimeout,
@@ -115,7 +116,7 @@ test("OAuth reauthorization is account-bound and rejects unsafe or stale-account
   const changed = client({
     sessionUser: () => (++sessions === 1 ? owner : account),
     fetcher: async (path, init) => {
-      assert.equal(path, `/api/google/auth?connectionId=${account}`);
+      assert.equal(path, `/api/google/auth?connector=gmail&connectionId=${account}`);
       assert.equal(init.credentials, "same-origin");
       return Response.json({ url: "https://accounts.google.com/o/oauth2/v2/auth?state=fixture" });
     },
@@ -161,4 +162,26 @@ test("read helpers can bind each request to an explicit account", async () => {
   await api.calendarList({ maxResults: 3, connectionId: account });
   assert.equal(bodies.length, 5);
   assert.ok(bodies.every((body) => body.connectionId === account));
+});
+
+test("each Google Connect action sends only its selected connector", async () => {
+  for (const connector of ["gmail", "google-calendar", "google-drive"]) {
+    const { api, location } = client({
+      fetcher: async (path) => {
+        assert.equal(path, `/api/google/auth?connector=${connector}`);
+        return Response.json({ url: "https://accounts.google.com/o/oauth2/v2/auth" });
+      },
+    });
+    await api.startGoogleConnect(undefined, owner, connector);
+    assert.match(location.href, /^https:\/\/accounts.google.com/);
+  }
+  let calls = 0;
+  const { api } = client({
+    fetcher: async () => {
+      calls++;
+      return Response.json({});
+    },
+  });
+  await assert.rejects(api.startGoogleConnect(undefined, owner, "all"), /Invalid/);
+  assert.equal(calls, 0);
 });

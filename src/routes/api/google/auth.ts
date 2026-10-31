@@ -2,6 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { buildGoogleAuthUrl, beginGoogleOAuth } from "@/lib/google-oauth.server";
+import { googleConnectorScopes } from "@/lib/google-account-policy.mjs";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 import { enforceLockdownCapability } from "@/lib/lockdown-policy.mjs";
 
@@ -9,6 +10,12 @@ export const Route = createFileRoute("/api/google/auth")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const connector = new URL(request.url).searchParams.get("connector") ?? "gmail";
+        try {
+          googleConnectorScopes(connector);
+        } catch {
+          return Response.json({ error: "Invalid Google connector" }, { status: 400 });
+        }
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
         const lockdown = await enforceLockdownCapability(
@@ -64,6 +71,7 @@ export const Route = createFileRoute("/api/google/auth")({
           const attempt = await beginGoogleOAuth(auth.userId, nonce, connectionId);
           const url = buildGoogleAuthUrl({
             request,
+            connector,
             state,
             codeChallenge,
             loginHint: attempt.loginHint ?? undefined,

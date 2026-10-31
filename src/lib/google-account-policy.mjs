@@ -1,3 +1,19 @@
+// Each Connect action requests only the selected service. Google identity scopes
+// are shared so the existing owner/account binding remains intact.
+export const GOOGLE_CONNECTOR_SCOPES = Object.freeze({
+  gmail: [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.compose",
+  ],
+  "google-calendar": ["https://www.googleapis.com/auth/calendar.events"],
+  "google-drive": ["https://www.googleapis.com/auth/drive.readonly"],
+});
+export function googleConnectorScopes(connector = "gmail") {
+  if (!Object.hasOwn(GOOGLE_CONNECTOR_SCOPES, connector))
+    throw new Error("google_invalid_connector");
+  return ["openid", "email", "profile", ...GOOGLE_CONNECTOR_SCOPES[connector]].join(" ");
+}
+
 export const GOOGLE_CAPABILITY_SCOPES = {
   "gmail.read": [
     "https://www.googleapis.com/auth/gmail.readonly",

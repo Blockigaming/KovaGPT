@@ -7,6 +7,7 @@ import { readResponseBytesBounded } from "@/lib/endpoint-reliability.mjs";
 import { createGoogleAccountRuntime } from "@/lib/google-account-runtime.server.mjs";
 import {
   googleConnectionHealth,
+  googleConnectorScopes,
   parseGoogleBinding,
   type GoogleAccountBinding,
   type GoogleAccountHealth,
@@ -14,16 +15,7 @@ import {
 export type { GoogleAccountBinding } from "@/lib/google-account-policy.mjs";
 export type { GoogleConnection } from "@/lib/google-account-runtime.server.mjs";
 
-export const GOOGLE_SCOPES = [
-  "openid",
-  "email",
-  "profile",
-  "https://www.googleapis.com/auth/gmail.compose",
-  "https://www.googleapis.com/auth/gmail.readonly",
-  "https://www.googleapis.com/auth/calendar.events.readonly",
-  "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/drive.readonly",
-].join(" ");
+export const GOOGLE_SCOPES = googleConnectorScopes("gmail");
 
 /**
  * Envelope encryption for Google tokens at rest (AES-GCM, same key material as
@@ -88,7 +80,7 @@ export function buildGoogleAuthUrl(opts: {
   request: Request;
   state: string;
   codeChallenge: string;
-  scope?: string;
+  connector?: string;
   loginHint?: string;
 }): string {
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -97,7 +89,7 @@ export function buildGoogleAuthUrl(opts: {
     client_id: clientId,
     redirect_uri: googleRedirectUri(opts.request),
     response_type: "code",
-    scope: opts.scope ?? GOOGLE_SCOPES,
+    scope: googleConnectorScopes(opts.connector),
     access_type: "offline",
     include_granted_scopes: "true",
     prompt: "consent select_account",
@@ -113,7 +105,7 @@ type TokenResponse = {
   access_token: string;
   refresh_token?: string;
   expires_in: number;
-  scope?: string;
+  connector?: string;
   id_token?: string;
 };
 

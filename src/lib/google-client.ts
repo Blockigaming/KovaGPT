@@ -144,8 +144,13 @@ export async function getGoogleStatus(expectedUserId: string): Promise<GoogleSta
 export async function startGoogleConnect(
   id: string | undefined,
   expectedUserId: string,
+  connector = "gmail",
 ): Promise<void> {
-  const suffix = id ? `?connectionId=${encodeURIComponent(connectionId(id))}` : "";
+  if (!["gmail", "google-calendar", "google-drive"].includes(connector))
+    throw new Error("Invalid Google connector.");
+  const params = new URLSearchParams({ connector });
+  if (id) params.set("connectionId", connectionId(id));
+  const suffix = `?${params}`;
   const { response, body } = await accountRequest(`/api/google/auth${suffix}`, {}, expectedUserId);
   if (!response.ok || typeof body?.url !== "string")
     throw new Error(
