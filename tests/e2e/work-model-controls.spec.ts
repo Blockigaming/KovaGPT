@@ -9,8 +9,10 @@ for (const tier of ["free", "plus"] as const) {
     await fixture(page, "dark", true, false, tier);
     const executionRequests: string[] = [];
     page.on("request", (request) => {
-      if (new URL(request.url()).pathname.startsWith("/api/work/"))
-        executionRequests.push(request.url());
+      const path = new URL(request.url()).pathname;
+      // Read-only owner history sync is distinct from any Work command or mutation.
+      const historyRead = request.method() === "GET" && path === "/api/work/sync";
+      if (path.startsWith("/api/work/") && !historyRead) executionRequests.push(request.url());
     });
     await page.goto("/work?run=retired-bookmark");
     await waitForKovaHydration(page);

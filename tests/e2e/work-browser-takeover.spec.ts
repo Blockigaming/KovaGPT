@@ -9,7 +9,10 @@ for (const signedIn of [true, false]) {
     await fixture(page, "dark", signedIn);
     const commands: string[] = [];
     page.on("request", (request) => {
-      if (new URL(request.url()).pathname.startsWith("/api/work/")) commands.push(request.url());
+      const path = new URL(request.url()).pathname;
+      // Owner history can still restore; a retired bookmark must not dispatch commands.
+      const historyRead = request.method() === "GET" && path === "/api/work/sync";
+      if (path.startsWith("/api/work/") && !historyRead) commands.push(request.url());
     });
     await page.goto("/work#browser");
     await waitForKovaHydration(page);
