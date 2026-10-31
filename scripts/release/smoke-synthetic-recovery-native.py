@@ -252,6 +252,8 @@ def failure_details(error,stage="setup"):
     code=str(error) if isinstance(error,(Stopped,builder.Stopped,*RAM_STOPPED_TYPES)) else "synthetic_native_unconfirmed"
     code=code if code in SAFE_FAILURE_CODES else "synthetic_native_unconfirmed"
     value={"code":code,"stage":stage if stage in BUILD_STAGES|NATIVE_PROBE_STAGES else "setup"}
+    observed=base.safe_native_blank_observations(error)
+    if observed is not None:value["blankCatalog"]=observed
     if isinstance(error,SyntheticCommandFailure):value["command"]=error.details
     for proof_module in [operator.volume_proof,builder.volume_proof]:
         observed=proof_module.safe_mount_policy_observations(error)

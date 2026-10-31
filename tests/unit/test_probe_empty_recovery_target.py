@@ -388,6 +388,26 @@ class NativeProbeTests(unittest.TestCase):
         with self.assertRaisesRegex(m.Stopped,"native_blank_census_unqualified"):
             m.native_blank_surface(census,{"largeObjects":[{"oid":"synthetic"}]},{"pg_cron"},associated)
 
+    def test_blank_failure_diagnostics_only_expose_fixed_typed_counts_and_booleans(self):
+        census={"serverVersionNum":170006,"counts":{"unownedNamespaceObjects":1},
+                "namespaceObjects":[{"catalog":"pg_proc","schema":"PRIVATE_SCHEMA_CANARY",
+                    "identity":"PRIVATE_FUNCTION_CANARY"}],"tables":[]}
+        value=m.native_blank_observations(census,{"largeObjects":[]},{"pg_cron"},[])
+        error=m.Stopped("native_blank_census_unqualified");error.native_blank_observations=value
+        self.assertEqual(m.safe_native_blank_observations(error),value)
+        self.assertEqual(value["unownedByCatalog"]["pg_proc"],1)
+        self.assertEqual(value["unassociatedObjectCount"],1)
+        self.assertNotIn("PRIVATE_",json.dumps(value))
+        for change in [lambda d:d.update(untrusted="PRIVATE_CANARY"),
+                       lambda d:d.update(ordinaryTableCount=True),
+                       lambda d:d.update(versionMatches=1),
+                       lambda d:d["unownedByCatalog"].update(PRIVATE_CANARY=1)]:
+            bad=copy.deepcopy(value);change(bad);error.native_blank_observations=bad
+            self.assertIsNone(m.safe_native_blank_observations(error))
+        for foreign in [ValueError("native_blank_census_unqualified"),m.Stopped("PRIVATE_CANARY")]:
+            foreign.native_blank_observations=value
+            self.assertIsNone(m.safe_native_blank_observations(foreign))
+
     def test_optional_extension_coverage_is_identical_readonly_query_and_never_semantics(self):
         p=self.probe()
         self.assertIsNone(p.extension_coverage("a"))

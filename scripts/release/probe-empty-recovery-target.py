@@ -89,6 +89,12 @@ NATIVE_RELATION_SURFACE_SQL = """WITH RECURSIVE
   ORDER BY a.extension,a.catalog,a.schema,a.objid),'[]'::jsonb)::text
  FROM associated a WHERE a.schema<>'information_schema' AND a.schema !~ '^pg_'"""
 NATIVE_SURFACE_CATALOGS={"pg_class","pg_attrdef","pg_constraint","pg_trigger","pg_policy","pg_rewrite"}
+NATIVE_BLANK_CATALOGS=frozenset({"pg_class","pg_proc","pg_type","pg_constraint","pg_trigger","pg_policy",
+    "pg_rewrite","pg_attrdef","pg_collation","pg_conversion","pg_operator","pg_opclass","pg_opfamily",
+    "pg_ts_config","pg_ts_dict","pg_ts_parser","pg_ts_template","pg_statistic_ext","other"})
+NATIVE_BLANK_BOOLEAN_KEYS=frozenset({"versionMatches","largeObjectsAbsent","unownedCountMatches"})
+NATIVE_BLANK_COUNT_KEYS=frozenset({"unownedNamespaceObjectCount","ordinaryTableCount",
+    "unassociatedObjectCount","invalidAssociationRowCount","duplicateAssociationKeyCount"})
 NETNS_HELPER = """import os,subprocess,sys
 pid=int(sys.argv[1]);expected=int(sys.argv[2]);tool=sys.argv[3]
 assert pid>1 and tool in ('iptables','ip6tables','ip')
@@ -165,6 +171,52 @@ def native_blank_surface(census,catalog,extensions,associated):
                 and tuple(o[k] for k in ["catalog","schema","identity"]) in bound for o in unowned),
             "native_blank_census_unqualified")
     return count
+
+
+def native_blank_observations(census,catalog,extensions,associated):
+    """Fixed count/boolean diagnostics only; no object names, DDL or catalog rows."""
+    objects=census.get("namespaceObjects",[]);tables=census.get("tables",[])
+    objects=objects if type(objects) is list else []
+    tables=tables if type(tables) is list else []
+    def member(row):
+        return type(row) is dict and any(type(row.get(k)) is str and row[k] in extensions
+                                        for k in ["directExtension","internalExtension"])
+    unowned=[o for o in objects if not member(o)]
+    counts={k:0 for k in NATIVE_BLANK_CATALOGS}
+    for obj in unowned:
+        key=obj.get("catalog") if type(obj) is dict else None
+        counts[key if type(key) is str and key in counts else "other"]+=1
+    keys=[];invalid=0
+    for row in associated if type(associated) is list else []:
+        if (type(row) is not dict or set(row)!={"extension","catalog","schema","identity"}
+                or any(type(row.get(k)) is not str for k in ["extension","catalog","schema","identity"])
+                or row["extension"] not in extensions or row["catalog"] not in NATIVE_SURFACE_CATALOGS
+                or not IDENT.fullmatch(row["schema"]) or not 0<len(row["identity"])<=4096
+                or any(c in row["identity"] for c in "\x00\r\n")):
+            invalid+=1;continue
+        keys.append(tuple(row[k] for k in ["catalog","schema","identity"]))
+    bound=set(keys)
+    missing=sum(type(o) is not dict or any(type(o.get(k)) is not str for k in ["catalog","schema","identity"])
+                or tuple(o[k] for k in ["catalog","schema","identity"]) not in bound for o in unowned)
+    count=census.get("counts",{}).get("unownedNamespaceObjects")
+    return {"versionMatches":census.get("serverVersionNum")==170006,
+        "largeObjectsAbsent":not catalog.get("largeObjects"),
+        "unownedCountMatches":type(count) is int and count==len(unowned),
+        "unownedNamespaceObjectCount":count if type(count) is int and 0<=count<=1000000 else -1,
+        "ordinaryTableCount":sum(not member(t) for t in tables),"unassociatedObjectCount":missing,
+        "invalidAssociationRowCount":invalid,"duplicateAssociationKeyCount":len(keys)-len(bound),
+        "unownedByCatalog":counts}
+
+
+def safe_native_blank_observations(error):
+    if type(error) is not Stopped or error.args!=("native_blank_census_unqualified",):return None
+    value=getattr(error,"native_blank_observations",None)
+    if (type(value) is not dict or set(value)!=NATIVE_BLANK_BOOLEAN_KEYS|NATIVE_BLANK_COUNT_KEYS|{"unownedByCatalog"}
+            or any(type(value[k]) is not bool for k in NATIVE_BLANK_BOOLEAN_KEYS)
+            or any(type(value[k]) is not int or not -1<=value[k]<=1000000 for k in NATIVE_BLANK_COUNT_KEYS)
+            or type(value["unownedByCatalog"]) is not dict or set(value["unownedByCatalog"])!=NATIVE_BLANK_CATALOGS
+            or any(type(v) is not int or not 0<=v<=1000000 for v in value["unownedByCatalog"].values())):return None
+    return value
 
 
 def private_file(path):
@@ -911,7 +963,12 @@ while :; do sleep 1; done"""
         if census.get("counts",{}).get("unownedNamespaceObjects"):
             _,raw=self.client_sql(target,NATIVE_RELATION_SURFACE_SQL+";\n")
             associated=json.loads(raw)
-        native_blank_surface(census,catalog,{e["name"] for e in self.metadata["extensions"]},associated)
+        extensions={e["name"] for e in self.metadata["extensions"]}
+        try:native_blank_surface(census,catalog,extensions,associated)
+        except Stopped as error:
+            if error.args==("native_blank_census_unqualified",):
+                error.native_blank_observations=native_blank_observations(census,catalog,extensions,associated)
+            raise
         recovery.identifiers(catalog)
         rows=[]
         catalog_tables={(r["schema"],r["name"]):r for r in catalog["tables"]}
@@ -1234,6 +1291,8 @@ while :; do sleep 1; done"""
             self.stage="native_proof_complete"
         except Exception as error:
             # A late postcondition failure must revoke every earlier success flag.
+            observed=safe_native_blank_observations(error)
+            if observed is not None:result["blankCatalog"]=observed
             result["dataFreeSafetyProofComplete"]=False
             result["sourceMetadataCompatible"]=False
             code=str(error) if isinstance(error,(Stopped,server_image.Stopped)) else ""

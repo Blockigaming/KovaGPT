@@ -30,6 +30,16 @@ runtime_bytes=fixture.runtime_bytes
 
 
 class SyntheticTests(unittest.TestCase):
+    def test_native_blank_failure_keeps_only_fixed_catalog_counts(self):
+        error=m.Stopped("native_blank_census_unqualified")
+        value=m.base.native_blank_observations({"serverVersionNum":170006,
+            "counts":{"unownedNamespaceObjects":0},"namespaceObjects":[],"tables":[]},
+            {"largeObjects":[]},{"plpgsql"},[])
+        error.native_blank_observations=value;error.raw_catalog="PRIVATE_CATALOG_CANARY"
+        result=m.failure_details(error,"native_catalog_proof")
+        self.assertEqual(result["blankCatalog"],value)
+        self.assertNotIn("PRIVATE_",json.dumps(result))
+
     def test_catalog_comparison_failure_uses_fixed_native_stage_without_raw_catalog_values(self):
         actual=m.failure_details(m.Stopped("synthetic_image_baselines_differ"),"native_catalog_proof")
         self.assertEqual(actual,{"code":"synthetic_image_baselines_differ","stage":"native_catalog_proof"})
