@@ -30,6 +30,12 @@ runtime_bytes=fixture.runtime_bytes
 
 
 class SyntheticTests(unittest.TestCase):
+    def test_catalog_comparison_failure_uses_fixed_native_stage_without_raw_catalog_values(self):
+        actual=m.failure_details(m.Stopped("synthetic_image_baselines_differ"),"native_catalog_proof")
+        self.assertEqual(actual,{"code":"synthetic_image_baselines_differ","stage":"native_catalog_proof"})
+        actual=m.failure_details(m.Stopped("synthetic_image_baselines_differ PRIVATE_CATALOG_CANARY"),"PRIVATE_STAGE_CANARY")
+        self.assertEqual(actual,{"code":"synthetic_native_unconfirmed","stage":"setup"})
+
     def test_numeric_denial_diagnostic_uses_existing_exact_stopped_type_and_fixed_code_only(self):
         error=o.base.Stopped("numeric_denial_cause_unconfirmed")
         self.assertIs(type(error),m.Stopped)
@@ -585,21 +591,27 @@ class SyntheticTests(unittest.TestCase):
         role={"name":"pg_database_owner","super":False,"inherit":True,"createRole":False,"createDb":False,
               "login":False,"replication":False,"bypassRls":False,"connectionLimit":-1,"validUntil":None}
         bootstrap={**role,"name":m.FIXTURE_BOOTSTRAP,"super":True,"createRole":True,"createDb":True,"login":True}
-        fixture={"bootstrapRole":m.FIXTURE_BOOTSTRAP,"roles":[role,bootstrap,
+        fixture={"bootstrapRole":m.FIXTURE_BOOTSTRAP,"roles":[role,bootstrap,{**role,"name":m.FIXTURE_OWNER},
                    {**role,"name":m.FIXTURE_GRANT_ROLE},{**role,"name":m.FIXTURE_GRANT_MEMBER}],
                  "memberships":[{"role":m.FIXTURE_GRANT_ROLE,"member":m.FIXTURE_GRANT_MEMBER,
                     "grantor":m.FIXTURE_BOOTSTRAP,"admin":False,"inherit":True,"set":True}],
                  "schemas":[{"name":"public","owner":"pg_database_owner","acl":None,"comment":None}],
                  "available":[{"name":"plpgsql","version":"1.0","schema":"pg_catalog"},
                    {"name":"pgcrypto","version":"1.3","schema":None},{"name":"vector","version":"0.8.0","schema":None}]}
-        calls=[]
-        p.bootstrap_sql=lambda target,sql:(calls.append(sql) or (0,json.dumps(fixture).encode()))
+        calls=[];targets=[]
+        p.bootstrap_sql=lambda target,sql:(targets.append(target) or calls.append(sql) or (0,json.dumps(fixture).encode()))
         p.derive_image_fixture()
         self.assertEqual({e["name"]:e["version"] for e in p.metadata["extensions"]},
                          {"plpgsql":"1.0","pgcrypto":"1.3","vector":"0.8.0"})
         self.assertNotIn("sourceCommit",p.metadata);self.assertNotIn("sourceSettingsComplete",p.metadata)
         self.assertTrue(p.metadata["syntheticFixtureDerivedOnlyFromPinnedImage"])
         self.assertEqual(p.metadata["bootstrapRole"],m.FIXTURE_BOOTSTRAP)
+        self.assertEqual(p.metadata["roles"],fixture["roles"])
+        positions=[calls[0].index("CREATE ROLE "+m.base.ident(n)) for n in
+                   sorted([m.FIXTURE_OWNER,m.FIXTURE_GRANT_MEMBER,m.FIXTURE_GRANT_ROLE])]
+        self.assertEqual(positions,sorted(positions))
+        self.assertEqual(targets,["a","b","a"])
+        self.assertEqual(calls[0],calls[1])
         self.assertIn("GRANTED BY "+m.base.ident(m.FIXTURE_BOOTSTRAP),calls[0])
         self.assertFalse(any("auth.users" in sql or "pg_authid" in sql for sql in calls))
         fixture["available"].pop()

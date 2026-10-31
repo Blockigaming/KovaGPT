@@ -26,9 +26,13 @@ print(json.dumps({'operator':m.operator_bootstrap_sql('synthetic-target-only-pas
   ),
 );
 
-test("copying SUPERUSER does not copy the PG17 bootstrap grantor exception", async () => {
+test("copying SUPERUSER does not copy the bootstrap grantor exception", async (t) => {
   const db = new PGlite();
   try {
+    const version = await db.query("SELECT current_setting('server_version_num') AS version");
+    t.diagnostic(
+      `Controlled PGlite engine version: ${version.rows[0].version}; native PostgreSQL 17 qualification is separate.`,
+    );
     await db.exec(generated.operator);
     await assert.rejects(db.exec(generated.metadata), (error) => {
       assert.equal(error.code, "42501");
