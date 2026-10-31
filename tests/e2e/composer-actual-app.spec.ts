@@ -64,6 +64,7 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
     "Search the web",
     "Analyze data",
     "Analyze files",
+    "Tasks and audio",
     "Drawings",
     "Create Image",
   ];
