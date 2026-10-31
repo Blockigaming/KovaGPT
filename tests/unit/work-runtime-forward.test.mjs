@@ -7,6 +7,7 @@ import {
   WORK_RUNTIME_MIGRATION,
   WORK_RUNTIME_TABLES,
   WORK_RUNTIME_FUNCTIONS,
+  WORK_RUNTIME_CANONICAL_COLUMN_ACL_CHECK,
   workRuntimePreflight,
   workRuntimeInstallationSnapshot,
   captureUnusedWorkRuntimeQualification,
@@ -124,7 +125,7 @@ test("the actual native fixture bootstraps all captured helper definitions in on
   }
 });
 
-test("both exact native canonical replays execute the forward as read-only no-ops and preserve synthetic rows", async () => {
+test("all exact native canonical replays preserve rows, Library column grants and read-only no-ops", async () => {
   const cases = JSON.parse(
     execFileSync(
       "python3",
@@ -132,10 +133,10 @@ test("both exact native canonical replays execute the forward as read-only no-op
         "-c",
         "import importlib.util,json,pathlib;s=importlib.util.spec_from_file_location('native','scripts/release/work-runtime-forward-native.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);r=pathlib.Path.cwd();print(json.dumps(m.canonical_smoke_sources(r,m.validate_sources(r))))",
       ],
-      { encoding: "utf8", maxBuffer: 2 * 1024 * 1024 },
+      { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
     ),
   );
-  assert.equal(Object.keys(cases).length, 2);
+  assert.equal(Object.keys(cases).length, 4);
   for (const [marker, sql] of Object.entries(cases)) {
     assert.equal(sql.split(migration).length, 2);
     const db = new PGlite();
@@ -627,6 +628,96 @@ test("canonical no-op qualification rejects dangerous browser role drift", async
     await failure(db, migration, /work_forward_role_drift/);
   } finally {
     await db.close();
+  }
+});
+
+const canonicalLibraryColumnGrants =
+  "REVOKE UPDATE ON public.user_library_items FROM authenticated;\nGRANT UPDATE(title,folder_id,updated_at) ON public.user_library_items TO authenticated;";
+const explicitColumnAclSnapshot =
+  "select c.relname,a.attname,a.attacl::text as acl from pg_attribute a join pg_class c on c.oid=a.attrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and a.attnum>0 and not a.attisdropped and coalesce(cardinality(a.attacl),0)>0 order by c.relname,a.attnum";
+
+test("the canonical Library profile is the exact published grant and remains a read-only no-op", async () => {
+  const published = await readFile(
+    "supabase/migrations/20260905031000_library_content_versions.sql",
+    "utf8",
+  );
+  assert.equal(published.split(canonicalLibraryColumnGrants).length, 2);
+  const embedded = migration
+    .split(" -- WORK_CANONICAL_COLUMN_ACL_BEGIN\n")[1]
+    .split("\n -- WORK_CANONICAL_COLUMN_ACL_END")[0];
+  assert.equal(
+    embedded,
+    " if not (" +
+      WORK_RUNTIME_CANONICAL_COLUMN_ACL_CHECK.replace(/ as valid$/, "") +
+      ") then raise exception 'work_forward_column_acl_drift'; end if;",
+  );
+  const db = await canonicalFixture();
+  try {
+    await db.exec(canonicalLibraryColumnGrants);
+    await db.exec(`insert into public.work_sync_counters(owner_id) values('${USER}')`);
+    const beforeColumns = await rows(db, explicitColumnAclSnapshot);
+    const beforeWork = await workRuntimeInstallationSnapshot(query(db));
+    assert.equal(beforeColumns.length, 3);
+    assert.equal((await rows(db, WORK_RUNTIME_CANONICAL_COLUMN_ACL_CHECK))[0].valid, true);
+    await db.exec("set default_transaction_read_only=on");
+    await db.exec(migration);
+    await db.exec("reset default_transaction_read_only");
+    assert.deepEqual(await rows(db, explicitColumnAclSnapshot), beforeColumns);
+    assert.deepEqual(await workRuntimeInstallationSnapshot(query(db)), beforeWork);
+    assert.equal((await rows(db, "select count(*)::int n from public.work_sync_counters"))[0].n, 1);
+  } finally {
+    await db.close();
+  }
+});
+
+test("partial, additional, grantable, other-recipient and weakened canonical Library profiles fail", async () => {
+  for (const change of [
+    "revoke update(title) on public.user_library_items from authenticated",
+    "grant select(title) on public.user_library_items to authenticated",
+    "grant update(title) on public.user_library_items to authenticated with grant option",
+    "grant update(title) on public.user_library_items to anon",
+    "grant update(totals) on public.work_accounting_settlements to service_role",
+    "grant update on public.user_library_items to authenticated",
+    "alter table public.user_library_items disable row level security",
+    "alter table public.user_library_items force row level security",
+    "alter table public.user_library_items owner to service_role",
+  ]) {
+    const db = await canonicalFixture();
+    try {
+      await db.exec(canonicalLibraryColumnGrants);
+      await db.exec(change);
+      const beforeColumns = await rows(db, explicitColumnAclSnapshot);
+      const beforeWork = await workRuntimeInstallationSnapshot(query(db));
+      assert.equal((await rows(db, WORK_RUNTIME_CANONICAL_COLUMN_ACL_CHECK))[0].valid, false);
+      await failure(db, migration, /work_forward_column_acl_drift/);
+      assert.deepEqual(await rows(db, explicitColumnAclSnapshot), beforeColumns);
+      assert.deepEqual(await workRuntimeInstallationSnapshot(query(db)), beforeWork);
+    } finally {
+      await db.close();
+    }
+  }
+});
+
+test("the Library canonical exception never relaxes the legacy install or captured rollback profile", async () => {
+  const absent = await fixture({ install: false });
+  const installed = await fixture();
+  try {
+    const q = await captureUnusedWorkRuntimeQualification(query(installed));
+    for (const db of [absent, installed]) await db.exec(canonicalLibraryColumnGrants);
+    await failure(absent, migration, /work_forward_column_acl_drift/);
+    await assert.rejects(
+      captureUnusedWorkRuntimeQualification(query(installed)),
+      /work_forward_column_acl_drift/,
+    );
+    await failure(installed, await unusedWorkRuntimeRollback(q), /work_forward_column_acl_drift/);
+    assert.equal(
+      (await rows(absent, "select to_regclass('public.work_execution_runs') t"))[0].t,
+      null,
+    );
+    assert.equal((await rows(installed, explicitColumnAclSnapshot)).length, 3);
+  } finally {
+    await absent.close();
+    await installed.close();
   }
 });
 

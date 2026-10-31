@@ -4243,7 +4243,7 @@
       "order": 203,
       "filename": "20261030163511_kova_work_runtime_forward.sql",
       "timestamp": "20261030163511",
-      "sha256": "c741654759d53efbc03af3d0d13bd3499761e42795d14755d1a5f47f1fc87502",
+      "sha256": "0f5fdff7f77368d418095fcb31cf197033ccb7c430136dee08886a75a3da1b84",
       "tables": [
         "work_sync_counters",
         "work_saved_records",

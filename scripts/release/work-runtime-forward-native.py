@@ -17,7 +17,7 @@ import signal
 import socket
 import subprocess
 
-EXPECTED = {'supabase/migrations/20261030163511_kova_work_runtime_forward.sql': 'c741654759d53efbc03af3d0d13bd3499761e42795d14755d1a5f47f1fc87502', 'scripts/release/work-runtime-forward-guards.mjs': 'b835ab22cd3cbb11a63f3e602fc5a6f1713d3b20b29442b8b0d33603a16f6ab5', 'tests/fixtures/work-runtime-prerequisite-catalog-20261030.json': '13b8daf520686eccaa909a818ae9c3483b84d0edbc7afeae9e16703858dfe23a', 'tests/fixtures/work-runtime-forward-native-smoke-20261030.sql': '5362f3afa1abc334552757d79074eb11f6226b6ce728b9b4b1d8046106c46d6d', 'supabase/migrations/20260903213000_work_cross_device_sync.sql': '87209bc11cac44d6efc7f51f04886ae5ba44093fbc862a4fd0edef43850b810b', 'supabase/migrations/20260903214500_work_sync_protection_hardening.sql': '49beb15d9fc16cd72593bdf16b338a496fb3431bc8fa9539b4a6ff92d40e123b', 'supabase/migrations/20260904235937_work_session_sync.sql': '70b4564e0645906026f4cca32ffa29c2978a6a75667c6bf4f3a7899a43937418', 'supabase/migrations/20260905002615_unified_work_execution_protocol.sql': '39b33292df7317a15b7973c9196d218980b5b2e686211bfc992285318dea444d', 'supabase/migrations/20260905005310_work_accounting_reconciliation.sql': 'eddd3caa63401723a24f9f1b99ddc9f20eae88729f5f09b7091bfd97fc059ed1', 'supabase/migrations/20260905034000_work_browser_takeover.sql': 'ba24b2113aabdeb77b65dfb01236105f394c381299490e9aee9216fbb5fff6c1', 'supabase/migrations/20260910143000_work_specialist_state_transitions.sql': '75f9f68c264620470a8c32075a1b0eef6bdc342f6fb4b6ce9010ee12de2f8d66', 'supabase/migrations/20260913022249_stabilize_work_browser_session_timestamps.sql': '01a3f198633dd26ca38ee17ad70aa7c1a661059e1478686bfb18be06d278fb0f'}
+EXPECTED = {'supabase/migrations/20261030163511_kova_work_runtime_forward.sql': '0f5fdff7f77368d418095fcb31cf197033ccb7c430136dee08886a75a3da1b84', 'scripts/release/work-runtime-forward-guards.mjs': 'b4d085782ae2b96124dcf05cffc83706636a87754a2dc36a7e0ce2be501fafd2', 'tests/fixtures/work-runtime-prerequisite-catalog-20261030.json': '13b8daf520686eccaa909a818ae9c3483b84d0edbc7afeae9e16703858dfe23a', 'tests/fixtures/work-runtime-forward-native-smoke-20261030.sql': 'af7df2a80a2414e94292c1ce479484c815c38a4a97759f7b2136b7cc0904ed90', 'supabase/migrations/20260903213000_work_cross_device_sync.sql': '87209bc11cac44d6efc7f51f04886ae5ba44093fbc862a4fd0edef43850b810b', 'supabase/migrations/20260903214500_work_sync_protection_hardening.sql': '49beb15d9fc16cd72593bdf16b338a496fb3431bc8fa9539b4a6ff92d40e123b', 'supabase/migrations/20260904235937_work_session_sync.sql': '70b4564e0645906026f4cca32ffa29c2978a6a75667c6bf4f3a7899a43937418', 'supabase/migrations/20260905002615_unified_work_execution_protocol.sql': '39b33292df7317a15b7973c9196d218980b5b2e686211bfc992285318dea444d', 'supabase/migrations/20260905005310_work_accounting_reconciliation.sql': 'eddd3caa63401723a24f9f1b99ddc9f20eae88729f5f09b7091bfd97fc059ed1', 'supabase/migrations/20260905034000_work_browser_takeover.sql': 'ba24b2113aabdeb77b65dfb01236105f394c381299490e9aee9216fbb5fff6c1', 'supabase/migrations/20260910143000_work_specialist_state_transitions.sql': '75f9f68c264620470a8c32075a1b0eef6bdc342f6fb4b6ce9010ee12de2f8d66', 'supabase/migrations/20260913022249_stabilize_work_browser_session_timestamps.sql': '01a3f198633dd26ca38ee17ad70aa7c1a661059e1478686bfb18be06d278fb0f', 'supabase/migrations/20260905031000_library_content_versions.sql': '1ef0c7375c618516934bd1b8eb7ca0ff01ce11ba390ed909f39e060b012be025'}
 SQL = "tests/fixtures/work-runtime-forward-native-smoke-20261030.sql"
 MIGRATION = "supabase/migrations/20261030163511_kova_work_runtime_forward.sql"
 MARKERS = (
@@ -29,6 +29,8 @@ MARKERS = (
 CANONICAL_MARKERS = (
     "WORK_FORWARD_NATIVE_CANONICAL_DEFAULTLESS_NOOP_PASS",
     "WORK_FORWARD_NATIVE_CANONICAL_SUPABASE_DEFAULTS_NOOP_PASS",
+    "WORK_FORWARD_NATIVE_CANONICAL_LIBRARY_COLUMNS_DEFAULTLESS_NOOP_PASS",
+    "WORK_FORWARD_NATIVE_CANONICAL_LIBRARY_COLUMNS_SUPABASE_DEFAULTS_NOOP_PASS",
 )
 
 
@@ -63,9 +65,26 @@ def canonical_smoke_sources(repository, smoke):
     policies = "\n".join("create policy kova_owned_session_guard on public." + name + " as restrictive for all to anon,authenticated using ((select kova_auth_guard.session_is_active())) with check ((select kova_auth_guard.session_is_active()));" for name in tables)
     migration = (repository / MIGRATION).read_text()
     cases = {}
+    library_source = (repository / "supabase/migrations/20260905031000_library_content_versions.sql").read_text()
+    library_grants = "REVOKE UPDATE ON public.user_library_items FROM authenticated;\nGRANT UPDATE(title,folder_id,updated_at) ON public.user_library_items TO authenticated;"
+    if library_source.count(library_grants) != 1:
+        raise RuntimeError("work_native_canonical_library_source_changed")
+    install_guard = migration[migration.index("do $work_forward_install$"):migration.rindex("\ncommit;")]
+    negative_changes = [
+        "revoke update(title) on public.user_library_items from authenticated",
+        "grant select(title) on public.user_library_items to authenticated",
+        "grant update(title) on public.user_library_items to authenticated with grant option",
+        "grant update(title) on public.user_library_items to anon",
+        "grant update(totals) on public.work_accounting_settlements to service_role",
+        "grant update on public.user_library_items to authenticated",
+        "alter table public.user_library_items disable row level security",
+        "alter table public.user_library_items force row level security",
+        "alter table public.user_library_items owner to service_role",
+    ]
+    negative_checks = "create function pg_temp.native_expect_column_acl_drift(p_change text) returns void language plpgsql as $native_check$ begin begin execute p_change;execute $native_replay$" + install_guard + "$native_replay$;raise exception 'native_work_column_acl_rejection_missing';exception when raise_exception then if sqlerrm<>'work_forward_column_acl_drift' then raise;end if;end;end $native_check$;\n" + "\n".join("select pg_temp.native_expect_column_acl_drift('" + change.replace("'", "''") + "');" for change in negative_changes)
     for index, marker in enumerate(CANONICAL_MARKERS):
-        defaults = "alter default privileges in schema public grant all on tables to service_role;alter default privileges in schema public grant select,insert,update,delete on tables to anon,authenticated;" if index else ""
-        cases[marker] = prefix + "\n" + defaults + "\n" + historical + "\n" + policies + "\ninsert into public.work_sync_counters(owner_id) values('11111111-1111-4111-8111-111111111111');\nset default_transaction_read_only=on;\n" + migration + "\nreset default_transaction_read_only;\ndo $native_preserved$ begin if (select count(*) from public.work_sync_counters)<>1 then raise exception 'native_work_canonical_row_changed';end if;end $native_preserved$;\nselect '" + marker + "' as evidence;\n"
+        defaults = "alter default privileges in schema public grant all on tables to service_role;alter default privileges in schema public grant select,insert,update,delete on tables to anon,authenticated;" if index % 2 else ""
+        cases[marker] = prefix + "\n" + defaults + "\n" + historical + "\n" + (library_grants if index >= 2 else "") + "\n" + policies + "\ninsert into public.work_sync_counters(owner_id) values('11111111-1111-4111-8111-111111111111');\nset default_transaction_read_only=on;\n" + migration + "\nbegin;reset default_transaction_read_only;commit;\n" + (negative_checks if index >= 2 else "") + "\ndo $native_preserved$ begin if (select count(*) from public.work_sync_counters)<>1 then raise exception 'native_work_canonical_row_changed';end if;end $native_preserved$;\nselect '" + marker + "' as evidence;\n"
     return cases
 
 
@@ -173,7 +192,8 @@ def main():
             with (evidence / "native-work.log").open("a") as log:
                 log.write("\n-- " + marker + " --\n" + output)
             passed = replay.returncode == 0 and sum(line.strip() == marker for line in replay.stdout.splitlines()) == 1
-            receipt["canonicalReplays"].append({"database": target, "marker": marker, "exitCode": replay.returncode, "readOnlyNoopAndRowsPreserved": passed})
+            library_case = "LIBRARY_COLUMNS" in marker
+            receipt["canonicalReplays"].append({"database": target, "marker": marker, "exitCode": replay.returncode, "readOnlyNoopAndRowsPreserved": passed, "canonicalLibraryColumnAclProfileVerified": passed and library_case, "columnAclNegativeCasesVerified": 9 if passed and library_case else 0})
             if not passed:
                 raise RuntimeError("work_native_canonical_noop_failed")
             receipt["verifiedChecks"].append(marker)
