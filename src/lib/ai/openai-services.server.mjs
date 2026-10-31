@@ -28,11 +28,7 @@ const identifier = (value, prefix) => {
   return value;
 };
 function completed(response) {
-  if (
-    response?.status !== "completed" ||
-    response.error ||
-    !Array.isArray(response.output)
-  )
+  if (response?.status !== "completed" || response.error || !Array.isArray(response.output))
     fail("incomplete_provider_response");
   return response;
 }
@@ -56,12 +52,7 @@ export function webSearchSources(response, limit = 8) {
     if (typeof value !== "string") return;
     try {
       const url = new URL(value);
-      if (
-        !["http:", "https:"].includes(url.protocol) ||
-        url.username ||
-        url.password
-      )
-        return;
+      if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) return;
       url.hash = "";
       if (!sources.has(url.href))
         sources.set(url.href, {
@@ -75,11 +66,9 @@ export function webSearchSources(response, limit = 8) {
   for (const item of response.output) {
     if (item?.type !== "message" || !Array.isArray(item.content)) continue;
     for (const part of item.content) {
-      if (part?.type !== "output_text" || !Array.isArray(part.annotations))
-        continue;
+      if (part?.type !== "output_text" || !Array.isArray(part.annotations)) continue;
       for (const annotation of part.annotations) {
-        if (annotation?.type === "url_citation")
-          addSource(annotation.url, annotation.title);
+        if (annotation?.type === "url_citation") addSource(annotation.url, annotation.title);
       }
     }
   }
@@ -87,8 +76,7 @@ export function webSearchSources(response, limit = 8) {
   // Only fall back to URLs returned by that successful search action itself.
   if (!sources.size) {
     for (const call of searchCalls) {
-      if (call.action?.type !== "search" || !Array.isArray(call.action.sources))
-        continue;
+      if (call.action?.type !== "search" || !Array.isArray(call.action.sources)) continue;
       for (const source of call.action.sources) {
         if (source?.type === "url") addSource(source.url);
       }
@@ -107,9 +95,7 @@ export function normalizeBrowserDomains(domains) {
         typeof domain !== "string" ||
         domain.length > 253 ||
         !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain) ||
-        /(?:^|\.)(?:localhost|local|internal|test|invalid|example)$/.test(
-          domain,
-        ),
+        /(?:^|\.)(?:localhost|local|internal|test|invalid|example)$/.test(domain),
     )
   )
     fail("browser_domains_not_configured", 503);
@@ -118,17 +104,14 @@ export function normalizeBrowserDomains(domains) {
 
 /** Pin credentials to OpenAI and bound response bytes before the SDK buffers them. */
 export function createOpenAiServiceClient(apiKey, fetchImpl = fetch) {
-  if (typeof apiKey !== "string" || apiKey.length < 16)
-    fail("openai_not_configured", 503);
+  if (typeof apiKey !== "string" || apiKey.length < 16) fail("openai_not_configured", 503);
   return new OpenAI({
     apiKey,
     baseURL: `${API_ORIGIN}/v1`,
     maxRetries: 0,
     timeout: 60_000,
     fetch: async (input, init) => {
-      const url = new URL(
-        typeof input === "string" ? input : (input.url ?? input.toString()),
-      );
+      const url = new URL(typeof input === "string" ? input : (input.url ?? input.toString()));
       if (
         url.origin !== API_ORIGIN ||
         !url.pathname.startsWith("/v1/") ||
@@ -145,10 +128,7 @@ export function createOpenAiServiceClient(apiKey, fetchImpl = fetch) {
         signal,
         redirect: "error",
       });
-      if (
-        response.headers.get("content-type")?.includes("text/event-stream") &&
-        response.body
-      ) {
+      if (response.headers.get("content-type")?.includes("text/event-stream") && response.body) {
         const reader = response.body.getReader();
         let received = 0;
         return new Response(
@@ -164,9 +144,7 @@ export function createOpenAiServiceClient(apiKey, fetchImpl = fetch) {
                 received += part.value.byteLength;
                 if (received > 2 * 1024 * 1024) {
                   void reader.cancel().catch(() => {});
-                  controller.error(
-                    new OpenAiServiceError("provider_response_limit"),
-                  );
+                  controller.error(new OpenAiServiceError("provider_response_limit"));
                   return;
                 }
                 controller.enqueue(part.value);
@@ -185,14 +163,11 @@ export function createOpenAiServiceClient(apiKey, fetchImpl = fetch) {
         signal: init?.signal,
         timeoutMs: 60_000,
       });
-      return new Response(
-        [204, 205, 304].includes(response.status) ? null : bytes,
-        {
-          status: response.status,
-          statusText: response.statusText,
-          headers: response.headers,
-        },
-      );
+      return new Response([204, 205, 304].includes(response.status) ? null : bytes, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+      });
     },
   });
 }
@@ -275,9 +250,7 @@ export function createOpenAiServices({
         !(error instanceof OpenAiServiceError) &&
         (error instanceof OpenAI.APIConnectionError ||
           error?.status === 409 ||
-          (Number.isInteger(error?.status) &&
-            error.status >= 500 &&
-            error.status <= 599));
+          (Number.isInteger(error?.status) && error.status >= 500 && error.status <= 599));
       if (!transient) throw error;
       // Reconcile only this request's session. Never repeat the task or accept an uncertain receipt.
       const current = await client.beta.agents.sessions.retrieve(sessionId, {
@@ -358,15 +331,11 @@ export function createOpenAiServices({
           if (eventBytes > 2 * 1024 * 1024) fail("agent_output_limit");
           if (event.type === "agent.session.requires_action") {
             if (!browser || !sessionId) fail("agent_action_required", 409);
-            const current = await client.beta.agents.sessions.retrieve(
-              sessionId,
-              { signal },
-            );
+            const current = await client.beta.agents.sessions.retrieve(sessionId, { signal });
             if (current.id !== sessionId || !current.required_actions?.length)
               fail("browser_approval_unconfirmed", 409);
             for (const approval of current.required_actions) {
-              if (handledApprovals.has(approval.request_id))
-                fail("browser_approval_repeated", 409);
+              if (handledApprovals.has(approval.request_id)) fail("browser_approval_repeated", 409);
               if (
                 handledApprovals.size >= 8 ||
                 approval.type !== "computer_use_approval_request" ||
@@ -415,25 +384,14 @@ export function createOpenAiServices({
             event.item.status === "completed"
           )
             browserCalls++;
-          if (
-            [
-              "agent.session.failed",
-              "agent.session.environment.failed",
-            ].includes(event.type)
-          )
+          if (["agent.session.failed", "agent.session.environment.failed"].includes(event.type))
             fail("agent_failed");
           if (
             event.turn?.subagent_id == null &&
-            [
-              "agent.session.turn.failed",
-              "agent.session.turn.cancelled",
-            ].includes(event.type)
+            ["agent.session.turn.failed", "agent.session.turn.cancelled"].includes(event.type)
           )
             fail("agent_failed");
-          if (
-            event.type === "agent.session.turn.completed" &&
-            event.turn?.subagent_id == null
-          )
+          if (event.type === "agent.session.turn.completed" && event.turn?.subagent_id == null)
             terminal = true;
         }
         const result = await stream.finalResult();
@@ -477,11 +435,7 @@ export function createOpenAiServices({
       };
     },
     async decisions(input, questions, { signal } = {}) {
-      if (
-        !Array.isArray(questions) ||
-        !questions.length ||
-        questions.length > 8
-      )
+      if (!Array.isArray(questions) || !questions.length || questions.length > 8)
         fail("invalid_decision_questions", 400);
       const names = new Set();
       const normalized = questions.map((question) => {
@@ -512,10 +466,7 @@ export function createOpenAiServices({
             value: text(choice.value, 80),
             description: text(choice.description, 240),
           }));
-          if (
-            new Set(item.choices.map((choice) => choice.value)).size !==
-            item.choices.length
-          )
+          if (new Set(item.choices.map((choice) => choice.value)).size !== item.choices.length)
             fail("invalid_decision_questions", 400);
         } else if (item.type !== "predicate" || question.choices !== undefined)
           fail("invalid_decision_questions", 400);
@@ -566,10 +517,8 @@ export function createOpenAiServices({
           },
           { signal },
         );
-        const id = register(
-          "container",
-          identifier(container.id, "cntr_"),
-          (options) => client.containers.delete(container.id, options),
+        const id = register("container", identifier(container.id, "cntr_"), (options) =>
+          client.containers.delete(container.id, options),
         );
         const response = completed(
           await client.responses.create(
@@ -584,14 +533,10 @@ export function createOpenAiServices({
             { signal },
           ),
         );
-        const calls = response.output.filter(
-          (item) => item.type === "code_interpreter_call",
-        );
+        const calls = response.output.filter((item) => item.type === "code_interpreter_call");
         if (
           !calls.length ||
-          calls.some(
-            (item) => item.status !== "completed" || item.container_id !== id,
-          )
+          calls.some((item) => item.status !== "completed" || item.container_id !== id)
         )
           fail("analysis_not_completed");
         return {
@@ -603,11 +548,7 @@ export function createOpenAiServices({
     },
     async searchFiles(question, documents, { signal } = {}) {
       text(question, 16000);
-      if (
-        !Array.isArray(documents) ||
-        !documents.length ||
-        documents.length > 2
-      )
+      if (!Array.isArray(documents) || !documents.length || documents.length > 2)
         fail("invalid_documents", 400);
       const inputs = documents.map((document, index) => ({
         name: `${index + 1}-${text(document.name, 80).replace(/[^A-Za-z0-9_.-]/g, "_")}.txt`,
@@ -639,10 +580,8 @@ export function createOpenAiServices({
           },
           { signal },
         );
-        const storeId = register(
-          "vector_store",
-          identifier(store.id, "vs_"),
-          (options) => client.vectorStores.delete(store.id, options),
+        const storeId = register("vector_store", identifier(store.id, "vs_"), (options) =>
+          client.vectorStores.delete(store.id, options),
         );
         for (const file of files) {
           const indexed = await client.vectorStores.files.createAndPoll(
@@ -674,8 +613,7 @@ export function createOpenAiServices({
         );
         if (
           !response.output.some(
-            (item) =>
-              item.type === "file_search_call" && item.status === "completed",
+            (item) => item.type === "file_search_call" && item.status === "completed",
           )
         )
           fail("file_search_not_completed");
