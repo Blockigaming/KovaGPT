@@ -580,7 +580,7 @@ def cleanup_image_from_state(env):
             and state.get("tag")=="kova-recovery-operator:"+state["owner"],"synthetic_image_cleanup_state_unqualified")
     require(type(state.get("buildInvoked")) is bool and type(state.get("buildReturned")) is bool
             and (not state["buildInvoked"] or state["buildReturned"]),"synthetic_build_completion_unknown")
-    b=object.__new__(SyntheticBuilder);b.owner=state["owner"];b.tag=state["tag"];b.image_id=None
+    b=object.__new__(SyntheticBuilder);b.source=source;b.owner=state["owner"];b.tag=state["tag"];b.image_id=None
     b.env={k:v for k,v in env.items() if k in builder.SAFE_HOST_ENV}
     b.build_stage="cleanup";b._diagnostic_secrets=diagnostic_secrets(env)
     return b.cleanup_image()

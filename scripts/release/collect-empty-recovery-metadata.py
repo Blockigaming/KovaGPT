@@ -61,6 +61,7 @@ PUBLIC_FAILURE_CODES=frozenset({
     'extension_coverage_result_shape',
     'extension_coverage_result_unqualified',
     'metadata_command_unconfirmed',
+    'metadata_ca_bundle_unqualified',
     'metadata_environment_shape_rejected',
     'metadata_execution_not_enabled',
     'metadata_image_pin_mismatch',
@@ -278,6 +279,18 @@ def collect(env, output, *, extension_coverage=False):
             private=Path(temporary);private.chmod(0o700)
             PUBLIC_STAGE='private-source-environment'
             values={k:v for k,v in source.items() if k.startswith("PG")}
+            # The libpq host CA path is outside the container. Copy only the
+            # selected public trust roots into this run's private directory,
+            # and expose that single file read-only at a fixed container path.
+            ca=Path(values.get("PGSSLROOTCERT",""))
+            require(ca.is_file() and not ca.is_symlink() and 0<ca.stat().st_size<=1024**2,
+                    "metadata_ca_bundle_unqualified")
+            mounted_ca=private/"source-ca.crt"
+            require(not any(c in str(mounted_ca) for c in ",\r\n\x00"),"metadata_ca_bundle_unqualified")
+            with mounted_ca.open("xb") as stream:
+                stream.write(ca.read_bytes())
+            mounted_ca.chmod(0o444)
+            values["PGSSLROOTCERT"]="/run/kova-source-ca.crt"
             require(all(isinstance(v,str) and "\n" not in v and "\r" not in v and "\x00" not in v
                         for v in values.values()),"metadata_environment_shape_rejected")
             file=private/"source-pg-env"
@@ -290,7 +303,9 @@ def collect(env, output, *, extension_coverage=False):
                 raw=command(["docker","run","--interactive","--rm","--name",name,"--label","org.kova.metadata-owner="+owner,
                              "--platform","linux/amd64","--user",f"{os.getuid()}:{os.getgid()}",
                              "--read-only","--no-healthcheck","--cap-drop","ALL","--security-opt","no-new-privileges:true",
-                             "--network","bridge","--env-file",str(file),"--entrypoint","psql",IMAGE,
+                             "--network","bridge","--env-file",str(file),
+                             "--mount","type=bind,source="+str(mounted_ca)+",target=/run/kova-source-ca.crt,readonly",
+                             "--entrypoint","psql",IMAGE,
                              "-X","--no-password","--quiet","--tuples-only","--no-align","--set","ON_ERROR_STOP=1","--set","VERBOSITY=sqlstate","--file","-"],
                             data=source_query(extension_coverage).encode(),timeout=150)
             finally:

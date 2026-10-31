@@ -88,6 +88,30 @@ class RelationTests(unittest.TestCase):
                 bad=row(catalog);bad["values"]["unreviewed_column"]={"isNull":False,"bytesHex":"00"}
                 with self.assertRaises(core.Stopped):self.canonical(bad)
 
+    def test_identical_dependency_rows_preserve_count_and_hash_multiplicity(self):
+        def receipt(rows):
+            return core.hash_rows(rows,self.resolver,catalog_columns=core.layout_columns(self.options["manifests"]),
+                catalog_foreign_keys=self.options["expected_foreign_keys"],server_version_num=170006,
+                canonicalize_tree=lambda text,*_,**__: {"fixtureNode":text},**self.options)
+        dependency=row("pg_depend");dependency["values"]["deptype"]={"isNull":False,"bytesHex":"6e"}
+        one=receipt([dependency]);two=receipt([dependency,copy.deepcopy(dependency)])
+        find=lambda result:next(c for c in result["catalogs"] if c["catalog"]=="pg_depend")
+        self.assertEqual(find(one)["count"],1);self.assertEqual(find(two)["count"],2)
+        self.assertNotEqual(find(one)["sha256"],find(two)["sha256"])
+        other=copy.deepcopy(dependency);other["values"]["deptype"]["bytesHex"]="61"
+        self.assertEqual(receipt([dependency,other,dependency]),receipt([other,dependency,dependency]))
+        self.assertNotEqual(receipt([dependency,other]),receipt([dependency,other,dependency]))
+
+    def test_dependency_multiset_never_accepts_changed_payload_or_another_duplicate_catalog(self):
+        dependency=self.canonical(row("pg_depend"));keys={}
+        core.record_row_identity(keys,dependency);core.record_row_identity(keys,copy.deepcopy(dependency))
+        changed=copy.deepcopy(dependency);changed["columns"]["deptype"]["bytesHex"]="61"
+        with self.assertRaisesRegex(core.Stopped,"payload_duplicate_identity"):
+            core.record_row_identity(keys,changed)
+        ordinary=self.canonical(row("pg_class"));keys={};core.record_row_identity(keys,ordinary)
+        with self.assertRaisesRegex(core.Stopped,"payload_duplicate_identity"):
+            core.record_row_identity(keys,copy.deepcopy(ordinary))
+
     def test_layout_and_compound_foreign_keys_are_exact(self):
         columns=core.layout_columns(manifests=self.options["manifests"])
         fks=self.options["expected_foreign_keys"]

@@ -127,7 +127,7 @@ class MetadataTests(unittest.TestCase):
             self.assertFalse(any(c[0]=="docker" for c in calls))
 
     def test_collector_credentials_are_in_private_reader_envfile_not_args_or_restore_output(self):
-        calls=[];reader_files=[];output=self.root/"private"/"metadata.json"
+        calls=[];reader_files=[];ca_files=[];output=self.root/"private"/"metadata.json"
         def command(args,**kwargs):
             calls.append(args)
             if args[0]=="git":return ("a"*40+"\n").encode()
@@ -141,6 +141,14 @@ class MetadataTests(unittest.TestCase):
                 secret_env=file.read_text()
                 self.assertIn("PGPASSWORD=synthetic-password\n",secret_env)
                 self.assertIn("default_transaction_read_only=on",secret_env)
+                self.assertIn("PGSSLMODE=verify-full\n",secret_env)
+                self.assertIn("PGSSLROOTCERT=/run/kova-source-ca.crt\n",secret_env)
+                mounted=args[args.index("--mount")+1]
+                self.assertTrue(mounted.startswith("type=bind,source="))
+                self.assertTrue(mounted.endswith(",target=/run/kova-source-ca.crt,readonly"))
+                ca_file=Path(mounted.split(",")[1].removeprefix("source="));ca_files.append(ca_file)
+                self.assertEqual(ca_file.read_bytes(),self.ca.read_bytes())
+                self.assertEqual(ca_file.stat().st_mode & 0o777,0o444)
                 self.assertTrue(all(line.startswith("PG") for line in secret_env.splitlines()))
                 self.assertEqual(kwargs["data"],m.SOURCE_SQL.encode())
                 self.assertIn("--cap-drop",args);self.assertIn("--read-only",args)
@@ -158,6 +166,7 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(output.stat().st_mode & 0o777,0o600)
         self.assertEqual(output.parent.stat().st_mode & 0o777,0o700)
         self.assertTrue(all(not p.exists() for p in reader_files))
+        self.assertTrue(all(not p.exists() for p in ca_files))
         self.assertNotIn("synthetic-password",output.read_text())
         self.assertNotIn(self.env["KOVA_PRODUCTION_DATABASE_URL"],output.read_text())
         self.assertNotIn("synthetic-password",json.dumps(calls))

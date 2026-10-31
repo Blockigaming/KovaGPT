@@ -559,6 +559,27 @@ class SyntheticTests(unittest.TestCase):
             self.assertEqual(m.cleanup_all(self.env),(False,False))
         image.assert_not_called()
 
+    def test_rehydrated_cleanup_preserves_source_and_rejects_foreign_image_before_remove(self):
+        b=m.SyntheticBuilder(self.env)
+        b.build_invoked=True;b.build_returned=True;b.write_state("123","1")
+        for source in [b.source,"f"*40]:
+            calls=[];listed={"Repository":"kova-recovery-operator","Tag":b.owner}
+            def command(instance,args,**kwargs):
+                calls.append(args)
+                if args[:3]==["docker","image","ls"]:
+                    return (json.dumps(listed)+"\n").encode() if len(calls)==1 else b""
+                if args[:3]==["docker","image","inspect"]:
+                    return json.dumps([{"Config":{"Labels":{"org.kova.recovery.owner":b.owner,
+                        "org.opencontainers.image.revision":source}}}]).encode()
+                if args[:3]==["docker","image","rm"]:return b""
+                raise AssertionError("unexpected synthetic cleanup command")
+            with self.subTest(source=source),patch.object(m.SyntheticBuilder,"command",command):
+                if source==b.source:self.assertTrue(m.cleanup_image_from_state(self.env))
+                else:
+                    with self.assertRaisesRegex(m.builder.Stopped,"foreign_image_cleanup_forbidden"):
+                        m.cleanup_image_from_state(self.env)
+                    self.assertFalse(any(a[:3]==["docker","image","rm"] for a in calls))
+
     def test_image_fixture_uses_actual_control_versions_and_requires_every_requested_extension(self):
         p=self.probe();p.wait_native=lambda *_:None
         role={"name":"pg_database_owner","super":False,"inherit":True,"createRole":False,"createDb":False,
