@@ -43,6 +43,18 @@ def env():return {"KOVA_AUTH_RECOVERY_CONFIRMATION":"CAPTURE_ONLY","GITHUB_EVENT
 
 
 class CaptureTests(unittest.TestCase):
+    def test_datum_guard_failure_identifies_fixed_phase_without_raw_values(self):
+        reader=Reader();reader.datum.update(eightByteLittleEndianProven=False,private="synthetic-private-metadata")
+        with self.assertRaises(m.Stopped) as caught:m.capture(reader,env())
+        self.assertEqual(m.public_failure(caught.exception),{
+            "stage":"datum-proof","code":"semantic_datum_encoding_unqualified"})
+        self.assertNotIn("synthetic-private",str(m.public_failure(caught.exception)))
+
+    def test_unrecognized_private_exception_is_not_a_public_diagnostic(self):
+        with patch.object(m,"PUBLIC_STAGE","synthetic-private-stage"):
+            value=m.public_failure(RuntimeError("synthetic-private-function-body"))
+        self.assertEqual(value,{"stage":"authorization","code":"unclassified_private_failure"})
+
     def test_capture_binds_actual_exporter_queries_and_offline_verification(self):
         r=Reader();value=m.capture(r,env())
         self.assertTrue(value["captureSnapshotBound"])

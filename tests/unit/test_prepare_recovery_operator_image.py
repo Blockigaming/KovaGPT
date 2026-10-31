@@ -49,6 +49,63 @@ def write_oci(path,config,*,tampered=False):
 
 
 class PreparationTests(unittest.TestCase):
+    def test_native_failure_reports_executed_marker_and_never_private_output(self):
+        with tempfile.TemporaryDirectory() as folder:
+            builder=m.Builder({"GITHUB_ACTIONS":"true","RUNNER_OS":"Linux","GITHUB_EVENT_NAME":"workflow_dispatch",
+                "GITHUB_REPOSITORY":"Blockigaming/KovaGPT","GITHUB_REF":"refs/heads/main",
+                "GITHUB_SHA":"a"*40,"KOVA_APPROVED_SOURCE_SHA":"a"*40,"GITHUB_RUN_ID":"123","GITHUB_RUN_ATTEMPT":"1",
+                "RUNNER_TEMP":folder,"KOVA_OPERATOR_IMAGE_CONFIRMATION":"BUILD_DATA_FREE_OPERATOR_IMAGE","PATH":os.environ["PATH"]},
+                Path(folder)/"operator-client-image")
+            def child(_args,**kwargs):
+                kwargs["stdout"].write(b"synthetic-private-key")
+                kwargs["stderr"].write(b"RUN echo KOVA_OPERATOR_STAGE=pg17-client-install\n"
+                    b"#8 0.2 KOVA_OPERATOR_STAGE=ubuntu-package-version-guard\n"
+                    b"#8 0.3 KOVA_OPERATOR_STAGE=synthetic-private-key\nsynthetic-private-key\n")
+                return subprocess.CompletedProcess(_args,17)
+            with patch.object(m.subprocess,"run",side_effect=child),self.assertRaises(m.Stopped) as caught:
+                builder.command(["docker","build","private-context-name"])
+            error=caught.exception;error.public_stage="docker-build"
+            value=m.public_failure(error)
+            self.assertEqual(value["command"],{"status":"exit","exitCode":17,
+                "dockerBuildStage":"ubuntu-package-version-guard"})
+            self.assertNotIn("private",json.dumps(value))
+            self.assertNotIn("pg17-client-install",json.dumps(value))
+
+    def test_unknown_exceptions_and_timeout_details_remain_private(self):
+        value=m.public_failure(RuntimeError("synthetic-private-key"))
+        self.assertEqual(value["code"],"unclassified_private_failure")
+        self.assertNotIn("synthetic-private",json.dumps(value))
+        builder=self.builder()
+        with patch.object(m.subprocess,"run",side_effect=subprocess.TimeoutExpired("synthetic-private-command",1)),\
+             self.assertRaises(m.Stopped) as caught:
+            builder.command(["synthetic-private-command"])
+        self.assertEqual(m.public_failure(caught.exception)["command"],{"status":"timeout"})
+        self.assertNotIn("synthetic-private",json.dumps(m.public_failure(caught.exception)))
+
+    def test_oci_failure_keeps_primary_stage_when_cleanup_also_fails(self):
+        builder=self.builder();image_id="sha256:"+"e"*64
+        def command(args,**kwargs):
+            if args[:2]==["git","rev-parse"]:return b"a"*40
+            if args[:3]==["docker","image","inspect"]:
+                if args[-1]==m.BASE_TAG:return json.dumps([{"Id":"sha256:"+"b"*64,"Os":"linux",
+                    "Architecture":"amd64","RepoDigests":["ubuntu@sha256:"+"c"*64]}]).encode()
+                return json.dumps([{"Id":image_id,"Os":"linux","Architecture":"amd64","Config":{
+                    "User":"65532:65532","Healthcheck":{"Test":["NONE"]},"Labels":{
+                    "org.kova.recovery.owner":builder.owner,"org.opencontainers.image.revision":"a"*40}}}]).encode()
+            if args[:2]==["skopeo","copy"]:raise m.native_failure("exit",17)
+            return b""
+        builder.command=command;builder.run_args=lambda:[]
+        builder.run_generic=lambda args:json.dumps(smoke()).encode() if not args else b"synthetic\n"
+        builder.cleanup_storage=lambda:True
+        builder.cleanup_image=lambda:(_ for _ in ()).throw(m.Stopped("generic_image_cleanup_unconfirmed"))
+        with patch.object(m,"os",SimpleNamespace(getuid=lambda:1001,getgid=lambda:1001,chmod=os.chmod)),\
+             self.assertRaises(m.Stopped) as caught:
+            builder.execute()
+        value=m.public_failure(caught.exception)
+        self.assertEqual(value["stage"],"oci-export")
+        self.assertEqual(value["command"],{"status":"exit","exitCode":17})
+        self.assertFalse(builder.output.exists())
+
     def setUp(self):
         self.folder=tempfile.TemporaryDirectory();self.addCleanup(self.folder.cleanup)
         self.root=Path(self.folder.name)

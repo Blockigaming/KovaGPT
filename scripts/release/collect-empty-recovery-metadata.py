@@ -57,6 +57,59 @@ class Stopped(Exception):
     pass
 
 
+PUBLIC_FAILURE_CODES=frozenset({
+    'extension_coverage_result_shape',
+    'extension_coverage_result_unqualified',
+    'metadata_command_unconfirmed',
+    'metadata_environment_shape_rejected',
+    'metadata_execution_not_enabled',
+    'metadata_image_pin_mismatch',
+    'metadata_interrupted',
+    'metadata_not_enabled',
+    'metadata_output_bound',
+    'metadata_output_exists',
+    'metadata_private_output_required',
+    'metadata_query_transaction_unqualified',
+    'metadata_reader_cleanup_unconfirmed',
+    'metadata_reader_ownership_mismatch',
+    'metadata_result_count_unqualified',
+    'metadata_source_pin_mismatch',
+    'metadata_source_shape_rejected',
+    'role_setting_shape_rejected',
+    'source_url_in_metadata_rejected',
+})
+PUBLIC_STAGE="authorization"
+PUBLIC_STAGES=frozenset({"authorization","source-config","server-image","private-source-environment",
+    "source-query-and-cleanup","metadata-validation","private-output"})
+SQLSTATES=frozenset({"42601","42703","42883","42704","42501","57014","08001","08006","XX000"})
+
+
+def public_failure(error):
+    code=str(error) if isinstance(error,(Stopped,recovery.Stopped,server_image.Stopped)) else ''
+    allowed=PUBLIC_FAILURE_CODES|recovery.PUBLIC_FAILURE_CODES|server_image.PUBLIC_FAILURE_CODES
+    result={'ok':False,'error':'empty_recovery_metadata_unqualified',
+            'stage':PUBLIC_STAGE if PUBLIC_STAGE in PUBLIC_STAGES else 'authorization',
+            'code':code if code in allowed else 'unclassified_private_failure'}
+    status=getattr(error,'command_status',None)
+    if type(status) is str and status in {'exit','signal','timeout','os-error'}:
+        result['commandStatus']=status
+        value=getattr(error,'exit_code',None)
+        if type(value) is int and -255<=value<=255:result['exitCode']=value
+    state=getattr(error,'sqlstate',None)
+    if type(state) is str and state in SQLSTATES:result['sqlstate']=state
+    return result
+
+
+def command_failure(status,exit_code=None,stderr=b''):
+    error=Stopped('metadata_command_unconfirmed')
+    error.command_status=status;error.exit_code=exit_code
+    # psql is asked for SQLSTATE-only errors; never emit its raw stderr.
+    for match in re.finditer(rb'(?:ERROR|FATAL):[ \t]+([A-Z0-9]{5})(?:[\r\n]|$)',stderr):
+        state=match[1].decode('ascii')
+        if state in SQLSTATES:error.sqlstate=state
+    return error
+
+
 def require(ok, code):
     if not ok:
         raise Stopped(code)
@@ -80,15 +133,17 @@ def bounded_child():
 
 def command(args, *, data=None, timeout=120):
     try:
-        with tempfile.TemporaryFile() as out:
-            result=subprocess.run(args,input=data,stdout=out,stderr=subprocess.DEVNULL,
+        with tempfile.TemporaryFile() as out,tempfile.TemporaryFile() as err:
+            result=subprocess.run(args,input=data,stdout=out,stderr=err,
                                   env=host_env(),timeout=timeout,check=False,preexec_fn=bounded_child)
-            require(result.returncode==0,"metadata_command_unconfirmed")
+            if result.returncode!=0:
+                err.seek(0)
+                raise command_failure("signal" if result.returncode<0 else "exit",result.returncode,err.read(65536))
             require(out.tell()<=MAX_BYTES,"metadata_output_bound")
             out.seek(0)
             return out.read(MAX_BYTES+1)
-    except (OSError,subprocess.SubprocessError):
-        raise Stopped("metadata_command_unconfirmed") from None
+    except subprocess.TimeoutExpired:raise command_failure("timeout") from None
+    except (OSError,subprocess.SubprocessError):raise command_failure("os-error") from None
 
 
 def source_pin(env):
@@ -203,12 +258,16 @@ def parse_source_output(raw, extension_coverage):
 
 
 def collect(env, output, *, extension_coverage=False):
+    global PUBLIC_STAGE
+    PUBLIC_STAGE="authorization"
     commit=source_pin(env)
     require(not output.exists() and not output.is_symlink(),"metadata_output_exists")
     root=Path(env.get("RUNNER_TEMP","")).resolve()
     require(root.is_dir() and output.is_absolute() and output.parent.resolve().is_relative_to(root)
             and not output.parent.exists(),"metadata_private_output_required")
+    PUBLIC_STAGE='source-config'
     source=recovery.source_environment(env)
+    PUBLIC_STAGE='server-image'
     qualified=server_image.qualify(command)
     require(qualified["imageInfo"].get("Architecture")=="amd64" and qualified["imageInfo"].get("Os")=="linux",
             "metadata_image_pin_mismatch")
@@ -217,6 +276,7 @@ def collect(env, output, *, extension_coverage=False):
     try:
         with tempfile.TemporaryDirectory(prefix="kova-metadata-secret-",dir=root) as temporary:
             private=Path(temporary);private.chmod(0o700)
+            PUBLIC_STAGE='private-source-environment'
             values={k:v for k,v in source.items() if k.startswith("PG")}
             require(all(isinstance(v,str) and "\n" not in v and "\r" not in v and "\x00" not in v
                         for v in values.values()),"metadata_environment_shape_rejected")
@@ -224,22 +284,25 @@ def collect(env, output, *, extension_coverage=False):
             with file.open("x") as f:
                 file.chmod(0o600)
                 for key,value in values.items():f.write(key+"="+value+"\n")
+            PUBLIC_STAGE='source-query-and-cleanup'
             owner=uuid.uuid4().hex;name="kova-meta-"+owner[:16]
             try:
                 raw=command(["docker","run","--rm","--name",name,"--label","org.kova.metadata-owner="+owner,
                              "--platform","linux/amd64","--user",f"{os.getuid()}:{os.getgid()}",
                              "--read-only","--no-healthcheck","--cap-drop","ALL","--security-opt","no-new-privileges:true",
                              "--network","bridge","--env-file",str(file),"--entrypoint","psql",IMAGE,
-                             "-X","--no-password","--quiet","--tuples-only","--no-align","--set","ON_ERROR_STOP=1","--file","-"],
+                             "-X","--no-password","--quiet","--tuples-only","--no-align","--set","ON_ERROR_STOP=1","--set","VERBOSITY=sqlstate","--file","-"],
                             data=source_query(extension_coverage).encode(),timeout=150)
             finally:
                 remove_metadata_reader(owner,name)
+            PUBLIC_STAGE='metadata-validation'
             value=parse_source_output(raw,extension_coverage)
             value.update(databaseHost=urlparse(env["KOVA_PRODUCTION_DATABASE_URL"]).hostname,
                          sourceCommit=commit,metadataImageDigest=IMAGE,sourceBuildOperatorPin=BUILD,
                          metadataActualRepoDigest=qualified["receipt"]["actualRepoDigest"],
                          metadataImageQualification=qualified["receipt"],
                          sourcePackagingBuildObservedBySql=False)
+            PUBLIC_STAGE='private-output'
             data=canonical(value)
             require(env["KOVA_PRODUCTION_DATABASE_URL"].encode() not in data,"source_url_in_metadata_rejected")
             with output.open("xb") as f:
@@ -272,7 +335,5 @@ if __name__=="__main__":
     signal.signal(signal.SIGTERM,interrupted);signal.signal(signal.SIGINT,interrupted)
     try:main()
     except Exception as error:
-        code=(str(error) if isinstance(error,server_image.Stopped)
-              and str(error) in server_image.PUBLIC_FAILURE_CODES else "empty_recovery_metadata_unqualified")
-        print(json.dumps({"ok":False,"error":code},sort_keys=True,separators=(",",":")))
+        print(json.dumps(public_failure(error),sort_keys=True,separators=(",",":")))
         raise SystemExit(1)
