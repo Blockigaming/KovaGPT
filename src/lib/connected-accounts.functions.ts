@@ -14,6 +14,7 @@ export const searchConnectedAccount = createServerFn({ method: "POST" })
       connectionId: z.string().max(40),
       accountId: z.string().uuid(),
       query: z.string().trim().min(1).max(300),
+      recordType: z.enum(["accounts", "contacts", "opportunities"]).optional(),
     }),
   )
   .handler(async ({ data, context }) => {
@@ -21,12 +22,18 @@ export const searchConnectedAccount = createServerFn({ method: "POST" })
       ? CONNECTION_FLOWS[data.connectionId]
       : undefined;
     if (!flow) return { error: "This connection is unavailable." };
+    if (data.connectionId === "salesforce" && !data.recordType)
+      return { error: "Choose the Salesforce record type to search." };
     try {
       const binding = await getConnectedToolContext(context.userId);
       return await runConnectionAccountSearch(
         context.userId,
         flow.tool,
-        { account_id: data.accountId, query: data.query },
+        {
+          account_id: data.accountId,
+          query: data.query,
+          ...(data.connectionId === "salesforce" ? { record_type: data.recordType } : {}),
+        },
         binding,
       );
     } catch {

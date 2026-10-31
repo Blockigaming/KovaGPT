@@ -1359,7 +1359,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Salesforce",
     description: "Reference CRM accounts, contacts, and opportunities.",
     category: "Productivity",
-    status: "planned",
+    status: "setup_required",
     domain: "salesforce.com",
   },
   {

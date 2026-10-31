@@ -1,5 +1,6 @@
 import { readProviderJsonObject } from "../lib/provider-response.server.mjs";
 import { CONNECTION_FLOWS, safeConnectionLink } from "./connection-flows.mjs";
+import { salesforceReadRequest, salesforceReadResult } from "./salesforce-read.server.mjs";
 
 const str = (value, limit = 2000) => (typeof value === "string" ? value.slice(0, limit) : "");
 const title = (page) => {
@@ -12,8 +13,9 @@ const title = (page) => {
   );
 };
 
-export function connectionReadRequest(id, query, token) {
+export function connectionReadRequest(id, query, token, options = {}) {
   if (!Object.hasOwn(CONNECTION_FLOWS, id)) throw new Error("unsupported_connection");
+  if (id === "salesforce") return salesforceReadRequest(query, token, options.recordType);
   if (typeof query !== "string" || !query.trim() || query.length > 300)
     throw new Error("invalid_connection_query");
   query = query.trim();
@@ -66,8 +68,8 @@ export function connectionReadRequest(id, query, token) {
   };
 }
 
-export async function readConnection(id, query, token, fetchImpl = fetch) {
-  const request = connectionReadRequest(id, query, token);
+export async function readConnection(id, query, token, fetchImpl = fetch, options = {}) {
+  const request = connectionReadRequest(id, query, token, options);
   const response = await fetchImpl(request.url, request.init);
   if (!response.ok) {
     await response.body?.cancel();
@@ -82,6 +84,7 @@ export async function readConnection(id, query, token, fetchImpl = fetch) {
     );
   }
   const data = await readProviderJsonObject(response, 512_000);
+  if (id === "salesforce") return salesforceReadResult(data, token, options.recordType);
   if ((id === "slack" && data.ok !== true) || (id === "linear" && data.errors?.length))
     throw new Error("connection_read_failed");
   let rows =
