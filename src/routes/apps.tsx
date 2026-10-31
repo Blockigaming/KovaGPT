@@ -1099,7 +1099,7 @@ function AppsPage() {
     void refreshGoogle();
   };
 
-  const connectGoogle = async (connectionId?: string, itemId = "google") => {
+  const connectGoogle = async (connectionId?: string, itemId = "gmail") => {
     if (!activityReady || !principal || !userKey || googleBusyRef.current || googleLoading) return;
     const generation = generationRef.current;
     const requestPrincipal = principal;
@@ -1114,7 +1114,7 @@ function AppsPage() {
       return next;
     });
     try {
-      await startGoogleConnect(connectionId, userKey);
+      await startGoogleConnect(connectionId, userKey, itemId === "google" ? "gmail" : itemId);
     } catch (error) {
       if (isCurrent()) {
         setFailed((current) => ({ ...current, [itemId]: true }));
@@ -1493,11 +1493,20 @@ function AppsPage() {
                     </>
                   )}
                   {isGoogleId(visibleSelectedApp.id) && (
-                    <p>
-                      The shared Google connection requests your profile and email, Gmail read and
-                      draft/send access, calendar read/edit access, and Drive read access. Review
-                      the permissions on Google’s consent screen before approving.
-                    </p>
+                    <>
+                      <p>
+                        This connection requests your Google profile and email, plus only{" "}
+                        {visibleSelectedApp.label} permissions:
+                        {visibleSelectedApp.id === "gmail"
+                          ? " read email, manage drafts, and send email."
+                          : visibleSelectedApp.id === "google-calendar"
+                            ? " read and edit calendar events."
+                            : " read Drive files."}
+                        Other Google services require their own Connect action. Previously approved
+                        services remain connected.
+                      </p>
+                      <p>Review the permissions on Google’s consent screen before approving.</p>
+                    </>
                   )}
                   {visibleSelectedApp.id === "github" && (
                     <p>
@@ -1599,7 +1608,9 @@ function AppsPage() {
                               <Button
                                 variant="outline"
                                 disabled={googleBusy || visibleGoogleLoading}
-                                onClick={() => void connectGoogle(account.id)}
+                                onClick={() =>
+                                  void connectGoogle(account.id, visibleSelectedApp.id)
+                                }
                                 aria-label={`Reconnect ${account.email || "Google account"}`}
                               >
                                 Reconnect

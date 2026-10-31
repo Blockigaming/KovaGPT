@@ -1086,7 +1086,7 @@ export const Route = createFileRoute("/api/chat")({
                 tier: callerTier,
                 deepMode: m.id === "max" || m.id === "ultra",
                 hasImages,
-                needsTools: m.id !== "instant" && Boolean(auth),
+                needsTools: Boolean(auth),
                 text: lastText ?? "",
                 contextChars: transformed.reduce(
                   (total, msg) =>
@@ -1490,7 +1490,7 @@ export const Route = createFileRoute("/api/chat")({
 
             // === TOOL-CALLING PRE-LOOP ============================================
             // Only for signed-in users who've connected Google, on a real text
-            // turn (no attachments, not instant mode). We run up to
+            // turn (no attachments, including Default/Instant mode). We run up to
             // MAX_TOOL_HOPS non-streaming calls with tools enabled. Each hop
             // that produces tool_calls gets executed server-side and streams a
             // typed `activity` event back to the client so the user sees
@@ -1507,7 +1507,6 @@ export const Route = createFileRoute("/api/chat")({
               usesExistingContext &&
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
-              m.id !== "instant" &&
               lastText.length > 0
                 ? ((await preflight.run(
                     "connector_tools",
@@ -1521,7 +1520,6 @@ export const Route = createFileRoute("/api/chat")({
               usesExistingContext &&
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
-              m.id !== "instant" &&
               lastText.length > 0
                 ? ((await preflight.run(
                     "other_connector_tools",
