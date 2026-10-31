@@ -35,6 +35,9 @@ for (const [connector, label, permission] of [
     await page.getByRole("button", { name: `Connect ${label}`, exact: true }).click();
     const dialog = page.getByRole("dialog", { name: label, exact: true });
     await expect(dialog).toContainText(permission);
+    await expect(dialog).toContainText(
+      "Review the permissions on Google’s consent screen before approving.",
+    );
     await dialog.getByRole("button", { name: "Connect", exact: true }).click();
     await expect.poll(() => selections).toEqual([connector]);
   });

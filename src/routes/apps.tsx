@@ -1493,17 +1493,20 @@ function AppsPage() {
                     </>
                   )}
                   {isGoogleId(visibleSelectedApp.id) && (
-                    <p>
-                      This connection requests your Google profile and email, plus only{" "}
-                      {visibleSelectedApp.label} permissions:
-                      {visibleSelectedApp.id === "gmail"
-                        ? " read email, manage drafts, and send email."
-                        : visibleSelectedApp.id === "google-calendar"
-                          ? " read and edit calendar events."
-                          : " read Drive files."}
-                      Other Google services require their own Connect action. Previously approved
-                      services remain connected.
-                    </p>
+                    <>
+                      <p>
+                        This connection requests your Google profile and email, plus only{" "}
+                        {visibleSelectedApp.label} permissions:
+                        {visibleSelectedApp.id === "gmail"
+                          ? " read email, manage drafts, and send email."
+                          : visibleSelectedApp.id === "google-calendar"
+                            ? " read and edit calendar events."
+                            : " read Drive files."}
+                        Other Google services require their own Connect action. Previously approved
+                        services remain connected.
+                      </p>
+                      <p>Review the permissions on Google’s consent screen before approving.</p>
+                    </>
                   )}
                   {visibleSelectedApp.id === "github" && (
                     <p>
