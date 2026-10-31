@@ -5,10 +5,12 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - .github/workflows/smoke-synthetic-recovery-native.yml
+      - .github/workflows/capture-managed-auth-production.yml
       - scripts/release/**
       - tests/unit/test_synthetic_recovery_native.py
       - tests/unit/test_generic_operator_archive_native.py
       - tests/unit/test_operator_oci_runtime_binding.py
+      - tests/unit/test_private_capture_memory.py
       - tests/unit/test_prepare_recovery_operator_image.py
       - tests/unit/synthetic-recovery-native-workflow.test.mjs
 
@@ -20,6 +22,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  native-capture-memory:
+    if: github.event_name == 'pull_request' && github.repository == 'Blockigaming/KovaGPT'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check capture memory rejection boundaries without credentials
+        run: python3 -m unittest discover -s tests/unit -p test_private_capture_memory.py -q
+      - name: Prepare actual run-owned no-swap memory without source access
+        run: python3 scripts/release/private-capture-memory.py prepare
+      - name: Prove Python temporary files and a data-free file roundtrip use this mount
+        run: python3 scripts/release/private-capture-memory.py verify
+      - name: Exercise actual capture encryption and decryption with synthetic bytes only
+        run: |
+          python3 - <<'PY'
+          import importlib.util, json, os, pathlib, tempfile
+          source = pathlib.Path('scripts/release/managed-auth-recovery.py')
+          spec = importlib.util.spec_from_file_location('capture_memory_crypto_smoke', source)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          with tempfile.TemporaryDirectory(prefix='data-free-capture-crypto-') as directory:
+              root = pathlib.Path(directory)
+              plain, encrypted, restored = [root / name for name in ['synthetic.txt', 'synthetic.gpg', 'roundtrip.txt']]
+              plain.write_bytes(b'KOVA_DATA_FREE_CAPTURE_MEMORY_CRYPTO_PROBE\n')
+              phrase = b'KOVA_SYNTHETIC_ONLY_NOT_A_PRODUCTION_PASSPHRASE'
+              module.crypt(os.environ, phrase, plain, encrypted)
+              module.crypt(os.environ, phrase, encrypted, restored, decrypt=True)
+              assert plain.read_bytes() == restored.read_bytes()
+          print(json.dumps({'dataFreeCaptureCryptoRoundtripVerified': True, 'sourceConnected': False, 'customerRowsUsed': False, 'protectedPhraseUsed': False}))
+          PY
+      - name: Require exact run-owned memory cleanup
+        if: always()
+        run: python3 scripts/release/private-capture-memory.py cleanup
+
   native-synthetic:
     if: github.event_name == 'pull_request' && github.repository == 'Blockigaming/KovaGPT'
     runs-on: ubuntu-24.04

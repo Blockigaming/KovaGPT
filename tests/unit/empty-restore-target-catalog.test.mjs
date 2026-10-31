@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { isIP } from "node:net";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { validateObservation } from "../../scripts/release/verify-isolated-restore-target.mjs";
 
@@ -344,27 +346,40 @@ test("empty-target census retains unknown objects and binds extension internals 
           CREATE SCHEMA pgsodium;
           CREATE SCHEMA pgmq;
           CREATE SCHEMA pgdata;
+          CREATE SCHEMA fixture_extension_owned;
+          ALTER EXTENSION plpgsql ADD SCHEMA fixture_extension_owned;
           CREATE TABLE pgsodium.synthetic_records(id integer, body text);
           CREATE TABLE pgmq.synthetic_records(id integer, body text);
           CREATE TABLE pgdata.synthetic_records(id integer, body text);
           INSERT INTO pgsodium.synthetic_records VALUES (1, 'SYNTHETIC_PRIVATE_ROW_NOT_METADATA');
         `);
-        const captureSource = readFileSync(
-          new URL("../../scripts/release/managed-auth-recovery.py", import.meta.url),
-          "utf8",
+        const [captureSql, metadataSql] = JSON.parse(
+          execFileSync(
+            "python3",
+            [
+              "-c",
+              `import importlib.util,json,sys
+def load(path):
+ s=importlib.util.spec_from_file_location('coverage_sql_fixture',path)
+ m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
+print(json.dumps([load(sys.argv[1]).CATALOG_SQL,load(sys.argv[2]).SOURCE_SQL]))`,
+              ...["managed-auth-recovery.py", "collect-empty-recovery-metadata.py"].map((name) =>
+                fileURLToPath(new URL(`../../scripts/release/${name}`, import.meta.url)),
+              ),
+            ],
+            { encoding: "utf8" },
+          ),
         );
-        const metadataSource = readFileSync(
-          new URL("../../scripts/release/collect-empty-recovery-metadata.py", import.meta.url),
-          "utf8",
-        );
-        const captureSql = captureSource.match(/CATALOG_SQL = """([\s\S]*?)"""/)[1];
-        const metadataSql = metadataSource.match(/SOURCE_SQL = """([\s\S]*?)"""/)[1];
         for (const query of [captureSql, metadataSql]) {
           const results = await coverage.exec(query);
           const row = results
             .flatMap((r) => r.rows)
             .find((r) => Object.hasOwn(r, "jsonb_build_object"));
           const actual = JSON.parse(row.jsonb_build_object);
+          if (query === metadataSql)
+            assert.deepEqual(actual.extensionNamespaces, [
+              { name: "fixture_extension_owned", extension: "plpgsql" },
+            ]);
           for (const name of ["pgsodium", "pgmq", "pgdata"]) {
             assert.ok(
               actual.schemas.some((s) => s.name === name),

@@ -38,6 +38,14 @@ SAFE_GUC_KEYS = {
     "pgrst.db_prepared_statements", "pgrst.db_tx_end", "pgrst.db_root_spec",
     "pgrst.db_aggregates_enabled", "pgrst.db_hoisted_tx_settings",
 }
+EXTENSION_NAMESPACES_SQL = """SELECT coalesce(jsonb_agg(jsonb_build_object(
+ 'name',n.nspname,'extension',e.extname) ORDER BY n.nspname),'[]'::jsonb)
+ FROM pg_catalog.pg_namespace n
+ JOIN pg_catalog.pg_depend d ON d.classid='pg_catalog.pg_namespace'::regclass
+  AND d.objid=n.oid AND d.objsubid=0 AND d.deptype='e'
+  AND d.refclassid='pg_catalog.pg_extension'::regclass AND d.refobjsubid=0
+ JOIN pg_catalog.pg_extension e ON e.oid=d.refobjid
+ WHERE n.nspname !~ '^pg_' AND n.nspname<>'information_schema'"""
 SOURCE_SQL = """BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 SELECT jsonb_build_object(
  'format',1,'project','mfbycmbjygcfkrsuepxf','postgresBuild','17.6.1.155',
@@ -46,6 +54,7 @@ SELECT jsonb_build_object(
  'bootstrapRole',(SELECT rolname FROM pg_catalog.pg_roles WHERE oid=10),
  'extensions',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname,'owner',pg_get_userbyid(e.extowner)) ORDER BY e.extname),'[]') FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid=e.extnamespace),
  'schemas',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',n.nspname,'owner',pg_get_userbyid(n.nspowner),'acl',n.nspacl,'comment',obj_description(n.oid,'pg_namespace')) ORDER BY n.nspname),'[]') FROM pg_catalog.pg_namespace n WHERE n.nspname !~ '^pg_' AND n.nspname<>'information_schema'),
+ 'extensionNamespaces',("""+EXTENSION_NAMESPACES_SQL+"""),
  'roles',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',rolname,'super',rolsuper,'inherit',rolinherit,'createRole',rolcreaterole,'createDb',rolcreatedb,'login',rolcanlogin,'replication',rolreplication,'bypassRls',rolbypassrls,'connectionLimit',rolconnlimit,'validUntil',rolvaliduntil) ORDER BY rolname),'[]') FROM pg_catalog.pg_roles),
  'memberships',(SELECT coalesce(jsonb_agg(jsonb_build_object('role',pg_get_userbyid(roleid),'member',pg_get_userbyid(member),'grantor',pg_get_userbyid(grantor),'admin',admin_option,'inherit',inherit_option,'set',set_option) ORDER BY roleid,member),'[]') FROM pg_catalog.pg_auth_members),
  'roleSettings',(SELECT coalesce(jsonb_agg(jsonb_build_object('role',CASE WHEN s.setrole=0 THEN '*' ELSE pg_get_userbyid(s.setrole) END,'database',coalesce(d.datname,'*'),'settings',s.setconfig) ORDER BY s.setrole,s.setdatabase),'[]') FROM pg_catalog.pg_db_role_setting s LEFT JOIN pg_catalog.pg_database d ON d.oid=s.setdatabase)
@@ -64,6 +73,7 @@ PUBLIC_FAILURE_CODES=frozenset({
     'metadata_command_unconfirmed',
     'metadata_ca_bundle_unqualified',
     'metadata_environment_shape_rejected',
+    'metadata_extension_namespace_unqualified',
     'metadata_execution_not_enabled',
     'metadata_image_pin_mismatch',
     'metadata_interrupted',
@@ -203,6 +213,38 @@ def remove_metadata_reader(owner, name):
     require(names()==[],"metadata_reader_cleanup_unconfirmed")
 
 
+def extension_namespace_owners(raw):
+    """Require observed extension membership; never infer it from a schema name.
+
+    A namespace used as an extension's installation target must be available
+    before CREATE EXTENSION WITH SCHEMA. Ambiguous creator/target dependencies
+    need separate qualification, rather than an assumed bootstrap order.
+    """
+    require(type(raw.get("extensionNamespaces")) is list
+            and type(raw.get("extensions")) is list and type(raw.get("schemas")) is list,
+            "metadata_extension_namespace_unqualified")
+    extensions={};schemas=set();owners={}
+    for row in raw["extensions"]:
+        require(type(row) is dict and type(row.get("name")) is str
+                and re.fullmatch(r"[a-z_][a-z0-9_-]*",row["name"])
+                and row["name"] not in extensions,"metadata_extension_namespace_unqualified")
+        extensions[row["name"]]=row
+    for row in raw["schemas"]:
+        require(type(row) is dict and type(row.get("name")) is str
+                and recovery.IDENT.fullmatch(row["name"]) and row["name"] not in schemas,
+                "metadata_extension_namespace_unqualified")
+        schemas.add(row["name"])
+    for row in raw["extensionNamespaces"]:
+        require(type(row) is dict and set(row)=={"name","extension"}
+                and type(row["name"]) is str and row["name"] in schemas
+                and type(row["extension"]) is str and row["extension"] in extensions
+                and row["name"] not in owners,"metadata_extension_namespace_unqualified")
+        owners[row["name"]]=row["extension"]
+    require(all(type(row.get("schema")) is str and row["schema"] not in owners
+                for row in extensions.values()),"metadata_extension_namespace_unqualified")
+    return owners
+
+
 def sanitize_settings(raw):
     require(raw.get("format")==1 and raw.get("project")==PROJECT and raw.get("postgresBuild")==BUILD
             and raw.get("serverVersionNum")==170006 and raw.get("database")=="postgres"
@@ -211,7 +253,8 @@ def sanitize_settings(raw):
             "metadata_source_shape_rejected")
     require(isinstance(raw.get("bootstrapRole"),str) and recovery.IDENT.fullmatch(raw["bootstrapRole"])
             and not raw["bootstrapRole"].startswith("pg_"),"metadata_source_shape_rejected")
-    out={k:raw[k] for k in ["format","project","postgresBuild","serverVersionNum","database","bootstrapRole","extensions","schemas","roles","memberships"]}
+    extension_namespace_owners(raw)
+    out={k:raw[k] for k in ["format","project","postgresBuild","serverVersionNum","database","bootstrapRole","extensions","schemas","extensionNamespaces","roles","memberships"]}
     settings=[];withheld=0
     for row in raw["roleSettings"]:
         require(isinstance(row,dict) and isinstance(row.get("role"),str) and isinstance(row.get("database"),str)

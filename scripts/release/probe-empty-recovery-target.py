@@ -48,6 +48,53 @@ FORBIDDEN_ENV = {"KOVA_PRODUCTION_DATABASE_URL", "PGPASSWORD", "OPENAI_API_KEY",
 SAFE_SETTINGS = metadata_source.SAFE_GUC_KEYS
 NATIVE_WORKERS = {"client backend", "checkpointer", "background writer", "walwriter",
                   "autovacuum launcher", "logical replication launcher"}
+# These are associated surfaces, not extension ownership. The complete original
+# census (including every AUTO/normal dependency and catalog payload hash) is
+# still compared between two independently initialized pinned-image targets.
+NATIVE_RELATION_SURFACE_SQL = """WITH RECURSIVE
+ owned(classid,objid,objsubid,extension) AS (
+  SELECT d.classid,d.objid,d.objsubid,e.extname::text
+  FROM pg_catalog.pg_depend d JOIN pg_catalog.pg_extension e
+   ON d.refclassid='pg_catalog.pg_extension'::regclass AND d.refobjid=e.oid AND d.deptype='e'
+  UNION
+  SELECT d.classid,d.objid,d.objsubid,o.extension FROM pg_catalog.pg_depend d JOIN owned o
+   ON d.refclassid=o.classid AND d.refobjid=o.objid AND d.refobjsubid=o.objsubid
+   WHERE d.deptype='i'
+ ),
+ relations(extension,relid) AS (
+  SELECT extension,objid FROM owned WHERE classid='pg_catalog.pg_class'::regclass AND objsubid=0
+ ),
+ associated(extension,catalog,classid,objid,schema) AS (
+  SELECT r.extension,'pg_class','pg_catalog.pg_class'::regclass,i.indexrelid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_index i ON i.indrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=i.indexrelid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_attrdef','pg_catalog.pg_attrdef'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_attrdef a ON a.adrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_constraint','pg_catalog.pg_constraint'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_constraint a ON a.conrelid=r.relid
+   JOIN pg_catalog.pg_namespace n ON n.oid=a.connamespace
+  UNION SELECT r.extension,'pg_trigger','pg_catalog.pg_trigger'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_trigger a ON a.tgrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_policy','pg_catalog.pg_policy'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_policy a ON a.polrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_rewrite','pg_catalog.pg_rewrite'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_rewrite a ON a.ev_class=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+ )
+ SELECT coalesce(jsonb_agg(jsonb_build_object('extension',a.extension,'catalog',a.catalog,
+  'schema',a.schema,'identity',(pg_catalog.pg_identify_object(a.classid,a.objid,0)).identity)
+  ORDER BY a.extension,a.catalog,a.schema,a.objid),'[]'::jsonb)::text
+ FROM associated a WHERE a.schema<>'information_schema' AND a.schema !~ '^pg_'"""
+NATIVE_SURFACE_CATALOGS={"pg_class","pg_attrdef","pg_constraint","pg_trigger","pg_policy","pg_rewrite"}
+NATIVE_BLANK_CATALOGS=frozenset({"pg_class","pg_proc","pg_type","pg_constraint","pg_trigger","pg_policy",
+    "pg_rewrite","pg_attrdef","pg_collation","pg_conversion","pg_operator","pg_opclass","pg_opfamily",
+    "pg_ts_config","pg_ts_dict","pg_ts_parser","pg_ts_template","pg_statistic_ext","other"})
+NATIVE_BLANK_BOOLEAN_KEYS=frozenset({"versionMatches","largeObjectsAbsent","unownedCountMatches"})
+NATIVE_BLANK_COUNT_KEYS=frozenset({"unownedNamespaceObjectCount","ordinaryTableCount",
+    "unassociatedObjectCount","invalidAssociationRowCount","duplicateAssociationKeyCount"})
 NETNS_HELPER = """import os,subprocess,sys
 pid=int(sys.argv[1]);expected=int(sys.argv[2]);tool=sys.argv[3]
 assert pid>1 and tool in ('iptables','ip6tables','ip')
@@ -86,6 +133,90 @@ def encoded(value):
 
 def digest(value):
     return hashlib.sha256(value).hexdigest()
+
+
+def native_blank_surface(census,catalog,extensions,associated):
+    """Bound auxiliary objects without declaring AUTO/normal objects owned.
+
+    This is only a preparation check. It cannot qualify a baseline: both fresh
+    complete census/catalog/row/schema fingerprints and later stability checks
+    must still match. An ordinary table or unrelated namespace object fails.
+    """
+    require(census.get("serverVersionNum")==170006 and not catalog.get("largeObjects"),
+            "native_blank_census_unqualified")
+    objects=census.get("namespaceObjects");tables=census.get("tables")
+    count=census.get("counts",{}).get("unownedNamespaceObjects")
+    require(type(objects) is list and type(tables) is list and type(count) is int and 0<=count<=1000000,
+            "native_blank_census_unqualified")
+    def member(row):
+        return any(type(row.get(k)) is str and row[k] in extensions for k in ["directExtension","internalExtension"])
+    require(all(type(t) is dict and member(t) for t in tables),"native_blank_census_unqualified")
+    unowned=[o for o in objects if type(o) is dict and not member(o)]
+    require(all(type(o) is dict for o in objects) and len(unowned)==count,
+            "native_blank_census_unqualified")
+    require(type(associated) is list,"native_blank_census_unqualified")
+    bound={}
+    for row in associated:
+        require(type(row) is dict and set(row)=={"extension","catalog","schema","identity"}
+                and type(row["extension"]) is str and row["extension"] in extensions
+                and type(row["catalog"]) is str and row["catalog"] in NATIVE_SURFACE_CATALOGS
+                and type(row["schema"]) is str and IDENT.fullmatch(row["schema"])
+                and type(row["identity"]) is str and 0<len(row["identity"])<=4096
+                and not any(c in row["identity"] for c in "\x00\r\n"),"native_blank_census_unqualified")
+        key=tuple(row[k] for k in ["catalog","schema","identity"])
+        require(key not in bound,"native_blank_census_unqualified")
+        bound[key]=row["extension"]
+    require(all(all(type(o.get(k)) is str for k in ["catalog","schema","identity"])
+                and o["catalog"] in NATIVE_SURFACE_CATALOGS
+                and tuple(o[k] for k in ["catalog","schema","identity"]) in bound for o in unowned),
+            "native_blank_census_unqualified")
+    return count
+
+
+def native_blank_observations(census,catalog,extensions,associated):
+    """Fixed count/boolean diagnostics only; no object names, DDL or catalog rows."""
+    objects=census.get("namespaceObjects",[]);tables=census.get("tables",[])
+    objects=objects if type(objects) is list else []
+    tables=tables if type(tables) is list else []
+    def member(row):
+        return type(row) is dict and any(type(row.get(k)) is str and row[k] in extensions
+                                        for k in ["directExtension","internalExtension"])
+    unowned=[o for o in objects if not member(o)]
+    counts={k:0 for k in NATIVE_BLANK_CATALOGS}
+    for obj in unowned:
+        key=obj.get("catalog") if type(obj) is dict else None
+        counts[key if type(key) is str and key in counts else "other"]+=1
+    keys=[];invalid=0
+    for row in associated if type(associated) is list else []:
+        if (type(row) is not dict or set(row)!={"extension","catalog","schema","identity"}
+                or any(type(row.get(k)) is not str for k in ["extension","catalog","schema","identity"])
+                or row["extension"] not in extensions or row["catalog"] not in NATIVE_SURFACE_CATALOGS
+                or not IDENT.fullmatch(row["schema"]) or not 0<len(row["identity"])<=4096
+                or any(c in row["identity"] for c in "\x00\r\n")):
+            invalid+=1;continue
+        keys.append(tuple(row[k] for k in ["catalog","schema","identity"]))
+    bound=set(keys)
+    missing=sum(type(o) is not dict or any(type(o.get(k)) is not str for k in ["catalog","schema","identity"])
+                or tuple(o[k] for k in ["catalog","schema","identity"]) not in bound for o in unowned)
+    count=census.get("counts",{}).get("unownedNamespaceObjects")
+    return {"versionMatches":census.get("serverVersionNum")==170006,
+        "largeObjectsAbsent":not catalog.get("largeObjects"),
+        "unownedCountMatches":type(count) is int and count==len(unowned),
+        "unownedNamespaceObjectCount":count if type(count) is int and 0<=count<=1000000 else -1,
+        "ordinaryTableCount":sum(not member(t) for t in tables),"unassociatedObjectCount":missing,
+        "invalidAssociationRowCount":invalid,"duplicateAssociationKeyCount":len(keys)-len(bound),
+        "unownedByCatalog":counts}
+
+
+def safe_native_blank_observations(error):
+    if type(error) is not Stopped or error.args!=("native_blank_census_unqualified",):return None
+    value=getattr(error,"native_blank_observations",None)
+    if (type(value) is not dict or set(value)!=NATIVE_BLANK_BOOLEAN_KEYS|NATIVE_BLANK_COUNT_KEYS|{"unownedByCatalog"}
+            or any(type(value[k]) is not bool for k in NATIVE_BLANK_BOOLEAN_KEYS)
+            or any(type(value[k]) is not int or not -1<=value[k]<=1000000 for k in NATIVE_BLANK_COUNT_KEYS)
+            or type(value["unownedByCatalog"]) is not dict or set(value["unownedByCatalog"])!=NATIVE_BLANK_CATALOGS
+            or any(type(v) is not int or not 0<=v<=1000000 for v in value["unownedByCatalog"].values())):return None
+    return value
 
 
 def private_file(path):
@@ -185,6 +316,7 @@ def validate_metadata(metadata, *, source_sha):
                 "source_extension_owner_unqualified")
         ident(row.get("schema"));extensions.add(name)
     require("plpgsql" in extensions, "source_plpgsql_missing")
+    extension_namespace_owners(metadata)
     withheld=0
     for row in metadata["roleSettings"]:
         require(row.get("role") == "*" or row.get("role") in role_names, "source_setting_role_unqualified")
@@ -288,14 +420,31 @@ def operator_bootstrap_sql(password):
             "REPLICATION BYPASSRLS PASSWORD "+literal(password)+";\n").encode()
 
 
+def extension_namespace_owners(metadata):
+    try:return metadata_source.extension_namespace_owners(metadata)
+    except metadata_source.Stopped:raise Stopped("source_extension_namespace_unqualified") from None
+
+
+def schema_properties_sql(row):
+    name=ident(row["name"])
+    return ("ALTER SCHEMA "+name+" OWNER TO "+ident(row["owner"])+";\n"
+            +"COMMENT ON SCHEMA "+name+" IS "+("NULL" if row.get("comment") is None else literal(row["comment"]))+";\n")
+
+
 def schema_setup_sql(metadata):
+    # Extension members such as pg_cron's cron namespace are created by their
+    # pinned installer. Precreating them can fail CREATE EXTENSION or omit the
+    # required pg_depend membership. All properties are applied after install.
+    deferred=extension_namespace_owners(metadata)
     statements = []
     for row in sorted(metadata["schemas"], key=lambda r:r["name"]):
-        name=ident(row["name"])
-        statements += ["CREATE SCHEMA IF NOT EXISTS "+name+";",
-                       "ALTER SCHEMA "+name+" OWNER TO "+ident(row["owner"])+";",
-                       "COMMENT ON SCHEMA "+name+" IS "+("NULL" if row.get("comment") is None else literal(row["comment"]))+";"]
+        if row["name"] in deferred:continue
+        statements += ["CREATE SCHEMA IF NOT EXISTS "+ident(row["name"])+";",schema_properties_sql(row)]
     return "\n".join(statements)+"\n"
+
+
+def schema_metadata_sql(metadata):
+    return "".join(schema_properties_sql(row) for row in sorted(metadata["schemas"],key=lambda r:r["name"]))
 
 
 def schema_acl_sql(metadata):
@@ -763,7 +912,7 @@ while :; do sleep 1; done"""
                 self.bootstrap_sql(target,extension_create_sql(e))
                 installed.add(name);del pending[name]
         self.bootstrap_sql(target,extension_owner_bootstrap_sql(self.metadata,restore=True))
-        self.bootstrap_sql(target,schema_acl_sql(self.metadata))
+        self.bootstrap_sql(target,schema_metadata_sql(self.metadata)+schema_acl_sql(self.metadata))
         # Bootstrap local sockets stay inside the server and disappear before
         # qualification. No host/client socket is mounted or permitted.
         self.docker(["exec","--user",str(self.pg_uid)+":"+str(self.pg_gid),self.names[target],
@@ -804,14 +953,25 @@ while :; do sleep 1; done"""
                 "consumers_or_local_socket_not_stopped")
         return {"preloadLibraries":0,"cronLaunchActiveJobs":False,"unexpectedWorkers":0,"unixSockets":0}
 
+    def native_schema_dump_tool(self):
+        return self.native_tools["pg_dump"]
+
     def native_snapshot(self,target):
         self.stage="native_catalog_proof"
         _,raw=self.client_sql(target,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n"+recovery.CATALOG_SQL+"\nCOMMIT;\n")
         catalog=json.loads(raw)
         _,raw=self.client_sql(target,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n"+recovery.EMPTY_CENSUS.read_text()+"\nCOMMIT;\n")
         census=json.loads(raw)
-        require(census.get("serverVersionNum")==170006 and census.get("counts",{}).get("unownedNamespaceObjects")==0
-                and not catalog.get("largeObjects"),"native_blank_census_unqualified")
+        associated=[]
+        if census.get("counts",{}).get("unownedNamespaceObjects"):
+            _,raw=self.client_sql(target,NATIVE_RELATION_SURFACE_SQL+";\n")
+            associated=json.loads(raw)
+        extensions={e["name"] for e in self.metadata["extensions"]}
+        try:native_blank_surface(census,catalog,extensions,associated)
+        except Stopped as error:
+            if error.args==("native_blank_census_unqualified",):
+                error.native_blank_observations=native_blank_observations(census,catalog,extensions,associated)
+            raise
         recovery.identifiers(catalog)
         rows=[]
         catalog_tables={(r["schema"],r["name"]):r for r in catalog["tables"]}
@@ -832,7 +992,7 @@ while :; do sleep 1; done"""
                     "PGSSLROOTCERT":"/run/client/ca.crt","PGPASSFILE":"/run/client/pgpass","PGCONNECT_TIMEOUT":"3",
                     "PGOPTIONS":recovery.CANONICAL_PG+" -c default_transaction_read_only=on"}.items():
             args += ["--env",k+"="+v]
-        _,schema=self.docker(args+[self.names["client"],self.native_tools["pg_dump"],"--no-password","--schema-only"],timeout=60)
+        _,schema=self.docker(args+[self.names["client"],self.native_schema_dump_tool(),"--no-password","--schema-only"],timeout=60)
         expected={"bootstrapRole":self.metadata["bootstrapRole"],"roles":self.metadata["roles"],"memberships":self.metadata["memberships"],
                   "roleSettings":[{k:r[k] for k in ["role","database","settings"]} for r in self.metadata["roleSettings"]]}
         role_match=True
@@ -842,8 +1002,10 @@ while :; do sleep 1; done"""
         ns_match=source_ns=={s["name"]:s for s in catalog["schemas"]}
         _,raw=self.client_sql(target,"SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname,'owner',pg_get_userbyid(e.extowner)) ORDER BY e.extname),'[]')::text FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace;\n")
         owned_extensions=json.loads(raw)
+        _,raw=self.client_sql(target,metadata_source.EXTENSION_NAMESPACES_SQL+";\n")
+        extension_namespace_match=encoded(json.loads(raw))==encoded(self.metadata["extensionNamespaces"])
         extension_match=encoded(owned_extensions)==encoded(self.metadata["extensions"]) \
-            and encoded(catalog["extensions"])==encoded(self.metadata["extensions"])
+            and encoded(catalog["extensions"])==encoded(self.metadata["extensions"]) and extension_namespace_match
         return {"fingerprints":{"emptyBaselineCensusSha256":digest(encoded(census)),
                  "emptyBaselineCatalogSha256":digest(encoded(catalog)),"emptyBaselineRowsSha256":digest(encoded(rows)),
                  "emptyBaselineSchemaSha256":recovery.schema_hash(schema)},
@@ -1132,6 +1294,8 @@ while :; do sleep 1; done"""
             self.stage="native_proof_complete"
         except Exception as error:
             # A late postcondition failure must revoke every earlier success flag.
+            observed=safe_native_blank_observations(error)
+            if observed is not None:result["blankCatalog"]=observed
             result["dataFreeSafetyProofComplete"]=False
             result["sourceMetadataCompatible"]=False
             code=str(error) if isinstance(error,(Stopped,server_image.Stopped)) else ""

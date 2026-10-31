@@ -378,52 +378,10 @@ while :; do sleep 1; done"""
         self.client_sql(target,"SELECT 1;\n")
         return values[0]["systemIdentifier"]
 
-    def native_snapshot(self,target):
-        self.stage="native_catalog_proof"
-        _,raw=self.client_sql(target,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n"+recovery.CATALOG_SQL+"\nCOMMIT;\n")
-        catalog=json.loads(raw)
-        _,raw=self.client_sql(target,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n"+recovery.EMPTY_CENSUS.read_text()+"\nCOMMIT;\n")
-        census=json.loads(raw)
-        require(census.get("serverVersionNum")==170006 and census.get("counts",{}).get("unownedNamespaceObjects")==0
-                and not catalog.get("largeObjects"),"native_blank_census_unqualified")
-        recovery.identifiers(catalog)
-        rows=[]
-        catalog_tables={(r["schema"],r["name"]):r for r in catalog["tables"]}
-        census_tables={(r["schema"],r["name"]):r for r in census["tables"]}
-        require(set(catalog_tables)==set(census_tables),"native_table_census_coverage_missing")
-        for key,table in sorted(census_tables.items()):
-            require(table["kind"] in {"r","p","m"},"native_target_table_kind_unqualified")
-            observed=catalog_tables[key]
-            if table["kind"]=="m" and observed.get("populated") is not True:continue
-            _,raw=self.client_sql(target,"SELECT count(*)::bigint FROM "+ident(table["schema"])+"."+ident(table["name"])+";\n")
-            require(raw.strip()==b"0","native_target_contains_seed_data")
-            if table["kind"] in {"r","m"}:
-                rows.append({"schema":table["schema"],"name":table["name"],"rows":0,"sha256":digest(b"")})
-        # pg_dump runs as the same nonroot target-only client, under verified TLS.
-        args=["exec","--user",str(self.uid)+":"+str(self.gid)]
-        for k,v in {"PGHOST":self.hosts[target],"PGHOSTADDR":self.addresses[target][0],"PGPORT":"5432",
-                    "PGUSER":OPERATOR,"PGDATABASE":"postgres","PGSSLMODE":"verify-full",
-                    "PGSSLROOTCERT":"/run/client/ca.crt","PGPASSFILE":"/run/client/pgpass","PGCONNECT_TIMEOUT":"3",
-                    "PGOPTIONS":recovery.CANONICAL_PG+" -c default_transaction_read_only=on"}.items():
-            args += ["--env",k+"="+v]
-        _,schema=self.docker(args+[self.names["client"],self.client_tools["pg_dump"],"--no-password","--schema-only"],timeout=60)
-        expected={"bootstrapRole":self.metadata["bootstrapRole"],"roles":self.metadata["roles"],"memberships":self.metadata["memberships"],
-                  "roleSettings":[{k:r[k] for k in ["role","database","settings"]} for r in self.metadata["roleSettings"]]}
-        role_match=True
-        try:recovery.role_compatibility(expected,catalog,[OPERATOR])
-        except recovery.Stopped:role_match=False
-        source_ns={s["name"]:s for s in self.metadata["schemas"]}
-        ns_match=source_ns=={s["name"]:s for s in catalog["schemas"]}
-        _,raw=self.client_sql(target,"SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname,'owner',pg_get_userbyid(e.extowner)) ORDER BY e.extname),'[]')::text FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace;\n")
-        owned_extensions=json.loads(raw)
-        extension_match=encoded(owned_extensions)==encoded(self.metadata["extensions"]) \
-            and encoded(catalog["extensions"])==encoded(self.metadata["extensions"])
-        return {"fingerprints":{"emptyBaselineCensusSha256":digest(encoded(census)),
-                 "emptyBaselineCatalogSha256":digest(encoded(catalog)),"emptyBaselineRowsSha256":digest(encoded(rows)),
-                 "emptyBaselineSchemaSha256":recovery.schema_hash(schema)},
-                "roleMatch":role_match,"namespaceMatch":ns_match,"extensionMatch":extension_match,
-                "tableCount":len(rows),"namespaceObjectCount":len(census["namespaceObjects"]),
-                "globalObjectCount":len(census["globalObjects"])}
+    def native_schema_dump_tool(self):
+        # Share every snapshot safety/metadata check with the base probe. Only
+        # the separately verified operator-image executable path differs.
+        return self.client_tools["pg_dump"]
 
     def timeout_control(self,key,tools):
         expired=super().timeout_control(key,tools)

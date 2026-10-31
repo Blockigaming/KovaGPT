@@ -30,6 +30,16 @@ runtime_bytes=fixture.runtime_bytes
 
 
 class SyntheticTests(unittest.TestCase):
+    def test_native_blank_failure_keeps_only_fixed_catalog_counts(self):
+        error=m.Stopped("native_blank_census_unqualified")
+        value=m.base.native_blank_observations({"serverVersionNum":170006,
+            "counts":{"unownedNamespaceObjects":0},"namespaceObjects":[],"tables":[]},
+            {"largeObjects":[]},{"plpgsql"},[])
+        error.native_blank_observations=value;error.raw_catalog="PRIVATE_CATALOG_CANARY"
+        result=m.failure_details(error,"native_catalog_proof")
+        self.assertEqual(result["blankCatalog"],value)
+        self.assertNotIn("PRIVATE_",json.dumps(result))
+
     def test_catalog_comparison_failure_uses_fixed_native_stage_without_raw_catalog_values(self):
         actual=m.failure_details(m.Stopped("synthetic_image_baselines_differ"),"native_catalog_proof")
         self.assertEqual(actual,{"code":"synthetic_image_baselines_differ","stage":"native_catalog_proof"})
@@ -393,6 +403,24 @@ class SyntheticTests(unittest.TestCase):
         self.assertIn("PGSSLMODE=verify-full",values)
         self.assertFalse(any("PASSWORD" in x or "PRODUCTION" in x for x in values))
 
+    def test_executed_operator_uses_shared_snapshot_guards_and_its_own_dump_tool(self):
+        self.assertIs(o.OperatorProbe.native_snapshot,m.base.Probe.native_snapshot)
+        self.assertIs(m.SyntheticProbe.native_snapshot,m.base.Probe.native_snapshot)
+        p=self.probe();p.client_tools={"pg_dump":"/operator/pg_dump"};p.native_tools={"pg_dump":"/server/pg_dump"}
+        self.assertEqual(p.native_schema_dump_tool(),"/operator/pg_dump")
+        self.assertEqual(m.base.Probe.native_schema_dump_tool(p),"/server/pg_dump")
+        p.metadata={"extensions":[{"name":"plpgsql"}]}
+        catalog={"largeObjects":[]}
+        census={"serverVersionNum":170006,"counts":{"unownedNamespaceObjects":0},
+                "namespaceObjects":[],"tables":[{"schema":"public","name":"unrelated",
+                    "kind":"r","directExtension":None,"internalExtension":None}]}
+        p.client_sql=lambda _target,sql,**_:(0,json.dumps(catalog if m.base.recovery.CATALOG_SQL in sql else census).encode())
+        with patch.object(p,"docker") as docker:
+            with self.assertRaisesRegex(m.Stopped,"native_blank_census_unqualified") as caught:
+                p.native_snapshot("a")
+        docker.assert_not_called()
+        self.assertEqual(m.base.safe_native_blank_observations(caught.exception)["ordinaryTableCount"],1)
+
     def test_separate_server_client_bash_hashes_and_native_paths_are_verified(self):
         p=self.probe();p.native_tools={"timeout":"/server/timeout","sha256sum":"/server/sha"}
         p.client_tools={"timeout":"/operator/timeout","sha256sum":"/operator/sha"}
@@ -537,7 +565,7 @@ class SyntheticTests(unittest.TestCase):
 
     def test_synthetic_builder_builds_only_allowlisted_recipe_and_never_exports_archive(self):
         self.assertNotIn("oci-archive:",m.SyntheticBuilder.build.__code__.co_consts)
-        self.assertEqual(m.FIXTURE_EXTENSIONS,("pgcrypto","vector"))
+        self.assertEqual(m.FIXTURE_EXTENSIONS,("pg_cron","pgcrypto","vector"))
         self.assertNotIn("sourceCommit",m.SyntheticProbe.derive_image_fixture.__code__.co_consts)
 
     def test_inherited_execute_entrypoint_also_cannot_emit_source_authority(self):
@@ -597,16 +625,23 @@ class SyntheticTests(unittest.TestCase):
                     "grantor":m.FIXTURE_BOOTSTRAP,"admin":False,"inherit":True,"set":True}],
                  "schemas":[{"name":"public","owner":"pg_database_owner","acl":None,"comment":None}],
                  "available":[{"name":"plpgsql","version":"1.0","schema":"pg_catalog"},
+                   {"name":"pg_cron","version":"1.6","schema":"pg_catalog"},
                    {"name":"pgcrypto","version":"1.3","schema":None},{"name":"vector","version":"0.8.0","schema":None}]}
         calls=[];targets=[]
         p.bootstrap_sql=lambda target,sql:(targets.append(target) or calls.append(sql) or (0,json.dumps(fixture).encode()))
         p.derive_image_fixture()
         self.assertEqual({e["name"]:e["version"] for e in p.metadata["extensions"]},
-                         {"plpgsql":"1.0","pgcrypto":"1.3","vector":"0.8.0"})
+                         {"plpgsql":"1.0","pg_cron":"1.6","pgcrypto":"1.3","vector":"0.8.0"})
         self.assertNotIn("sourceCommit",p.metadata);self.assertNotIn("sourceSettingsComplete",p.metadata)
         self.assertTrue(p.metadata["syntheticFixtureDerivedOnlyFromPinnedImage"])
         self.assertEqual(p.metadata["bootstrapRole"],m.FIXTURE_BOOTSTRAP)
         self.assertEqual(p.metadata["roles"],fixture["roles"])
+        self.assertEqual(p.metadata["extensionNamespaces"],[{"name":"cron","extension":"pg_cron"}])
+        self.assertEqual(next(s for s in p.metadata["schemas"] if s["name"]=="cron"),
+                         {"name":"cron","owner":m.FIXTURE_BOOTSTRAP,"acl":None,
+                          "comment":"Credential-free extension namespace fixture."})
+        self.assertNotIn('"cron"',m.base.schema_setup_sql(p.metadata))
+        self.assertIn('ALTER SCHEMA "cron" OWNER TO '+m.base.ident(m.FIXTURE_BOOTSTRAP),m.base.schema_metadata_sql(p.metadata))
         positions=[calls[0].index("CREATE ROLE "+m.base.ident(n)) for n in
                    sorted([m.FIXTURE_OWNER,m.FIXTURE_GRANT_MEMBER,m.FIXTURE_GRANT_ROLE])]
         self.assertEqual(positions,sorted(positions))
