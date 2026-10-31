@@ -23,7 +23,7 @@ const mergedMainMigration = "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4
 const reviewedForwardMigrations = new Map([
   [
     "20261031220329_task_project_membership_argument_order.sql",
-    "c13bb007e3a2a307e41909f1aa80eb4cc3cffa7aa82663730692130f82bf2f20",
+    "4f9a248ffa9fde2fa7e89b74ec7b0b35aae45b15d0b027125bf6ceda0abe519c",
   ],
   [
     "20261031014500_public_chat_share_links.sql",

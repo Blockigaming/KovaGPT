@@ -26,3 +26,21 @@ begin
   end loop;
 end
 $task_project_membership$;
+
+-- The claim gate already scales this allowance by plan. Apply the same policy
+-- at run admission so Pro is not capped at Plus usage and Free cannot race past
+-- its smaller limit between claim and begin. Preserve all other lease checks.
+do $task_daily_admission$
+declare
+  definition text;
+  previous_limit text := '(select max_runs_per_user_day from public.scheduled_task_runtime where id)';
+begin
+  definition := pg_get_functiondef('public.begin_scheduled_task_run(uuid,text,timestamptz,text)'::regprocedure);
+  if (length(definition) - length(replace(definition, previous_limit, '')))
+      / length(previous_limit) <> 1 then
+    raise exception 'task_daily_admission_source_mismatch';
+  end if;
+  execute replace(definition, previous_limit,
+    '(select greatest(1,floor(max_runs_per_user_day * case public.effective_user_plan_tier(task.user_id) when ''free'' then 0.2 when ''plus'' then 1 when ''pro'' then 15 else 0 end)) from public.scheduled_task_runtime where id)');
+end
+$task_daily_admission$;

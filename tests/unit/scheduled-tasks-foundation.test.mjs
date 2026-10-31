@@ -773,3 +773,46 @@ test("current task policy permits one Free task and preserves consent and plan-s
     await db.close();
   }
 });
+
+test("Task claim and run admission enforce the same Free, Plus and Pro daily allowance", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(sql("20261031014600_scheduled_task_plan_allowances.sql"));
+    await db.exec("set role service_role");
+    await activate(db);
+    for (const [tier, limit] of [
+      ["free", 4],
+      ["plus", 20],
+      ["pro", 300],
+    ]) {
+      await db.query("update public.test_plans set tier=$1 where user_id=$2", [tier, owner]);
+      const created = await mutate(db, "create", createPayload());
+      await db.query(
+        `insert into public.scheduled_task_runs(id,task_id,user_id,scheduled_for,started_at,status)
+        select 'synthetic-'||g,$1,$2,now()-make_interval(secs=>g+60),now(),'complete' from generate_series(1,$3::integer) g`,
+        [created.id, owner, limit - 1],
+      );
+      const run = await claim(db, created.id);
+      assert.equal((await begin(db, run)).plan, tier);
+      await db.query("delete from public.scheduled_task_runs where id=$1", [run.runId]);
+      await db.query(
+        "insert into public.scheduled_task_runs(id,task_id,user_id,scheduled_for,started_at,status) values('synthetic-limit',$1,$2,now()-interval '1 day',now(),'complete')",
+        [created.id, owner],
+      );
+      await assert.rejects(begin(db, run), /task_daily_capacity/);
+      await db.query(
+        "update public.scheduled_tasks set status='scheduled',worker_id=null,lease_expires_at=null where id=$1",
+        [created.id],
+      );
+      assert.equal(
+        (await db.query("select * from public.claim_due_scheduled_tasks('worker',1,120)")).rows
+          .length,
+        0,
+      );
+      await db.query("delete from public.scheduled_tasks where id=$1", [created.id]);
+    }
+  } finally {
+    await db.close();
+  }
+});
