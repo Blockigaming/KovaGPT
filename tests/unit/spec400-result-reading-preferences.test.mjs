@@ -18,12 +18,23 @@ const declarations = [];
 const readingEffects = [];
 let themeEffect;
 let dialog;
+let settingsScope;
 function visit(node) {
   if (
     ts.isVariableStatement(node) &&
+    node.declarationList.declarations.some(
+      (declaration) => declaration.name.getText(ast) === "[settingsState, setSettingsState]",
+    )
+  )
+    settingsScope = node.parent;
+  if (
+    ts.isVariableStatement(node) &&
+    node.parent === settingsScope &&
     node.declarationList.declarations.some((declaration) =>
       [
-        "[settings, setSettings]",
+        "[settingsState, setSettingsState]",
+        "settings",
+        "setSettings",
         "[settingsPrincipal, setSettingsPrincipal]",
         "settingsReady",
       ].includes(declaration.name.getText(ast)),
@@ -58,7 +69,7 @@ const defaults = {
 // props. DOM/React scheduling is synthetic; browser glyph/layout QA is separate.
 function fixture() {
   assert.equal(readingEffects.length, 1, "The mounted workspace must apply reading preferences");
-  assert.equal(declarations.length, 3);
+  assert.equal(declarations.length, 5);
   assert.ok(themeEffect);
   assert.ok(dialog);
   const slots = [];
@@ -99,9 +110,12 @@ function fixture() {
       return [
         slots[index].value,
         (value) => {
-          slots[index].value = value;
+          slots[index].value = typeof value === "function" ? value(slots[index].value) : value;
         },
       ];
+    },
+    useCallback(callback) {
+      return callback;
     },
     useEffect(effect, dependencies) {
       const index = cursor++;
