@@ -132,6 +132,10 @@ class MetadataTests(unittest.TestCase):
             calls.append(args)
             if args[0]=="git":return ("a"*40+"\n").encode()
             if args[:2]==["docker","run"]:
+                # Docker forwards the piped SQL only when stdin stays open;
+                # a TTY would change the machine-readable result stream.
+                self.assertIn("--interactive",args)
+                self.assertNotIn("--tty",args)
                 file=Path(args[args.index("--env-file")+1]);reader_files.append(file)
                 self.assertEqual(file.stat().st_mode & 0o777,0o600)
                 secret_env=file.read_text()

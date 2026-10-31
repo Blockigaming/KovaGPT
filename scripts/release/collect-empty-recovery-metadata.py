@@ -287,7 +287,7 @@ def collect(env, output, *, extension_coverage=False):
             PUBLIC_STAGE='source-query-and-cleanup'
             owner=uuid.uuid4().hex;name="kova-meta-"+owner[:16]
             try:
-                raw=command(["docker","run","--rm","--name",name,"--label","org.kova.metadata-owner="+owner,
+                raw=command(["docker","run","--interactive","--rm","--name",name,"--label","org.kova.metadata-owner="+owner,
                              "--platform","linux/amd64","--user",f"{os.getuid()}:{os.getgid()}",
                              "--read-only","--no-healthcheck","--cap-drop","ALL","--security-opt","no-new-privileges:true",
                              "--network","bridge","--env-file",str(file),"--entrypoint","psql",IMAGE,
