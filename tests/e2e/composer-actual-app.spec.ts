@@ -293,8 +293,13 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
   await page.goto("/");
   await waitForKovaHydration(page);
   // The fixture restores its closed sidebar preference on every navigation.
-  const navigation = await revealSidebar(page);
-  await navigation.getByRole("button", { name: "New chat", exact: true }).click();
+  // Resolve the visible action if the returning preference closes the sidebar.
+  await revealSidebar(page);
+  await page
+    .getByRole("button", { name: "New chat", exact: true })
+    .filter({ visible: true })
+    .first()
+    .click();
   await input.fill("Keep this unsent draft");
   const temporary = page.getByRole("button", { name: "Start temporary chat", exact: true });
   await temporary.click();
