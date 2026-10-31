@@ -132,6 +132,10 @@ class MetadataTests(unittest.TestCase):
             calls.append(args)
             if args[0]=="git":return ("a"*40+"\n").encode()
             if args[:2]==["docker","run"]:
+                # Docker forwards the piped SQL only when stdin stays open;
+                # a TTY would change the machine-readable result stream.
+                self.assertIn("--interactive",args)
+                self.assertNotIn("--tty",args)
                 file=Path(args[args.index("--env-file")+1]);reader_files.append(file)
                 self.assertEqual(file.stat().st_mode & 0o777,0o600)
                 secret_env=file.read_text()
@@ -218,6 +222,30 @@ class MetadataTests(unittest.TestCase):
         self.assertTrue(all("label=org.kova.metadata-owner=fixture" in c for c in [calls[0],calls[2]]))
         with patch.object(m,"command",return_value=b"another-container\n"),self.assertRaisesRegex(m.Stopped,"metadata_reader_ownership_mismatch"):
             m.remove_metadata_reader("fixture","kova-meta-fixture")
+
+
+class DiagnosticTests(unittest.TestCase):
+    def test_command_failure_reports_only_exit_status_and_fixed_sqlstate(self):
+        def child(args,**kwargs):
+            kwargs["stderr"].write(b"synthetic-private-host\npsql:<stdin>:5: ERROR: 42703\nsynthetic-private-password\n")
+            kwargs["stdout"].write(b"synthetic-private-metadata")
+            return subprocess.CompletedProcess(args,3)
+        with patch.object(m.subprocess,"run",side_effect=child),self.assertRaises(m.Stopped) as caught:
+            m.command(["docker","run","synthetic-private-path"])
+        with patch.object(m,"PUBLIC_STAGE","source-query-and-cleanup"):
+            value=m.public_failure(caught.exception)
+        self.assertEqual(value["sqlstate"],"42703")
+        self.assertEqual(value["exitCode"],3)
+        self.assertEqual(value["stage"],"source-query-and-cleanup")
+        self.assertNotIn("synthetic-private",json.dumps(value))
+
+    def test_unknown_codes_and_unreviewed_sqlstates_are_withheld(self):
+        error=m.command_failure("exit",3,b"ERROR: ABCDE\nsynthetic-private-password\n")
+        self.assertNotIn("sqlstate",m.public_failure(error))
+        for error in [RuntimeError("synthetic-private-password"),m.Stopped("synthetic-private-password")]:
+            value=m.public_failure(error)
+            self.assertEqual(value["code"],"unclassified_private_failure")
+            self.assertNotIn("synthetic-private",json.dumps(value))
 
 
 if __name__=="__main__":unittest.main()

@@ -40,6 +40,187 @@ nodes=module("semantic_pg17_nodes","canonicalize-pg17-extension-nodes.py")
 class Stopped(Exception):pass
 
 
+PUBLIC_FAILURE_CODES=frozenset({
+    'canonical_payload_type_unqualified',
+    'node_atom_unqualified',
+    'node_boolean_const_unqualified',
+    'node_boolean_unqualified',
+    'node_boolop_unqualified',
+    'node_const_datum_missing',
+    'node_const_datum_size_mismatch',
+    'node_const_layout_missing',
+    'node_const_layout_unqualified',
+    'node_const_shape_mismatch',
+    'node_const_type_unsupported',
+    'node_datum_bound',
+    'node_datum_byte_invalid',
+    'node_datum_platform_unqualified',
+    'node_datum_syntax',
+    'node_delimiter_unexpected',
+    'node_depth_bound',
+    'node_derived_reference_unqualified',
+    'node_domain_base_unqualified',
+    'node_domain_layout_mismatch',
+    'node_duplicate_field',
+    'node_enum_layout_unqualified',
+    'node_enum_reference_unqualified',
+    'node_field_coverage_mismatch',
+    'node_field_order_mismatch',
+    'node_field_syntax',
+    'node_fixed_const_layout_unqualified',
+    'node_input_bound',
+    'node_integer_const_layout_unqualified',
+    'node_integer_const_padding_unqualified',
+    'node_integer_out_of_range',
+    'node_integer_unqualified',
+    'node_null_const_has_payload',
+    'node_oid_const_layout_unqualified',
+    'node_oid_const_padding_unqualified',
+    'node_oid_list_class_missing',
+    'node_oid_list_unqualified',
+    'node_oid_unqualified',
+    'node_reference_identity_unqualified',
+    'node_resolver_unqualified',
+    'node_root_unqualified',
+    'node_rte_kind_unsupported',
+    'node_tag_unsupported',
+    'node_token_bound',
+    'node_trailing_escape',
+    'node_trailing_payload',
+    'node_truncated',
+    'node_value_unqualified',
+    'node_varlena_const_unqualified',
+    'node_varlena_header_unqualified',
+    'payload_acl_duplicate_entry',
+    'payload_acl_entry_unqualified',
+    'payload_acl_roundtrip_unqualified',
+    'payload_adapter_configuration_unqualified',
+    'payload_array_coverage_unqualified',
+    'payload_array_dimensions_unqualified',
+    'payload_array_null_unqualified',
+    'payload_array_shape_unqualified',
+    'payload_boolean_bytes_unqualified',
+    'payload_builtin_adapter_override_forbidden',
+    'payload_catalog_columns_uncovered',
+    'payload_catalog_foreign_keys_uncovered',
+    'payload_catalog_foreign_keys_unqualified',
+    'payload_catalog_layout_unqualified',
+    'payload_custom_adapter_unqualified',
+    'payload_derived_identity_unqualified',
+    'payload_derived_validators_unqualified',
+    'payload_duplicate_identity',
+    'payload_enum_identity_unqualified',
+    'payload_enum_identity_value_mismatch',
+    'payload_enum_label_unqualified',
+    'payload_enum_parent_unqualified',
+    'payload_field_adapter_unimplemented',
+    'payload_identity_selector_required',
+    'payload_identity_selector_unqualified',
+    'payload_mandatory_reference_zero',
+    'payload_node_canonicalizer_required',
+    'payload_node_null_unqualified',
+    'payload_nonnull_type_adapter_unimplemented',
+    'payload_object_identity_unqualified',
+    'payload_oidvector_shape_unqualified',
+    'payload_pg17_patch_unqualified',
+    'payload_physical_exclusion_unqualified',
+    'payload_reference_address_unqualified',
+    'payload_reference_null_unqualified',
+    'payload_reference_oid_unqualified',
+    'payload_reference_roundtrip_missing',
+    'payload_row_collection_unqualified',
+    'payload_row_columns_uncovered',
+    'payload_row_shape_unqualified',
+    'payload_scalar_bytes_unqualified',
+    'payload_scalar_null_unqualified',
+    'payload_scalar_shape_unqualified',
+    'payload_scalar_type_unimplemented',
+    'payload_scalar_width_unqualified',
+    'payload_verified_resolver_required',
+    'relation_column_identity_unqualified',
+    'relation_column_name_unqualified',
+    'relation_column_parent_unqualified',
+    'relation_composite_identity_unqualified',
+    'relation_composite_parent_unqualified',
+    'relation_conditional_name_scope_unqualified',
+    'relation_dropped_or_missing_attribute_unimplemented',
+    'relation_integer_cell_unqualified',
+    'relation_integer_wire_unqualified',
+    'relation_internal_trigger_unimplemented',
+    'relation_partition_foreign_or_rewrite_unimplemented',
+    'relation_partition_surface_unimplemented',
+    'relation_physical_policy_unqualified',
+    'relation_polymorphic_catalog_unqualified',
+    'relation_polymorphic_class_unqualified',
+    'relation_polymorphic_reference_unqualified',
+    'relation_polymorphic_subobject_unqualified',
+    'relation_primary_identity_unimplemented',
+    'relation_reference_cell_unqualified',
+    'relation_scalar_cell_unqualified',
+    'relation_toast_identity_unqualified',
+    'relation_toast_owner_unqualified',
+    'semantic_capture_bound_exceeded',
+    'semantic_datum_encoding_unqualified',
+    'semantic_datum_query_unqualified',
+    'semantic_duplicate_object_identity',
+    'semantic_exporter_changed',
+    'semantic_exporter_identity_unqualified',
+    'semantic_lazy_reference_binding_mismatch',
+    'semantic_payload_rows_unqualified',
+    'semantic_private_capture_not_enabled',
+    'semantic_private_context_unqualified',
+    'semantic_query_budget_exceeded',
+    'semantic_query_result_unqualified',
+    'semantic_query_shape_unqualified',
+    'semantic_reference_changed',
+    'semantic_reference_missing',
+    'semantic_reference_roundtrip_unqualified',
+    'semantic_reference_rows_unqualified',
+    'semantic_saved_binding_unqualified',
+    'semantic_saved_canonical_hash_mismatch',
+    'semantic_saved_datum_unqualified',
+    'semantic_saved_duplicate_reference',
+    'semantic_saved_provenance_unqualified',
+    'semantic_saved_query_binding_mismatch',
+    'semantic_saved_query_evidence_unqualified',
+    'semantic_saved_reference_missing',
+    'semantic_saved_reference_unqualified',
+    'semantic_saved_snapshot_unqualified',
+    'semantic_saved_type_cache_unqualified',
+    'semantic_snapshot_binding_mismatch',
+    'semantic_source_pin_unqualified',
+    'semantic_type_address_unqualified',
+    'semantic_type_budget_exceeded',
+    'semantic_type_identity_unqualified',
+    'semantic_type_snapshot_mismatch',
+    'semantic_wire_coverage_unqualified',
+})
+PUBLIC_STAGES=frozenset({
+    'all-catalog-wire',
+    'authorization',
+    'canonicalize',
+    'datum-encoding-proof',
+    'datum-proof',
+    'exporter-identity',
+    'frame-bound',
+    'lazy-reference',
+    'private-context',
+    'query-generation',
+    'snapshot-proof',
+    'source-files',
+    'type-layout',
+    'wire-coverage',
+})
+PUBLIC_STAGE="authorization"
+
+
+def public_failure(error):
+    # Values are compared against literal enums, never printed directly.
+    code=str(error)
+    return {'code':code if code in PUBLIC_FAILURE_CODES else 'unclassified_private_failure',
+            'stage':PUBLIC_STAGE if PUBLIC_STAGE in PUBLIC_STAGES else 'authorization'}
+
+
 def require(ok,code):
     if not ok:raise Stopped(code)
 
@@ -74,6 +255,8 @@ CONTEXT_SQL="""SELECT jsonb_build_object(
 
 class Session:
     def __init__(self,reader,*,check_deadline=lambda:None):
+        global PUBLIC_STAGE
+        PUBLIC_STAGE="exporter-identity"
         require(callable(getattr(reader,"query",None)) and re.fullmatch(r"[a-fA-F0-9]+-[a-fA-F0-9]+-\d+",getattr(reader,"id",""))
                 and SHA.fullmatch(getattr(reader,"snapshot_sha256",""))
                 and getattr(reader,"server_encoding",None)==getattr(reader,"client_encoding",None)=="UTF8",
@@ -82,6 +265,8 @@ class Session:
         self.check_deadline=check_deadline;self.query_log=[];self.references={};self.type_layouts=TypeLayouts(self)
 
     def query(self,sql,stage):
+        global PUBLIC_STAGE
+        PUBLIC_STAGE=stage if stage in PUBLIC_STAGES else "all-catalog-wire"
         self.check_deadline();require(len(self.query_log)<MAX_QUERIES,"semantic_query_budget_exceeded")
         statement=completed_statement(sql)
         self.query_log.append({"stage":stage,"sha256":sha(statement.encode())})
@@ -177,28 +362,35 @@ def canonical_receipt(wire,resolver,type_layouts,datum_layout,*,check_deadline=l
 
 def collect(reader,*,source_sha,check_deadline=lambda:None):
     """Already validated private capture/target caller only; no external API."""
+    global PUBLIC_STAGE
+    PUBLIC_STAGE="authorization"
     require(SOURCE.fullmatch(source_sha or ""),"semantic_source_pin_unqualified")
     session=Session(reader,check_deadline=check_deadline)
     context=session.query(CONTEXT_SQL,"private-context")
     require(context=={"privateWireContext":"PRIVATE_GHA_CAPTURE_ONLY","searchPath":"pg_catalog"},
             "semantic_private_context_unqualified")
     before=session.snapshot_proof()
+    PUBLIC_STAGE='query-generation'
     options=relations.capture_query_options(core,generator)
     query=generator.build_capture_all_private_wire_query(**options)
     wire=session.query(query,"all-catalog-wire")
+    PUBLIC_STAGE='wire-coverage'
     require(wire.get("operation")=="PRIVATE_GHA_ONLY-extension-all-catalog-wire" and wire.get("privateRawWire") is True
             and wire.get("sourceSnapshotSha256")==session.expected_snapshot and wire.get("serverVersionNum")==170006,
             "semantic_wire_coverage_unqualified")
     session.add_references(wire.get("resolvedReferences"))
     datum=session.query(audit_body(),"datum-encoding-proof")
+    PUBLIC_STAGE='datum-proof'
     little=datum.get("eightByteLittleEndianProven") is True
     big=datum.get("eightByteBigEndianProven") is True
     require(datum.get("serverVersionNum")==170006 and little!=big
             and datum.get("allObservedDatumsEightBytes") is True,"semantic_datum_encoding_unqualified")
     abi={"byteorder":"little" if little else "big","datum_bytes":8,"server_encoding":"UTF8",
          "evidence_sha256":sha(encoded({"snapshot":before,"datum":datum}))}
+    PUBLIC_STAGE='canonicalize'
     receipt=canonical_receipt(wire,session.resolver,session.type_layouts,abi,check_deadline=check_deadline)
     after=session.snapshot_proof();require(before==after,"semantic_exporter_changed")
+    PUBLIC_STAGE='source-files'
     result={"format":1,"operation":"same-exporter-private-extension-semantics","project":PROJECT,
         "postgresBuild":BUILD,"sourceSha":source_sha,"captureSnapshotBound":True,
         "sourceSnapshotSha256":session.expected_snapshot,"exportedSnapshotIdSha256":sha(reader.id.encode()),
@@ -207,6 +399,7 @@ def collect(reader,*,source_sha,check_deadline=lambda:None):
         "resolvedReferences":[session.references[k] for k in sorted(session.references)],
         "typeLayouts":{str(k):v for k,v in sorted(session.type_layouts.items())},"canonicalReceipt":receipt,
         "customerRowsRead":False,"productionMutated":False,"privateRawWire":True}
+    PUBLIC_STAGE='frame-bound'
     require(len(encoded(result))<=MAX_BYTES,"semantic_capture_bound_exceeded")
     check_deadline()
     return result

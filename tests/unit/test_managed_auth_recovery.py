@@ -99,6 +99,32 @@ class RecoveryTests(unittest.TestCase):
             with self.assertRaisesRegex(m.Stopped,"^private_command_unconfirmed$"):
                 m.run(["psql"],{})
 
+    def test_snapshot_failure_exposes_only_reviewed_sqlstate_and_closes_private_stderr(self):
+        snapshot=m.Snapshot({});snapshot.process=SimpleNamespace(poll=lambda:1,communicate=lambda *args,**kwargs:None)
+        snapshot.private_errors=tempfile.TemporaryFile()
+        self.addCleanup(snapshot.private_errors.close)
+        snapshot.private_errors.write(b"synthetic-private-host\nERROR: 42703\nsynthetic-private-function-body\n")
+        snapshot.private_errors.flush()
+        with self.assertRaises(m.Stopped) as caught:snapshot.query("SELECT private;")
+        result=m.public_failure(caught.exception)
+        self.assertEqual(result["sqlstate"],"42703")
+        self.assertEqual(result["code"],"snapshot_lost")
+        self.assertNotIn("synthetic-private",json.dumps(result))
+        snapshot.__exit__()
+        self.assertTrue(snapshot.private_errors.closed)
+
+    def test_nested_semantic_failure_keeps_fixed_stage_code_and_no_private_exception(self):
+        module=m.semantic_module()
+        for error,code in [(module.Stopped("semantic_wire_coverage_unqualified"),"semantic_wire_coverage_unqualified"),
+                           (RuntimeError("synthetic-private-function-body"),"unclassified_private_failure")]:
+            with patch.object(m,"semantic_module",return_value=module),\
+                 patch.object(module,"PUBLIC_STAGE","wire-coverage"),patch.object(module,"capture",side_effect=error),\
+                 self.assertRaises(m.Stopped) as caught:
+                m.capture_semantic_source(object(),{})
+            result=m.public_failure(caught.exception)
+            self.assertEqual(result["semanticFailure"],{"stage":"wire-coverage","code":code})
+            self.assertNotIn("synthetic-private",json.dumps(result))
+
     def test_actual_snapshot_query_reads_json_with_fake_process_and_selector(self):
         waits=[]
         class Selector:

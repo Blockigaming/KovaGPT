@@ -42,6 +42,7 @@ TIMEOUT = 900
 OPERATION_SECONDS = 1500
 DEADLINE = None
 PUBLIC_STAGE = "startup"
+PUBLIC_SQLSTATES = frozenset({"42601", "42703", "42883", "42704", "42501", "57014", "08001", "08006", "XX000"})
 PUBLIC_STAGES = frozenset({"startup", "capture-authorization", "capture-source-config",
     "capture-client-tools", "capture-snapshot", "capture-catalog", "capture-dump",
     "capture-schema", "capture-coverage", "capture-rows", "capture-package",
@@ -95,9 +96,19 @@ def mark_stage(stage):
 def public_failure(exc):
     # Both fields are fixed enumerations; raw exception/child diagnostics never escape.
     code = str(exc) if isinstance(exc, Stopped) else ""
-    return {"ok":False,"error":"managed_auth_recovery_unqualified",
+    result={"ok":False,"error":"managed_auth_recovery_unqualified",
             "stage":PUBLIC_STAGE if PUBLIC_STAGE in PUBLIC_STAGES else "startup",
             "code":code if code in PUBLIC_FAILURE_CODES else "unclassified_private_failure"}
+    state=getattr(exc,"sqlstate",None)
+    if type(state) is str and state in PUBLIC_SQLSTATES:result["sqlstate"]=state
+    detail=getattr(exc,"semantic_failure",None)
+    if type(detail) is dict:
+        module=semantic_module()
+        if (set(detail)=={"stage","code"} and type(detail.get("stage")) is str
+                and type(detail.get("code")) is str and detail.get("stage") in module.PUBLIC_STAGES
+                and detail.get("code") in module.PUBLIC_FAILURE_CODES|{"unclassified_private_failure"}):
+            result["semanticFailure"]={"stage":detail["stage"],"code":detail["code"]}
+    return result
 
 
 def digest(data):
@@ -274,13 +285,16 @@ class Snapshot:
     def __init__(self, env):
         self.env = env
         self.process = None
+        self.private_errors = None
 
     def __enter__(self):
-        self.process = subprocess.Popen(["psql", "-X", "--no-password", "-qAt", "-v", "ON_ERROR_STOP=1"],
-                                        env=self.env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                        stderr=subprocess.DEVNULL, preexec_fn=child_limits)
-        self.buffer = b""
+        self.private_errors = tempfile.TemporaryFile()
         try:
+            self.process = subprocess.Popen(["psql", "-X", "--no-password", "-qAt", "-v", "ON_ERROR_STOP=1",
+                                             "-v", "VERBOSITY=sqlstate"],
+                                            env=self.env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                            stderr=self.private_errors, preexec_fn=child_limits)
+            self.buffer = b""
             row = self.query("SELECT jsonb_build_object('snapshot',pg_export_snapshot(),'database',current_database(),'version',current_setting('server_version'),'versionNum',current_setting('server_version_num')::int,'serverEncoding',current_setting('server_encoding'),'clientEncoding',current_setting('client_encoding'),'snapshotSha256',encode(sha256(convert_to(pg_current_snapshot()::text,'UTF8')),'hex'));", begin=True)
             require(row["database"] == "postgres" and row["versionNum"] == 170006, "source_version_mismatch")
             require(row.get("serverEncoding")==row.get("clientEncoding")=="UTF8"
@@ -296,6 +310,20 @@ class Snapshot:
             raise
 
     def query(self, sql, begin=False):
+        try:return self._query(sql,begin=begin)
+        except Exception as error:
+            # Private stderr is discarded after extracting a fixed SQLSTATE.
+            # No SQL text, names, connection details or exception text escapes.
+            try:
+                if self.private_errors is not None and not self.private_errors.closed:
+                    raw=os.pread(self.private_errors.fileno(),65536,0)
+                    for match in re.finditer(rb"(?:ERROR|FATAL):[ \t]+([A-Z0-9]{5})(?:[\r\n]|$)",raw):
+                        state=match[1].decode("ascii")
+                        if state in PUBLIC_SQLSTATES:error.sqlstate=state
+            except OSError:pass
+            raise
+
+    def _query(self, sql, begin=False):
         check_deadline()
         require(self.process and self.process.poll() is None, "snapshot_lost")
         # Fixed JSON-producing read queries. No user-supplied SQL enters this API.
@@ -322,12 +350,15 @@ class Snapshot:
             raise Stopped("snapshot_response_invalid") from None
 
     def __exit__(self, *_):
-        if self.process:
-            try:
-                self.process.communicate(b"ROLLBACK;\n", timeout=5)
-            except (OSError, subprocess.SubprocessError):
-                self.process.kill()
-                self.process.wait(timeout=5)
+        try:
+            if self.process:
+                try:
+                    self.process.communicate(b"ROLLBACK;\n", timeout=5)
+                except (OSError, subprocess.SubprocessError):
+                    self.process.kill()
+                    self.process.wait(timeout=5)
+        finally:
+            if self.private_errors is not None:self.private_errors.close()
 
 
 CATALOG_SQL = """
@@ -652,9 +683,13 @@ def semantic_module():
 
 
 def capture_semantic_source(snapshot,env):
-    try:return semantic_module().capture(snapshot,env,check_deadline=check_deadline)
-    except Stopped:raise
-    except Exception:raise Stopped("extension_semantic_capture_unqualified") from None
+    module=semantic_module()
+    try:return module.capture(snapshot,env,check_deadline=check_deadline)
+    except Exception as error:
+        stopped=error if isinstance(error,Stopped) else Stopped("extension_semantic_capture_unqualified")
+        stopped.semantic_failure=module.public_failure(error)
+        if stopped is error:raise
+        raise stopped from None
 
 
 def verify_semantic_source(frame,manifest,env,attestation):

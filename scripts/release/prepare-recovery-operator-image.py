@@ -47,6 +47,189 @@ MAX_INVENTORY_BYTES=16*1024**2
 class Stopped(Exception):pass
 
 
+PUBLIC_FAILURE_CODES=frozenset({
+    'base_image_identity_unconfirmed',
+    'built_client_identity_unconfirmed',
+    'checked_out_source_mismatch',
+    'data_free_image_native_command_unconfirmed',
+    'explicit_execution_required',
+    'foreign_image_cleanup_forbidden',
+    'generic_dockerfile_unqualified',
+    'generic_image_cleanup_identity_unconfirmed',
+    'generic_image_cleanup_unconfirmed',
+    'generic_image_run_identity_required',
+    'generic_inventory_bound',
+    'generic_oci_archive_size_unqualified',
+    'generic_ram_kernel_proof_unconfirmed',
+    'generic_ram_volume_cleanup_unconfirmed',
+    'generic_source_file_unqualified',
+    'github_main_dispatch_required',
+    'image_command_output_bound',
+    'image_generic_source_changed',
+    'native_client_smoke_unqualified',
+    'native_package_inventory_unqualified',
+    'native_tool_inventory_incomplete',
+    'native_tool_inventory_unqualified',
+    'nonroot_host_runner_required',
+    'oci_archive_image_config_mismatch',
+    'oci_archive_layout_unconfirmed',
+    'oci_archive_manifest_ambiguous',
+    'oci_archive_manifest_digest_missing',
+    'oci_archive_manifest_integrity_failed',
+    'oci_blob_descriptor_unqualified',
+    'oci_blob_integrity_failed',
+    'oci_blob_size_mismatch',
+    'oci_layout_version_unqualified',
+    'oci_metadata_bound',
+    'official_ubuntu_amd64_digest_unconfirmed',
+    'owned_volume_activated_runtime_unconfirmed',
+    'owned_volume_attempt_reserved',
+    'owned_volume_census_unqualified',
+    'owned_volume_cleanup_recipe_unqualified',
+    'owned_volume_cleanup_state_unqualified',
+    'owned_volume_command_output_unqualified',
+    'owned_volume_command_unconfirmed',
+    'owned_volume_configuration_changed',
+    'owned_volume_container_mount_unqualified',
+    'owned_volume_container_references_present',
+    'owned_volume_context_unqualified',
+    'owned_volume_create_unconfirmed',
+    'owned_volume_creation_outcome_unknown',
+    'owned_volume_creation_unconfirmed',
+    'owned_volume_destination_unqualified',
+    'owned_volume_duplicate_json_key',
+    'owned_volume_existing_plan_unqualified',
+    'owned_volume_identity_unqualified',
+    'owned_volume_inspect_unqualified',
+    'owned_volume_json_unqualified',
+    'owned_volume_mode_unqualified',
+    'owned_volume_mount_count_unqualified',
+    'owned_volume_mount_keys_unqualified',
+    'owned_volume_name_not_absent',
+    'owned_volume_recipe_unqualified',
+    'owned_volume_removal_unconfirmed',
+    'owned_volume_runtime_identity_changed',
+    'owned_volume_runtime_shape_unqualified',
+    'owned_volume_runtime_state_unqualified',
+    'owned_volume_state_bound',
+    'owned_volume_state_changed',
+    'owned_volume_state_identity_changed',
+    'owned_volume_state_private_required',
+    'package_inventory_changed',
+    'pg17_client_required',
+    'private_image_output_unqualified',
+    'reviewed_source_pin_required',
+    'runner_temporary_directory_required',
+    'sensitive_input_in_image_preparation',
+    'volume_mountinfo_bound',
+    'volume_mountinfo_duplicate_id',
+    'volume_mountinfo_escape_unqualified',
+    'volume_mountinfo_shape',
+    'volume_runtime_capability_or_swap_unqualified',
+    'volume_runtime_capacity_mismatch',
+    'volume_runtime_descendant_mount',
+    'volume_runtime_mount_missing_or_shadowed',
+    'volume_runtime_mount_policy_unqualified',
+    'volume_runtime_output_bound',
+    'volume_runtime_output_duplicate',
+    'volume_runtime_output_unqualified',
+    'volume_runtime_owner_mode_or_device_mismatch',
+    'volume_runtime_root_not_readonly',
+    'volume_runtime_shared_superblock',
+    'volume_runtime_specs_duplicate',
+    'volume_runtime_specs_unqualified',
+    'volume_runtime_stat_coverage',
+    'volume_runtime_stat_unqualified',
+})
+PUBLIC_STAGES=frozenset({
+    'base-inspect',
+    'base-pull',
+    'build-context',
+    'client-identity',
+    'docker-build',
+    'image-cleanup',
+    'native-smoke',
+    'oci-export',
+    'oci-verification',
+    'package-inventory',
+    'ram-cleanup',
+    'receipt',
+    'setup',
+    'source-check',
+    'source-hashes',
+})
+DOCKER_BUILD_STAGES=frozenset({
+    'apt-cache-clean',
+    'build-temporary-clean',
+    'pg17-candidate-query',
+    'pg17-client-install',
+    'pg17-version-guard',
+    'pgdg-index-refresh',
+    'pgdg-key-count-guard',
+    'pgdg-key-directory',
+    'pgdg-key-download',
+    'pgdg-key-fingerprint-guard',
+    'pgdg-key-read',
+    'pgdg-source-write',
+    'sbom-directory',
+    'sbom-package-query',
+    'sbom-release-copy',
+    'ubuntu-architecture-guard',
+    'ubuntu-candidate-bash',
+    'ubuntu-candidate-ca-certificates',
+    'ubuntu-candidate-coreutils',
+    'ubuntu-candidate-curl',
+    'ubuntu-candidate-gnupg',
+    'ubuntu-candidate-nodejs',
+    'ubuntu-candidate-python3',
+    'ubuntu-enable-https',
+    'ubuntu-index-refresh',
+    'ubuntu-insecure-source-guard',
+    'ubuntu-legacy-sources-empty-guard',
+    'ubuntu-official-uris-guard',
+    'ubuntu-package-candidate-query',
+    'ubuntu-package-list',
+    'ubuntu-package-loop',
+    'ubuntu-package-select',
+    'ubuntu-package-version-guard',
+    'ubuntu-packages-install',
+    'ubuntu-release-guard',
+    'ubuntu-release-read',
+    'ubuntu-scope-signing-key',
+    'ubuntu-signed-by-guard',
+    'ubuntu-source-count-guard',
+    'ubuntu-source-glob',
+    'ubuntu-sources-present-guard',
+})
+
+
+def public_failure(error):
+    code=str(error) if isinstance(error,(Stopped,ram.Stopped,volume_proof.Stopped)) else ''
+    value={'ok':False,'error':'data_free_operator_image_unqualified',
+           'code':code if code in PUBLIC_FAILURE_CODES else 'unclassified_private_failure',
+           'stage':getattr(error,'public_stage','setup')}
+    if type(value['stage']) is not str or value['stage'] not in PUBLIC_STAGES:value['stage']='setup'
+    details=getattr(error,'command_details',None)
+    if type(details) is dict and type(details.get('status')) is str and details.get('status') in {'exit','signal','timeout','os-error','output-bound'}:
+        value['command']={'status':details['status']}
+        exit_code=details.get('exitCode')
+        if type(exit_code) is int and -255<=exit_code<=255:value['command']['exitCode']=exit_code
+        marker=details.get('dockerBuildStage')
+        if type(marker) is str and marker in DOCKER_BUILD_STAGES:value['command']['dockerBuildStage']=marker
+    return value
+
+
+def native_failure(status,exit_code=None,stderr=b''):
+    error=Stopped('data_free_image_native_command_unconfirmed')
+    details={'status':status,'exitCode':exit_code}
+    for line in stderr.splitlines():
+        match=re.fullmatch(rb'#[0-9]+[ \t]+[0-9]+(?:\.[0-9]+)?[ \t]+KOVA_OPERATOR_STAGE=([a-z0-9-]+)',line)
+        if match and match[1].decode('ascii') in DOCKER_BUILD_STAGES:
+            details['dockerBuildStage']=match[1].decode('ascii')
+    error.command_details=details
+    return error
+
+
 def require(condition,code):
     if not condition:raise Stopped(code)
 
@@ -165,6 +348,7 @@ def oci_identity(archive, expected_image_id):
 
 class Builder:
     def __init__(self,env,output):
+        self.stage="setup"
         self.source=context(env)
         self.env={k:v for k,v in env.items() if k in SAFE_HOST_ENV}
         self.temp=Path(env.get("RUNNER_TEMP","")).resolve()
@@ -184,10 +368,15 @@ class Builder:
         try:
             with tempfile.TemporaryFile() as out,tempfile.TemporaryFile() as err:
                 result=subprocess.run(argv,input=data,stdout=out,stderr=err,env=self.env,timeout=timeout,check=False)
-                require(result.returncode==0,"data_free_image_native_command_unconfirmed")
-                require(out.tell()<=64*1024**2 and err.tell()<=64*1024**2,"image_command_output_bound")
+                bounded=out.tell()<=64*1024**2 and err.tell()<=64*1024**2
+                if result.returncode!=0 or not bounded:
+                    err.seek(0)
+                    stderr=err.read(64*1024**2) if bounded and argv[:2]==["docker","build"] else b""
+                    status="output-bound" if not bounded else ("signal" if result.returncode<0 else "exit")
+                    raise native_failure(status,result.returncode,stderr)
                 out.seek(0);return out.read()
-        except (OSError,subprocess.SubprocessError):raise Stopped("data_free_image_native_command_unconfirmed") from None
+        except subprocess.TimeoutExpired:raise native_failure("timeout") from None
+        except (OSError,subprocess.SubprocessError):raise native_failure("os-error") from None
 
     def owned_ram(self):
         if self.ram_volumes is None:
@@ -247,18 +436,24 @@ exec "$@"
         return True
 
     def execute(self):
+        self.stage="source-check"
         require(os.getuid()!=0,"nonroot_host_runner_required")
         require(self.command(["git","rev-parse","HEAD"]).decode().strip()==self.source,"checked_out_source_mismatch")
         self.output.mkdir(mode=0o700,parents=True)
         success=False
         try:
+            self.stage='base-pull'
             self.command(["docker","pull","--platform","linux/amd64",BASE_TAG],timeout=300)
+            self.stage='base-inspect'
             base,base_id=measured_base(json.loads(self.command(["docker","image","inspect",BASE_TAG])))
+            self.stage='build-context'
             with tempfile.TemporaryDirectory(prefix="generic-operator-context-",dir=self.temp) as folder:
                 os.chmod(folder,0o700);hashes=source_context(folder)
-                self.command(["docker","build","--platform","linux/amd64","--no-cache","--pull=false",
+                self.stage='docker-build'
+                self.command(["docker","build","--progress=plain","--platform","linux/amd64","--no-cache","--pull=false",
                     "--build-arg","BASE_IMAGE="+base,"--build-arg","SOURCE_SHA="+self.source,
                     "--label","org.kova.recovery.owner="+self.owner,"--tag",self.tag,folder],timeout=900)
+            self.stage='client-identity'
             actual=json.loads(self.command(["docker","image","inspect",self.tag]))[0]
             labels=actual.get("Config",{}).get("Labels",{})
             self.image_id=actual.get("Id","")
@@ -268,7 +463,9 @@ exec "$@"
                     and actual.get("Config",{}).get("User")=="65532:65532"
                     and actual.get("Config",{}).get("Healthcheck",{}).get("Test")==["NONE"],
                     "built_client_identity_unconfirmed")
+            self.stage='native-smoke'
             smoke=check_smoke(json.loads(self.run_generic(self.run_args())))
+            self.stage='source-hashes'
             require(smoke.get("genericSourceSha256")=={name:hashes[name] for name in FILES},
                     "image_generic_source_changed")
             inventory={"sourceSha":self.source,"baseRepoDigest":base,"baseImageId":base_id,
@@ -277,14 +474,18 @@ exec "$@"
                        "genericSourceSha256":hashes,"nativeSmoke":smoke}
             # Extract the installed-version SBOM via a networkless native client;
             # it contains generic package names/versions, never source metadata.
+            self.stage='package-inventory'
             packages=self.run_generic(self.run_args()[:-1]+["--entrypoint","/bin/cat",self.image_id,
                                   "/opt/kova-build/packages.tsv"])
             require(sha(packages)==smoke["packageInventorySha256"],"package_inventory_changed")
             inventory["installedPackagesTsv"]=packages.decode()
             archive=self.output/"operator-client.oci.tar"
+            self.stage='oci-export'
             self.command(["skopeo","copy","docker-daemon:"+self.tag,"oci-archive:"+str(archive)+":operator-client"],timeout=300)
+            self.stage='oci-verification'
             require(archive.is_file() and 0<archive.stat().st_size<=MAX_ARCHIVE_BYTES,"generic_oci_archive_size_unqualified")
             manifest_digest=oci_identity(archive,self.image_id)
+            self.stage='receipt'
             inventory_bytes=canonical(inventory)
             require(len(inventory_bytes)<=MAX_INVENTORY_BYTES,"generic_inventory_bound")
             (self.output/"client-image-inventory.json").write_bytes(inventory_bytes)
@@ -296,13 +497,18 @@ exec "$@"
                 "restorePerformed":False,"clientNetworkIsolationQualified":False,"futureRestoreApproved":False,
                 "retentionDays":7,"newCloudResourceCreated":False,
                 "checkedAtUtc":datetime.now(timezone.utc).isoformat()}
+            self.stage='ram-cleanup'
             require(self.cleanup_storage(),"generic_ram_volume_cleanup_unconfirmed")
+            self.stage='image-cleanup'
             require(self.cleanup_image(),"generic_image_cleanup_unconfirmed")
             receipt["localTagRemoved"]=True
             (self.output/"image-preparation-receipt.json").write_bytes(canonical(receipt))
             for item in self.output.iterdir():os.chmod(item,0o600)
             success=True
             return receipt
+        except Exception as error:
+            error.public_stage=self.stage
+            raise
         finally:
             if not success:
                 try:self.cleanup_storage()
@@ -325,6 +531,6 @@ def main():
 
 if __name__=="__main__":
     try:main()
-    except Exception:
-        print('{"ok":false,"error":"data_free_operator_image_unqualified"}')
+    except Exception as error:
+        print(json.dumps(public_failure(error),sort_keys=True,separators=(",",":")))
         raise SystemExit(1)
