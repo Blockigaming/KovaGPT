@@ -647,7 +647,17 @@ function KovaGPT() {
   };
   const [chatRulesActive, setChatRulesActive] = useState(false);
 
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [settingsState, setSettingsState] = useState<{
+    settings: Settings;
+    persist: boolean;
+  }>({ settings: DEFAULT_SETTINGS, persist: false });
+  const settings = settingsState.settings;
+  const setSettings = useCallback((next: SetStateAction<Settings>) => {
+    setSettingsState((previous) => {
+      const settings = typeof next === "function" ? next(previous.settings) : next;
+      return settings === previous.settings ? previous : { settings, persist: true };
+    });
+  }, []);
   const [settingsPrincipal, setSettingsPrincipal] = useState<string | null>(null);
   const settingsReady = isLoaded && settingsPrincipal === storagePrincipal;
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
@@ -998,7 +1008,7 @@ function KovaGPT() {
     attachmentDraftsRef.current.clear();
 
     const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
-    setSettings(loaded);
+    setSettingsState({ settings: loaded, persist: false });
     setSettingsPrincipal(storagePrincipal);
     applyThemeMode(userKey === null ? loadThemeMode() : (loaded.mode ?? "system"));
     // Keep each signed-in account and the guest workspace in a separate
@@ -1069,25 +1079,27 @@ function KovaGPT() {
     const sync = (event: StorageEvent) => {
       if (event.key !== settingsKey(userKey) || event.newValue === null) return;
       const loaded = loadSettings(userKey);
-      setSettings((previous) =>
-        JSON.stringify(previous) === JSON.stringify(loaded) ? previous : loaded,
+      setSettingsState((previous) =>
+        JSON.stringify(previous.settings) === JSON.stringify(loaded) && !previous.persist
+          ? previous
+          : { settings: loaded, persist: false },
       );
     };
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
   }, [settingsReady, userKey]);
 
-  // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
-  // which was the main source of typing/streaming lag.
+  // Persist local edits only. Hydration and cross-tab snapshots must not
+  // schedule a write that can overwrite a newer preference from another tab.
   useEffect(() => {
-    if (!settingsReady || typeof window === "undefined") return;
+    if (!settingsReady || !settingsState.persist || typeof window === "undefined") return;
     const generation = storageGenerationRef.current;
     const t = setTimeout(() => {
       if (generation !== storageGenerationRef.current) return;
       safeBrowserStorage("localStorage")?.setItem(settingsKey(userKey), JSON.stringify(settings));
     }, 400);
     return () => clearTimeout(t);
-  }, [settings, settingsReady, userKey]);
+  }, [settings, settingsReady, settingsState.persist, userKey]);
 
   useEffect(() => {
     if (!principalReady) return;
@@ -1119,7 +1131,7 @@ function KovaGPT() {
       pendingDraftLoadRef.current = null;
       attachmentDraftsRef.current.clear();
       setConversationState({ principal: null, items: [] });
-      setSettings(DEFAULT_SETTINGS);
+      setSettingsState({ settings: DEFAULT_SETTINGS, persist: false });
       setSettingsPrincipal(null);
       setActiveId(null);
       setInput("");
@@ -1458,7 +1470,7 @@ function KovaGPT() {
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [settingsReady, userKey]);
+  }, [settingsReady, setSettings, userKey]);
 
   // Cross-chat memory is opt-in in each browser. Only eligible paid accounts
   // may enqueue bounded, non-temporary conversation windows for summarization.
@@ -1625,7 +1637,7 @@ function KovaGPT() {
     newChat();
     setSettings((previous) => ({ ...previous, responseLength: handoff.responseLength }));
     if (handoff.starter) setInput(handoff.starter);
-  }, [newChat, settingsReady, userKey, setInput]);
+  }, [newChat, settingsReady, userKey, setInput, setSettings]);
 
   const startTemporaryChat = useCallback(
     (context: TemporaryChatContext) => {
@@ -3678,7 +3690,7 @@ function KovaGPT() {
               // empty workspace. The incremented generation rejects every
               // closure created before cleanup.
               setConversationState({ principal: storagePrincipal, items: [] });
-              setSettings(DEFAULT_SETTINGS);
+              setSettingsState({ settings: DEFAULT_SETTINGS, persist: false });
               setSettingsPrincipal(storagePrincipal);
               setActiveId(null);
               setInput("");

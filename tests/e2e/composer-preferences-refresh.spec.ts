@@ -153,6 +153,7 @@ test("settings edits reach a chat that is already open in another tab", async ({
   page,
   context,
 }) => {
+  await page.clock.install();
   await coreFixture(page, "dark", "free", { preserveStorageOnReload: true });
   await page.goto("/settings/appearance");
   await waitForKovaHydration(page);
@@ -160,6 +161,16 @@ test("settings edits reach a chat that is already open in another tab", async ({
   await coreFixture(chat, "dark", "free", { preserveStorageOnReload: true });
   await chat.goto("/");
   await waitForKovaHydration(chat);
+  await chat.evaluate(() => {
+    const observedWindow = window as Window & { __kovaObservedSettingsWrites: number };
+    observedWindow.__kovaObservedSettingsWrites = 0;
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
+      if (this === localStorage && key.startsWith("nova-gpt-settings-v1:"))
+        observedWindow.__kovaObservedSettingsWrites += 1;
+      return original.call(this, key, value);
+    };
+  });
   await page.getByRole("combobox", { name: "Theme", exact: true }).click();
   await page.getByRole("option", { name: "Light", exact: true }).click();
   await expect(chat.locator("html")).not.toHaveClass(/dark/);
@@ -170,6 +181,21 @@ test("settings edits reach a chat that is already open in another tab", async ({
       chat.evaluate(() => document.documentElement.style.getPropertyValue("--kova-reading-size")),
     )
     .toBe("18px");
+  await page.clock.runFor(1_000);
+  await expect(page.getByRole("combobox", { name: "Text size", exact: true })).toContainText(
+    "Large",
+  );
+  await expect
+    .poll(() =>
+      chat.evaluate(() => document.documentElement.style.getPropertyValue("--kova-reading-size")),
+    )
+    .toBe("18px");
+  expect(
+    await chat.evaluate(
+      () =>
+        (window as Window & { __kovaObservedSettingsWrites: number }).__kovaObservedSettingsWrites,
+    ),
+  ).toBe(0);
   await chat.close();
 });
 
