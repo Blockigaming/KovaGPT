@@ -16,8 +16,6 @@ export default defineConfig({
     "**/azure-node-runtime.spec.ts",
     "**/public-surface-matrix.spec.ts",
     "**/public-detail-pages.spec.ts",
-    "**/writing-tools.spec.ts",
-    "**/translation-family.spec.ts",
   ],
   testMatch:
     suite === "all"

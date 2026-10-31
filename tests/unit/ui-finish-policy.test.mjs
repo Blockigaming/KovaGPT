@@ -30,6 +30,10 @@ test("account gate covers application tools while public help and shared links r
     "/scheduled-tasks",
     "/discovery",
     "/apps",
+    "/apps/github/connect",
+    "/apps/google-drive/private-action",
+    "/writing/paragraph-rewriter",
+    "/translate/english-to-french",
     "/projects/one",
     "/work",
     "/omega",
@@ -40,7 +44,26 @@ test("account gate covers application tools while public help and shared links r
     "/developers/connections",
   ])
     assert.equal(requiresAppAccount(path), true, path);
-  for (const path of ["/help", "/privacy", "/terms", "/pricing", "/share/opaque", "/auth/callback"])
+  for (const path of [
+    "/help",
+    "/privacy",
+    "/terms",
+    "/pricing",
+    "/share/opaque",
+    "/auth/callback",
+    "/connect",
+    "/ai-writer",
+    "/ai-image-generator",
+    "/ai-humanizer",
+    "/humanize-ai-text",
+    "/apps/google-drive",
+    "/apps/gmail",
+    "/apps/google-calendar",
+    "/apps/github",
+    "/apps/canva",
+    "/apps/powerpoint",
+    "/apps/spotify",
+  ])
     assert.equal(requiresAppAccount(path), false, path);
 });
 test("all daily allowances and token quotas follow Free 1/5 and Pro 15x of Plus", () => {

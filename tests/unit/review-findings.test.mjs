@@ -179,7 +179,7 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
   assert.match(capabilities, /label: "Scheduled Tasks status"/);
   assert.match(
     capabilityRegistry,
-    /Background scheduled execution is unavailable in this deployment/,
+    /Background scheduled execution is unavailable until an approved scheduler and fresh heartbeat are connected/,
   );
   assert.match(capabilityRegistry, /Previously saved task records can still be managed/);
   assert.doesNotMatch(help, /image generation, scheduled tasks/);
