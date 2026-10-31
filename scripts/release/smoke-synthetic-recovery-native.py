@@ -24,6 +24,9 @@ operator=importlib.util.module_from_spec(spec);spec.loader.exec_module(operator)
 base=operator.base;builder=operator.builder
 require=base.require;Stopped=base.Stopped
 FIXTURE_OWNER="synthetic_extension_owner"
+FIXTURE_BOOTSTRAP="synthetic_bootstrap_owner"
+FIXTURE_GRANT_ROLE="synthetic_granted_role"
+FIXTURE_GRANT_MEMBER="synthetic_grant_member"
 FIXTURE_EXTENSIONS=("pgcrypto","vector")
 FORBIDDEN_PREFIXES=("KOVA_PRODUCTION_","APPROVED_ISOLATED_","KOVA_AUTH_RESTORE_","KOVA_AUTH_BACKUP_")
 BUILD_STAGES=frozenset({"setup","git","pull","inspect","context","build","final-inspect","cleanup"})
@@ -90,6 +93,9 @@ SAFE_FAILURE_CODES=frozenset({
     "timeout_control_identity_unconfirmed","timeout_control_positive_unconfirmed",
     "timeout_control_expiry_unconfirmed","outbound_connection_not_denied","numeric_denial_cause_unconfirmed",
     "embedded_dns_udp_denial_unconfirmed",
+    "synthetic_image_baselines_differ","synthetic_fixture_metadata_differs",
+    "native_blank_census_unqualified","native_table_census_coverage_missing",
+    "native_target_contains_seed_data","identifier_review_required","schema_review_required","dump_wrapper_invalid",
 })
 
 
@@ -245,7 +251,7 @@ class SyntheticCommandFailure(Stopped):
 def failure_details(error,stage="setup"):
     code=str(error) if isinstance(error,(Stopped,builder.Stopped,*RAM_STOPPED_TYPES)) else "synthetic_native_unconfirmed"
     code=code if code in SAFE_FAILURE_CODES else "synthetic_native_unconfirmed"
-    value={"code":code,"stage":stage if stage in BUILD_STAGES else "setup"}
+    value={"code":code,"stage":stage if stage in BUILD_STAGES|NATIVE_PROBE_STAGES else "setup"}
     if isinstance(error,SyntheticCommandFailure):value["command"]=error.details
     for proof_module in [operator.volume_proof,builder.volume_proof]:
         observed=proof_module.safe_mount_policy_observations(error)
@@ -396,6 +402,7 @@ class SyntheticProbe(operator.OperatorProbe):
     def __init__(self,env,output,*,operator_image_id):
         self.source,self.run_id,self.attempt,self.runner_temp=identities(env)
         self.metadata={};self.env=base.clean_host_env(env)
+        self.bootstrap_role=FIXTURE_BOOTSTRAP
         self._diagnostic_secrets=diagnostic_secrets(env)
         self.native_attempted_stage="not-attempted";self.native_failure=None
         self.output=Path(output)
@@ -429,8 +436,20 @@ class SyntheticProbe(operator.OperatorProbe):
 
     def derive_image_fixture(self):
         # Read only this already isolated, freshly initialized trusted image.
-        self.wait_native("a")
+        # Install this controlled fixture on both independent empty clusters
+        # before the common template0 preparation. Census hashes intentionally
+        # retain physical identities: one-sided role creation would shift role,
+        # database and extension OIDs in only one target.
+        fixture_sql="CREATE ROLE "+base.ident(FIXTURE_OWNER)+" NOLOGIN;\n" \
+            +"CREATE ROLE "+base.ident(FIXTURE_GRANT_MEMBER)+" NOLOGIN;\n"
+        fixture_sql+="CREATE ROLE "+base.ident(FIXTURE_GRANT_ROLE)+" NOLOGIN;\n" \
+            +"GRANT "+base.ident(FIXTURE_GRANT_ROLE)+" TO "+base.ident(FIXTURE_GRANT_MEMBER) \
+            +" WITH ADMIN FALSE GRANTED BY "+base.ident(FIXTURE_BOOTSTRAP)+";\n"
+        for target in ["a","b"]:
+            self.wait_native(target)
+            self.bootstrap_sql(target,fixture_sql)
         sql="""SELECT jsonb_build_object(
+'bootstrapRole',(SELECT rolname FROM pg_roles WHERE oid=10),
 'roles',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',rolname,'super',rolsuper,'inherit',rolinherit,
  'createRole',rolcreaterole,'createDb',rolcreatedb,'login',rolcanlogin,'replication',rolreplication,
  'bypassRls',rolbypassrls,'connectionLimit',rolconnlimit,'validUntil',rolvaliduntil) ORDER BY rolname),'[]')
@@ -452,13 +471,18 @@ class SyntheticProbe(operator.OperatorProbe):
                 "synthetic_image_fixture_unavailable")
         fixture_role={"name":FIXTURE_OWNER,"super":False,"inherit":True,"createRole":False,"createDb":False,
                       "login":False,"replication":False,"bypassRls":False,"connectionLimit":-1,"validUntil":None}
-        require(not any(r["name"]==FIXTURE_OWNER for r in value["roles"]),"synthetic_fixture_role_collision")
+        require([r for r in value["roles"] if r["name"]==FIXTURE_OWNER]==[fixture_role],
+                "synthetic_fixture_role_collision")
         extensions=[]
         for row in value["available"]:
             require(re.fullmatch(r"[a-zA-Z0-9_.+-]+",row["version"]),"synthetic_fixture_extension_version")
             extensions.append({"name":row["name"],"version":row["version"],
                                "schema":row["schema"] or "public","owner":FIXTURE_OWNER})
-        self.metadata={"roles":[*value["roles"],fixture_role],"memberships":value["memberships"],
+        require(value.get("bootstrapRole")==FIXTURE_BOOTSTRAP,"synthetic_bootstrap_role_mismatch")
+        require(any(r.get("role")==FIXTURE_GRANT_ROLE and r.get("member")==FIXTURE_GRANT_MEMBER
+                    and r.get("grantor")==FIXTURE_BOOTSTRAP and r.get("admin") is False
+                    for r in value["memberships"]),"synthetic_bootstrap_grant_missing")
+        self.metadata={"bootstrapRole":value["bootstrapRole"],"roles":value["roles"],"memberships":value["memberships"],
                        "schemas":value["schemas"],"extensions":extensions,"roleSettings":[],
                        "fixtureSettingsComplete":True,"syntheticFixtureDerivedOnlyFromPinnedImage":True}
 
@@ -487,17 +511,23 @@ class SyntheticProbe(operator.OperatorProbe):
                                "runId":self.run_id,"attempt":self.attempt}))
             self.save_state();self.make_private_files(self.private_root);self.create_network()
             self.start_container("client")
-            first=self.start_container("a");self.static_ipv6_neighbors("a")
+            first={}
+            for target in ["a","b"]:
+                first[target]=self.start_container(target);self.static_ipv6_neighbors(target)
             self.stage="synthetic_fixture_from_image";self.derive_image_fixture()
             ids=[];systems=[];snapshots=[]
             for target in ["a","b"]:
-                info=first if target=="a" else self.start_container(target)
-                if target=="b":self.static_ipv6_neighbors(target)
+                info=first[target]
                 ids.append(info["Id"]);self.prepare_native(target)
                 system=self.tls_controls(target);systems.append(system)
                 self.original_destination_guard(target,system);self.consumer_proof(target)
                 snapshots.append(self.native_snapshot(target))
             require(len(set(ids))==len(set(systems))==2,"synthetic_native_instances_not_distinct")
+            result["syntheticBaselineComponentsEqual"]={k:snapshots[0]["fingerprints"][k]==snapshots[1]["fingerprints"][k]
+                for k in ["emptyBaselineCensusSha256","emptyBaselineCatalogSha256",
+                          "emptyBaselineRowsSha256","emptyBaselineSchemaSha256"]}
+            result["syntheticMetadataComparisonPassed"]={k:all(s[k] for s in snapshots)
+                                                        for k in ["roleMatch","namespaceMatch","extensionMatch"]}
             require(snapshots[0]["fingerprints"]==snapshots[1]["fingerprints"],"synthetic_image_baselines_differ")
             require(all(s[k] for s in snapshots for k in ["roleMatch","namespaceMatch","extensionMatch"]),
                     "synthetic_fixture_metadata_differs")
@@ -524,7 +554,7 @@ class SyntheticProbe(operator.OperatorProbe):
                 syntheticBaselineFingerprints=snapshots[0]["fingerprints"])
             self.stage="synthetic_complete"
         except Exception as error:
-            preserve_primary_failure(result,error)
+            preserve_primary_failure(result,error,self.stage)
             result["failedStage"]=self.stage if self.stage in NATIVE_PROBE_STAGES else "native-stage-unconfirmed"
             # Copy the sanitized primary command evidence BEFORE cleanup can
             # change last_stderr or attempt another native command.

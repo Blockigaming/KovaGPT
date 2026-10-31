@@ -24,7 +24,7 @@ def metadata():
             "sourceCommit":"a"*40,"metadataImageDigest":m.IMAGE,"sourceBuildOperatorPin":m.BUILD,
             "serverVersionNum":170006,"database":"postgres","sourceQueryReadOnly":True,
             "customerRowsRead":False,"passwordHashesRead":False,"sourceUrlStored":False,
-            "sourcePackagingBuildObservedBySql":False,
+            "sourcePackagingBuildObservedBySql":False,"bootstrapRole":"postgres",
             "roles":[role],"memberships":[],"roleSettings":[],
             "schemas":[{"name":"public","owner":"postgres","acl":None,"comment":None}],
             "extensions":[{"name":"plpgsql","version":"1.0","schema":"pg_catalog","owner":"postgres"}],
@@ -122,10 +122,12 @@ class NativeProbeTests(unittest.TestCase):
 
     def test_setting_policy_is_shared_with_collector_and_rejects_secret_or_preload_values(self):
         self.assertEqual(m.SAFE_SETTINGS,m.metadata_source.SAFE_GUC_KEYS)
-        for raw in ["statement_timeout=30000","pgrst.db_root_spec=public.root_spec","default_transaction_read_only=on"]:
+        for raw in ["statement_timeout=30000","pgrst.db_root_spec=public.root_spec","default_transaction_read_only=on",
+                    r'search_path=\$user, public, fixture_ns']:
             self.assertEqual(m.safe_setting(raw),tuple(raw.split("=",1)))
         for raw in ["session_preload_libraries=pg_net","local_preload_libraries=unsafe","pgrst.jwt_secret=private",
-                    "search_path=https://private.invalid","search_path=x\nALTER SYSTEM SET ssl=off"]:
+                    "search_path=https://private.invalid","search_path=x\nALTER SYSTEM SET ssl=off",
+                    r'search_path=\private',r'search_path=\\$user',r'pgrst.db_pre_request=\$user']:
             with self.subTest(kind=raw.split("=",1)[0]),self.assertRaises(m.Stopped):m.safe_setting(raw)
 
     def test_metadata_requires_owned_identifiers_typed_flags_and_explicit_setting_coverage(self):
@@ -301,7 +303,7 @@ class NativeProbeTests(unittest.TestCase):
 
     def test_native_snapshot_compares_complete_extension_owner_metadata(self):
         p=self.probe();p.native_tools={"pg_dump":"/native/pg_dump"};p.uid=1001;p.gid=1001
-        catalog={k:copy.deepcopy(p.metadata[k]) for k in ["roles","memberships","schemas","extensions"]}
+        catalog={k:copy.deepcopy(p.metadata[k]) for k in ["bootstrapRole","roles","memberships","schemas","extensions"]}
         catalog.update(tables=[],sequences=[],roleSettings=[],largeObjects=[])
         census={"serverVersionNum":170006,"counts":{"unownedNamespaceObjects":0},
                 "tables":[],"namespaceObjects":[],"globalObjects":[]}
@@ -310,7 +312,9 @@ class NativeProbeTests(unittest.TestCase):
             if "pg_extension e JOIN pg_namespace" in sql:return 0,json.dumps(catalog["extensions"]).encode()
             return 0,json.dumps(census).encode()
         p.client_sql=client_sql;p.docker=lambda *_args,**_kwargs:(0,b"-- schema\n")
-        self.assertTrue(p.native_snapshot("a")["extensionMatch"])
+        snapshot=p.native_snapshot("a")
+        self.assertTrue(snapshot["extensionMatch"])
+        self.assertTrue(snapshot["roleMatch"])
         catalog["extensions"][0]["owner"]="wrong_owner"
         self.assertFalse(p.native_snapshot("a")["extensionMatch"])
 
@@ -689,6 +693,15 @@ class NativeProbeTests(unittest.TestCase):
              self.assertRaisesRegex(m.Stopped,"outbound_connection_not_denied"):
             p.udp_dns_denial_command("a",{"timeout":"/native/timeout"},143)
         self.assertEqual(p.network_evidence,[])
+
+
+    def test_source_bootstrap_identity_cannot_be_missing_guessed_or_non_superuser(self):
+        self.assertEqual(m.validate_metadata(metadata(),source_sha="a"*40)["bootstrapRole"],"postgres")
+        for mutate in [lambda c:c.pop("bootstrapRole"),lambda c:c.update(bootstrapRole="unobserved_root"),
+                       lambda c:c["roles"][0].update(super=False)]:
+            changed=metadata();mutate(changed)
+            with self.assertRaisesRegex(m.Stopped,"source_bootstrap_role_unqualified"):
+                m.validate_metadata(changed,source_sha="a"*40)
 
 
 if __name__=="__main__":unittest.main()
