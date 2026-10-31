@@ -48,6 +48,47 @@ FORBIDDEN_ENV = {"KOVA_PRODUCTION_DATABASE_URL", "PGPASSWORD", "OPENAI_API_KEY",
 SAFE_SETTINGS = metadata_source.SAFE_GUC_KEYS
 NATIVE_WORKERS = {"client backend", "checkpointer", "background writer", "walwriter",
                   "autovacuum launcher", "logical replication launcher"}
+# These are associated surfaces, not extension ownership. The complete original
+# census (including every AUTO/normal dependency and catalog payload hash) is
+# still compared between two independently initialized pinned-image targets.
+NATIVE_RELATION_SURFACE_SQL = """WITH RECURSIVE
+ owned(classid,objid,objsubid,extension) AS (
+  SELECT d.classid,d.objid,d.objsubid,e.extname::text
+  FROM pg_catalog.pg_depend d JOIN pg_catalog.pg_extension e
+   ON d.refclassid='pg_catalog.pg_extension'::regclass AND d.refobjid=e.oid AND d.deptype='e'
+  UNION
+  SELECT d.classid,d.objid,d.objsubid,o.extension FROM pg_catalog.pg_depend d JOIN owned o
+   ON d.refclassid=o.classid AND d.refobjid=o.objid AND d.refobjsubid=o.objsubid
+   WHERE d.deptype='i'
+ ),
+ relations(extension,relid) AS (
+  SELECT extension,objid FROM owned WHERE classid='pg_catalog.pg_class'::regclass AND objsubid=0
+ ),
+ associated(extension,catalog,classid,objid,schema) AS (
+  SELECT r.extension,'pg_class','pg_catalog.pg_class'::regclass,i.indexrelid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_index i ON i.indrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=i.indexrelid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_attrdef','pg_catalog.pg_attrdef'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_attrdef a ON a.adrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_constraint','pg_catalog.pg_constraint'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_constraint a ON a.conrelid=r.relid
+   JOIN pg_catalog.pg_namespace n ON n.oid=a.connamespace
+  UNION SELECT r.extension,'pg_trigger','pg_catalog.pg_trigger'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_trigger a ON a.tgrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_policy','pg_catalog.pg_policy'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_policy a ON a.polrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_rewrite','pg_catalog.pg_rewrite'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_rewrite a ON a.ev_class=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+ )
+ SELECT coalesce(jsonb_agg(jsonb_build_object('extension',a.extension,'catalog',a.catalog,
+  'schema',a.schema,'identity',(pg_catalog.pg_identify_object(a.classid,a.objid,0)).identity)
+  ORDER BY a.extension,a.catalog,a.schema,a.objid),'[]'::jsonb)::text
+ FROM associated a WHERE a.schema<>'information_schema' AND a.schema !~ '^pg_'"""
+NATIVE_SURFACE_CATALOGS={"pg_class","pg_attrdef","pg_constraint","pg_trigger","pg_policy","pg_rewrite"}
 NETNS_HELPER = """import os,subprocess,sys
 pid=int(sys.argv[1]);expected=int(sys.argv[2]);tool=sys.argv[3]
 assert pid>1 and tool in ('iptables','ip6tables','ip')
@@ -86,6 +127,44 @@ def encoded(value):
 
 def digest(value):
     return hashlib.sha256(value).hexdigest()
+
+
+def native_blank_surface(census,catalog,extensions,associated):
+    """Bound auxiliary objects without declaring AUTO/normal objects owned.
+
+    This is only a preparation check. It cannot qualify a baseline: both fresh
+    complete census/catalog/row/schema fingerprints and later stability checks
+    must still match. An ordinary table or unrelated namespace object fails.
+    """
+    require(census.get("serverVersionNum")==170006 and not catalog.get("largeObjects"),
+            "native_blank_census_unqualified")
+    objects=census.get("namespaceObjects");tables=census.get("tables")
+    count=census.get("counts",{}).get("unownedNamespaceObjects")
+    require(type(objects) is list and type(tables) is list and type(count) is int and 0<=count<=1000000,
+            "native_blank_census_unqualified")
+    def member(row):
+        return any(type(row.get(k)) is str and row[k] in extensions for k in ["directExtension","internalExtension"])
+    require(all(type(t) is dict and member(t) for t in tables),"native_blank_census_unqualified")
+    unowned=[o for o in objects if type(o) is dict and not member(o)]
+    require(all(type(o) is dict for o in objects) and len(unowned)==count,
+            "native_blank_census_unqualified")
+    require(type(associated) is list,"native_blank_census_unqualified")
+    bound={}
+    for row in associated:
+        require(type(row) is dict and set(row)=={"extension","catalog","schema","identity"}
+                and type(row["extension"]) is str and row["extension"] in extensions
+                and type(row["catalog"]) is str and row["catalog"] in NATIVE_SURFACE_CATALOGS
+                and type(row["schema"]) is str and IDENT.fullmatch(row["schema"])
+                and type(row["identity"]) is str and 0<len(row["identity"])<=4096
+                and not any(c in row["identity"] for c in "\x00\r\n"),"native_blank_census_unqualified")
+        key=tuple(row[k] for k in ["catalog","schema","identity"])
+        require(key not in bound,"native_blank_census_unqualified")
+        bound[key]=row["extension"]
+    require(all(all(type(o.get(k)) is str for k in ["catalog","schema","identity"])
+                and o["catalog"] in NATIVE_SURFACE_CATALOGS
+                and tuple(o[k] for k in ["catalog","schema","identity"]) in bound for o in unowned),
+            "native_blank_census_unqualified")
+    return count
 
 
 def private_file(path):
@@ -828,8 +907,11 @@ while :; do sleep 1; done"""
         catalog=json.loads(raw)
         _,raw=self.client_sql(target,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n"+recovery.EMPTY_CENSUS.read_text()+"\nCOMMIT;\n")
         census=json.loads(raw)
-        require(census.get("serverVersionNum")==170006 and census.get("counts",{}).get("unownedNamespaceObjects")==0
-                and not catalog.get("largeObjects"),"native_blank_census_unqualified")
+        associated=[]
+        if census.get("counts",{}).get("unownedNamespaceObjects"):
+            _,raw=self.client_sql(target,NATIVE_RELATION_SURFACE_SQL+";\n")
+            associated=json.loads(raw)
+        native_blank_surface(census,catalog,{e["name"] for e in self.metadata["extensions"]},associated)
         recovery.identifiers(catalog)
         rows=[]
         catalog_tables={(r["schema"],r["name"]):r for r in catalog["tables"]}
