@@ -22,17 +22,16 @@ function writeHandoff(baseKey: string, userKey: string | null, payload: unknown)
 }
 
 export function openInWork(item: WorkspaceHandoff, userKey: string | null) {
-  const written = writeHandoff("kova-work-draft", userKey, {
-    objective: `Continue working with ${item.title}`,
-    context: `${item.type}: ${item.title}\n\n${item.content}`.slice(0, 24_000),
-    plan: [
-      "Review the source material",
-      "Complete the requested work",
-      "Review and record deliverables",
-    ],
-  });
+  const written = writeHandoff(
+    "kova-app-chat-context",
+    userKey,
+    `Continue working with ${item.title}.\n\n${item.type}: ${item.title}\n\n${item.content}`.slice(
+      0,
+      24_000,
+    ),
+  );
   if (!written) return false;
-  window.location.href = "/work";
+  window.location.href = "/";
   return true;
 }
 

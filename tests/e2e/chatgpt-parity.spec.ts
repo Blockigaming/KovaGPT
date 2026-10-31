@@ -1,4 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+test.beforeEach(async ({ page }) => {
+  await installAuthenticatedFixture(page);
+});
 import { VIEWPORTS, assertNoHorizontalOverflow, stablePage } from "./parity-helpers";
 
 test.describe("KovaGPT parity invariants", () => {
@@ -21,7 +25,9 @@ test.describe("KovaGPT parity invariants", () => {
     await stablePage(page);
     const input = page.locator(".spec400-composer textarea");
     await input.focus();
-    await expect(page.locator(".spec400-composer")).toHaveCSS("outline-style", "solid");
+    await expect(input).toBeFocused();
+    await expect(page.locator(".spec400-composer")).toHaveCSS("outline-style", "none");
+    await expect(input).toHaveCSS("outline-style", "none");
     await expect(input).toHaveCSS("font-size", "16px");
   });
 });

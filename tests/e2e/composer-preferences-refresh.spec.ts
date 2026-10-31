@@ -19,26 +19,40 @@ for (const [tier, choices] of [
     await expect(input).toHaveCSS("outline-style", "none");
     const composer = page.locator(".spec400-composer");
     expect((await composer.boundingBox())!.height).toBeGreaterThanOrEqual(128);
-    const picker = composer.getByTestId("model-selector-trigger");
-    await expect(picker).toContainText("Default");
-    await picker.click();
-    const menu = page.getByRole("dialog", { name: /^(Choose model|Models)$/, exact: true });
-    await expect(menu).toBeVisible();
-    await expect(menu.locator('[data-slot="model-selector-option"]')).toHaveCount(choices.length);
-    for (const id of choices) await expect(menu.getByTestId(`model-option-${id}`)).toBeVisible();
-    await menu.getByTestId("model-option-thinking").click();
-    await expect(menu).toBeHidden();
-    await expect(picker).toContainText("Thinking");
-    await expect(picker.locator("svg")).toHaveCount(2);
-    for (const id of choices) {
+    if (tier === "free") {
+      await expect(composer.getByTestId("model-selector-trigger")).toHaveCount(0);
+      const thinking = composer.getByTestId("thinking-toggle");
+      for (const active of [true, false]) {
+        await thinking.click();
+        await expect(thinking).toHaveAttribute("aria-pressed", String(active));
+        await expect(thinking).toBeFocused();
+        if (active) {
+          await expect(thinking).toHaveCSS("color", "rgb(59, 130, 246)");
+          await expect(thinking.locator("svg")).toHaveCSS("color", "rgb(59, 130, 246)");
+        }
+      }
+    } else {
+      const picker = composer.getByTestId("model-selector-trigger");
+      await expect(picker).toContainText("Default");
       await picker.click();
+      const menu = page.getByRole("dialog", { name: /^(Choose model|Models)$/, exact: true });
       await expect(menu).toBeVisible();
-      await menu.getByTestId(`model-option-${id}`).click();
+      await expect(menu.locator('[data-slot="model-selector-option"]')).toHaveCount(choices.length);
+      for (const id of choices) await expect(menu.getByTestId(`model-option-${id}`)).toBeVisible();
+      await menu.getByTestId("model-option-thinking").click();
       await expect(menu).toBeHidden();
-      await expect(picker).toBeFocused();
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-        true,
-      );
+      await expect(picker).toContainText("Thinking");
+      await expect(picker.locator("svg")).toHaveCount(2);
+      for (const id of choices) {
+        await picker.click();
+        await expect(menu).toBeVisible();
+        await menu.getByTestId(`model-option-${id}`).click();
+        await expect(menu).toBeHidden();
+        await expect(picker).toBeFocused();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        );
+      }
     }
     await input.fill("A local draft, never sent");
     await expect(composer.getByRole("button", { name: "Send message", exact: true })).toBeVisible();
@@ -208,7 +222,8 @@ test("empty home composer matches the two-row writing layout", async ({ page }, 
     "data-composer-surface",
     "empty",
   );
-  await expect(composer.getByTestId("model-selector-trigger")).toContainText("Default");
+  await expect(composer.getByTestId("model-selector-trigger")).toHaveCount(0);
+  await expect(composer.getByTestId("thinking-toggle")).toHaveAttribute("aria-pressed", "false");
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await input.click();
   await expect(input).toHaveCSS("outline-style", "none");

@@ -1,3 +1,4 @@
+import { GuidedHelp } from "@/components/GuidedHelp";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ArrowLeft, ChevronDown, LifeBuoy, Mail, Plus, Search, X } from "lucide-react";
@@ -198,6 +199,7 @@ function FaqRow({
 
 function HelpPage() {
   const [query, setQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(24);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
@@ -257,7 +259,10 @@ function HelpPage() {
             />
             <Input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setVisibleCount(24);
+              }}
               placeholder="Search help…"
               aria-label="Search help"
               className="h-12 rounded-xl border-border bg-muted pl-12 pr-14 text-base focus-visible:ring-2"
@@ -285,6 +290,7 @@ function HelpPage() {
           onChange={setActiveCategory}
           onExpanded={() => setShowAllCategories(true)}
         />
+        <GuidedHelp />
         <section aria-labelledby="answers-heading" aria-live="polite" className="mt-8">
           <div className="mb-4 flex items-end justify-between gap-4">
             <h2 id="answers-heading" className="min-w-0 text-xl font-semibold">
@@ -296,7 +302,7 @@ function HelpPage() {
           </div>
           {results.length ? (
             <div className="space-y-3">
-              {results.map((faq) => (
+              {results.slice(0, visibleCount).map((faq) => (
                 <FaqRow
                   key={faq.id}
                   faq={faq}
@@ -328,6 +334,16 @@ function HelpPage() {
             </div>
           )}
         </section>
+        {results.length > visibleCount ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-6 rounded-full"
+            onClick={() => setVisibleCount((n) => n + 24)}
+          >
+            Show more answers
+          </Button>
+        ) : null}
         <SupportForm />
       </main>
     </PublicShell>

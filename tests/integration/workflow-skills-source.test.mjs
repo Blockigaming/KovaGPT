@@ -104,7 +104,7 @@ test("workflow skill selection is principal-scoped and retained as IDs rather th
 test("workflow skills remain usable across durable chat, image requests, and available updates", () => {
   const imageBranch = chat.slice(
     chat.indexOf("if (isImageRequest && auth)"),
-    chat.indexOf("// Anonymous chat is allowed"),
+    chat.indexOf("if (auth && !isOwner)"),
   );
   assert.match(imageBranch, /handleImageRequest\(imagePrompt, logContext, request\.signal\)/u);
   assert.ok(
@@ -114,7 +114,7 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   assert.ok(imageBranch.indexOf("assertSelectedContextsCurrent") < imageQuota);
   assert.ok(imageQuota < imageBranch.lastIndexOf("assertSelectedContextsCurrent"));
   const chatQuotaBranch = chat.slice(
-    chat.indexOf("// Anonymous chat is allowed"),
+    chat.indexOf("if (auth && !isOwner)"),
     chat.indexOf("// SECURITY: Server-side tier enforcement"),
   );
   const contextBeforeChatQuota = chatQuotaBranch.indexOf("assertSelectedContextsCurrent");
@@ -191,7 +191,7 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   assert.match(panel, /\{skill\.installationId \? \(\s*<Button[\s\S]*?Uninstall/u);
 });
 
-test("workflow skill lifecycle is immutable replay-safe exportable and visible in Apps", () => {
+test("workflow skill lifecycle is immutable replay-safe exportable and visible in Apps", async () => {
   const manifestEntry = JSON.parse(manifest).migrations.find(
     (entry) => entry.filename === "20260910210000_workflow_skill_packages.sql",
   );
@@ -243,7 +243,13 @@ test("workflow skill lifecycle is immutable replay-safe exportable and visible i
   const directSources = [...directBudget.matchAll(/\('([^']+)', '([^']+)'\)/gu)].map(
     ([, table, ownerColumn]) => [table, ownerColumn],
   );
-  assert.deepEqual(directSources, ACCOUNT_EXPORT_DIRECT_TABLES);
+  assert.deepEqual(
+    directSources,
+    ACCOUNT_EXPORT_DIRECT_TABLES.filter(([table]) => table !== "chat_public_shares"),
+  );
+  const shareForward = await read("supabase/migrations/20261031014500_public_chat_share_links.sql");
+  assert.match(shareForward, /chat_public_shares/);
+  assert.match(shareForward, /account_export_direct_row_bytes/);
   const indirectBudget = exportBudget.slice(exportBudget.indexOf("-- The exporter reserves"));
   const budgetedIndirectTables = new Set(
     [...indirectBudget.matchAll(/^\s*\('([^']+)',/gmu)].map(([, table]) => table),

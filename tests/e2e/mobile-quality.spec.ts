@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { openCurrentSettings } from "./current-ui";
 
 const mobileProjects = new Set([
   "phone-320x700",
@@ -19,9 +21,9 @@ async function expectNoPageOverflow(page: Page) {
   expect(size.scroll).toBeLessThanOrEqual(size.client + 1);
 }
 
-test.beforeEach(({ page }, testInfo) => {
-  void page;
+test.beforeEach(async ({ page }, testInfo) => {
   test.skip(!mobileProjects.has(testInfo.project.name));
+  await installAuthenticatedFixture(page);
 });
 
 test("navigation opens, contains its controls, and dismisses predictably", async ({ page }) => {
@@ -69,14 +71,19 @@ test("mobile workspaces and settings never overflow", async ({ page }) => {
   await page.getByRole("button", { name: "Open menu" }).click();
   const navigation = page.getByRole("dialog", { name: "Primary navigation", exact: true });
   await expect(navigation).toBeVisible();
-  await navigation.getByRole("button", { name: "Settings", exact: true }).click();
-  const settings = page.locator(".kova-settings-dialog");
+  const settings = await openCurrentSettings(page);
   await expect(settings).toBeVisible();
   const box = await settings.boundingBox();
   expect(box).not.toBeNull();
   if (page.viewportSize()!.width < 768) {
     expect(box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-    expect(box!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    if ((await settings.getAttribute("role")) === "dialog")
+      expect(box!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    else {
+      const reset = settings.getByRole("button", { name: "Reset appearance", exact: true });
+      await reset.scrollIntoViewIfNeeded();
+      await expect(reset).toBeInViewport({ ratio: 1 });
+    }
   }
   await expectNoPageOverflow(page);
 });

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { waitForKovaHydration } from "./hydration";
+import { fixture } from "./actual-app-fixture";
 
 const projects = new Set(["phone-320x700", "phone-390x844", "desktop-1440x900"]);
 const routes = [
@@ -30,6 +31,7 @@ test("secondary screens preserve hierarchy and viewport containment", async ({ p
 });
 
 test("secondary controls remain keyboard-visible and touchable", async ({ page }) => {
+  await fixture(page, "dark", true);
   await page.goto("/library", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   const refresh = page.getByRole("button", { name: /Refresh/i });

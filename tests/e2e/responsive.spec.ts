@@ -1,4 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+test.beforeEach(async ({ page }) => {
+  await installAuthenticatedFixture(page);
+});
 
 import { waitForKovaHydration } from "./hydration";
 

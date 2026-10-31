@@ -1,5 +1,17 @@
 export type SidebarShortcutId =
-  "images" | "library" | "projects" | "scheduled-tasks" | "apps" | "work" | "discovery" | "maps";
+  | "images"
+  | "library"
+  | "projects"
+  | "scheduled-tasks"
+  | "apps"
+  | "work"
+  | "discovery"
+  | "maps"
+  | "usage"
+  | "settings"
+  | "billing"
+  | "memory"
+  | "notifications";
 export const SIDEBAR_SHORTCUTS_KEY: string;
 export const SIDEBAR_SHORTCUTS: readonly {
   readonly id: SidebarShortcutId;

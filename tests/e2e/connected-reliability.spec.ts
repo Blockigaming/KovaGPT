@@ -10,23 +10,17 @@ test.beforeEach(({ page }, testInfo) => {
 });
 
 test("connected apps and scheduled tasks expose truthful signed-out states", async ({ page }) => {
-  await page.goto("/apps", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sign in to connect tools" })).toBeVisible();
-
-  await page.goto("/scheduled-tasks", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "Scheduled tasks", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("Sign in to use Scheduled tasks", { exact: true })).toBeVisible();
-  await expect(
-    page.getByText("Sign in to review your saved tasks and background execution availability."),
-  ).toBeVisible();
-  await expect(page.getByText(/will run once|runner is fully enabled/i)).toHaveCount(0);
+  for (const path of ["/apps", "/scheduled-tasks"]) {
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Create an account", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "New task", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Connect Gmail", exact: true })).toHaveCount(0);
+    await expect(page.getByText(/will run once|runner is fully enabled/i)).toHaveCount(0);
+  }
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);

@@ -11,7 +11,10 @@ const sidebarStyles = await readFile("src/styles/sidebar-core.css", "utf8");
 const responseStyles = await readFile("src/components/response-action-refinement.css", "utf8");
 const popover = await readFile("src/components/ui/popover.tsx", "utf8");
 const composerStyles = await readFile("src/styles/spec400-chat.css", "utf8");
-const home = await readFile("src/routes/index.tsx", "utf8");
+const home =
+  (await readFile("src/routes/index.tsx", "utf8")) +
+  "\n" +
+  (await readFile("src/components/HomeChatStarters.tsx", "utf8"));
 const root = await readFile("src/routes/__root.tsx", "utf8");
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 const composer = await readFile("src/components/ChatInput.tsx", "utf8");
@@ -86,7 +89,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
     coreStyles,
     /@media \(prefers-reduced-transparency: reduce\)[\s\S]*?\.kova-composer-menu\)[\s\S]*?background: var\(--background\) !important;/,
   );
-  assert.match(home, /const greeting = "How can I help today\?"/);
+  assert.match(home, /const greeting = useHomeGreeting/);
   assert.match(openingTag(home, "h1", /id="chat-greeting"/), /id="chat-greeting"/);
   assert.match(home, /id="chat-greeting"[^>]*>\s*\{greeting\}\s*<\/h1>/);
   assert.match(composer, /COMPOSER_TOOLS/);
@@ -148,12 +151,12 @@ test("core chat surfaces use shared workspace primitives", () => {
     sidebar.indexOf('aria-label="Collapsed navigation"'),
     sidebar.indexOf("<aside"),
   );
-  const railLogo = openingTag(railSource, "NovaLogo", /decorative/);
-  assert.match(railLogo, /className="h-6 w-6"/);
+  assert.match(railSource, /aria-label="Expand sidebar"/);
+  assert.match(railSource, /kova-rail-header/);
   assert.equal(
     (sidebar.match(/<NovaLogo\b/g) ?? []).length,
-    2,
-    "expanded navigation and collapsed rail each have one decorative owner mark",
+    1,
+    "expanded navigation owns the brand; rail owns navigation controls",
   );
   assert.doesNotMatch(home, /<NovaLogo|kova-greeting-mark/);
   assert.match(publicSite, /<PublicShell>/);

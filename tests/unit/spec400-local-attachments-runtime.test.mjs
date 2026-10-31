@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
+import * as usagePolicy from "../../src/lib/plan-usage-policy.mjs";
 import ts from "typescript";
 import * as localAttachments from "../../src/lib/composer-local-attachments.mjs";
 import * as pdfMetadata from "../../src/lib/document-extraction/pdf-metadata.mjs";
@@ -58,6 +59,10 @@ function fixture(
     }).outputText,
     {
       exports: actualLimits,
+      require: (name) => {
+        assert.equal(name, "./plan-usage-policy.mjs");
+        return usagePolicy;
+      },
       window: {},
       localStorage: {
         getItem: (key) => quotaStorage.get(key) ?? null,
@@ -130,7 +135,7 @@ function fixture(
         return actualLimits.tryUseUpload(limit, "synthetic-owner");
       },
     },
-    "@/lib/modes": { DAILY_UPLOAD_LIMIT_BY_TIER: { free: 2 } },
+    "@/lib/modes": { DAILY_UPLOAD_LIMIT_BY_TIER: { free: 10 } },
     "@/lib/composer-keyboard.mjs": {},
     "@/lib/dialog-return-focus": { restoreDialogFocus() {} },
     "@/lib/composer-paste": { prepareComposerPaste: (plain) => plain },
@@ -353,9 +358,10 @@ test("guest paste is local pending input, blocks omission on Send, and still req
   assert.equal(f.input().value, "Keep" + exactText + "draft");
 });
 
-test("local paste remove/re-add does not consume server upload allowance; canonical Free cap remains two", async () => {
+test("local paste remove/re-add does not consume server upload allowance; daily Free allowance is ten while per-message slots remain two", async () => {
   const modes = readFileSync("src/lib/modes.ts", "utf8");
-  assert.match(modes, /DAILY_UPLOAD_LIMIT_BY_TIER[\s\S]*?free: 2/);
+  assert.match(modes, /free: DAILY_PLAN_ALLOWANCES.free.uploads/);
+  assert.equal(usagePolicy.DAILY_PLAN_ALLOWANCES.free.uploads, 10);
   const f = fixture({}, signedIn);
   for (let index = 0; index < 2; index++) {
     await f.root().onPaste(paste(exactText));

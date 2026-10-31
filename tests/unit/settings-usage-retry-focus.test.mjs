@@ -129,6 +129,7 @@ function fixture() {
         children: children.flat(Infinity).filter(Boolean),
       }),
     },
+    PlanUsageBars: "PlanUsageBars",
     subSummary: null,
     tier: "plus",
     DAILY_IMAGE_LIMIT: 1,

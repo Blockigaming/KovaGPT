@@ -52,7 +52,7 @@ const actionFor = (path: string): PublicDetailPage["primaryAction"] => {
     return { label: "Discuss organization requirements", to: "/contact-sales" };
   if (path.includes("/solutions/") || path.includes("why-openai"))
     return { label: "Explore KovaGPT for business", to: "/business" };
-  if (path.endsWith("/workspace-agents")) return { label: "Open KovaGPT Work", to: "/work" };
+  if (path.endsWith("/workspace-agents")) return { label: "Open KovaGPT", to: "/" };
   if (path.endsWith("/model")) return { label: "Review available AI modes", to: "/modes" };
   return { label: "Explore KovaGPT for business", to: "/business" };
 };

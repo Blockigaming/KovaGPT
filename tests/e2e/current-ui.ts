@@ -1,13 +1,17 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 
-export async function openResponseOptions(page: Page) {
+export async function openResponseOptions(page: Page, recordTrigger?: (trigger: Locator) => void) {
   const panel = page.getByRole("dialog", { name: "Response options", exact: true });
   if (!(await panel.isVisible())) {
     const options = page.getByRole("button", { name: "Options", exact: true });
-    if (await options.isVisible()) await options.click();
-    else {
-      await page.getByRole("button", { name: "Attach", exact: true }).click();
+    if (await options.isVisible()) {
+      recordTrigger?.(options);
+      await options.click();
+    } else {
+      const attach = page.getByRole("button", { name: "Attach", exact: true });
+      recordTrigger?.(attach);
+      await attach.click();
       await page
         .getByTestId("mobile-bottom-sheet")
         .getByRole("button", { name: "Response options", exact: true })

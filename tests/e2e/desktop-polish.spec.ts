@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+test.beforeEach(async ({ page }) => {
+  await installAuthenticatedFixture(page);
+});
 import { waitForKovaHydration } from "./hydration";
 
 const desktopProjects = new Set(["desktop-1280x800", "desktop-1440x900", "desktop-1728x1117"]);
@@ -15,14 +19,14 @@ test("collapsed sidebar leaves the layout and reopens from its external control"
   await expect(sidebar).toHaveCSS("width", "0px");
   await expect(sidebar).toHaveAttribute("aria-hidden", "true");
 
-  const openSidebar = page.getByRole("button", { name: "Open sidebar" });
+  const openSidebar = page.getByRole("button", { name: "Expand sidebar" });
   await expect(openSidebar).toBeVisible();
   await openSidebar.focus();
   await openSidebar.press("Enter");
 
   const navigation = page.getByRole("navigation", { name: "Primary navigation" });
   await expect(navigation).toBeVisible();
-  await expect(sidebar).toHaveCSS("width", "260px");
+  await expect(sidebar).toHaveCSS("width", "280px");
   const collapseSidebar = page.getByRole("button", { name: "Collapse sidebar" });
   await expect(collapseSidebar).toBeVisible();
   await expect(collapseSidebar).toBeFocused();

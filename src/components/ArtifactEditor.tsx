@@ -880,7 +880,7 @@ function ArtifactEditorSession({
                   )
                 }
               >
-                Open in Work
+                Continue in chat
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

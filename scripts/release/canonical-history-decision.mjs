@@ -22,6 +22,15 @@ const mergedMainMigration = "20260925000821_e0b50040-d849-438d-a4c4-b87a01f9c1b4
 // exception to its exact body instead of admitting arbitrary non-Kova files.
 const reviewedForwardMigrations = new Map([
   [
+    "20261031014500_public_chat_share_links.sql",
+    "bb14b6dabbed216bd46bb106352453c3d9441b1b1d42c8378f2579a6860b7d86",
+  ],
+  [
+    "20261031014600_scheduled_task_plan_allowances.sql",
+    "29864c547ceb2692b59072a378fb31ca0544f1aa3e264f52199b8ed916d3c078",
+  ],
+
+  [
     "20261030132255_google_connection_lifecycle_forward.sql",
     "4fde05fe365efabf0f5466640dc7ea07e8182864b4529dc7def2a71a4e82c3e2",
   ],

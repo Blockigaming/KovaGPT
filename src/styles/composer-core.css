@@ -4,6 +4,7 @@
   width: 18rem;
   max-height: min(36rem, var(--radix-popover-content-available-height, 80vh));
   overflow-y: auto;
+  scroll-padding-block: 8px;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   padding: 0.5rem;

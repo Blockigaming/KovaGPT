@@ -63,6 +63,7 @@ function NotificationsRoute() {
       const nextItems = await list();
       if (generation !== generationRef.current || activePrincipalRef.current !== expectedPrincipal)
         return;
+      if (!Array.isArray(nextItems)) throw new Error();
       setItems(nextItems);
     } catch {
       if (generation !== generationRef.current || activePrincipalRef.current !== expectedPrincipal)

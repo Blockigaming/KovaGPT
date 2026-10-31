@@ -47,7 +47,7 @@ test("shortcut defaults include Scheduled tasks, and choices remain stable after
   const storage = memoryStorage();
   assert.ok(DEFAULT_SIDEBAR_SHORTCUTS.includes("scheduled-tasks"));
   assert.deepEqual(readSidebarShortcuts(storage, "owner"), DEFAULT_SIDEBAR_SHORTCUTS);
-  const chosen = ["projects", "work", "scheduled-tasks"];
+  const chosen = ["projects", "images", "scheduled-tasks"];
   assert.equal(saveSidebarShortcuts(storage, "owner", chosen), true);
   assert.deepEqual(readSidebarShortcuts(storage, "owner"), chosen);
   assert.equal(saveSidebarShortcuts(storage, "owner", []), true);
@@ -56,20 +56,20 @@ test("shortcut defaults include Scheduled tasks, and choices remain stable after
 
 test("preferences never migrate across accounts or unresolved/guest identities", () => {
   const storage = memoryStorage();
-  saveSidebarShortcuts(storage, "account/a", ["work"]);
+  saveSidebarShortcuts(storage, "account/a", ["images"]);
   saveSidebarShortcuts(storage, "account:b", ["library"]);
   assert.notEqual(sidebarShortcutsKey("account/a"), sidebarShortcutsKey("account:b"));
-  assert.deepEqual(readSidebarShortcuts(storage, "account/a"), ["work"]);
+  assert.deepEqual(readSidebarShortcuts(storage, "account/a"), ["images"]);
   assert.deepEqual(readSidebarShortcuts(storage, "account:b"), ["library"]);
   for (const userId of [undefined, null, ""]) {
     assert.equal(sidebarShortcutsKey(userId), null);
-    assert.equal(saveSidebarShortcuts(storage, userId, ["work"]), false);
+    assert.equal(saveSidebarShortcuts(storage, userId, ["images"]), false);
     assert.equal(resetSidebarShortcuts(storage, userId), false);
     assert.deepEqual(readSidebarShortcuts(storage, userId), DEFAULT_SIDEBAR_SHORTCUTS);
   }
   assert.match(
     source,
-    /railPreferences.owner === railOwner \? railPreferences.shortcuts : DEFAULT_SIDEBAR_SHORTCUTS/,
+    /railPreferences.owner === railOwner \? railPreferences.layout : \{ \.\.\.DEFAULT_SIDEBAR_LAYOUT \}/,
   );
   assert.match(source, /railOwner && railDialogOwner === railOwner/);
 });
@@ -78,7 +78,7 @@ test("malformed, unknown-version, duplicate, and oversized choices fail back to 
   const storage = memoryStorage();
   for (const payload of [
     "{broken",
-    JSON.stringify({ version: 2, shortcuts: ["work"] }),
+    JSON.stringify({ version: 2, shortcuts: ["images"] }),
     JSON.stringify({ version: 1, shortcuts: ["work", "work"] }),
     JSON.stringify({ version: 1, shortcuts: ["unknown-route"] }),
     JSON.stringify({ version: 1, shortcuts: "work" }),
@@ -96,7 +96,7 @@ test("malformed, unknown-version, duplicate, and oversized choices fail back to 
 
 test("reset and account-local clearing remove only the matching account's choices", () => {
   const storage = memoryStorage();
-  saveSidebarShortcuts(storage, "A", ["work"]);
+  saveSidebarShortcuts(storage, "A", ["images"]);
   saveSidebarShortcuts(storage, "B", ["projects"]);
   assert.equal(resetSidebarShortcuts(storage, "A"), true);
   assert.deepEqual(readSidebarShortcuts(storage, "A"), DEFAULT_SIDEBAR_SHORTCUTS);
@@ -105,7 +105,7 @@ test("reset and account-local clearing remove only the matching account's choice
   clearPrincipalBrowserStorage("B", { localStorage: storage, sessionStorage: memoryStorage() });
   assert.deepEqual(readSidebarShortcuts(storage, "B"), DEFAULT_SIDEBAR_SHORTCUTS);
   assert.match(source, /isPrincipalBrowserStorageClearedEvent\(event, railOwner\)/);
-  assert.match(source, /event.key === sidebarShortcutsKey\(railOwner\)/);
+  assert.match(source, /event.key === sidebarLayoutKey\(railOwner\)/);
 });
 
 test("storage denial is recoverable and the UI reports unsaved choices", () => {
@@ -121,9 +121,9 @@ test("storage denial is recoverable and the UI reports unsaved choices", () => {
     },
   };
   assert.deepEqual(readSidebarShortcuts(denied, "A"), DEFAULT_SIDEBAR_SHORTCUTS);
-  assert.equal(saveSidebarShortcuts(denied, "A", ["work"]), false);
+  assert.equal(saveSidebarShortcuts(denied, "A", ["images"]), false);
   assert.equal(resetSidebarShortcuts(denied, "A"), false);
-  assert.equal(saveSidebarShortcuts(null, "A", ["work"]), false);
+  assert.equal(saveSidebarShortcuts(null, "A", ["images"]), false);
   assert.match(source, /this browser could not save them/);
   assert.match(source, /role="alert" className="kova-sidebar-personalization-error"/);
 });
@@ -180,7 +180,7 @@ test("sidebar colors and bounded drawer width come from one shared owner without
   assert.equal(property(mobile, "max-width"), "calc(100vw - 24px)");
   assert.equal(property(mobile, "border-radius"), "0 24px 24px 0");
   assert.equal(tokens.get("--kova-sidebar-width"), "260px");
-  assert.equal(tokens.get("--kova-sidebar-rail-width"), "56px");
+  assert.equal(tokens.get("--kova-sidebar-rail-width"), "84px");
   assert.equal(tokens.get("--kova-sidebar-drawer-width"), "min(320px, calc(100vw - 32px))");
   assert.ok(
     !rules.some(
@@ -210,12 +210,19 @@ test("navigation keeps dense desktop rows, touch targets and account outside scr
   assert.equal(property(scroll, "min-height"), "0");
   const account = sharedRules.find((rule) => rule.selector === ".kova-rail-account");
   assert.ok(account);
-  assert.match(source, /const canSchedule = signedIn;/);
-  assert.match(
-    source,
-    /canSchedule \? navLink\("\/scheduled-tasks", "Scheduled tasks", TasksGlyph\)/,
-  );
+  assert.match(source, /const signedIn = isLoaded && isSignedIn;/);
+  assert.match(source, /const availableShortcuts = SIDEBAR_ITEMS.filter/);
   assert.match(source, /shortcut.id !== "maps" \|\| mapsReleaseApproved/);
   assert.ok(SIDEBAR_SHORTCUTS.every((shortcut) => shortcut.to.startsWith("/")));
   assert.match(source, /<NovaLogo decorative/);
+});
+
+test("legacy Work choices are dropped without losing other saved destinations", () => {
+  const storage = memoryStorage();
+  storage.setItem(
+    sidebarShortcutsKey("owner"),
+    JSON.stringify({ version: 1, shortcuts: ["projects", "work", "library"] }),
+  );
+  assert.deepEqual(readSidebarShortcuts(storage, "owner"), ["projects", "library"]);
+  assert.equal(saveSidebarShortcuts(storage, "owner", ["work"]), false);
 });

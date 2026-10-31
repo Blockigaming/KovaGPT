@@ -536,6 +536,11 @@ export const Route = createFileRoute("/api/chat")({
 
             const auth = await preflight.run("session", () => optionalUser(request));
             if (auth instanceof Response) return auth;
+            if (!auth)
+              return Response.json(
+                { error: "Sign in to use KovaGPT.", code: "authentication_required" },
+                { status: 401, headers: { "Cache-Control": "no-store" } },
+              );
             if (capture) {
               await authorizeRequestCapture({ capture, auth, ingress, signal: request.signal });
             }
@@ -919,7 +924,7 @@ export const Route = createFileRoute("/api/chat")({
             const missingProvider = capture ? null : missingAiProviderResponse();
             if (missingProvider) return missingProvider;
 
-            // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
+            // Every chat requires an account; each plan has an authoritative daily allowance.
             if (auth && !isOwner) {
               const maint = await preflight.run("chat_feature", () =>
                 assertFeatureEnabled(auth, "chat"),
@@ -929,9 +934,9 @@ export const Route = createFileRoute("/api/chat")({
               // after it and before quota so a revoked skill cannot consume a
               // chat request without reaching a provider.
               await assertSelectedContextsCurrent(request.signal);
-              if (callerTier === "free" && !capture) {
+              if (!capture) {
                 const quota = await preflight.run("chat_quota", (signal) =>
-                  enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER.free, 1, signal),
+                  enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier], 1, signal),
                 );
                 if (quota) return quota;
               }

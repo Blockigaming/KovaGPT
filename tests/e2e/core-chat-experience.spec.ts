@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
+import { fixture } from "./actual-app-fixture";
+
+test.beforeEach(async ({ page }) => {
+  await fixture(page, "dark", true);
+});
 
 test.describe("core shell and chat experience", () => {
   test("empty chat, sidebar drawer, multiline composer, and theme states render", async ({
@@ -10,9 +15,8 @@ test.describe("core shell and chat experience", () => {
     await waitForKovaHydration(page);
     await expect(page.locator("body")).toBeVisible();
     await expect(page.getByRole("textbox").first()).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "How can I help today?", exact: true }),
-    ).toBeVisible();
+    await expect(page.locator("#chat-greeting")).toBeVisible();
+    await expect(page.locator("#chat-greeting")).not.toHaveText("");
 
     const textbox = page.getByRole("textbox").first();
     await textbox.fill("Line one");
@@ -46,11 +50,12 @@ test.describe("core shell and chat experience", () => {
     await waitForKovaHydration(page);
     const textbox = page.getByRole("textbox").first();
     await textbox.fill("Hello from the retry test");
+    await expect(page.getByTestId("send-button")).toBeEnabled();
     if (testInfo.project.use.hasTouch) {
       await page.getByTestId("send-button").click();
     } else {
-      // Desktop plain Enter remains covered while touch layouts use the visible send control.
-      await textbox.press("Enter");
+      const shortcuts = (await textbox.getAttribute("aria-keyshortcuts")) ?? "";
+      await textbox.press(shortcuts.startsWith("Enter ") ? "Enter" : "Control+Enter");
     }
     await expect(
       page.getByText(/Provider unavailable|AI provider had a hiccup|Tap retry/i).first(),

@@ -216,6 +216,7 @@ function fixture(
     const node = nodes(tree).find(
       (node) =>
         node.type === "button" &&
+        typeof node.props.onClick === "function" &&
         (text(node).trim() === label || node.props["aria-label"] === label),
     );
     assert.ok(node, `Missing ${label}`);

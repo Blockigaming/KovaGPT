@@ -99,7 +99,10 @@ async function verifyRoute(
   if (route === "/") {
     await expect(
       page.getByRole("textbox", { name: "Message KovaGPT" }),
-      `${route} ${colorScheme} composer`,
+      `${route} ${colorScheme} account-gated composer`,
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Create an account", exact: true }),
     ).toBeVisible();
   }
 

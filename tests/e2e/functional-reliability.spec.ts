@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+test.beforeEach(async ({ page }) => {
+  await installAuthenticatedFixture(page);
+});
 
 import { waitForKovaHydration } from "./hydration";
+import { functionNames } from "./actual-app-fixture";
 
 test.beforeEach(({ page: _page }, testInfo) =>
   test.skip(testInfo.project.name !== "desktop-1440x900"),
@@ -27,6 +32,18 @@ test("sensitive and malformed API requests fail closed", async ({ request }) => 
 test("real sharing remains available without the misleading local-member flow", async ({
   page,
 }) => {
+  const feedbackWrites: string[] = [];
+  await page.route("**/_serverFn/**", (route) => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+    const name = functionNames.get(id) ?? "";
+    if (name.startsWith("getResponseFeedbackBatch_"))
+      return route.fulfill({ json: { result: { ratings: {} }, context: {} } });
+    if (name.startsWith("submitResponseFeedback_")) {
+      feedbackWrites.push(route.request().postData() ?? "");
+      return route.fulfill({ json: { result: { saved: true }, context: {} } });
+    }
+    return route.fallback();
+  });
   await page.route("**/api/chat", async (route) => {
     await route.fulfill({
       status: 200,
@@ -50,6 +67,7 @@ test("real sharing remains available without the misleading local-member flow", 
   await badResponse.click();
   await expect(goodResponse).toHaveAttribute("aria-pressed", "false");
   await expect(badResponse).toHaveAttribute("aria-pressed", "true");
+  expect(feedbackWrites).toHaveLength(2);
   await responseActions.getByRole("button", { name: "More actions" }).click();
   await expect(page.getByRole("menuitem", { name: "Retry", exact: true })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Share" })).toBeVisible();

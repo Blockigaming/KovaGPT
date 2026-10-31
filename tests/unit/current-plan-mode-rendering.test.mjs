@@ -1,3 +1,4 @@
+import * as planUsage from "../../src/lib/plan-usage-policy.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -24,6 +25,7 @@ function fixture({ signedIn = true, loaded = true, desktop = true, menuOpen = fa
     ["@/components/NovaLogo", "src/components/NovaLogo.tsx"],
   ]);
   function load(id) {
+    if (id === "./plan-usage-policy.mjs") return planUsage;
     if (id === "@/lib/mode-entitlements.mjs") return entitlements;
     if (id === "@/lib/kova-model-identity.mjs") return modelIdentity;
     if (id === "@/hooks/use-mobile")
@@ -92,11 +94,21 @@ for (const desktop of [true, false]) {
       for (const placement of ["topbar", "composer"]) {
         for (const compact of [true, false]) {
           const html = closed.render(tier, "instant", placement, compact);
-          assert.match(html, /aria-label="Choose model: KovaGPT Default"/);
+          assert.match(
+            html,
+            tier === "free"
+              ? /aria-label="Thinking" aria-pressed="false"/
+              : /aria-label="Choose model: KovaGPT Default"/,
+          );
           assert.doesNotMatch(html, /\bLite\b|data-testid="model-option-/);
         }
       }
       const openHtml = open.render(tier, "instant", "composer");
+      if (tier === "free") {
+        assert.match(openHtml, /data-testid="thinking-toggle"/);
+        assert.doesNotMatch(openHtml, /model-option-/);
+        continue;
+      }
       assert.ok(openHtml.includes(`KovaGPT ${modelIdentity.KOVA_MODEL_VERSION}`));
       const options = Array.from(
         openHtml.matchAll(
@@ -117,8 +129,8 @@ for (const desktop of [true, false]) {
       }
     }
     const free = open.render("free", "instant", "composer");
-    assert.match(free, /model-option-thinking/);
-    assert.match(free, /model-selector-trigger/);
+    assert.match(free, /thinking-toggle/);
+    assert.doesNotMatch(free, /model-selector-trigger/);
   });
 
   test(`Plus retains High separately from Free Thinking (${desktop ? "desktop" : "touch"})`, () => {
@@ -185,8 +197,8 @@ test("published Chat copy does not disguise remaining aggregate limits as unlimi
   const { registry } = fixture();
   for (const tier of ["plus", "pro"]) {
     const copy = [registry.plans[tier].description, ...registry.plans[tier].features].join(" ");
-    assert.match(copy, /No paid Chat message-count quota/);
-    assert.match(copy, /token and premium-request limits still apply/);
+    assert.match(copy, /messages per day/);
+    assert.match(copy, /limits still apply/);
     assert.doesNotMatch(copy, /unlimited/i);
   }
 });
@@ -226,7 +238,7 @@ test("pricing uses public Default wording with exact tier choices and singular F
   assert.equal(modes.getMode("high").label, "High");
 });
 
-test("public mode wording leaves prices, billing identifiers and allowance copy unchanged", () => {
+test("new usage ratios preserve prices and billing identifiers", () => {
   const { registry } = fixture();
   assert.deepEqual(
     ["free", "plus", "pro"].map((tier) => registry.plans[tier].monthlyPriceUsd),
@@ -234,16 +246,16 @@ test("public mode wording leaves prices, billing identifiers and allowance copy 
   );
   for (const tier of ["plus", "pro"]) {
     assert.equal(registry.plans[tier].lookupKey, `${tier}_monthly`);
-    assert.match(registry.plans[tier].features[1], /token and premium-request limits still apply/);
+    assert.match(registry.plans[tier].features[1], /messages per day/);
     assert.equal(
       registry.plans[tier].features.at(-1),
       "Adaptive Memory when enabled and available",
     );
   }
   assert.deepEqual(Array.from(registry.plans.free.features.slice(1, 5)), [
-    "Small message allowance",
-    "3 image generations per day",
-    "2 file uploads per day",
+    "100 messages per day · one fifth of Plus usage",
+    "8 image generations per day",
+    "10 file uploads per day",
     "Small published storage allowance",
   ]);
 });

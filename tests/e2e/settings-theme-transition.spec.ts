@@ -98,86 +98,25 @@ async function mockAuthenticatedBackend(page: Page) {
   return mockedBackendOrigins;
 }
 
-async function openGuestSettings(page: Page) {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
+test("guest Settings URLs require an account with a consistent first-paint surface", async ({
+  page,
+}) => {
+  await page.goto("/settings/appearance", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  if (page.viewportSize()!.width < 1024) {
-    await page.getByRole("button", { name: "Open menu" }).click();
-  }
-  await page.getByRole("button", { name: "Settings" }).click();
-  const dialog = page.locator(".kova-settings-dialog");
-  await expect(dialog).toBeVisible();
-  return dialog;
-}
-
-async function chooseAppearance(page: Page, appearance: "Light" | "Dark") {
-  await page.getByRole("combobox", { name: "Appearance" }).click();
-  await page.getByRole("option", { name: appearance, exact: true }).click();
-}
-
-async function sampleSettingsSurfaces(page: Page) {
-  return page.evaluate(async () => {
-    const frames: Array<{ outer: string; inner: string }> = [];
-    for (let frame = 0; frame < 12; frame += 1) {
+  const surface = page.locator(".kova-account-gate");
+  await expect(surface).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toHaveCount(0);
+  const frames = await surface.evaluate(async (node) => {
+    const colors: string[] = [];
+    for (let i = 0; i < 12; i += 1) {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      const outer = document.querySelector<HTMLElement>(".kova-settings-surface");
-      const inner = document.querySelector<HTMLElement>(".kova-settings-guest-content");
-      if (!outer || !inner) throw new Error("Settings surfaces were not rendered");
-      // The full-page Settings section is transparent. Compare the painted guest
-      // panel with the content's visible backing, including any child override.
-      let backing: HTMLElement | null = inner;
-      while (
-        backing &&
-        ["transparent", "rgba(0, 0, 0, 0)"].includes(getComputedStyle(backing).backgroundColor)
-      )
-        backing = backing.parentElement;
-      if (!backing) throw new Error("Settings content has no painted backing");
-      frames.push({
-        outer: getComputedStyle(outer).backgroundColor,
-        inner: getComputedStyle(backing).backgroundColor,
-      });
+      colors.push(getComputedStyle(node).backgroundColor);
     }
-    return frames;
+    return colors;
   });
-}
-
-function expectAtomicSurfaceChange(
-  frames: Array<{ outer: string; inner: string }>,
-  expectedColor: string,
-) {
   expect(frames).toHaveLength(12);
-  expect(new Set(frames.map(({ outer }) => outer)).size).toBe(1);
-  for (const frame of frames) {
-    expect(frame.outer).toBe(expectedColor);
-    expect(frame.outer).toBe(frame.inner);
-  }
-}
-
-test("guest Settings changes themes without split surface colors", async ({ page }) => {
-  const settings = await openGuestSettings(page);
-  const surface = page.locator(".kova-settings-surface");
-  const appearance = page.getByRole("combobox", { name: "Appearance" });
-
-  await expect(appearance).toBeVisible();
-  await expect(page.locator("html")).not.toHaveClass(/(?:^|\s)dark(?:\s|$)/);
-  await expect(settings).toHaveClass(/(?:^|\s)kova-settings-page(?:\s|$)/);
-  await expect(surface).toHaveCSS("background-color", "rgb(255, 255, 255)");
-  expectAtomicSurfaceChange(await sampleSettingsSurfaces(page), "rgb(255, 255, 255)");
-
-  const transitionProperties = await settings.evaluate((element) =>
-    getComputedStyle(element)
-      .transitionProperty.split(",")
-      .map((property) => property.trim()),
-  );
-  expect(transitionProperties).toEqual(["opacity", "transform"]);
-
-  await chooseAppearance(page, "Dark");
-  await expect(page.locator("html")).toHaveClass(/(?:^|\s)dark(?:\s|$)/);
-  expectAtomicSurfaceChange(await sampleSettingsSurfaces(page), "rgb(48, 48, 48)");
-
-  await chooseAppearance(page, "Light");
-  await expect(page.locator("html")).not.toHaveClass(/(?:^|\s)dark(?:\s|$)/);
-  expectAtomicSurfaceChange(await sampleSettingsSurfaces(page), "rgb(255, 255, 255)");
+  expect(new Set(frames)).toEqual(new Set(["rgb(255, 255, 255)"]));
 });
 
 test("signed-in mobile settings list keeps every option at least 44px tall", async ({

@@ -15,13 +15,12 @@ for (const theme of ["dark", "light"] as const) {
     );
     await page.goto("/");
     await waitForKovaHydration(page);
-    await expect(
-      page.getByRole("heading", { name: "How can I help today?", exact: true }),
-    ).toBeVisible();
+    await expect(page.locator("#chat-greeting")).toBeVisible();
+    await expect(page.locator("#chat-greeting")).not.toHaveText("");
     await expect(page.locator(".spec400-composer")).toBeVisible();
     if (info.project.name.includes("desktop")) {
       await expect(
-        page.getByRole("link", { name: "Connections", exact: true }).filter({ visible: true }),
+        page.getByRole("link", { name: "Plugins", exact: true }).filter({ visible: true }),
       ).toBeVisible();
     }
     const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
@@ -67,7 +66,7 @@ for (const theme of ["dark", "light"] as const) {
         .poll(() => logo.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0))
         .toBe(true);
       await expect(
-        page.getByRole("link", { name: "Connections", exact: true }).filter({ visible: true }),
+        page.getByRole("link", { name: "Plugins", exact: true }).filter({ visible: true }),
       ).toBeVisible();
       const icons = page.locator("[data-kova-navigation-glyph]").filter({ visible: true });
       for (const icon of await icons.all()) await expect(icon).toHaveCSS("stroke", "none");

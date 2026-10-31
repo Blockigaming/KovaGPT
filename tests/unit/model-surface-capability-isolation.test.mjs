@@ -1,3 +1,4 @@
+import * as imageSizes from "../../src/lib/multimodal/image-size-policy.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -131,6 +132,7 @@ test("image settings use Azure format policy even when text uses OpenAI", () => 
     "src/lib/multimodal/image-workflows.server.ts",
     {
       ...imagePolicy,
+      ...imageSizes,
       getAiProviderConfig: api.getAiProviderConfig,
       imageModel: () => "gpt-image-1",
       runtimeEnv: () => undefined,

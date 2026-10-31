@@ -229,7 +229,9 @@ test("late discovery response after sign-out cannot restore prior queries or sou
     },
     `sb-${new URL(origin).hostname.split(".")[0]}-auth-token`,
   );
-  await expect(page.getByRole("button", { name: "Sign in to search" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create an account", exact: true })).toBeVisible();
+  await expect(page.getByLabel("What are you looking for?")).toHaveCount(0);
   release!();
   await expect(page.getByText("Prior user result")).toHaveCount(0);
   await expect(page.locator('input[value="private search"]')).toHaveCount(0);

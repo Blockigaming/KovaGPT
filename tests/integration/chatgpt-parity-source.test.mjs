@@ -46,52 +46,41 @@ const [
   readFile("src/styles/sidebar-core.css", "utf8"),
 ]);
 
-test("Chat and Work remain reachable without a phone topbar mode switch", () => {
-  assert.match(workspaceModeSwitch, /aria-label="Primary workspace"/);
-  assert.match(workspaceModeSwitch, /aria-current=\{active === "chat" \? "page" : undefined\}/);
-  assert.match(workspaceModeSwitch, /aria-current=\{active === "work" \? "page" : undefined\}/);
-  // The owner removed phone Chat/Work switching; navigation lives in the sidebar.
+const homeView = await readFile("src/components/HomeChatStarters.tsx", "utf8");
+const sidebarCatalog = await readFile("src/lib/sidebar-layout.mjs", "utf8");
+test("chat stays primary and retired Work bookmarks do not expose a workspace switch", () => {
+  assert.match(workspaceModeSwitch, /return null/);
   assert.doesNotMatch(mobileTopBar, /WorkspaceModeSwitch/);
-  assert.match(workRoute, /<WorkspaceModeSwitch active="work"/);
-  assert.match(sidebar, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
-  assert.match(sidebar, /onNew\(\);[\s\S]{0,180}aria-label="New chat"/);
+  assert.match(workRoute, /throw redirect\(\{ to: "\/", replace: true \}\)/);
+  assert.doesNotMatch(sidebarCatalog, /to: "\/work"/);
+  assert.match(sidebar, /aria-label="New chat"/);
 });
 
-test("sidebar keeps core destinations before its native More disclosure", () => {
-  // Native details/summary replaces the old aria-controls/sidebar-more-items button.
+test("customizable core destinations precede the scrollable More disclosure", () => {
   const disclosure = sidebar.match(/<details[^>]*>[\s\S]*?<\/details>/)?.[0];
-  assert.ok(disclosure, "More must remain a real disclosure");
-  assert.match(disclosure, /<summary[^>]*>[\s\S]*?<span>More<\/span>[\s\S]*?<\/summary>/);
-  assert.match(disclosure, /navLink\("\/work", "Work", BriefcaseBusiness\)/);
+  assert.ok(disclosure);
+  assert.match(disclosure, /<summary[^>]*>[\s\S]*?<span>More<\/span>/);
   assert.match(disclosure, /navLink\("\/discovery", "Discover", Compass\)/);
-  assert.match(disclosure, /mapsReleaseApproved \? navLink\("\/maps", "Maps", Map\) : null/);
-  const moreStart = sidebar.indexOf(disclosure);
-  for (const destination of [
-    'navLink("/library", "Library"',
-    'navLink("/projects", "Projects"',
-    'navLink("/apps", "Connections"',
-  ]) {
-    const index = sidebar.indexOf(destination);
-    assert.ok(index >= 0 && index < moreStart, `${destination} must precede More`);
-  }
+  assert.match(disclosure, /Customize sidebar/);
+  assert.doesNotMatch(disclosure, /navLink\("\/work"/);
+  for (const path of ["/library", "/projects", "/apps", "/scheduled-tasks"])
+    assert.ok(sidebarCatalog.includes('to: "' + path + '"'));
+  assert.ok(
+    sidebar.indexOf("navLink(item.to, item.label, SHORTCUT_ICONS[id])") <
+      sidebar.indexOf(disclosure),
+  );
 });
 
 test("secondary navigation remains discoverable without active unavailable destinations", () => {
-  const disclosure = sidebar.match(/<details\b[^>]*>/)?.[0];
-  assert.ok(disclosure, "More must retain its native disclosure element");
-  assert.match(disclosure, /className="kova-sidebar-more-disclosure"/);
-  assert.match(disclosure, /data-ui-reference="gemini-sidebar-disclosure"/);
-  assert.match(
-    disclosure,
-    /open=\{isOn\("\/work"\) \|\| isOn\("\/discovery"\) \|\| isOn\("\/maps"\) \|\| undefined\}/,
-  );
+  assert.match(sidebar, /data-ui-reference="gemini-sidebar-disclosure"/);
+  assert.match(sidebar, /open=\{isOn\("\/discovery"\) \|\| isOn\("\/maps"\) \|\| undefined\}/);
   assert.match(sidebar, /aria-label="Expand sidebar"/);
-  // Coming-soon placeholders were removed, rather than turned into working destinations.
-  assert.doesNotMatch(sidebar, /navLink\("\/(?:health|finances)"|to="\/(?:health|finances)"/);
+  assert.match(sidebar, /mapsReleaseApproved && railShortcuts.includes\("maps"\)/);
+  assert.doesNotMatch(sidebar, /navLink\("\/(?:health|finances|work)"/);
 });
 
 test("Chat uses the current greeting and reports model availability truthfully", () => {
-  assert.match(route, /const greeting = "How can I help today\?";/);
+  assert.match(homeView, /const greeting = useHomeGreeting/);
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /KovaGPT can make mistakes\. Check important info\./);
   assert.doesNotMatch(route, /ConversationOutline/);
@@ -117,14 +106,14 @@ test("Chat uses the current greeting and reports model availability truthfully",
 test("empty chat offers draft starters and scopes recent work to signed-in history", () => {
   assert.doesNotMatch(route, /kova-greeting-mark/);
   assert.doesNotMatch(route, /Think through a question, shape an idea/);
-  assert.match(route, /<HomeChatStarters setInput=\{setInput\}/);
+  assert.match(homeView, /<HomeChatStarters setInput=\{setInput\}/);
   for (const label of ["Write something", "Summarize a file", "Compare options"])
     assert.ok(starters.includes(`label: "${label}"`));
   assert.match(starters, /setInput\(\(current\) => \(current\.trim\(\) \? current : prompt\)\)/);
   assert.match(starters, /\.focus\(\{ preventScroll: true \}\)/);
   assert.doesNotMatch(starters, /onSubmit|\.submit\(/);
-  assert.match(route, /\{isLoaded && isSignedIn && historyConversations\.length > 0 \? \(/);
-  assert.match(route, /Continue working/);
+  assert.match(route, /conversations=\{isLoaded && isSignedIn \? historyConversations : \[\]\}/);
+  assert.match(homeView, /Continue working/);
   assert.doesNotMatch(route, /Sign in to save chats and attach files/);
   assert.match(route, /<SignInButton mode="modal">/);
 });

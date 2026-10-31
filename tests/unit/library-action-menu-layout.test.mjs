@@ -150,7 +150,7 @@ test("aligned Library actions retain their callbacks and favorite/delete states"
     "Preview",
     "Copy link",
     "Reuse in chat",
-    "Open in Work",
+    "Continue in chat",
     "Ask Kova",
     "Add to Context Pack",
     "Versions and replacement",

@@ -8,7 +8,6 @@ export const SIDEBAR_SHORTCUTS = Object.freeze(
     { id: "projects", label: "Projects", to: "/projects" },
     { id: "scheduled-tasks", label: "Scheduled tasks", to: "/scheduled-tasks" },
     { id: "apps", label: "Plugins", to: "/apps" },
-    { id: "work", label: "Work", to: "/work" },
     { id: "discovery", label: "Discover", to: "/discovery" },
     { id: "maps", label: "Maps", to: "/maps" },
   ].map((shortcut) => Object.freeze(shortcut)),
@@ -44,8 +43,12 @@ export function readSidebarShortcuts(storage, userId) {
     const raw = storage?.getItem(key);
     if (!raw || raw.length > 2048) return [...DEFAULT_SIDEBAR_SHORTCUTS];
     const saved = JSON.parse(raw);
-    return saved?.version === 1 && validChoices(saved.shortcuts)
-      ? [...saved.shortcuts]
+    const choices =
+      Array.isArray(saved?.shortcuts) && new Set(saved.shortcuts).size === saved.shortcuts.length
+        ? saved.shortcuts.filter((id) => id !== "work")
+        : null;
+    return saved?.version === 1 && validChoices(choices)
+      ? [...choices]
       : [...DEFAULT_SIDEBAR_SHORTCUTS];
   } catch {
     return [...DEFAULT_SIDEBAR_SHORTCUTS];

@@ -1,3 +1,4 @@
+import { planAllowance } from "../plan-usage-policy.mjs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { actualCostUsd, type CatalogModel } from "@/lib/ai/model-catalog.server";
@@ -105,9 +106,9 @@ export async function acquireGeneration(input: {
     p_reserved_tokens: input.reservedTokens,
     p_estimated_cost: input.estimatedCostUsd,
     p_context_trimmed: input.contextTrimmed,
-    p_daily_limit: config.maxTokensPerUserDay,
-    p_monthly_limit: config.maxTokensPerUserMonth,
-    p_premium_limit: config.maxPremiumRequestsPeriod,
+    p_daily_limit: planAllowance(config.maxTokensPerUserDay, input.plan),
+    p_monthly_limit: planAllowance(config.maxTokensPerUserMonth, input.plan),
+    p_premium_limit: planAllowance(config.maxPremiumRequestsPeriod, input.plan),
     p_guest_limit: config.maxGuestRequestsPerIp,
     p_global_concurrency: config.maxConcurrentGlobal,
     p_principal_concurrency: principalConcurrency,

@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+test.beforeEach(async ({ page }) => {
+  await installAuthenticatedFixture(page);
+});
 
 import { waitForKovaHydration } from "./hydration";
+import { functionNames } from "./actual-app-fixture";
 
 test.describe("product completeness responsive scaffolding", () => {
   test("help and support surfaces fit the configured viewport", async ({ page }) => {
@@ -12,6 +17,15 @@ test.describe("product completeness responsive scaffolding", () => {
   });
 
   test("command palette, notifications, and policies have smoke targets", async ({ page }) => {
+    await page.route("**/_serverFn/**", (route) => {
+      const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+      if (functionNames.get(id)?.startsWith("listNotifications_"))
+        return route.fulfill({
+          status: 503,
+          json: { error: "Notifications unavailable in fixture" },
+        });
+      return route.fallback();
+    });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
@@ -27,7 +41,10 @@ test.describe("product completeness responsive scaffolding", () => {
     await page.keyboard.press("Escape");
     await page.goto("/notifications", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    await expect(page.getByRole("heading", { name: /notifications/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Notifications", exact: true })).toBeVisible();
+    const unavailable = page.getByRole("alert").filter({ hasText: "Notifications unavailable" });
+    await expect(unavailable).toBeVisible();
+    await expect(unavailable.getByRole("button", { name: "Try again", exact: true })).toBeEnabled();
     await page.goto("/privacy", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
     await expect(page.getByRole("heading", { name: /^Privacy Policy$/i })).toBeVisible();

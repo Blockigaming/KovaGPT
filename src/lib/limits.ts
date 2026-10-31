@@ -1,3 +1,4 @@
+import { DAILY_PLAN_ALLOWANCES } from "./plan-usage-policy.mjs";
 // Local display hint only. Authoritative quota is the server UTC-day counter.
 const KEY = "nova-gpt-usage-v2";
 const WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -5,8 +6,8 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
 type Usage = { windowStart: number; images: number; uploads: number };
 
 // Free plan limits.
-export const DAILY_IMAGE_LIMIT = 3;
-export const DAILY_UPLOAD_LIMIT = 2;
+export const DAILY_IMAGE_LIMIT = DAILY_PLAN_ALLOWANCES.free.images;
+export const DAILY_UPLOAD_LIMIT = DAILY_PLAN_ALLOWANCES.free.uploads;
 
 function fresh(): Usage {
   return { windowStart: Math.floor(Date.now() / WINDOW_MS) * WINDOW_MS, images: 0, uploads: 0 };

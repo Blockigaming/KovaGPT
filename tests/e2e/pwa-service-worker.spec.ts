@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createServer, type Server } from "node:http";
 import { readFile } from "node:fs/promises";
+test.use({ serviceWorkers: "allow" });
 let server: Server, origin: string;
 test.beforeAll(async () => {
   const worker = await readFile("public/kova-sw.js"),
