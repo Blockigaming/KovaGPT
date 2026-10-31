@@ -455,6 +455,9 @@
 .kova-source-provider-firecrawl svg {
   color: #fb923c;
 }
+.dark .kova-source-provider-github img {
+  filter: invert(1);
+}
 .kova-source-activity {
   margin-bottom: 18px;
 }
