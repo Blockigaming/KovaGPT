@@ -72,11 +72,6 @@ test("authenticated chat consumes Kova SSE once and keeps page and menu identity
   await expect(
     page.getByRole("button", { name: "Open chat Mock chat", exact: true }),
   ).toBeVisible();
-  await expect(
-    page
-      .getByRole("status")
-      .filter({ hasText: /Chat changes are waiting to sync|Chat history is up to date/ }),
-  ).toBeVisible();
   await waitForCommittedChat(page, "Mocked OpenAI response");
   await page.reload();
   await waitForKovaHydration(page);

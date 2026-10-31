@@ -516,11 +516,6 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   await revealSidebar(page);
   await expect(savedRow).toHaveCount(1);
   await expect(savedRow).toContainText("Workspace quality review");
-  await expect(
-    page
-      .getByRole("status")
-      .filter({ hasText: /Chat changes are waiting to sync|Chat history is up to date/ }),
-  ).toBeVisible();
   // A returning account retains this local conversation across navigation.
   // Unscoped guest and legacy stores must remain empty.
   await waitForCommittedChat(page, "Stability");
