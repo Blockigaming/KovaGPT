@@ -278,9 +278,11 @@ test("empty-target census retains unknown objects and binds extension internals 
     }),
   );
 
-  await t.test("bounds extension domain checks while retaining their complete census fingerprints", async () =>
-    fixture(async () => {
-      await db.exec(`
+  await t.test(
+    "bounds extension domain checks while retaining their complete census fingerprints",
+    async () =>
+      fixture(async () => {
+        await db.exec(`
         CREATE SCHEMA domain_census;
         CREATE DOMAIN domain_census.method AS text CONSTRAINT allowed_method CHECK (VALUE IN ('GET','POST'));
         CREATE DOMAIN domain_census.unrelated AS text CONSTRAINT unrelated_check CHECK (VALUE <> '');
@@ -292,28 +294,45 @@ test("empty-target census retains unknown objects and binds extension internals 
             WHERE contypid='domain_census.method'::regtype AND conname='allowed_method')
           AND deptype='e';
       `);
-      const associatedSql = execFileSync("python3", ["-c", `import importlib.util,sys
+        const associatedSql = execFileSync(
+          "python3",
+          [
+            "-c",
+            `import importlib.util,sys
 s=importlib.util.spec_from_file_location('domain_surface_fixture',sys.argv[1])
 m=importlib.util.module_from_spec(s);s.loader.exec_module(m);print(m.NATIVE_RELATION_SURFACE_SQL)`,
-        fileURLToPath(new URL("../../scripts/release/probe-empty-recovery-target.py", import.meta.url)),
-      ], { encoding: "utf8" });
-      const associated = JSON.parse(Object.values((await db.query(associatedSql)).rows[0])[0]);
-      const bound = associated.filter((o) => o.schema === "domain_census");
-      assert.equal(bound.length, 1);
-      assert.equal(bound[0].catalog, "pg_constraint");
-      assert.equal(bound[0].extension, "plpgsql");
-      assert.ok(bound[0].identity.includes("allowed_method"));
-      assert.equal(JSON.stringify(bound).includes("unrelated_check"), false);
-      const before = await census();
-      const original = before.namespaceObjects.find((o) => o.identity === bound[0].identity);
-      assert.equal(original.directExtension, null);
-      assert.equal(original.internalExtension, null);
-      await db.exec("ALTER DOMAIN domain_census.method ADD CONSTRAINT added_check CHECK (VALUE <> 'POST')");
-      const after = await census();
-      assert.notDeepEqual(after, before);
-      assert.ok(after.namespaceObjects.some((o) => o.catalog === "pg_constraint" && o.identity.includes("added_check")));
-      assert.deepEqual(after.namespaceObjects.find((o) => o.identity === bound[0].identity), original);
-    }),
+            fileURLToPath(
+              new URL("../../scripts/release/probe-empty-recovery-target.py", import.meta.url),
+            ),
+          ],
+          { encoding: "utf8" },
+        );
+        const associated = JSON.parse(Object.values((await db.query(associatedSql)).rows[0])[0]);
+        const bound = associated.filter((o) => o.schema === "domain_census");
+        assert.equal(bound.length, 1);
+        assert.equal(bound[0].catalog, "pg_constraint");
+        assert.equal(bound[0].extension, "plpgsql");
+        assert.ok(bound[0].identity.includes("allowed_method"));
+        assert.equal(JSON.stringify(bound).includes("unrelated_check"), false);
+        const before = await census();
+        const original = before.namespaceObjects.find((o) => o.identity === bound[0].identity);
+        assert.equal(original.directExtension, null);
+        assert.equal(original.internalExtension, null);
+        await db.exec(
+          "ALTER DOMAIN domain_census.method ADD CONSTRAINT added_check CHECK (VALUE <> 'POST')",
+        );
+        const after = await census();
+        assert.notDeepEqual(after, before);
+        assert.ok(
+          after.namespaceObjects.some(
+            (o) => o.catalog === "pg_constraint" && o.identity.includes("added_check"),
+          ),
+        );
+        assert.deepEqual(
+          after.namespaceObjects.find((o) => o.identity === bound[0].identity),
+          original,
+        );
+      }),
   );
 
   await t.test(

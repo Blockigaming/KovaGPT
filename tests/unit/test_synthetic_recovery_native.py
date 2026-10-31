@@ -642,6 +642,8 @@ class SyntheticTests(unittest.TestCase):
         self.assertEqual(next(s for s in p.metadata["schemas"] if s["name"]=="cron"),
                          {"name":"cron","owner":m.FIXTURE_BOOTSTRAP,"acl":None,
                           "comment":"Credential-free extension namespace fixture."})
+        self.assertEqual(next(s for s in p.metadata["schemas"] if s["name"]=="net")["acl"],
+                         [m.FIXTURE_BOOTSTRAP+"=UC/"+m.FIXTURE_BOOTSTRAP,"=U/"+m.FIXTURE_BOOTSTRAP])
         self.assertNotIn('"cron"',m.base.schema_setup_sql(p.metadata))
         self.assertNotIn('"net"',m.base.schema_setup_sql(p.metadata))
         self.assertIn('ALTER SCHEMA "cron" OWNER TO '+m.base.ident(m.FIXTURE_BOOTSTRAP),m.base.schema_metadata_sql(p.metadata))

@@ -492,6 +492,10 @@ class SyntheticProbe(operator.OperatorProbe):
                 "synthetic_fixture_metadata_differs")
         schemas=[*value["schemas"],*({"name":n["name"],"owner":FIXTURE_BOOTSTRAP,"acl":None,
                  "comment":"Credential-free extension namespace fixture."} for n in extension_namespaces)]
+        # pg_net's installer grants PUBLIC usage, so model an explicit,
+        # controlled ACL instead of expecting an untouched NULL namespace ACL.
+        next(s for s in schemas if s["name"]=="net")["acl"]=[
+            FIXTURE_BOOTSTRAP+"=UC/"+FIXTURE_BOOTSTRAP,"=U/"+FIXTURE_BOOTSTRAP]
         self.metadata={"bootstrapRole":value["bootstrapRole"],"roles":value["roles"],"memberships":value["memberships"],
                        "schemas":schemas,"extensions":extensions,"roleSettings":[],
                        "extensionNamespaces":extension_namespaces,
