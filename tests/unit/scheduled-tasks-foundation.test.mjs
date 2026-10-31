@@ -22,9 +22,10 @@ async function fixture() {
  create function public.scheduled_task_event_grant_ready(uuid) returns boolean language sql stable as $$select enabled from public.test_event_readiness$$;
  create function public.effective_user_plan_tier(uuid) returns text language sql stable as $$select coalesce((select tier from public.test_plans where user_id=$1),'free')$$;
  create table public.user_library_items(id uuid primary key,user_id uuid,title text,content_text text);
- create table public.projects(id uuid primary key,owner_id uuid,deletion_requested_at timestamptz);
- create table public.project_files(id uuid primary key,project_id uuid,status text,account_cleanup_user_id uuid);
- create function public.is_project_member(uuid,uuid) returns boolean language sql stable as $$select exists(select 1 from public.projects where id=$2 and owner_id=$1)$$;
+ create table public.projects(id uuid primary key,owner_id uuid,name text,deletion_requested_at timestamptz);
+ create table public.project_files(id uuid primary key,project_id uuid,name text,status text,account_cleanup_user_id uuid);
+ create table public.project_file_chunks(file_id uuid,project_id uuid,chunk_index integer,content text);
+ create function public.is_project_member(_project_id uuid,_user_id uuid) returns boolean language sql stable as $$select exists(select 1 from public.projects where id=_project_id and owner_id=_user_id)$$;
  create table public.google_oauth_tokens(id uuid primary key,user_id uuid,grant_id uuid,google_sub text,scopes text,expires_at timestamptz,refresh_token text,revoked_at timestamptz,reauthorization_required boolean default false,identity_verified boolean default true);
  create table public.integration_linked_accounts(id uuid primary key,owner_id uuid,provider_id text,provider_account_id text,status text,deleted_at timestamptz,token_expires_at timestamptz,granted_scopes text[],credential_key_version integer,updated_at timestamptz,workspace_id uuid);
  create table public.integration_consents(id uuid primary key default gen_random_uuid(),owner_id uuid,linked_account_id uuid,decision text,scopes text[],created_at timestamptz default now());
@@ -43,6 +44,7 @@ async function fixture() {
     "20260822143000_day14_scheduled_execution.sql",
     "20260823113000_day14_atomic_settlement.sql",
     "20260905005111_scheduled_tasks_activation_foundation.sql",
+    "20261031220329_task_project_membership_argument_order.sql",
   ])
     await db.exec(sql(name));
   await db.exec("grant all on all tables in schema public to service_role;set role service_role");
@@ -72,6 +74,50 @@ const createPayload = () => ({
   run_at: new Date(Date.now() + 120000).toISOString(),
   repeat: "daily",
   timezone: "America/New_York",
+});
+
+test("Tasks project context uses the canonical membership argument order and denies another owner", async () => {
+  const db = await fixture();
+  try {
+    await activate(db);
+    const project = randomUUID();
+    const file = randomUUID();
+    await db.query("insert into public.projects(id,owner_id,name) values($1,$2,'Project')", [
+      project,
+      owner,
+    ]);
+    await db.query(
+      "insert into public.project_files(id,project_id,name,status) values($1,$2,'Notes','ready')",
+      [file, project],
+    );
+    await db.query(
+      "insert into public.project_file_chunks values($1,$2,0,'Private project notes')",
+      [file, project],
+    );
+    const options = async (user) =>
+      (
+        await db.query(
+          "select public.list_scheduled_task_context_options($1,'project_file',null) result",
+          [user],
+        )
+      ).rows[0].result;
+    assert.equal((await options(owner)).items[0].id, file);
+    assert.deepEqual((await options(other)).items, []);
+    const contextRefs = [{ kind: "project_file", id: file, projectId: project }];
+    await mutate(db, "create", { ...createPayload(), contextRefs });
+    await assert.rejects(
+      mutate(db, "create", { ...createPayload(), contextRefs }, { user: other }),
+      /task_context_unavailable/,
+    );
+    await db.query("update public.projects set deletion_requested_at=now() where id=$1", [project]);
+    assert.deepEqual((await options(owner)).items, []);
+    await assert.rejects(
+      mutate(db, "create", { ...createPayload(), contextRefs }),
+      /task_context_unavailable/,
+    );
+  } finally {
+    await db.close();
+  }
 });
 
 test("Tasks require approved runtime plus fresh heartbeat and exact mutation receipts under service-only authority", async () => {
