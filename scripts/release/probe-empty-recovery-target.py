@@ -953,6 +953,9 @@ while :; do sleep 1; done"""
                 "consumers_or_local_socket_not_stopped")
         return {"preloadLibraries":0,"cronLaunchActiveJobs":False,"unexpectedWorkers":0,"unixSockets":0}
 
+    def native_schema_dump_tool(self):
+        return self.native_tools["pg_dump"]
+
     def native_snapshot(self,target):
         self.stage="native_catalog_proof"
         _,raw=self.client_sql(target,"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\n"+recovery.CATALOG_SQL+"\nCOMMIT;\n")
@@ -989,7 +992,7 @@ while :; do sleep 1; done"""
                     "PGSSLROOTCERT":"/run/client/ca.crt","PGPASSFILE":"/run/client/pgpass","PGCONNECT_TIMEOUT":"3",
                     "PGOPTIONS":recovery.CANONICAL_PG+" -c default_transaction_read_only=on"}.items():
             args += ["--env",k+"="+v]
-        _,schema=self.docker(args+[self.names["client"],self.native_tools["pg_dump"],"--no-password","--schema-only"],timeout=60)
+        _,schema=self.docker(args+[self.names["client"],self.native_schema_dump_tool(),"--no-password","--schema-only"],timeout=60)
         expected={"bootstrapRole":self.metadata["bootstrapRole"],"roles":self.metadata["roles"],"memberships":self.metadata["memberships"],
                   "roleSettings":[{k:r[k] for k in ["role","database","settings"]} for r in self.metadata["roleSettings"]]}
         role_match=True

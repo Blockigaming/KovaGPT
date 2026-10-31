@@ -403,6 +403,24 @@ class SyntheticTests(unittest.TestCase):
         self.assertIn("PGSSLMODE=verify-full",values)
         self.assertFalse(any("PASSWORD" in x or "PRODUCTION" in x for x in values))
 
+    def test_executed_operator_uses_shared_snapshot_guards_and_its_own_dump_tool(self):
+        self.assertIs(o.OperatorProbe.native_snapshot,m.base.Probe.native_snapshot)
+        self.assertIs(m.SyntheticProbe.native_snapshot,m.base.Probe.native_snapshot)
+        p=self.probe();p.client_tools={"pg_dump":"/operator/pg_dump"};p.native_tools={"pg_dump":"/server/pg_dump"}
+        self.assertEqual(p.native_schema_dump_tool(),"/operator/pg_dump")
+        self.assertEqual(m.base.Probe.native_schema_dump_tool(p),"/server/pg_dump")
+        p.metadata={"extensions":[{"name":"plpgsql"}]}
+        catalog={"largeObjects":[]}
+        census={"serverVersionNum":170006,"counts":{"unownedNamespaceObjects":0},
+                "namespaceObjects":[],"tables":[{"schema":"public","name":"unrelated",
+                    "kind":"r","directExtension":None,"internalExtension":None}]}
+        p.client_sql=lambda _target,sql,**_:(0,json.dumps(catalog if m.base.recovery.CATALOG_SQL in sql else census).encode())
+        with patch.object(p,"docker") as docker:
+            with self.assertRaisesRegex(m.Stopped,"native_blank_census_unqualified") as caught:
+                p.native_snapshot("a")
+        docker.assert_not_called()
+        self.assertEqual(m.base.safe_native_blank_observations(caught.exception)["ordinaryTableCount"],1)
+
     def test_separate_server_client_bash_hashes_and_native_paths_are_verified(self):
         p=self.probe();p.native_tools={"timeout":"/server/timeout","sha256sum":"/server/sha"}
         p.client_tools={"timeout":"/operator/timeout","sha256sum":"/operator/sha"}
