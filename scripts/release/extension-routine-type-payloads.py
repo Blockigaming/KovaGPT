@@ -338,6 +338,21 @@ def canonicalize_row(row, resolver, *, canonicalize_tree=None, type_layouts=None
             "identity":key,"columns":result}
 
 
+def record_row_identity(keys,payload):
+    """Keep identical pg_depend rows as a multiset; reject every ambiguous key.
+
+    pg_depend has no unique row constraint. Preserve every identical canonical
+    dependency row in the caller's list so its count and digest bind the exact
+    multiplicity. All other catalog identities still occur exactly once.
+    """
+    key=canonical_bytes({k:payload[k] for k in ["catalog","extension","identity"]})
+    encoded=canonical_bytes(payload)
+    previous=keys.get(key)
+    require(previous is None or (payload["catalog"]=="pg_depend" and previous==encoded),
+            "payload_duplicate_identity")
+    keys[key]=encoded
+
+
 def hash_rows(rows,resolver,*,catalog_columns,catalog_foreign_keys,server_version_num,
               canonicalize_tree=None,type_layouts=None,datum_layout=None,manifests=None,
               identity_selector=None,field_adapters=None,context=None,expected_foreign_keys=None):
@@ -345,12 +360,11 @@ def hash_rows(rows,resolver,*,catalog_columns,catalog_foreign_keys,server_versio
     validate_layout(catalog_columns,catalog_foreign_keys,server_version_num=server_version_num,manifests=manifests,
                     expected_foreign_keys=expected_foreign_keys)
     require(type(rows) is list,"payload_row_collection_unqualified")
-    grouped={catalog:[] for catalog in manifests};keys=set()
+    grouped={catalog:[] for catalog in manifests};keys={}
     for row in rows:
         payload=canonicalize_row(row,resolver,canonicalize_tree=canonicalize_tree,type_layouts=type_layouts,datum_layout=datum_layout,
             manifests=manifests,identity_selector=identity_selector,field_adapters=field_adapters,context=context)
-        key=canonical_bytes({k:payload[k] for k in ["catalog","extension","identity"]})
-        require(key not in keys,"payload_duplicate_identity");keys.add(key)
+        record_row_identity(keys,payload)
         grouped[payload["catalog"]].append(payload)
     # Only this hash/count receipt may leave the private caller.
     return {"operation":"private-routine-type-payload-hashes","format":FORMAT,

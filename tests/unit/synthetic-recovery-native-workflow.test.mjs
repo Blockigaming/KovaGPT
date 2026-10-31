@@ -33,6 +33,25 @@ function validate(text) {
   assert.equal(uploads[0].with["retention-days"], 7);
   assert.match(uploads[0].with.path, /kova-synthetic-proof-.*\/receipt\.json$/);
   assert.doesNotMatch(uploads[0].with.path, /\*|\.tar|\.gpg|\.oci|inventory|metadata|sql/);
+  const archive = workflow.jobs["native-oci-archive"];
+  assert.equal(archive["runs-on"], "ubuntu-24.04");
+  assert.equal(archive.environment, undefined);
+  assert.match(archive.if, /github\.event_name == 'pull_request'/);
+  assert.equal(archive.env.KOVA_SYNTHETIC_NATIVE_CONFIRMATION, "SYNTHETIC_ONLY");
+  assert.equal(archive.steps[0].with["persist-credentials"], false);
+  const archiveExecute = archive.steps.find((step) => step.run?.includes("--execute"));
+  assert.match(archiveExecute.run, /smoke-generic-operator-archive-native\.py/);
+  assert.match(archiveExecute.run, /--output.*\/receipt\.json/);
+  const archiveCleanup = archive.steps.find((step) => step.run?.includes("--cleanup-only"));
+  assert.equal(archiveCleanup.if, "always()");
+  const archiveUploads = archive.steps.filter((step) =>
+    step.uses?.startsWith("actions/upload-artifact@"),
+  );
+  assert.equal(archiveUploads.length, 1);
+  assert.equal(archiveUploads[0].if, "always()");
+  assert.equal(archiveUploads[0].with["retention-days"], 7);
+  assert.match(archiveUploads[0].with.path, /kova-native-oci-archive-.*\/receipt\.json$/);
+  assert.doesNotMatch(archiveUploads[0].with.path, /\*|\.tar|\.gpg|inventory|metadata|sql/);
 }
 
 test("synthetic native PR smoke has no protected credentials, source or image artifact", () => {
@@ -53,6 +72,14 @@ test("mutations cannot turn native synthetic smoke into a protected source or br
     ),
     source.replace("/receipt.json", "/*"),
     source.replace("if: always()", "if: success()"),
+    source.replace(
+      "    timeout-minutes: 30",
+      "    environment: production\n    timeout-minutes: 30",
+    ),
+    source.replace(
+      "kova-native-oci-archive-${{ github.run_id }}-${{ github.run_attempt }}/receipt.json",
+      "kova-native-oci-archive-${{ github.run_id }}-${{ github.run_attempt }}/*",
+    ),
   ]) {
     assert.throws(() => validate(changed));
   }

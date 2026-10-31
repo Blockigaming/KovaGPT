@@ -339,14 +339,13 @@ def canonical_receipt(wire,resolver,type_layouts,datum_layout,*,check_deadline=l
     core.validate_layout(wire["catalogColumns"],wire["catalogForeignKeys"],server_version_num=wire["serverVersionNum"],
         manifests=options["manifests"],expected_foreign_keys=options["expected_foreign_keys"])
     require(type(wire.get("rows")) is list,"semantic_payload_rows_unqualified")
-    grouped={catalog:[] for catalog in options["manifests"]};keys=set()
+    grouped={catalog:[] for catalog in options["manifests"]};keys={}
     for row in wire["rows"]:
         check_deadline()
         value=core.canonicalize_row(row,resolver,canonicalize_tree=nodes.canonicalize_tree,
             type_layouts=type_layouts,datum_layout=datum_layout,**{k:v for k,v in options.items()
                 if k not in {"expected_foreign_keys"}})
-        identity=core.canonical_bytes({k:value[k] for k in ["catalog","extension","identity"]})
-        require(identity not in keys,"semantic_duplicate_object_identity");keys.add(identity)
+        core.record_row_identity(keys,value)
         grouped[value["catalog"]].append(value)
     catalogs=[]
     for catalog,values in sorted(grouped.items()):

@@ -643,7 +643,8 @@ invalid_acls AS ("""+" UNION ALL ".join(acls or ["SELECT 0::bigint AS n"])+"""),
 unsupported_values AS ("""+" UNION ALL ".join(unsupported or ["SELECT 0::bigint AS n"])+"""),
 private_rows AS ("""+" UNION ALL ".join(wire_rows)+"""),
 duplicate_row_keys AS (SELECT catalog,extensionoid,row_identity FROM private_rows
-  GROUP BY catalog,extensionoid,row_identity HAVING count(*)<>1),
+  GROUP BY catalog,extensionoid,row_identity
+  HAVING count(*)<>1 AND (catalog<>'pg_depend' OR count(DISTINCT wire)<>1)),
 private_references AS (SELECT c.relname::text AS catalog,a.objid::bigint AS oid,a.objsubid AS subid,a.identity,a.roundtrip_ok AS roundtrip
   FROM checked_addresses a JOIN pg_catalog.pg_class c ON c.oid=a.classid"""+enum_refs+"""),
 guards AS (SELECT NOT EXISTS(SELECT 1 FROM column_differences) AS columns_ok,

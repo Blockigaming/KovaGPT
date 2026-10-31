@@ -273,9 +273,9 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
     };
   });
 
+  await page.clock.install();
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page.clock.install();
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Work through this carefully");
   await page.getByRole("button", { name: "Send message" }).click();
 
@@ -286,9 +286,9 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
     .filter({ hasText: "Activity" })
     .click();
   await expect(page.getByText("Search complete", { exact: true })).toBeVisible();
-  await page.clock.fastForward(8_000);
+  await page.clock.runFor(8_000);
   await expect(status).toContainText("Still waiting for the response…");
-  await page.clock.fastForward(22_000);
+  await page.clock.runFor(22_000);
   await expect(
     page.getByRole("status").filter({ hasText: "Taking a little longer" }),
   ).toContainText("Taking a little longer…");

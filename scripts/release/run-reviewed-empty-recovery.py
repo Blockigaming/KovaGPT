@@ -208,14 +208,24 @@ def load_exact_operator(plan,paths,run,tag):
     archive=directory/"operator-client.oci.tar"
     require(archive.stat().st_size==pin["archiveBytes"] and builder.file_sha(archive)==pin["archiveSha256"],
             "operator_archive_hash_mismatch")
-    builder.oci_identity(archive,pin["imageId"])
+    oci=builder.inspect_oci(archive)
+    require(oci["configDigest"]==pin["imageId"],"operator_archive_hash_mismatch")
     raw=private_file(directory/"client-image-inventory.json",MAX_JSON)
     require(sha(raw)==pin["inventorySha256"],"operator_inventory_hash_mismatch")
     inventory=strict_json(raw)
     expected={name:builder.file_sha(HERE/name) for name in [*builder.FILES,"recovery-operator-client.Dockerfile"]}
-    require(inventory.get("clientImageId")==pin["imageId"] and inventory.get("sourceSha")==pin["sourceSha"]
+    require(inventory.get("format")==2 and inventory.get("nativeOciArchiveRoundtripSmokePassed") is True
+            and inventory.get("ociConfigDigest")==pin["imageId"]
+            and re.fullmatch(r"sha256:[a-f0-9]{64}",inventory.get("buildClientImageId",""))
+            and inventory.get("clientImageId")==pin["imageId"] and inventory.get("sourceSha")==pin["sourceSha"]
             and all(inventory.get("genericSourceSha256",{}).get(k)==v for k,v in expected.items()),
             "operator_final_source_closure_mismatch")
+    built=inventory.get("genericBuildImage",{})
+    require(type(built) is dict and built.get("Id")==inventory["buildClientImageId"],
+            "operator_final_source_closure_mismatch")
+    binding=builder.verify_oci_runtime_binding(built,json.loads(oci["configBytes"]),source_sha=pin["sourceSha"],
+        owner=built.get("Config",{}).get("Labels",{}).get("org.kova.recovery.owner"))
+    require(binding==inventory.get("ociRuntimeBinding"),"operator_final_source_closure_mismatch")
     listed=run(["docker","image","ls","--format","{{json .}}",tag])
     require(not listed.strip(),"operator_load_tag_already_exists")
     run(["skopeo","copy","oci-archive:"+str(archive)+":operator-client","docker-daemon:"+tag],timeout=300)

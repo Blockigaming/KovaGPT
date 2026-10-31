@@ -43,6 +43,24 @@ def env():return {"KOVA_AUTH_RECOVERY_CONFIRMATION":"CAPTURE_ONLY","GITHUB_EVENT
 
 
 class CaptureTests(unittest.TestCase):
+    def test_whole_surface_receipt_preserves_dependency_row_multiplicity(self):
+        fixture_spec=importlib.util.spec_from_file_location("semantic_dependency_fixture",
+            Path(__file__).with_name("test_extension_relation_payloads.py"))
+        fixtures=importlib.util.module_from_spec(fixture_spec);fixture_spec.loader.exec_module(fixtures)
+        fixture=fixtures.RelationTests();fixture.setUp()
+        resolver=m.core.VerifiedResolver(lambda catalog,oid,subid:{
+            "identity":fixture.resolver(catalog,oid,subid),"roundtrip":True},
+            derived_validators=m.relations.DERIVED_VALIDATORS)
+        wire=Reader().wire;dependency=fixtures.row("pg_depend")
+        wire["rows"]=[dependency,copy.deepcopy(dependency)]
+        two=m.canonical_receipt(wire,resolver,{},{})
+        wire["rows"].pop();one=m.canonical_receipt(wire,resolver,{},{})
+        find=lambda value:next(c for c in value["catalogs"] if c["catalog"]=="pg_depend")
+        self.assertEqual(find(two)["count"],2);self.assertEqual(find(one)["count"],1)
+        self.assertNotEqual(two["canonicalSha256"],one["canonicalSha256"])
+        self.assertNotEqual(find(two)["sha256"],find(one)["sha256"])
+        self.assertFalse(two["rawValuesReturned"])
+
     def test_datum_guard_failure_identifies_fixed_phase_without_raw_values(self):
         reader=Reader();reader.datum.update(eightByteLittleEndianProven=False,private="synthetic-private-metadata")
         with self.assertRaises(m.Stopped) as caught:m.capture(reader,env())
