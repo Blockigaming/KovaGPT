@@ -104,7 +104,7 @@ class SemanticRecoveryTests(unittest.TestCase):
                        for name in ["auth","public","storage","realtime","supabase_migrations","extensions"]],
             "tables":[{"schema":"auth","name":name,"kind":"r"}
                       for name in ["identities","sessions","users"]],
-            "preinstalledObjects":[],"sequences":[],"roles":[],"memberships":[],"roleSettings":[],
+            "bootstrapRole":"postgres","preinstalledObjects":[],"sequences":[],"roles":[],"memberships":[],"roleSettings":[],
             "extensions":[{"name":"synthetic_extension","version":"1.0","schema":"extensions","owner":"postgres"}],
             "largeObjects":[],"publications":[],"extensionData":[]}
         rows = [{"schema":"auth","name":name,"rows":int(name == "users"),"sha256":"d"*64}

@@ -63,7 +63,7 @@ PUBLIC_FAILURE_CODES = frozenset({"explicit_execution_required", "capture_not_en
     "extension_data_coverage_missing", "extension_target_definition_mismatch",
     "source_snapshot_encoding_unqualified", "extension_semantic_capture_unqualified",
     "extension_semantic_source_unqualified", "extension_semantic_target_mismatch",
-    "isolation_server_transport_unqualified"})
+    "isolation_server_transport_unqualified", "toc_review_required", "empty_archive", "dump_wrapper_invalid"})
 STDOUT_BYTES = 128 * 1024**2
 MAX_BYTES = 4 * 1024**3
 CANONICAL_PG = "-c TimeZone=UTC -c DateStyle=ISO,YMD -c bytea_output=hex -c extra_float_digits=3 -c search_path=pg_catalog"
@@ -372,6 +372,7 @@ SELECT jsonb_build_object(
    UNION ALL SELECT n.nspname,t.typname,'type' FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname !~ '^pg_' AND n.nspname<>'information_schema' AND t.typtype IN ('d','e','r','m') AND NOT EXISTS(SELECT 1 FROM pg_depend d WHERE d.classid='pg_type'::regclass AND d.objid=t.oid AND d.deptype='e')
  )o),
  'sequences',(SELECT coalesce(jsonb_agg(jsonb_build_object('schema',n.nspname,'name',c.relname) ORDER BY n.nspname,c.relname),'[]') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind='S' AND n.nspname !~ '^pg_' AND n.nspname<>'information_schema'),
+ 'bootstrapRole',(SELECT rolname FROM pg_roles WHERE oid=10),
  'roles',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',rolname,'super',rolsuper,'inherit',rolinherit,'createRole',rolcreaterole,'createDb',rolcreatedb,'login',rolcanlogin,'replication',rolreplication,'bypassRls',rolbypassrls,'connectionLimit',rolconnlimit,'validUntil',rolvaliduntil) ORDER BY rolname),'[]') FROM pg_roles),
  'memberships',(SELECT coalesce(jsonb_agg(jsonb_build_object('role',pg_get_userbyid(roleid),'member',pg_get_userbyid(member),'grantor',pg_get_userbyid(grantor),'admin',admin_option,'inherit',inherit_option,'set',set_option) ORDER BY roleid,member),'[]') FROM pg_auth_members),
  'roleSettings',(SELECT coalesce(jsonb_agg(jsonb_build_object('role',CASE WHEN s.setrole=0 THEN '*' ELSE pg_get_userbyid(s.setrole) END,'database',coalesce(d.datname,'*'),'settings',s.setconfig) ORDER BY s.setrole,s.setdatabase),'[]') FROM pg_db_role_setting s LEFT JOIN pg_database d ON d.oid=s.setdatabase),
@@ -584,7 +585,7 @@ def schema_hash(data):
 
 # pg_restore's ordered TOC grammar; unsupported types/quoted identifiers stop
 # before execution rather than guessing which managed objects to skip.
-TOC_TYPES = sorted(["SCHEMA", "EXTENSION", "COMMENT", "ACL", "DEFAULT ACL", "TABLE", "TABLE DATA", "SEQUENCE", "SEQUENCE OWNED BY", "SEQUENCE SET", "FUNCTION", "PROCEDURE", "TYPE", "DOMAIN", "SHELL TYPE", "VIEW", "MATERIALIZED VIEW", "MATERIALIZED VIEW DATA", "CONSTRAINT", "FK CONSTRAINT", "INDEX", "INDEX ATTACH", "TABLE ATTACH", "RULE", "TRIGGER", "POLICY", "ROW SECURITY", "PUBLICATION", "PUBLICATION TABLE", "PUBLICATION TABLES IN SCHEMA", "EVENT TRIGGER", "COLLATION", "CONVERSION", "TEXT SEARCH CONFIGURATION", "TEXT SEARCH DICTIONARY", "TEXT SEARCH PARSER", "TEXT SEARCH TEMPLATE", "OPERATOR", "OPERATOR CLASS", "OPERATOR FAMILY", "CAST", "AGGREGATE", "BLOB", "BLOBS", "BLOB COMMENTS", "BLOB ACL", "ENCODING", "STDSTRINGS", "SEARCHPATH"], key=len, reverse=True)
+TOC_TYPES = sorted(["SCHEMA", "EXTENSION", "COMMENT", "ACL", "DEFAULT ACL", "TABLE", "TABLE DATA", "SEQUENCE", "SEQUENCE OWNED BY", "SEQUENCE SET", "FUNCTION", "PROCEDURE", "TYPE", "DOMAIN", "SHELL TYPE", "VIEW", "MATERIALIZED VIEW", "MATERIALIZED VIEW DATA", "CONSTRAINT", "CHECK CONSTRAINT", "FK CONSTRAINT", "INDEX", "INDEX ATTACH", "TABLE ATTACH", "RULE", "TRIGGER", "POLICY", "ROW SECURITY", "PUBLICATION", "PUBLICATION TABLE", "PUBLICATION TABLES IN SCHEMA", "EVENT TRIGGER", "COLLATION", "CONVERSION", "TEXT SEARCH CONFIGURATION", "TEXT SEARCH DICTIONARY", "TEXT SEARCH PARSER", "TEXT SEARCH TEMPLATE", "OPERATOR", "OPERATOR CLASS", "OPERATOR FAMILY", "CAST", "AGGREGATE", "BLOB", "BLOBS", "BLOB COMMENTS", "BLOB ACL", "ENCODING", "STDSTRINGS", "SEARCHPATH"], key=len, reverse=True)
 TOC = re.compile(r"^(\d+); \d+ \d+ (" + "|".join(map(re.escape, TOC_TYPES)) + r") (\S+) (.+)$")
 
 
@@ -907,6 +908,11 @@ COMMIT;"""
 
 
 def role_compatibility(source, target, approved_extra_roles):
+    # OID 10 has special membership-grantor semantics even among superusers.
+    # Preserve its source identity; matching role names/flags alone is not enough.
+    bootstrap=source.get("bootstrapRole")
+    require(isinstance(bootstrap,str) and IDENT.fullmatch(bootstrap)
+            and target.get("bootstrapRole")==bootstrap,"managed_bootstrap_role_mismatch")
     extra = set(approved_extra_roles)
     require(all(IDENT.fullmatch(r) for r in extra), "extra_role_review_required")
     target_filtered = [r for r in target["roles"] if r["name"] not in extra]
