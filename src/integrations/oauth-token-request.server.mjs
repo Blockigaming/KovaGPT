@@ -27,7 +27,11 @@ export function oauthTokenRequest({
   if (verifier) body.set("code_verifier", verifier);
   return {
     method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...(["oura", "whoop"].includes(providerId) ? { "User-Agent": "KovaGPT/1.0" } : {}),
+    },
     body,
   };
 }
@@ -56,17 +60,22 @@ export function selectOAuthTokens(providerId, payload) {
 }
 
 export function oauthRefreshRequest({ providerId, clientId, clientSecret, refreshToken }) {
-  if (!["microsoft", "linear", "slack"].includes(providerId))
+  if (!["microsoft", "linear", "slack", "oura", "whoop"].includes(providerId))
     throw new Error("refresh_not_supported");
   if (!clientId || !clientSecret || !refreshToken) throw new Error("refresh_not_configured");
   return {
     method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": "KovaGPT/1.0",
+    },
     body: new URLSearchParams({
       grant_type: "refresh_token",
       client_id: clientId,
       client_secret: clientSecret,
       refresh_token: refreshToken,
+      ...(providerId === "whoop" ? { scope: "offline" } : {}),
     }),
     redirect: "error",
     signal: AbortSignal.timeout(15_000),

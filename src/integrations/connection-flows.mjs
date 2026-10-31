@@ -94,6 +94,8 @@ export function connectionAuthorizationUrl(provider, value) {
     notion: "https://api.notion.com/v1/oauth/authorize",
     linear: "https://linear.app/oauth/authorize",
     slack: "https://slack.com/oauth/v2/authorize",
+    oura: "https://cloud.ouraring.com/oauth/authorize",
+    whoop: "https://api.prod.whoop.com/oauth/oauth2/auth",
   };
   try {
     const url = new URL(value),

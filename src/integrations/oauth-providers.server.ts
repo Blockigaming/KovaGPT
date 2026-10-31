@@ -1,5 +1,5 @@
 export type OAuthProviderId =
-  "microsoft" | "github" | "slack" | "notion" | "linear" | "dropbox" | "box";
+  "microsoft" | "github" | "slack" | "notion" | "linear" | "dropbox" | "box" | "oura" | "whoop";
 export type OAuthProviderAdapter = {
   id: OAuthProviderId;
   name: string;
@@ -18,6 +18,36 @@ export type OAuthProviderAdapter = {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  oura: {
+    id: "oura",
+    name: "Oura",
+    authorizationEndpoint: "https://cloud.ouraring.com/oauth/authorize",
+    tokenEndpoint: "https://api.ouraring.com/oauth/token",
+    clientIdEnv: "OURA_OAUTH_CLIENT_ID",
+    clientSecretEnv: "OURA_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["personal"],
+    optionalScopes: ["daily"],
+    usesPkce: true,
+    profileEndpoint: "https://api.ouraring.com/v2/usercollection/personal_info",
+    profileId: (v) => text(v.id),
+    profileLabel: () => "Oura account",
+  },
+  whoop: {
+    id: "whoop",
+    name: "WHOOP",
+    authorizationEndpoint: "https://api.prod.whoop.com/oauth/oauth2/auth",
+    tokenEndpoint: "https://api.prod.whoop.com/oauth/oauth2/token",
+    revocationEndpoint: "https://api.prod.whoop.com/developer/v2/user/access",
+    clientIdEnv: "WHOOP_OAUTH_CLIENT_ID",
+    clientSecretEnv: "WHOOP_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["read:profile", "offline"],
+    optionalScopes: ["read:sleep", "read:recovery", "read:cycles"],
+    usesPkce: false,
+    profileEndpoint: "https://api.prod.whoop.com/developer/v2/user/profile/basic",
+    profileId: (v) =>
+      typeof v.user_id === "number" && Number.isSafeInteger(v.user_id) ? String(v.user_id) : "",
+    profileLabel: () => "WHOOP account",
+  },
   microsoft: {
     id: "microsoft",
     name: "Microsoft",

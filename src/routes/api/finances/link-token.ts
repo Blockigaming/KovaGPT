@@ -13,7 +13,9 @@ export const Route = createFileRoute("/api/finances/link-token")({
           return Response.json({ error: "finance_plan_required" }, { status: 403 });
         const body = (await request.json().catch(() => null)) as { country?: string } | null;
         try {
-          return Response.json(await createFinanceLinkToken(auth, body?.country ?? "US"));
+          return Response.json(await createFinanceLinkToken(auth, body?.country ?? "US"), {
+            headers: { "Cache-Control": "no-store" },
+          });
         } catch (error) {
           const safe = publicFinanceError(error, "finance_unavailable");
           console.error("[finance link-token]", safe.logCode);

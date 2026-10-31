@@ -88,7 +88,7 @@ export async function refreshExpiringConnection(ownerId: string, id: string, ver
     !row.token_expires_at ||
     Date.parse(row.token_expires_at) > Date.now() + 60_000 ||
     !row.refresh_token_ciphertext ||
-    !["microsoft", "linear", "slack"].includes(row.provider_id)
+    !["microsoft", "linear", "slack", "oura", "whoop"].includes(row.provider_id)
   )
     return null;
   const provider = OAUTH_PROVIDERS[row.provider_id as OAuthProviderId];
