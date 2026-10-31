@@ -27,6 +27,8 @@ function fixture() {
   const queue = [],
     calls = [];
   let active = true;
+  let generation = 0;
+  let legacyPending = false;
   const modules = Object.fromEntries(
     [
       "@/integrations/supabase/client",
@@ -38,6 +40,10 @@ function fixture() {
       "@/components/ui/dropdown-menu",
     ].map((name) => [name, {}]),
   );
+  modules["react/jsx-runtime"] = {
+    jsx: (type, props, key) => ({ type, props, key }),
+    jsxs: (type, props, key) => ({ type, props, key }),
+  };
   modules["@/lib/principal-browser-storage.mjs"] = {
     purgeUnscopedPrivateBrowserStorage: () => ({
       local: { failures: [] },
@@ -54,8 +60,19 @@ function fixture() {
       assert.ok(next, "every probe has an explicit result");
       return next.promise;
     },
-    clearKovaAuthCache: () => calls.push("invalidate"),
+    clearKovaAuthCache: () => {
+      generation += 1;
+      calls.push("invalidate");
+    },
+    isKovaSessionActive: () => active || legacyPending,
+    isLegacySessionValidationAllowed: () => !active,
+    setLegacySessionValidationPending: (value) => {
+      if (value && !legacyPending) generation += 1;
+      legacyPending = value;
+    },
+    kovaAuthGeneration: () => generation,
     setKovaSessionActive: (value) => {
+      if (active !== value) generation += 1;
       active = value;
       calls.push(value ? "owned" : "legacy");
     },
@@ -77,7 +94,7 @@ function fixture() {
     document,
     calls,
     get active() {
-      return active;
+      return active || legacyPending;
     },
     get tree() {
       return h.tree;
@@ -113,9 +130,8 @@ for (const trigger of ["focus", "pageshow", "storage", "visibilitychange"]) {
     );
     assert.equal(f.active, true, "legacy dispatch is disabled before the probe completes");
     f.render();
-    assert.equal(f.tree.type, "context-provider");
-    assert.equal(f.tree.props.value.isLoaded, false);
-    assert.equal(f.tree.props.value.user, null);
+    assert.equal(f.tree.type.name, "SupabaseClerkProvider");
+    assert.equal(f.tree.props.authorityPending, true);
     result.resolve(principal("new-owner"));
     await f.flush();
     assert.equal(f.tree.props.value.user.id, "new-owner");
@@ -129,6 +145,127 @@ for (const trigger of ["focus", "pageshow", "storage", "visibilitychange"]) {
   });
 }
 
+for (const trigger of ["focus", "pageshow", "storage", "visibilitychange"]) {
+  test(`${trigger}: an unchanged legacy authority resumes the same mounted task subtree`, async () => {
+    const f = fixture();
+    f.next().resolve(null);
+    await f.flush();
+    const provider = f.tree.type;
+    const beforeRevision = f.tree.props.authorityRevision;
+    const result = f.next();
+    f.event(
+      trigger,
+      trigger === "storage" ? { key: "kova:auth-change", oldValue: "a", newValue: "b" } : {},
+      trigger === "visibilitychange" ? f.document : f.window,
+    );
+    assert.equal(f.active, true);
+    f.render();
+    assert.equal(f.tree.type, provider);
+    assert.equal(f.tree.props.children, "private-view");
+    assert.equal(f.tree.props.authorityPending, true);
+    assert.equal(f.tree.props.authorityRevision, beforeRevision + 1);
+    result.resolve(null);
+    await f.flush();
+    assert.equal(f.active, true, "the hosted SDK still needs independent user/MFA validation");
+    assert.equal(f.tree.props.legacyValidationRequired, true);
+    f.tree.props.onAuthorityResolved(f.tree.props.authorityRevision);
+    await f.flush();
+    assert.equal(f.active, false);
+    assert.equal(f.tree.type, provider, "React retains the task component's provider position");
+    assert.equal(f.tree.props.authorityPending, false);
+    assert.equal(f.tree.props.authorityRevision, beforeRevision + 1);
+    f.unmount();
+  });
+
+  test(`${trigger}: unchanged owned authority keeps its stable principal key while re-probing`, async () => {
+    const f = fixture();
+    f.next().resolve(principal("owner"));
+    await f.flush();
+    const originalKey = f.tree.key;
+    assert.equal(originalKey, "owner");
+    const result = f.next();
+    f.event(
+      trigger,
+      trigger === "storage" ? { key: "kova:auth-change", oldValue: "a", newValue: "b" } : {},
+      trigger === "visibilitychange" ? f.document : f.window,
+    );
+    f.render();
+    assert.equal(f.tree.key, originalKey);
+    assert.equal(f.tree.props.value.isLoaded, true);
+    assert.equal(f.tree.props.value.user.id, "owner");
+    const content = f.nodes().find((node) => node.type === "div" && node.props.inert);
+    assert.equal(content.props.style.display, "none", "old account controls are hidden");
+    result.resolve(principal("owner"));
+    await f.flush();
+    assert.equal(f.tree.key, originalKey);
+    assert.equal(f.tree.props.value.user.id, "owner");
+    assert.equal(
+      f.nodes().some((node) => node.props.inert),
+      false,
+    );
+    f.unmount();
+  });
+}
+
+test("an immediate same-legacy result still advances the rehydration revision", async () => {
+  const f = fixture();
+  f.next().resolve(null);
+  await f.flush();
+  const provider = f.tree.type;
+  f.next().resolve(null);
+  f.event("focus");
+  // Deliberately do not render the intermediate pending state.
+  await f.flush();
+  assert.equal(f.tree.type, provider);
+  assert.equal(f.tree.props.authorityPending, false);
+  assert.equal(f.tree.props.authorityRevision, 1);
+  f.unmount();
+});
+
+test("a stale hosted-validation callback cannot release a newer probe's fence", async () => {
+  const f = fixture();
+  f.next().resolve(null);
+  await f.flush();
+  f.next().resolve(null);
+  f.event("focus");
+  await f.flush();
+  const old = f.tree.props;
+  const current = f.next();
+  f.event("pageshow");
+  old.onAuthorityResolved(old.authorityRevision);
+  f.render();
+  assert.equal(f.active, true);
+  assert.equal(f.tree.props.legacyValidationRequired, true);
+  current.resolve(null);
+  await f.flush();
+  f.tree.props.onAuthorityFailed(f.tree.props.authorityRevision);
+  await f.flush();
+  assert.equal(f.active, true);
+  assert.equal(f.tree.props.value.user, null);
+  assert.equal(f.tree.props.value.isLoaded, false);
+  f.unmount();
+});
+
+test("confirmed owned account changes and revocation replace the prior principal key", async () => {
+  const f = fixture();
+  f.next().resolve(principal("first-owner"));
+  await f.flush();
+  const changed = f.next();
+  f.event("storage", { key: "kova:auth-change", oldValue: "a", newValue: "b" });
+  changed.resolve(principal("second-owner"));
+  await f.flush();
+  assert.equal(f.tree.key, "second-owner");
+  assert.equal(f.tree.props.value.user.id, "second-owner");
+  const revoked = f.next();
+  f.event("focus");
+  revoked.reject(new Error("rejected"));
+  await f.flush();
+  assert.equal(f.tree.key, "guest");
+  assert.equal(f.tree.props.value.user, null);
+  assert.equal(f.tree.props.value.isLoaded, true);
+  f.unmount();
+});
+
 test("rapid changes discard an older result and coalesce into one authoritative follow-up probe", async () => {
   const f = fixture();
   f.next().resolve(null);
@@ -140,7 +277,8 @@ test("rapid changes discard an older result and coalesce into one authoritative 
   f.event("storage", { key: "kova:auth-change", oldValue: "a", newValue: "b" });
   stale.resolve(principal("stale-owner"));
   await f.flush();
-  assert.equal(f.tree.props.value.user, null);
+  assert.equal(f.tree.type.name, "SupabaseClerkProvider");
+  assert.equal(f.tree.props.authorityPending, true);
   assert.equal(f.calls.filter((v) => v === "probe").length, 3);
   current.resolve(principal("current-owner"));
   await f.flush();

@@ -1,0 +1,94 @@
+name: Work runtime forward native PostgreSQL17
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/work-runtime-forward-native.yml
+      - scripts/release/work-runtime-forward-native.py
+      - scripts/release/work-runtime-forward-guards.mjs
+      - tests/fixtures/work-runtime-prerequisite-catalog-20261030.json
+      - tests/fixtures/work-runtime-forward-native-smoke-20261030.sql
+      - tests/unit/test_work_runtime_forward_native.py
+      - supabase/migrations/20261030163511_kova_work_runtime_forward.sql
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: work-forward-native-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-replay:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Validate credential-free target guards
+        run: python3 -m unittest discover -s tests/unit -p test_work_runtime_forward_native.py
+
+      - name: Extract PostgreSQL17 from the signed official repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" != 0
+          tools="$RUNNER_TEMP/work-native-pg17-tools"
+          mkdir -p "$tools/lists/partial" "$tools/archives/partial" "$tools/packages" "$tools/extracted"
+          key="$tools/pgdg.asc"
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2 \
+            --connect-timeout 10 --max-time 60 \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc -o "$key"
+          gpg --batch --show-keys --with-colons "$key" | python3 -c \
+            'import sys;r=[x.split(":") for x in sys.stdin.read().splitlines()];assert sum(x[0]=="pub" for x in r)==1;assert next(x[9] for x in r if x[0]=="fpr")=="B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8"'
+          printf '%s\n' \
+            "deb [arch=amd64 signed-by=$key] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+            > "$tools/pgdg.list"
+          apt_options=(
+            -o "APT::Sandbox::User=$(id -un)"
+            -o "Dir::Etc::sourcelist=$tools/pgdg.list"
+            -o Dir::Etc::sourceparts=-
+            -o "Dir::State::lists=$tools/lists"
+            -o "Dir::Cache::archives=$tools/archives"
+          )
+          apt-get "${apt_options[@]}" update -qq
+          version="$(apt-cache "${apt_options[@]}" policy postgresql-17 | awk '/Candidate:/ {print $2; exit}')"
+          [[ "$version" =~ ^17\.[0-9A-Za-z.+:~_-]+$ ]]
+          (
+            cd "$tools/packages"
+            apt-get "${apt_options[@]}" download \
+              "postgresql-17=$version" "postgresql-client-17=$version" libpq5
+            for package in ./*.deb; do dpkg-deb -x "$package" "$tools/extracted"; done
+            sha256sum ./*.deb > "$RUNNER_TEMP/work-native-package-sha256.txt"
+          )
+          export LD_LIBRARY_PATH="$tools/extracted/usr/lib/x86_64-linux-gnu"
+          "$tools/extracted/usr/lib/postgresql/17/bin/psql" --version
+          "$tools/extracted/usr/lib/postgresql/17/bin/postgres" --version
+          if ldd "$tools/extracted/usr/lib/postgresql/17/bin/postgres" | grep 'not found'; then exit 1; fi
+
+      - name: Replay only synthetic Work state on its newly pinned native target
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LD_LIBRARY_PATH="$RUNNER_TEMP/work-native-pg17-tools/extracted/usr/lib/x86_64-linux-gnu"
+          python3 scripts/release/work-runtime-forward-native.py \
+            --repository "$GITHUB_WORKSPACE" \
+            --pg17-bin "$RUNNER_TEMP/work-native-pg17-tools/extracted/usr/lib/postgresql/17/bin" \
+            --evidence-directory "$RUNNER_TEMP/work-native-evidence"
+
+      - name: Retain synthetic test evidence only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: work-forward-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/work-native-evidence/native-work.log
+            ${{ runner.temp }}/work-native-evidence/receipt.json
+            ${{ runner.temp }}/work-native-package-sha256.txt
+          if-no-files-found: warn
+          retention-days: 7

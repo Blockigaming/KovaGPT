@@ -27,6 +27,7 @@ import {
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import {
   getSupabaseClientConfigStatus,
+  getLegacyAuthValidationClient,
   signOutLegacySupabaseSession,
   supabase,
 } from "@/integrations/supabase/client";
@@ -68,6 +69,9 @@ import {
   KOVA_AUTH_CHANGE_KEY,
   resolveKovaSessionAuthority,
   isKovaSessionRejectedError,
+  isLegacySessionValidationAllowed,
+  kovaAuthGeneration,
+  setLegacySessionValidationPending,
   setKovaSessionActive,
   type KovaBrowserPrincipal,
 } from "@/lib/kova-auth-browser";
@@ -94,6 +98,33 @@ function isActiveBan(bannedUntil: string | undefined) {
   return !Number.isFinite(timestamp) || timestamp > Date.now();
 }
 
+function AuthAuthorityGate({ pending }: { pending: boolean }) {
+  const dialog = useRef<HTMLDialogElement | null>(null);
+  useEffect(() => {
+    const current = dialog.current;
+    if (!current) return;
+    // Native top-layer modality also fences Radix portals outside the normal
+    // app DOM. Keep this element mounted so the task subtree stays mounted.
+    if (pending && !current.open) current.showModal();
+    if (!pending && current.open) current.close();
+    return () => {
+      if (current.open) current.close();
+    };
+  }, [pending]);
+  return (
+    <dialog
+      ref={dialog}
+      aria-label="Verifying your session"
+      className="fixed inset-0 m-0 h-dvh w-screen max-h-none max-w-none border-0 bg-background p-0 text-foreground backdrop:bg-background"
+      onCancel={(event) => event.preventDefault()}
+    >
+      <div className="grid h-full place-items-center text-sm text-muted-foreground" role="status">
+        Verifying your session…
+      </div>
+    </dialog>
+  );
+}
+
 function KovaClerkProvider({
   children,
   allowLegacyFallback,
@@ -105,6 +136,10 @@ function KovaClerkProvider({
   const [isLoaded, setIsLoaded] = useState(false);
   const [authIssue, setAuthIssue] = useState<AuthIssue>(null);
   const [useLegacy, setUseLegacy] = useState(false);
+  const [authorityPending, setAuthorityPending] = useState(false);
+  const [authorityRevision, setAuthorityRevision] = useState(0);
+  const [legacyValidationRequired, setLegacyValidationRequired] = useState(false);
+  const authorityRevisionRef = useRef(0);
   const [dialog, setDialog] = useState<AuthDialogState>({ open: false, mode: "sign-in" });
   const authReturnFocusRef = useRef<HTMLElement | null>(null);
   // The reset route removes its fragment on mount. Keep its provider in place
@@ -173,12 +208,16 @@ function KovaClerkProvider({
         initial = false;
         if (!principal && allowLegacyFallback && !ownedRecovery) {
           setKovaSessionActive(false);
+          setAuthorityPending(false);
           setUseLegacy(true);
           return;
         }
         purgeOwnerlessStateFor(principal?.accountId ?? null);
         setKovaSessionActive(Boolean(principal) || !allowLegacyFallback || ownedRecovery);
         setUseLegacy(false);
+        setLegacySessionValidationPending(false);
+        setLegacyValidationRequired(false);
+        setAuthorityPending(false);
         setSession(principal ? toSession(principal) : null);
         setAuthIssue(null);
         setIsLoaded(true);
@@ -188,6 +227,9 @@ function KovaClerkProvider({
           purgeOwnerlessStateFor(null);
           setKovaSessionActive(true);
           setUseLegacy(false);
+          setLegacySessionValidationPending(false);
+          setLegacyValidationRequired(false);
+          setAuthorityPending(false);
           setSession(null);
           setAuthIssue(null);
           setIsLoaded(true);
@@ -196,6 +238,8 @@ function KovaClerkProvider({
         console.error("[KovaAuth] Kova session restore failed", {
           error: error instanceof Error ? error.name : "unknown_error",
         });
+        setUseLegacy(false);
+        setAuthorityPending(false);
         setSession(null);
         setAuthIssue("temporarily_unavailable");
         setIsLoaded(false);
@@ -208,13 +252,17 @@ function KovaClerkProvider({
       }
     };
     const invalidate = () => {
-      // Disable the legacy data client synchronously, before React commits the
-      // replacement provider or starts any asynchronous cookie validation.
+      // Fence data dispatch synchronously, but a focus or storage hint is not
+      // proof that the displayed principal changed. Keep its provider mounted
+      // until the cookie probe confirms a change, so bounded tasks survive a
+      // routine refresh. Legacy validation pauses while authority is unknown.
       setKovaSessionActive(true);
+      setLegacySessionValidationPending(true);
       clearKovaAuthCache();
-      setUseLegacy(false);
-      setSession(null);
-      setIsLoaded(false);
+      authorityRevisionRef.current += 1;
+      setAuthorityRevision(authorityRevisionRef.current);
+      setLegacyValidationRequired(true);
+      setAuthorityPending(true);
       void refresh();
     };
     const visible = () => {
@@ -236,6 +284,22 @@ function KovaClerkProvider({
       document.removeEventListener("visibilitychange", visible);
     };
   }, [allowLegacyFallback, ownedRecovery, purgeOwnerlessStateFor, toSession]);
+
+  const legacyAuthorityResolved = useCallback((revision: number) => {
+    if (revision !== authorityRevisionRef.current || !isLegacySessionValidationAllowed()) return;
+    setLegacySessionValidationPending(false);
+    setLegacyValidationRequired(false);
+  }, []);
+
+  const legacyAuthorityFailed = useCallback((revision: number) => {
+    if (revision !== authorityRevisionRef.current) return;
+    setLegacySessionValidationPending(true);
+    setUseLegacy(false);
+    setSession(null);
+    setIsLoaded(false);
+    setAuthIssue("temporarily_unavailable");
+    setAuthorityPending(false);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -300,7 +364,18 @@ function KovaClerkProvider({
     [session, isLoaded, authIssue, openAuth, signOut],
   );
 
-  if (useLegacy) return <SupabaseClerkProvider>{children}</SupabaseClerkProvider>;
+  if (useLegacy)
+    return (
+      <SupabaseClerkProvider
+        authorityPending={authorityPending}
+        authorityRevision={authorityRevision}
+        legacyValidationRequired={legacyValidationRequired}
+        onAuthorityResolved={legacyAuthorityResolved}
+        onAuthorityFailed={legacyAuthorityFailed}
+      >
+        {children}
+      </SupabaseClerkProvider>
+    );
 
   return (
     <Ctx.Provider
@@ -309,7 +384,13 @@ function KovaClerkProvider({
       }
       value={value}
     >
-      {children}
+      <div
+        style={{ display: authorityPending ? "none" : "contents" }}
+        inert={authorityPending || undefined}
+      >
+        {children}
+      </div>
+      <AuthAuthorityGate pending={authorityPending} />
       {authIssue ? (
         <div
           role="alert"
@@ -328,7 +409,7 @@ function KovaClerkProvider({
         </div>
       ) : null}
       <AuthDialog
-        open={dialog.open}
+        open={dialog.open && !authorityPending}
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}
         onOpenChange={(open) => setDialog((current) => ({ ...current, open }))}
@@ -337,7 +418,22 @@ function KovaClerkProvider({
   );
 }
 
-function SupabaseClerkProvider({ children }: { children: ReactNode }) {
+function SupabaseClerkProvider({
+  children,
+  authorityPending = false,
+  authorityRevision = 0,
+  legacyValidationRequired = false,
+  onAuthorityResolved,
+  onAuthorityFailed,
+}: {
+  children: ReactNode;
+  authorityPending?: boolean;
+  authorityRevision?: number;
+  legacyValidationRequired?: boolean;
+  onAuthorityResolved?: (revision: number) => void;
+  onAuthorityFailed?: (revision: number) => void;
+}) {
+  const authorityUnresolved = authorityPending || legacyValidationRequired;
   const [session, setSession] = useState<Session | null>(null);
   const [pendingMfaSession, setPendingMfaSession] = useState<Session | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -421,7 +517,13 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
 
   const acceptSession = useCallback(
     async (candidate: Session | null) => {
+      if (!isLegacySessionValidationAllowed()) return;
+      const authorityGeneration = kovaAuthGeneration();
       const validation = ++sessionValidationRef.current;
+      const current = () =>
+        validation === sessionValidationRef.current &&
+        authorityGeneration === kovaAuthGeneration() &&
+        isLegacySessionValidationAllowed();
       if (!candidate) {
         const previousUserId = browserStorageUserIdRef.current;
         const pendingUserId = pendingValidationUserIdRef.current;
@@ -445,6 +547,7 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
         setPendingMfaSession(null);
         setAuthIssue(null);
         setIsLoaded(true);
+        onAuthorityResolved?.(authorityRevision);
         return;
       }
 
@@ -459,12 +562,13 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
       }
 
       try {
+        const auth = getLegacyAuthValidationClient();
         const [{ data: userData, error: userError }, { data: assurance, error: assuranceError }] =
           await Promise.all([
-            supabase.auth.getUser(candidate.access_token),
-            supabase.auth.mfa.getAuthenticatorAssuranceLevel(candidate.access_token),
+            auth.getUser(candidate.access_token),
+            auth.getAuthenticatorAssuranceLevel(candidate.access_token),
           ]);
-        if (validation !== sessionValidationRef.current) return;
+        if (!current()) return;
 
         const validatedUser = userData.user;
         const disposition = classifyAuthValidationResult({
@@ -477,6 +581,7 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
         });
         if (disposition.kind === "retryable") {
           markRetryableAuthFailure(candidate, userError ?? assuranceError, "returned");
+          onAuthorityFailed?.(authorityRevision);
           return;
         }
         if (disposition.kind === "terminal") {
@@ -493,8 +598,8 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
             candidate.user.id,
           ] as const;
           clearBrowserStateFor(...cleanupIds);
-          await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-          if (validation !== sessionValidationRef.current) return;
+          await auth.signOut().catch(() => undefined);
+          if (!current()) return;
           clearBrowserStateFor(...cleanupIds);
           purgeOwnerlessStateFor(null);
           browserStorageUserIdRef.current = null;
@@ -504,6 +609,7 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
           setPendingMfaSession(null);
           setAuthIssue(null);
           setIsLoaded(true);
+          onAuthorityResolved?.(authorityRevision);
           return;
         }
         if (!validatedUser || !assurance) return;
@@ -528,6 +634,7 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
           // MFA identity is known, but storage stays unresolved until the
           // challenge succeeds so no caller can fall back to guest.
           setIsLoaded(false);
+          onAuthorityResolved?.(authorityRevision);
           return;
         }
 
@@ -548,15 +655,24 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
         setSession(validatedSession);
         setAuthIssue(null);
         setIsLoaded(true);
+        onAuthorityResolved?.(authorityRevision);
       } catch (error) {
-        if (validation !== sessionValidationRef.current) return;
+        if (!current()) return;
         const disposition = classifyThrownAuthValidationError(error);
         if (disposition.kind === "retryable") {
           markRetryableAuthFailure(candidate, error, "thrown");
+          onAuthorityFailed?.(authorityRevision);
         }
       }
     },
-    [clearBrowserStateFor, markRetryableAuthFailure, purgeOwnerlessStateFor],
+    [
+      authorityRevision,
+      clearBrowserStateFor,
+      markRetryableAuthFailure,
+      onAuthorityFailed,
+      onAuthorityResolved,
+      purgeOwnerlessStateFor,
+    ],
   );
 
   useEffect(() => {
@@ -566,6 +682,21 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
     // until deployment config is repaired.
     let cancelled = false;
     const callbackController = new AbortController();
+    // The parent has already fenced the shared data client. Do not let its
+    // temporary Kova selection masquerade as a missing hosted-auth session.
+    if (authorityPending) {
+      sessionValidationRef.current += 1;
+      return () => {
+        cancelled = true;
+        sessionValidationRef.current += 1;
+        callbackController.abort();
+      };
+    }
+    const authorityGeneration = kovaAuthGeneration();
+    const current = (validation: number) =>
+      isCurrentAuthValidation(validation, sessionValidationRef.current, cancelled) &&
+      authorityGeneration === kovaAuthGeneration() &&
+      isLegacySessionValidationAllowed();
     const config = getSupabaseClientConfigStatus();
     if (!config.configured) {
       console.warn(`[KovaAuth] Supabase auth unavailable. Missing: ${config.missing.join(", ")}`);
@@ -573,13 +704,16 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
       setAuthIssue("configuration_unavailable");
       // Missing deployment config cannot prove that this browser is a guest.
       setIsLoaded(false);
+      onAuthorityFailed?.(authorityRevision);
       return () => {
         cancelled = true;
       };
     }
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (cancelled) return;
+    if (!isLegacySessionValidationAllowed()) return;
+    const auth = getLegacyAuthValidationClient();
+    const { data: sub } = auth.onAuthStateChange((event, newSession) => {
+      if (cancelled || !isLegacySessionValidationAllowed()) return;
       if (!newSession && hasOAuthResponseInUrl()) return;
       if (event === "PASSWORD_RECOVERY" && newSession) {
         markPasswordRecoveryFlow(newSession.user.id);
@@ -592,7 +726,7 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
       // is held. Schedule the authoritative user/MFA validation after this
       // callback returns.
       window.setTimeout(() => {
-        if (isCurrentAuthValidation(eventValidation, sessionValidationRef.current, cancelled)) {
+        if (current(eventValidation)) {
           void acceptSession(newSession);
         }
       }, 0);
@@ -613,21 +747,16 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
             callbackController.signal,
           );
           clearOAuthResponseFromUrl();
-          if (
-            !isCurrentAuthValidation(hydrationValidation, sessionValidationRef.current, cancelled)
-          )
-            return;
+          if (!current(hydrationValidation)) return;
           if (oauthSession) {
             await acceptSession(oauthSession);
             return;
           }
         }
 
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await auth.getSession();
         if (error) {
-          if (
-            isCurrentAuthValidation(hydrationValidation, sessionValidationRef.current, cancelled)
-          ) {
+          if (current(hydrationValidation)) {
             const disposition = classifySessionRestoreError(error);
             if (disposition.kind === "terminal") {
               const cleanupIds = [
@@ -639,15 +768,8 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
               setPendingMfaSession(null);
               setIsLoaded(false);
               clearBrowserStateFor(...cleanupIds);
-              await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-              if (
-                !isCurrentAuthValidation(
-                  hydrationValidation,
-                  sessionValidationRef.current,
-                  cancelled,
-                )
-              )
-                return;
+              await auth.signOut().catch(() => undefined);
+              if (!current(hydrationValidation)) return;
               clearBrowserStateFor(...cleanupIds);
               purgeOwnerlessStateFor(null);
               browserStorageUserIdRef.current = null;
@@ -655,18 +777,20 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
               validatedSessionRef.current = null;
               setAuthIssue(null);
               setIsLoaded(true);
+              onAuthorityResolved?.(authorityRevision);
             } else {
               markRetryableAuthFailure(data.session, error, "restore");
+              onAuthorityFailed?.(authorityRevision);
             }
           }
           return;
         }
-        if (!isCurrentAuthValidation(hydrationValidation, sessionValidationRef.current, cancelled))
-          return;
+        if (!current(hydrationValidation)) return;
         await acceptSession(data.session);
       } catch (error) {
-        if (isCurrentAuthValidation(hydrationValidation, sessionValidationRef.current, cancelled)) {
+        if (current(hydrationValidation)) {
           markRetryableAuthFailure(null, error, "restore");
+          onAuthorityFailed?.(authorityRevision);
         }
       }
     }
@@ -675,10 +799,20 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      sessionValidationRef.current += 1;
       callbackController.abort();
       sub.subscription.unsubscribe();
     };
-  }, [acceptSession, clearBrowserStateFor, markRetryableAuthFailure, purgeOwnerlessStateFor]);
+  }, [
+    acceptSession,
+    authorityPending,
+    authorityRevision,
+    clearBrowserStateFor,
+    markRetryableAuthFailure,
+    onAuthorityFailed,
+    onAuthorityResolved,
+    purgeOwnerlessStateFor,
+  ]);
 
   // Support ?sign-in=1 / ?sign-up=1 deep links (legacy behavior).
   useEffect(() => {
@@ -742,8 +876,17 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Ctx.Provider value={value}>
-      {children}
+    // Resolving the initial public session must preserve the SSR subtree.
+    // isLoaded still gates all principal access; per-account keys discard
+    // private child state immediately when a validated account is cleared.
+    <Ctx.Provider key={session?.user.id ?? "guest"} value={value}>
+      <div
+        style={{ display: authorityUnresolved ? "none" : "contents" }}
+        inert={authorityUnresolved || undefined}
+      >
+        {children}
+      </div>
+      <AuthAuthorityGate pending={authorityUnresolved} />
       {authIssue ? (
         <div
           role="alert"
@@ -766,13 +909,13 @@ function SupabaseClerkProvider({ children }: { children: ReactNode }) {
         </div>
       ) : null}
       <AuthDialog
-        open={dialog.open}
+        open={dialog.open && !authorityUnresolved}
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}
         onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}
       />
       <MfaChallengeDialog
-        open={Boolean(pendingMfaSession)}
+        open={Boolean(pendingMfaSession) && !authorityUnresolved}
         onVerified={(verifiedSession) => void acceptSession(verifiedSession)}
         onCancel={() => void signOut()}
       />

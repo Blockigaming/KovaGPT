@@ -409,6 +409,7 @@ function KovaGPT() {
   // SSR/hydration. On desktop we honor the persisted user preference so the
   // sidebar remembers its collapsed state across reloads.
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarPreferenceRestored, setSidebarPreferenceRestored] = useState(false);
   const sidebarKeyboardTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const trigger = sidebarKeyboardTriggerRef.current;
@@ -425,15 +426,20 @@ function KovaGPT() {
       /* ignore */
     }
     setSidebarOpen(saved === null ? true : saved === "1");
+    setSidebarPreferenceRestored(true);
   }, []);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    // An Auth principal change can remount this shell before restoration's
+    // state update commits. Never persist the SSR-closed placeholder as the
+    // user's preference while that decision is still pending.
+    if (!sidebarPreferenceRestored || typeof window === "undefined" || window.innerWidth < 1024)
+      return;
     try {
       localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0");
     } catch {
       /* ignore */
     }
-  }, [sidebarOpen]);
+  }, [sidebarOpen, sidebarPreferenceRestored]);
 
   const loadRecentLibraryFiles = useCallback(async () => {
     if (!isLoaded) return;

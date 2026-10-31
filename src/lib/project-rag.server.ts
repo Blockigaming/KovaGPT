@@ -101,6 +101,7 @@ function chunkText(text: string): string[] {
     }
     const trimmed = slice.trim();
     if (trimmed) chunks.push(trimmed);
+    if (end === clean.length) break;
     i += Math.max(1, slice.length - CHUNK_OVERLAP);
   }
   return chunks;

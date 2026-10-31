@@ -77,9 +77,10 @@ export function parseAuthSettings(payload: unknown): AuthProviderAvailability {
   };
 }
 
-let cache: { at: number; value: AuthProviderAvailability } | null = null;
-let inFlight: Promise<AuthProviderAvailability> | null = null;
+let cache: { scope: string; at: number; value: AuthProviderAvailability } | null = null;
+let inFlight: { scope: string; promise: Promise<AuthProviderAvailability> } | null = null;
 const CACHE_MS = 5 * 60_000;
+const PROBE_TIMEOUT_MS = 10_000;
 
 /** Reset the in-memory probe cache. Test-only helper. */
 export function resetAuthProviderCache() {
@@ -87,40 +88,76 @@ export function resetAuthProviderCache() {
   inFlight = null;
 }
 
+const unavailable = (): AuthProviderAvailability => ({
+  ...UNRESOLVED_AUTH_PROVIDERS,
+  error: "unreachable",
+});
+
+function observeProbe(
+  promise: Promise<AuthProviderAvailability>,
+  signal?: AbortSignal,
+): Promise<AuthProviderAvailability> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.resolve(unavailable());
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: AuthProviderAvailability) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener("abort", abort);
+      resolve(value);
+    };
+    const abort = () => finish(unavailable());
+    signal.addEventListener("abort", abort, { once: true });
+    void promise.then(finish, () => finish(unavailable()));
+  });
+}
+
 export async function fetchAuthProviderAvailability(
   signal?: AbortSignal,
 ): Promise<AuthProviderAvailability> {
-  if (cache && Date.now() - cache.at < CACHE_MS) return cache.value;
-  if (inFlight) return inFlight;
+  if (signal?.aborted) return unavailable();
 
   const url = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
   const key = (import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ??
     import.meta.env["VITE_SUPABASE_ANON_KEY"]) as string | undefined;
   if (!url || !key) {
-    return { ...UNRESOLVED_AUTH_PROVIDERS, error: "unreachable" };
+    return unavailable();
   }
+  const scope = `${url}\u0000${key}`;
+  if (cache?.scope === scope && Date.now() - cache.at < CACHE_MS) return cache.value;
+  if (inFlight?.scope === scope) return observeProbe(inFlight.promise, signal);
 
-  inFlight = (async () => {
+  // The shared, fixed settings read owns its cancellation. A dialog unmount
+  // cancels only that observer, so its replacement cannot inherit an aborted
+  // request. The upstream read still has a fixed timeout and never retries.
+  const promise = (async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
     try {
       const response = await fetch(`${url.replace(/\/+$/, "")}/auth/v1/settings`, {
         headers: { apikey: key, Accept: "application/json" },
-        ...(signal ? { signal } : {}),
+        signal: controller.signal,
       });
       if (!response.ok) {
         return { ...UNRESOLVED_AUTH_PROVIDERS, error: "unreachable" as const };
       }
-      const parsed = parseAuthSettings(await response.json());
-      if (parsed.resolved) cache = { at: Date.now(), value: parsed };
-      return parsed;
+      return parseAuthSettings(await response.json());
     } catch {
       // Never surface a raw provider/network error to the UI.
       return { ...UNRESOLVED_AUTH_PROVIDERS, error: "unreachable" as const };
     } finally {
-      inFlight = null;
+      clearTimeout(timeout);
     }
   })();
-
-  return inFlight;
+  const request = { scope, promise };
+  inFlight = request;
+  void promise.then((value) => {
+    if (inFlight !== request) return;
+    if (value.resolved) cache = { scope, at: Date.now(), value };
+    inFlight = null;
+  });
+  return observeProbe(promise, signal);
 }
 
 export const GOOGLE_UNCONFIGURED_MESSAGE =

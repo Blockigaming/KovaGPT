@@ -1,0 +1,353 @@
+{
+  "customSerializationSource": "https://github.com/postgres/postgres/blob/REL_17_6/src/backend/nodes/outfuncs.c",
+  "fieldOrders": {
+    "ALIAS": ["aliasname", "colnames"],
+    "BOOLEXPR": ["boolop", "args", "location"],
+    "COERCETODOMAINVALUE": ["typeId", "typeMod", "collation", "location"],
+    "COERCEVIAIO": ["arg", "resulttype", "resultcollid", "coerceformat", "location"],
+    "CONST": [
+      "consttype",
+      "consttypmod",
+      "constcollid",
+      "constlen",
+      "constbyval",
+      "constisnull",
+      "location",
+      "constvalue"
+    ],
+    "FROMEXPR": ["fromlist", "quals"],
+    "FUNCEXPR": [
+      "funcid",
+      "funcresulttype",
+      "funcretset",
+      "funcvariadic",
+      "funcformat",
+      "funccollid",
+      "inputcollid",
+      "args",
+      "location"
+    ],
+    "NAMEDARGEXPR": ["arg", "name", "argnumber", "location"],
+    "NULLTEST": ["arg", "nulltesttype", "argisrow", "location"],
+    "OPEXPR": [
+      "opno",
+      "opfuncid",
+      "opresulttype",
+      "opretset",
+      "opcollid",
+      "inputcollid",
+      "args",
+      "location"
+    ],
+    "QUERY": [
+      "commandType",
+      "querySource",
+      "canSetTag",
+      "utilityStmt",
+      "resultRelation",
+      "hasAggs",
+      "hasWindowFuncs",
+      "hasTargetSRFs",
+      "hasSubLinks",
+      "hasDistinctOn",
+      "hasRecursive",
+      "hasModifyingCTE",
+      "hasForUpdate",
+      "hasRowSecurity",
+      "isReturn",
+      "cteList",
+      "rtable",
+      "rteperminfos",
+      "jointree",
+      "mergeActionList",
+      "mergeTargetRelation",
+      "mergeJoinCondition",
+      "targetList",
+      "override",
+      "onConflict",
+      "returningList",
+      "groupClause",
+      "groupDistinct",
+      "groupingSets",
+      "havingQual",
+      "windowClause",
+      "distinctClause",
+      "sortClause",
+      "limitOffset",
+      "limitCount",
+      "limitOption",
+      "rowMarks",
+      "setOperations",
+      "constraintDeps",
+      "withCheckOptions",
+      "stmt_location",
+      "stmt_len"
+    ],
+    "RANGETBLENTRY": {
+      "prefix": ["alias", "eref", "rtekind"],
+      "suffix": ["lateral", "inFromCl", "securityQuals"],
+      "variants": {
+        "0": ["relid", "inh", "relkind", "rellockmode", "perminfoindex", "tablesample"],
+        "3": ["functions", "funcordinality"],
+        "8": []
+      }
+    },
+    "RANGETBLFUNCTION": [
+      "funcexpr",
+      "funccolcount",
+      "funccolnames",
+      "funccoltypes",
+      "funccoltypmods",
+      "funccolcollations",
+      "funcparams"
+    ],
+    "RANGETBLREF": ["rtindex"],
+    "RELABELTYPE": [
+      "arg",
+      "resulttype",
+      "resulttypmod",
+      "resultcollid",
+      "relabelformat",
+      "location"
+    ],
+    "RTEPERMISSIONINFO": [
+      "relid",
+      "inh",
+      "requiredPerms",
+      "checkAsUser",
+      "selectedCols",
+      "insertedCols",
+      "updatedCols"
+    ],
+    "SQLVALUEFUNCTION": ["op", "type", "typmod", "location"],
+    "TARGETENTRY": [
+      "expr",
+      "resno",
+      "resname",
+      "ressortgroupref",
+      "resorigtbl",
+      "resorigcol",
+      "resjunk"
+    ],
+    "VAR": [
+      "varno",
+      "varattno",
+      "vartype",
+      "vartypmod",
+      "varcollid",
+      "varnullingrels",
+      "varlevelsup",
+      "varnosyn",
+      "varattnosyn",
+      "location"
+    ]
+  },
+  "format": 1,
+  "nodes": {
+    "ALIAS": {
+      "aliasname": "atom",
+      "colnames": "value"
+    },
+    "BOOLEXPR": {
+      "args": "value",
+      "boolop": "boolop",
+      "location": "int"
+    },
+    "COERCETODOMAINVALUE": {
+      "collation": "oid:pg_collation",
+      "location": "int",
+      "typeId": "oid:pg_type",
+      "typeMod": "int"
+    },
+    "COERCEVIAIO": {
+      "arg": "value",
+      "coerceformat": "int",
+      "location": "int",
+      "resultcollid": "oid:pg_collation",
+      "resulttype": "oid:pg_type"
+    },
+    "CONST": {
+      "constbyval": "bool",
+      "constcollid": "oid:pg_collation",
+      "constisnull": "bool",
+      "constlen": "int",
+      "consttype": "oid:pg_type",
+      "consttypmod": "int",
+      "constvalue": "datum",
+      "location": "int"
+    },
+    "FROMEXPR": {
+      "fromlist": "value",
+      "quals": "value"
+    },
+    "FUNCEXPR": {
+      "args": "value",
+      "funccollid": "oid:pg_collation",
+      "funcformat": "int",
+      "funcid": "oid:pg_proc",
+      "funcresulttype": "oid:pg_type",
+      "funcretset": "bool",
+      "funcvariadic": "bool",
+      "inputcollid": "oid:pg_collation",
+      "location": "int"
+    },
+    "NAMEDARGEXPR": {
+      "arg": "value",
+      "argnumber": "int",
+      "location": "int",
+      "name": "atom"
+    },
+    "NULLTEST": {
+      "arg": "value",
+      "argisrow": "bool",
+      "location": "int",
+      "nulltesttype": "int"
+    },
+    "OPEXPR": {
+      "args": "value",
+      "inputcollid": "oid:pg_collation",
+      "location": "int",
+      "opcollid": "oid:pg_collation",
+      "opfuncid": "oid:pg_proc",
+      "opno": "oid:pg_operator",
+      "opresulttype": "oid:pg_type",
+      "opretset": "bool"
+    },
+    "QUERY": {
+      "canSetTag": "bool",
+      "commandType": "int",
+      "constraintDeps": "oid_list:pg_constraint",
+      "cteList": "value",
+      "distinctClause": "value",
+      "groupClause": "value",
+      "groupDistinct": "bool",
+      "groupingSets": "value",
+      "hasAggs": "bool",
+      "hasDistinctOn": "bool",
+      "hasForUpdate": "bool",
+      "hasModifyingCTE": "bool",
+      "hasRecursive": "bool",
+      "hasRowSecurity": "bool",
+      "hasSubLinks": "bool",
+      "hasTargetSRFs": "bool",
+      "hasWindowFuncs": "bool",
+      "havingQual": "value",
+      "isReturn": "bool",
+      "jointree": "value",
+      "limitCount": "value",
+      "limitOffset": "value",
+      "limitOption": "int",
+      "mergeActionList": "value",
+      "mergeJoinCondition": "value",
+      "mergeTargetRelation": "int",
+      "onConflict": "value",
+      "override": "int",
+      "querySource": "int",
+      "resultRelation": "int",
+      "returningList": "value",
+      "rowMarks": "value",
+      "rtable": "value",
+      "rteperminfos": "value",
+      "setOperations": "value",
+      "sortClause": "value",
+      "stmt_len": "int",
+      "stmt_location": "int",
+      "targetList": "value",
+      "utilityStmt": "value",
+      "windowClause": "value",
+      "withCheckOptions": "value"
+    },
+    "RANGETBLENTRY": {
+      "common": {
+        "alias": "value",
+        "eref": "value",
+        "inFromCl": "bool",
+        "lateral": "bool",
+        "rtekind": "int",
+        "securityQuals": "value"
+      },
+      "variants": {
+        "0": {
+          "inh": "bool",
+          "perminfoindex": "int",
+          "relid": "oid:pg_class",
+          "relkind": "atom",
+          "rellockmode": "int",
+          "tablesample": "value"
+        },
+        "3": {
+          "funcordinality": "bool",
+          "functions": "value"
+        },
+        "8": {}
+      }
+    },
+    "RANGETBLFUNCTION": {
+      "funccolcollations": "oid_list:pg_collation",
+      "funccolcount": "int",
+      "funccolnames": "value",
+      "funccoltypes": "oid_list:pg_type",
+      "funccoltypmods": "value",
+      "funcexpr": "value",
+      "funcparams": "value"
+    },
+    "RANGETBLREF": {
+      "rtindex": "int"
+    },
+    "RELABELTYPE": {
+      "arg": "value",
+      "location": "int",
+      "relabelformat": "int",
+      "resultcollid": "oid:pg_collation",
+      "resulttype": "oid:pg_type",
+      "resulttypmod": "int"
+    },
+    "RTEPERMISSIONINFO": {
+      "checkAsUser": "oid:pg_authid",
+      "inh": "bool",
+      "insertedCols": "value",
+      "relid": "oid:pg_class",
+      "requiredPerms": "int",
+      "selectedCols": "value",
+      "updatedCols": "value"
+    },
+    "SQLVALUEFUNCTION": {
+      "location": "int",
+      "op": "int",
+      "type": "oid:pg_type",
+      "typmod": "int"
+    },
+    "TARGETENTRY": {
+      "expr": "value",
+      "resjunk": "bool",
+      "resname": "atom",
+      "resno": "int",
+      "resorigcol": "int",
+      "resorigtbl": "oid:pg_class",
+      "ressortgroupref": "int"
+    },
+    "VAR": {
+      "location": "int",
+      "varattno": "int",
+      "varattnosyn": "int",
+      "varcollid": "oid:pg_collation",
+      "varlevelsup": "int",
+      "varno": "int",
+      "varnosyn": "int",
+      "varnullingrels": "value",
+      "vartype": "oid:pg_type",
+      "vartypmod": "int"
+    }
+  },
+  "postgresVersion": "17.6",
+  "sourceHeaders": {
+    "parsenodes.h": {
+      "sha256": "5e66502b5005f8ea199afa42bd73edbd23d44981cf06dbd9c9d7e53d815eb1e2",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/nodes/parsenodes.h"
+    },
+    "primnodes.h": {
+      "sha256": "d17a03215de6ae6cb06647b6ce5792bddeee4714b3c4b030bfaedebbade08d05",
+      "url": "https://github.com/postgres/postgres/blob/REL_17_6/src/include/nodes/primnodes.h"
+    }
+  }
+}

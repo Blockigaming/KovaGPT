@@ -223,14 +223,17 @@ for (const theme of ["light", "dark"] as const) {
     ).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(more).toBeFocused();
-    const search = page.getByRole("button", { name: "Search this project", exact: true });
-    if (await search.isVisible()) {
+    if ((page.viewportSize()?.width ?? 0) >= 380) {
+      const search = page.getByRole("button", { name: "Search this project", exact: true });
+      await expect(search).toBeVisible();
       await search.click();
-      await page
-        .getByRole("dialog", { name: "Search this project", exact: true })
-        .getByRole("button", { name: "Close", exact: true })
-        .click();
+      await expect(
+        page.getByRole("dialog", { name: "Search this project", exact: true }),
+      ).toBeVisible();
+      await page.keyboard.press("Escape");
       await expect(search).toBeFocused();
+    } else {
+      await expect(page.locator(".kova-project-search-action")).toBeHidden();
     }
     await page.getByRole("tab", { name: "Files", exact: true }).click();
     await expect(page.getByRole("list", { name: "Project files", exact: true })).toContainText(

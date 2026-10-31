@@ -667,10 +667,52 @@ export const Route = createFileRoute("/api/chat")({
 
             const lastUser = [...messages].reverse().find((m) => m.role === "user");
             const currentAttachments = lastUser?.attachments ?? [];
+            const explicitHostedTool =
+              clientTool === "data_analysis" || clientTool === "file_analysis";
+            if (explicitHostedTool) {
+              if (!auth) {
+                return Response.json(
+                  {
+                    error: "Sign in to analyze data and files.",
+                    code: "analysis_sign_in_required",
+                  },
+                  { status: 401, headers: { "Cache-Control": "no-store" } },
+                );
+              }
+              if (
+                runtimeEnv("KOVA_OPENAI_SERVICES_ENABLED") !== "true" ||
+                runtimeEnv("KOVA_GENERATION_DISABLED") === "true" ||
+                getAiProviderConfig().provider !== "openai"
+              ) {
+                return Response.json(
+                  {
+                    error: "Data and file analysis are unavailable right now.",
+                    code: "hosted_tools_unavailable",
+                  },
+                  { status: 503, headers: { "Cache-Control": "no-store" } },
+                );
+              }
+              if (
+                clientTool === "file_analysis" &&
+                !currentAttachments.some(
+                  (attachment) =>
+                    attachment.kind === "text_file" && Boolean(attachment.content?.trim()),
+                )
+              ) {
+                return Response.json(
+                  {
+                    error: "Attach a text file or a document with extracted text to analyze files.",
+                    code: "analysis_file_required",
+                  },
+                  { status: 400, headers: { "Cache-Control": "no-store" } },
+                );
+              }
+            }
 
             // Detect image-generation intent on the latest user message
             const lastText = lastUser?.content?.trim() ?? "";
             let isImageRequest =
+              !explicitHostedTool &&
               lastText.length > 0 &&
               (!lastUser?.attachments || lastUser.attachments.length === 0) &&
               (clientTool === "image" || detectImageIntent(lastText));
@@ -1066,6 +1108,7 @@ export const Route = createFileRoute("/api/chat")({
             let webBlock = "";
             let webSources: KovaSource[] = [];
             if (
+              !explicitHostedTool &&
               !lockdownBlocksNetwork &&
               (!customKova || customKova.allows("web")) &&
               lastText &&
@@ -1452,13 +1495,7 @@ export const Route = createFileRoute("/api/chat")({
             //
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
-            const selectedHostedTool =
-              auth &&
-              runtimeEnv("KOVA_OPENAI_SERVICES_ENABLED") === "true" &&
-              getAiProviderConfig().provider === "openai" &&
-              (clientTool === "data_analysis" || (clientTool === "file_analysis" && hasAttachments))
-                ? clientTool
-                : null;
+            const selectedHostedTool = explicitHostedTool ? clientTool : null;
             const googleContext =
               !selectedHostedTool &&
               auth &&

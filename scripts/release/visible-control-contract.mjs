@@ -52,6 +52,9 @@ export function inspectVisibleControlContract({ files = trackedProductSource() }
           ? inspectVoiceComposerBoundary(source)
           : inspectBrowserVoiceSource(source, {
               allowMicrophone: path === "src/components/ComposerVoiceDialog.tsx",
+              // This file-only surface decodes an explicitly selected local
+              // audio blob. It never receives microphone capture permission.
+              allowFilePreparation: path === "src/components/AudioToolsPanel.tsx",
             });
       errors.push(...result.errors.map((error) => `${path}:${error}`));
     }

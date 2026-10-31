@@ -1,0 +1,132 @@
+name: Qualify a data-free empty recovery target
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/probe-empty-recovery-target.yml
+      - .github/workflows/capture-managed-auth-production.yml
+      - scripts/release/collect-empty-recovery-metadata.py
+      - scripts/release/extension-member-semantics-preflight.sql
+      - tests/unit/extension-member-semantics-preflight.test.mjs
+      - scripts/release/probe-empty-recovery-target.py
+      - scripts/release/empty-restore-target-catalog.sql
+      - scripts/release/managed-auth-recovery.py
+      - tests/unit/test_collect_empty_recovery_metadata.py
+      - tests/unit/test_probe_empty_recovery_target.py
+      - tests/unit/test_managed_auth_empty_recovery.py
+      - tests/unit/test_managed_auth_recovery.py
+      - tests/unit/managed-auth-capture-client-tools.test.mjs
+      - tests/unit/empty-restore-target-catalog.test.mjs
+      - tests/unit/empty-recovery-probe-workflow.test.mjs
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type PROBE_EMPTY_ONLY; metadata and empty targets, no customer rows or backup restore
+        required: true
+        type: string
+      source_sha:
+        description: Exact reviewed current main SHA, equal to the selected workflow revision
+        required: true
+        type: string
+      approved_database_build:
+        description: Current separately observed production PostgreSQL packaging build
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: empty-recovery-proof-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check synthetic guards without credentials, Docker or production access
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/unit -p 'test_managed_auth*recovery.py' -q
+          python3 -m unittest discover -s tests/unit -p test_collect_empty_recovery_metadata.py -q
+          python3 -m unittest discover -s tests/unit -p test_probe_empty_recovery_target.py -q
+          node --test tests/unit/empty-restore-target-catalog.test.mjs
+          node --test tests/unit/empty-recovery-probe-workflow.test.mjs
+          node --test tests/unit/managed-auth-capture-client-tools.test.mjs
+          node --test tests/unit/extension-member-semantics-preflight.test.mjs
+
+  probe-empty:
+    needs: source-tests
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/main' && inputs.source_sha == github.sha && inputs.confirmation == 'PROBE_EMPTY_ONLY' && inputs.approved_database_build == '17.6.1.155'
+    environment:
+      name: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      KOVA_EMPTY_PROBE_CONFIRMATION: PROBE_EMPTY_ONLY
+      KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
+      KOVA_AUTH_APPROVED_SOURCE_DATABASE_VERSION: ${{ inputs.approved_database_build }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Collect bounded read-only role, namespace and extension metadata
+        env:
+          KOVA_PRODUCTION_DATABASE_URL: ${{ secrets.KOVA_PRODUCTION_DATABASE_URL }}
+          KOVA_RECOVERY_CA_BUNDLE: ${{ github.workspace }}/scripts/release/supabase-prod-ca-2021.crt
+        run: >-
+          timeout --signal=TERM --kill-after=15s 6m
+          python3 scripts/release/collect-empty-recovery-metadata.py --execute --extension-coverage
+          --output "$RUNNER_TEMP/kova-empty-source-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/metadata.json"
+      - name: Exercise two native empty targets, verified TLS and denied dual-stack routes
+        run: >-
+          timeout --signal=TERM --kill-after=30s 17m
+          python3 scripts/release/probe-empty-recovery-target.py --execute
+          --metadata-file "$RUNNER_TEMP/kova-empty-source-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/metadata.json"
+          --output "$RUNNER_TEMP/kova-empty-proof-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/receipt.json"
+      - name: Remove private source metadata and reconcile only this run's target resources
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup_status=0
+          if ! python3 scripts/release/probe-empty-recovery-target.py --cleanup-only; then
+            cleanup_status=1
+          fi
+          python3 - <<'PY'
+          import os, pathlib, re, shutil
+          root = pathlib.Path(os.environ['RUNNER_TEMP']).resolve()
+          run_id, attempt = os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT']
+          if not re.fullmatch(r'\d+', run_id) or not re.fullmatch(r'\d+', attempt):
+              raise SystemExit('private cleanup identity rejected')
+          target = root / ('kova-empty-source-' + run_id + '-' + attempt)
+          if target.is_symlink():
+              raise SystemExit('private cleanup path rejected')
+          if target.exists():
+              shutil.rmtree(target)
+          PY
+          exit "$cleanup_status"
+      - name: Retain fixed sanitized hashes, counts and limitations only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: empty-recovery-proof-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/kova-empty-proof-${{ github.run_id }}-${{ github.run_attempt }}/receipt.json
+          if-no-files-found: warn
+          retention-days: 7

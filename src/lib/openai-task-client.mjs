@@ -1,4 +1,46 @@
-const operations = new Set(["agent", "browser"]);
+const operations = new Set(["agent", "browser", "decisions", "moderation"]);
+
+function structuredResult(body, operation) {
+  if (operation === "decisions") {
+    if (!Array.isArray(body.answers) || body.answers.length !== 1) return null;
+    const answer = body.answers[0];
+    if (answer?.name !== "question") return null;
+    if (answer.type === "refusal") return "The model declined to answer this question.";
+    if (
+      answer.type !== "predicate" ||
+      typeof answer.probability !== "number" ||
+      !Number.isFinite(answer.probability) ||
+      answer.probability < 0 ||
+      answer.probability > 1
+    )
+      return null;
+    return `Estimated probability the answer is yes: ${(answer.probability * 100).toFixed(1)}%.`;
+  }
+  if (operation === "moderation") {
+    if (!Array.isArray(body.results) || body.results.length !== 1) return null;
+    const result = body.results[0];
+    if (
+      typeof result?.flagged !== "boolean" ||
+      !result.categories ||
+      typeof result.categories !== "object" ||
+      Array.isArray(result.categories)
+    )
+      return null;
+    const categories = Object.entries(result.categories);
+    if (
+      !categories.length ||
+      categories.length > 32 ||
+      categories.some(([name, flagged]) => name.length > 80 || typeof flagged !== "boolean")
+    )
+      return null;
+    const flagged = categories.filter(([, value]) => value).map(([name]) => name);
+    if (result.flagged !== flagged.length > 0) return null;
+    return result.flagged
+      ? `Content flagged for review.${flagged.length ? `\nFlagged categories: ${flagged.join(", ")}.` : ""}`
+      : "No categories flagged. Review the content against your own policy before using it.";
+  }
+  return typeof body.text === "string" && body.text.trim() ? body.text : null;
+}
 
 const messages = {
   account_changed: "Your account changed. Open this task again.",
@@ -49,11 +91,17 @@ export async function loadOpenAiTaskAvailability(ownerId, { signal, fetchImpl = 
   );
   if (typeof available.agent !== "boolean" || typeof available.browser !== "boolean")
     throw new Error("The task service returned an unreadable response.");
-  return { configured: body.configured, agent: available.agent, browser: available.browser };
+  return {
+    configured: body.configured,
+    agent: available.agent,
+    browser: available.browser,
+    decisions: available.decisions === true,
+    moderation: available.moderation === true,
+  };
 }
 
 export async function submitOpenAiTask(
-  { ownerId, operation, input, requestId },
+  { ownerId, operation, input, requestId, question },
   { signal, fetchImpl = fetch } = {},
 ) {
   if (typeof ownerId !== "string" || !ownerId) throw new Error("Sign in to use OpenAI tasks.");
@@ -66,6 +114,13 @@ export async function submitOpenAiTask(
     throw new Error("Enter a task of up to 8,000 characters.");
   if (typeof requestId !== "string" || !/^[A-Za-z0-9:_-]{8,120}$/.test(requestId))
     throw new Error("The task identifier is invalid.");
+  if (
+    operation === "decisions" &&
+    (typeof question !== "string" || !question.trim() || question.length > 1000)
+  )
+    throw new Error("Enter a yes/no question of up to 1,000 characters.");
+  if (operation !== "decisions" && question !== undefined)
+    throw new Error("This task does not accept a decision question.");
   const body = await readReply(
     await fetchImpl("/api/ai/services", {
       method: "POST",
@@ -76,11 +131,17 @@ export async function submitOpenAiTask(
         "x-kova-service-owner": ownerId,
         "idempotency-key": requestId,
       },
-      body: JSON.stringify({ operation, input: input.trim() }),
+      body: JSON.stringify({
+        operation,
+        input: input.trim(),
+        ...(operation === "decisions"
+          ? { questions: [{ name: "question", type: "predicate", instructions: question.trim() }] }
+          : {}),
+      }),
       signal,
     }),
   );
-  if (body?.operation !== operation || typeof body.text !== "string" || !body.text.trim())
-    throw new Error("The task service returned an unreadable response.");
-  return { text: body.text, toolCalls: body.toolCalls };
+  const text = body?.operation === operation ? structuredResult(body, operation) : null;
+  if (!text) throw new Error("The task service returned an unreadable response.");
+  return { text, toolCalls: body.toolCalls };
 }

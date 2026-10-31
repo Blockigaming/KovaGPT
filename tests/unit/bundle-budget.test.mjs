@@ -117,3 +117,28 @@ test("the shared entry ceiling covers every recorded final-build observation tig
   assert.ok(BUNDLE_BUDGETS.main.raw <= largestRaw * 1.01);
   assert.ok(BUNDLE_BUDGETS.main.gzip <= largestGzip * 1.01);
 });
+
+test("the home-route gzip ceiling covers measured complete builds with less than one percent headroom", () => {
+  const observations = BUNDLE_BASELINE.initialRouteObservations;
+  assert.ok(observations.length >= 3);
+  const largestGzip = Math.max(...observations.map(({ gzip }) => gzip));
+  assert.ok(BUNDLE_BUDGETS.initial.gzip >= largestGzip);
+  assert.ok(BUNDLE_BUDGETS.initial.gzip <= largestGzip * 1.01);
+});
+
+test("home-route raw and gzip ceilings still reject a one-byte overflow", () => {
+  for (const metric of ["raw", "gzip"]) {
+    const selection = identifyBudgetChunks(
+      validRows().map((item) =>
+        item.file === "index-home-route.js"
+          ? { ...item, [metric]: BUNDLE_BUDGETS.initial[metric] + 1 }
+          : item,
+      ),
+      validManifest(),
+    );
+    assert.match(
+      evaluateBundleChecks(selection.chunks).failures.join("\n"),
+      new RegExp(`initial: ${metric} bytes`),
+    );
+  }
+});

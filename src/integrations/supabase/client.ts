@@ -13,8 +13,9 @@ import {
   resolveKovaSessionAuthority,
   kovaPublicAuthJson,
   announceKovaAuthChange,
+  isLegacySessionValidationAllowed,
 } from "@/lib/kova-auth-browser";
-import type { Session, User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { createKovaDataFetch } from "@/lib/kova-auth-data-fetch";
 
 export function getSupabaseClientConfigStatus() {
@@ -81,13 +82,14 @@ export async function resolveLegacyAuthContext() {
   if (mode === "kova") throw new Error("hosted_auth_unavailable");
   if (mode === "dual") {
     const principal = await resolveKovaSessionAuthority();
-    if (principal || isKovaSessionActive()) throw new Error("hosted_auth_unavailable");
+    if (principal || !isLegacySessionValidationAllowed())
+      throw new Error("hosted_auth_unavailable");
   }
   const generation = kovaAuthGeneration();
   const assertCurrent = () => {
     if (
       browserKovaAuthMode() !== mode ||
-      isKovaSessionActive() ||
+      !isLegacySessionValidationAllowed() ||
       kovaAuthGeneration() !== generation
     ) {
       throw new Error("auth_authority_changed");
@@ -101,6 +103,23 @@ export async function resolveLegacyAuthContext() {
 export async function signOutLegacySupabaseSession() {
   if (!_legacySupabase) _legacySupabase = createSupabaseClient("legacy");
   return _legacySupabase.auth.signOut({ scope: "local" });
+}
+
+// Only the hosted auth provider uses this narrow bridge while normal data
+// dispatch is fenced. It exposes no database, Storage, Realtime or RPC client.
+export function getLegacyAuthValidationClient() {
+  if (!isLegacySessionValidationAllowed()) throw new Error("auth_authority_changed");
+  if (!_legacySupabase) _legacySupabase = createSupabaseClient("legacy");
+  const auth = _legacySupabase.auth;
+  return {
+    getSession: () => auth.getSession(),
+    getUser: (token: string) => auth.getUser(token),
+    getAuthenticatorAssuranceLevel: (token: string) =>
+      auth.mfa.getAuthenticatorAssuranceLevel(token),
+    onAuthStateChange: (callback: (event: AuthChangeEvent, session: Session | null) => void) =>
+      auth.onAuthStateChange(callback),
+    signOut: () => auth.signOut({ scope: "local" }),
+  };
 }
 
 function activeSupabaseClient() {

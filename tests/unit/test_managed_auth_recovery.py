@@ -44,6 +44,8 @@ class RecoveryTests(unittest.TestCase):
         env = m.source_environment(self.source_env())
         self.assertEqual(env["PGSSLMODE"],"verify-full")
         self.assertEqual(env["PGPASSWORD"],"synthetic-password")
+        self.assertEqual(env["PGCLIENTENCODING"],"UTF8")
+        self.assertIn("-c search_path=pg_catalog",env["PGOPTIONS"])
         self.assertIn("default_transaction_read_only=on",env["PGOPTIONS"])
         self.assertNotIn("KOVA_PRODUCTION_DATABASE_URL",env)
         good=f"postgresql://postgres.{m.PROJECT}:synthetic-password@aws-0-us-west-2.pooler.supabase.com:5432/postgres?sslmode=verify-full"
@@ -55,6 +57,41 @@ class RecoveryTests(unittest.TestCase):
     def test_private_child_environment_excludes_provider_credentials_and_pg_overrides(self):
         out=m.clean_pg_env({"PATH":"safe","PGSERVICE":"unsafe","PGOPTIONS":"unsafe","OPENAI_API_KEY":"synthetic","KOVA_PRODUCTION_DATABASE_URL":"synthetic","KOVA_PRODUCTION_BACKUP_PASSPHRASE":"synthetic"})
         self.assertEqual(set(out),{"PATH","PGCONNECT_TIMEOUT","PGAPPNAME"})
+
+    def test_source_require_request_is_upgraded_to_verified_tls_with_the_selected_ca(self):
+        for authority in [f"postgres:synthetic-password@db.{m.PROJECT}.supabase.co",f"postgres.{m.PROJECT}:synthetic-password@aws-0-us-west-2.pooler.supabase.com"]:
+            supplied=self.source_env(f"postgresql://{authority}:5432/postgres?sslmode=require")
+            supplied.update(PGSSLMODE="disable",PGSSLROOTCERT="/untrusted/ca.pem",PGHOSTADDR="203.0.113.1",PGSERVICE="untrusted")
+            out=m.source_environment(supplied)
+            self.assertEqual(out["PGSSLMODE"],"verify-full")
+            self.assertEqual(out["PGSSLROOTCERT"],str(self.ca))
+            self.assertNotIn("PGHOSTADDR",out)
+            self.assertNotIn("PGSERVICE",out)
+            self.assertNotIn("KOVA_PRODUCTION_DATABASE_URL",out)
+
+    def test_source_tls_upgrade_rejects_unsafe_modes_ambiguous_options_nested_poolers_and_nul_credentials(self):
+        base=f"postgresql://postgres.{m.PROJECT}:synthetic-password@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
+        rejected=[base+"?sslmode="+mode for mode in ["disable","allow","prefer","verify-ca",""]]
+        rejected += [base+"?sslmode=require&sslmode=verify-full",base+"?sslmode=require&sslrootcert=/untrusted/ca.pem",base.replace("aws-0-","nested.aws-0-"),base.replace("synthetic-password","synthetic%00password")]
+        for uri in rejected:
+            with self.subTest(uri="nonsecret-rejected-fixture"), patch.object(m.subprocess,"run") as run:
+                with self.assertRaisesRegex(m.Stopped,"production_connection_rejected"):
+                    m.source_environment(self.source_env(uri))
+                run.assert_not_called()
+
+    def test_public_failure_uses_only_fixed_stage_and_code_enumerations(self):
+        with patch.object(m,"PUBLIC_STAGE","capture-snapshot"):
+            known=m.public_failure(m.Stopped("snapshot_lost"))
+            self.assertEqual(known["stage"],"capture-snapshot")
+            self.assertEqual(known["code"],"snapshot_lost")
+            for exc in [RuntimeError("synthetic-private-password"),m.Stopped("synthetic-private-url")]:
+                value=m.public_failure(exc)
+                self.assertEqual(value["code"],"unclassified_private_failure")
+                self.assertNotIn("synthetic-private",json.dumps(value))
+        with patch.object(m,"PUBLIC_STAGE","synthetic-private-stage"):
+            self.assertEqual(m.public_failure(Exception())["stage"],"startup")
+        with self.assertRaisesRegex(m.Stopped,"public_stage_rejected"):
+            m.mark_stage("synthetic-private-stage")
 
     def test_private_errors_never_echo_child_diagnostics(self):
         result=subprocess.CompletedProcess(["psql"],1,stdout=b"synthetic private rows",stderr=b"synthetic private key")
@@ -77,6 +114,25 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(snapshot.process.stdin.getvalue(),b"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;\nSELECT fixture;\n")
         self.assertEqual(len(waits),2)
         self.assertTrue(all(0 < n <= 125 for n in waits))
+
+    def test_exporter_binds_actual_encoding_and_exact_transaction_snapshot_digest(self):
+        row={"database":"postgres","versionNum":170006,"version":"17.6","snapshot":"00000001-00000002-1",
+             "serverEncoding":"UTF8","clientEncoding":"UTF8","snapshotSha256":"f"*64}
+        for mutate,accepted in [(None,True),(lambda d:d.update(clientEncoding="LATIN1"),False),
+                                (lambda d:d.update(serverEncoding="LATIN1"),False),
+                                (lambda d:d.update(snapshotSha256="bad"),False)]:
+            observed=dict(row)
+            if mutate:mutate(observed)
+            process=SimpleNamespace(stdin=io.BytesIO(),stdout=io.BytesIO(),stderr=None,wait=lambda **_:None,
+                                    kill=lambda:None,poll=lambda:None,communicate=lambda *_args,**_kwargs:(b"",b""))
+            with patch.object(m.subprocess,"Popen",return_value=process),patch.object(m.Snapshot,"query",return_value=observed):
+                if accepted:
+                    with m.Snapshot({}) as snapshot:
+                        self.assertEqual(snapshot.snapshot_sha256,"f"*64)
+                        self.assertEqual(snapshot.server_encoding,snapshot.client_encoding)
+                else:
+                    with self.assertRaisesRegex(m.Stopped,"source_snapshot_encoding_unqualified"):
+                        with m.Snapshot({}):pass
 
     def test_file_hash_stops_when_deadline_crosses_during_local_chunks(self):
         data=self.root/"synthetic-large";data.write_bytes(b"x"*(2*1024**2))
@@ -211,7 +267,8 @@ class RecoveryTests(unittest.TestCase):
         def snap(_):
             class S:
                 id="00000001-00000002-1"
-                def query(self,_):return catalog()
+                snapshot_sha256="f"*64
+                def query(self,sql):return [] if sql == m.EXTENSION_DATA_CATALOG_SQL else catalog()
             try:yield S()
             finally:closed.append(True)
         def fixture_crypt(_env,_phrase,src,dest,decrypt=False):
@@ -231,7 +288,7 @@ class RecoveryTests(unittest.TestCase):
             self.fail("unexpected private command")
         env={"PATH":os.environ["PATH"],"HOME":self.temp.name,"KOVA_AUTH_RECOVERY_CONFIRMATION":"CAPTURE_ONLY","GITHUB_SHA":"a"*40,"KOVA_APPROVED_SOURCE_SHA":"a"*40,"GITHUB_REF":"refs/heads/main","KOVA_AUTH_APPROVED_SOURCE_DATABASE_VERSION":m.BUILD,"KOVA_PRODUCTION_BACKUP_PASSPHRASE":"synthetic-fixture-only-passphrase-at-least32"}
         output=self.root/"encrypted-output"
-        with patch.object(m,"Snapshot",snap),patch.object(m,"source_environment",return_value={"PATH":os.environ["PATH"],"HOME":self.temp.name}),patch.object(m,"client_check"),patch.object(m,"row_fingerprints",return_value=[]),patch.object(m,"run",side_effect=fake),patch.object(m,"crypt",side_effect=fixture_crypt):
+        with patch.object(m,"capture_semantic_source",return_value={"captureSnapshotBound":True,"sourceSnapshotSha256":"f"*64,"canonicalReceipt":{"allCatalogFieldsCovered":True,"canonicalSha256":"e"*64}}),patch.object(m,"Snapshot",snap),patch.object(m,"source_environment",return_value={"PATH":os.environ["PATH"],"HOME":self.temp.name}),patch.object(m,"client_check"),patch.object(m,"row_fingerprints",return_value=[]),patch.object(m,"run",side_effect=fake),patch.object(m,"crypt",side_effect=fixture_crypt):
             result=m.capture(env,output)
         self.assertEqual(closed,[True])
         self.assertEqual({p.name for p in output.iterdir()},{"managed-auth-backup.tar.gpg","capture-receipt.json"})
@@ -288,12 +345,13 @@ class RecoveryTests(unittest.TestCase):
         def snap(_):
             class S:
                 id="00000001-00000002-1"
-                def query(self,_):return catalog()
+                snapshot_sha256="f"*64
+                def query(self,sql):return [] if sql == m.EXTENSION_DATA_CATALOG_SQL else catalog()
             try:yield S()
             finally:closed.append(True)
         env={"KOVA_AUTH_RECOVERY_CONFIRMATION":"CAPTURE_ONLY","GITHUB_SHA":"a"*40,"KOVA_APPROVED_SOURCE_SHA":"a"*40,"GITHUB_REF":"refs/heads/main","KOVA_AUTH_APPROVED_SOURCE_DATABASE_VERSION":m.BUILD,"KOVA_PRODUCTION_BACKUP_PASSPHRASE":"synthetic-fixture-only-passphrase-at-least32"}
         out=self.root/"partial"
-        with patch.object(m,"Snapshot",snap),patch.object(m,"source_environment",return_value={}),patch.object(m,"client_check"),patch.object(m,"run",side_effect=m.Stopped("private_command_unconfirmed")):
+        with patch.object(m,"capture_semantic_source",return_value={"captureSnapshotBound":True,"sourceSnapshotSha256":"f"*64,"canonicalReceipt":{"allCatalogFieldsCovered":True,"canonicalSha256":"e"*64}}),patch.object(m,"Snapshot",snap),patch.object(m,"source_environment",return_value={}),patch.object(m,"client_check"),patch.object(m,"run",side_effect=m.Stopped("private_command_unconfirmed")):
             with self.assertRaises(m.Stopped):m.capture(env,out)
         self.assertEqual(closed,[True])
         self.assertFalse(out.exists())
@@ -344,6 +402,8 @@ class RecoveryTests(unittest.TestCase):
             if "has_parameter_privilege" in sql:return b"t"
             if "cron.launch_active_jobs" in sql:return b"off"
             if sql==m.CATALOG_SQL:return m.encoded(c)
+            if sql==m.EMPTY_IDENTITY_SQL:return m.encoded({"database":"postgres","serverAddress":"192.0.2.1",
+                "serverPort":5432,"serverVersionNum":170006,"systemIdentifier":"123","managedRelationsPresent":["auth.users"]})
             self.fail("unexpected DB query")
         with patch.object(m,"attest",return_value=att),patch.object(m,"target_environment",return_value={}),patch.object(m,"client_check"),patch.object(m,"crypt",side_effect=lambda _e,_p,src,dst,decrypt:shutil.copyfile(src,dst)),patch.object(m,"target_observation",return_value={"observed":{"serverVersionNum":170006}}),patch.object(m,"run",side_effect=command),patch.object(m,"psql",side_effect=query),patch.object(m,"row_fingerprints",return_value=rows):
             with self.assertRaisesRegex(m.Stopped,"managed_ddl_baseline_mismatch"):

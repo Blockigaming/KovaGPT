@@ -124,6 +124,9 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
 
+    await expect(
+      page.getByRole("navigation", { name: "Collapsed navigation", exact: true }),
+    ).toBeVisible();
     await revealSidebar(page);
     const workLink = page.getByRole("link", { name: "Work" });
     if (!(await workLink.isVisible())) {

@@ -35,6 +35,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { WorkSessionPanel } from "@/components/WorkSessionPanel";
 import { OpenAiTasksPanel } from "@/components/OpenAiTasksPanel";
+import { AudioToolsPanel } from "@/components/AudioToolsPanel";
 import { WorkSyncStatus } from "@/components/WorkSyncStatus";
 import { WorkspaceModeSwitch } from "@/components/WorkspaceModeSwitch";
 import { recordWorkRecent } from "@/lib/work-sync-client";
@@ -317,6 +318,9 @@ function WorkRoute() {
             key={`openai-tasks:${principal}`}
             ownerId={isSignedIn ? userKey : null}
           />
+        )}
+        {isLoaded && (
+          <AudioToolsPanel key={`audio-tools:${principal}`} ownerId={isSignedIn ? userKey : null} />
         )}
         <div className="flex h-[calc(100dvh-12rem)] min-h-[32rem] gap-3">
           <aside className="kova-work-history hidden md:block">

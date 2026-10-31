@@ -186,13 +186,9 @@ function ProjectDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const projectMoreRef = useRef<HTMLButtonElement>(null);
-  const projectSearchUrlRef = useRef<string | undefined>(undefined);
   const projectSearchTriggerRef = useRef<HTMLElement | null>(null);
-  const openProjectSearch = (trigger: HTMLElement | null) => {
-    projectSearchUrlRef.current = window.location.href;
-    projectSearchTriggerRef.current = trigger;
-    setSearchOpen(true);
-  };
+  const projectSearchUrlRef = useRef<string | undefined>(undefined);
+  const projectSearchRequestKeyRef = useRef<string | null>(null);
   const projectActionUrlRef = useRef<string | undefined>(undefined);
   const projectActionTriggerRef = useRef<HTMLElement | null>(null);
   const openProjectDelete = (trigger?: HTMLElement) => {
@@ -205,6 +201,13 @@ function ProjectDetailPage() {
   const requestSequenceRef = useRef(0);
   const memberRoleOperationsRef = useRef(new Map<string, symbol>());
   currentRequestKeyRef.current = requestKey;
+
+  const openProjectSearch = (trigger: HTMLElement | null) => {
+    projectSearchTriggerRef.current = trigger;
+    projectSearchUrlRef.current = window.location.href;
+    projectSearchRequestKeyRef.current = currentRequestKeyRef.current;
+    setSearchOpen(true);
+  };
 
   const fnGet = useServerFn(getProject);
   const fnUpdate = useServerFn(updateProject);
@@ -1071,9 +1074,14 @@ function ProjectDetailPage() {
         projectId={projectId}
         open={searchOpen}
         onOpenChange={setSearchOpen}
-        onReturnFocus={() =>
-          restoreDialogFocus(projectSearchTriggerRef.current, projectSearchUrlRef.current)
-        }
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          restoreDialogFocus(
+            projectSearchTriggerRef.current,
+            projectSearchUrlRef.current,
+            projectSearchRequestKeyRef.current !== currentRequestKeyRef.current,
+          );
+        }}
         onNavigate={(kind) => {
           setSearchOpen(false);
           setTab(kind === "chat" ? "chats" : kind === "file" ? "files" : kind);
@@ -3310,14 +3318,14 @@ function SearchDialog({
   projectId,
   open,
   onOpenChange,
+  onCloseAutoFocus,
   onNavigate,
-  onReturnFocus,
 }: {
   projectId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onCloseAutoFocus: (event: Event) => void;
   onNavigate: (kind: SearchResult["kind"]) => void;
-  onReturnFocus: () => void;
 }) {
   const fn = useServerFn(searchProject);
   const [q, setQ] = useState("");
@@ -3352,13 +3360,7 @@ function SearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-lg"
-        onCloseAutoFocus={(event) => {
-          event.preventDefault();
-          onReturnFocus();
-        }}
-      >
+      <DialogContent className="max-w-lg" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>Search this project</DialogTitle>
         </DialogHeader>

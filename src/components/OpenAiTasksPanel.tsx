@@ -1,3 +1,4 @@
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
   const [checking, setChecking] = useState(false);
   const [operation, setOperation] = useState<OpenAiTaskOperation>("agent");
   const [input, setInput] = useState("");
+  const [question, setQuestion] = useState("");
   const [result, setResult] = useState<{
     ownerId: string;
     text: string;
@@ -37,6 +39,10 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
     active.current = null;
     setResult(null);
     setError("");
+    setInput("");
+    setQuestion("");
+    setRunning(false);
+    setChecking(false);
     setAvailability(null);
     if (!ownerId) return;
     const controller = new AbortController();
@@ -45,7 +51,15 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
       .then((next) => {
         if (owner.current === ownerId && !controller.signal.aborted) {
           setAvailability(next);
-          setOperation(next.agent ? "agent" : "browser");
+          setOperation(
+            next.agent
+              ? "agent"
+              : next.browser
+                ? "browser"
+                : next.decisions
+                  ? "decisions"
+                  : "moderation",
+          );
         }
       })
       .catch((reason) => {
@@ -65,7 +79,14 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!ownerId || running || active.current || !availability?.[operation] || !input.trim())
+    if (
+      !ownerId ||
+      running ||
+      active.current ||
+      !availability?.[operation] ||
+      !input.trim() ||
+      (operation === "decisions" && !question.trim())
+    )
       return;
     const controller = new AbortController();
     active.current = controller;
@@ -74,7 +95,13 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
     setResult(null);
     try {
       const answer = await submitOpenAiTask(
-        { ownerId, operation, input, requestId: crypto.randomUUID() },
+        {
+          ownerId,
+          operation,
+          input,
+          requestId: crypto.randomUUID(),
+          ...(operation === "decisions" ? { question } : {}),
+        },
         { signal: controller.signal, fetchImpl: authFetch },
       );
       if (owner.current === ownerId && active.current === controller && !controller.signal.aborted)
@@ -100,8 +127,8 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
     <section className="my-4 rounded-2xl border bg-card p-4" aria-label="OpenAI tasks">
       <h2 className="text-lg font-semibold">OpenAI tasks</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Run one hosted Agent task or a public-page Browser task. These results are separate from
-        saved Work runs.
+        Run a hosted Agent or Browser task, evaluate a yes/no question, or check text for content
+        categories. Results are separate from saved Work runs.
       </p>
       {!ownerId ? (
         <p className="mt-3 text-sm" role="status">
@@ -119,75 +146,113 @@ export function OpenAiTasksPanel({ ownerId }: { ownerId: string | null }) {
               OpenAI tasks are unavailable right now.
             </p>
           )}
-          {availability?.configured && !availability.agent && !availability.browser && (
-            <p className="mt-3 text-sm" role="status">
-              These tasks require a verified Kova Plus or Pro account. Hosted Browser also needs
-              approved public domains.
-            </p>
-          )}
-          {availability?.configured && (availability.agent || availability.browser) && (
-            <form onSubmit={(event) => void submit(event)} className="mt-3 space-y-3">
-              <label className="block text-sm">
-                Task type
-                <Select
-                  value={operation}
-                  onValueChange={(value) => {
-                    setOperation(value as OpenAiTaskOperation);
-                    setResult(null);
-                    setError("");
-                  }}
-                  disabled={running}
-                >
-                  <SelectTrigger aria-label="Task type" className="mt-1 min-h-11 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="agent" disabled={!availability.agent}>
-                      Hosted Agent
-                    </SelectItem>
-                    <SelectItem value="browser" disabled={!availability.browser}>
-                      Hosted Browser
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </label>
-              <p className="text-xs text-muted-foreground">
-                {operation === "browser"
-                  ? "Public pages on approved domains only. No sign-in, purchases, or site changes."
-                  : "One bounded task in an isolated sandbox. It cannot change external systems."}
+          {availability?.configured &&
+            !availability.agent &&
+            !availability.browser &&
+            !availability.decisions &&
+            !availability.moderation && (
+              <p className="mt-3 text-sm" role="status">
+                No tasks are available for your account right now.
               </p>
-              <label className="block text-sm">
-                What should it do?
-                <Textarea
-                  className="mt-1 block min-h-28 w-full border bg-background"
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  maxLength={8000}
-                  disabled={running}
-                />
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="default"
-                  type="submit"
-                  className="bg-primary text-sm text-primary-foreground disabled:opacity-40"
-                  disabled={running || !input.trim() || !availability[operation]}
-                >
-                  {running ? "Running task…" : "Run task"}
-                </Button>
-                {running && (
-                  <Button
-                    variant="outline"
-                    type="button"
-                    className="border text-sm"
-                    onClick={() => active.current?.abort()}
+            )}
+          {availability?.configured &&
+            (availability.agent ||
+              availability.browser ||
+              availability.decisions ||
+              availability.moderation) && (
+              <form onSubmit={(event) => void submit(event)} className="mt-3 space-y-3">
+                <label className="block text-sm">
+                  Task type
+                  <Select
+                    value={operation}
+                    onValueChange={(value) => {
+                      setOperation(value as OpenAiTaskOperation);
+                      setResult(null);
+                      setError("");
+                    }}
+                    disabled={running}
                   >
-                    Cancel
-                  </Button>
+                    <SelectTrigger aria-label="Task type" className="mt-1 min-h-11 w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="agent" disabled={!availability.agent}>
+                        Hosted Agent
+                      </SelectItem>
+                      <SelectItem value="browser" disabled={!availability.browser}>
+                        Hosted Browser
+                      </SelectItem>
+                      <SelectItem value="decisions" disabled={!availability.decisions}>
+                        Decisions
+                      </SelectItem>
+                      <SelectItem value="moderation" disabled={!availability.moderation}>
+                        Content moderation
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  {operation === "browser"
+                    ? "Public pages on approved domains only. No sign-in, purchases, or site changes."
+                    : operation === "decisions"
+                      ? "Evaluate a yes/no question against the supplied text. The probability is a model estimate."
+                      : operation === "moderation"
+                        ? "Check text for potentially harmful content categories. Results support your review."
+                        : "One bounded task in an isolated sandbox. It cannot change external systems."}
+                </p>
+                {operation === "decisions" && (
+                  <label className="block text-sm">
+                    Yes/no question
+                    <Input
+                      className="mt-1 block w-full border bg-background"
+                      value={question}
+                      onChange={(event) => setQuestion(event.target.value)}
+                      maxLength={1000}
+                      disabled={running}
+                    />
+                  </label>
                 )}
-              </div>
-            </form>
-          )}
+                <label className="block text-sm">
+                  {operation === "decisions"
+                    ? "Text to evaluate"
+                    : operation === "moderation"
+                      ? "Text to check"
+                      : "What should it do?"}
+                  <Textarea
+                    className="mt-1 block min-h-28 w-full border bg-background"
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    maxLength={8000}
+                    disabled={running}
+                  />
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="default"
+                    type="submit"
+                    className="bg-primary text-sm text-primary-foreground disabled:opacity-40"
+                    disabled={
+                      running ||
+                      !input.trim() ||
+                      !availability[operation] ||
+                      (operation === "decisions" && !question.trim())
+                    }
+                  >
+                    {running ? "Running task…" : "Run task"}
+                  </Button>
+                  {running && (
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="border text-sm"
+                      onClick={() => active.current?.abort()}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </form>
+            )}
           {error && (
             <p className="mt-3 text-sm text-destructive" role="alert">
               {error}

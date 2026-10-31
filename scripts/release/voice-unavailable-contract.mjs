@@ -320,7 +320,10 @@ export function inspectConfiguredVoiceDialog(source) {
 // Source checks supplement runtime tests; they never certify account entitlement
 // or live capture/playback. Browser callers must keep credentials and upstream
 // transport server-side, while explicit capture stays in the reviewed dialog.
-export function inspectBrowserVoiceSource(source, { allowMicrophone = false } = {}) {
+export function inspectBrowserVoiceSource(
+  source,
+  { allowMicrophone = false, allowFilePreparation = false } = {},
+) {
   const errors = [];
   for (const pattern of [
     /ELEVENLABS_API_KEY|xi-api-key|api\.elevenlabs\.io/iu,
@@ -328,8 +331,10 @@ export function inspectBrowserVoiceSource(source, { allowMicrophone = false } = 
   ]) {
     if (pattern.test(source)) errors.push("browser voice provider/credential bypass");
   }
-  if (!allowMicrophone && /\b(?:getUserMedia|MediaRecorder|prepareVoiceRecording)\b/u.test(source))
+  if (!allowMicrophone && /\b(?:getUserMedia|MediaRecorder)\b/u.test(source))
     errors.push("microphone capture must remain inside the reviewed voice boundary");
+  if (!allowMicrophone && !allowFilePreparation && /\bprepareVoiceRecording\b/u.test(source))
+    errors.push("audio preparation must remain inside the reviewed voice boundaries");
   return { errors: [...new Set(errors)] };
 }
 

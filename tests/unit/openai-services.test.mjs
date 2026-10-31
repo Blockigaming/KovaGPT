@@ -409,7 +409,10 @@ function agentClient(
               return stream;
             },
             events: { create: async (id) => calls.push(["cancel", id]) },
-            delete: async (id) => calls.push(["delete", id]),
+            delete: async (id) => {
+              calls.push(["delete", id]);
+              return { id, deleted: true, object: "agent.session.deleted" };
+            },
           },
         },
       },
@@ -433,6 +436,136 @@ test("Agents requires the completed root turn and cleans its network-disabled sa
     ["cancel", "session_owned"],
     ["delete", "session_owned"],
   ]);
+});
+
+test("failed agent cancellation still deletes only its owned session with an independent deadline", async () => {
+  const f = agentClient([
+    { type: "agent.session.created", session: { id: "session_owned" } },
+    { type: "agent.session.failed" },
+  ]);
+  const pending = [];
+  let cancellationSignal;
+  let deleteCalls = 0;
+  f.client.beta.agents.sessions.events.create = async (id, body, options) => {
+    assert.equal(id, "session_owned");
+    assert.deepEqual(body, { events: [{ type: "agent.session.input.cancel" }] });
+    f.calls.push(["cancel", id]);
+    cancellationSignal = options.signal;
+    throw Object.assign(new Error("synthetic cancellation timeout"), { name: "TimeoutError" });
+  };
+  f.client.beta.agents.sessions.delete = async (id, options) => {
+    assert.equal(id, "session_owned");
+    assert.ok(options.signal instanceof AbortSignal);
+    assert.notEqual(options.signal, cancellationSignal);
+    assert.equal(options.signal.aborted, false);
+    deleteCalls++;
+    return { id, deleted: true, object: "agent.session.deleted" };
+  };
+  const provider = createOpenAiServices({
+    client: f.client,
+    model: "gpt-5.6-luna",
+    reportCleanupFailure: (resources) => pending.push(...resources),
+  });
+  await assert.rejects(provider.agent("Compute one result"), /agent_failed/);
+  assert.equal(f.calls.filter(([kind]) => kind === "create").length, 1);
+  assert.equal(f.calls.filter(([kind]) => kind === "cancel").length, 1);
+  assert.equal(deleteCalls, 1);
+  assert.deepEqual(pending, []);
+});
+
+test("unconfirmed agent deletion stays fail closed after cancellation failure without retries", async () => {
+  const f = agentClient([
+    { type: "agent.session.created", session: { id: "session_owned" } },
+    { type: "agent.session.failed" },
+  ]);
+  const pending = [];
+  let cancelCalls = 0;
+  let deleteCalls = 0;
+  f.client.beta.agents.sessions.events.create = async () => {
+    cancelCalls++;
+    throw new Error("synthetic cancellation unavailable");
+  };
+  f.client.beta.agents.sessions.delete = async (id) => {
+    assert.equal(id, "session_owned");
+    deleteCalls++;
+    throw new Error("synthetic deletion unavailable");
+  };
+  const provider = createOpenAiServices({
+    client: f.client,
+    model: "gpt-5.6-luna",
+    reportCleanupFailure: (resources) => pending.push(...resources),
+  });
+  await assert.rejects(provider.agent("Compute one result"), /provider_cleanup_unconfirmed/);
+  assert.equal(cancelCalls, 1);
+  assert.equal(deleteCalls, 1);
+  assert.equal(f.calls.filter(([kind]) => kind === "create").length, 1);
+  assert.deepEqual(pending, [{ kind: "agent_session", id: "session_owned" }]);
+});
+
+test("agent results are withheld unless deletion acknowledges the exact owned session", async () => {
+  for (const receipt of [
+    undefined,
+    { id: "session_other", deleted: true, object: "agent.session.deleted" },
+    { id: "session_owned", deleted: false, object: "agent.session.deleted" },
+    { id: "session_owned", deleted: true, object: "session" },
+  ]) {
+    const f = agentClient([
+      { type: "agent.session.created", session: { id: "session_owned" } },
+      { type: "agent.session.turn.completed", turn: { id: "turn_owned", subagent_id: null } },
+    ]);
+    const pending = [];
+    let deleteCalls = 0;
+    f.client.beta.agents.sessions.delete = async (id) => {
+      assert.equal(id, "session_owned");
+      deleteCalls++;
+      return receipt;
+    };
+    const provider = createOpenAiServices({
+      client: f.client,
+      model: "gpt-5.6-luna",
+      reportCleanupFailure: (resources) => pending.push(...resources),
+    });
+    await assert.rejects(provider.agent("Compute one result"), /provider_cleanup_unconfirmed/);
+    assert.equal(deleteCalls, 1);
+    assert.equal(f.calls.filter(([kind]) => kind === "cancel").length, 0);
+    assert.deepEqual(pending, [{ kind: "agent_session", id: "session_owned" }]);
+  }
+});
+
+test("an already absent agent session retains the existing not-found cleanup behavior", async () => {
+  const f = agentClient([
+    { type: "agent.session.created", session: { id: "session_owned" } },
+    { type: "agent.session.turn.completed", turn: { id: "turn_owned", subagent_id: null } },
+  ]);
+  f.client.beta.agents.sessions.delete = async (id) => {
+    assert.equal(id, "session_owned");
+    throw Object.assign(new Error("synthetic session absent"), { status: 404 });
+  };
+  assert.equal((await services(f.client).agent("Compute one result")).text, "Actual answer");
+});
+
+test("forbidden or rate-limited agent deletion never counts as confirmed removal", async () => {
+  for (const status of [403, 429]) {
+    const f = agentClient([
+      { type: "agent.session.created", session: { id: "session_owned" } },
+      { type: "agent.session.turn.completed", turn: { id: "turn_owned", subagent_id: null } },
+    ]);
+    const pending = [];
+    let deleteCalls = 0;
+    f.client.beta.agents.sessions.delete = async (id) => {
+      assert.equal(id, "session_owned");
+      deleteCalls++;
+      throw Object.assign(new Error("synthetic deletion refused"), { status });
+    };
+    const provider = createOpenAiServices({
+      client: f.client,
+      model: "gpt-5.6-luna",
+      reportCleanupFailure: (resources) => pending.push(...resources),
+    });
+    await assert.rejects(provider.agent("Compute one result"), /provider_cleanup_unconfirmed/);
+    assert.equal(deleteCalls, 1);
+    assert.deepEqual(pending, [{ kind: "agent_session", id: "session_owned" }]);
+  }
 });
 
 test("hosted browser requires real browser activity and only approves configured public origins", async () => {

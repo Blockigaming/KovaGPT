@@ -40,10 +40,32 @@ export const BUNDLE_BASELINE = Object.freeze({
     "The 2026-09-14 final build adds generated four-segment routing and expanded catalog registries. A clean rebuild of the authorized auth PR head b5a09278 on Node 24.19.0 already exceeded the older ceiling at 667,469 raw / 198,845 gzip before the current review fixes. The current source-only review batch measured 667,800 raw / 198,923 gzip on the same Node version and lockfile. The refreshed ceiling gives less than 1% headroom over that complete build while keeping the home route, omega, and chart ceilings unchanged.",
   voiceReceiptAdjustment:
     "The 2026-10-27 model-bound ElevenLabs playback adds a server receipt check to the home route. The exact PR head b25e56c5 measured 20,112 gzip bytes in CI and 20,109 locally against the old 20,000 ceiling; the 20,250 ceiling leaves less than 1% headroom while keeping the other chunk ceilings unchanged.",
+  initialRouteObservations: Object.freeze([
+    Object.freeze({
+      head: "3da99f7089e32f0ea62d57f1fd444fb525382958",
+      source: "CI",
+      raw: 61_469,
+      gzip: 20_238,
+    }),
+    Object.freeze({
+      head: "7bf09cbaa2722f2b8de31225391cab4308a9f7cb",
+      source: "CI",
+      raw: 61_507,
+      gzip: 20_253,
+    }),
+    Object.freeze({
+      tree: "2797198fb429ba7a1bb83a2157943169de9ca04d",
+      source: "Node 24.22.1 local production build",
+      raw: 61_545,
+      gzip: 20_259,
+    }),
+  ]),
+  apiAudioAdjustment:
+    "The 2026-10-29 UI/Auth/API integration measured 20,238 home-route gzip bytes in PR #489 CI. Decisions, moderation and audio controls measured 20,253 in PR #492 CI; the combined sidebar preference repair measured 20,259 locally. The 20,400 ceiling retains less than 1% headroom over that complete build. The 62,500 raw ceiling and every shared-entry, omega and chart ceiling are unchanged.",
 });
 
 export const BUNDLE_BUDGETS = Object.freeze({
-  initial: Object.freeze({ raw: 62_500, gzip: 20_250 }),
+  initial: Object.freeze({ raw: 62_500, gzip: 20_400 }),
   main: Object.freeze({ raw: 670_000, gzip: 200_000 }),
   omega: Object.freeze({ raw: 35_000, gzip: 12_000 }),
   chartLazy: Object.freeze({ raw: 470_000, gzip: 125_000 }),

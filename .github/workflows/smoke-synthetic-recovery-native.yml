@@ -1,0 +1,53 @@
+name: Smoke isolated recovery on native tools without credentials
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/smoke-synthetic-recovery-native.yml
+      - scripts/release/**
+      - tests/unit/test_synthetic_recovery_native.py
+      - tests/unit/synthetic-recovery-native-workflow.test.mjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: synthetic-recovery-native-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  native-synthetic:
+    if: github.event_name == 'pull_request' && github.repository == 'Blockigaming/KovaGPT'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      KOVA_SYNTHETIC_NATIVE_CONFIRMATION: SYNTHETIC_ONLY
+      KOVA_SYNTHETIC_SOURCE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check rejection, logging and private runtime recipes without Docker
+        run: |
+          python3 -m unittest discover -s tests/unit -p test_synthetic_recovery_native.py -q
+          python3 -m unittest discover -s tests/unit -p test_prepare_recovery_operator_image.py -q
+          python3 -m unittest discover -s tests/unit -p test_owned_noswap_volumes.py -q
+          python3 -m unittest discover -s tests/unit -p test_noswap_volume_proof.py -q
+          python3 -m unittest discover -s tests/unit -p test_verified_server_image.py -q
+      - name: Build generic client locally and prove empty native targets and denied routes
+        run: >-
+          timeout --signal=TERM --kill-after=30s 30m
+          python3 scripts/release/smoke-synthetic-recovery-native.py --execute
+          --output "$RUNNER_TEMP/kova-synthetic-proof-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/receipt.json"
+      - name: Reconcile only this run's owned containers, network and generic image
+        if: always()
+        run: python3 scripts/release/smoke-synthetic-recovery-native.py --cleanup-only
+      - name: Retain fixed synthetic hashes and counts only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: synthetic-recovery-native-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/kova-synthetic-proof-${{ github.run_id }}-${{ github.run_attempt }}/receipt.json
+          if-no-files-found: warn
+          retention-days: 7

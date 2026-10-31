@@ -1,0 +1,84 @@
+name: Prepare generic isolated recovery operator image
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/prepare-recovery-operator-image.yml
+      - scripts/release/prepare-recovery-operator-image.py
+      - scripts/release/recovery-operator-client.Dockerfile
+      - scripts/release/recovery-operator-client-smoke.py
+      - tests/unit/test_prepare_recovery_operator_image.py
+      - scripts/release/run-isolated-recovery-client.py
+      - scripts/release/managed-auth-recovery.py
+      - scripts/release/managed-auth-recovery-target.mjs
+      - scripts/release/verify-isolated-restore-target.mjs
+      - scripts/release/empty-restore-target-catalog.sql
+      - tests/unit/test_isolated_recovery_client.py
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type BUILD_DATA_FREE_OPERATOR_IMAGE; generic tools only, no source database or restore
+        required: true
+        type: string
+      source_sha:
+        description: Exact reviewed current main SHA, equal to the selected workflow revision
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: generic-recovery-operator-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check generic builder and rejection mutations without Docker or credentials
+        run: |
+          python3 -m unittest discover -s tests/unit -p test_prepare_recovery_operator_image.py -q
+          python3 -m unittest discover -s tests/unit -p test_isolated_recovery_client.py -q
+
+  prepare-generic-image:
+    needs: source-tests
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'Blockigaming/KovaGPT' && github.ref == 'refs/heads/main' && inputs.source_sha == github.sha && inputs.confirmation == 'BUILD_DATA_FREE_OPERATOR_IMAGE'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      KOVA_OPERATOR_IMAGE_CONFIRMATION: BUILD_DATA_FREE_OPERATOR_IMAGE
+      KOVA_APPROVED_SOURCE_SHA: ${{ inputs.source_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Select signed distro OCI archive transport before any sensitive input
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends skopeo
+          command -v docker >/dev/null
+          command -v skopeo >/dev/null
+          command -v timeout >/dev/null
+      - name: Measure Ubuntu base, build generic tools, run native smoke and archive exact image
+        run: >-
+          timeout --signal=TERM --kill-after=15s 23m
+          python3 scripts/release/prepare-recovery-operator-image.py --execute
+          --output "$RUNNER_TEMP/kova-generic-image-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/operator-client-image"
+      - name: Retain only generic OCI tooling and its public-source native inventory
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: recovery-operator-client-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/kova-generic-image-${{ github.run_id }}-${{ github.run_attempt }}/operator-client-image/operator-client.oci.tar
+            ${{ runner.temp }}/kova-generic-image-${{ github.run_id }}-${{ github.run_attempt }}/operator-client-image/client-image-inventory.json
+            ${{ runner.temp }}/kova-generic-image-${{ github.run_id }}-${{ github.run_attempt }}/operator-client-image/image-preparation-receipt.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
