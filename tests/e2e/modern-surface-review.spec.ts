@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 import { openResponseOptions } from "./current-ui";
@@ -68,10 +68,14 @@ test("menus retain focus, placement, and reduced-motion behavior", async ({ page
   await coreFixture(page, "dark");
   await page.goto("/");
   await waitForKovaHydration(page);
-  const options = page.getByRole("button", { name: "Options", exact: true });
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeEnabled();
   const attach = page.locator('button[aria-label="Attach"]');
-  const optionsTrigger = (await options.isVisible()) ? options : attach;
-  const panel = await openResponseOptions(page);
+  let optionsTrigger: Locator | undefined;
+  const rememberTrigger = (trigger: Locator) => {
+    optionsTrigger = trigger;
+  };
+  const panel = await openResponseOptions(page, rememberTrigger);
+  expect(optionsTrigger).toBeDefined();
   await expect(panel).toBeVisible();
   const box = await panel.boundingBox();
   expect(box!.x).toBeGreaterThanOrEqual(0);
@@ -79,9 +83,9 @@ test("menus retain focus, placement, and reduced-motion behavior", async ({ page
   await page.screenshot({ path: info.outputPath("options-menu-dark.png"), animations: "disabled" });
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
-  await expect(optionsTrigger).toBeFocused();
+  await expect(optionsTrigger!).toBeFocused();
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await openResponseOptions(page);
+  await openResponseOptions(page, rememberTrigger);
   await expect(panel).toBeVisible();
   const motion = await panel.evaluate((el) => ({
     duration: getComputedStyle(el).animationDuration,
@@ -91,7 +95,7 @@ test("menus retain focus, placement, and reduced-motion behavior", async ({ page
     motion.name === "none" || motion.duration.split(",").every((x) => parseFloat(x) <= 0.01),
   ).toBe(true);
   await page.keyboard.press("Escape");
-  await expect(optionsTrigger).toBeFocused();
+  await expect(optionsTrigger!).toBeFocused();
   await attach.click();
   await expect(attach).toHaveAttribute("aria-expanded", "true");
   const attachmentPanel = page.getByRole("dialog").filter({ visible: true });

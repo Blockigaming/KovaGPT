@@ -3,11 +3,11 @@ import { owner } from "./actual-app-fixture";
 
 // Observe the real account cache transaction. A rendered response or an older
 // sync status does not acknowledge the composer's debounced history write.
-export async function waitForCommittedChat(page: Page, content: string) {
+export async function waitForCommittedChat(page: Page, content: string, title?: string) {
   await expect
     .poll(() =>
       page.evaluate(
-        ({ owner, content }) =>
+        ({ owner, content, title }) =>
           new Promise<boolean>((resolve) => {
             const request = indexedDB.open("kovagpt-chat-history-v1", 1);
             request.onupgradeneeded = () => request.transaction?.abort();
@@ -22,11 +22,13 @@ export async function waitForCommittedChat(page: Page, content: string) {
               tx.oncomplete = () => {
                 db.close();
                 resolve(
-                  rows.result.some((row) =>
-                    row.record.local?.messages?.some(
-                      (message: { content?: unknown }) =>
-                        typeof message.content === "string" && message.content.includes(content),
-                    ),
+                  rows.result.some(
+                    (row) =>
+                      (title === undefined || row.record.local?.title === title) &&
+                      row.record.local?.messages?.some(
+                        (message: { content?: unknown }) =>
+                          typeof message.content === "string" && message.content.includes(content),
+                      ),
                   ),
                 );
               };
@@ -36,7 +38,7 @@ export async function waitForCommittedChat(page: Page, content: string) {
               };
             };
           }),
-        { owner, content },
+        { owner, content, title },
       ),
     )
     .toBe(true);

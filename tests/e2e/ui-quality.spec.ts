@@ -518,7 +518,7 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   await expect(savedRow).toContainText("Workspace quality review");
   // A returning account retains this local conversation across navigation.
   // Unscoped guest and legacy stores must remain empty.
-  await waitForCommittedChat(page, "Stability");
+  await waitForCommittedChat(page, "Stability", "Workspace quality review");
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await revealSidebar(page);

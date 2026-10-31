@@ -72,7 +72,7 @@ test("authenticated chat consumes Kova SSE once and keeps page and menu identity
   await expect(
     page.getByRole("button", { name: "Open chat Mock chat", exact: true }),
   ).toBeVisible();
-  await waitForCommittedChat(page, "Mocked OpenAI response");
+  await waitForCommittedChat(page, "Mocked OpenAI response", "Mock chat");
   await page.reload();
   await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeVisible();
