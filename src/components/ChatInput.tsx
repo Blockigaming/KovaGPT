@@ -22,6 +22,7 @@ import {
   Maximize2,
   SlidersHorizontal,
   Loader2,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
@@ -1480,7 +1481,7 @@ export function ChatInput({
                   setToolsOpening({ ownerId: user.id, context: toolsContext });
                 }}
               >
-                <AudioLines aria-hidden="true" />
+                <Wrench aria-hidden="true" />
                 <span>Tasks and audio</span>
               </button>
             )}
