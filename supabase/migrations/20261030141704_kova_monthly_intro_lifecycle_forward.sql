@@ -10,7 +10,64 @@ begin;
 -- authorities or an earlier partial installation before creating any object.
 do $$
 declare item record; relation_oid oid; routine_oid oid; expected_count integer;
+  canonical_billing_baseline boolean;
 begin
+  -- Full canonical history retains the observation protocol and irreversible
+  -- deletion fence. Production's inspected legacy profile remains unchanged.
+  -- Recognize this complete published shape; partial/unknown shapes still fail.
+  canonical_billing_baseline :=
+    (select count(*) from pg_attribute where attrelid=to_regclass('public.subscriptions') and attnum>0 and not attisdropped)=16
+    and (select count(*) from pg_attribute where attrelid=to_regclass('public.processed_stripe_events') and attnum>0 and not attisdropped)=19
+    and (select count(*) from pg_attribute where attrelid=to_regclass('public.account_deletion_fences') and attnum>0 and not attisdropped)=4;
+  if canonical_billing_baseline then
+    for item in select * from (values
+      ('subscriptions','last_stripe_observation_sequence','bigint',false,null::text),
+      ('processed_stripe_events','processing_status','text',true,'''completed''::text'),
+      ('processed_stripe_events','observation_sequence','bigint',false,null::text),
+      ('processed_stripe_events','lease_token','uuid',false,null::text),
+      ('processed_stripe_events','lease_expires_at','timestamp with time zone',false,null::text),
+      ('processed_stripe_events','completed_at','timestamp with time zone',false,null::text),
+      ('account_deletion_fences','started_at','timestamp with time zone',true,'now()')
+    ) canonical_columns(table_name,column_name,data_type,not_null,default_expression) loop
+      if not exists(select 1 from pg_attribute a where a.attrelid=to_regclass('public.'||item.table_name)
+        and a.attname=item.column_name and a.attnum>0 and not a.attisdropped
+        and format_type(a.atttypid,a.atttypmod)=item.data_type and a.attnotnull=item.not_null
+        and a.attidentity='' and a.attgenerated='' and coalesce(cardinality(a.attacl),0)=0
+        and (select pg_get_expr(d.adbin,d.adrelid) from pg_attrdef d where d.adrelid=a.attrelid and d.adnum=a.attnum)
+          is not distinct from item.default_expression) then
+        raise exception 'monthly_policy_canonical_column_drift';
+      end if;
+    end loop;
+    if exists(select 1 from pg_attribute a where a.attrelid=any(array[
+      to_regclass('public.subscriptions'),to_regclass('public.billing_plan_tiers'),
+      to_regclass('public.processed_stripe_events'),to_regclass('public.account_deletion_fences')])
+      and a.attnum>0 and not a.attisdropped and coalesce(cardinality(a.attacl),0)>0)
+      or not exists(select 1 from pg_constraint where conrelid=to_regclass('public.processed_stripe_events')
+        and conname='processed_stripe_events_processing_status_check' and contype='c' and convalidated
+        and pg_get_constraintdef(oid)='CHECK ((processing_status = ''completed''::text))') then
+      raise exception 'monthly_policy_canonical_event_guard_drift';
+    end if;
+    routine_oid:=to_regprocedure('kova_private.preserve_started_account_deletion()');
+    if routine_oid is null or (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='kova_private' and p.proname='preserve_started_account_deletion')<>1
+      or not exists(select 1 from pg_proc p join pg_language l on l.oid=p.prolang where p.oid=routine_oid
+        and pg_get_userbyid(p.proowner)='postgres' and p.prosecdef and p.provolatile='v' and l.lanname='plpgsql'
+        and p.pronargs=0 and p.pronargdefaults=0 and pg_get_function_result(p.oid)='trigger'
+        and cardinality(p.proconfig)=1 and replace(replace(p.proconfig[1],chr(92),''),'"','')='search_path='
+        and encode(sha256(convert_to(p.prosrc,'UTF8')),'hex')='e797425e3b325af46c334a63393c6b7ac07b669f95374ddfcf096134e944f7cf')
+      or has_function_privilege('anon',routine_oid,'EXECUTE')
+      or has_function_privilege('authenticated',routine_oid,'EXECUTE')
+      or exists(select 1 from pg_proc p cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+        where p.oid=routine_oid and a.grantee=0 and a.privilege_type='EXECUTE')
+      or not exists(select 1 from pg_trigger t where t.tgrelid=to_regclass('public.account_deletion_fences')
+        and t.tgname='preserve_started_account_deletion' and t.tgfoid=routine_oid and not t.tgisinternal
+        and t.tgtype=27 and t.tgenabled='O' and t.tgnargs=0 and t.tgattr=''::int2vector
+        and t.tgqual is null and t.tgconstraint=0)
+      or has_table_privilege('service_role','public.account_deletion_fences','DELETE')
+      or has_table_privilege('service_role','public.account_deletion_fences','TRUNCATE') then
+      raise exception 'monthly_policy_canonical_deletion_guard_drift';
+    end if;
+  end if;
   for item in select * from (values
     ('subscriptions','id','uuid',true),('subscriptions','user_id','uuid',true),
     ('subscriptions','stripe_subscription_id','text',true),('subscriptions','stripe_customer_id','text',true),
@@ -40,15 +97,18 @@ begin
       raise exception 'monthly_policy_required_column_drift';
     end if;
   end loop;
-  for item in select * from (values ('subscriptions',15),('billing_plan_tiers',4),
-    ('processed_stripe_events',14),('account_deletion_fences',3)) t(table_name,column_count) loop
+  for item in select * from (values ('subscriptions',(case when canonical_billing_baseline then 16 else 15 end)),('billing_plan_tiers',4),
+    ('processed_stripe_events',(case when canonical_billing_baseline then 19 else 14 end)),
+    ('account_deletion_fences',(case when canonical_billing_baseline then 4 else 3 end))) t(table_name,column_count) loop
     relation_oid:=to_regclass('public.'||item.table_name);
     if (select count(*) from pg_attribute where attrelid=relation_oid and attnum>0 and not attisdropped)<>item.column_count
        or not exists(select 1 from pg_class where oid=relation_oid and relkind='r' and relrowsecurity
          and pg_get_userbyid(relowner)='postgres')
        or not has_table_privilege('service_role',relation_oid,'SELECT') then raise exception 'monthly_policy_required_table_drift'; end if;
     if item.table_name<>'billing_plan_tiers' and (not has_table_privilege('service_role',relation_oid,'INSERT')
-      or not has_table_privilege('service_role',relation_oid,'UPDATE') or not has_table_privilege('service_role',relation_oid,'DELETE')) then
+      or not has_table_privilege('service_role',relation_oid,'UPDATE')
+      or (not (canonical_billing_baseline and item.table_name='account_deletion_fences')
+        and not has_table_privilege('service_role',relation_oid,'DELETE'))) then
       raise exception 'monthly_policy_required_table_privilege_drift';
     end if;
   end loop;

@@ -19,10 +19,13 @@ import signal
 
 EXPECTED = {
     "database-contract.json": "0a36a0ab88e167f5062712671bc2acf1202c7366de7d897b3732327339fef6ae",
-    "release-migrations.json": "c7250c74210fd4b99075222eaab09d58164cc6ae2e3be94661b53ab6354c8a69",
+    "release-migrations.json": "12562cf94d4b7cbe282caf9fad7db88e3f40ebda24c392b228a3c6556b9a97c6",
     "scripts/release/monthly-intro-lifecycle-guards.mjs": "6b12d22e1b4321b59de5ba4307d564355e2350de23efd3b6c17184a5b0b8139d",
-    "supabase/migrations/20261030141704_kova_monthly_intro_lifecycle_forward.sql": "787d04b875dab35224e5f45ec4c0f0d6ca2e1c9aec41cd6992d037a6e6775ecc",
-    "tests/unit/monthly-intro-lifecycle-forward.test.mjs": "166d5ead11baaecab6e0349690959ea49523479ac24940369b673722f5f48d19",
+    "supabase/migrations/20261030141704_kova_monthly_intro_lifecycle_forward.sql": "04dbfd519ac70c5d643c9b06dd506fb767fa203163556b62c148262cd3cb391e",
+    "tests/unit/monthly-intro-lifecycle-forward.test.mjs": "b1e562a2c39e8e2c0034e47e2e12989e14e3c9a6a5eff922e3b51c3f6cdebd1e",
+    "supabase/migrations/20260904231213_billing_plan_tier_and_atomic_stripe_events.sql": "224240168c4f6752f691c8e50b4669b2caeac408094af6024a6eefc0ed7c6541",
+    "supabase/migrations/20261029235133_kova_production_subscription_summary_read_only_forward.sql": "8856b46715d701be07cdccadfc833ef22659ee80ff71459f4f7ad53513af1cd4",
+    "supabase/migrations/20260905030947_irreversible_account_deletion.sql": "f29466776b99a5c8661de1b8a7ac1d82c11afe2ff4feaa9dc1033d74cf161e29"
 }
 
 
@@ -112,7 +115,8 @@ def main():
             (evidence / "native-tap.log").write_text(text.replace(password, "[REDACTED]"))
             raise RuntimeError("unexpected_credential_in_test_output")
         verified = text.count("NATIVE CONTENTION VERIFIED:")
-        receipt.update({"exitCode": result.returncode, "contentionCasesVerified": verified, "nativeQualified": result.returncode == 0 and verified == 3})
+        canonical_verified = text.count("NATIVE CANONICAL BILLING VERIFIED:")
+        receipt.update({"exitCode": result.returncode, "contentionCasesVerified": verified, "canonicalBillingCasesVerified": canonical_verified, "nativeQualified": result.returncode == 0 and verified == 3 and canonical_verified == 1})
         if not receipt["nativeQualified"]:
             raise RuntimeError("native_monthly_contention_not_qualified")
     finally:

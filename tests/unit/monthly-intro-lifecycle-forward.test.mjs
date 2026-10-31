@@ -29,6 +29,151 @@ const PRO = "price_1UEw6FAEZlsb6DBYuksCKOBR";
 const OLD_PRO = "price_1UAzhRAEZlsb6DBYlafU4mhc";
 const RETURN = "https://kovagpt.com/checkout/return?session_id={CHECKOUT_SESSION_ID}";
 
+async function canonicalBillingBaselineSql() {
+  const canonical = await readFile(CANONICAL, "utf8");
+  const start = canonical.indexOf(
+    "alter table public.subscriptions\n  add column if not exists last_stripe_observation_sequence bigint;",
+  );
+  const end = canonical.indexOf("-- In-flight work", start);
+  assert.ok(start > 0 && end > start);
+  return (
+    canonical.slice(start, end) +
+    "\n" +
+    (await readFile("supabase/migrations/20260905030947_irreversible_account_deletion.sql", "utf8"))
+  );
+}
+
+async function canonicalBillingSnapshot(db) {
+  return (
+    await db.query(`select jsonb_build_object(
+    'subscriptions',(select coalesce(jsonb_agg(to_jsonb(s) order by s.id),'[]'::jsonb) from public.subscriptions s),
+    'events',(select coalesce(jsonb_agg(to_jsonb(e) order by e.event_id),'[]'::jsonb) from public.processed_stripe_events e),
+    'fences',(select coalesce(jsonb_agg(to_jsonb(f) order by f.user_id),'[]'::jsonb) from public.account_deletion_fences f),
+    'guard',pg_get_functiondef('kova_private.preserve_started_account_deletion()'::regprocedure),
+    'trigger',(select pg_get_triggerdef(oid) from pg_trigger where tgrelid='public.account_deletion_fences'::regclass and tgname='preserve_started_account_deletion'),
+    'delete',has_table_privilege('service_role','public.account_deletion_fences','DELETE'),
+    'truncate',has_table_privilege('service_role','public.account_deletion_fences','TRUNCATE')) value`)
+  ).rows[0].value;
+}
+
+test("canonical billing installation preserves published observation rows and irreversible fence guards", async () => {
+  let before;
+  const db = await fixture({
+    beforeInstall: async (connection) => {
+      await connection.exec(await canonicalBillingBaselineSql());
+      await connection.exec(`insert into public.subscriptions(user_id,stripe_subscription_id,stripe_customer_id,product_id,price_id,environment,last_stripe_observation_sequence) values('${OTHER}','sub_Canonical','cus_Canonical','prod_Canonical','${PLUS}','live',77);
+      insert into public.processed_stripe_events(event_id,type,environment,observation_sequence,completed_at) values('evt_Canonical','subscription.updated','live',77,now());`);
+      before = await canonicalBillingSnapshot(connection);
+      await connection.exec((await monthlyLifecyclePreflight()).sql);
+    },
+  });
+  try {
+    await admin(db, async () => assert.deepEqual(await canonicalBillingSnapshot(db), before));
+    assert.equal(before.delete, false);
+    assert.equal(before.truncate, false);
+    assert.equal((await rpc(db, "kova_policy_schedule_deletion", [USER])).state, "scheduled");
+    assert.equal((await rpc(db, "kova_policy_recover_deletion", [USER])).state, "active");
+    await admin(db, async () => {
+      await db.exec(`insert into public.account_deletion_fences(user_id) values('${USER}')`);
+      await assert.rejects(
+        db.exec(`delete from public.account_deletion_fences where user_id='${USER}'`),
+        /account_deletion_irreversible/,
+      );
+    });
+    await assert.rejects(
+      rpc(db, "kova_policy_recover_deletion", [USER]),
+      /account_policy_finalization_started|account_policy_recovery_closed/,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("canonical billing unused rollback preserves the stronger original schema and deletion permissions", async () => {
+  let before;
+  const db = await fixture({
+    beforeInstall: async (connection) => {
+      await connection.exec(await canonicalBillingBaselineSql());
+      before = await canonicalBillingSnapshot(connection);
+    },
+  });
+  try {
+    await admin(db, async () => {
+      const q = await captureMonthlyLifecycleQualification((sql, args) => db.query(sql, args));
+      await db.exec(await unusedMonthlyLifecycleRollback(q));
+      assert.deepEqual(await canonicalBillingSnapshot(db), before);
+      assert.equal(
+        (await db.query("select to_regclass('public.kova_policy_accounts') as value")).rows[0]
+          .value,
+        null,
+      );
+    });
+  } finally {
+    await db.close();
+  }
+});
+
+test("canonical billing rejects unknown columns, incomplete protocols and altered deletion authority before writes", async () => {
+  const cases = [
+    {
+      sql: "alter table public.subscriptions add column unreviewed text",
+      pattern: /monthly_policy_required_table_drift/,
+    },
+    {
+      sql: "alter table public.account_deletion_fences drop column started_at",
+      pattern: /monthly_policy_required_table_drift/,
+    },
+    {
+      sql: "drop trigger preserve_started_account_deletion on public.account_deletion_fences",
+      pattern: /monthly_policy_canonical_deletion_guard_drift/,
+    },
+    {
+      sql: "alter table public.account_deletion_fences disable trigger preserve_started_account_deletion",
+      pattern: /monthly_policy_canonical_deletion_guard_drift/,
+    },
+    {
+      sql: "grant delete on public.account_deletion_fences to service_role",
+      pattern: /monthly_policy_canonical_deletion_guard_drift/,
+    },
+    {
+      sql: "grant truncate on public.account_deletion_fences to service_role",
+      pattern: /monthly_policy_canonical_deletion_guard_drift/,
+    },
+    {
+      sql: "alter table public.subscriptions alter column last_stripe_observation_sequence set default 0",
+      pattern: /monthly_policy_canonical_column_drift/,
+    },
+    {
+      sql: "create or replace function kova_private.preserve_started_account_deletion() returns trigger language plpgsql security definer set search_path='' as $$begin return new;end$$",
+      pattern: /monthly_policy_canonical_deletion_guard_drift/,
+    },
+    {
+      sql: "grant select(started_at) on public.account_deletion_fences to authenticated",
+      pattern: /monthly_policy_canonical_column_drift|monthly_policy_canonical_event_guard_drift/,
+    },
+  ];
+  for (const item of cases) {
+    const db = await fixture({
+      beforeInstall: async (connection) => {
+        await connection.exec(await canonicalBillingBaselineSql());
+        await connection.exec(item.sql);
+      },
+      installationError: item.pattern,
+    });
+    try {
+      await admin(db, async () =>
+        assert.equal(
+          (await db.query("select to_regclass('public.kova_policy_accounts') as value")).rows[0]
+            .value,
+          null,
+        ),
+      );
+    } finally {
+      await db.close();
+    }
+  }
+});
+
 // This is the inspected production table shape. Existing tier functions below
 // are loaded from canonical source, so summary tests exercise actual authorities.
 async function fixture({ catalog = true, beforeInstall, installationError } = {}) {
@@ -1683,7 +1828,7 @@ function nativePending(session, sql) {
   return operation;
 }
 
-async function nativeFixture(testContext, action) {
+async function nativeFixture(testContext, action, { canonicalBaseline = false } = {}) {
   const settings = nativeSettings(process.env);
   const client = inspectNativePsql("psql", ["--version"], {
     encoding: "utf8",
@@ -1781,6 +1926,7 @@ async function nativeFixture(testContext, action) {
       setup += `${match[0]}\nrevoke all on function public.${name}(uuid) from public,anon,authenticated;
         grant execute on function public.${name}(uuid) to service_role;\n`;
     }
+    if (canonicalBaseline) setup += await canonicalBillingBaselineSql();
     await nativeCommand(
       settings,
       database,
@@ -1827,7 +1973,9 @@ async function nativeFixture(testContext, action) {
     };
     await action(context);
     testContext.diagnostic(
-      `NATIVE CONTENTION VERIFIED: PG${identity.version}; two independent psql backends; disposable database ${database}`,
+      canonicalBaseline
+        ? `NATIVE CANONICAL BILLING VERIFIED: PG${identity.version}; published observation and irreversible-deletion source; disposable database ${database}`
+        : `NATIVE CONTENTION VERIFIED: PG${identity.version}; two independent psql backends; disposable database ${database}`,
     );
   } finally {
     await Promise.allSettled(sessions.map((session) => session.close()));
@@ -1974,5 +2122,39 @@ test(
       'fence',(select count(*) from public.account_deletion_fences where user_id='${USER}'));`);
       assert.deepEqual(preserved, { users: 3, fence: 1 });
     });
+  },
+);
+
+test(
+  "native PG17 canonical billing preserves irreversible deletion and permits recoverable policy scheduling",
+  nativeOptions,
+  async (context) => {
+    await nativeFixture(
+      context,
+      async (target) => {
+        const baseline = await target.command(`select jsonb_build_object(
+      'subscriptions',(select count(*) from pg_attribute where attrelid='public.subscriptions'::regclass and attnum>0 and not attisdropped),
+      'events',(select count(*) from pg_attribute where attrelid='public.processed_stripe_events'::regclass and attnum>0 and not attisdropped),
+      'fences',(select count(*) from pg_attribute where attrelid='public.account_deletion_fences'::regclass and attnum>0 and not attisdropped),
+      'delete',has_table_privilege('service_role','public.account_deletion_fences','DELETE'),
+      'truncate',has_table_privilege('service_role','public.account_deletion_fences','TRUNCATE'));`);
+        assert.deepEqual(baseline, {
+          subscriptions: 16,
+          events: 19,
+          fences: 4,
+          delete: false,
+          truncate: false,
+        });
+        const result = await target.command(`set role service_role;
+      do $$ begin
+        if public.kova_policy_schedule_deletion('${USER}')->>'state'<>'scheduled' then raise exception 'native_canonical_schedule_failed';end if;
+        if public.kova_policy_recover_deletion('${USER}')->>'state'<>'active' then raise exception 'native_canonical_recovery_failed';end if;
+      end;$$;
+      select jsonb_build_object('ready',public.kova_policy_readiness()->>'ready','irreversibleGuard',exists(select 1 from pg_trigger where tgrelid='public.account_deletion_fences'::regclass and tgname='preserve_started_account_deletion' and tgenabled='O'));`);
+        assert.equal(result.ready, "true");
+        assert.equal(result.irreversibleGuard, true);
+      },
+      { canonicalBaseline: true },
+    );
   },
 );

@@ -4187,7 +4187,7 @@
       "order": 202,
       "filename": "20261030141704_kova_monthly_intro_lifecycle_forward.sql",
       "timestamp": "20261030141704",
-      "sha256": "787d04b875dab35224e5f45ec4c0f0d6ca2e1c9aec41cd6992d037a6e6775ecc",
+      "sha256": "04dbfd519ac70c5d643c9b06dd506fb767fa203163556b62c148262cd3cb391e",
       "tables": [
         "kova_policy_accounts",
         "kova_policy_customer_bindings",
