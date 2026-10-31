@@ -28,7 +28,7 @@ def metadata():
             "roles":[role],"memberships":[],"roleSettings":[],
             "schemas":[{"name":"public","owner":"postgres","acl":None,"comment":None}],
             "extensions":[{"name":"plpgsql","version":"1.0","schema":"pg_catalog","owner":"postgres"}],
-            "sourceSettingsComplete":True,"withheldSettingCount":0}
+            "sourceSettingsComplete":True,"withheldSettingCount":0,"extensionNamespaces":[]}
 
 
 def synthetic_qualification():
@@ -165,6 +165,29 @@ class NativeProbeTests(unittest.TestCase):
         self.assertNotIn("VALID UNTIL",sql)
         self.assertIn("Owner''s test; not a command",m.schema_setup_sql(d))
         self.assertEqual(m.schema_acl_sql(d),"\n")
+
+    def test_extension_creator_schemas_are_deferred_then_keep_exact_properties(self):
+        d=metadata()
+        d["extensions"].append({"name":"pg_cron","version":"1.6","schema":"pg_catalog","owner":"postgres"})
+        d["schemas"].append({"name":"cron","owner":"postgres","acl":None,"comment":"Owner's cron fixture"})
+        d["extensionNamespaces"]=[{"name":"cron","extension":"pg_cron"}]
+        m.validate_metadata(d,source_sha="a"*40)
+        self.assertEqual(m.extension_namespace_owners(d),{"cron":"pg_cron"})
+        setup=m.schema_setup_sql(d)
+        self.assertIn('CREATE SCHEMA IF NOT EXISTS "public"',setup)
+        self.assertNotIn('"cron"',setup)
+        properties=m.schema_metadata_sql(d)
+        self.assertIn('ALTER SCHEMA "cron" OWNER TO "postgres";',properties)
+        self.assertIn('COMMENT ON SCHEMA "cron" IS \'Owner\'\'s cron fixture\';',properties)
+        self.assertNotIn("CREATE SCHEMA",properties)
+        d["extensionNamespaces"]=[]
+        self.assertIn('CREATE SCHEMA IF NOT EXISTS "cron";',m.schema_setup_sql(d))
+        for change in [lambda d:d.pop("extensionNamespaces"),
+                       lambda d:d.update(extensionNamespaces=[{"name":"unobserved","extension":"pg_cron"}]),
+                       lambda d:d.update(extensionNamespaces=[{"name":"cron","extension":"unknown"}])]:
+            bad=copy.deepcopy(d);change(bad)
+            with self.subTest(change=change),self.assertRaisesRegex(m.Stopped,"source_extension_namespace_unqualified"):
+                m.validate_metadata(bad,source_sha="a"*40)
 
     def test_extension_bootstrap_uses_source_owner_and_restores_every_source_role_flag(self):
         d=metadata();d["roles"][0].update(super=False,login=False,replication=False,bypassRls=False)
@@ -307,15 +330,20 @@ class NativeProbeTests(unittest.TestCase):
         catalog.update(tables=[],sequences=[],roleSettings=[],largeObjects=[])
         census={"serverVersionNum":170006,"counts":{"unownedNamespaceObjects":0},
                 "tables":[],"namespaceObjects":[],"globalObjects":[]}
+        namespace_members=[]
         def client_sql(_target,sql,**_):
             if m.recovery.CATALOG_SQL in sql:return 0,json.dumps(catalog).encode()
             if "pg_extension e JOIN pg_namespace" in sql:return 0,json.dumps(catalog["extensions"]).encode()
+            if m.metadata_source.EXTENSION_NAMESPACES_SQL in sql:return 0,json.dumps(namespace_members).encode()
             return 0,json.dumps(census).encode()
         p.client_sql=client_sql;p.docker=lambda *_args,**_kwargs:(0,b"-- schema\n")
         snapshot=p.native_snapshot("a")
         self.assertTrue(snapshot["extensionMatch"])
         self.assertTrue(snapshot["roleMatch"])
         catalog["extensions"][0]["owner"]="wrong_owner"
+        self.assertFalse(p.native_snapshot("a")["extensionMatch"])
+        catalog["extensions"][0]["owner"]="postgres"
+        namespace_members.append({"name":"cron","extension":"pg_cron"})
         self.assertFalse(p.native_snapshot("a")["extensionMatch"])
 
     def test_optional_extension_coverage_is_identical_readonly_query_and_never_semantics(self):

@@ -185,6 +185,7 @@ def validate_metadata(metadata, *, source_sha):
                 "source_extension_owner_unqualified")
         ident(row.get("schema"));extensions.add(name)
     require("plpgsql" in extensions, "source_plpgsql_missing")
+    extension_namespace_owners(metadata)
     withheld=0
     for row in metadata["roleSettings"]:
         require(row.get("role") == "*" or row.get("role") in role_names, "source_setting_role_unqualified")
@@ -288,14 +289,31 @@ def operator_bootstrap_sql(password):
             "REPLICATION BYPASSRLS PASSWORD "+literal(password)+";\n").encode()
 
 
+def extension_namespace_owners(metadata):
+    try:return metadata_source.extension_namespace_owners(metadata)
+    except metadata_source.Stopped:raise Stopped("source_extension_namespace_unqualified") from None
+
+
+def schema_properties_sql(row):
+    name=ident(row["name"])
+    return ("ALTER SCHEMA "+name+" OWNER TO "+ident(row["owner"])+";\n"
+            +"COMMENT ON SCHEMA "+name+" IS "+("NULL" if row.get("comment") is None else literal(row["comment"]))+";\n")
+
+
 def schema_setup_sql(metadata):
+    # Extension members such as pg_cron's cron namespace are created by their
+    # pinned installer. Precreating them can fail CREATE EXTENSION or omit the
+    # required pg_depend membership. All properties are applied after install.
+    deferred=extension_namespace_owners(metadata)
     statements = []
     for row in sorted(metadata["schemas"], key=lambda r:r["name"]):
-        name=ident(row["name"])
-        statements += ["CREATE SCHEMA IF NOT EXISTS "+name+";",
-                       "ALTER SCHEMA "+name+" OWNER TO "+ident(row["owner"])+";",
-                       "COMMENT ON SCHEMA "+name+" IS "+("NULL" if row.get("comment") is None else literal(row["comment"]))+";"]
+        if row["name"] in deferred:continue
+        statements += ["CREATE SCHEMA IF NOT EXISTS "+ident(row["name"])+";",schema_properties_sql(row)]
     return "\n".join(statements)+"\n"
+
+
+def schema_metadata_sql(metadata):
+    return "".join(schema_properties_sql(row) for row in sorted(metadata["schemas"],key=lambda r:r["name"]))
 
 
 def schema_acl_sql(metadata):
@@ -763,7 +781,7 @@ while :; do sleep 1; done"""
                 self.bootstrap_sql(target,extension_create_sql(e))
                 installed.add(name);del pending[name]
         self.bootstrap_sql(target,extension_owner_bootstrap_sql(self.metadata,restore=True))
-        self.bootstrap_sql(target,schema_acl_sql(self.metadata))
+        self.bootstrap_sql(target,schema_metadata_sql(self.metadata)+schema_acl_sql(self.metadata))
         # Bootstrap local sockets stay inside the server and disappear before
         # qualification. No host/client socket is mounted or permitted.
         self.docker(["exec","--user",str(self.pg_uid)+":"+str(self.pg_gid),self.names[target],
@@ -842,8 +860,10 @@ while :; do sleep 1; done"""
         ns_match=source_ns=={s["name"]:s for s in catalog["schemas"]}
         _,raw=self.client_sql(target,"SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname,'owner',pg_get_userbyid(e.extowner)) ORDER BY e.extname),'[]')::text FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace;\n")
         owned_extensions=json.loads(raw)
+        _,raw=self.client_sql(target,metadata_source.EXTENSION_NAMESPACES_SQL+";\n")
+        extension_namespace_match=encoded(json.loads(raw))==encoded(self.metadata["extensionNamespaces"])
         extension_match=encoded(owned_extensions)==encoded(self.metadata["extensions"]) \
-            and encoded(catalog["extensions"])==encoded(self.metadata["extensions"])
+            and encoded(catalog["extensions"])==encoded(self.metadata["extensions"]) and extension_namespace_match
         return {"fingerprints":{"emptyBaselineCensusSha256":digest(encoded(census)),
                  "emptyBaselineCatalogSha256":digest(encoded(catalog)),"emptyBaselineRowsSha256":digest(encoded(rows)),
                  "emptyBaselineSchemaSha256":recovery.schema_hash(schema)},

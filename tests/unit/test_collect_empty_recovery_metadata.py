@@ -1,5 +1,6 @@
 """Synthetic metadata and mocked commands; never contacts any database."""
 import importlib.util
+import copy
 import json
 import os
 from pathlib import Path
@@ -16,7 +17,7 @@ m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 def metadata():
     return {"format":1,"project":m.PROJECT,"postgresBuild":m.BUILD,"serverVersionNum":170006,
             "database":"postgres","readOnly":True,"bootstrapRole":"synthetic_bootstrap_owner","extensions":[],"schemas":[],"roles":[],
-            "memberships":[],"roleSettings":[]}
+            "memberships":[],"roleSettings":[],"extensionNamespaces":[]}
 
 
 def synthetic_qualification():
@@ -55,6 +56,32 @@ class MetadataTests(unittest.TestCase):
                 m.sanitize_settings({**metadata(),"bootstrapRole":value})
         missing=metadata();del missing["bootstrapRole"]
         with self.assertRaises(m.Stopped):m.sanitize_settings(missing)
+
+    def test_extension_namespace_membership_is_readonly_observed_and_preserved(self):
+        raw=metadata()
+        raw["extensions"]=[{"name":"pg_cron","version":"1.6","schema":"pg_catalog","owner":"postgres"}]
+        raw["schemas"]=[{"name":"cron","owner":"postgres","acl":None,"comment":None}]
+        raw["extensionNamespaces"]=[{"name":"cron","extension":"pg_cron"}]
+        self.assertEqual(m.extension_namespace_owners(raw),{"cron":"pg_cron"})
+        self.assertEqual(m.sanitize_settings(raw)["extensionNamespaces"],raw["extensionNamespaces"])
+        self.assertIn(m.EXTENSION_NAMESPACES_SQL,m.SOURCE_SQL)
+        for term in ["pg_catalog.pg_namespace","pg_catalog.pg_depend","pg_catalog.pg_extension","d.deptype='e'","d.objsubid=0"]:
+            self.assertIn(term,m.EXTENSION_NAMESPACES_SQL)
+        for change in [lambda d:d.pop("extensionNamespaces"),
+                       lambda d:d.update(extensionNamespaces=None),
+                       lambda d:d["extensionNamespaces"].append(dict(d["extensionNamespaces"][0])),
+                       lambda d:d["extensionNamespaces"][0].update(name="unobserved"),
+                       lambda d:d["extensionNamespaces"][0].update(extension="unobserved"),
+                       lambda d:d["extensionNamespaces"][0].update(untrusted="PRIVATE_CANARY"),
+                       lambda d:d["extensionNamespaces"].append("cron"),
+                       lambda d:d["extensions"][0].update(schema="cron")]:
+            bad=copy.deepcopy(raw);change(bad)
+            with self.subTest(change=change),self.assertRaisesRegex(m.Stopped,"metadata_extension_namespace_unqualified"):
+                m.sanitize_settings(bad)
+        cross=copy.deepcopy(raw)
+        cross["extensions"].append({"name":"pgcrypto","version":"1.3","schema":"cron","owner":"postgres"})
+        with self.assertRaisesRegex(m.Stopped,"metadata_extension_namespace_unqualified"):
+            m.sanitize_settings(cross)
 
     def test_extension_preflight_shares_fixed_readonly_snapshot_and_never_implies_semantics(self):
         query=m.source_query(True)

@@ -537,7 +537,7 @@ class SyntheticTests(unittest.TestCase):
 
     def test_synthetic_builder_builds_only_allowlisted_recipe_and_never_exports_archive(self):
         self.assertNotIn("oci-archive:",m.SyntheticBuilder.build.__code__.co_consts)
-        self.assertEqual(m.FIXTURE_EXTENSIONS,("pgcrypto","vector"))
+        self.assertEqual(m.FIXTURE_EXTENSIONS,("pg_cron","pgcrypto","vector"))
         self.assertNotIn("sourceCommit",m.SyntheticProbe.derive_image_fixture.__code__.co_consts)
 
     def test_inherited_execute_entrypoint_also_cannot_emit_source_authority(self):
@@ -597,16 +597,23 @@ class SyntheticTests(unittest.TestCase):
                     "grantor":m.FIXTURE_BOOTSTRAP,"admin":False,"inherit":True,"set":True}],
                  "schemas":[{"name":"public","owner":"pg_database_owner","acl":None,"comment":None}],
                  "available":[{"name":"plpgsql","version":"1.0","schema":"pg_catalog"},
+                   {"name":"pg_cron","version":"1.6","schema":"pg_catalog"},
                    {"name":"pgcrypto","version":"1.3","schema":None},{"name":"vector","version":"0.8.0","schema":None}]}
         calls=[];targets=[]
         p.bootstrap_sql=lambda target,sql:(targets.append(target) or calls.append(sql) or (0,json.dumps(fixture).encode()))
         p.derive_image_fixture()
         self.assertEqual({e["name"]:e["version"] for e in p.metadata["extensions"]},
-                         {"plpgsql":"1.0","pgcrypto":"1.3","vector":"0.8.0"})
+                         {"plpgsql":"1.0","pg_cron":"1.6","pgcrypto":"1.3","vector":"0.8.0"})
         self.assertNotIn("sourceCommit",p.metadata);self.assertNotIn("sourceSettingsComplete",p.metadata)
         self.assertTrue(p.metadata["syntheticFixtureDerivedOnlyFromPinnedImage"])
         self.assertEqual(p.metadata["bootstrapRole"],m.FIXTURE_BOOTSTRAP)
         self.assertEqual(p.metadata["roles"],fixture["roles"])
+        self.assertEqual(p.metadata["extensionNamespaces"],[{"name":"cron","extension":"pg_cron"}])
+        self.assertEqual(next(s for s in p.metadata["schemas"] if s["name"]=="cron"),
+                         {"name":"cron","owner":m.FIXTURE_BOOTSTRAP,"acl":None,
+                          "comment":"Credential-free extension namespace fixture."})
+        self.assertNotIn('"cron"',m.base.schema_setup_sql(p.metadata))
+        self.assertIn('ALTER SCHEMA "cron" OWNER TO '+m.base.ident(m.FIXTURE_BOOTSTRAP),m.base.schema_metadata_sql(p.metadata))
         positions=[calls[0].index("CREATE ROLE "+m.base.ident(n)) for n in
                    sorted([m.FIXTURE_OWNER,m.FIXTURE_GRANT_MEMBER,m.FIXTURE_GRANT_ROLE])]
         self.assertEqual(positions,sorted(positions))
