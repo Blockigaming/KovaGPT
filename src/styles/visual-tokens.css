@@ -127,7 +127,7 @@
   --kova-radius-message: 20px;
   --kova-radius-output: 16px;
   --kova-sidebar-width: 260px;
-  --kova-sidebar-rail-width: 56px;
+  --kova-sidebar-rail-width: 84px;
   --kova-sidebar-drawer-width: min(320px, calc(100vw - 32px));
   --kova-reading-width: 768px;
   --kova-composer-width: 768px;

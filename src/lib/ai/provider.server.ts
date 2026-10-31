@@ -957,7 +957,7 @@ export async function imageEdits(
   images: { image: ProviderImageInput; mask?: ProviderImageInput },
   init?: RequestInit,
 ): Promise<Response> {
-  if (runtimeEnv("KOVA_IMAGE_EDITS_ENABLED") !== "true")
+  if (runtimeEnv("KOVA_IMAGE_EDITS_ENABLED") === "false")
     throw new AiProviderError({
       error: "Image editing is not enabled.",
       code: "provider_unavailable",

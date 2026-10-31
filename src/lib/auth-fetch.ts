@@ -10,6 +10,9 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     const owner = data.session?.user?.id;
+    const expectedOwner = headers.get("X-Kova-Owner");
+    if (expectedOwner && owner && expectedOwner !== owner)
+      throw new Error("Your account changed. Please try again.");
     if (token && owner) {
       headers.set("Authorization", `Bearer ${token}`);
       headers.set("X-Kova-Owner", owner);

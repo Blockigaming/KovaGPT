@@ -32,7 +32,10 @@ function trackedProductSource() {
     .filter((path) => path && scannedExtensions.has(extname(path)));
 }
 
-export function inspectVisibleControlContract({ files = trackedProductSource() } = {}) {
+export function inspectVisibleControlContract({
+  files = trackedProductSource(),
+  capabilities = readFileSync("src/lib/capability-registry.ts", "utf8"),
+} = {}) {
   const errors = [];
   for (const path of files) {
     const sourcePath = join(root, path);
@@ -73,11 +76,19 @@ export function inspectVisibleControlContract({ files = trackedProductSource() }
     errors.push("src/routes/scheduled-tasks.tsx:unavailable scheduler exposes creation copy");
   }
 
-  const capabilities = readFileSync("src/lib/capability-registry.ts", "utf8");
-  if (!/imageEditing:[\s\S]*availability: "unavailable"/u.test(capabilities)) {
+  const imageEditing = capabilities.match(/imageEditing:\s*\{([^}]+)\}/u)?.[1] ?? "";
+  if (
+    !/availability: "provider-dependent"/u.test(imageEditing) ||
+    !/supported configured image model/u.test(imageEditing) ||
+    !/Image allowances apply/u.test(imageEditing)
+  ) {
     errors.push("capability-registry:image editing limitation missing");
   }
-  if (!/scheduledTasks:[\s\S]*availability: "unavailable"/u.test(capabilities)) {
+  const scheduledTasks = capabilities.match(/scheduledTasks:\s*\{([^}]+)\}/u)?.[1] ?? "";
+  if (
+    !/availability: "provider-dependent"/u.test(scheduledTasks) ||
+    !/unavailable until an approved scheduler and fresh heartbeat/u.test(scheduledTasks)
+  ) {
     errors.push("capability-registry:scheduled execution limitation missing");
   }
   if (!/voiceScope: "required_provider_dependent"/u.test(capabilities)) {

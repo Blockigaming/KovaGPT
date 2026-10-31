@@ -5,7 +5,6 @@ import {
   ImagesGlyph,
   TasksGlyph,
   PluginsGlyph,
-  SidebarGlyphIcon,
   SearchGlyph,
   SettingsGlyph,
   MoreGlyph,
@@ -14,6 +13,9 @@ import {
 } from "@/components/SidebarIcons";
 import {
   Archive,
+  Brain,
+  Bell,
+  PanelLeft,
   MessageSquare,
   ChevronDown,
   BarChart3,
@@ -59,19 +61,20 @@ import {
   PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
+import { type SidebarShortcutId } from "@/lib/sidebar-shortcuts.mjs";
 import {
-  DEFAULT_SIDEBAR_SHORTCUTS,
-  readSidebarShortcuts,
-  resetSidebarShortcuts,
-  saveSidebarShortcuts,
-  SIDEBAR_SHORTCUTS,
-  sidebarShortcutsKey,
-  type SidebarShortcutId,
-} from "@/lib/sidebar-shortcuts.mjs";
+  DEFAULT_SIDEBAR_LAYOUT,
+  SIDEBAR_ITEMS,
+  readSidebarLayout,
+  saveSidebarLayout,
+  sidebarLayoutKey,
+  clampSidebarWidth,
+  sidebarColors,
+  type SidebarLayout,
+} from "@/lib/sidebar-layout.mjs";
 import "@/styles/sidebar-personalization.css";
 import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
 
-const EXPANDED_WIDTH = 260;
 const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   images: ImagesGlyph,
   library: LibraryGlyph,
@@ -81,6 +84,11 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   work: BriefcaseBusiness,
   discovery: Compass,
   maps: Map,
+  memory: Brain,
+  settings: SettingsGlyph,
+  usage: BarChart3,
+  billing: CreditCard,
+  notifications: Bell,
 };
 const ChatProjectDialog = lazy(() =>
   import("@/components/ChatProjectDialog").then((module) => ({
@@ -183,22 +191,30 @@ export function Sidebar({
   const [railDialogOwner, setRailDialogOwner] = useState<string | null>(null);
   const [railPreferences, setRailPreferences] = useState<{
     owner: string | undefined;
-    shortcuts: readonly SidebarShortcutId[];
-  }>({ owner: undefined, shortcuts: DEFAULT_SIDEBAR_SHORTCUTS });
+    layout: SidebarLayout;
+  }>({ owner: undefined, layout: { ...DEFAULT_SIDEBAR_LAYOUT } });
   const [railSaveError, setRailSaveError] = useState("");
-
+  const resizeRef = useRef<{
+    owner: string;
+    x: number;
+    width: number;
+    draft: number;
+    layout: SidebarLayout;
+  } | null>(null);
+  const [resizing, setResizing] = useState(false);
   const signedIn = isLoaded && isSignedIn;
-  const canSchedule = signedIn;
   const railOwner = signedIn ? user?.id : undefined;
-  // Never show the previous account's choices during an identity transition.
-  const railShortcuts =
-    railPreferences.owner === railOwner ? railPreferences.shortcuts : DEFAULT_SIDEBAR_SHORTCUTS;
+  const layout =
+    railPreferences.owner === railOwner ? railPreferences.layout : { ...DEFAULT_SIDEBAR_LAYOUT };
+  const railShortcuts = layout.shortcuts;
   const railDialogOpen = Boolean(railOwner && railDialogOwner === railOwner);
-  const availableShortcuts = SIDEBAR_SHORTCUTS.filter(
-    (shortcut) =>
-      ["images", "work", "discovery", "maps"].includes(shortcut.id) &&
-      (shortcut.id !== "maps" || mapsReleaseApproved),
+  const availableShortcuts = SIDEBAR_ITEMS.filter(
+    (shortcut) => shortcut.id !== "maps" || mapsReleaseApproved,
   );
+  const sidebarStyle = {
+    ...sidebarColors(layout.color),
+    "--sidebar-expanded": `${layout.width}px`,
+  } as React.CSSProperties;
   const collapsed = !open;
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -291,14 +307,16 @@ export function Sidebar({
     const refresh = () => {
       setRailPreferences({
         owner: railOwner,
-        shortcuts: readSidebarShortcuts(safeBrowserStorage("localStorage"), railOwner),
+        layout: readSidebarLayout(safeBrowserStorage("localStorage"), railOwner),
       });
       setRailSaveError("");
     };
     refresh();
     setRailDialogOwner(null);
+    resizeRef.current = null;
+    setResizing(false);
     const onStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === sidebarShortcutsKey(railOwner)) refresh();
+      if (event.key === null || event.key === sidebarLayoutKey(railOwner)) refresh();
     };
     const onCleared = (event: Event) => {
       if (isPrincipalBrowserStorageClearedEvent(event, railOwner)) refresh();
@@ -330,14 +348,40 @@ export function Sidebar({
     if (trigger?.isConnected && trigger.offsetParent !== null && !trigger.closest("[inert]"))
       trigger.focus({ preventScroll: true });
   };
-  const changeRailShortcuts = (shortcuts: readonly SidebarShortcutId[]) => {
+  const changeLayout = (patch: Partial<SidebarLayout>) => {
     if (!railOwner) return;
-    setRailPreferences({ owner: railOwner, shortcuts });
+    const next = { ...layout, ...patch };
+    setRailPreferences({ owner: railOwner, layout: next });
     setRailSaveError(
-      saveSidebarShortcuts(safeBrowserStorage("localStorage"), railOwner, shortcuts)
+      saveSidebarLayout(safeBrowserStorage("localStorage"), railOwner, next)
         ? ""
         : "Your choices apply now, but this browser could not save them. Try again to keep them after reload.",
     );
+  };
+  const changeRailShortcuts = (shortcuts: readonly SidebarShortcutId[]) =>
+    changeLayout({ shortcuts: [...shortcuts] });
+  const openChatSearch = () => {
+    if (onOpenWorkspaceSearch) {
+      closeAfterMobileNavigation();
+      onOpenWorkspaceSearch();
+    } else setSearchOpen((value) => !value);
+  };
+  const searchButton = (rail = false) => {
+    const button = (
+      <button
+        type="button"
+        className={
+          rail ? "kova-rail-button kova-header-search" : "kova-header-button kova-header-search"
+        }
+        aria-label="Search chats"
+        aria-haspopup="dialog"
+        aria-expanded={searchOpen}
+        onClick={openChatSearch}
+      >
+        <SearchGlyph aria-hidden="true" />
+      </button>
+    );
+    return rail ? <RailTooltip label="Search chats">{button}</RailTooltip> : button;
   };
 
   const cancelPendingSelection = useCallback(() => {
@@ -901,11 +945,10 @@ export function Sidebar({
             </Button>
           </div>
           <p id="sidebar-personalization-description">
-            Choose additional shortcuts for your collapsed desktop sidebar. New chat, Projects,
-            Scheduled tasks, Library, Connections, and your account stay available.
+            Make this space yours. Show the tools you use, choose a color, and adjust the width.
           </p>
           <fieldset>
-            <legend>Additional shortcuts</legend>
+            <legend>Navigation items</legend>
             {availableShortcuts.map((shortcut) => {
               const Icon = SHORTCUT_ICONS[shortcut.id];
               return (
@@ -927,6 +970,104 @@ export function Sidebar({
               );
             })}
           </fieldset>
+          <fieldset className="kova-sidebar-order">
+            <legend>Item order</legend>
+            {railShortcuts.map((id, index) => {
+              const item = availableShortcuts.find((entry) => entry.id === id);
+              if (!item) return null;
+              return (
+                <div key={id}>
+                  <span>{item.label}</span>
+                  <button
+                    type="button"
+                    aria-label={`Move ${item.label} up`}
+                    disabled={index === 0}
+                    onClick={() => {
+                      const next = [...railShortcuts];
+                      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                      changeRailShortcuts(next);
+                    }}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Move ${item.label} down`}
+                    disabled={index === railShortcuts.length - 1}
+                    onClick={() => {
+                      const next = [...railShortcuts];
+                      [next[index + 1], next[index]] = [next[index], next[index + 1]];
+                      changeRailShortcuts(next);
+                    }}
+                  >
+                    ↓
+                  </button>
+                </div>
+              );
+            })}
+          </fieldset>
+          <fieldset className="kova-sidebar-layout-controls">
+            <legend>Layout & appearance</legend>
+            <label>
+              Search chats
+              <select
+                aria-label="Search position"
+                value={layout.searchPosition}
+                onChange={(event) =>
+                  changeLayout({
+                    searchPosition: event.target.value as SidebarLayout["searchPosition"],
+                  })
+                }
+              >
+                <option value="header">Icon beside the sidebar button</option>
+                <option value="navigation">Item in navigation</option>
+              </select>
+            </label>
+            <label>
+              Sidebar width <span>{layout.width}px</span>
+              <input
+                aria-label="Sidebar width"
+                type="range"
+                min={240}
+                max={420}
+                step={10}
+                value={layout.width}
+                onChange={(event) => changeLayout({ width: Number(event.target.value) })}
+              />
+            </label>
+            <label>
+              Sidebar color{" "}
+              <input
+                aria-label="Sidebar color"
+                type="color"
+                value={layout.color === "default" ? "#171717" : layout.color}
+                onChange={(event) => changeLayout({ color: event.target.value })}
+              />
+            </label>
+            <button
+              type="button"
+              className="kova-sidebar-color-reset"
+              onClick={() => changeLayout({ color: "default" })}
+            >
+              Use theme color
+            </button>
+            <label className="kova-sidebar-shortcut-choice">
+              <span>New chat</span>
+              <Switch
+                aria-label="Show New chat"
+                checked={layout.newChat}
+                onCheckedChange={(newChat) => changeLayout({ newChat })}
+              />
+            </label>
+            <label className="kova-sidebar-shortcut-choice">
+              <span>Recent chats</span>
+              <Switch
+                aria-label="Show recent chats"
+                checked={layout.recentChats}
+                onCheckedChange={(recentChats) => changeLayout({ recentChats })}
+              />
+            </label>
+          </fieldset>
           <p className="kova-sidebar-personalization-note">
             Saved for this account in this browser.
           </p>
@@ -939,14 +1080,7 @@ export function Sidebar({
             <Button
               variant="outline"
               type="button"
-              onClick={() => {
-                setRailPreferences({ owner: railOwner, shortcuts: DEFAULT_SIDEBAR_SHORTCUTS });
-                setRailSaveError(
-                  resetSidebarShortcuts(safeBrowserStorage("localStorage"), railOwner)
-                    ? ""
-                    : "Defaults apply now, but this browser could not save the reset. Try again.",
-                );
-              }}
+              onClick={() => changeLayout({ ...DEFAULT_SIDEBAR_LAYOUT })}
             >
               Reset to default
             </Button>
@@ -1133,6 +1267,7 @@ export function Sidebar({
         <TooltipProvider>
           <nav
             className="kova-sidebar-rail"
+            style={sidebarStyle}
             data-ui-reference="chatgpt-collapsed-sidebar"
             aria-label="Collapsed navigation"
             data-kova-core-rail=""
@@ -1141,7 +1276,8 @@ export function Sidebar({
             aria-hidden={!collapsed}
             inert={!collapsed}
           >
-            <div className="flex h-16 min-h-16 shrink-0 items-center justify-center">
+            <div className="kova-rail-header">
+              {layout.searchPosition === "header" ? searchButton(true) : null}
               <RailTooltip label="Expand sidebar">
                 <button
                   ref={expandButtonRef}
@@ -1159,7 +1295,7 @@ export function Sidebar({
                   className="kova-rail-button kova-sidebar-toggle"
                   aria-label="Expand sidebar"
                 >
-                  <NovaLogo decorative className="h-6 w-6" />
+                  <PanelLeft aria-hidden="true" />
                 </button>
               </RailTooltip>
             </div>
@@ -1169,21 +1305,20 @@ export function Sidebar({
                 aria-label="Primary destinations"
                 className="flex shrink-0 flex-col items-center gap-2"
               >
-                <RailTooltip label="New chat">
-                  <button
-                    type="button"
-                    onClick={onNew}
-                    className="kova-rail-button kova-new-chat"
-                    aria-label="New chat"
-                  >
-                    <NewChatGlyph aria-hidden="true" />
-                  </button>
-                </RailTooltip>
+                {layout.newChat ? (
+                  <RailTooltip label="New chat">
+                    <button
+                      type="button"
+                      onClick={onNew}
+                      className="kova-rail-button kova-new-chat"
+                      aria-label="New chat"
+                    >
+                      <NewChatGlyph aria-hidden="true" />
+                    </button>
+                  </RailTooltip>
+                ) : null}
+                {layout.searchPosition === "navigation" ? searchButton(true) : null}
                 {railLink("/", "Chat", MessageSquare)}
-                {signedIn ? railLink("/projects", "Projects", ProjectsGlyph) : null}
-                {canSchedule ? railLink("/scheduled-tasks", "Scheduled tasks", TasksGlyph) : null}
-                {signedIn ? railLink("/library", "Library", LibraryGlyph) : null}
-                {railLink("/apps", "Connections", PluginsGlyph)}
               </div>
               {railShortcuts.some((id) => availableShortcuts.some((item) => item.id === id)) ? (
                 <div
@@ -1233,7 +1368,8 @@ export function Sidebar({
         id="kova-primary-navigation"
         data-kova-core-sidebar=""
         data-kova-refined-sidebar=""
-        style={{ "--sidebar-expanded": `${EXPANDED_WIDTH}px` } as React.CSSProperties}
+        style={sidebarStyle}
+        data-resizing={resizing || undefined}
         className="kova-sidebar"
         data-ui-reference="chatgpt-sidebar"
         aria-label="Primary navigation"
@@ -1250,6 +1386,7 @@ export function Sidebar({
               KovaGPT
             </span>
             <div className="kova-sidebar-header-actions">
+              {layout.searchPosition === "header" ? searchButton() : null}
               <button
                 type="button"
                 className="kova-header-button kova-sidebar-toggle flex lg:hidden"
@@ -1257,7 +1394,7 @@ export function Sidebar({
                 aria-label="Close sidebar"
                 title="Close sidebar"
               >
-                <X />
+                <PanelLeft aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -1275,7 +1412,7 @@ export function Sidebar({
                 aria-label="Collapse sidebar"
                 title="Collapse sidebar"
               >
-                <SidebarGlyphIcon />
+                <PanelLeft aria-hidden="true" />
               </button>
             </div>
           </header>
@@ -1298,62 +1435,61 @@ export function Sidebar({
 
           <div className="kova-sidebar-scroll">
             <nav className="kova-sidebar-primary" aria-label="KovaGPT features">
-              <button
-                type="button"
-                onClick={() => {
-                  closeAfterMobileNavigation("/");
-                  onNew();
-                }}
-                className="kova-new-chat kova-nav-row"
-                aria-label="New chat"
-              >
-                {icon(NewChatGlyph)}
-                <span>New chat</span>
-              </button>
-              <button
-                type="button"
-                className="kova-nav-row"
-                aria-label="Search chats"
-                aria-haspopup={onOpenWorkspaceSearch ? "dialog" : undefined}
-                aria-expanded={onOpenWorkspaceSearch ? undefined : searchOpen}
-                onClick={() => {
-                  if (onOpenWorkspaceSearch) {
-                    closeAfterMobileNavigation();
-                    onOpenWorkspaceSearch();
-                  } else setSearchOpen((value) => !value);
-                }}
-              >
-                <span className="kova-sidebar-icon" aria-hidden="true">
-                  <SearchGlyph />
-                </span>
-                <span>Search</span>
-              </button>
-              {navLink("/images", "Images", ImagesGlyph)}
-              {navLink("/apps", "Connections", PluginsGlyph)}
-              {signedIn ? (
-                <div
-                  className="kova-sidebar-workspace"
-                  role="group"
-                  aria-label="Workspace destinations"
+              {layout.newChat ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeAfterMobileNavigation("/");
+                    onNew();
+                  }}
+                  className="kova-new-chat kova-nav-row"
+                  aria-label="New chat"
                 >
-                  <p className="kova-sidebar-section-label">Workspace</p>
-                  {navLink("/projects", "Projects", ProjectsGlyph)}
-                  {navLink("/library", "Library", LibraryGlyph)}
-                  {canSchedule ? navLink("/scheduled-tasks", "Scheduled tasks", TasksGlyph) : null}
-                </div>
+                  {icon(NewChatGlyph)}
+                  <span>New chat</span>
+                </button>
               ) : null}
+              {layout.searchPosition === "navigation" ? (
+                <button
+                  type="button"
+                  className="kova-nav-row"
+                  aria-label="Search chats"
+                  aria-haspopup={onOpenWorkspaceSearch ? "dialog" : undefined}
+                  aria-expanded={onOpenWorkspaceSearch ? undefined : searchOpen}
+                  onClick={() => {
+                    if (onOpenWorkspaceSearch) {
+                      closeAfterMobileNavigation();
+                      onOpenWorkspaceSearch();
+                    } else setSearchOpen((value) => !value);
+                  }}
+                >
+                  <span className="kova-sidebar-icon" aria-hidden="true">
+                    <SearchGlyph />
+                  </span>
+                  <span>Search</span>
+                </button>
+              ) : null}
+              {railShortcuts
+                .filter((id) => !["discovery", "maps", "work"].includes(id))
+                .map((id) => {
+                  const item = availableShortcuts.find((entry) => entry.id === id);
+                  return item ? navLink(item.to, item.label, SHORTCUT_ICONS[id]) : null;
+                })}
               <details
                 className="kova-sidebar-more-disclosure"
                 data-ui-reference="gemini-sidebar-disclosure"
-                open={isOn("/work") || isOn("/discovery") || isOn("/maps") || undefined}
+                open={isOn("/discovery") || isOn("/maps") || undefined}
               >
                 <summary className="kova-nav-row cursor-pointer">
                   {icon(MoreGlyph)}
                   <span>More</span>
                 </summary>
-                {navLink("/work", "Work", BriefcaseBusiness)}
-                {navLink("/discovery", "Discover", Compass)}
-                {mapsReleaseApproved ? navLink("/maps", "Maps", Map) : null}
+                {railShortcuts.includes("discovery")
+                  ? navLink("/discovery", "Discover", Compass)
+                  : null}
+                {mapsReleaseApproved && railShortcuts.includes("maps")
+                  ? navLink("/maps", "Maps", Map)
+                  : null}
                 {signedIn ? (
                   <button
                     type="button"
@@ -1367,7 +1503,11 @@ export function Sidebar({
                 ) : null}
               </details>
             </nav>
-            <section className="kova-sidebar-history" aria-label="Chats">
+            <section
+              className="kova-sidebar-history"
+              aria-label="Chats"
+              hidden={!layout.recentChats}
+            >
               {pinned.length > 0 ? (
                 <div role="group" aria-labelledby="sidebar-pinned-heading">
                   <h2 id="sidebar-pinned-heading" tabIndex={-1}>
@@ -1556,6 +1696,75 @@ export function Sidebar({
             )}
           </footer>
         </div>
+        {!mobileViewport ? (
+          <div
+            className="kova-sidebar-resize"
+            role="separator"
+            aria-label="Resize sidebar"
+            aria-orientation="vertical"
+            aria-valuemin={240}
+            aria-valuemax={420}
+            aria-valuenow={layout.width}
+            tabIndex={open ? 0 : -1}
+            title="Drag to resize · Arrow keys to adjust · Double-click to reset"
+            onDoubleClick={() => changeLayout({ width: DEFAULT_SIDEBAR_LAYOUT.width })}
+            onKeyDown={(event) => {
+              const width =
+                event.key === "ArrowLeft"
+                  ? layout.width - 10
+                  : event.key === "ArrowRight"
+                    ? layout.width + 10
+                    : event.key === "Home"
+                      ? 240
+                      : event.key === "End"
+                        ? 420
+                        : null;
+              if (width === null) return;
+              event.preventDefault();
+              changeLayout({ width: clampSidebarWidth(width) });
+            }}
+            onPointerDown={(event) => {
+              if (!railOwner || event.button !== 0) return;
+              event.preventDefault();
+              event.currentTarget.setPointerCapture(event.pointerId);
+              resizeRef.current = {
+                owner: railOwner,
+                x: event.clientX,
+                width: layout.width,
+                draft: layout.width,
+                layout,
+              };
+              setResizing(true);
+            }}
+            onPointerMove={(event) => {
+              const drag = resizeRef.current;
+              if (!drag || drag.owner !== accountRef.current) return;
+              drag.draft = clampSidebarWidth(drag.width + event.clientX - drag.x);
+              setRailPreferences({
+                owner: drag.owner,
+                layout: { ...drag.layout, width: drag.draft },
+              });
+            }}
+            onLostPointerCapture={() => {
+              const drag = resizeRef.current;
+              resizeRef.current = null;
+              setResizing(false);
+              if (!drag || drag.owner !== accountRef.current) return;
+              const next = { ...drag.layout, width: drag.draft };
+              setRailSaveError(
+                saveSidebarLayout(safeBrowserStorage("localStorage"), drag.owner, next)
+                  ? ""
+                  : "This width could not be saved. Try again in Customize sidebar.",
+              );
+            }}
+            onPointerUp={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId))
+                event.currentTarget.releasePointerCapture(event.pointerId);
+            }}
+          >
+            <span />
+          </div>
+        ) : null}
       </aside>
     </>
   );

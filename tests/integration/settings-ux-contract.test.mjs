@@ -292,13 +292,10 @@ test("mobile settings drill-in moves focus with the visible panel", () => {
   assert.match(settingsSource, /contentHeadingRef\.current\?\.focus\(\)/);
 });
 
-test("usage and billing preserve real data states without invented allowances", () => {
+test("usage bars bind verified plan allowances to real daily counters and retain failure states", () => {
   assert.match(settingsSource, /getMyDailyUsage\(\)/);
   assert.match(settingsSource, /getSubscriptionSummary/);
-  assert.match(settingsSource, /usage\.chats/);
-  assert.match(settingsSource, /usage\.images/);
-  assert.match(settingsSource, /usage\.uploads/);
-  assert.match(settingsSource, /does not currently[\s\S]*account allowance total/);
+  assert.match(settingsSource, /<PlanUsageBars tier=\{tier\} usage=\{usage\}/);
   assert.match(settingsSource, /Loading usage/);
   assert.match(settingsSource, /Usage data isn't available right now/);
   assert.doesNotMatch(settingsSource, /52%/);

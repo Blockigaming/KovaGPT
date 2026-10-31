@@ -119,7 +119,6 @@ test("live handoff producers and consumers use the tested principal envelope hel
     ["kova-prompt-launch", [sources.prompts]],
     ["kova-work-context", [sources.agent]],
     ["kova-automation-draft", [sources.agent]],
-    ["kova-work-draft", [sources.contextPacks]],
   ]);
   for (const [key, producers] of producerKeys) {
     for (const source of producers) {
@@ -131,14 +130,10 @@ test("live handoff producers and consumers use the tested principal envelope hel
     sources.home,
     /const storage = safeBrowserStorage\("sessionStorage"\);[\s\S]{0,260}consumePrincipalHandoff<T>\(storage, baseKey, userKey\)/,
   );
-  for (const key of [
-    "kova-active-context-pack",
-    "kova-app-chat-context",
-    "kova-prompt-launch",
-    "kova-work-context",
-  ]) {
+  for (const key of ["kova-active-context-pack", "kova-app-chat-context", "kova-prompt-launch"]) {
     assert.match(sources.home, new RegExp(`consume<[\\s\\S]{0,320}>\\("${key}",`), key);
   }
+  assert.match(sources.home, /for \(const key of \["kova-work-context", "kova-work-draft"\]\)/);
   for (const [key, source] of [
     ["kova-automation-draft", sources.scheduled],
     ["kova-context-candidates", sources.contextPacks],

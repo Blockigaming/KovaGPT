@@ -76,7 +76,7 @@ test("mobile top bar exposes chat settings with an accessible target", () => {
 });
 
 test("sharing discloses that only the active branch is snapshotted", () => {
-  const source = read("src/components/ShareChatDialog.tsx");
+  const source = read("src/components/EmailShareChatDialog.tsx");
   assert.match(source, /branch you’re viewing before sharing/u);
   assert.match(
     source,

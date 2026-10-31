@@ -104,7 +104,7 @@ async function expandDesktopNavigation(page: Page) {
   const expand = page.getByRole("button", { name: "Expand sidebar", exact: true });
   if (await expand.isVisible()) await expand.click();
   await expect(
-    page.getByRole("group", { name: "Workspace destinations", exact: true }),
+    page.getByRole("navigation", { name: "KovaGPT features", exact: true }),
   ).toBeVisible();
 }
 
@@ -299,13 +299,13 @@ test("workspace destinations stay together in desktop navigation and the phone d
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu", exact: true }).click();
   } else await expandDesktopNavigation(page);
-  const workspace = page.getByRole("group", { name: "Workspace destinations", exact: true });
+  const workspace = page.getByRole("navigation", { name: "KovaGPT features", exact: true });
   for (const name of ["Projects", "Library", "Scheduled tasks"]) {
     await expect(workspace.getByRole("link", { name, exact: true })).toBeVisible();
   }
   const more = page.locator("details.kova-sidebar-more-disclosure");
   await more.locator("summary").click();
-  await expect(more.getByRole("link", { name: "Work", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
   await expect(more.getByRole("link", { name: "Discover", exact: true })).toBeVisible();
   if (page.viewportSize()!.width < 1024) {
     await page.keyboard.press("Escape");

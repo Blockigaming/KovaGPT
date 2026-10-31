@@ -1,3 +1,4 @@
+import * as browserActivity from "../../src/lib/browser-activity-contract.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -18,6 +19,7 @@ function load(path, modules = {}) {
 }
 
 const { conversationSources } = load("src/lib/conversation-sources.ts", {
+  "./browser-activity-contract.mjs": browserActivity,
   "./memory-sources.mjs": memorySources,
   "./response-sources": load("src/lib/response-sources.ts", {
     "./response-source-time.mjs": responseSourceTime,
@@ -236,4 +238,36 @@ test("derivation is deterministic, isolated to the supplied chat, and does not m
     attachments: [],
     browser: [],
   });
+});
+
+test("explicit provider activity accumulates across turns and never comes from prose", () => {
+  const result = conversationSources({
+    ...chat,
+    messages: [
+      assistant("one", {
+        activities: [
+          { tool: "github_fetch", label: "Reading GitHub", status: "done" },
+          { tool: "supabase_execute_sql", label: "Reading database", status: "done" },
+        ],
+      }),
+      assistant("two", {
+        activities: [
+          { tool: "github_search", label: "Searching GitHub", status: "done" },
+          { tool: "firecrawl_search", label: "Searching", status: "done" },
+        ],
+      }),
+    ],
+  });
+  assert.deepEqual(
+    result.providers.map((provider) => provider.name),
+    ["GitHub", "Supabase", "Firecrawl"],
+  );
+  assert.deepEqual(result.providers[0].messageIds, ["one", "two"]);
+  assert.equal(
+    conversationSources({
+      ...chat,
+      messages: [assistant("text", { content: "I used GitHub, Supabase and Firecrawl." })],
+    }).providers,
+    undefined,
+  );
 });

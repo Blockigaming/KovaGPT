@@ -43,7 +43,7 @@ test("Project, Artifact, and Work surfaces expose graceful realtime degradation"
   ]);
   assert.match(project, /CollaborationStatus/);
   assert.match(artifact, /CollaborationStatus/);
-  assert.match(work, /RealtimeReadiness/);
+  assert.match(work, /throw redirect/);
   assert.match(status, /Realtime unavailable/);
   const collaborationStatus = await read("src/components/CollaborationStatus.tsx");
   assert.match(collaborationStatus, /Reconnecting/);

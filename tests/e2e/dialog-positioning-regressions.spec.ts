@@ -191,7 +191,7 @@ for (const theme of ["light", "dark"] as const) {
   test(`${theme}: Sources drawer stays docked inside the viewport and scrolls long local evidence`, async ({
     page,
   }, info) => {
-    await fixture(page, theme, false);
+    await fixture(page, theme, true);
     let requests = 0;
     const sources = Array.from({ length: 12 }, (_, index) => ({
       id: `local-source-${index + 1}`,

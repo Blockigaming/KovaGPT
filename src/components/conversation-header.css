@@ -453,6 +453,10 @@
 }
 
 .kova-conversation-actions-compact .kova-conversation-share {
+  display: inline-flex;
+  border: 0;
+}
+.kova-conversation-actions-compact .spec400-header-context {
   display: none;
 }
 

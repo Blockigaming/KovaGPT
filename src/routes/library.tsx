@@ -1491,7 +1491,7 @@ function LibraryPage() {
         <DropdownMenuItem
           onClick={() => void withItem(item, (value) => openInWork(toHandoff(value), userKey))}
         >
-          Open in Work
+          Continue in chat
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => void withItem(item, (value) => continueInChat(toHandoff(value), userKey))}

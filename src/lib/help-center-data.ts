@@ -34,6 +34,57 @@ const features = CAPABILITY_REGISTRY.features;
 
 const rows: Row[] = [
   [
+    "Chat & modes",
+    "Why is Thinking blue?",
+    "The brain and Thinking label turn blue when deeper reasoning is on. Click the same button again for Default. Free has this simple on/off control; Plus and Pro have additional model levels.",
+  ],
+  [
+    "Settings & memory",
+    "How do I resize or color the sidebar?",
+    "On a desktop, drag the sidebar's right edge. You can also focus that edge and press Left or Right; Home and End use its minimum and maximum widths. Open More → Customize sidebar to choose items, color, search placement, and recent-chat visibility. Choices are saved for this account in this browser.",
+  ],
+  [
+    "Library & sharing",
+    "How do I copy or remove a chat link?",
+    "Open Share in a saved chat, review the text snapshot, then choose Create & copy link. Anyone with the link can read that snapshot for 30 days. Files and future messages are excluded. Remove link revokes it. A success popup appears only after the clipboard accepts the link.",
+  ],
+  [
+    "Library & sharing",
+    "The clipboard won't copy a share link.",
+    "The created link remains visible in the Share dialog. Select that field and copy it manually, or allow clipboard access for KovaGPT and try Copy link again. A failed copy does not mean the link was revoked.",
+  ],
+  [
+    "Files & images",
+    "Which image shapes and custom sizes can I use?",
+    "Choose Square 1:1, Landscape 3:2, Portrait 2:3, Widescreen 16:9, Story 9:16, or Custom with a supported image model. Custom edges must be multiples of 16, no more than 3840 pixels, with 655,360–8,294,400 total pixels and a ratio from 1:3 to 3:1. Larger outputs may take longer.",
+  ],
+  [
+    "Files & images",
+    "How do I create an image in a normal chat?",
+    "Open the + menu and choose Create Image, then describe what you want and send the message. Sign-in and an available image allowance are required. The output stays in that conversation and can be saved to Library.",
+  ],
+  [
+    "Chat & modes",
+    "Why doesn't the activity panel show Cloud browser?",
+    "The panel displays recorded sources and outputs from this conversation. Browser preview and tab count appear when a browser integration supplies real active-session data. Web search alone does not mean a cloud browser is active.",
+  ],
+  [
+    "Billing & plans",
+    "How much usage does each plan include?",
+    "Free has one fifth of Plus usage. Plus costs $16 per month and is the baseline. Pro costs $80 per month and has fifteen times Plus usage. Daily message, image, and upload progress appears in Settings → Usage; token and technical limits also apply.",
+  ],
+  [
+    "Scheduled tasks",
+    "Scheduled tasks says access could not be verified.",
+    "Reload once and confirm the same verified account is signed in. If it persists, Support must check the deployment's task schema and account-access functions. A client refresh cannot repair a missing database migration. Existing task records should not be deleted as a workaround.",
+  ],
+  [
+    "Scheduled tasks",
+    "My task is saved but background execution isn't ready.",
+    "Check the task's status and time zone. Scheduled execution requires a configured provider, approved runtime policy, and a healthy scheduler heartbeat. If the page reports a service problem, keep the task and contact Support; repeated Run actions can create unwanted duplicate work.",
+  ],
+
+  [
     "Getting started",
     "What is KovaGPT?",
     "KovaGPT is an AI workspace for conversations, web research, supported files, images, projects, and connected apps. Availability can depend on your plan and the providers configured for this deployment.",
@@ -52,7 +103,7 @@ const rows: Row[] = [
   [
     "Getting started",
     "Can I use KovaGPT without an account?",
-    "Yes. Guests can create session-only chats. Sign in to synchronize chat history and use account-backed features.",
+    "A verified account is required to chat, create or edit images, manage Library files, and use KovaGPT tools. Choose Log in or Create an account. Help, pricing, legal information, and read-only shared links are public.",
   ],
   [
     "Getting started",
@@ -154,7 +205,7 @@ const rows: Row[] = [
   [
     "Chat & modes",
     "What is Lite mode?",
-    "Default is the fastest Chat setting. Signed-in Free users can also choose Thinking. Plus adds Medium and High; Pro adds Extra High, Max, and Ultra. Signed-out visitors use Default.",
+    "Default is the fastest Chat setting. Free users turn the brain-shaped Thinking button on for deeper reasoning, or off for Default. Plus adds Medium and High; Pro adds Extra High, Max, and Ultra. An account is required.",
   ],
   [
     "Chat & modes",
@@ -600,7 +651,7 @@ const rows: Row[] = [
   [
     "Billing & plans",
     "How do usage limits work?",
-    "Free Chat has a finite message allowance. Plus and Pro do not use a paid Chat message-count or weekly Work quota; technical per-request, security, concurrency, image, upload, and storage limits still apply where shown in the product.",
+    "Free has one fifth of the Plus allowance; Pro has fifteen times the Plus allowance. Settings → Usage shows daily message, image, and upload progress. Token, security, concurrency, and storage limits also apply.",
   ],
   [
     "Privacy & security",

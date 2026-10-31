@@ -241,6 +241,8 @@ function ProjectDetailPage() {
         currentRequestKeyRef.current !== loadRequestKey
       )
         return;
+      if (!p || p.id !== projectId || !Array.isArray(m) || !Array.isArray(i) || !Array.isArray(c))
+        throw new Error("The project could not be loaded. Try again.");
       setProject(p);
       try {
         const key = `kova-project-opened:${userKey}`;

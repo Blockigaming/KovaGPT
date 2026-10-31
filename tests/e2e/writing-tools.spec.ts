@@ -1,4 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+
+test.beforeEach(async ({ page }) => {
+  await installAuthenticatedFixture(page);
+});
 
 test("writing hub exposes all 21 focused tools", async ({ page }) => {
   await page.goto("/writing");

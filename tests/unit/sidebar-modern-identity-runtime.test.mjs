@@ -204,6 +204,10 @@ test("inline chat search exposes its current expanded state and preserves toggli
   for (const searchOpen of [false, true]) {
     let next = searchOpen;
     const tree = renderSidebar(button, {
+      rail: false,
+      openChatSearch: () => {
+        next = !next;
+      },
       searchOpen,
       onOpenWorkspaceSearch: undefined,
       setSearchOpen: (update) => (next = update(next)),

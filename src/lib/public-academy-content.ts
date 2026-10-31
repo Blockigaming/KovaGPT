@@ -174,7 +174,7 @@ const topics: readonly AcademyTopic[] = [
       "Do not imply an external action was completed",
       "Use qualified review for high-impact work",
     ],
-    action: { label: "Open Work", to: "/work" },
+    action: { label: "Open KovaGPT", to: "/" },
   },
   {
     slug: "chatgpt-sites",
@@ -214,7 +214,7 @@ const topics: readonly AcademyTopic[] = [
       "Confirm recipients and external mutations",
       "Review every material change before handoff",
     ],
-    action: { label: "Open Work", to: "/work" },
+    action: { label: "Open KovaGPT", to: "/" },
   },
   {
     slug: "chatgpt-work/how-business-operations-teams-use-codex",
@@ -334,7 +334,7 @@ const topics: readonly AcademyTopic[] = [
       "Verify product and contract details",
       "Confirm messages and account changes",
     ],
-    action: { label: "Open Work", to: "/work" },
+    action: { label: "Open KovaGPT", to: "/" },
   },
   {
     slug: "data-analysis",
@@ -354,7 +354,7 @@ const topics: readonly AcademyTopic[] = [
       "Distinguish correlation from causation",
       "Retain assumptions and transformation steps",
     ],
-    action: { label: "Open Work", to: "/work" },
+    action: { label: "Open KovaGPT", to: "/" },
   },
   {
     slug: "finance",
@@ -374,7 +374,7 @@ const topics: readonly AcademyTopic[] = [
       "Check formulas, units, currencies, and dates",
       "Require qualified review for financial decisions",
     ],
-    action: { label: "Open Work", to: "/work" },
+    action: { label: "Open KovaGPT", to: "/" },
   },
   {
     slug: "financial-services",
@@ -478,7 +478,7 @@ const topics: readonly AcademyTopic[] = [
       "Verify external actions and important claims",
       "Stop work when required authority is missing",
     ],
-    action: { label: "Open Work", to: "/work" },
+    action: { label: "Open KovaGPT", to: "/" },
   },
   {
     slug: "image-generation",
@@ -518,7 +518,7 @@ const topics: readonly AcademyTopic[] = [
       "Check for missing perspectives and unfair inference",
       "Keep people decisions human-owned",
     ],
-    action: { label: "Open Work", to: "/work" },
+    action: { label: "Open KovaGPT", to: "/" },
   },
   {
     slug: "marketing",
@@ -558,7 +558,7 @@ const topics: readonly AcademyTopic[] = [
       "Do not bypass approvals or segregation of duties",
       "Provide escalation and recovery instructions",
     ],
-    action: { label: "Open Work", to: "/work" },
+    action: { label: "Open KovaGPT", to: "/" },
   },
   {
     slug: "personalization",
@@ -658,7 +658,7 @@ const topics: readonly AcademyTopic[] = [
       "Do not invent relationships or customer facts",
       "Confirm commercial terms with authorized owners",
     ],
-    action: { label: "Open Work", to: "/work" },
+    action: { label: "Open KovaGPT", to: "/" },
   },
   {
     slug: "skills",

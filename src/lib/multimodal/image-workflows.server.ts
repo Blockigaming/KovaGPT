@@ -1,3 +1,4 @@
+import { supportsImageEdits, supportsCustomImageSizes } from "./image-size-policy.mjs";
 import { imageModel } from "@/lib/ai/provider.server";
 import { selectModelForMode } from "@/lib/ai/registry.server";
 import { replaceControlCharacters } from "@/lib/sanitize-text";
@@ -33,10 +34,7 @@ export type ImageResultMetadata = {
 };
 
 export function imageEditingEnabled() {
-  return (
-    runtimeEnv("KOVA_IMAGE_EDITS_ENABLED") === "true" &&
-    /^gpt-image-(?:1(?:\.5|-mini)?|2)$/u.test(imageModel())
-  );
+  return runtimeEnv("KOVA_IMAGE_EDITS_ENABLED") !== "false" && supportsImageEdits(imageModel());
 }
 export function sanitizeImagePrompt(prompt: string): string {
   return replaceControlCharacters(prompt).replace(/\s+/g, " ").trim();
@@ -45,6 +43,7 @@ export function normalizeImageSettings(input: unknown): ImageGenerationSettings 
   return normalizeImageRequest(input, {
     provider: getAiProviderConfig("image_generation").provider,
     editEnabled: imageEditingEnabled(),
+    customSizesSupported: supportsCustomImageSizes(imageModel()),
   });
 }
 export function imageProviderPayload(settings: ImageGenerationSettings) {

@@ -33,7 +33,7 @@ test("Agent Workspace is plan-gated, approval-aware, local-only and explicit", a
   assert.doesNotMatch(component, /Execution history/);
   assert.match(store, /type AgentRunStatus/);
   assert.match(store, /"approval_needed"/);
-  assert.match(route, /useServerFn\(listWorkRuns\)/);
+  assert.match(route, /throw redirect/);
 });
 
 test("Nexus audit leaves no frontend item marked partial or missing", async () => {

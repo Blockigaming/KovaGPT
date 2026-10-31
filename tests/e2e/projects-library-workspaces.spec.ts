@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
+import { coreFixture, reviewProject } from "./core-app-fixture";
+
+test.beforeEach(async ({ page }) => {
+  await coreFixture(page, "dark");
+});
 
 test.describe("projects and library workspaces", () => {
   test("projects overview desktop and mobile controls render", async ({ page }) => {
@@ -40,12 +45,12 @@ test.describe("projects and library workspaces", () => {
   });
 
   test("project tabs and instructions surface are reachable", async ({ page }) => {
-    await page.goto("/projects/test-project", { waitUntil: "domcontentloaded" });
+    await page.goto(`/projects/${reviewProject.id}`, { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const instructions = page.getByRole("tab", { name: /instructions/i }).first();
-    if (await instructions.isVisible().catch(() => false)) {
-      await instructions.click();
-      await expect(page.getByText(/instructions are injected into project chats/i)).toBeVisible();
-    }
+    await page.getByRole("tab", { name: "Context", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Project instructions", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".kova-project-instructions textarea")).toBeVisible();
   });
 });

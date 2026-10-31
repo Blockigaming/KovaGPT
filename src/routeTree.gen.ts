@@ -72,6 +72,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as AdminKovasRouteImport } from './routes/admin/kovas'
 import { Route as ApiAccountRouteImport } from './routes/api/account'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiChatShareRouteImport } from './routes/api/chat-share'
 import { Route as ApiDiscoveryRouteImport } from './routes/api/discovery'
 import { Route as ApiDocumentExportRouteImport } from './routes/api/document-export'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
@@ -109,6 +110,7 @@ import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe
 import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as SettingsSectionRouteImport } from './routes/settings.$section'
+import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as TranslateIndexRouteImport } from './routes/translate.index'
 import { Route as TranslatePairSlugRouteImport } from './routes/translate.$pairSlug'
 import { Route as WritingIndexRouteImport } from './routes/writing.index'
@@ -134,6 +136,7 @@ import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
 import { Route as ApiAuthSignupRouteImport } from './routes/api/auth/signup'
 import { Route as ApiAuthTokenRouteImport } from './routes/api/auth/token'
 import { Route as ApiAuthVerifyRouteImport } from './routes/api/auth/verify'
+import { Route as ApiChatShareTokenRouteImport } from './routes/api/chat-share.$token'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
 import { Route as ApiChatHistoryRouteImport } from './routes/api/chat/history'
 import { Route as ApiDeveloperConsoleRouteImport } from './routes/api/developer/console'
@@ -544,6 +547,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatShareRoute = ApiChatShareRouteImport.update({
+  id: '/api/chat-share',
+  path: '/api/chat-share',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDiscoveryRoute = ApiDiscoveryRouteImport.update({
   id: '/api/discovery',
   path: '/api/discovery',
@@ -731,6 +739,11 @@ const SettingsSectionRoute = SettingsSectionRouteImport.update({
   path: '/settings/$section',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareTokenRoute = ShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TranslateIndexRoute = TranslateIndexRouteImport.update({
   id: '/translate/',
   path: '/translate/',
@@ -859,6 +872,11 @@ const ApiAuthVerifyRoute = ApiAuthVerifyRouteImport.update({
   id: '/api/auth/verify',
   path: '/api/auth/verify',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatShareTokenRoute = ApiChatShareTokenRouteImport.update({
+  id: '/$token',
+  path: '/$token',
+  getParentRoute: () => ApiChatShareRoute,
 } as any)
 const ApiChatConfirmRoute = ApiChatConfirmRouteImport.update({
   id: '/confirm',
@@ -1407,6 +1425,7 @@ export interface FileRoutesByFullPath {
   '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/chat-share': typeof ApiChatShareRouteWithChildren
   '/api/discovery': typeof ApiDiscoveryRoute
   '/api/document-export': typeof ApiDocumentExportRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -1443,6 +1462,7 @@ export interface FileRoutesByFullPath {
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/$section': typeof SettingsSectionRoute
+  '/share/$token': typeof ShareTokenRoute
   '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
@@ -1469,6 +1489,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/token': typeof ApiAuthTokenRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/chat-share/$token': typeof ApiChatShareTokenRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
   '/api/developer/console': typeof ApiDeveloperConsoleRoute
@@ -1625,6 +1646,7 @@ export interface FileRoutesByTo {
   '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/chat-share': typeof ApiChatShareRouteWithChildren
   '/api/discovery': typeof ApiDiscoveryRoute
   '/api/document-export': typeof ApiDocumentExportRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -1661,6 +1683,7 @@ export interface FileRoutesByTo {
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/$section': typeof SettingsSectionRoute
+  '/share/$token': typeof ShareTokenRoute
   '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
@@ -1687,6 +1710,7 @@ export interface FileRoutesByTo {
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/token': typeof ApiAuthTokenRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/chat-share/$token': typeof ApiChatShareTokenRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
   '/api/developer/console': typeof ApiDeveloperConsoleRoute
@@ -1844,6 +1868,7 @@ export interface FileRoutesById {
   '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
   '/api/chat': typeof ApiChatRouteWithChildren
+  '/api/chat-share': typeof ApiChatShareRouteWithChildren
   '/api/discovery': typeof ApiDiscoveryRoute
   '/api/document-export': typeof ApiDocumentExportRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -1880,6 +1905,7 @@ export interface FileRoutesById {
   '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/settings/$section': typeof SettingsSectionRoute
+  '/share/$token': typeof ShareTokenRoute
   '/translate/$pairSlug': typeof TranslatePairSlugRoute
   '/writing/$toolSlug': typeof WritingToolSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
@@ -1906,6 +1932,7 @@ export interface FileRoutesById {
   '/api/auth/signup': typeof ApiAuthSignupRoute
   '/api/auth/token': typeof ApiAuthTokenRoute
   '/api/auth/verify': typeof ApiAuthVerifyRouteWithChildren
+  '/api/chat-share/$token': typeof ApiChatShareTokenRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/chat/history': typeof ApiChatHistoryRoute
   '/api/developer/console': typeof ApiDeveloperConsoleRoute
@@ -2064,6 +2091,7 @@ export interface FileRouteTypes {
     | '/admin/kovas'
     | '/api/account'
     | '/api/chat'
+    | '/api/chat-share'
     | '/api/discovery'
     | '/api/document-export'
     | '/api/generate-image'
@@ -2100,6 +2128,7 @@ export interface FileRouteTypes {
     | '/oauth/consent'
     | '/projects/$projectId'
     | '/settings/$section'
+    | '/share/$token'
     | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
@@ -2126,6 +2155,7 @@ export interface FileRouteTypes {
     | '/api/auth/signup'
     | '/api/auth/token'
     | '/api/auth/verify'
+    | '/api/chat-share/$token'
     | '/api/chat/confirm'
     | '/api/chat/history'
     | '/api/developer/console'
@@ -2282,6 +2312,7 @@ export interface FileRouteTypes {
     | '/admin/kovas'
     | '/api/account'
     | '/api/chat'
+    | '/api/chat-share'
     | '/api/discovery'
     | '/api/document-export'
     | '/api/generate-image'
@@ -2318,6 +2349,7 @@ export interface FileRouteTypes {
     | '/oauth/consent'
     | '/projects/$projectId'
     | '/settings/$section'
+    | '/share/$token'
     | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
@@ -2344,6 +2376,7 @@ export interface FileRouteTypes {
     | '/api/auth/signup'
     | '/api/auth/token'
     | '/api/auth/verify'
+    | '/api/chat-share/$token'
     | '/api/chat/confirm'
     | '/api/chat/history'
     | '/api/developer/console'
@@ -2500,6 +2533,7 @@ export interface FileRouteTypes {
     | '/admin/kovas'
     | '/api/account'
     | '/api/chat'
+    | '/api/chat-share'
     | '/api/discovery'
     | '/api/document-export'
     | '/api/generate-image'
@@ -2536,6 +2570,7 @@ export interface FileRouteTypes {
     | '/oauth/consent'
     | '/projects/$projectId'
     | '/settings/$section'
+    | '/share/$token'
     | '/translate/$pairSlug'
     | '/writing/$toolSlug'
     | '/~oauth/callback'
@@ -2562,6 +2597,7 @@ export interface FileRouteTypes {
     | '/api/auth/signup'
     | '/api/auth/token'
     | '/api/auth/verify'
+    | '/api/chat-share/$token'
     | '/api/chat/confirm'
     | '/api/chat/history'
     | '/api/developer/console'
@@ -2719,6 +2755,7 @@ export interface RootRouteChildren {
   AdminKovasRoute: typeof AdminKovasRoute
   ApiAccountRoute: typeof ApiAccountRouteWithChildren
   ApiChatRoute: typeof ApiChatRouteWithChildren
+  ApiChatShareRoute: typeof ApiChatShareRouteWithChildren
   ApiDiscoveryRoute: typeof ApiDiscoveryRoute
   ApiDocumentExportRoute: typeof ApiDocumentExportRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
@@ -2753,6 +2790,7 @@ export interface RootRouteChildren {
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   OauthConsentRoute: typeof OauthConsentRoute
   SettingsSectionRoute: typeof SettingsSectionRoute
+  ShareTokenRoute: typeof ShareTokenRoute
   TranslatePairSlugRoute: typeof TranslatePairSlugRoute
   WritingToolSlugRoute: typeof WritingToolSlugRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
@@ -3306,6 +3344,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat-share': {
+      id: '/api/chat-share'
+      path: '/api/chat-share'
+      fullPath: '/api/chat-share'
+      preLoaderRoute: typeof ApiChatShareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/discovery': {
       id: '/api/discovery'
       path: '/api/discovery'
@@ -3565,6 +3610,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSectionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share/$token': {
+      id: '/share/$token'
+      path: '/share/$token'
+      fullPath: '/share/$token'
+      preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/translate/': {
       id: '/translate/'
       path: '/translate'
@@ -3739,6 +3791,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/verify'
       preLoaderRoute: typeof ApiAuthVerifyRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/chat-share/$token': {
+      id: '/api/chat-share/$token'
+      path: '/$token'
+      fullPath: '/api/chat-share/$token'
+      preLoaderRoute: typeof ApiChatShareTokenRouteImport
+      parentRoute: typeof ApiChatShareRoute
     }
     '/api/chat/confirm': {
       id: '/api/chat/confirm'
@@ -4442,6 +4501,18 @@ const ApiChatRouteChildren: ApiChatRouteChildren = {
 const ApiChatRouteWithChildren =
   ApiChatRoute._addFileChildren(ApiChatRouteChildren)
 
+interface ApiChatShareRouteChildren {
+  ApiChatShareTokenRoute: typeof ApiChatShareTokenRoute
+}
+
+const ApiChatShareRouteChildren: ApiChatShareRouteChildren = {
+  ApiChatShareTokenRoute: ApiChatShareTokenRoute,
+}
+
+const ApiChatShareRouteWithChildren = ApiChatShareRoute._addFileChildren(
+  ApiChatShareRouteChildren,
+)
+
 interface ApiKovasRouteChildren {
   ApiKovasDirectoryRoute: typeof ApiKovasDirectoryRoute
 }
@@ -4554,6 +4625,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminKovasRoute: AdminKovasRoute,
   ApiAccountRoute: ApiAccountRouteWithChildren,
   ApiChatRoute: ApiChatRouteWithChildren,
+  ApiChatShareRoute: ApiChatShareRouteWithChildren,
   ApiDiscoveryRoute: ApiDiscoveryRoute,
   ApiDocumentExportRoute: ApiDocumentExportRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
@@ -4588,6 +4660,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   OauthConsentRoute: OauthConsentRoute,
   SettingsSectionRoute: SettingsSectionRoute,
+  ShareTokenRoute: ShareTokenRoute,
   TranslatePairSlugRoute: TranslatePairSlugRoute,
   WritingToolSlugRoute: WritingToolSlugRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,

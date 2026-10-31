@@ -181,6 +181,7 @@ function archiveFixture() {
       return trash.writeChatTrash(...args);
     },
     loadArchivedConversations: () => stored.archived,
+    subscribeToConversationChanges: () => () => {},
     loadConversations: () => stored.active,
     mergeConversations: (a, b) => [...new Map([...a, ...b].map((row) => [row.id, row])).values()],
     saveConversations: (...args) => {

@@ -8,24 +8,26 @@ import { waitForKovaHydration } from "./hydration";
  */
 
 test.describe("Signed-out gating", () => {
-  test("/projects renders either the workspace or the sign-in prompt", async ({ page }) => {
+  test("/projects requires an account before exposing the workspace", async ({ page }) => {
     await page.goto("/projects");
     await waitForKovaHydration(page);
-    // Whichever branch resolves, one of these strings must appear somewhere.
-    const anyMatch = page
-      .getByRole("main")
-      .getByText(/sign in to use projects|^projects$/i)
-      .filter({ visible: true })
-      .first();
-    await expect(anyMatch).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Create an account", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "New project", exact: true })).toHaveCount(0);
   });
 
-  test("/ homepage renders without an auth wall", async ({ page }) => {
+  test("/ homepage presents a usable login and signup entry", async ({ page }) => {
     await page.goto("/");
     await waitForKovaHydration(page);
     // No redirect off "/"; some KovaGPT branded element must be visible.
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator("body")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(
+      0,
+    );
   });
 });
 

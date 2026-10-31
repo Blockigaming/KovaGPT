@@ -15,7 +15,7 @@ import {
   Paperclip,
   ArrowLeft,
   Files,
-  PanelRightOpen,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { exportConversationMarkdown, type Conversation } from "@/lib/chat-store";
@@ -45,7 +45,7 @@ import { MemorySourcesDialog } from "./MemorySourcesDialog";
 import type { MemorySources } from "@/lib/memory-sources.mjs";
 import { conversationSources, type ConversationBrowserSource } from "@/lib/conversation-sources";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
+import { ConversationSourcesPanel, ConversationActivitySummary } from "./ConversationSourcesPanel";
 import { PluginsGlyph, LibraryGlyph, ProjectsGlyph } from "./SidebarIcons";
 import "./conversation-header.css";
 
@@ -65,7 +65,7 @@ function focusAfterRemoval() {
 }
 
 function OutputsIcon() {
-  return <PanelRightOpen aria-hidden="true" />;
+  return <SlidersHorizontal aria-hidden="true" />;
 }
 
 function downloadOutput(output: ConversationOutput) {
@@ -102,6 +102,7 @@ export function ConversationHeaderActions({
 }: {
   browserPresentation?: {
     thumbnail: ReactNode;
+    tabCount?: number;
     renderDialog: (props: {
       activity: ConversationBrowserSource;
       onClose: () => void;
@@ -128,7 +129,8 @@ export function ConversationHeaderActions({
     [conversation, isLoaded, isSignedIn, user?.id],
   );
   const hasSources =
-    sourceInventory.web.length +
+    (sourceInventory.providers?.length ?? 0) +
+      sourceInventory.web.length +
       sourceInventory.memory.length +
       sourceInventory.attachments.length +
       sourceInventory.browser.length >
@@ -245,6 +247,12 @@ export function ConversationHeaderActions({
               dialogOpeningRef.current = false;
             }}
           >
+            <ConversationActivitySummary
+              inventory={sourceInventory}
+              browserTabCount={
+                signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
+              }
+            />
             {!hasSources && generatedOutputs.length === 0 && (
               <p className="kova-header-note">No recorded outputs or sources yet.</p>
             )}
@@ -279,6 +287,10 @@ export function ConversationHeaderActions({
               </>
             )}
             <ConversationSourcesPanel
+              showActivity={false}
+              browserTabCount={
+                signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
+              }
               browserPreview={
                 signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
               }
@@ -793,22 +805,15 @@ export function ConversationHeaderActions({
                 <DialogDescription>{selectedBrowser?.label}</DialogDescription>
               </DialogHeader>
               <p className="text-sm text-muted-foreground">
-                {!signedIn
-                  ? "Sign in with a paid plan to use Cloud browser."
-                  : userTier === "free"
-                    ? "Cloud browser is available on Plus and Pro. Your Free plan does not include browser sessions."
-                    : "This record has no connected live view or owned session reference. Take over is available only from a confirmed Work browser session after its run is paused."}
+                This is a recorded browser event. No live session is connected. A live preview and
+                controls appear here when a verified browser session is active.
               </p>
-              <Button asChild variant="outline" className="min-h-11">
-                <Link
-                  to={signedIn && userTier !== "free" ? "/work" : "/pricing"}
-                  preload={false}
-                  onClick={(event) => {
-                    if (navigationBlocked) event.preventDefault();
-                  }}
-                >
-                  {signedIn && userTier !== "free" ? "Open Work browser controls" : "View plans"}
-                </Link>
+              <Button
+                variant="outline"
+                className="min-h-11"
+                onClick={() => setSelectedBrowser(null)}
+              >
+                Close
               </Button>
             </DialogContent>
           </Dialog>

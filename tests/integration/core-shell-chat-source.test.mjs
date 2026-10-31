@@ -1,3 +1,4 @@
+import { SIDEBAR_ITEMS, DEFAULT_SIDEBAR_LAYOUT } from "../../src/lib/sidebar-layout.mjs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -38,15 +39,15 @@ function sidebarRule(selector, media) {
 test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focus trap", () => {
   assert.match(sidebar, /data-kova-core-sidebar=""/);
   assert.match(tokens, /--kova-sidebar-width: 260px;/);
-  assert.match(sidebar, /const EXPANDED_WIDTH = 260;/);
+  assert.match(sidebar, /"--sidebar-expanded": `\$\{layout.width\}px`/);
   assert.equal(
     sidebarRule(".kova-sidebar[data-kova-core-sidebar]").width,
     "var(--sidebar-expanded, var(--kova-sidebar-width, 260px))",
   );
-  assert.match(tokens, /--kova-sidebar-rail-width: 56px;/);
+  assert.match(tokens, /--kova-sidebar-rail-width: 84px;/);
   assert.equal(
     sidebarRule(".kova-sidebar-rail[data-kova-core-rail]").width,
-    "var(--kova-sidebar-rail-width, 56px)",
+    "var(--kova-sidebar-rail-width, 84px)",
   );
   const closed = sidebarRule('.kova-sidebar[data-kova-core-sidebar][data-state="closed"]');
   assert.equal(closed.width, "0");
@@ -67,26 +68,11 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
   assert.match(sidebar, />\s*Rename\s*</);
   assert.match(sidebar, /aria-label=\{`Options for \$\{conversation\.title\}`\}/);
   assert.match(sidebar, /sort\(\(a, b\) => b\.updatedAt - a\.updatedAt\)/);
-  const order = [
-    'aria-label="New chat"',
-    'aria-label="Search chats"',
-    'navLink("/images"',
-    'navLink("/apps"',
-    'aria-label="Workspace destinations"',
-    'navLink("/projects"',
-    'navLink("/library"',
-    'navLink("/scheduled-tasks"',
-    "<span>More</span>",
-    'navLink("/work"',
-  ];
-  let cursor = -1;
-  for (const marker of order) {
-    const next = sidebar.slice(sidebar.indexOf("<aside")).indexOf(marker);
-    assert.ok(next > cursor, `${marker} should appear after previous nav marker`);
-    cursor = next;
-  }
-
-  assert.match(sidebar, /navLink\("\/apps", "Connections", PluginsGlyph\)/);
+  const defaultIds = DEFAULT_SIDEBAR_LAYOUT.shortcuts;
+  for (const id of ["images", "library", "projects", "scheduled-tasks", "apps"])
+    assert.ok(defaultIds.includes(id), id);
+  assert.ok(!SIDEBAR_ITEMS.some((item) => item.to === "/work"));
+  assert.match(sidebar, /navLink\(item.to, item.label, SHORTCUT_ICONS\[id\]\)/);
   assert.match(sidebar, /closeAfterMobileNavigation\("\/"\);\s+onNew\(\);/);
 });
 

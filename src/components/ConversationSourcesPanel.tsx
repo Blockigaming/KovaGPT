@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { ConversationSourcesView } from "./ConversationSourcesView";
+export { ConversationActivitySummary } from "./ConversationSourcesView";
 import { useUser } from "@/components/auth/ClerkSafe";
 import type { Conversation } from "@/lib/chat-store";
 import type { MemorySources } from "@/lib/memory-sources.mjs";
@@ -11,8 +12,12 @@ export function ConversationSourcesPanel({
   onOpenMemory,
   onOpenBrowser,
   browserPreview,
+  browserTabCount,
+  showActivity,
 }: {
+  showActivity?: boolean;
   browserPreview?: ReactNode;
+  browserTabCount?: number;
   conversation: Conversation;
   onOpenAttachment: (outputId: string) => void;
   onOpenMemory: (sources: MemorySources) => void;
@@ -29,6 +34,8 @@ export function ConversationSourcesPanel({
       <ConversationSourcesView
         inventory={inventory}
         browserPreview={browserPreview}
+        browserTabCount={browserTabCount}
+        showActivity={showActivity}
         onOpenAttachment={onOpenAttachment}
         onOpenMemory={onOpenMemory}
         onOpenBrowser={onOpenBrowser}

@@ -20,7 +20,7 @@ test("shared specification leaves the canonical ChatGPT palette and geometry in 
   assert.match(geometry, /--radius: var\(--kova-radius-card\)/);
   assert.match(geometry, /--kova-radius-card:\s*16px;/);
   assert.match(geometry, /--kova-sidebar-width:\s*260px;/);
-  assert.match(geometry, /--kova-sidebar-rail-width:\s*56px;/);
+  assert.match(geometry, /--kova-sidebar-rail-width:\s*84px;/);
   const sidebar = read("src/styles/sidebar-core.css");
   assert.match(
     sidebar,
@@ -28,7 +28,7 @@ test("shared specification leaves the canonical ChatGPT palette and geometry in 
   );
   assert.match(
     sidebar,
-    /width: var\(--kova-sidebar-rail-width, 56px\);\s*min-width: var\(--kova-sidebar-rail-width, 56px\)/,
+    /width: var\(--kova-sidebar-rail-width, 84px\);\s*min-width: var\(--kova-sidebar-rail-width, 84px\)/,
   );
 });
 test("all six locally hosted IBM font files are actual WOFF2 assets", () => {
@@ -77,8 +77,5 @@ test("expanded navigation does not retain a hidden rail width and fonts are scop
     read("src/styles/visual-tokens.css"),
     /--font-ui:\s*ui-sans-serif, -apple-system, system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial/,
   );
-  assert.match(
-    read("src/components/Sidebar.tsx"),
-    /navLink\("\/scheduled-tasks", "Scheduled tasks"/,
-  );
+  assert.match(read("src/lib/sidebar-layout.mjs"), /to: "\/scheduled-tasks"/);
 });

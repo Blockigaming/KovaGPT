@@ -3,18 +3,16 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("Work exposes the persisted specialist graph and live server timeline", async () => {
+test("retired Work UI leaves authenticated specialist history services intact", async () => {
   const [route, functions] = await Promise.all([
     read("src/routes/work.tsx"),
     read("src/lib/work.functions.ts"),
   ]);
-  assert.match(route, /DependencyGraph/);
-  assert.match(route, /Timeline/);
-  assert.match(route, /Evidence/);
-  assert.match(route, /Approvals/);
-  assert.match(route, /useServerFn\(getWorkRun\)/);
+  assert.match(route, /throw redirect\(\{ to: "\/", replace: true \}\)/);
+  assert.doesNotMatch(route, /<WorkExecutionPanel|<AgentWorkspace/);
   assert.match(functions, /agent_specialist_tasks/);
   assert.match(functions, /agent_dependency_edges/);
+  assert.match(functions, /requireSupabaseAuth/);
 });
 
 test("Apollo migration persists parent tasks, dependencies, retries, outputs and checkpoints", async () => {

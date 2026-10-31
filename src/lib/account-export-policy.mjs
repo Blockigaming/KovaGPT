@@ -50,6 +50,7 @@ export const ACCOUNT_EXPORT_DIRECT_TABLES = Object.freeze([
   ["chat_message_versions", "owner_id"],
   ["chat_pinned_files", "owner_id"],
   ["chat_share_links", "user_id"],
+  ["chat_public_shares", "owner_id"],
   ["connected_account_audit_log", "user_id"],
   ["connected_accounts", "user_id"],
   ["context_packs", "user_id"],

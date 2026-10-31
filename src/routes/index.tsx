@@ -1,3 +1,4 @@
+import { normalizeBrowserActivity } from "@/lib/browser-activity-contract.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
 import {
   snapshotNextPrompt,
@@ -101,9 +102,8 @@ const ReviewedMemoryDialog = lazy(() =>
     default: module.ReviewedMemoryDialog,
   })),
 );
-const HomeChatStarters = lazy(() =>
-  import("@/components/HomeChatStarters").then((module) => ({ default: module.HomeChatStarters })),
-);
+const HomeWelcome = lazy(() => import("@/components/HomeChatStarters"));
+
 const ChatWorkspaceControls = lazy(() =>
   import("@/components/ChatWorkspaceControls").then((module) => ({
     default: module.ChatWorkspaceControls,
@@ -1198,24 +1198,28 @@ function KovaGPT() {
         );
     });
 
-    consume<{
-      objective: string;
-      context: string;
-      steps: { text: string; done?: boolean; approval?: boolean }[];
-    }>("kova-work-context", (task) => {
-      if (
-        typeof task?.objective !== "string" ||
-        typeof task.context !== "string" ||
-        !Array.isArray(task.steps) ||
-        !task.steps.every((step) => typeof step?.text === "string")
-      ) {
-        throw new Error("invalid_work_handoff");
-      }
-      return () =>
-        setInput(
-          `Continue this work task without claiming background execution.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${task.steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
-        );
-    });
+    for (const key of ["kova-work-context", "kova-work-draft"]) {
+      consume<{
+        objective: string;
+        context: string;
+        steps?: { text: string; done?: boolean; approval?: boolean }[];
+        plan?: string[];
+      }>(key, (task) => {
+        const steps: { text: string; done?: boolean }[] | undefined =
+          task.steps ?? task.plan?.map((text) => ({ text }));
+        if (
+          typeof task?.objective !== "string" ||
+          typeof task.context !== "string" ||
+          !Array.isArray(steps) ||
+          !steps.every((step) => typeof step?.text === "string")
+        )
+          throw new Error("invalid_work_handoff");
+        return () =>
+          setInput(
+            `Continue this task.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
+          );
+      });
+    }
 
     consume<AppChatContextHandoff>("kova-app-chat-context", (appContext) => {
       if (typeof appContext === "string") return () => setInput(appContext);
@@ -1436,8 +1440,6 @@ function KovaGPT() {
     },
     [],
   );
-
-  const greeting = "How can I help today?";
 
   const transcriptScope = JSON.stringify([storagePrincipal, activeId, principalReady]);
   const transcriptScopeRef = useRef(transcriptScope);
@@ -1748,6 +1750,7 @@ function KovaGPT() {
       .then(({ listWorkspaceRecents }) => listWorkspaceRecents())
       .then((items) => {
         if (cancelled) return;
+        if (!Array.isArray(items)) throw new Error();
         setWorkspaceItems(items);
         setWorkspaceStatus("ready");
       })
@@ -2257,6 +2260,9 @@ function KovaGPT() {
                 const activity: Activity = {
                   tool: String(delta.tool ?? ""),
                   label: String(delta.label),
+                  ...(delta.tool === "browser_interact"
+                    ? { browser: normalizeBrowserActivity(delta.browser) }
+                    : {}),
                   status:
                     delta.status === "failed" || delta.status === "canceled"
                       ? delta.status
@@ -3380,116 +3386,81 @@ function KovaGPT() {
             aria-labelledby={result && !wideResult ? "conversation-tab" : undefined}
           >
             {!active || (active.messages.length === 0 && composerVoiceMode !== "voice") ? (
-              <section
-                className="kova-empty-chat flex flex-1 flex-col overflow-y-auto px-3 lg:px-6"
-                data-ui-reference="grok.prompt-first-home"
-                aria-labelledby="chat-greeting"
+              <Suspense
+                fallback={
+                  <p className="kova-home-loading" role="status">
+                    Loading
+                  </p>
+                }
               >
-                <div className="kova-empty-chat-content flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
-                  <div
-                    data-ui-reference="claude.greeting"
-                    className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-3 lg:mb-6"
-                  >
-                    <h1
-                      id="chat-greeting"
-                      className="text-balance px-4 text-center text-[30px] font-semibold leading-[1.12] tracking-[-0.035em] text-foreground lg:text-[36px]"
-                    >
-                      {greeting}
-                    </h1>
-                  </div>
-
-                  <div className="kova-empty-composer">
-                    <ChatInput
-                      value={principalReady ? input : ""}
-                      onChange={setInput}
-                      onSubmit={(tool) => send(input, attachments, tool)}
-                      onStop={stop}
-                      onSendNext={queueNextPrompt}
-                      sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
-                      nextPromptPanel={composerPromptPanel}
-                      requestStatusPanel={requestStatusPanel}
-                      isStreaming={isStreaming}
-                      voiceMode={composerVoiceMode}
-                      onVoiceModeChange={changeComposerVoiceMode}
-                      onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
-                      latestAssistantText={
-                        active?.messages
-                          .filter(
-                            (message) =>
-                              message.role === "assistant" &&
-                              !message.generationStatus &&
-                              !message.pendingImage,
-                          )
-                          .at(-1)?.content
-                      }
-                      latestAssistantReply={latestAssistantReply}
-                      disabled={!principalReady}
-                      sendDisabled={!historyReady}
-                      saveAttachmentsToLibrary={principalReady && !tempChat}
-                      attachments={principalReady ? attachments : []}
-                      onAttachmentsChange={setAttachments}
-                      attachmentContext={JSON.stringify([
-                        storagePrincipal,
-                        activeId,
-                        editingMessage?.messageId ?? null,
-                      ])}
-                      mode={mode}
-                      onModeChange={active?.kova ? undefined : setMode}
-                      userTier={tier}
-                      canChangeAgent={!active?.kova}
-                      showModelStatus
-                      showChooseProject
-                      savedConversations={userKey && principalReady ? conversations : []}
-                      onOpenChatContext={active ? openChatWorkspace : undefined}
-                      chatRulesActive={chatRulesActive}
-                      onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                      placeholder="Describe what you need…"
-                      responseSettings={settings}
-                      onResponseSettingsChange={(change) =>
-                        setSettings((previous) => ({ ...previous, ...change }))
-                      }
-                      onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
-                      selectedTool={selectedTool}
-                      onToolSelect={setSelectedTool}
-                      recentLibraryFiles={recentLibraryFiles}
-                      recentLibraryLoading={recentLibraryLoading}
-                      recentLibraryError={recentLibraryError}
-                      onRecentLibraryRetry={loadRecentLibraryFiles}
-                      surface="empty"
-                    />
-                  </div>
-                  <Suspense fallback={<div aria-hidden="true" className="h-11 w-full" />}>
-                    <HomeChatStarters setInput={setInput} />
-                  </Suspense>
-                  {isLoaded && isSignedIn && historyConversations.length > 0 ? (
-                    <section
-                      className="spec400-recent-work"
-                      aria-labelledby="continue-working-heading"
-                    >
-                      <h2 id="continue-working-heading">Continue working</h2>
-                      <ul>
-                        {[...historyConversations]
-                          .sort((a, b) => b.updatedAt - a.updatedAt)
-                          .slice(0, 3)
-                          .map((conversation) => (
-                            <li key={conversation.id}>
-                              <button type="button" onClick={() => setActiveId(conversation.id)}>
-                                <strong>{conversation.title}</strong>
-                                <time dateTime={new Date(conversation.updatedAt).toISOString()}>
-                                  Updated{" "}
-                                  {new Date(conversation.updatedAt).toLocaleDateString(undefined, {
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                </time>
-                              </button>
-                            </li>
-                          ))}
-                      </ul>
-                    </section>
-                  ) : null}
-                </div>
-              </section>
+                <HomeWelcome
+                  owner={userKey}
+                  firstName={user?.firstName}
+                  chatId={activeId}
+                  conversations={isLoaded && isSignedIn ? historyConversations : []}
+                  onSelect={setActiveId}
+                  setInput={setInput}
+                >
+                  <ChatInput
+                    value={principalReady ? input : ""}
+                    onChange={setInput}
+                    onSubmit={(tool) => send(input, attachments, tool)}
+                    onStop={stop}
+                    onSendNext={queueNextPrompt}
+                    sendNextDisabled={Boolean(visibleNextPrompt) || Boolean(editingMessage)}
+                    nextPromptPanel={composerPromptPanel}
+                    requestStatusPanel={requestStatusPanel}
+                    isStreaming={isStreaming}
+                    voiceMode={composerVoiceMode}
+                    onVoiceModeChange={changeComposerVoiceMode}
+                    onVoiceSubmit={composerVoiceEligible ? submitComposerVoiceTurn : undefined}
+                    latestAssistantText={
+                      active?.messages
+                        .filter(
+                          (message) =>
+                            message.role === "assistant" &&
+                            !message.generationStatus &&
+                            !message.pendingImage,
+                        )
+                        .at(-1)?.content
+                    }
+                    latestAssistantReply={latestAssistantReply}
+                    disabled={!principalReady}
+                    sendDisabled={!historyReady}
+                    saveAttachmentsToLibrary={principalReady && !tempChat}
+                    attachments={principalReady ? attachments : []}
+                    onAttachmentsChange={setAttachments}
+                    attachmentContext={JSON.stringify([
+                      storagePrincipal,
+                      activeId,
+                      editingMessage?.messageId ?? null,
+                    ])}
+                    mode={mode}
+                    onModeChange={active?.kova ? undefined : setMode}
+                    userTier={tier}
+                    canChangeAgent={!active?.kova}
+                    showModelStatus
+                    showChooseProject
+                    savedConversations={userKey && principalReady ? conversations : []}
+                    onOpenChatContext={active ? openChatWorkspace : undefined}
+                    chatRulesActive={chatRulesActive}
+                    onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
+                    placeholder="Describe what you need…"
+                    responseSettings={settings}
+                    onResponseSettingsChange={(change) =>
+                      setSettings((previous) => ({ ...previous, ...change }))
+                    }
+                    onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                    selectedTool={selectedTool}
+                    onToolSelect={setSelectedTool}
+                    recentLibraryFiles={recentLibraryFiles}
+                    recentLibraryLoading={recentLibraryLoading}
+                    recentLibraryError={recentLibraryError}
+                    onRecentLibraryRetry={loadRecentLibraryFiles}
+                    surface="empty"
+                  />
+                </HomeWelcome>
+              </Suspense>
             ) : (
               <>
                 <Suspense fallback={null}>
