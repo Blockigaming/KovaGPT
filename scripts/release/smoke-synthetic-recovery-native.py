@@ -27,7 +27,7 @@ FIXTURE_OWNER="synthetic_extension_owner"
 FIXTURE_BOOTSTRAP="synthetic_bootstrap_owner"
 FIXTURE_GRANT_ROLE="synthetic_granted_role"
 FIXTURE_GRANT_MEMBER="synthetic_grant_member"
-FIXTURE_EXTENSIONS=("pg_cron","pgcrypto","vector")
+FIXTURE_EXTENSIONS=("pg_cron","pg_net","pgcrypto","vector")
 FORBIDDEN_PREFIXES=("KOVA_PRODUCTION_","APPROVED_ISOLATED_","KOVA_AUTH_RESTORE_","KOVA_AUTH_BACKUP_")
 BUILD_STAGES=frozenset({"setup","git","pull","inspect","context","build","final-inspect","cleanup"})
 DOCKER_BUILD_STAGES=frozenset({
@@ -464,7 +464,7 @@ class SyntheticProbe(operator.OperatorProbe):
  WHERE nspname !~ '^pg_' AND nspname<>'information_schema'),
 'available',(SELECT jsonb_agg(jsonb_build_object('name',a.name,'version',a.default_version,'schema',v.schema)
  ORDER BY a.name) FROM pg_available_extensions a JOIN pg_available_extension_versions v
- ON v.name=a.name AND v.version=a.default_version WHERE a.name IN ('plpgsql','pg_cron','pgcrypto','vector'))
+ ON v.name=a.name AND v.version=a.default_version WHERE a.name IN ('plpgsql','pg_cron','pg_net','pgcrypto','vector'))
 )::text;\n"""
         _,raw=self.bootstrap_sql("a",sql)
         value=json.loads(raw)
@@ -487,12 +487,14 @@ class SyntheticProbe(operator.OperatorProbe):
         # A controlled DTO exercises an installer-created namespace and a
         # different final namespace owner/comment. This is synthetic data,
         # never production metadata or authority to restore customer data.
-        require(not any(s["name"]=="cron" for s in value["schemas"]),"synthetic_fixture_metadata_differs")
-        schemas=[*value["schemas"],{"name":"cron","owner":FIXTURE_BOOTSTRAP,"acl":None,
-                 "comment":"Credential-free extension namespace fixture."}]
+        extension_namespaces=[{"name":"cron","extension":"pg_cron"},{"name":"net","extension":"pg_net"}]
+        require(not any(s["name"] in {n["name"] for n in extension_namespaces} for s in value["schemas"]),
+                "synthetic_fixture_metadata_differs")
+        schemas=[*value["schemas"],*({"name":n["name"],"owner":FIXTURE_BOOTSTRAP,"acl":None,
+                 "comment":"Credential-free extension namespace fixture."} for n in extension_namespaces)]
         self.metadata={"bootstrapRole":value["bootstrapRole"],"roles":value["roles"],"memberships":value["memberships"],
                        "schemas":schemas,"extensions":extensions,"roleSettings":[],
-                       "extensionNamespaces":[{"name":"cron","extension":"pg_cron"}],
+                       "extensionNamespaces":extension_namespaces,
                        "fixtureSettingsComplete":True,"syntheticFixtureDerivedOnlyFromPinnedImage":True}
 
     def execute(self):
