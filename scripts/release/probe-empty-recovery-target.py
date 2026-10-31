@@ -165,6 +165,10 @@ def validate_metadata(metadata, *, source_sha):
         require(all(row.get(k) in role_names for k in ["role", "member", "grantor"])
                 and all(type(row.get(k)) is bool for k in ["admin", "inherit", "set"]),
                 "source_membership_unqualified")
+    bootstrap = metadata.get("bootstrapRole")
+    require(isinstance(bootstrap,str) and bootstrap in role_names and not bootstrap.startswith("pg_")
+            and next(r for r in metadata["roles"] if r["name"]==bootstrap)["super"] is True,
+            "source_bootstrap_role_unqualified")
     schemas = {}
     for row in metadata["schemas"]:
         ident(row.get("name"));require(row.get("owner") in role_names, "source_schema_owner_unqualified")
@@ -238,7 +242,7 @@ def extension_create_sql(extension):
 
 def role_setup_sql(metadata):
     """Only data-free catalog metadata; identifiers/literals never interpolated unchecked."""
-    statements = ["SET statement_timeout='30s'; SET lock_timeout='5s';"]
+    statements = ["SET standard_conforming_strings=on; SET search_path=pg_catalog; SET statement_timeout='30s'; SET lock_timeout='5s';"]
     for row in sorted(metadata["roles"], key=lambda r:r["name"]):
         name = row["name"]
         if name.startswith("pg_"):
@@ -259,8 +263,29 @@ def role_setup_sql(metadata):
             else:
                 prefix="ALTER ROLE "+ident(row["role"])
                 if row["database"] != "*":prefix+=" IN DATABASE "+ident(row["database"])
-            statements.append(prefix+" SET "+'"'+key+'"'+" TO "+literal(value)+";")
+            if key=="search_path":
+                # This is a serialized GUC list. Passing it as one SQL value
+                # would quote the entire list as a single schema name. Let
+                # PostgreSQL parse the bounded string, retain it FROM CURRENT,
+                # then immediately restore the private operator's fixed path.
+                statements += ["SELECT pg_catalog.set_config('search_path',"+literal(value)+",false);",
+                               prefix+' SET "search_path" FROM CURRENT;',"SET search_path=pg_catalog;"]
+            else:
+                statements.append(prefix+" SET "+'"'+key+'"'+" TO "+literal(value)+";")
     return "\n".join(statements)+"\n"
+
+
+def operator_bootstrap_sql(password):
+    """Create the target-only operator without replacing the source's OID-10 role.
+
+    PG17 permits the bootstrap superuser to be a membership grantor without an
+    ADMIN edge. Merely copying its name and SUPERUSER flag does not preserve
+    that behavior. The password is newly generated for this private target.
+    """
+    require(isinstance(password,str) and 16<=len(password)<=128 and "\n" not in password,
+            "private_operator_password_unqualified")
+    return ("CREATE ROLE "+ident(OPERATOR)+" SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN "
+            "REPLICATION BYPASSRLS PASSWORD "+literal(password)+";\n").encode()
 
 
 def schema_setup_sql(metadata):
@@ -323,6 +348,7 @@ class Probe:
     def __init__(self, metadata, env, output):
         self.source=checked_context(env)
         self.metadata=validate_metadata(metadata,source_sha=self.source)
+        self.bootstrap_role=self.metadata["bootstrapRole"]
         self.env=clean_host_env(env)
         self.run_id=env.get("GITHUB_RUN_ID","");self.attempt=env.get("GITHUB_RUN_ATTEMPT","")
         require(re.fullmatch(r"[1-9][0-9]*",self.run_id) and re.fullmatch(r"[1-9][0-9]*",self.attempt),
@@ -472,6 +498,7 @@ class Probe:
             data=directory/"data";data.mkdir(mode=0o700)
             self.server_dirs[target]=directory
             write_private(directory/"password",(self.password+"\n").encode())
+            write_private(directory/"operator-bootstrap.sql",operator_bootstrap_sql(self.password))
             serverkey=directory/"server.key";csr=directory/"server.csr";cert=directory/"server.crt"
             self.run(["openssl","req","-newkey","rsa:3072","-nodes","-keyout",str(serverkey),
                       "-out",str(csr),"-subj","/CN="+self.hosts[target]])
@@ -546,11 +573,14 @@ class Probe:
             script="trap 'exit 0' TERM INT; while :; do sleep 1; done"
         else:
             script="""while [ ! -f /run/server/network-ready ]; do sleep 1; done
-initdb -D "$PGDATA" --username=kova_probe_operator --auth-local=trust --auth-host=scram-sha-256 --pwfile=/run/server/password >/tmp/init.log 2>&1
+initdb -D "$PGDATA" --username=__KOVA_BOOTSTRAP_ROLE__ --auth-local=trust --auth-host=scram-sha-256 --pwfile=/run/server/password >/tmp/init.log 2>&1
 printf '%s\n' 'hostssl all all 172.30.240.4/32 scram-sha-256' 'hostssl all all fd68:6b6f:7661:240::4/128 scram-sha-256' 'host all all 0.0.0.0/0 reject' 'host all all ::/0 reject' >> "$PGDATA/pg_hba.conf"
 pg_ctl -D "$PGDATA" -l /tmp/postgres.log -o "-c listen_addresses='*' -c ssl=on -c ssl_cert_file=/run/server/server.crt -c ssl_key_file=/run/server/server.key -c ssl_ca_file=/run/server/ca.crt -c unix_socket_directories=/tmp -c shared_preload_libraries='' -c cron.launch_active_jobs=off -c autovacuum=off -c log_statement=none" -w start >/tmp/pg-start.log 2>&1
+psql -X --no-password --host /tmp --username=__KOVA_BOOTSTRAP_ROLE__ --dbname postgres --set ON_ERROR_STOP=1 --set VERBOSITY=sqlstate --file=/run/server/operator-bootstrap.sql >/tmp/operator-bootstrap.log 2>&1
 trap 'pg_ctl -D "$PGDATA" -m fast -w stop >/tmp/stop.log 2>&1 || true; exit 0' TERM INT
 while :; do sleep 1; done"""
+            ident(self.bootstrap_role)
+            script=script.replace("__KOVA_BOOTSTRAP_ROLE__",self.bootstrap_role)
         self.docker(self._container_args(key)+["--entrypoint","/bin/bash",IMAGE,"-ceu",script])
         info=self.inspect(self.names[key]);self.verify_container(key,info)
         self.namespace_firewall(key,info["State"]["Pid"])
@@ -803,7 +833,7 @@ while :; do sleep 1; done"""
                     "PGOPTIONS":recovery.CANONICAL_PG+" -c default_transaction_read_only=on"}.items():
             args += ["--env",k+"="+v]
         _,schema=self.docker(args+[self.names["client"],self.native_tools["pg_dump"],"--no-password","--schema-only"],timeout=60)
-        expected={"roles":self.metadata["roles"],"memberships":self.metadata["memberships"],
+        expected={"bootstrapRole":self.metadata["bootstrapRole"],"roles":self.metadata["roles"],"memberships":self.metadata["memberships"],
                   "roleSettings":[{k:r[k] for k in ["role","database","settings"]} for r in self.metadata["roleSettings"]]}
         role_match=True
         try:recovery.role_compatibility(expected,catalog,[OPERATOR])

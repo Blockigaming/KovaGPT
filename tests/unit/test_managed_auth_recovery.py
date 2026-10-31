@@ -22,7 +22,7 @@ spec.loader.exec_module(m)
 def catalog():
     return {"schemas":[{"name":n,"owner":"postgres","acl":None,"comment":None} for n in ["auth","public","storage","realtime","supabase_migrations"]],
             "tables":[{"schema":"auth","name":n,"kind":"r"} for n in ["identities","sessions","users"]],
-            "preinstalledObjects":[],"sequences":[],"roles":[],"memberships":[],"roleSettings":[],"extensions":[],"largeObjects":[],"publications":[]}
+            "bootstrapRole":"postgres","preinstalledObjects":[],"sequences":[],"roles":[],"memberships":[],"roleSettings":[],"extensions":[],"largeObjects":[],"publications":[]}
 
 
 TOC = "\n".join(f"{i}; 0 {i} TABLE DATA auth {n} postgres" for i,n in enumerate(["identities","sessions","users"],1))+"\n"
@@ -446,6 +446,30 @@ class RecoveryTests(unittest.TestCase):
         self.assertIn("capture-receipt.json",upload)
         for forbidden in [".sql","full.dump","catalog.json","rows.json","manifest.json"]:self.assertNotIn(forbidden,upload)
         for forbidden in ["restore --execute","apply_migration","az containerapp","deploy_edge_function"]:self.assertNotIn(forbidden,workflow)
+
+
+    def test_unvalidated_check_constraint_toc_is_preserved_and_unknown_types_still_stop(self):
+        line="901; 2606 9001 CHECK CONSTRAINT public synthetic_table synthetic_check postgres\n"
+        entries=m.toc_entries(line)
+        self.assertEqual(entries[0]["kind"],"CHECK CONSTRAINT")
+        self.assertEqual(m.empty_schema_restore_list(entries,catalog(),catalog()),line.encode())
+        with self.assertRaisesRegex(m.Stopped,"toc_review_required"):
+            m.toc_entries("902; 0 0 UNSUPPORTED PRIVATE_KIND public private_object postgres\n")
+        old=m.PUBLIC_STAGE
+        try:
+            m.mark_stage("capture-coverage")
+            failure=m.public_failure(m.Stopped("toc_review_required"))
+        finally:m.PUBLIC_STAGE=old
+        self.assertEqual(failure["code"],"toc_review_required")
+        self.assertNotIn("private_object",json.dumps(failure))
+
+    def test_bootstrap_identity_is_required_even_when_role_flags_and_grants_match(self):
+        source=catalog();target=catalog()
+        m.role_compatibility(source,target,[])
+        for mutate in [lambda c:c.pop("bootstrapRole"),lambda c:c.update(bootstrapRole="other_root")]:
+            changed=json.loads(json.dumps(target));mutate(changed)
+            with self.assertRaisesRegex(m.Stopped,"managed_bootstrap_role_mismatch"):
+                m.role_compatibility(source,changed,[])
 
 
 if __name__ == "__main__":unittest.main()

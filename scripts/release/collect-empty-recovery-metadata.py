@@ -43,6 +43,7 @@ SELECT jsonb_build_object(
  'format',1,'project','mfbycmbjygcfkrsuepxf','postgresBuild','17.6.1.155',
  'serverVersionNum',current_setting('server_version_num')::int,
  'database',current_database(),'readOnly',current_setting('transaction_read_only')='on',
+ 'bootstrapRole',(SELECT rolname FROM pg_catalog.pg_roles WHERE oid=10),
  'extensions',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname,'owner',pg_get_userbyid(e.extowner)) ORDER BY e.extname),'[]') FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid=e.extnamespace),
  'schemas',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',n.nspname,'owner',pg_get_userbyid(n.nspowner),'acl',n.nspacl,'comment',obj_description(n.oid,'pg_namespace')) ORDER BY n.nspname),'[]') FROM pg_catalog.pg_namespace n WHERE n.nspname !~ '^pg_' AND n.nspname<>'information_schema'),
  'roles',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',rolname,'super',rolsuper,'inherit',rolinherit,'createRole',rolcreaterole,'createDb',rolcreatedb,'login',rolcanlogin,'replication',rolreplication,'bypassRls',rolbypassrls,'connectionLimit',rolconnlimit,'validUntil',rolvaliduntil) ORDER BY rolname),'[]') FROM pg_catalog.pg_roles),
@@ -180,10 +181,14 @@ def retained_setting(item, *, role=None, database=None):
             if token not in {"safeupdate","supautils"}:return False
             names.append(token)
         return bool(names) and len(names)==len(set(names))
+    # Some managed roles store an escaped $user token in search_path. Check
+    # that one supported escape without changing the retained setting bytes.
+    # Other backslashes and executable/configuration keys stay rejected.
+    checked_value=value.replace(r"\$user","$user") if key=="search_path" else value
     return (key in SAFE_GUC_KEYS and len(value)<=2048
             and not any(part in lower for part in ["password","secret","token","credential","jwt","preload"])
             and not any(part in value.lower() for part in ["://","sk-","-----begin "])
-            and re.fullmatch(r'[a-zA-Z0-9_.,* $"\-]*',value) is not None)
+            and re.fullmatch(r'[a-zA-Z0-9_.,* $"\-]*',checked_value) is not None)
 
 
 def remove_metadata_reader(owner, name):
@@ -204,7 +209,9 @@ def sanitize_settings(raw):
             and raw.get("readOnly") is True,"metadata_source_shape_rejected")
     require(all(isinstance(raw.get(k),list) for k in ["extensions","schemas","roles","memberships","roleSettings"]),
             "metadata_source_shape_rejected")
-    out={k:raw[k] for k in ["format","project","postgresBuild","serverVersionNum","database","extensions","schemas","roles","memberships"]}
+    require(isinstance(raw.get("bootstrapRole"),str) and recovery.IDENT.fullmatch(raw["bootstrapRole"])
+            and not raw["bootstrapRole"].startswith("pg_"),"metadata_source_shape_rejected")
+    out={k:raw[k] for k in ["format","project","postgresBuild","serverVersionNum","database","bootstrapRole","extensions","schemas","roles","memberships"]}
     settings=[];withheld=0
     for row in raw["roleSettings"]:
         require(isinstance(row,dict) and isinstance(row.get("role"),str) and isinstance(row.get("database"),str)

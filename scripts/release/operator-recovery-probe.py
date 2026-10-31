@@ -273,12 +273,15 @@ exec "$@"
             script="trap 'exit 0' TERM INT; while :; do sleep 1; done"
         else:
             script="""while [ ! -f /run/server/network-ready ]; do sleep 1; done
-initdb -D "$PGDATA" --username=kova_probe_operator --auth-local=trust --auth-host=scram-sha-256 --pwfile=/run/server/password >/tmp/init.log 2>&1
+initdb -D "$PGDATA" --username=__KOVA_BOOTSTRAP_ROLE__ --auth-local=trust --auth-host=scram-sha-256 --pwfile=/run/server/password >/tmp/init.log 2>&1
 printf '%s\\n' 'logging_collector=off' \"log_destination='stderr'\" 'log_statement=none' >> \"$PGDATA/postgresql.conf\"
 printf '%s\n' 'hostssl all all 172.30.240.4/32 scram-sha-256' 'hostssl all all fd68:6b6f:7661:240::4/128 scram-sha-256' 'host all all 0.0.0.0/0 reject' 'host all all ::/0 reject' >> "$PGDATA/pg_hba.conf"
 pg_ctl -D "$PGDATA" -l /tmp/postgres.log -o "-c listen_addresses='*' -c ssl=on -c ssl_cert_file=/run/server/server.crt -c ssl_key_file=/run/server/server.key -c ssl_ca_file=/run/server/ca.crt -c unix_socket_directories=/tmp -c shared_preload_libraries='' -c cron.launch_active_jobs=off -c autovacuum=off -c log_statement=none" -w start >/tmp/pg-start.log 2>&1
+psql -X --no-password --host /tmp --username=__KOVA_BOOTSTRAP_ROLE__ --dbname postgres --set ON_ERROR_STOP=1 --set VERBOSITY=sqlstate --file=/run/server/operator-bootstrap.sql >/tmp/operator-bootstrap.log 2>&1
 trap 'pg_ctl -D "$PGDATA" -m fast -w stop >/tmp/stop.log 2>&1 || true; exit 0' TERM INT
 while :; do sleep 1; done"""
+            ident(self.bootstrap_role)
+            script=script.replace("__KOVA_BOOTSTRAP_ROLE__",self.bootstrap_role)
         args=self._container_args(key)
         self.owned_ram().record_activation(self.ram_keys[key])
         self.docker(args+["--entrypoint","/bin/bash",(self.operator_image_id if key=="client" else IMAGE),"-ceu",script])
@@ -404,7 +407,7 @@ while :; do sleep 1; done"""
                     "PGOPTIONS":recovery.CANONICAL_PG+" -c default_transaction_read_only=on"}.items():
             args += ["--env",k+"="+v]
         _,schema=self.docker(args+[self.names["client"],self.client_tools["pg_dump"],"--no-password","--schema-only"],timeout=60)
-        expected={"roles":self.metadata["roles"],"memberships":self.metadata["memberships"],
+        expected={"bootstrapRole":self.metadata["bootstrapRole"],"roles":self.metadata["roles"],"memberships":self.metadata["memberships"],
                   "roleSettings":[{k:r[k] for k in ["role","database","settings"]} for r in self.metadata["roleSettings"]]}
         role_match=True
         try:recovery.role_compatibility(expected,catalog,[OPERATOR])

@@ -584,7 +584,12 @@ class SyntheticTests(unittest.TestCase):
         p=self.probe();p.wait_native=lambda *_:None
         role={"name":"pg_database_owner","super":False,"inherit":True,"createRole":False,"createDb":False,
               "login":False,"replication":False,"bypassRls":False,"connectionLimit":-1,"validUntil":None}
-        fixture={"roles":[role],"memberships":[],"schemas":[{"name":"public","owner":"pg_database_owner","acl":None,"comment":None}],
+        bootstrap={**role,"name":m.FIXTURE_BOOTSTRAP,"super":True,"createRole":True,"createDb":True,"login":True}
+        fixture={"bootstrapRole":m.FIXTURE_BOOTSTRAP,"roles":[role,bootstrap,
+                   {**role,"name":m.FIXTURE_GRANT_ROLE},{**role,"name":m.FIXTURE_GRANT_MEMBER}],
+                 "memberships":[{"role":m.FIXTURE_GRANT_ROLE,"member":m.FIXTURE_GRANT_MEMBER,
+                    "grantor":m.FIXTURE_BOOTSTRAP,"admin":False,"inherit":True,"set":True}],
+                 "schemas":[{"name":"public","owner":"pg_database_owner","acl":None,"comment":None}],
                  "available":[{"name":"plpgsql","version":"1.0","schema":"pg_catalog"},
                    {"name":"pgcrypto","version":"1.3","schema":None},{"name":"vector","version":"0.8.0","schema":None}]}
         calls=[]
@@ -594,6 +599,8 @@ class SyntheticTests(unittest.TestCase):
                          {"plpgsql":"1.0","pgcrypto":"1.3","vector":"0.8.0"})
         self.assertNotIn("sourceCommit",p.metadata);self.assertNotIn("sourceSettingsComplete",p.metadata)
         self.assertTrue(p.metadata["syntheticFixtureDerivedOnlyFromPinnedImage"])
+        self.assertEqual(p.metadata["bootstrapRole"],m.FIXTURE_BOOTSTRAP)
+        self.assertIn("GRANTED BY "+m.base.ident(m.FIXTURE_BOOTSTRAP),calls[0])
         self.assertFalse(any("auth.users" in sql or "pg_authid" in sql for sql in calls))
         fixture["available"].pop()
         with self.assertRaisesRegex(m.Stopped,"synthetic_image_fixture_unavailable"):p.derive_image_fixture()

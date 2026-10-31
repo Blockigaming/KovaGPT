@@ -21,7 +21,7 @@ spec.loader.exec_module(m)
 def catalog():
     return {"schemas":[{"name":n,"owner":"postgres","acl":None,"comment":None}
                         for n in ["auth","public","storage","realtime","supabase_migrations"]],
-            "tables":[],"preinstalledObjects":[],"sequences":[],"roles":[],
+            "bootstrapRole":"postgres","tables":[],"preinstalledObjects":[],"sequences":[],"roles":[],
             "memberships":[],"roleSettings":[],"extensions":[],"largeObjects":[],"publications":[]}
 
 

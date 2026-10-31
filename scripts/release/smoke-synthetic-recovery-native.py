@@ -24,6 +24,9 @@ operator=importlib.util.module_from_spec(spec);spec.loader.exec_module(operator)
 base=operator.base;builder=operator.builder
 require=base.require;Stopped=base.Stopped
 FIXTURE_OWNER="synthetic_extension_owner"
+FIXTURE_BOOTSTRAP="synthetic_bootstrap_owner"
+FIXTURE_GRANT_ROLE="synthetic_granted_role"
+FIXTURE_GRANT_MEMBER="synthetic_grant_member"
 FIXTURE_EXTENSIONS=("pgcrypto","vector")
 FORBIDDEN_PREFIXES=("KOVA_PRODUCTION_","APPROVED_ISOLATED_","KOVA_AUTH_RESTORE_","KOVA_AUTH_BACKUP_")
 BUILD_STAGES=frozenset({"setup","git","pull","inspect","context","build","final-inspect","cleanup"})
@@ -396,6 +399,7 @@ class SyntheticProbe(operator.OperatorProbe):
     def __init__(self,env,output,*,operator_image_id):
         self.source,self.run_id,self.attempt,self.runner_temp=identities(env)
         self.metadata={};self.env=base.clean_host_env(env)
+        self.bootstrap_role=FIXTURE_BOOTSTRAP
         self._diagnostic_secrets=diagnostic_secrets(env)
         self.native_attempted_stage="not-attempted";self.native_failure=None
         self.output=Path(output)
@@ -430,7 +434,12 @@ class SyntheticProbe(operator.OperatorProbe):
     def derive_image_fixture(self):
         # Read only this already isolated, freshly initialized trusted image.
         self.wait_native("a")
+        self.bootstrap_sql("a","CREATE ROLE "+base.ident(FIXTURE_GRANT_ROLE)+" NOLOGIN;\n"
+            +"CREATE ROLE "+base.ident(FIXTURE_GRANT_MEMBER)+" NOLOGIN;\n"
+            +"GRANT "+base.ident(FIXTURE_GRANT_ROLE)+" TO "+base.ident(FIXTURE_GRANT_MEMBER)
+            +" WITH ADMIN FALSE GRANTED BY "+base.ident(FIXTURE_BOOTSTRAP)+";\n")
         sql="""SELECT jsonb_build_object(
+'bootstrapRole',(SELECT rolname FROM pg_roles WHERE oid=10),
 'roles',(SELECT coalesce(jsonb_agg(jsonb_build_object('name',rolname,'super',rolsuper,'inherit',rolinherit,
  'createRole',rolcreaterole,'createDb',rolcreatedb,'login',rolcanlogin,'replication',rolreplication,
  'bypassRls',rolbypassrls,'connectionLimit',rolconnlimit,'validUntil',rolvaliduntil) ORDER BY rolname),'[]')
@@ -458,7 +467,11 @@ class SyntheticProbe(operator.OperatorProbe):
             require(re.fullmatch(r"[a-zA-Z0-9_.+-]+",row["version"]),"synthetic_fixture_extension_version")
             extensions.append({"name":row["name"],"version":row["version"],
                                "schema":row["schema"] or "public","owner":FIXTURE_OWNER})
-        self.metadata={"roles":[*value["roles"],fixture_role],"memberships":value["memberships"],
+        require(value.get("bootstrapRole")==FIXTURE_BOOTSTRAP,"synthetic_bootstrap_role_mismatch")
+        require(any(r.get("role")==FIXTURE_GRANT_ROLE and r.get("member")==FIXTURE_GRANT_MEMBER
+                    and r.get("grantor")==FIXTURE_BOOTSTRAP and r.get("admin") is False
+                    for r in value["memberships"]),"synthetic_bootstrap_grant_missing")
+        self.metadata={"bootstrapRole":value["bootstrapRole"],"roles":[*value["roles"],fixture_role],"memberships":value["memberships"],
                        "schemas":value["schemas"],"extensions":extensions,"roleSettings":[],
                        "fixtureSettingsComplete":True,"syntheticFixtureDerivedOnlyFromPinnedImage":True}
 
