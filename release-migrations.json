@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 205,
-  "latest": "20261031014600_scheduled_task_plan_allowances.sql",
+  "count": 206,
+  "latest": "20261031220329_task_project_membership_argument_order.sql",
   "migrations": [
     {
       "order": 1,
@@ -4337,6 +4337,20 @@
       "filename": "20261031014600_scheduled_task_plan_allowances.sql",
       "timestamp": "20261031014600",
       "sha256": "29864c547ceb2692b59072a378fb31ca0544f1aa3e264f52199b8ed916d3c078",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 206,
+      "filename": "20261031220329_task_project_membership_argument_order.sql",
+      "timestamp": "20261031220329",
+      "sha256": "c13bb007e3a2a307e41909f1aa80eb4cc3cffa7aa82663730692130f82bf2f20",
       "tables": [],
       "functions": [],
       "destructive": false,
