@@ -59,12 +59,13 @@ PUBLIC_FAILURE_CODES=frozenset({
     'generic_image_cleanup_unconfirmed',
     'generic_image_run_identity_required',
     'generic_inventory_bound',
+    'generic_loaded_image_identity_unqualified',
     'generic_oci_archive_size_unqualified',
     'generic_ram_kernel_proof_unconfirmed',
     'generic_ram_volume_cleanup_unconfirmed',
+    'generic_roundtrip_tag_already_exists',
     'generic_source_file_unqualified',
     'github_main_dispatch_required',
-    'image_command_output_bound',
     'image_generic_source_changed',
     'native_client_smoke_unqualified',
     'native_package_inventory_unqualified',
@@ -79,8 +80,26 @@ PUBLIC_FAILURE_CODES=frozenset({
     'oci_blob_descriptor_unqualified',
     'oci_blob_integrity_failed',
     'oci_blob_size_mismatch',
+    'oci_build_healthcheck_not_disabled',
+    'oci_docker_build_metadata_unqualified',
+    'oci_docker_host_config_unqualified',
+    'oci_docker_interactive_config_unqualified',
+    'oci_docker_security_hook_unqualified',
+    'oci_environment_not_generic',
+    'oci_generic_ports_or_volumes_unqualified',
+    'oci_image_platform_changed',
     'oci_layout_version_unqualified',
     'oci_metadata_bound',
+    'oci_metadata_shape_unqualified',
+    'oci_rootfs_changed',
+    'oci_runtime_array_unqualified',
+    'oci_runtime_boolean_unqualified',
+    'oci_runtime_config_changed',
+    'oci_runtime_config_shape_unqualified',
+    'oci_runtime_labels_unqualified',
+    'oci_runtime_map_unqualified',
+    'oci_runtime_string_unqualified',
+    'oci_source_binding_unqualified',
     'official_ubuntu_amd64_digest_unconfirmed',
     'owned_volume_activated_runtime_unconfirmed',
     'owned_volume_attempt_reserved',
@@ -148,8 +167,10 @@ PUBLIC_STAGES=frozenset({
     'client-identity',
     'docker-build',
     'image-cleanup',
+    'loaded-client-identity',
     'native-smoke',
     'oci-export',
+    'oci-load',
     'oci-verification',
     'package-inventory',
     'ram-cleanup',
@@ -288,6 +309,105 @@ def source_context(directory):
     return source_hashes
 
 
+OCI_RUNTIME_KEYS=frozenset({"User","ExposedPorts","Env","Entrypoint","Cmd","Volumes",
+    "WorkingDir","Labels","StopSignal","ArgsEscaped"})
+DOCKER_BUILD_ONLY_KEYS=frozenset({"Healthcheck","Shell","OnBuild","Image","Hostname","Domainname",
+    "AttachStdin","AttachStdout","AttachStderr","Tty","OpenStdin","StdinOnce"})
+
+
+def runtime_config_projection(config,*,oci):
+    """Only the documented OCI omitempty defaults are normalized.
+
+    All runtime fields and all rootfs diff IDs are compared separately. The
+    known Docker-only build fields must be inert before transport drops them.
+    This function never rewrites a config or manufactures an image identity.
+    """
+    require(type(config) is dict and set(config)<=OCI_RUNTIME_KEYS|(set() if oci else DOCKER_BUILD_ONLY_KEYS),
+            "oci_runtime_config_shape_unqualified")
+    if not oci:
+        health=config.get("Healthcheck")
+        require(health is None or (type(health) is dict and health.get("Test")==["NONE"]
+            and set(health)<={"Test","Interval","Timeout","StartPeriod","StartInterval","Retries"}
+            and all(type(v) is int and v==0 for k,v in health.items() if k!="Test")),
+            "oci_docker_security_hook_unqualified")
+        require(config.get("OnBuild") in (None,[]) and config.get("Shell") in
+                (None,[],["/bin/bash","-o","pipefail","-c"]),"oci_docker_security_hook_unqualified")
+        for key in {"AttachStdin","AttachStdout","AttachStderr","Tty","OpenStdin","StdinOnce"}:
+            require(key not in config or config[key] is False,"oci_docker_interactive_config_unqualified")
+        for key in {"Hostname","Domainname"}:
+            require(key not in config or config[key]=="","oci_docker_host_config_unqualified")
+        image=config.get("Image","")
+        require(type(image) is str and (image=="" or re.fullmatch(r"sha256:[a-f0-9]{64}",image)),
+                "oci_docker_build_metadata_unqualified")
+    projected={}
+    for key in {"User","WorkingDir","StopSignal"}:
+        value=config.get(key,"")
+        require(type(value) is str and len(value)<=4096,"oci_runtime_string_unqualified")
+        projected[key]=value
+    for key in {"Env","Entrypoint","Cmd"}:
+        value=config.get(key,[])
+        if value is None and not oci:value=[]
+        require(type(value) is list and len(value)<=256
+                and all(type(v) is str and len(v)<=65536 for v in value),"oci_runtime_array_unqualified")
+        projected[key]=value
+    for key in {"ExposedPorts","Volumes","Labels"}:
+        value=config.get(key,{})
+        if value is None and not oci:value={}
+        require(type(value) is dict and len(value)<=256,"oci_runtime_map_unqualified")
+        if key=="Labels":
+            require(all(type(k) is str and type(v) is str for k,v in value.items()),"oci_runtime_labels_unqualified")
+        else:require(not value,"oci_generic_ports_or_volumes_unqualified")
+        projected[key]=value
+    value=config.get("ArgsEscaped",False)
+    require(type(value) is bool,"oci_runtime_boolean_unqualified")
+    projected["ArgsEscaped"]=value
+    keys=[value.split("=",1)[0] for value in projected["Env"]]
+    require(all("=" in value for value in projected["Env"]) and len(keys)==len(set(keys))
+            and set(keys)<={"PATH","LANG","LC_ALL","TZ","PYTHONDONTWRITEBYTECODE"},
+            "oci_environment_not_generic")
+    return projected
+
+
+def verify_oci_runtime_binding(built,document,*,source_sha,owner):
+    """Bind the converted OCI runtime to the measured Docker build, not its old JSON digest."""
+    require(type(built) is dict and type(document) is dict
+            and re.fullmatch(r"[a-f0-9]{40}",source_sha or "")
+            and re.fullmatch(r"[a-f0-9]{24}",owner or ""),"oci_source_binding_unqualified")
+    require(set(document)<={"architecture","os","config","rootfs","history","created","author",
+                "variant","os.version","os.features"}
+            and built.get("Architecture")==document.get("architecture")=="amd64"
+            and built.get("Os")==document.get("os")=="linux"
+            and document.get("variant","")==document.get("os.version","")==""
+            and document.get("os.features",[])==[],"oci_image_platform_changed")
+    before=runtime_config_projection(built.get("Config"),oci=False)
+    after=runtime_config_projection(document.get("config"),oci=True)
+    require(before==after,"oci_runtime_config_changed")
+    require(before["User"]=="65532:65532"
+            and before["Labels"].get("org.opencontainers.image.revision")==source_sha
+            and before["Labels"].get("org.kova.recovery.owner")==owner,"oci_source_binding_unqualified")
+    health=built.get("Config",{}).get("Healthcheck")
+    require(type(health) is dict and health.get("Test")==["NONE"],"oci_build_healthcheck_not_disabled")
+    root=built.get("RootFS");converted=document.get("rootfs")
+    require(type(root) is dict and set(root)=={"Type","Layers"} and root.get("Type")=="layers"
+            and type(root.get("Layers")) is list and 0<len(root["Layers"])<=256
+            and all(type(v) is str and re.fullmatch(r"sha256:[a-f0-9]{64}",v) for v in root["Layers"])
+            and type(converted) is dict and set(converted)=={"type","diff_ids"}
+            and converted=={"type":"layers","diff_ids":root["Layers"]},"oci_rootfs_changed")
+    for key in {"created","author"}:
+        require(key not in document or type(document[key]) is str,"oci_metadata_shape_unqualified")
+    history=document.get("history",[])
+    require(type(history) is list and len(history)<=4096 and all(type(v) is dict
+            and set(v)<={"created","created_by","author","comment","empty_layer"}
+            and all(type(x) is (bool if k=="empty_layer" else str) for k,x in v.items()) for v in history),
+            "oci_metadata_shape_unqualified")
+    content={"architecture":"amd64","os":"linux","config":before,"rootfs":converted}
+    return {"operation":"oci-runtime-config-binding","sourceSha":source_sha,
+            "runtimeAndRootfsSha256":sha(canonical(content)),"allRuntimeFieldsPreserved":True,
+            "allRootfsDiffIdsPreserved":True,"buildHealthcheckDisabled":True,
+            "archiveHealthcheckAbsent":True,"configurationRewrittenLocally":False,
+            "nativeLoadAndToolSmokeRequired":True}
+
+
 def check_smoke(value):
     require(isinstance(value,dict) and value.get("operation")=="generic-recovery-client-native-smoke"
             and all(value.get(k) is True for k in ["nonroot","nativePythonEngineImport","nativeNodeDestinationGuard",
@@ -311,7 +431,7 @@ def check_smoke(value):
     return value
 
 
-def oci_identity(archive, expected_image_id):
+def inspect_oci(archive):
     """Verify OCI layout and the complete manifest/config/layer digest chain."""
     with tarfile.open(archive,"r:") as package:
         members=package.getmembers();names=[item.name for item in members]
@@ -331,7 +451,8 @@ def oci_identity(archive, expected_image_id):
         raw=small("blobs/sha256/"+manifest_digest.split(":")[1],1024**2)
         require("sha256:"+sha(raw)==manifest_digest and len(raw)==descriptor.get("size"),"oci_archive_manifest_integrity_failed")
         manifest=json.loads(raw)
-        require(manifest.get("schemaVersion")==2 and manifest.get("config",{}).get("digest")==expected_image_id
+        require(manifest.get("schemaVersion")==2 and type(manifest.get("config")) is dict
+                and re.fullmatch(r"sha256:[a-f0-9]{64}",manifest["config"].get("digest",""))
                 and isinstance(manifest.get("layers"),list),"oci_archive_image_config_mismatch")
         for blob in [manifest["config"],*manifest["layers"]]:
             digest=blob.get("digest","")
@@ -343,7 +464,24 @@ def oci_identity(archive, expected_image_id):
             with package.extractfile(member) as stream:
                 while block:=stream.read(1024**2):value.update(block)
             require("sha256:"+value.hexdigest()==digest,"oci_blob_integrity_failed")
-        return manifest_digest
+        config_digest=manifest["config"]["digest"]
+        config_bytes=small("blobs/sha256/"+config_digest.split(":")[1],1024**2)
+        return {"manifestDigest":manifest_digest,"configDigest":config_digest,"configBytes":config_bytes}
+
+
+def oci_identity(archive,expected_image_id):
+    value=inspect_oci(archive)
+    require(value["configDigest"]==expected_image_id,"oci_archive_image_config_mismatch")
+    return value["manifestDigest"]
+
+
+def image_healthcheck_disabled(config):
+    if type(config) is not dict:return False
+    if "Healthcheck" not in config:return True
+    value=config["Healthcheck"]
+    return (type(value) is dict and value.get("Test")==["NONE"]
+            and set(value)<={"Test","Interval","Timeout","StartPeriod","StartInterval","Retries"}
+            and all(type(v) is int and v==0 for k,v in value.items() if k!="Test"))
 
 
 class Builder:
@@ -358,6 +496,8 @@ class Builder:
                 and self.output.name=="operator-client-image" and not self.output.exists()
                 and not self.output.is_symlink(),"private_image_output_unqualified")
         self.owner=secrets.token_hex(12);self.tag="kova-recovery-operator:"+self.owner
+        self.roundtrip_tag="localhost/kova-recovery-operator-oci:"+self.owner
+        self.build_image_id=None
         self.image_id=None
         self.run_id=env.get("GITHUB_RUN_ID","");self.attempt=env.get("GITHUB_RUN_ATTEMPT","")
         require(re.fullmatch(r"[1-9][0-9]*",self.run_id) and re.fullmatch(r"[1-9][0-9]*",self.attempt),
@@ -422,18 +562,49 @@ exec "$@"
 
     def cleanup_image(self):
         # Generic image only; never remove a foreign tag or invoke global prune.
-        raw=self.command(["docker","image","ls","--no-trunc","--filter","reference="+self.tag,"--format","{{json .}}"])
-        rows=[json.loads(line) for line in raw.splitlines()]
-        if not rows:return True
-        require(len(rows)==1 and rows[0].get("Repository")+":"+rows[0].get("Tag")==self.tag,
-                "generic_image_cleanup_identity_unconfirmed")
-        actual=json.loads(self.command(["docker","image","inspect",self.tag]))[0]
-        require(actual.get("Config",{}).get("Labels",{}).get("org.kova.recovery.owner")==self.owner,
-                "foreign_image_cleanup_forbidden")
-        self.command(["docker","image","rm",self.tag])
-        after=self.command(["docker","image","ls","--filter","reference="+self.tag,"--format","{{json .}}"])
-        require(not after.strip(),"generic_image_cleanup_unconfirmed")
+        for tag in [self.tag,*([self.roundtrip_tag] if getattr(self,"roundtrip_tag",None) else [])]:
+            raw=self.command(["docker","image","ls","--no-trunc","--filter","reference="+tag,"--format","{{json .}}"])
+            rows=[json.loads(line) for line in raw.splitlines()]
+            if not rows:continue
+            require(len(rows)==1 and rows[0].get("Repository")+":"+rows[0].get("Tag")==tag,
+                    "generic_image_cleanup_identity_unconfirmed")
+            actual=json.loads(self.command(["docker","image","inspect",tag]))[0]
+            require(actual.get("Config",{}).get("Labels",{}).get("org.kova.recovery.owner")==self.owner
+                    and actual.get("Config",{}).get("Labels",{}).get("org.opencontainers.image.revision")==self.source,
+                    "foreign_image_cleanup_forbidden")
+            self.command(["docker","image","rm",tag])
+            after=self.command(["docker","image","ls","--filter","reference="+tag,"--format","{{json .}}"])
+            require(not after.strip(),"generic_image_cleanup_unconfirmed")
         return True
+
+    def archive_roundtrip(self,built):
+        self.build_image_id=self.image_id
+        archive=self.output/"operator-client.oci.tar"
+        self.stage="oci-export"
+        self.command(["skopeo","copy","docker-daemon:"+self.tag,"oci-archive:"+str(archive)+":operator-client"],timeout=300)
+        self.stage="oci-verification"
+        require(archive.is_file() and 0<archive.stat().st_size<=MAX_ARCHIVE_BYTES,"generic_oci_archive_size_unqualified")
+        measured=inspect_oci(archive)
+        document=json.loads(measured["configBytes"])
+        binding=verify_oci_runtime_binding(built,document,source_sha=self.source,owner=self.owner)
+        # The destination image ID is measured from the actual OCI config bytes.
+        # Native Skopeo/Docker must materialize it successfully before any smoke
+        # or receipt; no config or layer is rewritten by this Python code.
+        self.stage="oci-load"
+        listed=self.command(["docker","image","ls","--filter","reference="+self.roundtrip_tag,"--format","{{json .}}"])
+        require(not listed.strip(),"generic_roundtrip_tag_already_exists")
+        self.command(["skopeo","copy","oci-archive:"+str(archive)+":operator-client",
+                      "docker-daemon:"+self.roundtrip_tag],timeout=300)
+        self.stage="loaded-client-identity"
+        values=json.loads(self.command(["docker","image","inspect",self.roundtrip_tag]))
+        require(type(values) is list and len(values)==1,"generic_loaded_image_identity_unqualified")
+        loaded=values[0];config=loaded.get("Config",{})
+        require(loaded.get("Id")==measured["configDigest"] and loaded.get("Os")=="linux"
+                and loaded.get("Architecture")=="amd64" and image_healthcheck_disabled(config)
+                and runtime_config_projection(config,oci=False)==runtime_config_projection(document["config"],oci=True)
+                and loaded.get("RootFS")==built.get("RootFS"),"generic_loaded_image_identity_unqualified")
+        self.image_id=loaded["Id"]
+        return archive,measured,binding
 
     def execute(self):
         self.stage="source-check"
@@ -463,6 +634,7 @@ exec "$@"
                     and actual.get("Config",{}).get("User")=="65532:65532"
                     and actual.get("Config",{}).get("Healthcheck",{}).get("Test")==["NONE"],
                     "built_client_identity_unconfirmed")
+            archive,oci,binding=self.archive_roundtrip(actual)
             self.stage='native-smoke'
             smoke=check_smoke(json.loads(self.run_generic(self.run_args())))
             self.stage='source-hashes'
@@ -470,6 +642,9 @@ exec "$@"
                     "image_generic_source_changed")
             inventory={"sourceSha":self.source,"baseRepoDigest":base,"baseImageId":base_id,
                        "clientImageId":self.image_id,"pgdgPrimaryKeyFingerprint":KEY_FINGERPRINT,
+                       "format":2,"buildClientImageId":self.build_image_id,"ociConfigDigest":oci["configDigest"],
+                       "ociRuntimeBinding":binding,"nativeOciArchiveRoundtripSmokePassed":True,
+                       "genericBuildImage":{key:actual[key] for key in ["Id","Os","Architecture","Config","RootFS"]},
                        "ubuntuAllowedSigningKeyFingerprint":UBUNTU_KEY_FINGERPRINT,
                        "genericSourceSha256":hashes,"nativeSmoke":smoke}
             # Extract the installed-version SBOM via a networkless native client;
@@ -479,17 +654,14 @@ exec "$@"
                                   "/opt/kova-build/packages.tsv"])
             require(sha(packages)==smoke["packageInventorySha256"],"package_inventory_changed")
             inventory["installedPackagesTsv"]=packages.decode()
-            archive=self.output/"operator-client.oci.tar"
-            self.stage='oci-export'
-            self.command(["skopeo","copy","docker-daemon:"+self.tag,"oci-archive:"+str(archive)+":operator-client"],timeout=300)
-            self.stage='oci-verification'
-            require(archive.is_file() and 0<archive.stat().st_size<=MAX_ARCHIVE_BYTES,"generic_oci_archive_size_unqualified")
             manifest_digest=oci_identity(archive,self.image_id)
             self.stage='receipt'
             inventory_bytes=canonical(inventory)
             require(len(inventory_bytes)<=MAX_INVENTORY_BYTES,"generic_inventory_bound")
             (self.output/"client-image-inventory.json").write_bytes(inventory_bytes)
             receipt={"operation":"data-free-recovery-operator-image-preparation","sourceSha":self.source,
+                "format":2,"buildClientImageId":self.build_image_id,"nativeOciArchiveRoundtripSmokePassed":True,
+                "ociConfigDigest":oci["configDigest"],"ociRuntimeBindingSha256":sha(canonical(binding)),
                 "baseRepoDigest":base,"clientImageId":self.image_id,"ociManifestDigest":manifest_digest,
                 "ociArchiveSha256":file_sha(archive),"ociArchiveBytes":archive.stat().st_size,
                 "inventorySha256":sha(inventory_bytes),"nativeToolSmokePassed":True,"syntheticGpgRoundtrip":True,

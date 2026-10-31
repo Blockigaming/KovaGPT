@@ -6,6 +6,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 from pathlib import Path
 import stat
 import subprocess
@@ -51,8 +52,11 @@ def github_fixture(kind):
 
 def oci_archive(path):
     """A complete tiny OCI digest chain, containing only synthetic bytes."""
-    config = m.canonical({"architecture": "amd64", "os": "linux", "synthetic": True})
     layer = b"synthetic fixture layer only\n"
+    config = m.canonical({"architecture":"amd64","os":"linux","config":{"User":"65532:65532",
+        "Env":["PATH=/usr/bin"],"Entrypoint":["python3","/opt/kova/scripts/release/recovery-operator-client-smoke.py"],
+        "WorkingDir":"/tmp","Labels":{"org.opencontainers.image.revision":SOURCE,"org.kova.recovery.owner":"b"*24}},
+        "rootfs":{"type":"layers","diff_ids":["sha256:"+m.sha(layer)]}})
     descriptor = lambda raw: {"digest": "sha256:" + m.sha(raw), "size": len(raw)}
     manifest = m.canonical({"schemaVersion": 2, "config": descriptor(config), "layers": [descriptor(layer)]})
     entries = {"oci-layout": m.canonical({"imageLayoutVersion": "1.0.0"}),
@@ -238,7 +242,16 @@ class CoordinatorTests(unittest.TestCase):
         directory = self.root / "operatorClient"; directory.mkdir()
         archive = directory / "operator-client.oci.tar"
         image_id = oci_archive(archive)
-        inventory = {"clientImageId": image_id, "sourceSha": SOURCE,
+        document=json.loads(m.builder.inspect_oci(archive)["configBytes"])
+        config={**document["config"],"Healthcheck":{"Test":["NONE"]},"Shell":["/bin/bash","-o","pipefail","-c"]}
+        built_id="sha256:"+m.sha(m.canonical(config))
+        built={"Id":built_id,"Os":"linux","Architecture":"amd64","Config":config,
+            "RootFS":{"Type":"layers","Layers":document["rootfs"]["diff_ids"]}}
+        binding=m.builder.verify_oci_runtime_binding(built,document,source_sha=SOURCE,owner="b"*24)
+        inventory = {"format":2,"nativeOciArchiveRoundtripSmokePassed":True,
+                     "ociConfigDigest":image_id,"buildClientImageId":built_id,
+                     "genericBuildImage":built,"ociRuntimeBinding":binding,
+                     "clientImageId": image_id, "sourceSha": SOURCE,
                      "genericSourceSha256": {name: m.builder.file_sha(m.HERE / name) for name in [*m.builder.FILES,"recovery-operator-client.Dockerfile"]}}
         raw = m.canonical(inventory)
         private(directory / "client-image-inventory.json", raw)
@@ -256,6 +269,18 @@ class CoordinatorTests(unittest.TestCase):
         self.assertEqual(m.load_exact_operator(plan, paths, run, "synthetic-tag"), inventory)
         self.assertEqual([c[0][:2] for c in calls], [["docker", "image"], ["skopeo", "copy"], ["docker", "image"]])
         self.assertEqual(calls[1][0][-1], "docker-daemon:synthetic-tag")
+
+    def test_missing_native_roundtrip_or_archive_identity_binding_stops_before_load(self):
+        for key,value in [("format",1),("nativeOciArchiveRoundtripSmokePassed",False),
+                          ("ociConfigDigest","sha256:"+"f"*64),("buildClientImageId","unmeasured")]:
+            directory=self.root/"operatorClient"
+            if directory.exists():shutil.rmtree(directory)
+            plan,paths,inventory,calls,run=self.operator_fixture()
+            inventory[key]=value;raw=m.canonical(inventory)
+            (paths["operatorClient"]/"client-image-inventory.json").write_bytes(raw)
+            plan["operatorClient"]["inventorySha256"]=m.sha(raw)
+            with self.subTest(key=key),self.assertRaises(m.Stopped):m.load_exact_operator(plan,paths,run,"synthetic-tag")
+            self.assertEqual(calls,[])
 
     def test_hub_verifier_is_reviewed_host_code_outside_exact_client_source_allowlists(self):
         expected = ["managed-auth-recovery.py", "managed-auth-recovery-target.mjs", "verify-isolated-restore-target.mjs",

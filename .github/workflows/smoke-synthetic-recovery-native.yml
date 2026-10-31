@@ -7,6 +7,9 @@ on:
       - .github/workflows/smoke-synthetic-recovery-native.yml
       - scripts/release/**
       - tests/unit/test_synthetic_recovery_native.py
+      - tests/unit/test_generic_operator_archive_native.py
+      - tests/unit/test_operator_oci_runtime_binding.py
+      - tests/unit/test_prepare_recovery_operator_image.py
       - tests/unit/synthetic-recovery-native-workflow.test.mjs
 
 permissions:
@@ -49,5 +52,43 @@ jobs:
         with:
           name: synthetic-recovery-native-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/kova-synthetic-proof-${{ github.run_id }}-${{ github.run_attempt }}/receipt.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  native-oci-archive:
+    if: github.event_name == 'pull_request' && github.repository == 'Blockigaming/KovaGPT'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      KOVA_SYNTHETIC_NATIVE_CONFIRMATION: SYNTHETIC_ONLY
+      KOVA_SYNTHETIC_SOURCE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check native archive context, conversion and rejection contracts
+        run: |
+          python3 -m unittest discover -s tests/unit -p test_generic_operator_archive_native.py -q
+          python3 -m unittest discover -s tests/unit -p test_operator_oci_runtime_binding.py -q
+          python3 -m unittest discover -s tests/unit -p test_prepare_recovery_operator_image.py -q
+      - name: Select signed distro OCI transport before all private inputs
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends skopeo
+      - name: Rehearse the final generic producer, OCI load and native tools without credentials
+        run: >-
+          timeout --signal=TERM --kill-after=30s 23m
+          python3 scripts/release/smoke-generic-operator-archive-native.py --execute
+          --output "$RUNNER_TEMP/kova-native-oci-archive-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/receipt.json"
+      - name: Reconcile only this archive rehearsal's owned generic images and private memory
+        if: always()
+        run: python3 scripts/release/smoke-generic-operator-archive-native.py --cleanup-only
+      - name: Retain only the native archive rehearsal hashes and counts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: native-oci-roundtrip-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/kova-native-oci-archive-${{ github.run_id }}-${{ github.run_attempt }}/receipt.json
           if-no-files-found: warn
           retention-days: 7

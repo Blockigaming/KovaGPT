@@ -49,6 +49,36 @@ def write_oci(path,config,*,tampered=False):
 
 
 class PreparationTests(unittest.TestCase):
+    def test_cleanup_removes_both_exact_owned_source_bound_tags_and_preserves_foreign_images(self):
+        builder=self.builder();present={builder.tag,builder.roundtrip_tag,"foreign:image"};removed=[]
+        def command(args,**kwargs):
+            if args[:3]==["docker","image","ls"]:
+                tag=next(x.removeprefix("reference=") for x in args if x.startswith("reference="))
+                return json.dumps({"Repository":tag.split(":")[0],"Tag":tag.split(":")[1]}).encode() if tag in present else b""
+            if args[:3]==["docker","image","inspect"]:
+                return json.dumps([{"Config":{"Labels":{"org.kova.recovery.owner":builder.owner,
+                    "org.opencontainers.image.revision":builder.source}}}]).encode()
+            if args[:3]==["docker","image","rm"]:
+                self.assertIn(args[-1],{builder.tag,builder.roundtrip_tag})
+                present.remove(args[-1]);removed.append(args[-1]);return b""
+            raise AssertionError("unexpected cleanup command")
+        builder.command=command
+        self.assertTrue(builder.cleanup_image())
+        self.assertEqual(set(removed),{builder.tag,builder.roundtrip_tag});self.assertEqual(present,{"foreign:image"})
+
+    def test_roundtrip_cleanup_rejects_matching_owner_with_changed_source(self):
+        builder=self.builder();calls=[]
+        def command(args,**kwargs):
+            calls.append(args)
+            if args[:3]==["docker","image","ls"]:
+                tag=next(x.removeprefix("reference=") for x in args if x.startswith("reference="))
+                return json.dumps({"Repository":tag.split(":")[0],"Tag":tag.split(":")[1]}).encode() if tag==builder.roundtrip_tag else b""
+            return json.dumps([{"Config":{"Labels":{"org.kova.recovery.owner":builder.owner,
+                "org.opencontainers.image.revision":"f"*40}}}]).encode()
+        builder.command=command
+        with self.assertRaisesRegex(m.Stopped,"foreign_image_cleanup_forbidden"):builder.cleanup_image()
+        self.assertFalse(any(args[:3]==["docker","image","rm"] for args in calls))
+
     def test_native_failure_reports_executed_marker_and_never_private_output(self):
         with tempfile.TemporaryDirectory() as folder:
             builder=m.Builder({"GITHUB_ACTIONS":"true","RUNNER_OS":"Linux","GITHUB_EVENT_NAME":"workflow_dispatch",
@@ -270,28 +300,52 @@ class PreparationTests(unittest.TestCase):
         with self.assertRaises(m.Stopped):m.oci_identity(archive,"sha256:"+m.sha(config))
 
     def test_mocked_build_preserves_oci_config_identity_and_does_not_claim_target_qualification(self):
-        p=self.builder();config=b"synthetic generic config";image_id="sha256:"+m.sha(config);calls=[]
+        p=self.builder();calls=[];loaded=False
+        runtime={"User":"65532:65532","Env":["PATH=/usr/bin"],"Entrypoint":["python3","/opt/kova/scripts/release/recovery-operator-client-smoke.py"],
+            "WorkingDir":"/tmp","Labels":{"org.kova.recovery.owner":p.owner,"org.opencontainers.image.revision":"a"*40}}
+        layer_id="sha256:"+m.sha(b"synthetic generic layer")
+        document={"architecture":"amd64","os":"linux","config":copy.deepcopy(runtime),
+            "rootfs":{"type":"layers","diff_ids":[layer_id]}}
+        config=m.canonical(document);image_id="sha256:"+m.sha(config)
+        built_config={**copy.deepcopy(runtime),"Healthcheck":{"Test":["NONE"]},
+            "Shell":["/bin/bash","-o","pipefail","-c"],"Cmd":None,"Volumes":None}
+        built_id="sha256:"+m.sha(m.canonical({**document,"config":built_config}))
+        self.assertNotEqual(built_id,image_id)
         def command(args,**_):
+            nonlocal loaded
             calls.append(args)
             if args[:2] in [["docker","volume"],["docker","ps"]]:return p.test_ram_docker(args)
             if args[:2]==["git","rev-parse"]:return b"a"*40+b"\n"
             if args[:3]==["docker","image","inspect"]:
                 if args[-1]==m.BASE_TAG:return json.dumps([{"Id":"sha256:"+"b"*64,"Os":"linux","Architecture":"amd64","RepoDigests":["ubuntu@sha256:"+"c"*64]}]).encode()
-                return json.dumps([{"Id":image_id,"Os":"linux","Architecture":"amd64","Config":{"User":"65532:65532","Healthcheck":{"Test":["NONE"]},"Labels":{"org.kova.recovery.owner":p.owner,"org.opencontainers.image.revision":"a"*40}}}]).encode()
+                roundtrip=args[-1]==p.roundtrip_tag
+                if roundtrip:self.assertTrue(loaded)
+                return json.dumps([{"Id":image_id if roundtrip else built_id,"Os":"linux","Architecture":"amd64",
+                    "Config":runtime if roundtrip else built_config,"RootFS":{"Type":"layers","Layers":[layer_id]}}]).encode()
             if args[:2]==["docker","run"]:
+                self.assertTrue(loaded)
+                self.assertEqual(p.image_id,image_id)
                 specs=p.owned_ram().expected_mounts(p.last_ram_keys)
                 self.assertTrue(all(spec["activated"] for spec in specs))
                 stdout=b"synthetic\n" if "/bin/cat" in args else json.dumps(smoke()).encode()
                 return b"KOVA_PRIVATE_RAM_PROOF_BEGIN\n"+fixture.runtime_bytes(specs)+b"KOVA_PRIVATE_RAM_PROOF_END\n"+stdout
             if args[:2]==["skopeo","copy"]:
-                archive=Path(args[-1].removeprefix("oci-archive:").removesuffix(":operator-client"))
-                write_oci(archive,config)
+                if args[-1].startswith("oci-archive:"):
+                    archive=Path(args[-1].removeprefix("oci-archive:").removesuffix(":operator-client"))
+                    write_oci(archive,config)
+                else:
+                    self.assertEqual(args[-1],"docker-daemon:"+p.roundtrip_tag)
+                    loaded=True
             return b""
         p.command=command;p.cleanup_image=lambda:True
         with patch.object(m,"os",SimpleNamespace(getuid=lambda:1001,getgid=lambda:1001,chmod=os.chmod)):
             receipt=p.execute()
         self.assertEqual(len(p.owned_ram().runtime_records),2)
         self.assertEqual(receipt["clientImageId"],image_id)
+        self.assertEqual(receipt["buildClientImageId"],built_id)
+        self.assertEqual(receipt["ociConfigDigest"],image_id)
+        self.assertTrue(receipt["nativeOciArchiveRoundtripSmokePassed"])
+        self.assertEqual(receipt["format"],2)
         self.assertFalse(receipt["restorePerformed"]);self.assertFalse(receipt["clientNetworkIsolationQualified"])
         self.assertFalse(receipt["futureRestoreApproved"]);self.assertFalse(receipt["customerDataReceived"])
         self.assertEqual({x.name for x in p.output.iterdir()},

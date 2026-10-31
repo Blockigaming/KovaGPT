@@ -193,7 +193,7 @@ exec "$@"
         info=values[0];config=info.get("Config",{})
         require(info.get("Id")==self.operator_image_id and info.get("Architecture")=="amd64"
                 and info.get("Os")=="linux" and not config.get("Volumes")
-                and config.get("Healthcheck",{}).get("Test")==["NONE"]
+                and builder.image_healthcheck_disabled(config)
                 and config.get("Labels",{}).get("org.opencontainers.image.revision")==self.operator_source_sha,
                 "operator_image_identity_unconfirmed")
         self.operator_env=environment(config.get("Env",[]))
