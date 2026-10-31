@@ -136,7 +136,7 @@ test("all exact native canonical replays preserve rows, Library column grants an
       { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
     ),
   );
-  assert.equal(Object.keys(cases).length, 4);
+  assert.equal(Object.keys(cases).length, 6);
   for (const [marker, sql] of Object.entries(cases)) {
     assert.equal(sql.split(migration).length, 2);
     const db = new PGlite();
@@ -230,8 +230,9 @@ test("forward installation pins prerequisites and creates ten guarded tables and
   }
 });
 
-async function canonicalFixture() {
+async function canonicalFixture({ defaults = "" } = {}) {
   const db = await fixture({ install: false });
+  if (defaults) await db.exec(defaults);
   for (const entry of catalog.canonicalSources) await db.exec(await readFile(entry.path, "utf8"));
   for (const name of WORK_RUNTIME_TABLES)
     await db.exec(
@@ -254,6 +255,62 @@ test("complete canonical history takes only the exact no-op branch and preserves
     );
   } finally {
     await db.close();
+  }
+});
+
+const cliRevokeCrudDefaults =
+  "alter default privileges in schema public grant all on tables to service_role;" +
+  "alter default privileges for role postgres in schema public revoke select,insert,update,delete on tables from anon,authenticated,service_role;";
+
+test("the published CLI default-CRUD revocation retains the exact service-role catalog read-only", async () => {
+  const db = await canonicalFixture({ defaults: cliRevokeCrudDefaults });
+  try {
+    await db.exec(`insert into public.work_sync_counters(owner_id) values('${USER}')`);
+    const before = await workRuntimeInstallationSnapshot(query(db));
+    const checks = await rows(
+      db,
+      "select has_table_privilege('service_role','public.work_execution_outputs','UPDATE') as output_update,has_table_privilege('service_role','public.work_accounting_settlements','DELETE') as settlement_delete,has_table_privilege('service_role','public.work_execution_outputs','TRUNCATE') as retained_truncate,has_table_privilege('service_role','public.work_accounting_settlements','MAINTAIN') as retained_maintain",
+    );
+    assert.deepEqual(checks[0], {
+      output_update: false,
+      settlement_delete: false,
+      retained_truncate: true,
+      retained_maintain: true,
+    });
+    await db.exec("set default_transaction_read_only=on");
+    await db.exec(migration);
+    assert.deepEqual(await workRuntimeInstallationSnapshot(query(db)), before);
+    assert.equal((await rows(db, "select count(*)::int n from public.work_sync_counters"))[0].n, 1);
+    await db.exec("set default_transaction_read_only=off");
+    await assert.rejects(
+      captureUnusedWorkRuntimeQualification(query(db)),
+      /work_forward_incomplete_installation/,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("extra or removed service grants, browser grants, comments and overloads fail the full CLI catalog", async () => {
+  for (const change of [
+    "grant update on public.work_execution_outputs to service_role",
+    "grant delete on public.work_accounting_settlements to service_role",
+    "revoke maintain on public.work_execution_runs from service_role",
+    "revoke select on public.work_execution_outputs from service_role",
+    "grant select on public.work_execution_runs to anon",
+    "grant insert on public.work_execution_runs to authenticated",
+    "comment on table public.work_execution_runs is 'unexpected catalog drift'",
+    "create function public.next_work_sync_version(uuid,text) returns bigint language sql as $$select 1::bigint$$",
+  ]) {
+    const db = await canonicalFixture({ defaults: cliRevokeCrudDefaults });
+    try {
+      await db.exec(change);
+      const changed = await workRuntimeInstallationSnapshot(query(db));
+      await failure(db, migration, /work_forward_existing_object/);
+      assert.deepEqual(await workRuntimeInstallationSnapshot(query(db)), changed);
+    } finally {
+      await db.close();
+    }
   }
 });
 
