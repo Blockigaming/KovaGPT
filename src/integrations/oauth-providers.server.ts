@@ -1,5 +1,14 @@
 export type OAuthProviderId =
-  "microsoft" | "github" | "slack" | "notion" | "linear" | "dropbox" | "box" | "oura" | "whoop";
+  | "microsoft"
+  | "github"
+  | "slack"
+  | "notion"
+  | "linear"
+  | "dropbox"
+  | "box"
+  | "oura"
+  | "whoop"
+  | "salesforce";
 export type OAuthProviderAdapter = {
   id: OAuthProviderId;
   name: string;
@@ -18,6 +27,24 @@ export type OAuthProviderAdapter = {
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
+  salesforce: {
+    id: "salesforce",
+    name: "Salesforce",
+    authorizationEndpoint: "https://login.salesforce.com/services/oauth2/authorize",
+    tokenEndpoint: "https://login.salesforce.com/services/oauth2/token",
+    revocationEndpoint: "https://login.salesforce.com/services/oauth2/revoke",
+    clientIdEnv: "SALESFORCE_OAUTH_CLIENT_ID",
+    clientSecretEnv: "SALESFORCE_OAUTH_CLIENT_SECRET",
+    requiredScopes: ["openid", "api", "refresh_token"],
+    optionalScopes: [],
+    usesPkce: true,
+    profileEndpoint: "https://login.salesforce.com/services/oauth2/userinfo?version=latest",
+    profileId: (v) =>
+      v.active === true && text(v.organization_id) && text(v.user_id)
+        ? `${text(v.organization_id)}:${text(v.user_id)}`
+        : "",
+    profileLabel: (v) => text(v.preferred_username) || text(v.name) || "Salesforce account",
+  },
   oura: {
     id: "oura",
     name: "Oura",

@@ -290,6 +290,42 @@ test("Microsoft account management searches only the explicitly selected authori
   expect((await page.evaluate(() => (window as FixtureWindow).operations)).length).toBe(1);
 });
 
+test("Salesforce management sends the selected record type with the owner-bound account", async ({
+  page,
+}) => {
+  await boot(page, emptyGoogle, "https://kova-plugins.test/apps", {
+    configuredProviders: [{ id: "salesforce" }],
+    accounts: [
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        provider_id: "salesforce",
+        account_label: "Salesforce fixture",
+        status: "connected",
+        granted_scopes: ["api", "openid", "refresh_token"],
+        token_expires_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Manage Salesforce", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("combobox", { name: "Record type", exact: true }).click();
+  await page.getByRole("option", { name: "Opportunities", exact: true }).click();
+  await dialog.getByRole("textbox", { name: "Search Salesforce", exact: true }).fill("renewal");
+  await dialog.getByRole("button", { name: "Search this account", exact: true }).click();
+  await expect(
+    dialog.getByRole("link", { name: "Actual fixture result", exact: true }),
+  ).toBeVisible();
+  expect((await page.evaluate(() => (window as FixtureWindow).operations))[0]).toEqual([
+    "provider-read",
+    {
+      connectionId: "salesforce",
+      accountId: "11111111-1111-4111-8111-111111111111",
+      query: "renewal",
+      recordType: "opportunities",
+    },
+  ]);
+});
+
 test("opening a configured provider never starts OAuth until Connect is clicked", async ({
   page,
 }) => {

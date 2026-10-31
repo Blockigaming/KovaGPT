@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 import * as flows from "../../src/integrations/connection-flows.mjs";
+import * as salesforceCredentials from "../../src/integrations/salesforce-credential.server.mjs";
 import * as tokenRequests from "../../src/integrations/oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "../../src/lib/provider-response.server.mjs";
 
@@ -34,8 +35,14 @@ function fixture() {
     from(table) {
       const filters = [];
       let patch;
+      let columns = "*";
+      const project = (row) =>
+        columns === "*"
+          ? { ...row }
+          : Object.fromEntries(columns.split(",").map((key) => [key, row[key]]));
       const chain = {
         select(value) {
+          columns = value;
           calls.push([table, "select", value]);
           return chain;
         },
@@ -69,11 +76,13 @@ function fixture() {
         maybeSingle() {
           const matches = state.row && filters.every(([key, value]) => state.row[key] === value);
           if (matches && patch) state.row = { ...state.row, ...patch };
-          return Promise.resolve({ data: matches ? { ...state.row } : null, error: null });
+          return Promise.resolve({ data: matches ? project(state.row) : null, error: null });
         },
         then(resolve, reject) {
           return Promise.resolve({
-            data: state.rows.filter((row) => filters.every(([key, value]) => row[key] === value)),
+            data: state.rows
+              .filter((row) => filters.every(([key, value]) => row[key] === value))
+              .map(project),
             error: null,
           }).then(resolve, reject);
         },
@@ -106,8 +115,14 @@ function fixture() {
     },
     "./connection-flows.mjs": flows,
     "./oauth-providers.server": {
-      configuredOAuthProviders: () => (state.configured ? [{ id: "microsoft" }] : []),
+      configuredOAuthProviders: () => (state.configured ? [{ id: state.row.provider_id }] : []),
       OAUTH_PROVIDERS: {
+        salesforce: {
+          id: "salesforce",
+          tokenEndpoint: "https://login.salesforce.com/services/oauth2/token",
+          clientIdEnv: "TEST_ID",
+          clientSecretEnv: "TEST_SECRET",
+        },
         microsoft: {
           id: "microsoft",
           tokenEndpoint: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
@@ -117,21 +132,22 @@ function fixture() {
       },
     },
     "./credential-vault.server": {
-      decryptCredential: async () => {
+      decryptCredential: async (ciphertext) => {
         state.decrypts += 1;
         await state.onDecrypt?.();
-        return "fake-token";
+        return ciphertext.startsWith("encrypted:") ? ciphertext.slice(10) : "fake-token";
       },
       encryptCredential: async (value) => `encrypted:${value}`,
     },
     "./connection-read.server.mjs": {
-      readConnection: async (id, query, token) => {
+      readConnection: async (id, query, token, _fetch, options) => {
         state.reads += 1;
-        calls.push(["read", id, query, token]);
+        calls.push(["read", id, query, token, options]);
         await state.onRead?.();
         return { results: [{ title: "test result" }] };
       },
     },
+    "./salesforce-credential.server.mjs": salesforceCredentials,
     "./oauth-token-request.server.mjs": tokenRequests,
     "@/lib/provider-response.server.mjs": { readProviderJsonObject },
   };
@@ -146,9 +162,11 @@ function fixture() {
       assert.ok(Object.hasOwn(modules, id), id);
       return modules[id];
     },
-    async () => {
+    async (url, init) => {
+      calls.push(["fetch", url, init]);
       state.refreshCalls = (state.refreshCalls ?? 0) + 1;
-      await state.onFetch?.();
+      const response = await state.onFetch?.(url, init);
+      if (response) return response;
       return (
         state.fetchResponse ??
         Response.json({
@@ -451,5 +469,156 @@ test("uncertain token rotation is not replayed and cannot replace a newer reconn
     if (failure === "reconnect")
       assert.equal(f.state.row.access_token_ciphertext, "new-connection-token");
     if (failure === "response") assert.equal(f.state.row.status, "expired");
+  }
+});
+
+function salesforceFixture() {
+  const f = fixture();
+  const profile = {
+    active: true,
+    organization_id: "00D000000000001",
+    user_id: "005000000000001",
+    urls: { query: "https://fixture.my.salesforce.com/services/data/v67.0/query" },
+  };
+  Object.assign(f.state.row, {
+    provider_id: "salesforce",
+    granted_scopes: ["api", "refresh_token", "openid"],
+    access_token_ciphertext: `encrypted:${salesforceCredentials.packSalesforceCredential("old-token", profile)}`,
+    refresh_token_ciphertext: "encrypted:old-refresh",
+    token_expires_at: null,
+  });
+  f.state.onFetch = (url) =>
+    url === salesforceCredentials.SALESFORCE_PROFILE_ENDPOINT
+      ? Response.json(profile)
+      : Response.json({ access_token: "renewed-token", scope: "api refresh_token openid" });
+  return f;
+}
+
+test("Salesforce chat requires an explicit record type before reading or decrypting", async () => {
+  const f = salesforceFixture();
+  const context = await f.getConnectedToolContext("owner-a");
+  assert.deepEqual(context.tools[0].function.parameters.required, [
+    "account_id",
+    "query",
+    "record_type",
+  ]);
+  for (const record_type of [undefined, "User", "__proto__"])
+    await assert.rejects(
+      f.runConnectedTool(
+        "owner-a",
+        "salesforce_search",
+        { account_id: f.state.row.id, query: "name", record_type },
+        context,
+      ),
+      /invalid_salesforce_record_type/,
+    );
+  assert.equal(f.state.decrypts, 0);
+  assert.equal(f.state.reads, 0);
+});
+
+test("Salesforce refreshes only after a rejected read and pins the renewed identity for a single retry", async () => {
+  const f = salesforceFixture();
+  const context = await f.getConnectedToolContext("owner-a");
+  assert.equal(f.state.refreshCalls ?? 0, 0);
+  f.state.onRead = () => {
+    if (f.state.reads === 1) throw new Error("connection_reauthorization_required");
+  };
+  const result = await f.runConnectedTool(
+    "owner-a",
+    "salesforce_search",
+    { account_id: f.state.row.id, query: "name", record_type: "opportunities" },
+    context,
+  );
+  assert.equal(result.results.length, 1);
+  assert.equal(f.state.reads, 2);
+  assert.equal(f.state.refreshCalls, 2, "one token exchange and one identity verification");
+  const requests = f.calls.filter((call) => call[0] === "fetch");
+  assert.equal(requests[0][1], "https://fixture.my.salesforce.com/services/oauth2/token");
+  assert.equal(requests[0][2].body.get("refresh_token"), "old-refresh");
+  assert.equal(f.state.row.token_expires_at, null);
+  assert.equal(f.state.row.refresh_token_ciphertext, "encrypted:old-refresh");
+  const reads = f.calls.filter((call) => call[0] === "read");
+  assert.equal(
+    salesforceCredentials.unpackSalesforceCredential(reads[1][3]).access_token,
+    "renewed-token",
+  );
+  assert.deepEqual(reads[1][4], { recordType: "opportunities" });
+  assert.equal(context.accounts[0].updated_at, f.state.row.updated_at);
+  assert.equal("access_token_ciphertext" in context.accounts[0], false);
+});
+
+test("a repeated Salesforce rejection is not retried or reported as a successful read", async () => {
+  const f = salesforceFixture();
+  const context = await f.getConnectedToolContext("owner-a");
+  f.state.onRead = () => {
+    throw new Error("connection_reauthorization_required");
+  };
+  await assert.rejects(
+    f.runConnectedTool(
+      "owner-a",
+      "salesforce_search",
+      { account_id: f.state.row.id, query: "name", record_type: "accounts" },
+      context,
+    ),
+    /connection_reauthorization_required/,
+  );
+  assert.equal(f.state.reads, 2);
+  assert.equal(f.state.refreshCalls, 2);
+  assert.equal(
+    f.calls.filter((call) => call[0] === "integration_audit_events" && call[1] === "insert").length,
+    0,
+  );
+});
+
+for (const stage of ["onDecrypt", "onFetch"]) {
+  test(`Salesforce ${stage} disconnect prevents token replacement or retried data`, async () => {
+    const f = salesforceFixture();
+    const context = await f.getConnectedToolContext("owner-a");
+    f.state.onRead = () => {
+      throw new Error("connection_reauthorization_required");
+    };
+    if (stage === "onDecrypt")
+      f.state.onDecrypt = () => {
+        if (f.state.row.status === "expired") f.state.row.deleted_at = "now";
+      };
+    else
+      f.state.onFetch = () => {
+        f.state.row = {
+          ...f.state.row,
+          status: "connected",
+          updated_at: "reconnected",
+          access_token_ciphertext: "new-owner-bound-credential",
+        };
+        return Response.json({ access_token: "must-not-store", scope: "api" });
+      };
+    await assert.rejects(
+      f.runConnectedTool(
+        "owner-a",
+        "salesforce_search",
+        { account_id: f.state.row.id, query: "name", record_type: "contacts" },
+        context,
+      ),
+      /connection_reauthorization_required/,
+    );
+    assert.equal(f.state.reads, 1);
+    assert.equal(f.state.refreshCalls ?? 0, stage === "onDecrypt" ? 0 : 1);
+    assert.doesNotMatch(f.state.row.access_token_ciphertext, /must-not-store/);
+  });
+}
+
+test("forced Salesforce renewal cannot read another owner or a workspace credential", async () => {
+  for (const patch of [
+    { owner_id: "owner-b" },
+    { workspace_id: "workspace-a" },
+    { deleted_at: "now" },
+  ]) {
+    const f = salesforceFixture();
+    Object.assign(f.state.row, patch);
+    assert.equal(
+      await f.refreshExpiringConnection("owner-a", f.state.row.id, f.state.row.updated_at, true),
+      null,
+    );
+    assert.equal(f.state.decrypts, 0);
+    assert.equal(f.state.refreshCalls ?? 0, 0);
   }
 });

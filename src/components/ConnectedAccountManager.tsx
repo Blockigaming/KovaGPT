@@ -3,6 +3,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { authFetch, fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { searchConnectedAccount, refreshConnectedAccess } from "@/lib/connected-accounts.functions";
 import {
@@ -33,6 +40,9 @@ export function ConnectedAccountManager({
   const flow = CONNECTION_FLOWS[id];
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
+  const [recordType, setRecordType] = useState<"accounts" | "contacts" | "opportunities">(
+    "accounts",
+  );
   const [result, setResult] = useState<ConnectionReadResult | null>(null);
   const [disconnect, setDisconnect] = useState<ConnectedAccount | null>(null);
   const active = useRef(true);
@@ -77,7 +87,14 @@ export function ConnectedAccountManager({
     setBusy(true);
     setResult(null);
     try {
-      const next = await readAccount({ data: { connectionId: id, accountId, query } });
+      const next = await readAccount({
+        data: {
+          connectionId: id,
+          accountId,
+          query,
+          ...(id === "salesforce" ? { recordType } : {}),
+        },
+      });
       if (active.current) {
         if ("error" in next) toast.error(next.error);
         else setResult(next);
@@ -162,6 +179,27 @@ export function ConnectedAccountManager({
       </div>
       {accounts.length > 0 && (
         <>
+          {id === "salesforce" && (
+            <div className="mt-4 space-y-2">
+              <label htmlFor="salesforce-record-type">Record type</label>
+              <Select
+                value={recordType}
+                onValueChange={(value: "accounts" | "contacts" | "opportunities") => {
+                  setRecordType(value);
+                  setResult(null);
+                }}
+              >
+                <SelectTrigger id="salesforce-record-type" aria-label="Record type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="accounts">Accounts</SelectItem>
+                  <SelectItem value="contacts">Contacts</SelectItem>
+                  <SelectItem value="opportunities">Opportunities</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <label className="block mt-4">
             Search {flow.label}
             <Input

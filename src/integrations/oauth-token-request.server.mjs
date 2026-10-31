@@ -60,7 +60,7 @@ export function selectOAuthTokens(providerId, payload) {
 }
 
 export function oauthRefreshRequest({ providerId, clientId, clientSecret, refreshToken }) {
-  if (!["microsoft", "linear", "slack", "oura", "whoop"].includes(providerId))
+  if (!["microsoft", "linear", "slack", "oura", "whoop", "salesforce"].includes(providerId))
     throw new Error("refresh_not_supported");
   if (!clientId || !clientSecret || !refreshToken) throw new Error("refresh_not_configured");
   return {
@@ -86,6 +86,8 @@ export function selectRefreshTokens(providerId, payload) {
   if (providerId === "slack" && payload?.token_type !== "user")
     throw new Error("oauth_access_token_missing");
   const tokens = selectOAuthTokens("refresh", payload);
-  if (!tokens.expires_in) throw new Error("refresh_expiry_missing");
+  // Salesforce session lifetime is controlled by the org, not expires_in.
+  // Its rejected API read triggers a claimed refresh instead of inventing TTL.
+  if (!tokens.expires_in && providerId !== "salesforce") throw new Error("refresh_expiry_missing");
   return tokens;
 }

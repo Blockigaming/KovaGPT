@@ -10,6 +10,11 @@ import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { oauthTokenRequest, selectOAuthTokens } from "./oauth-token-request.server.mjs";
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
 import { confirmedHealthScopes } from "@/health/health-read.server.mjs";
+import {
+  packSalesforceCredential,
+  unpackSalesforceCredential,
+  salesforceOAuthEndpoint,
+} from "./salesforce-credential.server.mjs";
 
 const admin = () =>
   createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -163,6 +168,8 @@ export async function completeOAuth(input: {
   );
   if (["oura", "whoop"].includes(provider.id) && !tokens.expires_in)
     throw new Error("oauth_token_expiry_missing");
+  if (provider.id === "salesforce" && (!tokens.refresh_token || !tokens.scope))
+    throw new Error("oauth_scope_verification_failed");
   await assertLockdownAllows(db, record.owner_id, "connector_write");
   const profileResponse = await fetch(provider.profileEndpoint, {
     method: ["linear", "slack", "dropbox"].includes(provider.id) ? "POST" : "GET",
@@ -213,7 +220,11 @@ export async function completeOAuth(input: {
         account_label: provider.profileLabel(profile),
         status: "connected",
         granted_scopes: granted,
-        access_token_ciphertext: await encryptCredential(tokens.access_token),
+        access_token_ciphertext: await encryptCredential(
+          provider.id === "salesforce"
+            ? packSalesforceCredential(tokens.access_token, profile)
+            : tokens.access_token,
+        ),
         refresh_token_ciphertext: tokens.refresh_token
           ? await encryptCredential(tokens.refresh_token)
           : null,
@@ -269,6 +280,8 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
   let token: string | null = null;
   try {
     token = await decryptCredential(revocationCiphertext);
+    if (provider.id === "salesforce" && !account.refresh_token_ciphertext)
+      token = unpackSalesforceCredential(token).access_token;
   } catch {
     console.error("[oauth-disconnect] revocation credential unavailable", {
       providerId: provider.id,
@@ -282,11 +295,17 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
   let providerRevoked = false;
   const canAttemptRevocation =
     Boolean(provider.revocationEndpoint && token) &&
-    ["github", "slack", "linear", "dropbox", "box", "whoop"].includes(provider.id) &&
+    ["github", "slack", "linear", "dropbox", "box", "whoop", "salesforce"].includes(provider.id) &&
     (provider.id !== "github" || Boolean(clientId && clientSecret));
   if (provider.revocationEndpoint && token && canAttemptRevocation) {
     try {
-      const endpoint = provider.revocationEndpoint.replace("{client_id}", clientId ?? "");
+      const endpoint =
+        provider.id === "salesforce"
+          ? salesforceOAuthEndpoint(
+              await decryptCredential(account.access_token_ciphertext),
+              "revoke",
+            )
+          : provider.revocationEndpoint.replace("{client_id}", clientId ?? "");
       const githubAuthorization =
         provider.id === "github"
           ? `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`
@@ -296,7 +315,9 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
         redirect: "error",
         signal: AbortSignal.timeout(10_000),
         headers: {
-          Authorization: githubAuthorization ?? `Bearer ${token}`,
+          ...(provider.id !== "salesforce"
+            ? { Authorization: githubAuthorization ?? `Bearer ${token}` }
+            : {}),
           "Content-Type":
             provider.id === "github" ? "application/json" : "application/x-www-form-urlencoded",
           Accept: provider.id === "github" ? "application/vnd.github+json" : "application/json",
@@ -311,7 +332,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
                   client_id: clientId!,
                   client_secret: clientSecret!,
                 })
-              : provider.id === "linear"
+              : ["linear", "salesforce"].includes(provider.id)
                 ? new URLSearchParams({ token })
                 : undefined,
       });

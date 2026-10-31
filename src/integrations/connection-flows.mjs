@@ -1,6 +1,14 @@
 // Client-safe descriptions of implemented read operations. Deployment readiness
 // and the user's granted scopes are checked separately on the server.
 export const CONNECTION_FLOWS = {
+  salesforce: {
+    provider: "salesforce",
+    scopes: ["api"],
+    tool: "salesforce_search",
+    label: "Salesforce",
+    description:
+      "Search Salesforce accounts, contacts or opportunities allowed by your Salesforce role. Read-only; choose the record type explicitly.",
+  },
   outlook: {
     provider: "microsoft",
     scopes: ["Mail.Read"],
@@ -96,6 +104,7 @@ export function connectionAuthorizationUrl(provider, value) {
     slack: "https://slack.com/oauth/v2/authorize",
     oura: "https://cloud.ouraring.com/oauth/authorize",
     whoop: "https://api.prod.whoop.com/oauth/oauth2/auth",
+    salesforce: "https://login.salesforce.com/services/oauth2/authorize",
   };
   try {
     const url = new URL(value),

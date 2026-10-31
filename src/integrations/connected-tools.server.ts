@@ -15,6 +15,11 @@ import { oauthRefreshRequest, selectRefreshTokens } from "./oauth-token-request.
 import { readProviderJsonObject } from "@/lib/provider-response.server.mjs";
 import { githubChatTools } from "@/lib/github-chat-tools.server";
 import type { GitHubChatContext } from "@/lib/github-chat-read.server.mjs";
+import {
+  renewSalesforceCredential,
+  salesforceOAuthEndpoint,
+} from "./salesforce-credential.server.mjs";
+import type { SalesforceRecordType } from "./salesforce-read.server.mjs";
 
 type BoundAccount = ConnectedAccount & { updated_at: string };
 export type ConnectedToolContext = {
@@ -70,7 +75,12 @@ const db = supabaseAdmin as unknown as SupabaseClient<ConnectorDatabase>;
 // Claim each expiring credential before rotating it. An uncertain/crashed
 // refresh remains expired and requires fresh OAuth consent, so another replica
 // cannot replay a potentially consumed refresh token.
-export async function refreshExpiringConnection(ownerId: string, id: string, version: string) {
+export async function refreshExpiringConnection(
+  ownerId: string,
+  id: string,
+  version: string,
+  forceSalesforce = false,
+) {
   await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
   const { data: row, error } = await db
     .from("integration_linked_accounts")
@@ -85,10 +95,10 @@ export async function refreshExpiringConnection(ownerId: string, id: string, ver
   if (
     error ||
     !row ||
-    !row.token_expires_at ||
-    Date.parse(row.token_expires_at) > Date.now() + 60_000 ||
+    (!(forceSalesforce && row.provider_id === "salesforce") &&
+      (!row.token_expires_at || Date.parse(row.token_expires_at) > Date.now() + 60_000)) ||
     !row.refresh_token_ciphertext ||
-    !["microsoft", "linear", "slack", "oura", "whoop"].includes(row.provider_id)
+    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce"].includes(row.provider_id)
   )
     return null;
   const provider = OAUTH_PROVIDERS[row.provider_id as OAuthProviderId];
@@ -103,15 +113,42 @@ export async function refreshExpiringConnection(ownerId: string, id: string, ver
     .eq("status", "connected")
     .eq("updated_at", version)
     .eq("access_token_ciphertext", row.access_token_ciphertext)
+    .is("workspace_id", null)
     .is("deleted_at", null)
     .select("id")
     .maybeSingle();
   if (claimError || !claim) return null;
-  try {
+  const ensureRefreshLease = async () => {
     await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
+    const current = await db
+      .from("integration_linked_accounts")
+      .select("id")
+      .eq("id", id)
+      .eq("owner_id", ownerId)
+      .eq("provider_id", provider.id)
+      .eq("status", "expired")
+      .eq("updated_at", lease)
+      .eq("access_token_ciphertext", row.access_token_ciphertext)
+      .is("workspace_id", null)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (
+      current.error ||
+      !current.data ||
+      !configuredOAuthProviders().some((entry) => entry.id === provider.id)
+    )
+      throw new Error("refresh_binding_changed");
+  };
+  try {
+    await ensureRefreshLease();
     const refreshToken = await decryptCredential(row.refresh_token_ciphertext);
+    const oldSalesforceCredential =
+      provider.id === "salesforce" ? await decryptCredential(row.access_token_ciphertext) : null;
+    await ensureRefreshLease();
     const response = await fetch(
-      provider.tokenEndpoint,
+      oldSalesforceCredential
+        ? salesforceOAuthEndpoint(oldSalesforceCredential, "token")
+        : provider.tokenEndpoint,
       oauthRefreshRequest({
         providerId: provider.id,
         clientId: process.env[provider.clientIdEnv],
@@ -124,17 +161,30 @@ export async function refreshExpiringConnection(ownerId: string, id: string, ver
       throw new Error("refresh_failed");
     }
     const tokens = selectRefreshTokens(provider.id, await readProviderJsonObject(response, 64_000));
+    await ensureRefreshLease();
+    const packed = oldSalesforceCredential
+      ? await renewSalesforceCredential(
+          oldSalesforceCredential,
+          tokens.access_token,
+          ensureRefreshLease,
+          fetch,
+        )
+      : tokens.access_token;
+    const newCiphertext = await encryptCredential(packed);
+    await ensureRefreshLease();
     const scopes =
       tokens.scope === undefined ? row.granted_scopes : tokens.scope.split(/[ ,]+/).filter(Boolean);
     const { data: renewed, error: updateError } = await db
       .from("integration_linked_accounts")
       .update({
         status: "connected",
-        access_token_ciphertext: await encryptCredential(tokens.access_token),
+        access_token_ciphertext: newCiphertext,
         refresh_token_ciphertext: tokens.refresh_token
           ? await encryptCredential(tokens.refresh_token)
           : row.refresh_token_ciphertext,
-        token_expires_at: new Date(Date.now() + tokens.expires_in! * 1000).toISOString(),
+        token_expires_at: tokens.expires_in
+          ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+          : null,
         granted_scopes: scopes,
         updated_at: new Date().toISOString(),
       })
@@ -143,10 +193,15 @@ export async function refreshExpiringConnection(ownerId: string, id: string, ver
       .eq("status", "expired")
       .eq("updated_at", lease)
       .eq("access_token_ciphertext", row.access_token_ciphertext)
+      .is("workspace_id", null)
       .is("deleted_at", null)
       .select(accountColumns)
       .maybeSingle();
-    return updateError ? null : renewed;
+    return updateError || !renewed
+      ? null
+      : forceSalesforce && provider.id === "salesforce"
+        ? { ...renewed, renewalCiphertext: newCiphertext }
+        : renewed;
   } catch {
     return null;
   }
@@ -197,8 +252,16 @@ export async function getConnectedToolContext(ownerId: string): Promise<Connecte
             properties: {
               account_id: { type: "string", enum: allowed.map((account) => account.id) },
               query: { type: "string", minLength: 1, maxLength: 300 },
+              ...(id === "salesforce"
+                ? {
+                    record_type: {
+                      type: "string",
+                      enum: ["accounts", "contacts", "opportunities"],
+                    },
+                  }
+                : {}),
             },
-            required: ["account_id", "query"],
+            required: ["account_id", "query", ...(id === "salesforce" ? ["record_type"] : [])],
           },
         },
       },
@@ -220,6 +283,11 @@ export async function runConnectionAccountSearch(
   if (!entry || !context.tools.some((tool) => tool.function.name === name))
     throw new Error("connection_tool_not_allowed");
   const [id, flow] = entry;
+  if (
+    id === "salesforce" &&
+    !["accounts", "contacts", "opportunities"].includes(String(args.record_type))
+  )
+    throw new Error("invalid_salesforce_record_type");
   const bound = context.accounts.find(
     (account) =>
       account.id === args.account_id &&
@@ -240,22 +308,25 @@ export async function runConnectionAccountSearch(
     throw new Error(
       limit.status === "limited" ? "connection_rate_limited" : "connection_protection_unavailable",
     );
-  const { data: account, error } = await db
-    .from("integration_linked_accounts")
-    .select(`${accountColumns},access_token_ciphertext,deleted_at`)
-    .eq("id", bound.id)
-    .eq("owner_id", ownerId)
-    .eq("provider_id", flow.provider)
-    .is("workspace_id", null)
-    .is("deleted_at", null)
-    .maybeSingle();
+  const lookup = () =>
+    db
+      .from("integration_linked_accounts")
+      .select(`${accountColumns},access_token_ciphertext,deleted_at`)
+      .eq("id", bound.id)
+      .eq("owner_id", ownerId)
+      .eq("provider_id", flow.provider)
+      .is("workspace_id", null)
+      .is("deleted_at", null)
+      .maybeSingle();
+  const { data: original, error } = await lookup();
   if (
     error ||
-    !account ||
-    !canReadConnection(account, id) ||
-    account.updated_at !== bound.updated_at
+    !original ||
+    !canReadConnection(original, id) ||
+    original.updated_at !== bound.updated_at
   )
     throw new Error("connection_changed_or_expired");
+  let account = original;
   const ensureCurrentBinding = async () => {
     const { data: current, error: currentError } = await db
       .from("integration_linked_accounts")
@@ -277,9 +348,46 @@ export async function runConnectionAccountSearch(
     )
       throw new Error("connection_changed_or_expired");
   };
-  const token = await decryptCredential(account.access_token_ciphertext);
+  let token = await decryptCredential(account.access_token_ciphertext);
   await ensureCurrentBinding();
-  const result = await readConnection(id, String(args.query ?? ""), token);
+  const options =
+    id === "salesforce" ? { recordType: args.record_type as SalesforceRecordType | undefined } : {};
+  let result;
+  try {
+    result = await readConnection(id, String(args.query ?? ""), token, fetch, options);
+  } catch (error) {
+    if (
+      id !== "salesforce" ||
+      !(error instanceof Error) ||
+      error.message !== "connection_reauthorization_required"
+    )
+      throw error;
+    await ensureCurrentBinding();
+    const renewed = await refreshExpiringConnection(ownerId, account.id, account.updated_at, true);
+    if (!renewed || !("renewalCiphertext" in renewed))
+      throw new Error("connection_reauthorization_required", { cause: error });
+    const current = await lookup();
+    if (
+      current.error ||
+      !current.data ||
+      current.data.updated_at !== renewed.updated_at ||
+      current.data.access_token_ciphertext !== renewed.renewalCiphertext ||
+      !canReadConnection(current.data, id)
+    )
+      throw new Error("connection_changed_or_expired", { cause: error });
+    account = current.data;
+    await ensureCurrentBinding();
+    token = await decryptCredential(account.access_token_ciphertext);
+    result = await readConnection(id, String(args.query ?? ""), token, fetch, options);
+    // Carry only safe binding metadata forward for another tool in this same
+    // chat. The encrypted credential is confined to this server-side read.
+    Object.assign(bound, {
+      updated_at: account.updated_at,
+      status: account.status,
+      granted_scopes: account.granted_scopes,
+      token_expires_at: account.token_expires_at,
+    });
+  }
   // Revocation, reconnect, scope changes and Lockdown can occur while the
   // provider request is in flight. Discard its data unless the same binding
   // remains authorized. Recheck after the audit await before exposing it.
