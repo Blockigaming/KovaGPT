@@ -15,7 +15,7 @@ m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
 def metadata():
     return {"format":1,"project":m.PROJECT,"postgresBuild":m.BUILD,"serverVersionNum":170006,
-            "database":"postgres","readOnly":True,"extensions":[],"schemas":[],"roles":[],
+            "database":"postgres","readOnly":True,"bootstrapRole":"synthetic_bootstrap_owner","extensions":[],"schemas":[],"roles":[],
             "memberships":[],"roleSettings":[]}
 
 
@@ -46,6 +46,15 @@ class MetadataTests(unittest.TestCase):
                           "pg_largeobject","INSERT ","UPDATE ","DELETE ","CREATE ","COPY "]:
             self.assertNotIn(forbidden,m.SOURCE_SQL)
         self.assertIn("'readOnly',current_setting('transaction_read_only')='on'",m.SOURCE_SQL)
+        self.assertIn("'bootstrapRole',(SELECT rolname FROM pg_catalog.pg_roles WHERE oid=10)",m.SOURCE_SQL)
+
+    def test_observed_bootstrap_identity_survives_private_metadata_sanitization(self):
+        self.assertEqual(m.sanitize_settings(metadata())["bootstrapRole"],"synthetic_bootstrap_owner")
+        for value in [None,"",17,"pg_invalid","invalid;SELECT"]:
+            with self.subTest(value=value),self.assertRaises(m.Stopped):
+                m.sanitize_settings({**metadata(),"bootstrapRole":value})
+        missing=metadata();del missing["bootstrapRole"]
+        with self.assertRaises(m.Stopped):m.sanitize_settings(missing)
 
     def test_extension_preflight_shares_fixed_readonly_snapshot_and_never_implies_semantics(self):
         query=m.source_query(True)
@@ -108,6 +117,18 @@ class MetadataTests(unittest.TestCase):
         self.assertTrue(out["sourceSettingsComplete"]);self.assertEqual(out["withheldSettingCount"],0)
         raw["roleSettings"][0]["role"]="postgres"
         self.assertEqual(m.sanitize_settings(raw)["withheldSettingCount"],1)
+
+    def test_search_path_user_escape_is_retained_exactly_without_general_backslash_permission(self):
+        setting=r'search_path=\$user, public, fixture_ns'
+        raw=metadata();raw["roleSettings"]=[{"role":"postgres","database":"*","settings":[setting]}]
+        out=m.sanitize_settings(raw)
+        self.assertTrue(out["sourceSettingsComplete"])
+        self.assertEqual(out["roleSettings"][0]["settings"],[setting])
+        self.assertEqual(out["roleSettings"][0]["settingFingerprints"],
+            [{"key":"search_path","sha256":m.sha(setting.encode()),"retained":True}])
+        for setting in [r'search_path=\private',r'search_path=\\$user',r'search_path=\$user;SELECT',
+                        r'pgrst.db_pre_request=\$user',r'unknown.setting=\$user']:
+            with self.subTest(setting=setting):self.assertFalse(m.retained_setting(setting))
 
     def test_invalid_source_version_database_or_readonly_bit_is_rejected(self):
         for key,value in [("serverVersionNum",180003),("readOnly",False),("database","other"),
@@ -173,6 +194,7 @@ class MetadataTests(unittest.TestCase):
         self.assertFalse(receipt["productionMutated"])
         self.assertFalse(receipt["customerRowsRead"])
         saved=json.loads(output.read_bytes())
+        self.assertEqual(saved["bootstrapRole"],metadata()["bootstrapRole"])
         self.assertEqual(saved["metadataActualRepoDigest"],m.server_image.TRANSPORT_REF)
         self.assertEqual(saved["metadataImageQualification"],synthetic_qualification()["receipt"])
         self.assertNotEqual(saved["metadataActualRepoDigest"],m.server_image.ORIGINAL_ECR_REF)
