@@ -55,6 +55,9 @@ export async function requireUser(request: Request): Promise<HttpAuthedCaller | 
   const result = await optionalUser(request);
   if (!result) return unauthorized();
   if (result instanceof Response) return result;
+  const expectedOwner = request.headers.get("x-kova-expected-owner");
+  if (expectedOwner !== null && expectedOwner !== result.userId)
+    return jsonError("Account changed. Refresh before retrying.", 409);
   return result;
 }
 

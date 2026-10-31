@@ -12,6 +12,7 @@ const PATHS = new Set([
   "/item/remove",
   "/accounts/get",
   "/transactions/sync",
+  "/transactions/get",
   "/investments/holdings/get",
   "/investments/transactions/get",
   "/liabilities/get",

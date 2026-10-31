@@ -20,7 +20,7 @@ export const Route = createFileRoute("/api/finances/exchange")({
         try {
           return Response.json(
             await exchangeFinanceToken(auth, body.publicToken, body.country ?? "US"),
-            { status: 201 },
+            { status: 201, headers: { "Cache-Control": "no-store" } },
           );
         } catch (error) {
           const safe = publicFinanceError(error, "finance_exchange_failed");

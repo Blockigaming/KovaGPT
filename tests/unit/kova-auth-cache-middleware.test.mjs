@@ -433,6 +433,19 @@ test("a preferred owned credential never reaches Supabase Auth or creates an adm
       assert.equal(result.authProvider, "kova");
       assert.equal(result.userId, "owner");
       assert.deepEqual(calls, ["owned-authority", "publishable", "admin"]);
+      for (const expectedOwner of ["owner", "different-owner"]) {
+        const pinnedHeaders = new Headers(request.headers);
+        pinnedHeaders.set("X-Kova-Expected-Owner", expectedOwner);
+        const pinned = await exports.requireUser(new Request(request, { headers: pinnedHeaders }));
+        if (expectedOwner === "owner") assert.equal(pinned.userId, "owner");
+        else {
+          assert.equal(pinned.status, 409);
+          assert.equal(pinned.headers.get("Cache-Control"), "no-store");
+          assert.deepEqual(await pinned.json(), {
+            error: "Account changed. Refresh before retrying.",
+          });
+        }
+      }
     } else {
       assert.equal(result.status, behavior === "denied" ? 401 : 503);
       assert.deepEqual(calls, ["owned-authority"]);

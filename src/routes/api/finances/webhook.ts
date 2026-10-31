@@ -1,25 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  BodyReadError,
-  financeQueueUnavailableResponse,
-  readUtf8BodyBounded,
-} from "@/lib/endpoint-reliability.mjs";
-import { timingSafeEqualText } from "@/lib/http-security.server";
+import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requestPlaid } from "@/finances/plaid-request.server.mjs";
+import { createPlaidWebhookVerifier } from "@/finances/plaid-webhook.server.mjs";
+import { persistFinanceWebhook } from "@/finances/plaid.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ConnectionDomainDatabase } from "@/integrations/connection-domain.types";
+
+const verifyWebhook = createPlaidWebhookVerifier(requestPlaid);
 
 export const Route = createFileRoute("/api/finances/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // A deployed edge/WAF must verify Plaid-Verification JWT before forwarding. Fail closed otherwise.
-        const verificationToken = process.env.FINANCE_WEBHOOK_VERIFICATION_TOKEN;
-        if (!verificationToken) {
-          return Response.json({ error: "webhook_verification_unavailable" }, { status: 503 });
-        }
-        const suppliedToken = request.headers.get("x-kova-webhook-verified") ?? "";
-        if (!timingSafeEqualText(suppliedToken, verificationToken)) {
-          return Response.json({ error: "invalid_webhook_signature" }, { status: 401 });
-        }
-
         let raw: string;
         try {
           raw = await readUtf8BodyBounded(request, 256 * 1024);
@@ -30,22 +23,28 @@ export const Route = createFileRoute("/api/finances/webhook")({
           }
           return Response.json({ error: "invalid_webhook_body" }, { status: 400 });
         }
-        const body = (await Promise.resolve()
-          .then(() => JSON.parse(raw))
-          .catch(() => null)) as {
-          webhook_type?: string;
-          webhook_code?: string;
-          item_id?: string;
-        } | null;
-        if (!body?.webhook_type || !body.webhook_code || !body.item_id) {
-          return Response.json({ error: "invalid_webhook" }, { status: 400 });
+        try {
+          const event = await verifyWebhook(raw, request.headers.get("plaid-verification"));
+          const result = await persistFinanceWebhook(
+            supabaseAdmin as unknown as SupabaseClient<ConnectionDomainDatabase>,
+            event,
+          );
+          return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+        } catch (error) {
+          const code = error instanceof Error ? error.message : "";
+          const status =
+            code === "invalid_webhook_signature" ? 401 : code === "invalid_webhook" ? 400 : 503;
+          return Response.json(
+            { error: status === 503 ? "finance_webhook_unavailable" : code },
+            {
+              status,
+              headers: {
+                "Cache-Control": "no-store",
+                ...(status === 503 ? { "Retry-After": "30" } : {}),
+              },
+            },
+          );
         }
-
-        // There is currently no durable finance-event queue/table in the schema.
-        // A 2xx would tell the provider to stop retrying and silently lose this
-        // verified event. Return a truthful retryable failure until persistence is wired.
-        // Item IDs remain deliberately unlogged.
-        return financeQueueUnavailableResponse();
       },
     },
   },
