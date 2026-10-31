@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import * as usagePolicy from "../../src/lib/plan-usage-policy.mjs";
 import { reactFixture, nodes, text } from "../helpers/kova-react-fixture.mjs";
 
 // Load the actual immutable plan policy, not a second test-only pricing catalog.
@@ -13,6 +14,7 @@ function policy(path) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   new Function("exports", "require", code)(exports, (name) => {
+    if (name === "./plan-usage-policy.mjs") return usagePolicy;
     assert.ok(name.startsWith("@/lib/"));
     return policy(name.replace("@/", "src/") + (name.endsWith(".mjs") ? "" : ".ts"));
   });

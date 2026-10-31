@@ -1,3 +1,5 @@
+import { PublicShareLinks } from "@/components/PublicShareLinks";
+import { PlanUsageBars } from "@/components/PlanUsageBars";
 import "@/styles/billing-surfaces.css";
 import { BillingWorkspace, BillingSubscriptionFacts } from "@/components/BillingWorkspace";
 import "@/styles/settings-reference.css";
@@ -1712,30 +1714,7 @@ export function SettingsDialog({
                         Loading usage…
                       </div>
                     ) : usage ? (
-                      <dl className="kova-settings-reference-metrics">
-                        <div>
-                          <dt>Messages</dt>
-                          <dd>{usage.chats}</dd>
-                        </div>
-                        <div>
-                          <dt>Images</dt>
-                          <dd>
-                            {usage.images}
-                            {tier === "free"
-                              ? ` / ${DAILY_IMAGE_LIMIT} used · ${Math.max(0, DAILY_IMAGE_LIMIT - usage.images)} remaining`
-                              : " used"}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>File uploads</dt>
-                          <dd>
-                            {usage.uploads}
-                            {tier === "free"
-                              ? ` / ${DAILY_UPLOAD_LIMIT} used · ${Math.max(0, DAILY_UPLOAD_LIMIT - usage.uploads)} remaining`
-                              : " used"}
-                          </dd>
-                        </div>
-                      </dl>
+                      <PlanUsageBars tier={tier} usage={usage} />
                     ) : (
                       <div className="kova-settings-inline-error" role="alert">
                         <p>Usage data isn't available right now.</p>
@@ -1749,9 +1728,10 @@ export function SettingsDialog({
                 <section className="kova-settings-section">
                   <h3>How limits work</h3>
                   <p className="text-sm text-muted-foreground">
-                    Your current allowance is enforced by KovaGPT when you use a limited feature.
-                    Exact percentage progress is not shown because the service does not currently
-                    provide an account allowance total.
+                    Free includes one fifth of the Plus allowance. Plus is the baseline; Pro
+                    includes 15 times the Plus allowance. These daily progress bars show messages,
+                    images, and uploads. Token limits also apply, so longer conversations can reach
+                    an allowance sooner.
                   </p>
                   <Link
                     to="/pricing"
@@ -2193,6 +2173,7 @@ export function SettingsDialog({
                 </div>
                 <ArchivedChatsPanel userKey={userKey} />
                 <ChatTrashPanel userKey={userKey} />
+                <PublicShareLinks />
                 <div
                   role="note"
                   className="rounded-lg border border-border bg-muted/30 p-4 space-y-2"

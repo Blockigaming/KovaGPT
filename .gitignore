@@ -54,3 +54,7 @@ artifacts/ui-parity/computed-styles/*
 !artifacts/ui-parity/computed-styles/comparison.json
 
 /.nitro/
+
+# Local Python verification caches
+__pycache__/
+*.pyc

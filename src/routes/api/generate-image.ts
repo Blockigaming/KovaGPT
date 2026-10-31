@@ -1,3 +1,5 @@
+import { IMAGE_SHAPES, supportsCustomImageSizes } from "@/lib/multimodal/image-size-policy.mjs";
+import { imageModel } from "@/lib/ai/provider.server";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   assertFeatureEnabled,
@@ -66,7 +68,11 @@ export const Route = createFileRoute("/api/generate-image")({
           const result = {
             editingEnabled: imageEditingEnabled(),
             variationEnabled: false,
-            aspectRatios: ["1:1", "2:3", "3:2"],
+            aspectRatios: IMAGE_SHAPES.filter(
+              (shape) =>
+                supportsCustomImageSizes(imageModel()) || ["1:1", "2:3", "3:2"].includes(shape.id),
+            ).map((shape) => shape.id),
+            customSizesSupported: supportsCustomImageSizes(imageModel()),
           };
           const url = new URL(request.url);
           if (!url.searchParams.has("sources") || !result.editingEnabled) return json(result);

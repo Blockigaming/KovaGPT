@@ -1,5 +1,10 @@
+import {
+  normalizeBrowserActivity,
+  type BrowserActivityMetadata,
+} from "@/lib/browser-activity-contract.mjs";
 import { replaceControlCharacters } from "@/lib/sanitize-text";
 export type ToolActivityType =
+  | "browser_interact"
   | "search_web"
   | "read_source"
   | "project_files"
@@ -48,6 +53,7 @@ export type ToolActivityEvent = {
   timestamp: string;
   parentId?: string;
   metadata?: Record<string, string | number | boolean>;
+  browser?: BrowserActivityMetadata;
 };
 
 let activityCounter = 0;
@@ -56,7 +62,11 @@ export function createToolActivityEvent(
   type: ToolActivityType,
   label: string,
   status: ToolActivityStatus = "pending",
-  options: { parentId?: string; metadata?: Record<string, string | number | boolean> } = {},
+  options: {
+    parentId?: string;
+    metadata?: Record<string, string | number | boolean>;
+    browser?: BrowserActivityMetadata;
+  } = {},
 ): ToolActivityEvent {
   activityCounter += 1;
   return {
@@ -65,6 +75,9 @@ export function createToolActivityEvent(
     label: replaceControlCharacters(label).slice(0, 160),
     status,
     timestamp: new Date().toISOString(),
+    ...(type === "browser_interact" && normalizeBrowserActivity(options.browser)
+      ? { browser: normalizeBrowserActivity(options.browser) }
+      : {}),
     ...(options.parentId ? { parentId: options.parentId } : {}),
     ...(options.metadata ? { metadata: scrubActivityMetadata(options.metadata) } : {}),
   };
@@ -91,5 +104,8 @@ export function activityToSseDelta(event: ToolActivityEvent) {
     timestamp: event.timestamp,
     ...(event.parentId ? { parent_id: event.parentId } : {}),
     ...(event.metadata ? { metadata: event.metadata } : {}),
+    ...(event.type === "browser_interact" && normalizeBrowserActivity(event.browser)
+      ? { browser: normalizeBrowserActivity(event.browser) }
+      : {}),
   };
 }

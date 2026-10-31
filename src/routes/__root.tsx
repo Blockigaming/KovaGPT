@@ -23,6 +23,7 @@ import { useEffect, useLayoutEffect } from "react";
 import { installInputModality } from "@/lib/input-modality.mjs";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 import { DrawerNavigationFocus } from "@/components/DrawerNavigationFocus";
+import { AppAccountGate } from "@/components/AppAccountGate";
 import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 
 const HYDRATION_READY_EVENT = "kova:hydrated";
@@ -355,7 +356,9 @@ function RootComponent() {
         <RootInputModality />
         <RootThemeManager />
         <PlatformRuntime />
-        <Outlet />
+        <AppAccountGate>
+          <Outlet />
+        </AppAccountGate>
         <Toaster />
       </QueryClientProvider>
     </ClerkProvider>

@@ -1,3 +1,8 @@
+import {
+  IMAGE_SHAPES,
+  validCustomImageSize,
+  type ImageShape,
+} from "@/lib/multimodal/image-size-policy.mjs";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import "@/styles/images-collection.css";
 import { imageApiRequest } from "@/lib/image-api-client";
@@ -393,7 +398,9 @@ function ImagesPage() {
   const openHelp = () => navigate({ to: "/help" as never });
 
   const [editSelection, setEditSelection] = useState<ImageEditSelection>(null);
-  const [aspectRatio, setAspectRatio] = useState<"1:1" | "2:3" | "3:2">("1:1");
+  const [aspectRatio, setAspectRatio] = useState<ImageShape>("1:1");
+  const [customWidth, setCustomWidth] = useState("1536");
+  const [customHeight, setCustomHeight] = useState("864");
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -774,6 +781,12 @@ function ImagesPage() {
   async function generate(p: string, returnFocus: HTMLElement | null = null) {
     const trimmed = p.trim();
     if (!trimmed || submittingRef.current) return;
+    if (aspectRatio === "custom" && !validCustomImageSize(`${customWidth}x${customHeight}`)) {
+      setError(
+        "Enter valid custom dimensions: multiples of 16, up to 3840px per edge, 655,360–8,294,400 pixels, and a ratio between 1:3 and 3:1.",
+      );
+      return;
+    }
     if (!isSignedIn || !userKey) {
       setLoginOpen(true);
       return;
@@ -796,6 +809,7 @@ function ImagesPage() {
         {
           prompt: trimmed,
           aspectRatio,
+          ...(aspectRatio === "custom" ? { size: `${customWidth}x${customHeight}` } : {}),
           ...(editSelection
             ? {
                 operation: "edit",
@@ -965,7 +979,9 @@ function ImagesPage() {
               >
                 {error === IMAGE_GENERATION_UNAVAILABLE
                   ? IMAGE_GENERATION_UNAVAILABLE
-                  : "The image could not be generated. Your prompt is kept here. Please try again."}
+                  : error.startsWith("Enter valid custom dimensions:")
+                    ? error
+                    : "Image generation failed. Your prompt is kept here so you can try again."}
               </div>
             )}
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
@@ -983,12 +999,51 @@ function ImagesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1:1">Square 1:1</SelectItem>
-                  <SelectItem value="2:3">Portrait 2:3</SelectItem>
-                  <SelectItem value="3:2">Landscape 3:2</SelectItem>
+                  {IMAGE_SHAPES.map((shape) => (
+                    <SelectItem key={shape.id} value={shape.id}>
+                      {shape.label} · {shape.id}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Custom dimensions</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {aspectRatio === "custom" ? (
+              <fieldset className="kova-image-custom-size">
+                <legend>Custom dimensions</legend>
+                <label>
+                  Width
+                  <input
+                    aria-label="Image width"
+                    type="number"
+                    min={256}
+                    max={3840}
+                    step={16}
+                    value={customWidth}
+                    disabled={loading}
+                    onChange={(event) => setCustomWidth(event.target.value)}
+                  />
+                </label>
+                <span aria-hidden="true">×</span>
+                <label>
+                  Height
+                  <input
+                    aria-label="Image height"
+                    type="number"
+                    min={256}
+                    max={3840}
+                    step={16}
+                    value={customHeight}
+                    disabled={loading}
+                    onChange={(event) => setCustomHeight(event.target.value)}
+                  />
+                </label>
+                <p>
+                  Use multiples of 16. Maximum 3840px per edge; 655,360–8,294,400 pixels total;
+                  ratio 1:3–3:1.
+                </p>
+              </fieldset>
+            ) : null}
             {isSignedIn && userKey && (
               <ImageEditControls
                 key={userKey}

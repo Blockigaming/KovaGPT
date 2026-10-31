@@ -578,7 +578,7 @@ test("unbound browser activity opens an honest detail dialog and restores Output
   assert.deepEqual(f.calls.at(-1), ["focus", target, "https://local.invalid/"]);
 });
 
-test("compact header retains Share in More while preserving visible activity access", () => {
+test("compact header exposes Share and retains the More action and activity access", () => {
   const f = fixture({ compact: true });
   const root = f.render();
   const share = nodes(root).find(
@@ -590,7 +590,7 @@ test("compact header retains Share in More while preserving visible activity acc
   assert.ok(nodes(root).some((n) => n.props["aria-label"] === "Outputs"));
   assert.match(
     readFileSync("src/components/conversation-header.css", "utf8"),
-    /actions-compact \.kova-conversation-share\s*\{\s*display: none/,
+    /actions-compact \.kova-conversation-share\s*\{\s*display: inline-flex/,
   );
 });
 

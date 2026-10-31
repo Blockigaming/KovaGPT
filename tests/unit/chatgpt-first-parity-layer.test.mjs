@@ -44,15 +44,8 @@ test("one reference foundation replaces historical parity override imports", () 
 });
 
 test("current destinations and signed-out controls retain Kova branding", () => {
-  for (const label of [
-    "New chat",
-    "Search",
-    "Projects",
-    "Scheduled tasks",
-    "Library",
-    "Connections",
-  ])
-    assert.match(sidebar, new RegExp(label, "u"));
+  for (const label of ["New chat", "Search", "Projects", "Scheduled tasks", "Library", "Plugins"])
+    assert.match(sidebar + read("src/lib/sidebar-layout.mjs"), new RegExp(label, "u"));
   assert.match(sidebar, /Log in to view saved chats\./u);
   assert.match(sidebar, /<SignInButton mode="modal">/u);
   assert.match(sidebar, /Log in/u);

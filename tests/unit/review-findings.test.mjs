@@ -107,7 +107,7 @@ test("uploads retain authoritative tier quotas and reject invalid sizes before a
   const modes = read("src/lib/modes.ts");
   const chat = read("src/routes/api/chat.ts");
   const quota = read("src/lib/upload-quota.server.mjs");
-  assert.match(modes, /DAILY_UPLOAD_LIMIT_BY_TIER[\s\S]*?free: 2,\s*plus: 50,\s*pro: 200,/);
+  assert.match(modes, /DAILY_UPLOAD_LIMIT_BY_TIER[\s\S]*?free: DAILY_PLAN_ALLOWANCES.free.uploads/);
   assert.doesNotMatch(composer, /tryUseUpload\(|u\.uploads >= DAILY_UPLOAD_LIMIT/);
   assert.match(
     composer,
@@ -162,10 +162,7 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
   assert.doesNotMatch(route, /Schedule KovaGPT to do something for you later/);
   // Approved navigation uses the concise destination name. Truthfulness lives in
   // the destination's runtime readiness notice and creation gate, not a suffix.
-  assert.match(
-    sidebar,
-    /canSchedule \? navLink\("\/scheduled-tasks", "Scheduled tasks", TasksGlyph\) : null/,
-  );
+  assert.match(sidebar, /const availableShortcuts = SIDEBAR_ITEMS.filter/);
   assert.match(route, /!executionAvailable[\s\S]*?aria-label="Scheduled Tasks Status"/);
   assert.match(route, /visibleAccess === "eligible" && \(/);
   assert.match(

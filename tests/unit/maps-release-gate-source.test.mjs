@@ -45,7 +45,7 @@ test("Sidebar exposes and applies the Maps release decision", () => {
   assert.match(sidebar, /mapsReleaseApproved = false/u);
   const expression = sidebar.match(/const availableShortcuts = ([\s\S]*?);\n/u)?.[1];
   assert.ok(expression, "Collapsed navigation must use the approved shortcut filter");
-  const filter = new Function("SIDEBAR_SHORTCUTS", "mapsReleaseApproved", `return ${expression}`);
+  const filter = new Function("SIDEBAR_ITEMS", "mapsReleaseApproved", `return ${expression}`);
   const shortcuts = [
     { id: "maps", to: "/maps" },
     { id: "work", to: "/work" },
@@ -63,7 +63,10 @@ test("Sidebar exposes and applies the Maps release decision", () => {
     /railShortcuts\.map\([\s\S]*?availableShortcuts\.find\([\s\S]*?if \(!shortcut\) return null;[\s\S]*?railLink\(shortcut\.to/,
   );
   assert.doesNotMatch(sidebar, /<Link to="\/maps"/u);
-  assert.match(sidebar, /mapsReleaseApproved \? navLink\("\/maps", "Maps", Map\) : null/u);
+  assert.match(
+    sidebar,
+    /mapsReleaseApproved && railShortcuts\.includes\("maps"\)\s*\?\s*navLink\("\/maps", "Maps", Map\)\s*:\s*null/u,
+  );
 });
 
 test("Maps route metadata does not advertise an unapproved provider experience", () => {

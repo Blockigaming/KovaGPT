@@ -15,7 +15,7 @@ import {
   Paperclip,
   ArrowLeft,
   Files,
-  PanelRightOpen,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { exportConversationMarkdown, type Conversation } from "@/lib/chat-store";
@@ -45,7 +45,7 @@ import { MemorySourcesDialog } from "./MemorySourcesDialog";
 import type { MemorySources } from "@/lib/memory-sources.mjs";
 import { conversationSources, type ConversationBrowserSource } from "@/lib/conversation-sources";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { ConversationSourcesPanel } from "./ConversationSourcesPanel";
+import { ConversationSourcesPanel, ConversationActivitySummary } from "./ConversationSourcesPanel";
 import { PluginsGlyph, LibraryGlyph, ProjectsGlyph } from "./SidebarIcons";
 import "./conversation-header.css";
 
@@ -65,7 +65,7 @@ function focusAfterRemoval() {
 }
 
 function OutputsIcon() {
-  return <PanelRightOpen aria-hidden="true" />;
+  return <SlidersHorizontal aria-hidden="true" />;
 }
 
 function downloadOutput(output: ConversationOutput) {
@@ -102,6 +102,7 @@ export function ConversationHeaderActions({
 }: {
   browserPresentation?: {
     thumbnail: ReactNode;
+    tabCount?: number;
     renderDialog: (props: {
       activity: ConversationBrowserSource;
       onClose: () => void;
@@ -128,7 +129,8 @@ export function ConversationHeaderActions({
     [conversation, isLoaded, isSignedIn, user?.id],
   );
   const hasSources =
-    sourceInventory.web.length +
+    (sourceInventory.providers?.length ?? 0) +
+      sourceInventory.web.length +
       sourceInventory.memory.length +
       sourceInventory.attachments.length +
       sourceInventory.browser.length >
@@ -245,6 +247,12 @@ export function ConversationHeaderActions({
               dialogOpeningRef.current = false;
             }}
           >
+            <ConversationActivitySummary
+              inventory={sourceInventory}
+              browserTabCount={
+                signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
+              }
+            />
             {!hasSources && generatedOutputs.length === 0 && (
               <p className="kova-header-note">No recorded outputs or sources yet.</p>
             )}
@@ -279,6 +287,10 @@ export function ConversationHeaderActions({
               </>
             )}
             <ConversationSourcesPanel
+              showActivity={false}
+              browserTabCount={
+                signedIn && userTier !== "free" ? browserPresentation?.tabCount : undefined
+              }
               browserPreview={
                 signedIn && userTier !== "free" ? browserPresentation?.thumbnail : undefined
               }

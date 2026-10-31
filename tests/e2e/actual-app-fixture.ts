@@ -75,6 +75,18 @@ export async function fixture(
     { theme, owner, saved, chatA, chatB },
   );
   await page.route("**/api/**", (route) => route.fulfill({ json: {} }));
+  await page.route("**/api/chat/history**", (route) =>
+    route.fulfill({
+      json: {
+        ownerId: owner,
+        epoch: "44444444-4444-4444-8444-444444444444",
+        records: [],
+        nextCursor: 0,
+        currentVersion: 0,
+        hasMore: false,
+      },
+    }),
+  );
   await page.route("**/_serverFn/**", (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
     const name = functionNames.get(id) ?? "";

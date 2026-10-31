@@ -4,6 +4,7 @@ import {
   Mic,
   AudioLines,
   Paperclip,
+  Plug,
   Plus,
   Square,
   X,
@@ -1870,140 +1871,6 @@ export function ChatInput({
                 )}
               </Popover>
             )}
-            {(showAddMenu || readOnlyContext) && (
-              <button
-                type="button"
-                className="spec400-toolbar-button spec400-toolbar-icon"
-                aria-label="Context"
-                title="Files, instructions, and saved material"
-                aria-haspopup="dialog"
-                aria-expanded={contextOpen}
-                disabled={disabled && !readOnlyContext}
-                onClick={(event) => openMessageSettings(event.currentTarget)}
-              >
-                <Files aria-hidden="true" />
-                <span className="sr-only">Context</span>
-                {attachments.length > 0 && (
-                  <span className="spec400-context-count">{attachments.length}</span>
-                )}
-              </button>
-            )}
-            <Popover open={optionsOpen} onOpenChange={setOptionsOpen}>
-              {optionsReturnTriggerRef.current ? (
-                <PopoverAnchor virtualRef={plusTriggerRef} />
-              ) : null}
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="spec400-toolbar-button spec400-toolbar-icon"
-                  disabled={disabled}
-                  aria-label="Options"
-                  title="Response format, length, and tone"
-                  aria-haspopup="dialog"
-                  aria-expanded={optionsOpen}
-                  onClick={() => {
-                    optionsReturnTriggerRef.current = null;
-                  }}
-                >
-                  <SlidersHorizontal aria-hidden="true" />
-                  <span className="sr-only">Options</span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                role="dialog"
-                aria-label="Response options"
-                className="spec400-options-panel"
-                onCloseAutoFocus={(event) => {
-                  if (!optionsReturnTriggerRef.current) return;
-                  event.preventDefault();
-                  restoreDialogFocus(optionsReturnTriggerRef.current, optionsReturnUrlRef.current);
-                  optionsReturnTriggerRef.current = null;
-                }}
-                side="top"
-                align="start"
-                sideOffset={8}
-                collisionPadding={12}
-              >
-                <h2>Response options</h2>
-                <p>
-                  Preferences guide replies. Explicit instructions in your message take priority.
-                </p>
-                {responseSettings && onResponseSettingsChange ? (
-                  <>
-                    <label>
-                      Format
-                      <Select
-                        value={responseSettings.responseFormat ?? "automatic"}
-                        onValueChange={(value) =>
-                          onResponseSettingsChange({
-                            responseFormat: value as Settings["responseFormat"],
-                          })
-                        }
-                      >
-                        <SelectTrigger aria-label="Format" className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="automatic">Automatic</SelectItem>
-                          <SelectItem value="plain">Plain text</SelectItem>
-                          <SelectItem value="markdown">Markdown</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </label>
-                    <label>
-                      Length
-                      <Select
-                        value={responseSettings.responseLength}
-                        onValueChange={(value) =>
-                          onResponseSettingsChange({
-                            responseLength: value as Settings["responseLength"],
-                          })
-                        }
-                      >
-                        <SelectTrigger aria-label="Length" className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="short">Concise</SelectItem>
-                          <SelectItem value="medium">Standard</SelectItem>
-                          <SelectItem value="long">Detailed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </label>
-                    <label>
-                      Tone
-                      <Select
-                        value={responseSettings.responseTone ?? "direct"}
-                        onValueChange={(value) =>
-                          onResponseSettingsChange({
-                            responseTone: value as Settings["responseTone"],
-                          })
-                        }
-                      >
-                        <SelectTrigger aria-label="Tone" className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="direct">Direct</SelectItem>
-                          <SelectItem value="formal">Formal</SelectItem>
-                          <SelectItem value="conversational">Conversational</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </label>
-                    <p>
-                      {responseSettings.responseTone === "formal"
-                        ? "Use polished, professional language."
-                        : responseSettings.responseTone === "conversational"
-                          ? "Use a natural, friendly style."
-                          : "Get to the point with clear, straightforward language."}
-                    </p>
-                  </>
-                ) : (
-                  <p>Format, length, and tone preferences are available in Settings → Responses.</p>
-                )}
-                <p>Choose your model from the bottom of the message box.</p>
-              </PopoverContent>
-            </Popover>
           </div>
           <div className="spec400-composer-trailing">
             {canChangeAgent && mode && onModeChange ? (
@@ -2088,6 +1955,200 @@ export function ChatInput({
           </div>
         </div>
       </div>
+      <div
+        className="kova-composer-tray"
+        data-has-add-menu={showAddMenu || undefined}
+        role="group"
+        aria-label="Chat resources"
+      >
+        {showChooseProject && showAddMenu ? (
+          <button
+            type="button"
+            className="kova-composer-tray-action"
+            disabled={!user || disabled || isStreaming}
+            onClick={(event) => {
+              projectTriggerRef.current = event.currentTarget;
+              projectReturnUrlRef.current = window.location.href;
+              setProjectPickerOpen(true);
+            }}
+          >
+            <Folder aria-hidden="true" />
+            <span>Choose project</span>
+          </button>
+        ) : null}
+        {showAddMenu
+          ? (["files", "plugins"] as const).map((section) => (
+              <Popover
+                key={section}
+                open={utilityMenu === section}
+                onOpenChange={(next) => setUtilityMenu(next ? section : null)}
+              >
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="kova-composer-tray-action"
+                    disabled={disabled || isStreaming}
+                    aria-label={section === "files" ? "Files" : "Plugins"}
+                    aria-haspopup="dialog"
+                  >
+                    {section === "files" ? (
+                      <Paperclip aria-hidden="true" />
+                    ) : (
+                      <Plug aria-hidden="true" />
+                    )}
+                    <span>{section === "files" ? "Files" : "Plugins"}</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  role="dialog"
+                  aria-label={section === "files" ? "Choose files" : "Choose plugins"}
+                  className="kova-composer-menu"
+                  side="top"
+                  align="start"
+                  collisionPadding={12}
+                  onCloseAutoFocus={(event) => {
+                    if (libraryOpen || contextOpen || signInRequest) event.preventDefault();
+                  }}
+                >
+                  {renderComposerActions(false, section)}
+                </PopoverContent>
+              </Popover>
+            ))
+          : null}
+        <div className="kova-composer-tray-preferences">
+          {(showAddMenu || readOnlyContext) && (
+            <button
+              type="button"
+              className="spec400-toolbar-button spec400-toolbar-icon"
+              aria-label="Context"
+              title="Files, instructions, and saved material"
+              aria-haspopup="dialog"
+              aria-expanded={contextOpen}
+              disabled={disabled && !readOnlyContext}
+              onClick={(event) => openMessageSettings(event.currentTarget)}
+            >
+              <Files aria-hidden="true" />
+              <span>Context</span>
+              {attachments.length > 0 && (
+                <span className="spec400-context-count">{attachments.length}</span>
+              )}
+            </button>
+          )}
+          <Popover open={optionsOpen} onOpenChange={setOptionsOpen}>
+            {optionsReturnTriggerRef.current ? <PopoverAnchor virtualRef={plusTriggerRef} /> : null}
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="spec400-toolbar-button spec400-toolbar-icon"
+                disabled={disabled}
+                aria-label="Options"
+                title="Response format, length, and tone"
+                aria-haspopup="dialog"
+                aria-expanded={optionsOpen}
+                onClick={() => {
+                  optionsReturnTriggerRef.current = null;
+                }}
+              >
+                <SlidersHorizontal aria-hidden="true" />
+                <span>Options</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              role="dialog"
+              aria-label="Response options"
+              className="spec400-options-panel"
+              onCloseAutoFocus={(event) => {
+                if (!optionsReturnTriggerRef.current) return;
+                event.preventDefault();
+                restoreDialogFocus(optionsReturnTriggerRef.current, optionsReturnUrlRef.current);
+                optionsReturnTriggerRef.current = null;
+              }}
+              side="top"
+              align="start"
+              sideOffset={8}
+              collisionPadding={12}
+            >
+              <h2>Response options</h2>
+              <p>Preferences guide replies. Explicit instructions in your message take priority.</p>
+              {responseSettings && onResponseSettingsChange ? (
+                <>
+                  <label>
+                    Format
+                    <Select
+                      value={responseSettings.responseFormat ?? "automatic"}
+                      onValueChange={(value) =>
+                        onResponseSettingsChange({
+                          responseFormat: value as Settings["responseFormat"],
+                        })
+                      }
+                    >
+                      <SelectTrigger aria-label="Format" className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="automatic">Automatic</SelectItem>
+                        <SelectItem value="plain">Plain text</SelectItem>
+                        <SelectItem value="markdown">Markdown</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  <label>
+                    Length
+                    <Select
+                      value={responseSettings.responseLength}
+                      onValueChange={(value) =>
+                        onResponseSettingsChange({
+                          responseLength: value as Settings["responseLength"],
+                        })
+                      }
+                    >
+                      <SelectTrigger aria-label="Length" className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="short">Concise</SelectItem>
+                        <SelectItem value="medium">Standard</SelectItem>
+                        <SelectItem value="long">Detailed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  <label>
+                    Tone
+                    <Select
+                      value={responseSettings.responseTone ?? "direct"}
+                      onValueChange={(value) =>
+                        onResponseSettingsChange({
+                          responseTone: value as Settings["responseTone"],
+                        })
+                      }
+                    >
+                      <SelectTrigger aria-label="Tone" className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="direct">Direct</SelectItem>
+                        <SelectItem value="formal">Formal</SelectItem>
+                        <SelectItem value="conversational">Conversational</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  <p>
+                    {responseSettings.responseTone === "formal"
+                      ? "Use polished, professional language."
+                      : responseSettings.responseTone === "conversational"
+                        ? "Use a natural, friendly style."
+                        : "Get to the point with clear, straightforward language."}
+                  </p>
+                </>
+              ) : (
+                <p>Format, length, and tone preferences are available in Settings → Responses.</p>
+              )}
+              <p>Choose your model from the bottom of the message box.</p>
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
       {pasteOffer && (
         <p className="spec400-composer-hint" role="status">
           {pasteOffer.error ??

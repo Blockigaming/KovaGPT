@@ -1,4 +1,5 @@
 import type { Activity, Attachment, Conversation } from "./chat-store";
+import { normalizeBrowserActivity } from "./browser-activity-contract.mjs";
 import {
   normalizeMemorySources,
   type MemorySourceRef,
@@ -42,6 +43,7 @@ export type ConversationAttachmentSource = {
 };
 
 export type ConversationBrowserSource = {
+  browser?: import("./browser-activity-contract.mjs").BrowserActivityMetadata;
   id: string;
   kind: "browser";
   messageId: string;
@@ -52,7 +54,28 @@ export type ConversationBrowserSource = {
   status: "active" | "completed" | "failed" | "canceled";
 };
 
+export type ConversationProviderSource = {
+  id: string;
+  name: string;
+  provider: "github" | "supabase" | "firecrawl" | "library" | "files" | "google" | "microsoft";
+  messageIds: string[];
+  status: Activity["status"];
+};
+const RECORDED_PROVIDERS: [RegExp, ConversationProviderSource["provider"], string][] = [
+  [/^(?:mcp__[a-z0-9_]+__)?github(?:__|_|$)/u, "github", "GitHub"],
+  [/^(?:mcp__[a-z0-9_]+__)?supabase(?:__|_|$)/u, "supabase", "Supabase"],
+  [/^(?:mcp__[a-z0-9_]+__)?firecrawl(?:__|_|$)/u, "firecrawl", "Firecrawl"],
+  [
+    /^(?:(?:mcp__[a-z0-9_]+__)?library(?:__|_)|search_library|read_library|list_library)/u,
+    "library",
+    "Library",
+  ],
+  [/^(?:read_file|file_search|files_)/u, "files", "Files"],
+  [/^(?:google_|gmail_|drive_)/u, "google", "Google"],
+  [/^(?:microsoft_|outlook_|onedrive_)/u, "microsoft", "Microsoft"],
+];
 export type ConversationSourceInventory = {
+  providers?: ConversationProviderSource[];
   web: ConversationWebSource[];
   memory: ConversationMemorySource[];
   attachments: ConversationAttachmentSource[];
@@ -100,6 +123,7 @@ export function conversationSources(
   conversation: Conversation,
   ownerId: string | null = null,
 ): ConversationSourceInventory {
+  const providers = new Map<string, ConversationProviderSource>();
   const web = new Map<string, ConversationWebSource>();
   const memory = new Map<string, ConversationMemorySource>();
   const attachments: ConversationAttachmentSource[] = [];
@@ -165,6 +189,30 @@ export function conversationSources(
         });
     }
 
+    for (const activity of message.activities ?? []) {
+      if (
+        !activity ||
+        typeof activity.tool !== "string" ||
+        !Object.hasOwn(BROWSER_STATUSES, activity.status)
+      )
+        continue;
+      const match = RECORDED_PROVIDERS.find(([pattern]) => pattern.test(activity.tool));
+      if (!match) continue;
+      const [, provider, name] = match;
+      const existing = providers.get(provider);
+      if (existing) {
+        includeMessage(existing, message.id);
+        existing.status = activity.status;
+      } else
+        providers.set(provider, {
+          id: `provider:${provider}`,
+          name,
+          provider,
+          messageIds: [message.id],
+          status: activity.status,
+        });
+    }
+
     // Activities are per-tool snapshots in the chat stream. If a fixture or
     // restored message contains several snapshots, the latest valid one wins.
     let browserActivity: Activity | undefined;
@@ -178,6 +226,7 @@ export function conversationSources(
     }
     if (browserActivity)
       browser.push({
+        browser: normalizeBrowserActivity(browserActivity.browser),
         id: `${message.id}:browser:browser_interact`,
         kind: "browser",
         messageId: message.id,
@@ -187,5 +236,11 @@ export function conversationSources(
       });
   }
 
-  return { web: [...web.values()], memory: [...memory.values()], attachments, browser };
+  return {
+    ...(providers.size ? { providers: [...providers.values()] } : {}),
+    web: [...web.values()],
+    memory: [...memory.values()],
+    attachments,
+    browser,
+  };
 }

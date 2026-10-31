@@ -1,3 +1,4 @@
+import * as planUsage from "../../src/lib/plan-usage-policy.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -14,6 +15,7 @@ function sourceModule(path) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   new Function("exports", "require", code)(exports, (name) => {
+    if (name === "./plan-usage-policy.mjs") return planUsage;
     assert.ok(name.startsWith("@/lib/"));
     return sourceModule(name.replace("@/", "src/") + (name.endsWith(".mjs") ? "" : ".ts"));
   });

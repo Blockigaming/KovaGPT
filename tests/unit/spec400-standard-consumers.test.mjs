@@ -36,7 +36,12 @@ test("phone toasts occupy the safe top region clear of expanded composers", () =
 });
 
 test("pending schedule, share, upload and rename retain labels with a16px decorative spinner", () => {
-  for (const name of ["ScheduledTaskEditor", "ShareChatDialog", "LibraryUploadDialog", "Sidebar"]) {
+  for (const name of [
+    "ScheduledTaskEditor",
+    "EmailShareChatDialog",
+    "LibraryUploadDialog",
+    "Sidebar",
+  ]) {
     const source = read(name);
     assert.match(source, /className="spec400-loading-spinner" aria-hidden="true"/);
     assert.match(source, /Saving…|Sharing…/);

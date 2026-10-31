@@ -577,7 +577,7 @@ function ContextPacksPage() {
                               );
                               return;
                             }
-                            navigate({ to: "/work" });
+                            navigate({ to: "/" });
                           }}
                           className="  border  text-sm hover:bg-accent"
                         >
