@@ -32,6 +32,14 @@ import {
   type GitHubManagement,
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
+import { ConnectedAccountManager } from "@/components/ConnectedAccountManager";
+import { useConnectedAccounts } from "@/hooks/use-connected-accounts";
+import {
+  CONNECTION_FLOWS,
+  canReadConnection,
+  connectionAccounts,
+  hasConnectionScopes,
+} from "@/integrations/connection-flows.mjs";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -89,6 +97,7 @@ const WORKING_IDS = new Set<string>([
   "google-drive",
   "google-calendar",
   "github",
+  ...Object.keys(CONNECTION_FLOWS),
 ]);
 
 const CONFIGURED_CONNECTORS = WORKING_IDS;
@@ -807,6 +816,8 @@ function AppsPage() {
   const userKey = user?.id ?? null;
   const workflowSkillsAvailable = user?.primaryEmailAddress?.verification?.status === "verified";
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const otherConnections = useConnectedAccounts(principal, Boolean(isLoaded && isSignedIn));
+  const refreshOtherConnections = otherConnections.reload;
   const activityKey = isLoaded ? principalScopedStorageKey("kova-app-activity", userKey) : null;
   const principalRef = useRef(principal);
   principalRef.current = principal;
@@ -1249,6 +1260,44 @@ function AppsPage() {
     ? getPluginPreviewProvider(visibleSelectedApp.id)
     : undefined;
 
+  useEffect(() => {
+    if (!activityReady || !isSignedIn) return;
+    const url = new URL(window.location.href);
+    if (
+      !url.searchParams.has("integration_connected") &&
+      !url.searchParams.has("integration_error")
+    )
+      return;
+    const id = url.searchParams.get("connection_view");
+    if (id && Object.hasOwn(CONNECTION_FLOWS, id)) {
+      const item = LAUNCH_PLUGIN_REVIEW_CATALOG.find(
+        (entry) => entry.connector.id === id,
+      )?.connector;
+      if (item) setSelectedApp(item);
+    }
+    if (url.searchParams.has("integration_error"))
+      toast.error(
+        "The provider connection was not completed. Review the account status and try again.",
+      );
+    else toast.message("Authorization returned. Review the account and search to verify access.");
+    for (const key of ["integration_connected", "integration_error", "connection_view"])
+      url.searchParams.delete(key);
+    window.history.replaceState(window.history.state, "", url);
+    void refreshOtherConnections();
+  }, [activityReady, isSignedIn, refreshOtherConnections]);
+
+  const configuredOf = (id: string) => {
+    if (id === "github") return visibleGithubData?.configured !== false;
+    const flow = CONNECTION_FLOWS[id];
+    if (flow)
+      return (
+        otherConnections.data?.configuredProviders.some(
+          (provider) => provider.id === flow.provider,
+        ) === true
+      );
+    return CONFIGURED_CONNECTORS.has(id);
+  };
+
   const stateOf = (id: string): ConnState => {
     if (!isSignedIn) return "idle";
     if (isGoogleId(id)) {
@@ -1272,6 +1321,22 @@ function AppsPage() {
         return "connected";
       return "idle";
     }
+    if (CONNECTION_FLOWS[id]) {
+      if (otherConnections.loading) return "syncing";
+      if (otherConnections.error || !configuredOf(id)) return "temporarily_unavailable";
+      const accounts = connectionAccounts(otherConnections.data?.accounts ?? [], id);
+      if (accounts.some((account) => canReadConnection(account, id))) return "connected";
+      if (
+        accounts.some(
+          (account) =>
+            account.status === "expired" ||
+            (account.token_expires_at &&
+              Date.parse(account.token_expires_at) <= Date.now() + 30_000),
+        )
+      )
+        return "reauthorize";
+      return accounts.length ? "permission_incomplete" : "idle";
+    }
     return "temporarily_unavailable";
   };
 
@@ -1284,6 +1349,12 @@ function AppsPage() {
       );
     if (id === "github")
       return !!visibleGithubData?.accounts.some((account) => account.status !== "disconnected");
+    if (CONNECTION_FLOWS[id])
+      return connectionAccounts(otherConnections.data?.accounts ?? [], id).some(
+        (account) =>
+          account.status !== "revoked" &&
+          hasConnectionScopes(account.granted_scopes, CONNECTION_FLOWS[id].scopes),
+      );
     return false;
   };
   const catalog = LAUNCH_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector);
@@ -1292,10 +1363,17 @@ function AppsPage() {
     ? "unknown"
     : !isSignedIn
       ? "ready"
-      : !activityReady || visibleGoogleLoading || googleBusy || githubLoading
+      : !activityReady ||
+          visibleGoogleLoading ||
+          googleBusy ||
+          githubLoading ||
+          otherConnections.loading
         ? "checking"
         : githubLoadError ||
-            [...WORKING_IDS].some((id) => stateOf(id) === "temporarily_unavailable")
+            otherConnections.error ||
+            [...WORKING_IDS]
+              .filter((id) => !CONNECTION_FLOWS[id] || configuredOf(id))
+              .some((id) => stateOf(id) === "temporarily_unavailable")
           ? "unavailable"
           : !visibleGoogleStatus || !visibleGithubData
             ? "unknown"
@@ -1346,11 +1424,7 @@ function AppsPage() {
           key={item.id}
           item={item}
           state={stateOf(item.id)}
-          configured={
-            item.id === "github"
-              ? visibleGithubData?.configured !== false
-              : CONFIGURED_CONNECTORS.has(item.id)
-          }
+          configured={configuredOf(item.id)}
           onDetails={(trigger) => {
             detailsReturnRef.current = {
               trigger,
@@ -1397,11 +1471,7 @@ function AppsPage() {
               <div className="spec400-plugin-detail-body">
                 <StatusBadge
                   state={stateOf(visibleSelectedApp.id)}
-                  configured={
-                    visibleSelectedApp.id === "github"
-                      ? visibleGithubData?.configured !== false
-                      : CONFIGURED_CONNECTORS.has(visibleSelectedApp.id)
-                  }
+                  configured={configuredOf(visibleSelectedApp.id)}
                 />
                 <section className="spec400-plugin-detail-section">
                   <h3>Capabilities and permissions</h3>
@@ -1598,6 +1668,15 @@ function AppsPage() {
                     data={visibleGithubData}
                     loadError={githubLoadError}
                     reload={refreshGitHub}
+                  />
+                ) : CONNECTION_FLOWS[visibleSelectedApp.id] ? (
+                  <ConnectedAccountManager
+                    key={`${principal}:${visibleSelectedApp.id}`}
+                    id={visibleSelectedApp.id}
+                    data={otherConnections.data}
+                    loading={otherConnections.loading}
+                    error={otherConnections.error}
+                    reload={otherConnections.reload}
                   />
                 ) : null}
                 <section className="spec400-plugin-detail-section">

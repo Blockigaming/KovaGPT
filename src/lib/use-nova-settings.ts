@@ -36,10 +36,12 @@ export function useNovaSettings(userKey: string | null, principalResolved: boole
     principal: string | null;
     generation: number;
     settings: Settings;
+    persist: boolean;
   }>({
     principal: null,
     generation: 0,
     settings: DEFAULT_SETTINGS,
+    persist: false,
   });
   const settings =
     principal !== null &&
@@ -65,6 +67,7 @@ export function useNovaSettings(userKey: string | null, principalResolved: boole
           principal,
           generation,
           settings: typeof next === "function" ? next(current) : next,
+          persist: true,
         };
       });
     },
@@ -75,12 +78,12 @@ export function useNovaSettings(userKey: string | null, principalResolved: boole
     const generation = generationRef.current + 1;
     generationRef.current = generation;
     if (!principalResolved || principal === null) {
-      setState({ principal: null, generation, settings: DEFAULT_SETTINGS });
+      setState({ principal: null, generation, settings: DEFAULT_SETTINGS, persist: false });
       return;
     }
     const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
     if (generation !== generationRef.current) return;
-    setState({ principal, generation, settings: loaded });
+    setState({ principal, generation, settings: loaded, persist: false });
     applyThemeMode(loaded.mode ?? "system");
   }, [principal, principalResolved, userKey]);
 
@@ -100,7 +103,7 @@ export function useNovaSettings(userKey: string | null, principalResolved: boole
           return previous;
         return JSON.stringify(previous.settings) === JSON.stringify(loaded)
           ? previous
-          : { ...previous, settings: loaded };
+          : { ...previous, settings: loaded, persist: false };
       });
     };
     window.addEventListener("storage", sync);
@@ -113,7 +116,7 @@ export function useNovaSettings(userKey: string | null, principalResolved: boole
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       const generation = generationRef.current + 1;
       generationRef.current = generation;
-      setState({ principal: null, generation, settings: DEFAULT_SETTINGS });
+      setState({ principal: null, generation, settings: DEFAULT_SETTINGS, persist: false });
     };
     window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
@@ -129,6 +132,9 @@ export function useNovaSettings(userKey: string | null, principalResolved: boole
       return;
     applyThemeMode(state.settings.mode ?? "dark");
     applyReadingPreferences(document.documentElement, state.settings);
+    // Hydration and cross-tab delivery only apply the snapshot. Echoing a
+    // passive snapshot can overwrite a newer edit committed by another tab.
+    if (!state.persist) return;
     try {
       saveStoredSettings(userKey, state.settings);
       window.dispatchEvent(

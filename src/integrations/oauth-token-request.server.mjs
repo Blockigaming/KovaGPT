@@ -31,3 +31,52 @@ export function oauthTokenRequest({
     body,
   };
 }
+
+// Slack returns a bot token at the top level. Message search must use the
+// explicitly granted user token under authed_user, never the bot credential.
+export function selectOAuthTokens(providerId, payload) {
+  if (!payload || typeof payload !== "object" || payload.error || payload.ok === false)
+    throw new Error("oauth_token_exchange_failed");
+  const tokens = providerId === "slack" ? payload.authed_user : payload;
+  if (
+    !tokens ||
+    typeof tokens.access_token !== "string" ||
+    !tokens.access_token ||
+    (providerId === "slack" && tokens.token_type !== "user")
+  )
+    throw new Error("oauth_access_token_missing");
+  return {
+    access_token: tokens.access_token,
+    ...(typeof tokens.refresh_token === "string" ? { refresh_token: tokens.refresh_token } : {}),
+    ...(Number.isFinite(tokens.expires_in) && tokens.expires_in > 0
+      ? { expires_in: tokens.expires_in }
+      : {}),
+    ...(typeof tokens.scope === "string" ? { scope: tokens.scope } : {}),
+  };
+}
+
+export function oauthRefreshRequest({ providerId, clientId, clientSecret, refreshToken }) {
+  if (!["microsoft", "linear", "slack"].includes(providerId))
+    throw new Error("refresh_not_supported");
+  if (!clientId || !clientSecret || !refreshToken) throw new Error("refresh_not_configured");
+  return {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+    }),
+    redirect: "error",
+    signal: AbortSignal.timeout(15_000),
+  };
+}
+
+export function selectRefreshTokens(providerId, payload) {
+  if (providerId === "slack" && payload?.token_type !== "user")
+    throw new Error("oauth_access_token_missing");
+  const tokens = selectOAuthTokens("refresh", payload);
+  if (!tokens.expires_in) throw new Error("refresh_expiry_missing");
+  return tokens;
+}
