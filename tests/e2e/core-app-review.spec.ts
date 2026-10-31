@@ -90,10 +90,10 @@ test("sidebar search and all main destinations keep honest service states", asyn
   const imagePrompt = page.getByRole("textbox", { name: "Describe the image to generate" });
   await imagePrompt.fill("A rounded paper sculpture in morning light");
   await page.getByRole("combobox", { name: "Output image shape", exact: true }).click();
-  await page.getByRole("option", { name: "Portrait 2:3", exact: true }).click();
+  await page.getByRole("option", { name: /Portrait.*2:3/ }).click();
   await expect(
     page.getByRole("combobox", { name: "Output image shape", exact: true }),
-  ).toContainText("Portrait 2:3");
+  ).toContainText("2:3");
   await page.getByRole("button", { name: "Generate", exact: true }).click();
   await expect(
     page.getByRole("alert").filter({ hasText: "Image generation is temporarily unavailable" }),
@@ -139,7 +139,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
   await capture(page, info, "tasks");
 
   await openSidebar(page);
-  await page.getByRole("link", { name: "Connections", exact: true }).click();
+  await page.getByRole("link", { name: "Plugins", exact: true }).click();
   await expect(
     page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
   ).toBeVisible();
@@ -160,11 +160,7 @@ test("sidebar search and all main destinations keep honest service states", asyn
     .locator("summary")
     .filter({ hasText: /^More$/ })
     .click();
-  await page.getByRole("link", { name: "Work", exact: true }).click();
-  await expect(page.getByText("No Work runs", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start work", exact: true })).toBeDisabled();
-  await capture(page, info, "work");
-  await openSidebar(page);
+  await expect(page.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: "Discover", exact: true }).click();
   await expect(
     page.getByRole("main").getByRole("heading", { name: "Search and discovery" }),

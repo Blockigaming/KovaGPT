@@ -10,7 +10,7 @@ for (const theme of ["light", "dark"] as const) {
     page.on("pageerror", (error) => {
       if (/ResizeObserver loop/i.test(error.message)) resizeErrors.push(error.message);
     });
-    await fixture(page, theme, false);
+    await fixture(page, theme, true);
     await page.goto("/");
     await waitForKovaHydration(page);
     const composer = page.locator(".spec400-composer");

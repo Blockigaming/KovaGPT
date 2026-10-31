@@ -5,7 +5,7 @@ import { NovaLogo } from "@/components/NovaLogo";
 
 export default function AccountWelcome() {
   return (
-    <main id="main-content" className="kova-account-gate">
+    <main id="main-content" className="kova-account-gate" tabIndex={-1}>
       <div className="kova-account-gate-brand">
         <NovaLogo decorative className="h-8 w-8" /> KovaGPT
       </div>

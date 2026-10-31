@@ -12,7 +12,9 @@ test("Connections navigation and composer connector entry are truthful and reach
   const sidebar = await read("src/components/Sidebar.tsx");
   const composer = await read("src/components/ChatInput.tsx");
   const palette = await read("src/components/CommandPalette.tsx");
-  assert.match(sidebar, /navLink\("\/apps", "Connections", PluginsGlyph\)/);
+  const catalog = await read("src/lib/sidebar-layout.mjs");
+  assert.match(catalog, /label: "Plugins", to: "\/apps"/);
+  assert.match(sidebar, /navLink\(item.to, item.label, SHORTCUT_ICONS\[id\]\)/);
   assert.match(composer, /<ComposerPluginList/);
   const plugins = await read("src/components/ComposerPluginList.tsx");
   assert.match(plugins, /to="\/apps"/);

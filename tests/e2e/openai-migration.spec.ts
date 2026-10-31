@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 import { revealSidebar } from "./current-ui";
+import { fixture } from "./actual-app-fixture";
+import { waitForCommittedChat } from "./chat-history-commit";
+
+test.beforeEach(async ({ page }) => {
+  await fixture(page, "light", true, false, "free", { preserveStorageOnReload: true });
+});
 
 const sse = (...chunks: string[]) =>
   chunks
@@ -11,7 +17,7 @@ const sse = (...chunks: string[]) =>
     )
     .join("");
 
-test("guest chat consumes Kova SSE once and keeps page and menu identity", async ({
+test("authenticated chat consumes Kova SSE once and keeps page and menu identity", async ({
   page,
 }, testInfo) => {
   const errors: string[] = [];
@@ -20,14 +26,6 @@ test("guest chat consumes Kova SSE once and keeps page and menu identity", async
       errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("https://**", async (route) => {
-    const script = route.request().resourceType() === "script";
-    await route.fulfill({
-      status: 200,
-      contentType: script ? "application/javascript" : "application/json",
-      body: script ? "" : "{}",
-    });
-  });
   await page.route("**/api/title", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: '{"title":"Mock chat"}' }),
   );
@@ -70,18 +68,23 @@ test("guest chat consumes Kova SSE once and keeps page and menu identity", async
   await page.getByTestId("send-button").click();
   await expect(page.getByText("Mocked OpenAI response", { exact: false })).toBeVisible();
   await expect.poll(() => requests).toBe(1);
-  await expect
-    .poll(() =>
-      page.evaluate(() =>
-        Array.from({ length: localStorage.length }, (_, index) =>
-          localStorage.getItem(localStorage.key(index) ?? ""),
-        ).some((value) => value?.includes("Mocked OpenAI response")),
-      ),
-    )
-    .toBe(true);
+  await revealSidebar(page);
+  await expect(
+    page.getByRole("button", { name: "Open chat Mock chat", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: /Chat changes are waiting to sync|Chat history is up to date/ }),
+  ).toBeVisible();
+  await waitForCommittedChat(page, "Mocked OpenAI response");
   await page.reload();
   await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeVisible();
+  await revealSidebar(page);
+  await page.getByRole("button", { name: "Open chat Mock chat", exact: true }).click();
+  await expect(page.getByText("Mocked OpenAI response", { exact: false })).toBeVisible();
+  expect(requests).toBe(1);
   expect(errors).toEqual([]);
 });
 

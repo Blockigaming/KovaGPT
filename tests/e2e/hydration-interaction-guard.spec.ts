@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
+import { fixture } from "./actual-app-fixture";
 
 test("SSR controls wait for hydration and early shortcuts replay once", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1440x900");
+  await fixture(page, "dark", true);
 
   const hydrationErrors: string[] = [];
   const captureHydrationError = (message: string) => {
@@ -20,14 +22,17 @@ test("SSR controls wait for hydration and early shortcuts replay once", async ({
     releaseScripts = resolve;
   });
   await page.route("**/*", async (route) => {
-    if (route.request().resourceType() === "script") await scriptsReleased;
-    await route.continue();
+    if (route.request().resourceType() === "script") {
+      await scriptsReleased;
+      await route.continue();
+    } else await route.fallback();
   });
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "pending");
   await expect(page.getByText("Reconnect to send", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeDisabled();
+  await expect(page.getByRole("main")).toHaveAttribute("aria-busy", "true");
+  await expect(page.getByRole("button", { name: "Attach", exact: true })).toHaveCount(0);
 
   await page.evaluate(() => {
     const replayed: string[] = [];
@@ -123,9 +128,8 @@ for (const { mode, system, dark } of themeCases) {
       await expect(root).not.toHaveClass(/\bdark\b/);
       await expect(page.locator("body")).toHaveCSS("background-color", background);
       await expect(page.locator("body")).toHaveCSS("color", foreground);
-      const serverControl = await page
-        .getByRole("button", { name: "Attach", exact: true })
-        .elementHandle();
+      await expect(page.getByRole("main")).toHaveAttribute("aria-busy", "true");
+      await expect(page.getByRole("button", { name: "Attach", exact: true })).toHaveCount(0);
       await page.evaluate(
         () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
       );
@@ -134,7 +138,10 @@ for (const { mode, system, dark } of themeCases) {
       await expect(root).toHaveClass(dark ? /\bdark\b/ : /^(?!.*\bdark\b)/);
       await expect(page.locator("body")).toHaveCSS("background-color", background);
       await expect(page.locator("body")).toHaveCSS("color", foreground);
-      expect(await serverControl!.evaluate((element) => element.isConnected)).toBe(true);
+      await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+      await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(
+        0,
+      );
       const frames = await page.evaluate(async () => {
         for (let i = 0; i < 12; i++)
           await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -146,13 +153,11 @@ for (const { mode, system, dark } of themeCases) {
       expect(await page.evaluate(() => "__kovaRestoreThemeSelectors" in window)).toBe(false);
 
       if (mode === "dark") {
-        if (testInfo.project.name === "phone-390x844")
-          await page.getByRole("button", { name: "Open menu" }).click();
-        await page.getByRole("button", { name: "Settings", exact: true }).click();
-        await page.getByRole("combobox", { name: "Appearance" }).click();
-        await page.getByRole("option", { name: "Light", exact: true }).click();
-        await expect(root).not.toHaveClass(/\bdark\b/);
-        await expect(page.locator("body")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+        await page.goto("/settings/appearance");
+        await waitForKovaHydration(page);
+        await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+        await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toHaveCount(0);
+        await expect(page.locator("body")).toHaveCSS("background-color", background);
       }
     } finally {
       releaseScripts();

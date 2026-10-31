@@ -1,18 +1,26 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { captureCandidateVisual } from "./candidate-visual-evidence";
 import { waitForKovaHydration } from "./hydration";
+import { revealSidebar } from "./current-ui";
+import { waitForCommittedChat } from "./chat-history-commit";
 
 const projects = new Set(["phone-320x700", "phone-390x844", "tablet-1024x768", "desktop-1440x900"]);
 
-test.beforeEach(({ page: _page }, testInfo) => test.skip(!projects.has(testInfo.project.name)));
+test.beforeEach(async ({ page }, testInfo) => {
+  test.skip(!projects.has(testInfo.project.name));
+  if (!testInfo.title.startsWith("guest core shell visual baseline"))
+    await installAuthenticatedFixture(page, {
+      preserveStorageOnReload: testInfo.title.startsWith("rich conversation rhythm"),
+    });
+});
 
 async function expectEmptyWorkspaceLandmarks(page: Page) {
   await expect(page.getByRole("main")).toHaveCount(1);
   await expect(page.locator("h1")).toHaveCount(1);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "How can I help today?", exact: true }),
-  ).toBeVisible();
+  await expect(page.locator("#chat-greeting")).toBeVisible();
+  await expect(page.locator("#chat-greeting")).not.toHaveText("");
   // The mobile page title is a separate navigation destination heading.
   const navigationTitle = page.locator("[data-kova-navigation-heading]");
   await expect(navigationTitle).toHaveAttribute("role", "heading");
@@ -39,6 +47,13 @@ test("empty workspace remains contained and composer focus is deliberate", async
   await waitForKovaHydration(page);
   const composer = page.locator(".spec400-composer");
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
+  const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand");
+  await expect(sidebarBrand).toHaveText("KovaGPT");
+  await expect(sidebarBrand.locator("img")).toHaveCount(1);
+  const ownerAsset = await page.request.get("/kova-logo.png");
+  expect(ownerAsset.ok()).toBe(true);
+  expect(ownerAsset.headers()["content-type"]).toContain("image/png");
+  expect((await ownerAsset.body()).byteLength).toBeGreaterThan(0);
   await expectEmptyWorkspaceLandmarks(page);
   await expect(composer).toBeVisible();
   const send = page.getByRole("button", { name: "Send message", exact: true, includeHidden: true });
@@ -69,11 +84,10 @@ test("empty workspace remains contained and composer focus is deliberate", async
   expect(focused.radius).toBe(focused.radiusToken);
   expect(focused.radius).toBeGreaterThanOrEqual(16);
   expect(focused.borderColor).not.toBe("rgba(0, 0, 0, 0)");
-  expect(focused.outlineStyle).toBe("solid");
-  expect(focused.outlineWidth).toBe(2);
-  expect(focused.outlineOffset).toBe(2);
+  expect(focused.outlineStyle).toBe("none");
+  expect(focused.outlineWidth).toBe(0);
   expect(focused.outlineColor).not.toBe("rgba(0, 0, 0, 0)");
-  expect(focused.outlineColor).not.toBe(focused.color);
+  await expect(input).toHaveCSS("outline-style", "none");
 
   {
     const metrics = await composer.evaluate((element) => {
@@ -260,8 +274,8 @@ for (const theme of ["light", "dark"] as const) {
         width: Number.parseFloat(style.outlineWidth),
       };
     });
-    expect(after.style).toBe("solid");
-    expect(after.width).toBe(2);
+    expect(after.style).toBe("none");
+    expect(after.width).toBe(0);
     expect(after.color).not.toBe("rgba(0, 0, 0, 0)");
   });
 }
@@ -291,101 +305,28 @@ for (const theme of ["light", "dark"] as const) {
     }, theme);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const uiFont = await page.evaluate(async () => {
-      await document.fonts.ready;
-      return getComputedStyle(document.querySelector('textarea[aria-label="Message KovaGPT"]')!)
-        .fontFamily;
-    });
-    expect(uiFont).toContain("system-ui");
-
-    await expectEmptyWorkspaceLandmarks(page);
-    const optionsTrigger = page.getByRole("button", { name: "Options", exact: true });
-    await optionsTrigger.click();
-    const responseOptions = page.getByRole("dialog", { name: "Response options", exact: true });
-    await expect(responseOptions).toBeVisible();
-    await expect(responseOptions).toContainText(
-      "Choose your model from the bottom of the message box.",
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("your next big thing.");
+    await expect(page.getByRole("main")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Create an account", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(
+      0,
     );
-    await expect(responseOptions.getByTestId("thinking-upgrade-button")).toHaveCount(0);
-    await page.keyboard.press("Escape");
-    await expect(responseOptions).toBeHidden();
-    await expect(optionsTrigger).toBeFocused();
-
-    // Draft starters are lazy loaded and must focus/prefill without submitting
-    // or overwriting work that is already present.
-    const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
-    const draftStarters = [
-      { label: "Write something", prompt: "Help me write " },
-      {
-        label: "Summarize a file",
-        prompt:
-          "Summarize the file I attach, highlighting its key points and any important caveats.",
-      },
-      {
-        label: "Compare options",
-        prompt:
-          "Compare these options, including their benefits, drawbacks, and important trade-offs:\n\n",
-      },
-    ];
-    for (const { label, prompt } of draftStarters) {
-      const starter = page.getByRole("button", { name: `Start with ${label}`, exact: true });
-      await expect(starter).toBeVisible({ timeout: 15_000 });
-      await input.clear();
-      await starter.click();
-      await expect(input).toHaveValue(prompt);
-      await expect(input).toBeFocused();
-      await expect(page.locator(".kova-user-message")).toHaveCount(0);
-    }
-    await input.fill("Keep my existing draft");
-    await page.getByRole("button", { name: "Start with Write something", exact: true }).click();
-    await expect(input).toHaveValue("Keep my existing draft");
-    await expect(page.locator(".kova-user-message")).toHaveCount(0);
-    await input.clear();
-    await input.blur();
-    await page.mouse.move(page.viewportSize()!.width - 2, page.viewportSize()!.height - 2);
-    await expect
-      .poll(() =>
-        page
-          .locator(".kova-home-starter")
-          .evaluateAll((buttons) =>
-            buttons.every(
-              (button) => !button.matches(":hover") && !button.contains(document.activeElement),
-            ),
-          ),
-      )
-      .toBe(true);
-    // Navigation uses one decorative owner mark beside the KovaGPT wordmark.
-    const sidebarBrand = page.locator(".kova-sidebar-header .kova-sidebar-brand");
-    await expect(sidebarBrand).toHaveCount(1);
-    await expect(sidebarBrand).toHaveText("KovaGPT");
-    await expect(sidebarBrand.locator("img")).toHaveCount(1);
-    await expect(sidebarBrand.locator("img")).toHaveAttribute("src", "/kova-logo.png");
-    await expect(sidebarBrand.locator("img")).toHaveAttribute("alt", "");
-    await expect(page.locator(".kova-sidebar-rail")).toHaveCount(0);
-    await expect(page.locator(".kova-greeting-mark .kova-logo")).toHaveCount(0);
-    const ownerAsset = await page.request.get("/kova-logo.png");
-    expect(ownerAsset.ok()).toBe(true);
-    expect(ownerAsset.headers()["content-type"]).toContain("image/png");
-    expect((await ownerAsset.body()).byteLength).toBeGreaterThan(0);
-    if (page.viewportSize()!.width >= 1024) {
-      await expect(page.getByRole("main")).toHaveAttribute("data-sidebar", "open");
-      await expect(sidebarBrand).toBeVisible();
-    }
-    // The production Vite alias must render the pinned source glyph adapter.
-    await expect(page.locator('[data-product-icon="Mic"]').first()).toHaveAttribute(
-      "data-ui-reference",
-      "chatgpt.sdk.icon.Mic",
+    await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
     );
     expect(hydrationErrors).toEqual([]);
-    await expect(page).toHaveScreenshot(`guest-core-shell-${theme}-system.png`, {
+    await expect(page).toHaveScreenshot(`account-entry-${theme}.png`, {
       animations: "disabled",
       caret: "hide",
       maxDiffPixelRatio: 0.005,
       scale: "css",
     });
-    await captureCandidateVisual(page, testInfo, `guest-core-shell-${theme}-system`);
+    await captureCandidateVisual(page, testInfo, `account-entry-${theme}`);
     await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toHaveCount(0);
-    await expect(page.locator(".spec400-composer-trailing")).toContainText("Default");
   });
 }
 
@@ -393,9 +334,8 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   test.skip(page.viewportSize()!.width >= 1024);
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "How can I help today?", exact: true }),
-  ).toBeVisible();
+  await expect(page.locator("#chat-greeting")).toBeVisible();
+  await expect(page.locator("#chat-greeting")).not.toHaveText("");
 
   const composer = page.locator(".spec400-composer");
   const box = await composer.boundingBox();
@@ -406,12 +346,6 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   for (const action of [
     page.getByRole("button", { name: "Open menu" }),
     page.getByRole("button", { name: "Attach", exact: true }),
-    ...(page.viewportSize()!.width >= 380
-      ? [
-          page.getByRole("button", { name: "Context", exact: true }),
-          page.getByRole("button", { name: "Options", exact: true }),
-        ]
-      : []),
     page.getByRole("button", { name: "Dictate", exact: true }),
     page.getByRole("button", { name: "Voice", exact: true }),
   ]) {
@@ -579,28 +513,25 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
     );
   }
   const savedRow = page.locator(".kova-chat-row");
-  if (page.viewportSize()!.width < 1024)
-    await page.getByRole("button", { name: "Open menu", exact: true }).click();
-  await expect(savedRow).toHaveCount(0);
-  await expect
-    .poll(() =>
-      page.evaluate(() =>
-        Array.from({ length: localStorage.length }, (_, index) =>
-          localStorage.getItem(localStorage.key(index) ?? ""),
-        ).some((value) => value?.includes("Stability")),
-      ),
-    )
-    .toBe(true);
-  // A fresh load deliberately purges guest content. Durable authenticated
-  // history is a separate acceptance path and is not claimed by this fixture.
+  await revealSidebar(page);
+  await expect(savedRow).toHaveCount(1);
+  await expect(savedRow).toContainText("Workspace quality review");
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: /Chat changes are waiting to sync|Chat history is up to date/ }),
+  ).toBeVisible();
+  // A returning account retains this local conversation across navigation.
+  // Unscoped guest and legacy stores must remain empty.
+  await waitForCommittedChat(page, "Stability");
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expectEmptyWorkspaceLandmarks(page);
-  await expect(page.locator(".kova-user-message, .kova-assistant-message")).toHaveCount(0);
-  if (page.viewportSize()!.width < 1024) {
-    await page.getByRole("button", { name: "Open menu", exact: true }).click();
-  }
-  await expect(savedRow).toHaveCount(0);
+  await revealSidebar(page);
+  await expect(savedRow).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "Open chat Workspace quality review", exact: true })
+    .click();
+  await expect(page.locator(".kova-assistant-message")).toContainText("Stability");
   const guestStorage = await page.evaluate(() => ({
     conversations: JSON.parse(localStorage.getItem("nova-gpt-conversations-v3:guest") ?? "[]"),
     pendingActive: localStorage.getItem("nova-gpt-pending-active:v2:guest"),

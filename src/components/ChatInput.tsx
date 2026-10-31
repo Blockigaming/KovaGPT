@@ -1373,7 +1373,7 @@ export function ChatInput({
                 <span>Library</span>
               </button>
             )}
-            {(attachments.length > 0 || onOpenChatContext) && (
+            {(!mobile || section !== "all") && (attachments.length > 0 || onOpenChatContext) && (
               <button
                 type="button"
                 className={rowClass}

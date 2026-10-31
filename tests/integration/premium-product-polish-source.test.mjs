@@ -50,5 +50,5 @@ test("remaining native project and Work dialogs are replaced with accessible UI"
   assert.match(projectChat, /AlertDialog/);
   assert.match(projectChat, /aria-label="Project chat title"/);
   assert.match(collaboration, /Delete project comment\?/);
-  assert.match(work, /aria-label="Deliverable title"/);
+  assert.match(work, /throw redirect/);
 });

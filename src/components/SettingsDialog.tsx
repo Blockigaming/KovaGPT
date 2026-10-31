@@ -106,6 +106,7 @@ import {
   loadConversations,
   saveArchivedConversations,
   saveConversations,
+  subscribeToConversationChanges,
 } from "@/lib/chat-store";
 import {
   loadPrincipalStoredRecord,
@@ -3289,6 +3290,10 @@ function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
     transferComplete?: boolean;
   };
   const [revision, setRevision] = useState(0);
+  useEffect(
+    () => subscribeToConversationChanges(userKey, () => setRevision((value) => value + 1)),
+    [userKey],
+  );
   const [failure, setFailure] = useState<Failure | null>(null);
   const [pending, setPending] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);

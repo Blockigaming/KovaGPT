@@ -236,9 +236,9 @@ export const CAPABILITY_REGISTRY = Object.freeze({
     },
     scheduledTasks: {
       label: "Scheduled tasks",
-      availability: "unavailable",
+      availability: "provider-dependent",
       summary:
-        "Background scheduled execution is unavailable in this deployment. Previously saved task records can still be managed.",
+        "Background scheduled execution is unavailable until an approved scheduler and fresh heartbeat are connected. Previously saved task records can still be managed.",
     },
     cloudHistory: {
       label: "Conversation history",

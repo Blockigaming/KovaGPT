@@ -1,7 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { functionNames } from "./actual-app-fixture";
 
 test.describe("mobile shell UI truth", () => {
+  test.beforeEach(async ({ page }) => {
+    await installAuthenticatedFixture(page);
+  });
   test("the phone drawer fills the viewport and restores focus", async ({ page }) => {
     const viewport = page.viewportSize();
     test.skip(
@@ -40,6 +45,12 @@ test.describe("mobile shell UI truth", () => {
     page,
   }) => {
     const viewport = page.viewportSize()!;
+    await page.route("**/_serverFn/**", (route) => {
+      const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+      if (functionNames.get(id)?.startsWith("listWorkspaceRecents_"))
+        return route.fulfill({ status: 503, json: { error: "Workspace unavailable in fixture" } });
+      return route.fallback();
+    });
 
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -56,6 +67,9 @@ test.describe("mobile shell UI truth", () => {
 
     const palette = page.getByRole("dialog", { name: "Search workspace, chats, and actions" });
     await expect(palette).toBeVisible();
+    await expect(
+      palette.getByText("Workspace results are unavailable.", { exact: true }),
+    ).toBeVisible();
     await expect(
       palette.getByRole("combobox", { name: "Search workspace, commands, and chats" }),
     ).toBeFocused();

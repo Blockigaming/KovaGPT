@@ -159,8 +159,9 @@ export function ShareChatDialog({
             </div>
             <DialogTitle>Share this conversation</DialogTitle>
             <DialogDescription>
-              Anyone with the link can read this text snapshot. It expires after 30 days. Files,
-              private tool details, and future messages are excluded.
+              Anyone with the link can read this text snapshot of the active branch. It expires
+              after 30 days. Other branches, files, private tool details, and future messages are
+              excluded.
             </DialogDescription>
           </DialogHeader>
           {preview && readyScope === scope ? (

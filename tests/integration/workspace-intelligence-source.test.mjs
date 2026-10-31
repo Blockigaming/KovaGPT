@@ -18,7 +18,7 @@ test("workspace resources have reduced-click truthful handoffs", async () => {
     assert.match(source, /continueInChat/);
     assert.match(source, /addToContextPack/);
   }
-  assert.match(handoffs, /kova-work-draft/);
+  assert.doesNotMatch(handoffs, /kova-work-draft|location.href = "\/work"/);
   assert.match(handoffs, /kova-app-chat-context/);
   assert.match(packs, /Use in Search/);
   assert.match(packs, /const MAX_SEARCH_QUERY_CHARS = 240/);

@@ -28,19 +28,11 @@ test("Work is loaded from persisted runs, events, deliverables, and approvals", 
     assert.ok(server.includes(contract), contract);
 });
 
-test("Work exposes historical evidence and fail-closed controls", () => {
-  for (const contract of [
-    "Dependency graph",
-    "Specialist timeline",
-    "Evidence center",
-    "No estimated percentage",
-    "Approval center",
-    "Search deliverables",
-    "SHA-256",
-    "Agent execution is unavailable",
-    "cancel",
-  ])
-    assert.ok(route.includes(contract), contract);
+test("retired Work URL redirects without exposing legacy execution controls", () => {
+  assert.match(route, /throw redirect\(\{ to: "\/", replace: true \}\)/);
+  assert.doesNotMatch(route, /<WorkExecutionPanel|<WorkBrowserPanel|<AgentWorkspace/);
+  assert.match(server, /requireSupabaseAuth/);
+  assert.match(server, /decision: z\.literal\("denied"\)/);
 });
 
 test("both legacy execution queues reject new or resumptive work", () => {
@@ -91,19 +83,9 @@ test("consequential Work transitions are validated in security-definer RPCs", ()
   assert.doesNotMatch(teamServer, /\.from\("agent_run_tasks"\)[\s\S]*?\.update\(/);
 });
 
-test("Work graph, evidence, inspector, and revision controls are interactive", () => {
-  for (const contract of [
-    "Graph minimap",
-    "Interactive dependency graph",
-    "Specialist inspector",
-    "onPointerMove",
-    "Stored DOM snapshot",
-    "Timeline through",
-    "Evidence specialist",
-    "Version history",
-    "restoreDeliverableRevision",
-  ])
-    assert.ok(route.includes(contract), contract);
-  assert.match(server, /createSignedUrl\(storagePath, 300\)/);
-  assert.match(server, /listDeliverableVersions/);
+test("specialist execution components remain separate from the retired Work route", () => {
+  assert.match(executionPanel, /aria-label="Specialist progress"/);
+  assert.match(executionPanel, /specialist\.result\.summary/);
+  assert.match(executionProtocol, /"specialist-subruns"/);
+  assert.doesNotMatch(route, /<WorkExecutionPanel|<AgentWorkspace/);
 });

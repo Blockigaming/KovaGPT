@@ -557,37 +557,6 @@ function ContextPacksPage() {
                           onClick={() => {
                             const handoff = writePrincipalHandoff(
                               safeBrowserStorage("sessionStorage"),
-                              "kova-work-draft",
-                              isLoaded ? userKey : undefined,
-                              {
-                                objective: `Work with ${pack.name}`,
-                                context: pack.items
-                                  .map((item) => `${item.title}: ${item.content}`)
-                                  .join("\n\n"),
-                                plan: [
-                                  "Review the attached context",
-                                  "Complete the objective",
-                                  "Review and record deliverables",
-                                ],
-                              },
-                            );
-                            if (!handoff.ok) {
-                              toast.error(
-                                "Work context could not be prepared. Reload and try again.",
-                              );
-                              return;
-                            }
-                            navigate({ to: "/" });
-                          }}
-                          className="  border  text-sm hover:bg-accent"
-                        >
-                          Use in Work
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            const handoff = writePrincipalHandoff(
-                              safeBrowserStorage("sessionStorage"),
                               "kova-app-chat-context",
                               isLoaded ? userKey : undefined,
                               { prompt: searchHandoffPrompt(pack), tool: "web_search" },

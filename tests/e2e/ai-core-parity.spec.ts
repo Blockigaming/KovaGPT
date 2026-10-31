@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
+import { fixture } from "./actual-app-fixture";
 
 test("AI core controls fit the configured viewport", async ({ page }) => {
+  await fixture(page, "dark", true);
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(page.getByRole("main")).toBeVisible();

@@ -1,4 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+test.beforeEach(async ({ page }) => {
+  await installAuthenticatedFixture(page);
+});
 import { VIEWPORTS, assertNoHorizontalOverflow, stablePage } from "./parity-helpers";
 
 test.describe("KovaGPT parity invariants", () => {

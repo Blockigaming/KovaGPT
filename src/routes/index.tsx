@@ -1198,24 +1198,28 @@ function KovaGPT() {
         );
     });
 
-    consume<{
-      objective: string;
-      context: string;
-      steps: { text: string; done?: boolean; approval?: boolean }[];
-    }>("kova-work-context", (task) => {
-      if (
-        typeof task?.objective !== "string" ||
-        typeof task.context !== "string" ||
-        !Array.isArray(task.steps) ||
-        !task.steps.every((step) => typeof step?.text === "string")
-      ) {
-        throw new Error("invalid_work_handoff");
-      }
-      return () =>
-        setInput(
-          `Continue this work task without claiming background execution.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${task.steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
-        );
-    });
+    for (const key of ["kova-work-context", "kova-work-draft"]) {
+      consume<{
+        objective: string;
+        context: string;
+        steps?: { text: string; done?: boolean; approval?: boolean }[];
+        plan?: string[];
+      }>(key, (task) => {
+        const steps: { text: string; done?: boolean }[] | undefined =
+          task.steps ?? task.plan?.map((text) => ({ text }));
+        if (
+          typeof task?.objective !== "string" ||
+          typeof task.context !== "string" ||
+          !Array.isArray(steps) ||
+          !steps.every((step) => typeof step?.text === "string")
+        )
+          throw new Error("invalid_work_handoff");
+        return () =>
+          setInput(
+            `Continue this task.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
+          );
+      });
+    }
 
     consume<AppChatContextHandoff>("kova-app-chat-context", (appContext) => {
       if (typeof appContext === "string") return () => setInput(appContext);
@@ -1746,6 +1750,7 @@ function KovaGPT() {
       .then(({ listWorkspaceRecents }) => listWorkspaceRecents())
       .then((items) => {
         if (cancelled) return;
+        if (!Array.isArray(items)) throw new Error();
         setWorkspaceItems(items);
         setWorkspaceStatus("ready");
       })

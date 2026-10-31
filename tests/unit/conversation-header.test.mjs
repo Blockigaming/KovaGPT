@@ -566,10 +566,17 @@ test("unbound browser activity opens an honest detail dialog and restores Output
   root = f.render();
   assert.equal(nodes(root).find((n) => n.type === "Popover").props.open, false);
   const content = nodes(root).find(
-    (n) => n.type === "DialogContent" && text(n).includes("no connected live view"),
+    (n) => n.type === "DialogContent" && text(n).includes("No live session is connected"),
   );
   assert.ok(content);
-  assert.ok(text(content).includes("Open Work browser controls"));
+  assert.ok(text(content).includes("verified browser session is active"));
+  assert.equal(
+    nodes(content).some((n) => n.type === "Link" && n.props.to === "/work"),
+    false,
+  );
+  const close = nodes(content).find((n) => n.type === "Button" && text(n).trim() === "Close");
+  assert.ok(close);
+  close.props.onClick();
   assert.equal(
     nodes(content).some((n) => n.type === "button" && text(n) === "Take over"),
     false,
@@ -619,7 +626,7 @@ test("phone menu carries the conversation title and local search, with no invent
   assert.ok(nodes(root).some((n) => n.type === "button" && text(n).includes("A quiet workspace")));
 });
 
-test("Free recorded browser history never grants sample takeover and offers plans", () => {
+test("Free recorded browser history never grants sample takeover or claims a live session", () => {
   const f = fixture({
     userTier: "free",
     browserPresentation: {
@@ -634,8 +641,15 @@ test("Free recorded browser history never grants sample takeover and offers plan
   assert.equal(sources.props.browserPreview, undefined);
   sources.props.onOpenBrowser({ id: "sample", label: "Recorded event" });
   root = f.render();
-  assert.match(text(root), /Free plan does not include browser sessions/);
-  assert.ok(nodes(root).some((n) => n.type === "Link" && n.props.to === "/pricing"));
+  assert.match(text(root), /No live session is connected/);
+  assert.equal(
+    nodes(root).some((n) => n.type === "Link" && n.props.to === "/work"),
+    false,
+  );
+  assert.equal(
+    nodes(root).some((n) => n.type === "button" && text(n) === "Take over"),
+    false,
+  );
 });
 
 test("phone menu preserves 44px touch rows without excessive height", () => {

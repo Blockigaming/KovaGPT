@@ -126,14 +126,14 @@ test("the early bootstrap replays both global shortcuts after hydration", async 
 test("hydrated UI specs wait after navigation and assert principal-scoped archives", async () => {
   const contracts = [
     ["tests/e2e/ai-core-parity.spec.ts", 1, 1],
-    ["tests/e2e/connected-reliability.spec.ts", 2, 2],
+    ["tests/e2e/connected-reliability.spec.ts", 1, 1],
     ["tests/e2e/connectors-tasks-settings.spec.ts", 3, 3],
     ["tests/e2e/core-chat-experience.spec.ts", 2, 2],
     ["tests/e2e/depth.spec.ts", 5, 5],
     ["tests/e2e/desktop-polish.spec.ts", 2, 2],
     ["tests/e2e/final-readiness.spec.ts", 2, 3, 2],
     ["tests/e2e/functional-reliability.spec.ts", 1, 1],
-    ["tests/e2e/high-impact-chat.spec.ts", 9, 9],
+    ["tests/e2e/high-impact-chat.spec.ts", 9, 10, 9],
     ["tests/e2e/mobile-quality.spec.ts", 5, 5],
     ["tests/e2e/mobile-shell-ui-truth.spec.ts", 2, 2],
     ["tests/e2e/model-selector.spec.ts", 5, 5],
@@ -158,7 +158,8 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
   assert.match(helper, /timeout: 30_000/);
   assert.match(guardSpec, /resourceType\(\) === "script"/);
   assert.match(guardSpec, /"data-kova-hydration"\s*,\s*"pending"/s);
-  assert.match(guardSpec, /toBeDisabled\(\)/);
+  assert.match(guardSpec, /toHaveAttribute\("aria-busy", "true"\)/);
+  assert.match(guardSpec, /name: "Attach", exact: true \}\)\)\.toHaveCount\(0\)/);
   assert.match(guardSpec, /toBeEnabled\(\)/);
   assert.match(guardSpec, /toEqual\(\["k", "o"\]\)/);
   assert.equal((home.match(/disabled=\{!principalReady\}/g) ?? []).length, 2);
@@ -179,9 +180,10 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
   }
 
   const highImpact = specsByPath.get("tests/e2e/high-impact-chat.spec.ts");
-  assert.match(highImpact, /legacy: localStorage\.getItem\("kovagpt:archived"\)/);
-  assert.match(highImpact, /guest: localStorage\.getItem\("kovagpt:archived:v2:guest"\)/);
-  assert.match(highImpact, /toEqual\(\{ legacy: null, guest: "\[\]" \}\)/);
+  assert.match(highImpact, /kovagpt:archived:v2:user:22222222-2222-4222-8222-222222222222/);
+  assert.match(highImpact, /localStorage\.getItem\("kovagpt:archived"\)\)\)\.toBeNull\(\)/);
+  assert.match(highImpact, /await page\.reload\(\);\s*await waitForKovaHydration\(page\);/);
+  assert.match(highImpact, /name: "Archived chats"[\s\S]{0,100}"No archived chats"/);
 
   const uiQuality = specsByPath.get("tests/e2e/ui-quality.spec.ts");
   assert.match(uiQuality, /await home\.click\(\);\s*await waitForKovaHydration\(page\);/);

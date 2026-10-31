@@ -153,7 +153,7 @@ test("Share copies a real link and reports clipboard errors without false succes
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Create & copy link" }).click();
   await expect(dialog.getByRole("textbox", { name: "Share link" })).toHaveValue(
-    `http://127.0.0.1:4190/share/${token}`,
+    new URL(`/share/${token}`, page.url()).href,
   );
   await expect(page.getByText("Link copied to clipboard", { exact: true })).toHaveCount(0);
   await page.evaluate(() =>

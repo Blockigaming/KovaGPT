@@ -805,22 +805,15 @@ export function ConversationHeaderActions({
                 <DialogDescription>{selectedBrowser?.label}</DialogDescription>
               </DialogHeader>
               <p className="text-sm text-muted-foreground">
-                {!signedIn
-                  ? "Sign in with a paid plan to use Cloud browser."
-                  : userTier === "free"
-                    ? "Cloud browser is available on Plus and Pro. Your Free plan does not include browser sessions."
-                    : "This record has no connected live view or owned session reference. Take over is available only from a confirmed Work browser session after its run is paused."}
+                This is a recorded browser event. No live session is connected. A live preview and
+                controls appear here when a verified browser session is active.
               </p>
-              <Button asChild variant="outline" className="min-h-11">
-                <Link
-                  to={signedIn && userTier !== "free" ? "/work" : "/pricing"}
-                  preload={false}
-                  onClick={(event) => {
-                    if (navigationBlocked) event.preventDefault();
-                  }}
-                >
-                  {signedIn && userTier !== "free" ? "Open Work browser controls" : "View plans"}
-                </Link>
+              <Button
+                variant="outline"
+                className="min-h-11"
+                onClick={() => setSelectedBrowser(null)}
+              >
+                Close
               </Button>
             </DialogContent>
           </Dialog>

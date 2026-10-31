@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { fixture as appFixture } from "./actual-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { revealSidebar } from "./current-ui";
 import { waitForKovaHydration } from "./hydration";
@@ -7,14 +8,28 @@ import { waitForKovaHydration } from "./hydration";
 const widths = [320, 375, 390, 768, 1024, 1280, 1440, 1728] as const;
 const themes = ["light", "dark"] as const;
 
-async function verifyConversationShell(page: Page, width: number, theme: (typeof themes)[number]) {
+async function verifyConversationShell(
+  page: Page,
+  width: number,
+  theme: (typeof themes)[number],
+  signedIn = false,
+) {
   await page.setViewportSize({ width, height: width < 768 ? 812 : 900 });
   await page.emulateMedia({ colorScheme: theme });
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   await waitForKovaHydration(page);
-  await expect(page.getByRole("button", { name: "Dictate", exact: true })).toBeVisible();
-  await expect(page.locator("textarea:visible").first()).toBeVisible();
+  if (signedIn) {
+    await expect(page.getByRole("button", { name: "Dictate", exact: true })).toBeVisible();
+    await expect(page.locator("textarea:visible").first()).toBeVisible();
+  } else {
+    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Create an account", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator("textarea:visible")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Dictate", exact: true })).toHaveCount(0);
+  }
 
   const overflow = await page.evaluate(() => ({
     document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -57,7 +72,7 @@ async function expectAuthenticatedDesktopReady(page: Page) {
 test.describe("ChatGPT-like Kova conversation shell", () => {
   test.describe.configure({ timeout: 120_000 });
 
-  test("signed-out shell is responsive, accessible, restrained, and exposes labeled voice controls", async ({
+  test("signed-out account entry is responsive, accessible and prevents anonymous tool use", async ({
     page,
   }) => {
     for (const theme of themes) {
@@ -79,11 +94,11 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     ).toBe(0);
   });
 
-  test("signed-in desktop navigation keeps New chat and Work reachable from the sidebar", async ({
+  test("signed-in desktop navigation keeps chat and requested destinations reachable", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await installAuthenticatedFixture(page);
+    await appFixture(page, "dark", true);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
 
@@ -99,27 +114,21 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     ).toBeVisible();
     await expect(page).toHaveURL(/\/$/);
 
-    if (!(await chatNavigation.getByRole("link", { name: "Work", exact: true }).isVisible())) {
-      await chatNavigation.locator("summary").filter({ hasText: "More" }).click();
+    for (const name of ["Library", "Projects", "Scheduled tasks", "Plugins"]) {
+      await expect(chatNavigation.getByRole("link", { name, exact: true })).toBeVisible();
     }
-    await chatNavigation.getByRole("link", { name: "Work" }).click();
-    await expect(page).toHaveURL(/\/work$/);
-    await expectAuthenticatedDesktopReady(page);
-    await revealSidebar(page);
-    const workNavigation = page.getByRole("navigation", { name: "KovaGPT features" });
-    await expect(workNavigation).toBeVisible();
-    await expect(workNavigation.getByRole("link", { name: "Work" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-
-    await workNavigation.getByRole("button", { name: "New chat", exact: true }).click();
+    await chatNavigation.locator("summary").filter({ hasText: "More" }).click();
+    await expect(chatNavigation.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
+    await chatNavigation.getByRole("link", { name: "Library", exact: true }).click();
+    await expect(page).toHaveURL(/\/library$/);
+    const libraryNavigation = await revealSidebar(page);
+    await libraryNavigation.getByRole("button", { name: "New chat", exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("collapsed desktop navigation can expand to reach Work", async ({ page }) => {
+  test("collapsed desktop navigation can expand to reach Library", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
-    await installAuthenticatedFixture(page);
+    await appFixture(page, "dark", true);
     await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expectAuthenticatedDesktopReady(page);
@@ -128,17 +137,10 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
       page.getByRole("navigation", { name: "Collapsed navigation", exact: true }),
     ).toBeVisible();
     await revealSidebar(page);
-    const workLink = page.getByRole("link", { name: "Work" });
-    if (!(await workLink.isVisible())) {
-      await page
-        .getByRole("navigation", { name: "KovaGPT features" })
-        .locator("summary")
-        .filter({ hasText: "More" })
-        .click();
-    }
-    await expect(workLink).toBeVisible();
-    await workLink.click();
-    await expect(page).toHaveURL(/\/work$/);
+    const libraryLink = page.getByRole("link", { name: "Library", exact: true });
+    await expect(libraryLink).toBeVisible();
+    await libraryLink.click();
+    await expect(page).toHaveURL(/\/library$/);
   });
 
   test("active desktop chat keeps secondary actions in one overflow menu", async ({
@@ -185,37 +187,36 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     await expect(page.getByRole("menuitem", { name: "Export chat" })).toBeVisible();
   });
 
-  test("active guest desktop chat keeps its local settings action", async ({ page }, testInfo) => {
+  test("guest desktop entry does not expose chat actions or execute a request", async ({
+    page,
+  }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop-1440x900");
+    let requests = 0;
     await page.route("**/api/chat", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "text/event-stream",
-        body: 'data: {"choices":[{"delta":{"content":"Ready"}}]}\n\ndata: [DONE]\n\n',
-      });
+      requests += 1;
+      await route.abort("blockedbyclient");
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    const input = page.getByRole("textbox", { name: "Message KovaGPT" });
-    await expect(input).toBeEnabled();
-    await input.fill("Keep guest settings available");
-    await page.getByRole("button", { name: "Send message" }).click();
-    await expect(page.getByText("Ready", { exact: true })).toBeVisible({ timeout: 15_000 });
-
-    await page.getByRole("button", { name: "Share chat" }).click();
-    const shareGate = page.getByRole("dialog", { name: "Sharing unavailable", exact: true });
-    await expect(shareGate).toContainText("Sign in to share this conversation.");
-    await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "More chat actions" }).click();
-    await expect(page.getByRole("menuitem", { name: "Rename", exact: true })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Export chat" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Create an account", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(
+      0,
+    );
+    await expect(page.getByRole("button", { name: "Share chat", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "More chat actions", exact: true })).toHaveCount(
+      0,
+    );
+    expect(requests).toBe(0);
   });
 
   test("signed-in shell uses the same required viewport and theme matrix", async ({ page }) => {
     const mockedBackendOrigins = await installAuthenticatedFixture(page);
     for (const theme of themes) {
       for (const width of widths) {
-        await verifyConversationShell(page, width, theme);
+        await verifyConversationShell(page, width, theme, true);
         await expect(page.locator(".kova-greeting-mark")).toHaveCount(0);
         await expect(page.locator(".kova-starter-grid")).toHaveCount(0);
         await expect(

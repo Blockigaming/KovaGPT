@@ -36,16 +36,14 @@ test("Context Packs are owner scoped, persisted, and attach to chat", () => {
   assert.match(route, /Use in new chat/);
   assert.match(chat, /kova-active-context-pack/);
 });
-test("Work preserves durable history and denial-only controls without background claims", () => {
+test("retired Work UI preserves authenticated denial-only history services", () => {
   const route = read("src/routes/work.tsx"),
     functions = read("src/lib/work.functions.ts");
   assert.match(functions, /requireSupabaseAuth/);
-  assert.match(route, /Agent execution is unavailable/);
-  assert.match(route, /decideApproval/);
-  assert.match(route, /decision: "denied"/);
-  assert.match(route, /Deliverables/);
-  assert.match(route, /controlWorkRun/);
-  assert.doesNotMatch(route, /Waiting for worker|Approval required|decision: "approved"/);
+  assert.match(functions, /decision: z\.literal\("denied"\)/);
+  assert.match(functions, /action: z\.literal\("cancel"\)/);
+  assert.match(route, /throw redirect\(\{ to: "\/", replace: true \}\)/);
+  assert.doesNotMatch(route, /<WorkExecutionPanel|<AgentWorkspace|decision: "approved"/);
 });
 test("Files and Apps expose truthful professional workflows", () => {
   const files = read("src/routes/files.tsx"),
