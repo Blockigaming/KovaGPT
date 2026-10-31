@@ -1,0 +1,64 @@
+name: Connection release regression checks
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - .github/workflows/connections-release-regressions.yml
+      - src/lib/use-nova-settings.ts
+      - tests/unit/settings-cross-tab-ordering.test.mjs
+      - tests/e2e/authenticated-fixture.ts
+      - tests/unit/authenticated-fixture-profile.test.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: connections-regressions-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression-checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      AI_GENERATION_ENABLED: "false"
+      KOVA_BROWSER_PREVIEW: node
+      KOVA_BROWSER_SUITE: core
+      PLAYWRIGHT_PREBUILT: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check the bounded regression change formatting
+        run: npx --no-install prettier --check .github/workflows/connections-release-regressions.yml src/lib/use-nova-settings.ts tests/unit/settings-cross-tab-ordering.test.mjs tests/e2e/authenticated-fixture.ts tests/unit/authenticated-fixture-profile.test.mjs
+      - name: Lint and typecheck
+        run: |
+          npm run lint
+          npm run typecheck
+      - name: Verify interleaved tab updates and principal isolation
+        run: node --test tests/unit/settings-cross-tab-ordering.test.mjs tests/unit/principal-settings-storage.test.mjs tests/unit/authenticated-fixture-profile.test.mjs
+      - name: Build the real Node browser preview
+        run: npm run build
+      - name: Install the pinned Chromium test browser
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Verify appearance persistence and the unchanged cross-tab browser assertion
+        run: npm run test:e2e -- tests/e2e/composer-preferences-refresh.spec.ts --project=phone-320x700 --project=phone-390x844 --project=desktop-1440x900 --workers=2 --repeat-each=3
+      - name: Verify connected account controls in isolated browser fixtures
+        run: npm run test:browser -- tests/browser-runtime/spec400-plugins.spec.ts --project=chromium
+      - name: Preserve failed local-fixture browser evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: connections-regression-${{ github.event.pull_request.head.sha || github.sha }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 3

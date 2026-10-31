@@ -1,3 +1,4 @@
+import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
 import { getConnector, type ConnectorItem } from "./connectors-catalog";
 import gmailLogo from "../assets/plugins/gmail.svg";
 import googleCalendarLogo from "../assets/plugins/google-calendar.svg";
@@ -62,22 +63,34 @@ const supported = (
 const sharePoint: ConnectorItem = {
   id: "sharepoint",
   label: "SharePoint",
-  description: "Review a proposed connection to SharePoint sites and documents.",
+  description: "Find SharePoint sites you can access.",
   category: "Storage & Files",
-  status: "planned",
+  status: "setup_required",
   domain: "sharepoint.com",
 };
 function entry(id: string, permissions: PluginReviewPermission[]): PluginReviewEntry {
   const connector = id === "sharepoint" ? sharePoint : getConnector(id);
   if (!connector) throw new Error(`Missing launch review connector: ${id}`);
-  const implemented = ["gmail", "google-calendar", "google-drive", "github"].includes(id);
+  const implemented =
+    ["gmail", "google-calendar", "google-drive", "github"].includes(id) ||
+    Boolean(CONNECTION_FLOWS[id]);
   return {
     connector,
     availability: implemented ? "implemented" : "planned",
     availabilityNote: implemented
       ? "Integration code exists. Current availability and account connection must be checked separately."
       : "Planned interface only. No connection flow or provider operations are enabled here.",
-    permissions,
+    permissions: CONNECTION_FLOWS[id]
+      ? [
+          supported(
+            "read",
+            CONNECTION_FLOWS[id].description,
+            "src/integrations/connection-read.server.mjs",
+            "src/integrations/connected-tools.server.ts",
+          ),
+          ...permissions.filter((permission) => permission.access === "write"),
+        ]
+      : permissions,
     brandAsset: {
       status: "verified_local_asset",
       src: PLUGIN_BRAND_ASSET_URLS[id],

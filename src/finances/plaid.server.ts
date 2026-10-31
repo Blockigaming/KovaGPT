@@ -2,45 +2,16 @@ import { decryptCredential, encryptCredential } from "@/integrations/credential-
 import type { AuthedCaller } from "@/lib/api-auth.server";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
 import { createClient } from "@supabase/supabase-js";
-const base = () =>
-  process.env.PLAID_ENV === "production"
-    ? "https://production.plaid.com"
-    : process.env.PLAID_ENV === "development"
-      ? "https://development.plaid.com"
-      : "https://sandbox.plaid.com";
-const credentialsConfigured = () =>
-  Boolean(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET);
-const configured = () => Boolean(credentialsConfigured() && process.env.PLAID_WEBHOOK_URL);
+import { financeCountry, financeLinkRequest, requestPlaid } from "./plaid-request.server.mjs";
 async function call<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  if (!credentialsConfigured()) throw new Error("plaid_not_configured");
-  const response = await fetch(`${base()}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: process.env.PLAID_CLIENT_ID,
-      secret: process.env.PLAID_SECRET,
-      ...body,
-    }),
-  });
-  if (!response.ok) throw new Error(`plaid_${response.status}`);
-  return response.json() as Promise<T>;
+  return requestPlaid(path, body) as Promise<T>;
 }
 export async function createFinanceLinkToken(caller: AuthedCaller, country: string) {
   await assertLockdownAllows(caller.supabaseAdmin, caller.userId, "connector_write");
-  if (!configured()) throw new Error("plaid_not_configured");
-  const allowed = (process.env.KOVA_FINANCE_REGIONS ?? "US")
-    .split(",")
-    .map((v) => v.trim().toUpperCase());
-  if (!allowed.includes(country.toUpperCase())) throw new Error("finance_region_ineligible");
-  return call<{ link_token: string; expiration: string }>("/link/token/create", {
-    user: { client_user_id: caller.userId },
-    client_name: "Kova Finances",
-    products: ["transactions", "liabilities", "investments"],
-    country_codes: [country.toUpperCase()],
-    language: "en",
-    webhook: process.env.PLAID_WEBHOOK_URL,
-    redirect_uri: process.env.PLAID_REDIRECT_URI,
-  });
+  return call<{ link_token: string; expiration: string }>(
+    "/link/token/create",
+    financeLinkRequest(caller.userId, country),
+  );
 }
 export async function exchangeFinanceToken(
   caller: AuthedCaller,
@@ -48,6 +19,13 @@ export async function exchangeFinanceToken(
   country: string,
 ) {
   await assertLockdownAllows(caller.supabaseAdmin, caller.userId, "connector_write");
+  const region = financeCountry(country);
+  if (
+    typeof publicToken !== "string" ||
+    publicToken.length > 512 ||
+    !/^public-(?:production|sandbox)-[A-Za-z0-9-]+$/u.test(publicToken)
+  )
+    throw new Error("public_token_required");
   const db = caller.supabaseAdmin as unknown as ReturnType<typeof createClient>;
   const result = await call<{ access_token: string; item_id: string }>(
     "/item/public_token/exchange",
@@ -61,7 +39,7 @@ export async function exchangeFinanceToken(
       item_reference_ciphertext: await encryptCredential(JSON.stringify(result)),
       status: "connected",
       consented_products: ["transactions", "liabilities", "investments"],
-      country: country.toUpperCase(),
+      country: region,
     } as never)
     .select("id,status,country,created_at")
     .single();
@@ -73,7 +51,7 @@ export async function exchangeFinanceToken(
     result: "success",
     metadata: {
       provider: "plaid",
-      country: country.toUpperCase(),
+      country: region,
       paymentInitiation: false,
       trading: false,
     },

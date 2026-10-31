@@ -4,6 +4,9 @@ const FINANCE_PUBLIC_ERRORS = new Map<string, number>([
   ["finance_connection_store_failed", 503],
   ["finance_plan_required", 403],
   ["public_token_required", 400],
+  ["plaid_request_cancelled", 504],
+  ["plaid_transport_failed", 502],
+  ["plaid_response_rejected", 502],
 ]);
 
 export type PublicFinanceError = { error: string; status: number; logCode: string };

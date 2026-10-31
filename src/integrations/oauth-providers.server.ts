@@ -27,6 +27,7 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     clientSecretEnv: "MICROSOFT_OAUTH_CLIENT_SECRET",
     requiredScopes: ["openid", "profile", "email", "offline_access", "User.Read"],
     optionalScopes: [
+      "Files.Read",
       "Files.Read.All",
       "Sites.Read.All",
       "Mail.Read",
@@ -72,7 +73,8 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
     ],
     usesPkce: false,
     profileEndpoint: "https://slack.com/api/auth.test",
-    profileId: (v) => text(v.team_id) + ":" + text(v.user_id),
+    profileId: (v) =>
+      text(v.team_id) && text(v.user_id) ? text(v.team_id) + ":" + text(v.user_id) : "",
     profileLabel: (v) => text(v.team),
   },
   notion: {
@@ -142,6 +144,8 @@ export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderAdapter> = {
 };
 
 export function configuredOAuthProviders() {
+  const key = process.env.CONNECTOR_TOKEN_ENCRYPTION_KEY;
+  if (!key || Buffer.from(key, "base64").length !== 32) return [];
   return Object.values(OAUTH_PROVIDERS).filter(
     (provider) => process.env[provider.clientIdEnv] && process.env[provider.clientSecretEnv],
   );

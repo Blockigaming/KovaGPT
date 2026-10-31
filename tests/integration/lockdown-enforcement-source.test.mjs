@@ -83,7 +83,7 @@ test("connector and remote-download boundaries enforce Lockdown Mode", async () 
   before(
     files.githubManagement,
     "assertLockdownAllows(",
-    "listGitHubAppInstallations()",
+    "discoverGitHubUserRepositories(",
     "GitHub installation refresh",
   );
   before(files.googleTools, "assertLockdownAllows(", "getGoogleConnectionHealth(", "Google tools");

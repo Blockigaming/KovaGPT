@@ -1,7 +1,8 @@
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 
 const supabaseAuthStorageKeyPattern = /^sb-([a-z0-9]{20})-auth-token$/;
 const supabaseRequestPattern = /^https:\/\/[a-z0-9]{20}\.supabase\.co(?:\/|$)/;
+const returningProfileIds = new WeakMap<BrowserContext, string>();
 const e2eUser = {
   id: "22222222-2222-4222-8222-222222222222",
   aud: "authenticated",
@@ -27,6 +28,12 @@ export async function installAuthenticatedFixture(
     preserveStorageOnReload?: boolean;
   } = {},
 ) {
+  let storageFixtureId: string | null = null;
+  if (options.preserveStorageOnReload) {
+    const context = page.context();
+    storageFixtureId = returningProfileIds.get(context) ?? crypto.randomUUID();
+    returningProfileIds.set(context, storageFixtureId);
+  }
   // This fixture exercises the returning-user shell. Server-function onboarding
   // can arrive after hydration; dismiss that separate flow through its real UI
   // without issuing a save/skip request or hiding background accessibility bugs.
@@ -42,12 +49,13 @@ export async function installAuthenticatedFixture(
   });
   await page.addInitScript(
     ({ storageKeyPatternSource, user, storageFixtureId }) => {
-      // Persistence tests opt into a returning browser profile. The first
-      // document still starts clean; auth injection below runs on every load.
+      // Persistence tests opt into a returning browser profile. Each browser
+      // context starts clean once; new tabs share that returning profile.
+      // Auth injection below runs on every load.
       const initializedKey = "kova-e2e-storage-initialized";
-      if (!storageFixtureId || sessionStorage.getItem(initializedKey) !== storageFixtureId) {
+      if (!storageFixtureId || localStorage.getItem(initializedKey) !== storageFixtureId) {
         localStorage.clear();
-        if (storageFixtureId) sessionStorage.setItem(initializedKey, storageFixtureId);
+        if (storageFixtureId) localStorage.setItem(initializedKey, storageFixtureId);
       }
       const base64Url = (value: unknown) =>
         btoa(JSON.stringify(value)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
@@ -83,7 +91,7 @@ export async function installAuthenticatedFixture(
     {
       storageKeyPatternSource: supabaseAuthStorageKeyPattern.source,
       user: e2eUser,
-      storageFixtureId: options.preserveStorageOnReload ? crypto.randomUUID() : null,
+      storageFixtureId,
     },
   );
 

@@ -3,6 +3,7 @@ import { build } from "esbuild";
 import path from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import type { GoogleStatus } from "../../src/lib/google-client";
+import type { AccountStatus } from "../../src/hooks/use-connected-accounts";
 type FixtureWindow = Window & { operations: unknown[][]; toasts: string[][] };
 if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE) {
   test.use({ launchOptions: { executablePath: process.env.KOVA_TEST_CHROMIUM_EXECUTABLE } });
@@ -18,11 +19,12 @@ const mocks: Record<string, string> = {
   "@/components/auth/ClerkSafe": `export const useUser=()=>({isLoaded:true,isSignedIn:!!window.testOwner,user:window.testOwner?{id:window.testOwner,primaryEmailAddress:{emailAddress:"owner@example.test",verification:{status:"verified"}}}:null});export const SignInButton=({children})=>children;`,
   "@/components/WorkflowSkillsPanel": `export const WorkflowSkillsPanel=()=>null;`,
   "@/integrations/supabase/client": `export const supabase={auth:{resend:async()=>({error:null})}};`,
-  "@/lib/auth-fetch": `export const authFetch=async(...args)=>{window.operations.push(["github-auth",...args]);return {ok:false,json:async()=>({})}};`,
+  "@/lib/auth-fetch": `export const authFetch=async(url,init)=>{if(url==="/api/integrations/accounts")return {ok:true,json:async()=>window.otherStatus};window.operations.push([url.startsWith("/api/integrations/")?"provider-request":"github-auth",url,init]);if(url.endsWith("/disconnect")){window.otherStatus.accounts=[];return {ok:true,json:async()=>({providerRevoked:false})}}return {ok:false,json:async()=>({})}};export const fetchWithTimeoutAuthenticated=authFetch;`,
+  "@/lib/connected-accounts.functions": `export const searchConnectedAccount=async({data})=>{window.operations.push(["provider-read",data]);return {service:"Outlook",results:[{id:"result-1",title:"Actual fixture result",url:"https://outlook.live.com/mail/result-1",snippet:"Read result from the isolated fixture"}],limited:true}};export const refreshConnectedAccess=async()=>({ok:true});`,
   "@/lib/google-client": `export const getGoogleStatus=async()=>window.googleStatus;export const startGoogleConnect=async(...args)=>{window.operations.push(["google-connect",...args])};export const disconnectGoogleAccount=async(...args)=>{window.operations.push(["google-disconnect",...args]);window.googleStatus={connected:false,state:"disconnected",accounts:[],selectedConnectionId:null,selectionRevision:2}};export const selectGoogleAccount=async(...args)=>window.operations.push(["google-select",...args]);`,
   "@/lib/github.functions": `export const getGitHubManagement=async()=>window.githubData;export const refreshGitHubInstallations=async()=>window.operations.push(["github-refresh"]);export const updateGitHubRepositoryGrants=async(...args)=>window.operations.push(["github-grants",...args]);export const disconnectGitHub=async(...args)=>window.operations.push(["github-disconnect",...args]);`,
   "@/lib/scheduled-tasks.functions": `export const listScheduledTasks=async()=>[];export const listScheduledTaskConnections=async()=>({connections:[],grants:[]});`,
-  sonner: `export const toast=Object.fromEntries(["success","error","warning","info"].map(kind=>[kind,(message)=>window.toasts.push([kind,message])]));`,
+  sonner: `export const toast=Object.fromEntries(["success","error","warning","info","message"].map(kind=>[kind,(message)=>window.toasts.push([kind,message])]));`,
 };
 const result = await build({
   stdin: {
@@ -95,6 +97,7 @@ async function boot(
   page: import("@playwright/test").Page,
   google = emptyGoogle,
   url = "https://kova-plugins.test/apps",
+  other: AccountStatus = { configuredProviders: [], accounts: [] },
 ) {
   await page.route("**/*", (route) =>
     route.request().url().startsWith("https://kova-plugins.test/")
@@ -106,12 +109,13 @@ async function boot(
   );
   await page.goto(url);
   await page.evaluate(
-    (google) =>
+    ({ google, other }) =>
       Object.assign(window, {
         testOwner: "test-owner",
         operations: [],
         toasts: [],
         googleStatus: google,
+        otherStatus: other,
         githubData: {
           configured: true,
           accounts: [],
@@ -120,7 +124,7 @@ async function boot(
           health: "healthy",
         },
       }),
-    google,
+    { google, other },
   );
   // esbuild does not compile Tailwind utilities. Mirror DialogContent's individual
   // -translate-x-1/2 and -translate-y-1/2 positioning in this isolated harness.
@@ -173,9 +177,11 @@ test("unavailable providers have readable details and no connection action", asy
   await boot(page);
   await page.getByRole("button", { name: "Unavailable Slack" }).click();
   await expect(page.getByRole("dialog")).toContainText(
-    "No account is connected and no permissions have been requested",
+    "Connection setup is incomplete in this deployment.",
   );
-  await expect(page.getByRole("dialog").getByRole("button", { name: /^Connect/ })).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
+  ).toBeDisabled();
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
@@ -244,4 +250,60 @@ test("connection cards fit the phone and details stay centered with viewport gut
   expect(panel!.y + panel!.height).toBeLessThanOrEqual(833);
   expect(Math.abs(panel!.x + panel!.width / 2 - 195)).toBeLessThan(1);
   await expect(page.getByRole("button", { name: "Close connection details" })).toBeVisible();
+});
+
+test("Microsoft account management searches only the explicitly selected authorized account", async ({
+  page,
+}) => {
+  await boot(page, emptyGoogle, "https://kova-plugins.test/apps", {
+    configuredProviders: [{ id: "microsoft" }],
+    accounts: [
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        provider_id: "microsoft",
+        account_label: "mail@example.test",
+        status: "connected",
+        granted_scopes: ["Mail.Read"],
+        token_expires_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Manage Outlook", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("mail@example.test");
+  await dialog.getByRole("textbox", { name: "Search Outlook", exact: true }).fill("receipt");
+  await dialog.getByRole("button", { name: "Search this account", exact: true }).click();
+  await expect(
+    dialog.getByRole("link", { name: "Actual fixture result", exact: true }),
+  ).toBeVisible();
+  expect((await page.evaluate(() => (window as FixtureWindow).operations))[0]).toEqual([
+    "provider-read",
+    {
+      connectionId: "outlook",
+      accountId: "11111111-1111-4111-8111-111111111111",
+      query: "receipt",
+    },
+  ]);
+  await dialog.getByRole("button", { name: "Disconnect", exact: true }).click();
+  await expect(page.getByRole("alertdialog")).toContainText("Other Microsoft services");
+  await page.getByRole("alertdialog").getByRole("button", { name: "Cancel", exact: true }).click();
+  expect((await page.evaluate(() => (window as FixtureWindow).operations)).length).toBe(1);
+});
+
+test("opening a configured provider never starts OAuth until Connect is clicked", async ({
+  page,
+}) => {
+  await boot(page, emptyGoogle, "https://kova-plugins.test/apps", {
+    configuredProviders: [{ id: "microsoft" }],
+    accounts: [],
+  });
+  await page.getByRole("button", { name: "Connect Outlook", exact: true }).click();
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
+  await page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as FixtureWindow).operations.length)).toBe(1);
+  const operation = (await page.evaluate(() => (window as FixtureWindow).operations))[0];
+  expect(operation[1]).toBe("/api/integrations/oauth/start");
+  const body = JSON.parse((operation[2] as { body: string }).body);
+  expect(body.provider).toBe("microsoft");
+  expect(body.optionalScopes).toEqual(["Mail.Read"]);
 });
