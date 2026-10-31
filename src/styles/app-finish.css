@@ -1,0 +1,981 @@
+/* Shared, first-paint styles for the account workspace. */
+.kova-account-gate {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: 28px clamp(20px, 5vw, 72px);
+  background: var(--background);
+  color: var(--foreground);
+}
+.kova-account-gate-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 600;
+}
+.kova-account-gate-card {
+  align-self: center;
+  width: min(100%, 580px);
+  margin: 0 auto 8vh;
+  text-align: center;
+}
+.kova-account-gate-eyebrow {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.kova-account-gate-card h1 {
+  font-size: clamp(36px, 5vw, 62px);
+  line-height: 1.08;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  margin: 20px 0;
+}
+.kova-account-gate-card > p {
+  max-width: 380px;
+  margin: 0 auto;
+  color: var(--muted-foreground);
+  line-height: 1.65;
+}
+.kova-account-gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 28px;
+}
+.kova-account-gate-actions button {
+  min-height: 48px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.kova-account-gate-actions svg {
+  width: 18px;
+  height: 18px;
+}
+.kova-account-gate-primary {
+  background: var(--foreground);
+  color: var(--background);
+}
+.kova-account-gate-secondary {
+  border: 1px solid var(--border);
+  background: var(--surface-secondary);
+}
+.kova-account-gate-links {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-top: 32px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-account-gate-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 76px;
+}
+
+.kova-thinking-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+}
+.kova-thinking-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+.kova-thinking-toggle:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.kova-thinking-toggle[aria-pressed="true"] {
+  color: #3b82f6;
+  background: #3b82f618;
+  border-color: #3b82f633;
+}
+.kova-thinking-toggle[aria-pressed="true"] svg {
+  filter: drop-shadow(0 0 5px #3b82f640);
+}
+
+/* A field has one soft edge. Nested textarea/input outlines never draw a second box. */
+.spec400-composer[data-focus-origin="keyboard"]:focus-within,
+.spec400-composer[data-focus-origin="pointer"]:focus-within {
+  outline: none !important;
+  border-color: color-mix(in srgb, var(--foreground) 36%, transparent) !important;
+}
+.spec400-composer .spec400-composer-input,
+.kova-page :is(input, textarea):not([type="checkbox"]):not([type="radio"]):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.spec400-library-search:focus-within,
+.kova-sidebar-search-wrap:focus-within,
+.spec400-image-prompt:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: color-mix(in srgb, var(--foreground) 45%, transparent) !important;
+}
+.kova-header-button.kova-sidebar-toggle,
+.kova-rail-button.kova-sidebar-toggle {
+  border-radius: 11px;
+}
+.kova-sidebar-scroll {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.kova-sidebar-primary {
+  flex-shrink: 0;
+}
+.kova-sidebar-history {
+  flex-shrink: 0;
+}
+.kova-profile-menu {
+  width: var(--radix-dropdown-menu-trigger-width) !important;
+  min-width: 0 !important;
+  max-width: calc(100vw - 24px);
+  border-radius: 16px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-thinking-toggle {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .spec400-composer[data-focus-origin="keyboard"]:focus-within {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+  .kova-page :is(input, textarea):focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+  .kova-thinking-toggle[aria-pressed="true"] {
+    border: 2px solid Highlight;
+  }
+}
+/* A quiet resize affordance appears where the pointer can actually grab it. */
+.kova-sidebar-resize {
+  position: absolute;
+  inset: 64px 0 8px auto;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 2;
+}
+.kova-sidebar-resize span {
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  right: 2px;
+  width: 3px;
+  border-radius: 99px;
+  background: transparent;
+  transition: background 0.15s;
+}
+.kova-sidebar-resize:hover span,
+.kova-sidebar-resize:focus-visible span,
+.kova-sidebar[data-resizing] .kova-sidebar-resize span {
+  background: var(--muted-foreground);
+}
+.kova-sidebar[data-resizing] {
+  transition: none !important;
+  user-select: none;
+}
+.kova-sidebar-layout-controls {
+  display: grid;
+  gap: 16px;
+}
+.kova-sidebar-layout-controls > label:not(.kova-sidebar-shortcut-choice) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+.kova-sidebar-layout-controls select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.kova-sidebar-layout-controls input[type="range"] {
+  width: 100%;
+  accent-color: #3b82f6;
+}
+.kova-sidebar-layout-controls input[type="color"] {
+  width: 44px;
+  height: 34px;
+  padding: 2px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.kova-sidebar-color-reset {
+  justify-self: start;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.kova-rail-header {
+  display: flex;
+  gap: 2px;
+  height: 64px;
+  min-height: 64px;
+  align-items: center;
+  justify-content: center;
+}
+
+.kova-sidebar-history[hidden] {
+  display: none;
+}
+.kova-composer-tray {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: -10px 12px 0;
+  padding: 18px 10px 8px;
+  border-radius: 0 0 22px 22px;
+  background: color-mix(in srgb, var(--foreground) 3%, var(--background));
+}
+.kova-composer-tray-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  min-height: 38px;
+  border-radius: 11px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.kova-composer-tray-action svg {
+  width: 18px;
+  height: 18px;
+}
+.kova-composer-tray-action:hover {
+  color: var(--foreground);
+  background: var(--accent);
+}
+.kova-composer-tray-action:disabled {
+  opacity: 0.45;
+}
+.kova-composer-tray-preferences {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.kova-composer-tray-preferences .spec400-toolbar-button {
+  width: auto !important;
+  padding: 8px !important;
+  font-size: 12px;
+  gap: 6px;
+}
+.spec400-chat-input .spec400-composer {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--kova-radius-composer);
+  padding: 16px !important;
+  min-height: 156px !important;
+  box-shadow: 0 3px 16px #00000008;
+}
+.spec400-chat-input .spec400-composer-input-region {
+  min-height: 76px !important;
+}
+.spec400-chat-input .spec400-composer-input {
+  min-height: 68px !important;
+  font-size: 16px !important;
+  line-height: 1.55 !important;
+  padding: 2px 4px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+.spec400-chat-input .spec400-composer-toolbar {
+  margin-top: 8px;
+}
+.spec400-chat-input .spec400-composer-trailing {
+  margin-left: auto;
+}
+@media (max-width: 560px) {
+  .kova-composer-tray {
+    margin-inline: 6px;
+    padding-inline: 4px;
+    gap: 2px;
+  }
+  .kova-composer-tray-action {
+    padding: 7px 8px;
+    font-size: 12px;
+  }
+  .kova-composer-tray-preferences .spec400-toolbar-button span {
+    display: none;
+  }
+  .kova-composer-tray[data-has-add-menu="true"] .kova-composer-tray-preferences {
+    display: none;
+  }
+  .spec400-chat-input .spec400-composer {
+    padding: 12px !important;
+    border-radius: var(--kova-radius-composer);
+  }
+}
+@media (max-width: 380px) {
+  .kova-composer-tray-preferences {
+    margin-left: 0;
+  }
+}
+.kova-plan-usage {
+  margin-top: 24px;
+  display: grid;
+  gap: 22px;
+}
+.kova-plan-usage-heading,
+.kova-plan-usage-row > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+}
+.kova-plan-usage-heading > span {
+  color: #60a5fa;
+  border-radius: 99px;
+  background: #3b82f615;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.kova-plan-usage-row {
+  display: grid;
+  gap: 8px;
+}
+.kova-plan-usage-row small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-usage-track {
+  height: 8px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+.kova-usage-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.25s;
+}
+.kova-plan-usage-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+.kova-plan-usage-comparison > span {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.kova-plan-usage-comparison strong {
+  color: var(--foreground);
+  font-size: 20px;
+}
+.spec400-recent-work > div {
+  display: grid;
+  gap: 10px;
+}
+.spec400-recent-work a,
+.spec400-recent-work button {
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+  border-radius: 16px;
+  padding: 16px 18px !important;
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+.spec400-recent-work a:hover,
+.spec400-recent-work button:hover {
+  background: var(--accent);
+  transform: translateY(-1px);
+}
+.kova-source-provider,
+.kova-source-activity > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+  font-size: 13px;
+}
+.kova-source-provider svg,
+.kova-source-activity svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.kova-source-provider small,
+.kova-source-activity small {
+  margin-left: auto;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.kova-source-provider-supabase svg {
+  color: #34d399;
+}
+.kova-source-provider-firecrawl svg {
+  color: #fb923c;
+}
+.dark .kova-source-provider-github img {
+  filter: invert(1);
+}
+.kova-source-activity {
+  margin-bottom: 18px;
+}
+.kova-conversation-outputs {
+  border-radius: 20px;
+  padding: 18px !important;
+  max-height: min(78dvh, 740px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.kova-conversation-outputs h2 {
+  color: #b4c9df;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.kova-image-custom-size {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+.kova-image-custom-size legend {
+  font-size: 13px;
+  padding: 0 6px;
+}
+.kova-image-custom-size label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  flex: 1;
+  min-width: 80px;
+}
+.kova-image-custom-size input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: transparent;
+}
+.kova-image-custom-size p {
+  flex-basis: 100%;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.spec400-image-prompt,
+.spec400-image-prompt textarea,
+.kova-page textarea {
+  border-radius: 24px;
+}
+.kova-share-dialog {
+  border-radius: 26px;
+  max-width: 520px !important;
+  padding: 28px !important;
+  gap: 20px !important;
+}
+.kova-share-symbol {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+.kova-share-preview {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-size: 13px;
+}
+.kova-share-preview > span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-share-preview details {
+  grid-column: 1/-1;
+}
+.kova-share-preview summary {
+  cursor: pointer;
+  padding-top: 8px;
+  color: var(--muted-foreground);
+}
+.kova-share-preview details[open] {
+  max-height: 260px;
+  overflow: auto;
+}
+.kova-share-preview article {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.kova-share-preview article p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: 6px;
+}
+.kova-share-preview small {
+  color: var(--muted-foreground);
+}
+.kova-share-link {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+.kova-share-link input {
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 12px;
+  width: 100%;
+  background: transparent;
+}
+.kova-share-copy {
+  min-height: 46px;
+  border-radius: 99px;
+  gap: 8px;
+}
+.kova-share-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+}
+.kova-share-secondary button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-share-secondary svg {
+  width: 15px;
+  height: 15px;
+}
+[data-sonner-toast].kova-share-success {
+  background: #102f27 !important;
+  color: #c7f7df !important;
+  border: 1px solid #235d49 !important;
+  border-radius: 14px;
+}
+.kova-public-share {
+  min-height: 100dvh;
+  background: var(--background);
+  color: var(--foreground);
+}
+.kova-public-share header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border);
+}
+.kova-public-share header a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.kova-public-share header svg {
+  width: 22px;
+  height: 22px;
+}
+.kova-public-share > section {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 24px;
+}
+.kova-public-share h1 {
+  font-size: 30px;
+  letter-spacing: -0.035em;
+  margin: 12px 0;
+}
+.kova-share-eyebrow,
+.kova-share-note {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.kova-public-share article {
+  margin-top: 26px;
+  padding: 22px;
+  border-radius: 20px;
+}
+.kova-public-share article[data-role="user"] {
+  background: var(--accent);
+}
+.kova-public-share article > strong {
+  font-size: 12px;
+}
+.kova-public-share article > p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+  margin-top: 10px;
+}
+.kova-session-loading {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: var(--background);
+  color: var(--muted-foreground);
+}
+.kova-session-loading > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.kova-session-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: kova-session-spin 800ms linear infinite;
+}
+@keyframes kova-session-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-session-spinner {
+    animation: none;
+  }
+}
+.kova-core-page.kova-file-directory .kova-file-preview {
+  aspect-ratio: 16/9;
+  max-height: 172px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.kova-core-page.kova-file-directory .kova-file-preview > svg {
+  width: 30px;
+  height: 30px;
+  opacity: 0.6;
+}
+.kova-core-page.kova-file-directory .kova-file-toolbar .kova-directory-search input {
+  height: 44px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+}
+.kova-core-page.kova-file-directory .kova-file-card {
+  border-radius: 20px;
+  transition:
+    border-color 0.16s,
+    background 0.16s;
+}
+.kova-settings-route .kova-settings-page {
+  max-width: 1220px;
+  margin: 0 auto;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 7%, transparent);
+  background: var(--background);
+}
+.kova-settings-route .kova-settings-page .kova-settings-sidebar {
+  padding: 16px 12px;
+  margin: 12px;
+  border: 0;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.kova-settings-reference .kova-settings-search input {
+  border-radius: 12px;
+}
+.kova-settings-reference .kova-settings-nav [role="tab"] {
+  border-radius: 12px;
+  margin-bottom: 3px;
+}
+.kova-settings-route .kova-settings-content-header {
+  margin-inline: 28px;
+  border-bottom: 1px solid var(--border);
+  padding-block: 20px !important;
+}
+.kova-settings-route .kova-settings-content-header h2 {
+  font-size: 22px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.035em;
+}
+.kova-settings-reference [role="tabpanel"] input:not([type="checkbox"]):not([type="radio"]),
+.kova-settings-reference [role="tabpanel"] textarea,
+.kova-settings-reference [role="tabpanel"] [data-slot="select-trigger"] {
+  border-radius: 14px;
+}
+.kova-billing-plan-grid {
+  gap: 16px !important;
+}
+.kova-billing-plan-card {
+  border-radius: 22px;
+  padding: 24px !important;
+  background: color-mix(in srgb, var(--foreground) 2%, transparent) !important;
+}
+.kova-billing-plan-card[data-current-plan="true"] {
+  border-color: color-mix(in srgb, #3b82f6 60%, var(--border)) !important;
+  box-shadow: 0 0 0 3px #3b82f610;
+}
+.kova-billing-plan-price strong {
+  font-size: 38px !important;
+  letter-spacing: -0.055em;
+}
+.kova-billing-plan-card button,
+.kova-billing-view-plans,
+.kova-billing-management-row button {
+  border-radius: 99px;
+}
+.kova-billing-metrics {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+}
+.kova-tool-page[data-ui-reference="grok.search.results"] form {
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+}
+.kova-tool-page[data-ui-reference="grok.search.results"] input {
+  min-height: 50px;
+  border-radius: 16px;
+  padding-inline: 16px;
+}
+.kova-tool-page[data-ui-reference="grok.search.results"] fieldset button {
+  border-radius: 99px;
+}
+@media (max-width: 719px) {
+  .kova-settings-route .kova-settings-page {
+    border: 0;
+    border-radius: 0;
+  }
+  .kova-tool-page[data-ui-reference="grok.search.results"] form {
+    padding: 16px;
+  }
+}
+.kova-guided-help {
+  margin-top: 28px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 20px;
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
+}
+.kova-guided-help summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.kova-guided-help summary small {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+.kova-guided-help > p {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 18px;
+  max-width: 70ch;
+}
+.kova-guided-help-selects {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+.kova-guided-help-selects label {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  font-size: 12px;
+}
+.kova-guided-help-selects label:first-child {
+  grid-column: 1/-1;
+}
+.kova-guided-help select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--background);
+  color: var(--foreground);
+}
+.kova-guided-help ol {
+  margin-top: 24px;
+  display: grid;
+  gap: 18px;
+  padding-left: 22px;
+  list-style: decimal;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.kova-guided-help li::marker {
+  color: var(--muted-foreground);
+}
+@media (max-width: 560px) {
+  .kova-guided-help-selects {
+    grid-template-columns: 1fr;
+  }
+  .kova-guided-help {
+    padding: 16px;
+  }
+}
+.kova-browser-live-preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/10;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--accent);
+}
+.kova-browser-live-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.kova-browser-live-preview small {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 7px;
+  background: #0009;
+  color: #fff;
+  padding: 4px 7px;
+  font-size: 11px;
+}
+.kova-public-links {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+.kova-public-links > p {
+  margin-top: 8px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.kova-public-links ul {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+}
+.kova-public-links li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.kova-public-links li > div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  font-size: 13px;
+}
+.kova-public-links small {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.kova-public-links strong {
+  overflow-wrap: anywhere;
+}
+.kova-sidebar-order {
+  display: grid;
+  gap: 6px;
+}
+.kova-sidebar-order > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  font-size: 13px;
+}
+.kova-sidebar-order > div > span {
+  margin-right: auto;
+}
+.kova-sidebar-order button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.kova-sidebar-order button:disabled {
+  opacity: 0.3;
+}
+.kova-sidebar-order button:hover:not(:disabled) {
+  background: var(--accent);
+}
+
+.kova-home-loading {
+  display: grid;
+  flex: 1;
+  min-height: 300px;
+  place-items: center;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}

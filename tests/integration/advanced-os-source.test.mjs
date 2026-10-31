@@ -38,17 +38,17 @@ test("Prompt Studio persists variables favorites projects packs and launches cha
   assert.match(route, /Launch new chat/);
   assert.match(chat, /kova-prompt-launch/);
 });
-test("Artifact and Work expansions remain truthful and interactive", () => {
+test("Artifact tools remain interactive while retired Work links return to chat", () => {
   const artifact = read("src/components/ArtifactEditor.tsx"),
     work = read("src/routes/work.tsx");
-  assert.match(artifact, /readingMinutes/);
-  assert.match(artifact, /Search outline/);
-  assert.match(artifact, /Version comparison/);
-  assert.match(artifact, /Artifact comments/);
-  assert.match(work, /listWorkRuns/);
-  assert.match(work, /controlWorkRun/);
-  assert.match(work, /Agent execution is unavailable/);
-  assert.match(work, /Approval is disabled while execution is unavailable/);
-  assert.match(work, /decision: "denied"/);
-  assert.doesNotMatch(work, /decision: "approved"|>\s*Approve\s*</);
+  for (const label of [
+    "readingMinutes",
+    "Search outline",
+    "Version comparison",
+    "Artifact comments",
+    "Continue in chat",
+  ])
+    assert.ok(artifact.includes(label), label);
+  assert.match(work, /throw redirect\(\{ to: "\/", replace: true \}\)/);
+  assert.doesNotMatch(work, /<WorkExecutionPanel|<AgentWorkspace|decision: "approved"/);
 });

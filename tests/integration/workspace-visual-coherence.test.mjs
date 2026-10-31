@@ -98,11 +98,11 @@ test("Images gives every repeated control a single contextual accessible name", 
   assert.doesNotMatch(routes.images, /aria-busy=\{loading \|\| undefined\}/);
   assert.match(
     routes.images,
-    /The image could not be generated\. Your prompt is kept here\. Please try again\./,
+    /Image generation failed\. Your prompt is kept here so you can try again\./,
   );
   assert.match(
     routes.images,
-    /error === IMAGE_GENERATION_UNAVAILABLE\s*\? IMAGE_GENERATION_UNAVAILABLE\s*: "The image could not be generated/,
+    /error === IMAGE_GENERATION_UNAVAILABLE\s*\? IMAGE_GENERATION_UNAVAILABLE\s*: error\.startsWith\("Enter valid custom dimensions:"\)\s*\? error\s*: "Image generation failed\. Your prompt is kept here so you can try again\."/,
   );
   assert.doesNotMatch(routes.images, /Check your prompt and try again/);
   assert.doesNotMatch(routes.images, />\s*\{error\}\s*</);

@@ -29,23 +29,22 @@ for (const theme of ["dark", "light"] as const) {
   test(`${theme}: empty composer, starter drafts, expand input, Context and Options`, async ({
     page,
   }, info) => {
-    await fixture(page, theme, false);
+    await fixture(page, theme, true);
     await page.goto("/");
     await waitForKovaHydration(page);
     const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
     const send = page.getByTestId("send-button");
     const voice = page.getByTestId("voice-button");
     await expect(input).toBeEnabled();
-    await expect(
-      page.getByRole("heading", { name: "How can I help today?", exact: true }),
-    ).toBeVisible();
+    await expect(page.locator("#chat-greeting")).toBeVisible();
+    await expect(page.locator("#chat-greeting")).not.toHaveText("");
     await expect(input).toHaveAttribute("placeholder", "Describe what you need…");
     await expectRestingComposer(page);
     await expect(send).toBeHidden();
     await expect(send).toBeDisabled();
     await expect(voice).toBeVisible();
     await expect(voice).toHaveAccessibleName("Voice");
-    await expect(voice).toBeDisabled();
+    await expect(voice).toBeEnabled();
     await expect(page.getByText("Continue working", { exact: true })).toHaveCount(0);
     for (const action of ["Write something", "Summarize a file", "Compare options"]) {
       await input.fill("");
@@ -138,10 +137,10 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   await input.press(compactDesktop ? "Shift+Enter" : "Enter");
   await expect(input).toHaveValue("First line\n");
   await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
-  await page
-    .getByRole("button", { name: "Open Context", exact: true })
-    .filter({ visible: true })
-    .click();
+  const context = page.getByRole("button", { name: "Context", exact: true });
+  if (!(await context.isVisible()))
+    await page.getByRole("button", { name: "Attach", exact: true }).click();
+  await context.click();
   await expect(page.getByRole("dialog", { name: "Context", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(input).toHaveValue("First line\n");

@@ -1,24 +1,73 @@
+import { browserActivityIsFresh } from "@/lib/browser-activity-contract.mjs";
 import type { ReactNode } from "react";
-import { BookOpen, ChevronRight, File, Globe, Image, Monitor } from "lucide-react";
+import {
+  BookOpen,
+  ChevronRight,
+  File,
+  Globe,
+  Image,
+  Monitor,
+  GitBranch,
+  Database,
+  Zap,
+  LibraryBig,
+  CloudSun,
+} from "lucide-react";
+import githubLogo from "@/assets/plugins/github.svg";
 import type {
   ConversationBrowserSource,
   ConversationSourceInventory,
 } from "@/lib/conversation-sources";
 import type { MemorySources } from "@/lib/memory-sources.mjs";
+export function ConversationActivitySummary({
+  inventory,
+  browserTabCount,
+}: {
+  inventory: ConversationSourceInventory;
+  browserTabCount?: number;
+}) {
+  const latest = [...inventory.browser]
+    .reverse()
+    .find((activity) => activity.status === "active" && browserActivityIsFresh(activity.browser));
+  if (!latest) return null;
+  const tabCount = browserTabCount ?? latest.browser?.tabCount;
+  return (
+    <div className="kova-source-activity">
+      <h2>Activity</h2>
+      <div>
+        <Globe aria-hidden="true" />
+        <span>Browser</span>
+        {Number.isSafeInteger(tabCount) && tabCount! >= 0 ? (
+          <small>
+            {tabCount} {tabCount === 1 ? "tab" : "tabs"}
+          </small>
+        ) : (
+          <small>Active</small>
+        )}
+      </div>
+    </div>
+  );
+}
 export function ConversationSourcesView({
   inventory,
   onOpenAttachment,
   onOpenMemory,
   onOpenBrowser,
   browserPreview,
+  browserTabCount,
+  showActivity = true,
 }: {
   inventory: ConversationSourceInventory;
   onOpenAttachment: (outputId: string) => void;
   onOpenMemory: (sources: MemorySources) => void;
   onOpenBrowser?: (activity: ConversationBrowserSource) => void;
   browserPreview?: ReactNode;
+  browserTabCount?: number;
+  showActivity?: boolean;
 }) {
+  const providers = inventory.providers ?? [];
   const total =
+    providers.length +
     inventory.web.length +
     inventory.memory.length +
     inventory.attachments.length +
@@ -26,14 +75,49 @@ export function ConversationSourcesView({
   if (!total) return null;
   return (
     <section className="kova-conversation-sources" aria-label="Conversation sources">
-      {inventory.web.length + inventory.memory.length + inventory.attachments.length > 0 && (
-        <h2>Sources</h2>
-      )}
+      {providers.length +
+        inventory.web.length +
+        inventory.memory.length +
+        inventory.attachments.length >
+        0 && <h2>Sources</h2>}
+      {providers.map((entry) => {
+        const Icon = {
+          github: GitBranch,
+          supabase: Database,
+          firecrawl: Zap,
+          library: LibraryBig,
+          files: File,
+          google: CloudSun,
+          microsoft: CloudSun,
+        }[entry.provider];
+        return (
+          <div
+            key={entry.id}
+            className={`kova-source-provider kova-source-provider-${entry.provider}`}
+          >
+            {entry.provider === "github" ? (
+              <img src={githubLogo} width={16} height={16} alt="" />
+            ) : (
+              <Icon aria-hidden="true" />
+            )}
+            <span>{entry.name}</span>
+            <small>
+              {entry.status === "running"
+                ? "Active"
+                : entry.status === "failed"
+                  ? "Failed"
+                  : entry.status === "canceled"
+                    ? "Canceled"
+                    : `${entry.messageIds.length} ${entry.messageIds.length === 1 ? "turn" : "turns"}`}
+            </small>
+          </div>
+        );
+      })}
       {inventory.web.length > 0 && (
         <details className="kova-source-group">
           <summary>
             <Globe aria-hidden="true" />
-            <span>Web sources</span>
+            <span>Web search</span>
             <small>{inventory.web.length}</small>
             <ChevronRight aria-hidden="true" />
           </summary>
@@ -54,7 +138,7 @@ export function ConversationSourcesView({
         <details className="kova-source-group">
           <summary>
             <BookOpen aria-hidden="true" />
-            <span>Memory provided</span>
+            <span>Memory</span>
             <small>{inventory.memory.length}</small>
             <ChevronRight aria-hidden="true" />
           </summary>
@@ -97,19 +181,22 @@ export function ConversationSourcesView({
       )}
       {inventory.browser.length > 0 && (
         <section className="kova-browser-section" aria-label="Cloud browser">
+          {showActivity ? (
+            <ConversationActivitySummary inventory={inventory} browserTabCount={browserTabCount} />
+          ) : null}
           <div className="kova-browser-section-heading">
             <h2>Cloud browser</h2>
             {inventory.browser.length === 1 && (
               <span className="kova-source-state">
-                {browserPreview
-                  ? "Sample"
-                  : inventory.browser[0].status === "active"
+                {inventory.browser[0].status === "active"
+                  ? browserActivityIsFresh(inventory.browser[0].browser)
                     ? "Active"
-                    : inventory.browser[0].status === "completed"
-                      ? "Used"
-                      : inventory.browser[0].status === "failed"
-                        ? "Failed"
-                        : "Canceled"}
+                    : "Recorded"
+                  : inventory.browser[0].status === "completed"
+                    ? "Used"
+                    : inventory.browser[0].status === "failed"
+                      ? "Failed"
+                      : "Canceled"}
               </span>
             )}
           </div>
@@ -123,13 +210,26 @@ export function ConversationSourcesView({
               aria-label="Open browser activity"
             >
               {inventory.browser.length > 1 && <span className="sr-only">{activity.status}</span>}
-              {browserPreview ?? (
-                <span className="kova-browser-card-content">
-                  <Monitor aria-hidden="true" />
-                  <strong>{activity.label}</strong>
-                  <small>Recorded activity · no live preview</small>
-                </span>
-              )}
+              {browserPreview ??
+                (activity.status === "active" &&
+                browserActivityIsFresh(activity.browser) &&
+                activity.browser?.previewPath ? (
+                  <span className="kova-browser-live-preview">
+                    <img
+                      src={activity.browser.previewPath}
+                      alt="Current cloud browser preview"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                    />
+                    {activity.browser.hostname ? <small>{activity.browser.hostname}</small> : null}
+                  </span>
+                ) : (
+                  <span className="kova-browser-card-content">
+                    <Monitor aria-hidden="true" />
+                    <strong>{activity.label}</strong>
+                    <small>Recorded activity · no live preview</small>
+                  </span>
+                ))}
             </button>
           ))}
         </section>

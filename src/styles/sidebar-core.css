@@ -358,8 +358,8 @@
 }
 .kova-sidebar-rail[data-kova-core-rail] {
   display: none;
-  width: var(--kova-sidebar-rail-width, 56px);
-  min-width: var(--kova-sidebar-rail-width, 56px);
+  width: var(--kova-sidebar-rail-width, 84px);
+  min-width: var(--kova-sidebar-rail-width, 84px);
   height: 100dvh;
   flex: 0 0 auto;
   flex-direction: column;

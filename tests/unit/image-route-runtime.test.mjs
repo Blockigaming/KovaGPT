@@ -1,3 +1,4 @@
+import * as imageSizes from "../../src/lib/multimodal/image-size-policy.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
@@ -42,6 +43,7 @@ function fixture({ textUnavailable = false } = {}) {
     "@/lib/modes": { DAILY_IMAGE_LIMIT_BY_TIER: { free: 2 } },
     "@/lib/ai/provider.server": {
       AiProviderError: ProviderError,
+      imageModel: () => "gpt-image-2.5-flare",
       missingAiProviderResponse: () =>
         textUnavailable
           ? Response.json({ error: "synthetic_text_unavailable" }, { status: 503 })
@@ -72,6 +74,7 @@ function fixture({ textUnavailable = false } = {}) {
         parentImageId: settings.parentImageId,
       }),
     },
+    "@/lib/multimodal/image-size-policy.mjs": imageSizes,
     "@/lib/multimodal/image-request-policy.mjs": policy,
     "@/lib/multimodal/image-bytes.mjs": bytes,
     "@/lib/multimodal/image-source.server.mjs": {

@@ -154,6 +154,28 @@ export function ResponsiveModelSelector({
       </span>
     );
 
+  if (userTier === "free")
+    return (
+      <button
+        ref={triggerRef}
+        type="button"
+        data-testid="thinking-toggle"
+        data-slot="thinking-toggle"
+        aria-label="Thinking"
+        aria-pressed={mode === "thinking"}
+        title={
+          mode === "thinking"
+            ? "Thinking is on. Click for Default."
+            : "Use Thinking for a more considered answer."
+        }
+        className="kova-thinking-toggle"
+        onClick={() => onChange(mode === "thinking" ? "instant" : "thinking")}
+      >
+        <Brain aria-hidden="true" />
+        <span>Thinking</span>
+      </button>
+    );
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <div className="relative inline-flex min-w-0">

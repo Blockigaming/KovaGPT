@@ -75,6 +75,7 @@ export type Attachment =
       sourceProject?: string | null;
     };
 export type Activity = {
+  browser?: import("./browser-activity-contract.mjs").BrowserActivityMetadata;
   taskReceipt?: TaskCreatedReceipt;
   taskFailure?: TaskCreationFailureReceipt;
   error?: string;

@@ -112,7 +112,7 @@ test("known limitations and required provider-dependent Voice remain explicit", 
   assert.match(registry, /Library original PDF preview is separate from extracted text/);
   assert.match(registry, /Office originals can be downloaded but are not rendered/);
   assert.doesNotMatch(registry, /extraction is not currently supported/);
-  assert.match(registry, /Editing an uploaded or generated image is not currently available/);
+  assert.match(registry, /Edit a Library image with a supported configured image model/);
   assert.match(
     registry,
     /Signed-in ordinary chats synchronize with your account when chat sync is available/,
@@ -121,7 +121,10 @@ test("known limitations and required provider-dependent Voice remain explicit", 
     registry,
     /Offline edits stay on this device until acknowledged; Temporary Chat stays out of history/,
   );
-  assert.match(registry, /Background scheduled execution is unavailable in this deployment/);
+  assert.match(
+    registry,
+    /Background scheduled execution is unavailable until an approved scheduler and fresh heartbeat/,
+  );
   assert.match(
     registry,
     /Transcription, speech synthesis, voice conversion, and saved-response Read aloud depend on configured voice access/u,

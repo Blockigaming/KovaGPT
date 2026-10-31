@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 
-const componentSource = readFileSync("src/components/ShareChatDialog.tsx", "utf8");
+const componentSource = readFileSync("src/components/EmailShareChatDialog.tsx", "utf8");
 function load(source, modules = {}, globals = {}) {
   const code = ts.transpileModule(source, {
     compilerOptions: {
@@ -162,7 +162,7 @@ function fixture() {
     requests.push({ payload, resolve, reject });
     return promise;
   };
-  const { ShareChatDialog } = load(
+  const { EmailShareChatDialog } = load(
     componentSource,
     {
       react,
@@ -203,7 +203,7 @@ function fixture() {
     for (let pass = 0; dirty && mounted && pass < 15; pass++) {
       dirty = false;
       cursor = 0;
-      tree = ShareChatDialog(props);
+      tree = EmailShareChatDialog(props);
       for (const [ref, element] of refElements) {
         ref.current = null;
         element.isConnected = false;

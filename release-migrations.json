@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 203,
-  "latest": "20261030163511_kova_work_runtime_forward.sql",
+  "count": 205,
+  "latest": "20261031014600_scheduled_task_plan_allowances.sql",
   "migrations": [
     {
       "order": 1,
@@ -4317,6 +4317,34 @@
         "work_execution_dispatch_idx",
         "work_browser_one_live_run"
       ]
+    },
+    {
+      "order": 204,
+      "filename": "20261031014500_public_chat_share_links.sql",
+      "timestamp": "20261031014500",
+      "sha256": "bb14b6dabbed216bd46bb106352453c3d9441b1b1d42c8378f2579a6860b7d86",
+      "tables": ["chat_public_shares"],
+      "functions": ["read_public_chat_share", "guard_public_chat_share"],
+      "destructive": true,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": ["chat_public_shares"],
+      "policies": [],
+      "indexes": ["chat_public_shares_owner_created_idx"]
+    },
+    {
+      "order": 205,
+      "filename": "20261031014600_scheduled_task_plan_allowances.sql",
+      "timestamp": "20261031014600",
+      "sha256": "29864c547ceb2692b59072a378fb31ca0544f1aa3e264f52199b8ed916d3c078",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

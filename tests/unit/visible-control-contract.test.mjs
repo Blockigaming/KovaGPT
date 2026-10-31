@@ -9,6 +9,31 @@ test("visible product controls are backed or explicitly absent", () => {
   assert.deepEqual(inspectVisibleControlContract(), []);
 });
 
+test("configured editing and scheduling cannot claim unconditional availability", async () => {
+  const capabilities = await readFile(
+    new URL("../../src/lib/capability-registry.ts", import.meta.url),
+    "utf8",
+  );
+  for (const [feature, limitation] of [
+    ["imageEditing", "supported configured image model"],
+    ["scheduledTasks", "unavailable until an approved scheduler and fresh heartbeat"],
+  ]) {
+    const advertised = capabilities.replace(
+      new RegExp(`(${feature}:\\s*\\{[^}]*availability: )"provider-dependent"`, "u"),
+      '$1"available"',
+    );
+    const omitted = capabilities.replace(limitation, "always ready");
+    for (const source of [advertised, omitted]) {
+      assert.notEqual(source, capabilities);
+      assert.ok(
+        inspectVisibleControlContract({ files: [], capabilities: source }).includes(
+          `capability-registry:${feature === "imageEditing" ? "image editing" : "scheduled execution"} limitation missing`,
+        ),
+      );
+    }
+  }
+});
+
 test("selected-file preparation never grants microphone or provider bypass permission", async () => {
   const panel = await readFile(
     new URL("../../src/components/AudioToolsPanel.tsx", import.meta.url),

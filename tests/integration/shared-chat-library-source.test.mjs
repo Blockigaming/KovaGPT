@@ -34,7 +34,7 @@ test("shared-chat Library requests and mutations are guarded across account chan
 });
 
 test("Share chat labels its email field and points recipients to Library", () => {
-  const source = read("src/components/ShareChatDialog.tsx");
+  const source = read("src/components/EmailShareChatDialog.tsx");
 
   assert.match(source, /htmlFor=\{recipientEmailId\}/u);
   assert.match(source, /id=\{recipientEmailId\}/u);

@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 import { coreFixture } from "./core-app-fixture";
 import { openResponseOptions, revealSidebar } from "./current-ui";
-import { fixture, origin, functionNames } from "./actual-app-fixture";
+import { fixture, functionNames } from "./actual-app-fixture";
 import { choosePickerValue } from "./select-control";
 
 async function geometry(page: Page) {
@@ -44,18 +44,18 @@ async function geometry(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
-test("guest Add menu uses one scroll region in a short desktop viewport", async ({
+test("signed-in Add menu uses one scroll region in a short desktop viewport", async ({
   page,
 }, info) => {
   test.skip(page.viewportSize()!.width < 768, "Desktop Popover regression; phones use a sheet.");
   await page.setViewportSize({ width: 1180, height: 757 });
-  await fixture(page, "dark", false);
+  await fixture(page, "dark", true);
   await page.goto("/");
   await waitForKovaHydration(page);
   const trigger = page.getByRole("button", { name: "Attach", exact: true });
   const menu = page.getByRole("dialog", { name: "Attach files and tools", exact: true });
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
-  await input.fill("Keep this guest draft");
+  await input.fill("Keep this draft");
   const coarsePointer = await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches);
   const attachmentActions = [
     "Library",
@@ -101,12 +101,15 @@ test("guest Add menu uses one scroll region in a short desktop viewport", async 
     ).toEqual([true]);
     for (const name of attachmentActions) {
       const action = menu.getByRole("button", { name, exact: true });
+      await action.evaluate((element) =>
+        element.scrollIntoView({ block: "center", inline: "nearest" }),
+      );
       await expect(action).toBeInViewport({ ratio: 1 });
       if (coarsePointer) expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     }
     if (opening === 0)
       await page.screenshot({
-        path: info.outputPath("guest-add-menu-initial.png"),
+        path: info.outputPath("signed-in-add-menu-initial.png"),
         animations: "disabled",
       });
 
@@ -114,12 +117,12 @@ test("guest Add menu uses one scroll region in a short desktop viewport", async 
     const browse = menu.getByRole("link", { name: "Browse all plugins", exact: true });
     await expect(browse).toBeFocused();
     await expect(browse).toBeInViewport({ ratio: 1 });
-    const drive = menu.getByRole("button", { name: /^Google Drive / });
+    const drive = menu.getByRole("link", { name: /^Google Drive / });
     await drive.focus();
     await expect(drive).toBeInViewport({ ratio: 1 });
     await page.keyboard.press("Home");
-    await expect(menu.getByRole("button", { name: "Library", exact: true })).toBeFocused();
-    for (const name of attachmentActions.slice(1)) {
+    await expect(menu.getByRole("button", { name: "Retry allowance", exact: true })).toBeFocused();
+    for (const name of attachmentActions) {
       await page.keyboard.press("ArrowDown");
       const action = menu.getByRole("button", { name, exact: true });
       await expect(action).toBeFocused();
@@ -128,7 +131,7 @@ test("guest Add menu uses one scroll region in a short desktop viewport", async 
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();
     await expect(trigger).toBeFocused();
-    await expect(input).toHaveValue("Keep this guest draft");
+    await expect(input).toHaveValue("Keep this draft");
   }
 });
 
@@ -151,7 +154,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByRole("button", { name: "Expand input", exact: true }).focus();
     await page.keyboard.press("Shift+Tab");
     await expect(input).toBeFocused();
-    await expect(page.locator(".spec400-composer")).toHaveCSS("outline-offset", "2px");
+    await expect(page.locator(".spec400-composer")).toHaveCSS("outline-style", "none");
     await input.fill("Plan a thoughtful product launch");
     await input.press("Shift+Enter");
     await input.pressSequentially("Keep the next steps clear.");
@@ -326,8 +329,31 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
   await expect(timer).toBeFocused();
 });
 
-test("guest gates keep drafts and send reaches the actual request path", async ({ page }) => {
+test("guest account gate prevents messaging and restores login focus", async ({ page }) => {
   await fixture(page, "light", false);
+  let requests = 0;
+  await page.route("**/api/chat", (route) => {
+    requests++;
+    return route.abort("blockedbyclient");
+  });
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Attach", exact: true })).toHaveCount(0);
+  const login = page.getByRole("button", { name: "Log in", exact: true });
+  await login.click();
+  const dialog = page.getByRole("dialog", { name: "Log in to Kova", exact: true });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(login).toBeFocused();
+  expect(requests).toBe(0);
+});
+
+test("authenticated send reaches the actual request path and reports provider failure", async ({
+  page,
+}) => {
+  await fixture(page, "light", true);
   let requests = 0;
   await page.route("**/api/chat", (route) => {
     requests++;
@@ -345,17 +371,7 @@ test("guest gates keep drafts and send reaches the actual request path", async (
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
   await expect(input).toBeEnabled();
-  await input.fill("Keep this guest draft");
-  await page.getByRole("button", { name: "Attach", exact: true }).click();
-  await page
-    .getByRole("dialog", { name: /^(Attach files and tools|Attach to your message|Attach)$/ })
-    .getByRole("button", { name: "Library", exact: true })
-    .click();
-  const prompt = page.getByRole("dialog", { name: "Sign in to continue" });
-  await expect(prompt).toBeVisible();
-  await expect(prompt.getByRole("button", { name: "Sign in", exact: true })).toBeDisabled();
-  await prompt.getByRole("button", { name: "Not now" }).click();
-  await expect(input).toHaveValue("Keep this guest draft");
+  await input.fill("Review this authenticated draft");
   await page.getByTestId("send-button").click();
   await expect.poll(() => requests).toBe(1);
   await expect(
@@ -448,10 +464,10 @@ test("voice stays disconnected while typing, attachments and Stop retain their c
   await expect(voice).toBeVisible();
   await geometry(page);
 
-  const picker = page.getByTestId("model-selector-trigger").filter({ visible: true });
-  await picker.click();
-  await page.getByTestId("model-option-thinking").click();
-  await expect(picker).toContainText("Thinking");
+  const thinking = page.getByTestId("thinking-toggle");
+  await thinking.click();
+  await expect(thinking).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
 });
 
 for (const theme of ["light", "dark"] as const) {
@@ -465,11 +481,13 @@ for (const theme of ["light", "dark"] as const) {
     await input.click();
     await expect(input).toHaveCSS("outline-style", "none");
     await input.fill("Keep this draft while choosing Thinking");
-    const picker = page.getByTestId("model-selector-trigger").filter({ visible: true });
-    await picker.click();
-    await expect(page.getByTestId("model-option-thinking")).toBeVisible();
-    await page.getByTestId("model-option-thinking").click();
-    await expect(picker).toContainText("Thinking");
+    const thinking = page.getByTestId("thinking-toggle");
+    await expect(thinking).toHaveAttribute("aria-pressed", "false");
+    await thinking.click();
+    await expect(thinking).toHaveAttribute("aria-pressed", "true");
+    await expect(thinking).toHaveCSS("color", "rgb(59, 130, 246)");
+    await expect(thinking.locator("svg")).toHaveCSS("color", "rgb(59, 130, 246)");
+    await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
     await expect(input).toHaveValue("Keep this draft while choosing Thinking");
     await geometry(page);
     await page.screenshot({

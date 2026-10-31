@@ -213,7 +213,7 @@ test("actual route and UI bind attribution to prompt assembly, current generatio
   assert.match(fn, /private, no-store/);
   assert.match(read("src/components/ChatMessage.tsx"), /Memory provided/);
   assert.match(
-    read("src/components/ShareChatDialog.tsx"),
+    read("src/components/EmailShareChatDialog.tsx"),
     /prepareShareSnapshot\(conversation, email, myEmail\)/,
   );
   const shared = prepareShareSnapshot(

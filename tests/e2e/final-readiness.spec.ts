@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+test.beforeEach(async ({ page }) => {
+  await installAuthenticatedFixture(page);
+});
 
 import { waitForKovaHydration } from "./hydration";
+import { openCurrentSettings } from "./current-ui";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
@@ -33,13 +38,11 @@ test("keyboard users can dismiss menus and dialogs with focus restoration", asyn
     await menu.press("Enter");
   }
 
-  const settings = page.getByRole("button", { name: "Settings" }).first();
-  await settings.focus();
-  await page.keyboard.press("Enter");
+  const settings = await openCurrentSettings(page);
   await expect(page).toHaveURL(/\/settings(?:\/[^?#]+)?(?:[?#]|$)/);
-  await expect(page.getByRole("region", { name: "Settings", exact: true })).toBeVisible();
+  await expect(settings).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("region", { name: "Settings", exact: true })).toBeVisible();
+  await expect(settings).toBeVisible();
   await page.goBack();
   await waitForKovaHydration(page);
   const expand = page.getByRole("button", { name: "Expand input", exact: true });

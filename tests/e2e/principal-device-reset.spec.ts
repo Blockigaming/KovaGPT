@@ -3,6 +3,9 @@ import { openCurrentSettings, chooseSettingsSection } from "./current-ui";
 import { coreFixture } from "./core-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 
+// Erasure waits for a real service-worker acknowledgement.
+test.use({ serviceWorkers: "allow" });
+
 const owner = "22222222-2222-4222-8222-222222222222";
 const otherOwner = "33333333-3333-4333-8333-333333333333";
 

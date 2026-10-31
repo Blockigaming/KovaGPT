@@ -121,21 +121,21 @@ function formatStorage(bytes: number): string {
 
 export const PLAN_ALLOWANCE_COPY = {
   free: {
-    chat: "Small message allowance",
-    image: "3 image generations per day",
-    upload: "2 file uploads per day",
+    chat: `${DAILY_CHAT_LIMIT_BY_TIER.free} messages per day · one fifth of Plus usage`,
+    image: `${DAILY_IMAGE_LIMIT_BY_TIER.free} image generations per day`,
+    upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.free} file uploads per day`,
     storage: "Small published storage allowance",
   },
   plus: {
-    chat: "No paid Chat message-count quota; token and premium-request limits still apply",
-    image: "Higher image generation allowance",
-    upload: "Higher file and image upload allowance",
+    chat: `${DAILY_CHAT_LIMIT_BY_TIER.plus} messages per day · baseline usage`,
+    image: `${DAILY_IMAGE_LIMIT_BY_TIER.plus} image generations per day`,
+    upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.plus} file uploads per day`,
     storage: "Higher published storage allowance",
   },
   pro: {
-    chat: "No paid Chat message-count quota; token and premium-request limits still apply",
-    image: "Highest image generation allowance",
-    upload: "Highest file and image upload allowance",
+    chat: `${DAILY_CHAT_LIMIT_BY_TIER.pro} messages per day · 15× Plus usage`,
+    image: `${DAILY_IMAGE_LIMIT_BY_TIER.pro} image generations per day`,
+    upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.pro} file uploads per day`,
     storage: "Highest published storage allowance",
   },
 } as const;
@@ -213,8 +213,10 @@ export const CAPABILITY_REGISTRY = Object.freeze({
     },
     imageEditing: {
       label: "Image editing",
-      availability: "unavailable",
-      summary: "Editing an uploaded or generated image is not currently available.",
+      availability: "provider-dependent",
+      minimumTier: "free",
+      summary:
+        "Edit a Library image with a supported configured image model. An optional transparent PNG mask can guide the change. Image allowances apply.",
     },
     projects: {
       label: "Projects",
@@ -234,9 +236,9 @@ export const CAPABILITY_REGISTRY = Object.freeze({
     },
     scheduledTasks: {
       label: "Scheduled tasks",
-      availability: "unavailable",
+      availability: "provider-dependent",
       summary:
-        "Background scheduled execution is unavailable in this deployment. Previously saved task records can still be managed.",
+        "Background scheduled execution is unavailable until an approved scheduler and fresh heartbeat are connected. Previously saved task records can still be managed.",
     },
     cloudHistory: {
       label: "Conversation history",

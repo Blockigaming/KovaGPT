@@ -1,10 +1,11 @@
+import { IMAGE_SHAPES, validCustomImageSize } from "./image-size-policy.mjs";
 export class ImageInputError extends Error {
   constructor(message, status = 400) {
     super(message);
     this.status = status;
   }
 }
-const SIZES = { "1:1": "1024x1024", "2:3": "1024x1536", "3:2": "1536x1024" };
+const SIZES = Object.fromEntries(IMAGE_SHAPES.map((shape) => [shape.id, shape.size]));
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 function prompt(value) {
   if (typeof value !== "string" || value.length > 2000)
@@ -19,7 +20,7 @@ function prompt(value) {
 }
 export function normalizeImageRequest(
   input,
-  { provider = "azure_openai", editEnabled = false } = {},
+  { provider = "azure_openai", editEnabled = false, customSizesSupported = false } = {},
 ) {
   if (!input || typeof input !== "object" || Array.isArray(input))
     throw new ImageInputError("Invalid image settings.");
@@ -58,13 +59,22 @@ export function normalizeImageRequest(
   )
     throw new ImageInputError("A source image requires the image-edit operation.");
   const aspectRatio = input.aspectRatio ?? "1:1";
-  if (!Object.hasOwn(SIZES, aspectRatio))
+  if (!Object.hasOwn(SIZES, aspectRatio) && aspectRatio !== "custom")
+    throw new ImageInputError("Choose one of the five image shapes or Custom.");
+  if (
+    (aspectRatio === "custom" || aspectRatio === "16:9" || aspectRatio === "9:16") &&
+    !customSizesSupported
+  )
     throw new ImageInputError(
-      "Choose square (1:1), portrait (2:3), or landscape (3:2). Exact 16:9 and 9:16 output is unsupported.",
+      "This image model supports Square, Portrait, and Landscape. Choose one of those shapes.",
     );
-  const size = SIZES[aspectRatio];
+  const size = aspectRatio === "custom" ? input.size : SIZES[aspectRatio];
+  if (!validCustomImageSize(size))
+    throw new ImageInputError(
+      "Use dimensions divisible by 16, up to 3840px per edge, 655,360–8,294,400 pixels, and an aspect ratio between 1:3 and 3:1.",
+    );
   if (input.size !== undefined && input.size !== size)
-    throw new ImageInputError("Image size must match the supported aspect ratio.");
+    throw new ImageInputError("Image size must match the selected shape.");
   const quality = input.quality ?? "low",
     outputFormat = input.outputFormat ?? "png";
   if (!["low", "medium", "high"].includes(quality))

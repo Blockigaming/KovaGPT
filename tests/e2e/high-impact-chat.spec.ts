@@ -2,11 +2,16 @@ import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { openCurrentSettings, chooseSettingsSection } from "./current-ui";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
-test.beforeEach(({ page: _page }, testInfo) => {
+test.beforeEach(async ({ page }, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
+  if (!testInfo.title.startsWith("signed-out"))
+    await fixture(page, "light", true, false, "free", {
+      preserveStorageOnReload: testInfo.title.startsWith("archived chats"),
+    });
 });
 
 test("web answers expose their real sources instead of a placeholder action", async ({ page }) => {
@@ -393,12 +398,10 @@ test("regenerate resends the prompt with its attachment without duplicating the 
 });
 
 test("archived chats can be removed from Settings data controls", async ({ page }) => {
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     const now = Date.now();
     localStorage.setItem(
-      "kovagpt:archived:v2:guest",
+      "kovagpt:archived:v2:user:22222222-2222-4222-8222-222222222222",
       JSON.stringify([
         {
           id: "archived-1",
@@ -411,11 +414,13 @@ test("archived chats can be removed from Settings data controls", async ({ page 
       ]),
     );
   });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
   }
-  await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("button", { name: "Data controls" }).click();
+  await openCurrentSettings(page);
+  await chooseSettingsSection(page, "Data control");
 
   const archived = page.getByRole("region", { name: "Archived chats" });
   await expect(archived).toBeVisible();
@@ -426,15 +431,20 @@ test("archived chats can be removed from Settings data controls", async ({ page 
     "Archived chat",
   );
   await expect(archived.getByText("No archived chats", { exact: true })).toBeVisible();
-  expect(
-    await page.evaluate(() => ({
-      legacy: localStorage.getItem("kovagpt:archived"),
-      guest: localStorage.getItem("kovagpt:archived:v2:guest"),
-    })),
-  ).toEqual({ legacy: null, guest: "[]" });
+  await page.reload();
+  await waitForKovaHydration(page);
+  await expect(page.getByRole("region", { name: "Archived chats" })).toContainText(
+    "No archived chats",
+  );
+  await expect(page.getByRole("region", { name: "Trash", exact: true })).toContainText(
+    "Archived chat",
+  );
+  expect(await page.evaluate(() => localStorage.getItem("kovagpt:archived"))).toBeNull();
 });
-test("signed-out chat history stays session-only", async ({ page }) => {
+test("signed-out chat cannot start a generation or create history", async ({ page }) => {
+  let requests = 0;
   await page.route("**/api/chat", async (route) => {
+    requests++;
     await route.fulfill({
       status: 200,
       contentType: "text/event-stream",
@@ -443,12 +453,10 @@ test("signed-out chat history stays session-only", async ({ page }) => {
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Session-only prompt");
-  await page.getByRole("button", { name: "Send message" }).click();
-  await expect(page.locator(".kova-assistant-message")).toContainText("Session response");
-  if (page.viewportSize()!.width < 1024) {
-    await page.getByRole("button", { name: "Open menu" }).click();
-  }
+  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toHaveCount(0);
+  await expect(page.getByTestId("send-button")).toHaveCount(0);
+  expect(requests).toBe(0);
   await expect(page.locator(".kova-chat-row")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Chat options" })).toHaveCount(0);
 });

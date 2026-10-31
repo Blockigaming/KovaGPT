@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { waitForKovaHydration } from "./hydration";
+import { coreFixture } from "./core-app-fixture";
 
 const auditedProjects = new Set(["phone-390x844", "desktop-1440x900"]);
 
@@ -23,80 +24,38 @@ async function expectOneMainWithoutOverflow(page: Page) {
 test("signed-out workspace discovery keeps focused hierarchy and truthful controls", async ({
   page,
 }) => {
-  await page.goto("/projects", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await expectOneMainWithoutOverflow(page);
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "Sign in to use Projects" }),
-  ).toBeVisible();
-
-  await page.goto("/library", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await expectOneMainWithoutOverflow(page);
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "Saved in this browser", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByPlaceholder("Search Library")).toHaveCount(0);
-
-  await page.goto("/apps", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await expectOneMainWithoutOverflow(page);
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "Connections", exact: true }),
-  ).toBeVisible();
-  const pluginSearch = page.getByPlaceholder("Search connections", { exact: true });
-  await expect(pluginSearch).toBeVisible();
-  await pluginSearch.fill("Gmail");
-  await expect(page.getByRole("button", { name: "Connect Gmail", exact: true })).toBeVisible();
-
-  await page.goto("/images", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
-  await expectOneMainWithoutOverflow(page);
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "Images", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "Image history", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Use Portrait mode style", exact: true }),
-  ).toHaveCount(1);
+  for (const path of ["/projects", "/library", "/apps", "/images"]) {
+    await page.goto(path, { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
+    await expectOneMainWithoutOverflow(page);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Create an account", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByPlaceholder("Search Library")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Connect Gmail", exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Use Portrait mode style", exact: true }),
+    ).toHaveCount(0);
+  }
 });
 
 test("Library preview traps focus, closes with Escape, and restores its trigger", async ({
   page,
 }) => {
+  await coreFixture(page, "dark");
   await page.goto("/library", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page.evaluate(() => {
-    window.localStorage.setItem(
-      "kova-guest-library",
-      JSON.stringify([
-        {
-          id: "guest-focus-contract",
-          title: "Focus restoration sample",
-          item_type: "document",
-          source: "manual",
-          content_text: "Preview content for the modal focus contract.",
-          file_url: null,
-          file_name: "focus-sample.txt",
-          file_type: "text/plain",
-          file_size: 45,
-          created_at: "2026-09-02T00:00:00.000Z",
-        },
-      ]),
-    );
-  });
-  await page.getByRole("button", { name: "Refresh" }).click();
 
-  const trigger = page.getByRole("button", { name: "Actions for Focus restoration sample" });
+  const trigger = page.getByRole("button", { name: "Actions for Release notes" });
   await trigger.focus();
   await page.keyboard.press("Enter");
   const previewMenuItem = page.getByRole("menuitem", { name: "Preview", exact: true });
   await expect(previewMenuItem).toBeFocused();
   await page.keyboard.press("Enter");
 
-  const dialog = page.getByRole("dialog", { name: "Focus restoration sample" });
+  const dialog = page.getByRole("dialog", { name: "Release notes" });
   await expect(dialog).toBeVisible();
   await expect
     .poll(() => dialog.evaluate((node) => node.contains(document.activeElement)))

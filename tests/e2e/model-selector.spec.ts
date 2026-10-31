@@ -12,13 +12,15 @@ test("Free chat offers Default and Thinking without executing Chat", async ({ pa
   });
   await page.goto("/");
   await waitForKovaHydration(page);
-  await page.getByTestId("model-selector-trigger").filter({ visible: true }).click();
-  await expect(page.locator('[data-testid^="model-option-"]:visible')).toHaveCount(2);
-  await expect(page.getByTestId("model-option-instant")).toHaveText("Default");
-  await page.getByTestId("model-option-thinking").click();
-  await expect(
-    page.getByTestId("model-selector-trigger").filter({ visible: true }),
-  ).toHaveAttribute("aria-label", "Choose model: KovaGPT Thinking");
+  const thinking = page.getByRole("button", { name: "Thinking", exact: true });
+  await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
+  await expect(thinking).toHaveAttribute("aria-pressed", "false");
+  await thinking.click();
+  await expect(thinking).toHaveAttribute("aria-pressed", "true");
+  await expect(thinking).toHaveCSS("color", "rgb(59, 130, 246)");
+  await expect(thinking.locator("svg")).toHaveCSS("color", "rgb(59, 130, 246)");
+  await thinking.click();
+  await expect(thinking).toHaveAttribute("aria-pressed", "false");
   expect(chatRequests).toBe(0);
 });
 
@@ -81,14 +83,16 @@ test("Pro picker keeps all seven modes and the High label", async ({ page }) => 
   await expect(page.getByTestId("thinking-upgrade-button")).toHaveCount(0);
 });
 
-test("signed-out chat retains Default without paid model access", async ({ page }) => {
+test("signed-out visitors must log in before chat or model access", async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
   await page.route("https://*.supabase.co/**", (route) => route.abort("blockedbyclient"));
   await page.goto("/");
   await waitForKovaHydration(page);
   await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toHaveCount(0);
   await expect(page.getByTestId("thinking-upgrade-button")).toHaveCount(0);
-  await expect(page.locator(".spec400-composer-trailing")).toContainText("Default");
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create an account", exact: true })).toBeVisible();
 });
 
 test.describe("short desktop model picker", () => {

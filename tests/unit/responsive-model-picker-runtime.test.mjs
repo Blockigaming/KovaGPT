@@ -211,15 +211,17 @@ test("signed-in Free keeps Default and Thinking switchable and resets a stale pa
   const f = fixture({ userTier: "free", mode: "high" });
   await f.flush();
   assert.deepEqual(f.changes, ["instant"]);
-  f.open();
-  await f.flush();
-  const options = f.nodes().filter((node) => node.props?.["data-slot"] === "model-selector-option");
-  assert.deepEqual(
-    options.map((node) => node.props["data-testid"]),
-    ["model-option-instant", "model-option-thinking"],
+  const toggle = () => f.find("button", (node) => node.props["data-testid"] === "thinking-toggle");
+  assert.equal(
+    f.nodes().some((node) => node.type === "popover"),
+    false,
   );
-  f.find("button", (node) => node.props["data-testid"] === "model-option-thinking").props.onClick();
+  assert.equal(toggle().props["aria-pressed"], false);
+  toggle().props.onClick();
   await f.flush();
-  assert.equal(f.trigger().props["aria-label"], "Choose model: KovaGPT Thinking");
-  assert.deepEqual(f.changes, ["instant", "thinking"]);
+  assert.equal(toggle().props["aria-pressed"], true);
+  toggle().props.onClick();
+  await f.flush();
+  assert.equal(toggle().props["aria-pressed"], false);
+  assert.deepEqual(f.changes, ["instant", "thinking", "instant"]);
 });

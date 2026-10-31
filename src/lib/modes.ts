@@ -1,3 +1,4 @@
+import { DAILY_PLAN_ALLOWANCES } from "./plan-usage-policy.mjs";
 import {
   MODE_IDS_BY_TIER,
   isModeAllowedForTier,
@@ -192,19 +193,17 @@ export const STORAGE_LIMITS_BYTES: Record<Tier, number> = {
 };
 
 export const DAILY_IMAGE_LIMIT_BY_TIER: Record<Tier, number> = {
-  free: 3,
-  plus: 40,
-  pro: 200,
+  free: DAILY_PLAN_ALLOWANCES.free.images,
+  plus: DAILY_PLAN_ALLOWANCES.plus.images,
+  pro: DAILY_PLAN_ALLOWANCES.pro.images,
 };
-
 export const DAILY_CHAT_LIMIT_BY_TIER: Record<Tier, number> = {
-  free: 50,
-  plus: 500,
-  pro: 2000,
+  free: DAILY_PLAN_ALLOWANCES.free.chats,
+  plus: DAILY_PLAN_ALLOWANCES.plus.chats,
+  pro: DAILY_PLAN_ALLOWANCES.pro.chats,
 };
-
 export const DAILY_UPLOAD_LIMIT_BY_TIER: Record<Tier, number> = {
-  free: 2,
-  plus: 50,
-  pro: 200,
+  free: DAILY_PLAN_ALLOWANCES.free.uploads,
+  plus: DAILY_PLAN_ALLOWANCES.plus.uploads,
+  pro: DAILY_PLAN_ALLOWANCES.pro.uploads,
 };

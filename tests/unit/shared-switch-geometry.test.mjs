@@ -224,7 +224,10 @@ function execute(code, dependencies) {
 function consumerSwitch(path, dependencies) {
   const { file, nodes } = parse(path);
   const switches = nodes.filter(
-    (node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(file) === "Switch",
+    (node) =>
+      ts.isJsxSelfClosingElement(node) &&
+      node.tagName.getText(file) === "Switch" &&
+      (!dependencies.shortcut || node.getText(file).includes("shortcut.label")),
   );
   assert.equal(switches.length, 1);
   return execute(`return (${switches[0].getText(file)});`, { React, Switch, ...dependencies });
@@ -265,19 +268,19 @@ test("sidebar shortcut switch keeps its label and immediate add/remove handler",
   const changes = [];
   const render = () =>
     consumerSwitch("src/components/Sidebar.tsx", {
-      shortcut: { id: "work", label: "Work" },
+      shortcut: { id: "images", label: "Images" },
       railShortcuts: shortcuts,
       changeRailShortcuts: (value) => {
         shortcuts = value;
         changes.push(value);
       },
     });
-  assert.equal(render().props["aria-label"], "Work");
+  assert.equal(render().props["aria-label"], "Images");
   assert.equal(render().props.checked, false);
   render().props.onCheckedChange(true);
   assert.equal(render().props.checked, true);
   render().props.onCheckedChange(false);
-  assert.deepEqual(changes, [["projects", "work"], ["projects"]]);
+  assert.deepEqual(changes, [["projects", "images"], ["projects"]]);
 });
 
 test("Personality Auto-adapt keeps its accessible name and existing controlled callback", () => {

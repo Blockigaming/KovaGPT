@@ -33,6 +33,8 @@ export function reactFixture(path, select, options = {}) {
     return { type: element.type, props: element.props };
   };
   const react = {
+    lazy: () => "lazy-component",
+    Suspense: "suspense",
     createContext: (value) => ({ Provider: "context-provider", value }),
     useContext: (context) => context.value,
     useMemo(run, deps) {

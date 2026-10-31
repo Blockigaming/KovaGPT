@@ -1,3 +1,4 @@
+import * as browserActivity from "../../src/lib/browser-activity-contract.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -5,10 +6,24 @@ import ts from "typescript";
 let inventory = { web: [], memory: [], attachments: [], browser: [] };
 const jsx = (type, props) => ({ type, props: props ?? {} });
 const modules = {
+  "@/lib/browser-activity-contract.mjs": browserActivity,
+  "@/assets/plugins/github.svg": { default: "github.svg" },
   react: { useMemo: (fn) => fn(), useState: (value) => [value, () => {}] },
   "react/jsx-runtime": { jsx, jsxs: jsx },
   "lucide-react": Object.fromEntries(
-    ["BookOpen", "ChevronRight", "File", "Globe", "Image", "Monitor"].map((k) => [k, k]),
+    [
+      "BookOpen",
+      "ChevronRight",
+      "File",
+      "Globe",
+      "Image",
+      "Monitor",
+      "GitBranch",
+      "Database",
+      "Zap",
+      "LibraryBig",
+      "CloudSun",
+    ].map((k) => [k, k]),
   ),
   "@/components/auth/ClerkSafe": {
     useUser: () => ({ user: { id: "owner" }, isLoaded: true, isSignedIn: true }),
@@ -69,7 +84,7 @@ test("web sources expand as safe links and browser status is explicit", () => {
     browser: [{ id: "event", label: "Recorded browser operation", status: "active" }],
   };
   const view = render();
-  assert.match(text(view), /Sources.*Web sources.*Cloud browser.*Active/);
+  assert.match(text(view), /Sources.*Web search.*Cloud browser.*Recorded/);
   const link = nodes(view).find((n) => n.type === "a");
   assert.equal(link.props.href, "https://example.com/");
   assert.equal(link.props.rel, "noopener noreferrer");
@@ -99,7 +114,7 @@ test("memory context is labeled provided rather than evidence of influence", () 
     browser: [],
     memory: [{ id: "memory", name: "Chat memory", sources: { ownerId: "owner", sources: [] } }],
   };
-  assert.match(text(render()), /Memory provided.*does not prove it influenced/);
+  assert.match(text(render()), /Memory.*does not prove it influenced/);
 });
 
 test("browser activity review uses pure view without runtime or network access", () => {
@@ -128,4 +143,18 @@ test("browser-only activity has its own section without an empty Sources heading
       (n) => n.type === "button" && n.props["aria-label"] === "Open browser activity",
     ),
   );
+});
+
+test("Activity shows the latest fresh session and excludes stale tab counts", () => {
+  const inventory = {
+    browser: [
+      { status: "active", browser: { sessionId: "fixture", tabCount: 5, observedAt: Date.now() } },
+    ],
+  };
+  assert.match(
+    text(exports.ConversationActivitySummary({ inventory })),
+    /Activity.*Browser.*5.*tabs/,
+  );
+  inventory.browser[0].browser.observedAt -= 600000;
+  assert.equal(exports.ConversationActivitySummary({ inventory }), null);
 });

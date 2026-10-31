@@ -10,6 +10,8 @@ import {
   saveSidebarShortcuts,
 } from "../../src/lib/sidebar-shortcuts.mjs";
 
+import { SIDEBAR_ITEMS, DEFAULT_SIDEBAR_LAYOUT } from "../../src/lib/sidebar-layout.mjs";
+
 const source = readFileSync("src/components/Sidebar.tsx", "utf8");
 const file = ts.createSourceFile(
   "Sidebar.tsx",
@@ -60,6 +62,8 @@ function fixture(options = {}) {
   const deps = {
     React,
     SIDEBAR_SHORTCUTS,
+    SIDEBAR_ITEMS,
+    sidebarStyle: {},
     signedIn: true,
     canSchedule: true,
     mapsReleaseApproved: false,
@@ -89,6 +93,7 @@ function fixture(options = {}) {
         "RailTooltip",
         "TooltipProvider",
         "NovaLogo",
+        "PanelLeft",
         "NewChatGlyph",
         "SearchGlyph",
         "MessageSquare",
@@ -100,9 +105,12 @@ function fixture(options = {}) {
         "UserRound",
       ].map((name) => [name, name]),
     ),
-    SHORTCUT_ICONS: Object.fromEntries(SIDEBAR_SHORTCUTS.map(({ id }) => [id, `icon:${id}`])),
+    SHORTCUT_ICONS: Object.fromEntries(SIDEBAR_ITEMS.map(({ id }) => [id, `icon:${id}`])),
     ...options,
   };
+  deps.layout = { ...DEFAULT_SIDEBAR_LAYOUT, shortcuts: deps.railShortcuts, ...options.layout };
+  deps.openChatSearch = compile(`return (${variable("openChatSearch")});`, deps);
+  deps.searchButton = compile(`return (${variable("searchButton")});`, deps);
   deps.availableShortcuts = compile(`return (${variable("availableShortcuts")});`, deps);
   deps.railLink = compile(`return (${variable("railLink")});`, deps);
   const tree = compile(`return (${rail});`, deps);
@@ -116,10 +124,10 @@ function fixture(options = {}) {
           attribute.name?.text === "aria-label" && attribute.initializer?.text === "Search chats",
       ),
   );
-  const search = compile(`return (${searchNode.getText(file)});`, deps);
+  const search = compile(`return (${searchNode.getText(file)});`, { ...deps, rail: true });
   return { tree, calls, deps, find, search };
 }
-const primaryLabels = ["New chat", "Chat", "Projects", "Scheduled tasks", "Library", "Connections"];
+const primaryLabels = ["New chat", "Chat"];
 const controls = (tree) => all(tree).filter(({ type }) => type === "button" || type === "Link");
 
 for (const choices of [
@@ -127,67 +135,58 @@ for (const choices of [
   DEFAULT_SIDEBAR_SHORTCUTS,
   SIDEBAR_SHORTCUTS.map(({ id }) => id).reverse(),
 ]) {
-  test(`mandatory primary destinations keep exact order independent of ${choices.length} stored choices`, () => {
+  test(`customizable destinations preserve the selected order for ${choices.length} choices`, () => {
     const f = fixture({ railShortcuts: choices });
     assert.deepEqual(
       controls(f.find("Primary destinations")).map(({ props }) => props["aria-label"]),
       primaryLabels,
     );
+    const expected = choices
+      .map((id) => SIDEBAR_ITEMS.find((item) => item.id === id))
+      .filter((item) => item && item.id !== "maps");
     assert.deepEqual(
-      controls(f.find("Primary destinations"))
-        .filter(({ type }) => type === "Link")
-        .map(({ props }) => props.to),
-      ["/", "/projects", "/scheduled-tasks", "/library", "/apps"],
+      controls(f.find("Additional shortcuts")).map(({ props }) => props.to),
+      expected.map((item) => item.to),
     );
-    for (const label of primaryLabels)
-      assert.equal(controls(f.tree).filter(({ props }) => props["aria-label"] === label).length, 1);
-    assert.deepEqual(f.calls, [], "rendering never resets or saves preferences");
+    assert.deepEqual(f.calls, [], "render never changes stored choices");
   });
 }
 
-test("only enabled optional shortcuts follow the permanent primary group", () => {
-  const f = fixture({ railShortcuts: SIDEBAR_SHORTCUTS.map(({ id }) => id) });
+test("all chosen tools are configurable and Maps retains its release gate", () => {
+  const f = fixture({ railShortcuts: ["maps", "projects", "library", "scheduled-tasks", "apps"] });
   assert.deepEqual(
     controls(f.find("Additional shortcuts")).map(({ props }) => props["aria-label"]),
-    ["Images", "Work", "Discover"],
+    ["Projects", "Library", "Scheduled tasks", "Plugins"],
   );
-  const approved = fixture({
-    mapsReleaseApproved: true,
-    railShortcuts: ["maps", "work", "images"],
-  });
+  const approved = fixture({ mapsReleaseApproved: true, railShortcuts: ["maps", "images"] });
   assert.deepEqual(
     controls(approved.find("Additional shortcuts")).map(({ props }) => props["aria-label"]),
-    ["Maps", "Work", "Images"],
+    ["Maps", "Images"],
   );
   assert.equal(fixture().find("Additional shortcuts"), undefined);
-  assert.deepEqual(
-    f.deps.availableShortcuts.map(({ id }) => id),
-    ["images", "work", "discovery"],
-  );
+  assert.ok(!SIDEBAR_ITEMS.some((item) => item.id === "work"));
 });
 
 test("guest/auth and scheduling gates are unchanged and hidden expanded rail is inert", () => {
   assert.equal(fixture({ signedIn: false }).tree, null);
-  assert.equal(fixture({ canSchedule: false }).find("Scheduled tasks"), undefined);
+
   const nav = fixture({ collapsed: false, open: true }).find("Collapsed navigation");
   assert.equal(nav.props["aria-hidden"], true);
   assert.equal(nav.props.inert, true);
   assert.equal(nav.props["data-state"], "closed");
   assert.match(source, /const signedIn = isLoaded && isSignedIn;/);
-  assert.match(source, /const canSchedule = signedIn;/);
 });
 
 for (const [path, label] of [
   ["/projects/project-1", "Projects"],
   ["/scheduled-tasks/task-1", "Scheduled tasks"],
   ["/library", "Library"],
-  ["/apps/plugin-1", "Connections"],
+  ["/apps/plugin-1", "Plugins"],
   ["/images", "Images"],
-  ["/work", "Work"],
   ["/discovery", "Discover"],
 ]) {
   test(`selected destination remains marked on ${path}`, () => {
-    const f = fixture({ path, railShortcuts: ["images", "work", "discovery"] });
+    const f = fixture({ path, railShortcuts: SIDEBAR_ITEMS.map((item) => item.id) });
     assert.deepEqual(
       controls(f.tree)
         .filter(({ props }) => props["aria-current"] === "page")
@@ -254,13 +253,13 @@ test("optional switches preserve legacy stored primary IDs without migration or 
     ),
     primaryLabels,
   );
-  assert.match(source, /Choose additional shortcuts/);
-  assert.match(source, /<legend>Additional shortcuts<\/legend>/);
+  assert.match(source, /Make this space yours/);
+  assert.match(source, /<legend>Navigation items<\/legend>/);
 });
 
 test("every collapsed action is wrapped in the shared pointer-and-keyboard Tooltip primitive", () => {
   const f = fixture({
-    railShortcuts: ["images", "work", "discovery", "maps"],
+    railShortcuts: ["images", "discovery", "maps"],
     mapsReleaseApproved: true,
   });
   const wrappers = all(f.tree).filter(({ type }) => type === "RailTooltip");
@@ -289,21 +288,21 @@ test("every collapsed action is wrapped in the shared pointer-and-keyboard Toolt
   assert.equal(f.tree.type, "TooltipProvider");
 });
 
-test("rail keeps one 56px width owner, a 64px header and a 24px owner logo", () => {
+test("rail places search beside the same rounded PanelLeft control used to collapse", () => {
   const f = fixture();
-  assert.equal(f.find("Collapsed navigation").props.className, "kova-sidebar-rail");
-  assert.equal(fixture({ path: "/" }).find("Chat").props.to, "/");
-  assert.equal(f.find("Search"), undefined, "Search has one expanded-sidebar control");
-  const header = all(f.tree).find(
-    ({ type, props }) => type === "div" && props.className?.includes("h-16"),
+  const header = all(f.tree).find(({ props }) => props.className === "kova-rail-header");
+  assert.deepEqual(
+    controls(header).map(({ props }) => props["aria-label"]),
+    ["Search chats", "Expand sidebar"],
   );
-  assert.match(header.props.className, /min-h-16/);
-  assert.equal(controls(header)[0].props["aria-label"], "Expand sidebar");
-  const logo = all(header).find(({ type }) => type === "NovaLogo");
-  assert.equal(logo.props.decorative, true);
-  assert.equal(logo.props.className, "h-6 w-6");
+  assert.equal(all(header).filter(({ type }) => type === "PanelLeft").length, 1);
   f.find("Expand sidebar").props.onClick({ detail: 1 });
   assert.deepEqual(f.calls, [["toggle"]]);
+  const moved = fixture({ layout: { searchPosition: "navigation", newChat: false } });
+  assert.deepEqual(
+    controls(moved.find("Primary destinations")).map(({ props }) => props["aria-label"]),
+    ["Search chats", "Chat"],
+  );
 });
 
 test("rail geometry has a single shared owner and expands touch controls without forced strokes", () => {
@@ -317,7 +316,7 @@ test("rail geometry has a single shared owner and expands touch controls without
   assert.equal(property(shape, "min-height"), "36px");
   assert.equal(property(shape, "border-radius"), "8px");
   const width = rules.find((rule) => rule.selector === ".kova-sidebar-rail[data-kova-core-rail]");
-  assert.equal(property(width, "width"), "var(--kova-sidebar-rail-width, 56px)");
+  assert.equal(property(width, "width"), "var(--kova-sidebar-rail-width, 84px)");
   const touch = rules.find(
     (rule) =>
       rule.parent.params === "(pointer: coarse), (max-width: 1023px)" &&

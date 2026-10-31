@@ -26,14 +26,14 @@ const declarationValues = (rule, property) =>
 
 test("desktop sidebar fully collapses and has one contained close trigger", () => {
   assert.match(tokens, /--kova-sidebar-width: 260px;/);
-  assert.match(tokens, /--kova-sidebar-rail-width: 56px;/);
-  assert.match(sidebar, /const EXPANDED_WIDTH = 260;/);
+  assert.match(tokens, /--kova-sidebar-rail-width: 84px;/);
+  assert.match(sidebar, /"--sidebar-expanded": `\$\{layout.width\}px`/);
   const expanded = sidebarRule(".kova-sidebar[data-kova-core-sidebar]");
   const rail = sidebarRule(".kova-sidebar-rail[data-kova-core-rail]");
   assert.deepEqual(declarationValues(expanded, "width"), [
     "var(--sidebar-expanded, var(--kova-sidebar-width, 260px))",
   ]);
-  assert.deepEqual(declarationValues(rail, "width"), ["var(--kova-sidebar-rail-width, 56px)"]);
+  assert.deepEqual(declarationValues(rail, "width"), ["var(--kova-sidebar-rail-width, 84px)"]);
   for (const selector of [
     ".kova-sidebar[data-kova-core-sidebar]",
     ".kova-sidebar-rail[data-kova-core-rail]",
