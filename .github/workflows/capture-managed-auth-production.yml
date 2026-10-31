@@ -105,6 +105,8 @@ jobs:
           done
           command -v gpg >/dev/null
           command -v timeout >/dev/null
+      - name: Prepare run-owned private no-swap memory before all source credentials
+        run: python3 scripts/release/private-capture-memory.py prepare
       - name: Capture one consistent complete database snapshot into ciphertext
         env:
           KOVA_AUTH_RECOVERY_CONFIRMATION: CAPTURE_ONLY
@@ -113,7 +115,13 @@ jobs:
           KOVA_PRODUCTION_DATABASE_URL: ${{ secrets.KOVA_PRODUCTION_DATABASE_URL }}
           KOVA_RECOVERY_CA_BUNDLE: ${{ github.workspace }}/scripts/release/supabase-prod-ca-2021.crt
           KOVA_PRODUCTION_BACKUP_PASSPHRASE: ${{ secrets.KOVA_PRODUCTION_BACKUP_PASSPHRASE_20260926 }}
-        run: timeout --signal=TERM --kill-after=10s 26m python3 scripts/release/managed-auth-recovery.py capture --execute --output "$RUNNER_TEMP/managed-auth-capture"
+        run: |
+          set -euo pipefail
+          python3 scripts/release/private-capture-memory.py verify
+          timeout --signal=TERM --kill-after=10s 26m python3 scripts/release/managed-auth-recovery.py capture --execute --output "$RUNNER_TEMP/managed-auth-capture"
+      - name: Require private plaintext memory cleanup before retaining ciphertext
+        if: always()
+        run: python3 scripts/release/private-capture-memory.py cleanup
       - name: Retain ciphertext and fixed sanitized receipt only
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
