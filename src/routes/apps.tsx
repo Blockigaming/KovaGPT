@@ -33,6 +33,8 @@ import {
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
 import { ConnectedAccountManager } from "@/components/ConnectedAccountManager";
+import { BankConnectionsPanel } from "@/components/BankConnectionsPanel";
+import { HealthConnectionsPanel } from "@/components/HealthConnectionsPanel";
 import { useConnectedAccounts } from "@/hooks/use-connected-accounts";
 import {
   CONNECTION_FLOWS,
@@ -1869,6 +1871,18 @@ function AppsPage() {
                 )}
               </TabsContent>
             </Tabs>
+            <BankConnectionsPanel
+              key={`banks:${userKey ?? "guest"}`}
+              ownerId={isSignedIn ? userKey : null}
+            />
+            <HealthConnectionsPanel
+              key={`health:${userKey ?? "guest"}`}
+              ownerId={isSignedIn ? userKey : null}
+              data={otherConnections.data}
+              loading={otherConnections.loading}
+              error={otherConnections.error}
+              reload={otherConnections.reload}
+            />
             {isSignedIn && (
               <details className="spec400-plugin-skills">
                 <summary>Workflow skills</summary>

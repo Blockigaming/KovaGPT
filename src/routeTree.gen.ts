@@ -145,6 +145,7 @@ import { Route as ApiDeveloperFundingRouteImport } from './routes/api/developer/
 import { Route as ApiDeveloperMcpRouteImport } from './routes/api/developer/mcp'
 import { Route as ApiFinancesExchangeRouteImport } from './routes/api/finances/exchange'
 import { Route as ApiFinancesLinkTokenRouteImport } from './routes/api/finances/link-token'
+import { Route as ApiFinancesManageRouteImport } from './routes/api/finances/manage'
 import { Route as ApiFinancesWebhookRouteImport } from './routes/api/finances/webhook'
 import { Route as ApiGithubAuthRouteImport } from './routes/api/github/auth'
 import { Route as ApiGithubCallbackRouteImport } from './routes/api/github/callback'
@@ -158,6 +159,7 @@ import { Route as ApiGoogleDriveRouteImport } from './routes/api/google/drive'
 import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
 import { Route as ApiGoogleSelectRouteImport } from './routes/api/google/select'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
+import { Route as ApiHealthDataReadRouteImport } from './routes/api/health-data/read'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
 import { Route as ApiInternalAccountDeletionsRouteImport } from './routes/api/internal/account-deletions'
 import { Route as ApiInternalAccountExportsRouteImport } from './routes/api/internal/account-exports'
@@ -916,6 +918,11 @@ const ApiFinancesLinkTokenRoute = ApiFinancesLinkTokenRouteImport.update({
   path: '/api/finances/link-token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFinancesManageRoute = ApiFinancesManageRouteImport.update({
+  id: '/api/finances/manage',
+  path: '/api/finances/manage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFinancesWebhookRoute = ApiFinancesWebhookRouteImport.update({
   id: '/api/finances/webhook',
   path: '/api/finances/webhook',
@@ -979,6 +986,11 @@ const ApiGoogleSelectRoute = ApiGoogleSelectRouteImport.update({
 const ApiGoogleStatusRoute = ApiGoogleStatusRouteImport.update({
   id: '/api/google/status',
   path: '/api/google/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthDataReadRoute = ApiHealthDataReadRouteImport.update({
+  id: '/api/health-data/read',
+  path: '/api/health-data/read',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiIntegrationsAccountsRoute = ApiIntegrationsAccountsRouteImport.update({
@@ -1486,6 +1498,7 @@ export interface FileRoutesByFullPath {
   '/api/developer/mcp': typeof ApiDeveloperMcpRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
+  '/api/finances/manage': typeof ApiFinancesManageRoute
   '/api/finances/webhook': typeof ApiFinancesWebhookRoute
   '/api/github/auth': typeof ApiGithubAuthRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
@@ -1499,6 +1512,7 @@ export interface FileRoutesByFullPath {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
+  '/api/health-data/read': typeof ApiHealthDataReadRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
@@ -1705,6 +1719,7 @@ export interface FileRoutesByTo {
   '/api/developer/mcp': typeof ApiDeveloperMcpRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
+  '/api/finances/manage': typeof ApiFinancesManageRoute
   '/api/finances/webhook': typeof ApiFinancesWebhookRoute
   '/api/github/auth': typeof ApiGithubAuthRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
@@ -1718,6 +1733,7 @@ export interface FileRoutesByTo {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
+  '/api/health-data/read': typeof ApiHealthDataReadRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
@@ -1925,6 +1941,7 @@ export interface FileRoutesById {
   '/api/developer/mcp': typeof ApiDeveloperMcpRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
+  '/api/finances/manage': typeof ApiFinancesManageRoute
   '/api/finances/webhook': typeof ApiFinancesWebhookRoute
   '/api/github/auth': typeof ApiGithubAuthRoute
   '/api/github/callback': typeof ApiGithubCallbackRoute
@@ -1938,6 +1955,7 @@ export interface FileRoutesById {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/select': typeof ApiGoogleSelectRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
+  '/api/health-data/read': typeof ApiHealthDataReadRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
   '/api/internal/account-deletions': typeof ApiInternalAccountDeletionsRoute
   '/api/internal/account-exports': typeof ApiInternalAccountExportsRoute
@@ -2146,6 +2164,7 @@ export interface FileRouteTypes {
     | '/api/developer/mcp'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
+    | '/api/finances/manage'
     | '/api/finances/webhook'
     | '/api/github/auth'
     | '/api/github/callback'
@@ -2159,6 +2178,7 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/select'
     | '/api/google/status'
+    | '/api/health-data/read'
     | '/api/integrations/accounts'
     | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
@@ -2365,6 +2385,7 @@ export interface FileRouteTypes {
     | '/api/developer/mcp'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
+    | '/api/finances/manage'
     | '/api/finances/webhook'
     | '/api/github/auth'
     | '/api/github/callback'
@@ -2378,6 +2399,7 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/select'
     | '/api/google/status'
+    | '/api/health-data/read'
     | '/api/integrations/accounts'
     | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
@@ -2584,6 +2606,7 @@ export interface FileRouteTypes {
     | '/api/developer/mcp'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
+    | '/api/finances/manage'
     | '/api/finances/webhook'
     | '/api/github/auth'
     | '/api/github/callback'
@@ -2597,6 +2620,7 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/select'
     | '/api/google/status'
+    | '/api/health-data/read'
     | '/api/integrations/accounts'
     | '/api/internal/account-deletions'
     | '/api/internal/account-exports'
@@ -2797,6 +2821,7 @@ export interface RootRouteChildren {
   ApiDeveloperMcpRoute: typeof ApiDeveloperMcpRoute
   ApiFinancesExchangeRoute: typeof ApiFinancesExchangeRoute
   ApiFinancesLinkTokenRoute: typeof ApiFinancesLinkTokenRoute
+  ApiFinancesManageRoute: typeof ApiFinancesManageRoute
   ApiFinancesWebhookRoute: typeof ApiFinancesWebhookRoute
   ApiGithubAuthRoute: typeof ApiGithubAuthRoute
   ApiGithubCallbackRoute: typeof ApiGithubCallbackRoute
@@ -2810,6 +2835,7 @@ export interface RootRouteChildren {
   ApiGoogleGmailRoute: typeof ApiGoogleGmailRoute
   ApiGoogleSelectRoute: typeof ApiGoogleSelectRoute
   ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
+  ApiHealthDataReadRoute: typeof ApiHealthDataReadRoute
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
   ApiInternalAccountDeletionsRoute: typeof ApiInternalAccountDeletionsRoute
   ApiInternalAccountExportsRoute: typeof ApiInternalAccountExportsRoute
@@ -3829,6 +3855,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiFinancesLinkTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/finances/manage': {
+      id: '/api/finances/manage'
+      path: '/api/finances/manage'
+      fullPath: '/api/finances/manage'
+      preLoaderRoute: typeof ApiFinancesManageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/finances/webhook': {
       id: '/api/finances/webhook'
       path: '/api/finances/webhook'
@@ -3918,6 +3951,13 @@ declare module '@tanstack/react-router' {
       path: '/api/google/status'
       fullPath: '/api/google/status'
       preLoaderRoute: typeof ApiGoogleStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health-data/read': {
+      id: '/api/health-data/read'
+      path: '/api/health-data/read'
+      fullPath: '/api/health-data/read'
+      preLoaderRoute: typeof ApiHealthDataReadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/integrations/accounts': {
@@ -4651,6 +4691,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeveloperMcpRoute: ApiDeveloperMcpRoute,
   ApiFinancesExchangeRoute: ApiFinancesExchangeRoute,
   ApiFinancesLinkTokenRoute: ApiFinancesLinkTokenRoute,
+  ApiFinancesManageRoute: ApiFinancesManageRoute,
   ApiFinancesWebhookRoute: ApiFinancesWebhookRoute,
   ApiGithubAuthRoute: ApiGithubAuthRoute,
   ApiGithubCallbackRoute: ApiGithubCallbackRoute,
@@ -4664,6 +4705,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleGmailRoute: ApiGoogleGmailRoute,
   ApiGoogleSelectRoute: ApiGoogleSelectRoute,
   ApiGoogleStatusRoute: ApiGoogleStatusRoute,
+  ApiHealthDataReadRoute: ApiHealthDataReadRoute,
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
   ApiInternalAccountDeletionsRoute: ApiInternalAccountDeletionsRoute,
   ApiInternalAccountExportsRoute: ApiInternalAccountExportsRoute,

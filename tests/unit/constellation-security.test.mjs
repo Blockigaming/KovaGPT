@@ -41,7 +41,7 @@ test("finance and health records are isolated and finance is read-only", async (
   ]);
   assert.match(migration, /create table if not exists public\.financial_connections/);
   assert.match(migration, /create table if not exists public\.health_connections/);
-  assert.match(plaid, /products: \["transactions", "liabilities", "investments"\]/);
+  assert.match(plaid, /consented_products: \["transactions"\]/);
   assert.doesNotMatch(plaid, /payment_initiation|transfer\/create|orders\/create/);
 });
 

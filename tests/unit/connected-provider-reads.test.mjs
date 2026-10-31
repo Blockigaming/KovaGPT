@@ -10,6 +10,7 @@ import {
   connectionReadRequest,
   readConnection,
 } from "../../src/integrations/connection-read.server.mjs";
+import { packSalesforceCredential } from "../../src/integrations/salesforce-credential.server.mjs";
 import {
   selectOAuthTokens,
   oauthRefreshRequest,
@@ -55,9 +56,25 @@ test("authorization redirects reject other origins, paths, schemes, and URL cred
 });
 
 test("all service requests use fixed HTTPS endpoints, bounded queries and no redirects", () => {
-  const hosts = new Set(["graph.microsoft.com", "api.notion.com", "api.linear.app", "slack.com"]);
+  const hosts = new Set([
+    "graph.microsoft.com",
+    "api.notion.com",
+    "api.linear.app",
+    "slack.com",
+    "fixture.my.salesforce.com",
+  ]);
+  const salesforceToken = packSalesforceCredential("fake-token", {
+    active: true,
+    organization_id: "00D000000000001",
+    user_id: "005000000000001",
+    urls: { query: "https://fixture.my.salesforce.com/services/data/v67.0/query" },
+  });
   for (const id of Object.keys(CONNECTION_FLOWS)) {
-    const req = connectionReadRequest(id, "a&?$top=999' https://evil.example", "fake-token");
+    const req = connectionReadRequest(
+      id,
+      "a&?$top=999' https://evil.example",
+      id === "salesforce" ? salesforceToken : "fake-token",
+    );
     assert.equal(new URL(req.url).protocol, "https:");
     assert.ok(hosts.has(new URL(req.url).hostname));
     assert.equal(req.init.headers.Authorization, "Bearer fake-token");
@@ -224,7 +241,7 @@ test("Slack stores only the explicitly granted user token and its actual scopes"
 });
 
 test("refresh requests retain client authentication and validate user-token expiration", () => {
-  for (const providerId of ["microsoft", "linear", "slack"]) {
+  for (const providerId of ["microsoft", "linear", "slack", "salesforce"]) {
     const request = oauthRefreshRequest({
       providerId,
       clientId: "example",

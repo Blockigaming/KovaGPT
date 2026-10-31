@@ -13,13 +13,13 @@ if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE) {
 const root = process.cwd();
 const mocks: Record<string, string> = {
   "@tanstack/react-router": `export const createFileRoute=()=>value=>value;`,
-  "@tanstack/react-start": `export const useServerFn=fn=>fn;`,
+  "@tanstack/react-start": `export const useServerFn=fn=>fn;export const createClientOnlyFn=fn=>fn;`,
   "@/components/AppShell": `export const AppShell=({children})=>children;`,
   "@/components/WorkspacePageHeader": `export const WorkspacePageHeader=({title,titleId,description})=><header className="kova-page-header"><h1 id={titleId}>{title}</h1><p>{description}</p></header>;`,
   "@/components/auth/ClerkSafe": `export const useUser=()=>({isLoaded:true,isSignedIn:!!window.testOwner,user:window.testOwner?{id:window.testOwner,primaryEmailAddress:{emailAddress:"owner@example.test",verification:{status:"verified"}}}:null});export const SignInButton=({children})=>children;`,
   "@/components/WorkflowSkillsPanel": `export const WorkflowSkillsPanel=()=>null;`,
   "@/integrations/supabase/client": `export const supabase={auth:{resend:async()=>({error:null})}};`,
-  "@/lib/auth-fetch": `export const authFetch=async(url,init)=>{if(url==="/api/integrations/accounts")return {ok:true,json:async()=>window.otherStatus};window.operations.push([url.startsWith("/api/integrations/")?"provider-request":"github-auth",url,init]);if(url.endsWith("/disconnect")){window.otherStatus.accounts=[];return {ok:true,json:async()=>({providerRevoked:false})}}return {ok:false,json:async()=>({})}};export const fetchWithTimeoutAuthenticated=authFetch;`,
+  "@/lib/auth-fetch": `export const authFetch=async(url,init)=>{if(url==="/api/integrations/accounts")return {ok:true,json:async()=>window.otherStatus};if(url==="/api/finances/manage"&&init?.method!=="POST")return {ok:true,json:async()=>({configured:false,planEligible:false,connections:[]})};window.operations.push([url.startsWith("/api/integrations/")?"provider-request":"github-auth",url,init]);if(url.endsWith("/disconnect")){window.otherStatus.accounts=[];return {ok:true,json:async()=>({providerRevoked:false})}}return {ok:false,json:async()=>({})}};export const fetchWithTimeoutAuthenticated=authFetch;`,
   "@/lib/connected-accounts.functions": `export const searchConnectedAccount=async({data})=>{window.operations.push(["provider-read",data]);return {service:"Outlook",results:[{id:"result-1",title:"Actual fixture result",url:"https://outlook.live.com/mail/result-1",snippet:"Read result from the isolated fixture"}],limited:true}};export const refreshConnectedAccess=async()=>({ok:true});`,
   "@/lib/google-client": `export const getGoogleStatus=async()=>window.googleStatus;export const startGoogleConnect=async(...args)=>{window.operations.push(["google-connect",...args])};export const disconnectGoogleAccount=async(...args)=>{window.operations.push(["google-disconnect",...args]);window.googleStatus={connected:false,state:"disconnected",accounts:[],selectedConnectionId:null,selectionRevision:2}};export const selectGoogleAccount=async(...args)=>window.operations.push(["google-select",...args]);`,
   "@/lib/github.functions": `export const getGitHubManagement=async()=>window.githubData;export const refreshGitHubInstallations=async()=>window.operations.push(["github-refresh"]);export const updateGitHubRepositoryGrants=async(...args)=>window.operations.push(["github-grants",...args]);export const disconnectGitHub=async(...args)=>window.operations.push(["github-disconnect",...args]);`,
@@ -288,6 +288,42 @@ test("Microsoft account management searches only the explicitly selected authori
   await expect(page.getByRole("alertdialog")).toContainText("Other Microsoft services");
   await page.getByRole("alertdialog").getByRole("button", { name: "Cancel", exact: true }).click();
   expect((await page.evaluate(() => (window as FixtureWindow).operations)).length).toBe(1);
+});
+
+test("Salesforce management sends the selected record type with the owner-bound account", async ({
+  page,
+}) => {
+  await boot(page, emptyGoogle, "https://kova-plugins.test/apps", {
+    configuredProviders: [{ id: "salesforce" }],
+    accounts: [
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        provider_id: "salesforce",
+        account_label: "Salesforce fixture",
+        status: "connected",
+        granted_scopes: ["api", "openid", "refresh_token"],
+        token_expires_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Manage Salesforce", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("combobox", { name: "Record type", exact: true }).click();
+  await page.getByRole("option", { name: "Opportunities", exact: true }).click();
+  await dialog.getByRole("textbox", { name: "Search Salesforce", exact: true }).fill("renewal");
+  await dialog.getByRole("button", { name: "Search this account", exact: true }).click();
+  await expect(
+    dialog.getByRole("link", { name: "Actual fixture result", exact: true }),
+  ).toBeVisible();
+  expect((await page.evaluate(() => (window as FixtureWindow).operations))[0]).toEqual([
+    "provider-read",
+    {
+      connectionId: "salesforce",
+      accountId: "11111111-1111-4111-8111-111111111111",
+      query: "renewal",
+      recordType: "opportunities",
+    },
+  ]);
 });
 
 test("opening a configured provider never starts OAuth until Connect is clicked", async ({
