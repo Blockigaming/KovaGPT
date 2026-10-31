@@ -98,3 +98,67 @@ test("a plugin connection never inherits another account's status or incomplete 
     false,
   );
 });
+
+test("GitHub composer status reflects the server's read binding and fails closed", () => {
+  const snapshot = {
+    principal: "owner-a",
+    loading: false,
+    githubReadAccess: true,
+    github: {
+      configured: true,
+      health: "healthy",
+      accounts: [{ status: "connected" }],
+      repositories: [{ explicitly_granted: true, revoked_at: null }],
+    },
+  };
+  const status = (changes = {}, userId = "owner-a") =>
+    composerPluginConnection("github", {
+      userId,
+      authLoaded: true,
+      snapshot: { ...snapshot, ...changes },
+    });
+  assert.deepEqual(status(), { label: "View only", connected: true, action: "Review" });
+  assert.equal(status({ githubReadAccess: undefined }).label, "Access unverified");
+  assert.equal(status({ githubReadAccess: false }).connected, false);
+  assert.equal(status({ githubReadAccess: false }).label, "Read access unavailable");
+  assert.equal(status({}, "owner-b").connected, false);
+  assert.equal(
+    status({ githubReadAccess: false, github: { ...snapshot.github, repositories: [] } }).label,
+    "Choose repositories",
+  );
+});
+
+test("Google composer accepts the actual status DTO without an invented configured field", () => {
+  const google = {
+    state: "connected",
+    connected: true,
+    has: { gmail: true, gmailWrite: false, calendar: true, calendarWrite: false, drive: true },
+  };
+  const status = (id, changes = {}) =>
+    composerPluginConnection(id, {
+      userId: "owner-a",
+      authLoaded: true,
+      snapshot: { principal: "owner-a", loading: false, google: { ...google, ...changes } },
+    });
+  for (const id of ["gmail", "google-calendar", "google-drive"])
+    assert.deepEqual(status(id), { label: "View only", connected: true, action: "Review" });
+  assert.equal(status("gmail", { has: { gmail: true } }).connected, false);
+  assert.equal(status("gmail", { configured: false }).label, "Requires setup");
+  assert.equal(status("gmail", { state: "temporarily_unavailable" }).connected, false);
+});
+
+test("GitHub read requests count once even when saved branches repeat their activity", () => {
+  const message = {
+    id: "github-answer",
+    role: "assistant",
+    activities: [
+      { tool: "github_read", status: "done" },
+      { tool: "github_read", status: "running" },
+      { tool: "github_write", status: "done" },
+    ],
+  };
+  assert.deepEqual(
+    rankConnectedComposerPlugins([{ messages: [message] }, { messages: [message] }], ["github"]),
+    [{ id: "github", count: 1 }],
+  );
+});

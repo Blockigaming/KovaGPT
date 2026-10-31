@@ -5,6 +5,17 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { decryptSecret } from "@/lib/github-oauth.server";
 import { discoverGitHubUserRepositories } from "@/lib/github-user-access.server.mjs";
 import { assertLockdownAllows } from "@/lib/lockdown-policy.mjs";
+import { githubChatTools } from "@/lib/github-chat-tools.server";
+
+// Report the same owner-bound read capability offered to chat. Return no
+// repository context, credentials, or write capability to the composer.
+export const getGitHubChatReadAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ readable: boolean }> => {
+    const binding = await githubChatTools.getContext(context.userId);
+    return { readable: binding.tools.some((tool) => tool.function.name === "github_read") };
+  });
+
 /* eslint-disable @typescript-eslint/no-explicit-any -- Mercury tables are available after generated types refresh. */
 export type GitHubManagement = {
   configured: boolean;

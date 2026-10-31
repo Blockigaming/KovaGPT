@@ -7,8 +7,7 @@ import {
   type ConnectorItem,
 } from "@/lib/connectors-catalog";
 import { getGoogleStatus } from "@/lib/google-client";
-import { getGitHubManagement } from "@/lib/github.functions";
-import { authFetch } from "@/lib/auth-fetch";
+import { getGitHubChatReadAccess, getGitHubManagement } from "@/lib/github.functions";
 import { Plug } from "lucide-react";
 import {
   composerPluginConnection,
@@ -35,6 +34,7 @@ export function ComposerPluginList({
   navigationBlocked?: boolean;
 }) {
   const readGitHub = useServerFn(getGitHubManagement);
+  const readGitHubAccess = useServerFn(getGitHubChatReadAccess);
   const [snapshot, setSnapshot] = useState<ComposerConnectionSnapshot | null>(null);
   useEffect(() => {
     if (!userId || !authLoaded) {
@@ -42,32 +42,23 @@ export function ComposerPluginList({
       return;
     }
     let active = true;
-    const controller = new AbortController();
     setSnapshot({ principal: userId, loading: true });
-    void Promise.allSettled([
-      getGoogleStatus(userId),
-      readGitHub(),
-      authFetch("/api/github/tool", { signal: controller.signal }).then(async (response) => {
-        const body = await response.json();
-        if (!response.ok || !body.ok || !["none", "view", "write"].includes(body.access_mode))
-          throw new Error("Access unavailable");
-        return body.access_mode as "none" | "view" | "write";
-      }),
-    ]).then(([google, github, access]) => {
-      if (!active) return;
-      setSnapshot({
-        principal: userId,
-        loading: false,
-        google: google.status === "fulfilled" ? google.value : undefined,
-        github: github.status === "fulfilled" ? github.value : undefined,
-        githubAccess: access.status === "fulfilled" ? access.value : undefined,
-      });
-    });
+    void Promise.allSettled([getGoogleStatus(userId), readGitHub(), readGitHubAccess()]).then(
+      ([google, github, access]) => {
+        if (!active) return;
+        setSnapshot({
+          principal: userId,
+          loading: false,
+          google: google.status === "fulfilled" ? google.value : undefined,
+          github: github.status === "fulfilled" ? github.value : undefined,
+          githubReadAccess: access.status === "fulfilled" ? access.value.readable : undefined,
+        });
+      },
+    );
     return () => {
       active = false;
-      controller.abort();
     };
-  }, [userId, authLoaded, readGitHub]);
+  }, [userId, authLoaded, readGitHub, readGitHubAccess]);
   const blockedNavigationTitle = "Finish or clear your current message before opening plugins.";
   const handleNavigate = (event: MouseEvent<HTMLAnchorElement>) => {
     if (navigationBlocked) {
