@@ -15,7 +15,9 @@ def fixture():
         "Entrypoint":["python3","/opt/kova/scripts/release/recovery-operator-client-smoke.py"],
         "Cmd":None,"WorkingDir":"/tmp","Volumes":None,"ExposedPorts":None,
         "Labels":{"org.opencontainers.image.revision":"a"*40,"org.kova.recovery.owner":"b"*24},
-        "Healthcheck":{"Test":["NONE"]},"Shell":["/bin/bash","-o","pipefail","-c"],"OnBuild":None,
+        "Healthcheck":{"Test":["NONE"]},"Shell":json.loads(next(line.removeprefix("SHELL ")
+            for line in (SCRIPT.parent/"recovery-operator-client.Dockerfile").read_text().splitlines()
+            if line.startswith("SHELL "))),"OnBuild":None,
         "Hostname":"","Domainname":"","AttachStdin":False,"AttachStdout":False,
         "AttachStderr":False,"Tty":False,"OpenStdin":False,"StdinOnce":False,"Image":""}
     image={"Architecture":"amd64","Os":"linux","Config":config,

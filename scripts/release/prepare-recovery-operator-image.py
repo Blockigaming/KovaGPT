@@ -331,7 +331,7 @@ def runtime_config_projection(config,*,oci):
             and all(type(v) is int and v==0 for k,v in health.items() if k!="Test")),
             "oci_docker_security_hook_unqualified")
         require(config.get("OnBuild") in (None,[]) and config.get("Shell") in
-                (None,[],["/bin/bash","-o","pipefail","-c"]),"oci_docker_security_hook_unqualified")
+                (None,[],["/bin/bash","-o","pipefail","-ceu"]),"oci_docker_security_hook_unqualified")
         for key in {"AttachStdin","AttachStdout","AttachStderr","Tty","OpenStdin","StdinOnce"}:
             require(key not in config or config[key] is False,"oci_docker_interactive_config_unqualified")
         for key in {"Hostname","Domainname"}:

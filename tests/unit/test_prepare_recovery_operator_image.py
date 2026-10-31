@@ -308,7 +308,7 @@ class PreparationTests(unittest.TestCase):
             "rootfs":{"type":"layers","diff_ids":[layer_id]}}
         config=m.canonical(document);image_id="sha256:"+m.sha(config)
         built_config={**copy.deepcopy(runtime),"Healthcheck":{"Test":["NONE"]},
-            "Shell":["/bin/bash","-o","pipefail","-c"],"Cmd":None,"Volumes":None}
+            "Shell":["/bin/bash","-o","pipefail","-ceu"],"Cmd":None,"Volumes":None}
         built_id="sha256:"+m.sha(m.canonical({**document,"config":built_config}))
         self.assertNotEqual(built_id,image_id)
         def command(args,**_):

@@ -243,7 +243,7 @@ class CoordinatorTests(unittest.TestCase):
         archive = directory / "operator-client.oci.tar"
         image_id = oci_archive(archive)
         document=json.loads(m.builder.inspect_oci(archive)["configBytes"])
-        config={**document["config"],"Healthcheck":{"Test":["NONE"]},"Shell":["/bin/bash","-o","pipefail","-c"]}
+        config={**document["config"],"Healthcheck":{"Test":["NONE"]},"Shell":["/bin/bash","-o","pipefail","-ceu"]}
         built_id="sha256:"+m.sha(m.canonical(config))
         built={"Id":built_id,"Os":"linux","Architecture":"amd64","Config":config,
             "RootFS":{"Type":"layers","Layers":document["rootfs"]["diff_ids"]}}
