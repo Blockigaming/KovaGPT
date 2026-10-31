@@ -170,6 +170,28 @@ test("capture and both source metadata workflows select the qualified public Sup
   }
 });
 
+test("plaintext capture starts only after verified no-swap memory and retention follows required cleanup", () => {
+  const steps = workflow.jobs["capture-only"].steps;
+  const prepare = steps.findIndex((step) =>
+    step.run?.includes("private-capture-memory.py prepare"),
+  );
+  const capture = steps.findIndex((step) => step.env?.KOVA_PRODUCTION_DATABASE_URL);
+  const cleanup = steps.findIndex((step) =>
+    step.run?.includes("private-capture-memory.py cleanup"),
+  );
+  const upload = steps.findIndex((step) => step.uses?.startsWith("actions/upload-artifact@"));
+  assert.ok(prepare >= 0 && prepare < capture && capture < cleanup && cleanup < upload);
+  assert.doesNotMatch(JSON.stringify(steps[prepare]), /DATABASE_URL|BACKUP_PASSPHRASE/);
+  assert.ok(
+    steps[capture].run.indexOf("private-capture-memory.py verify") <
+      steps[capture].run.indexOf("managed-auth-recovery.py capture"),
+  );
+  assert.equal(steps[cleanup].if, "always()");
+  assert.equal(steps[cleanup]["continue-on-error"], undefined);
+  assert.equal(steps[upload].if, undefined);
+  assert.equal(steps[upload].with["retention-days"], 7);
+});
+
 test("the selected public CA is the already-qualified provider root with a valid self signature and lifetime", () => {
   const pem = readFileSync(
     new URL("../../scripts/release/supabase-prod-ca-2021.crt", import.meta.url),

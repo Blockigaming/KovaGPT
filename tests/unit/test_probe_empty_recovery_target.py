@@ -28,7 +28,7 @@ def metadata():
             "roles":[role],"memberships":[],"roleSettings":[],
             "schemas":[{"name":"public","owner":"postgres","acl":None,"comment":None}],
             "extensions":[{"name":"plpgsql","version":"1.0","schema":"pg_catalog","owner":"postgres"}],
-            "sourceSettingsComplete":True,"withheldSettingCount":0}
+            "sourceSettingsComplete":True,"withheldSettingCount":0,"extensionNamespaces":[]}
 
 
 def synthetic_qualification():
@@ -165,6 +165,29 @@ class NativeProbeTests(unittest.TestCase):
         self.assertNotIn("VALID UNTIL",sql)
         self.assertIn("Owner''s test; not a command",m.schema_setup_sql(d))
         self.assertEqual(m.schema_acl_sql(d),"\n")
+
+    def test_extension_creator_schemas_are_deferred_then_keep_exact_properties(self):
+        d=metadata()
+        d["extensions"].append({"name":"pg_cron","version":"1.6","schema":"pg_catalog","owner":"postgres"})
+        d["schemas"].append({"name":"cron","owner":"postgres","acl":None,"comment":"Owner's cron fixture"})
+        d["extensionNamespaces"]=[{"name":"cron","extension":"pg_cron"}]
+        m.validate_metadata(d,source_sha="a"*40)
+        self.assertEqual(m.extension_namespace_owners(d),{"cron":"pg_cron"})
+        setup=m.schema_setup_sql(d)
+        self.assertIn('CREATE SCHEMA IF NOT EXISTS "public"',setup)
+        self.assertNotIn('"cron"',setup)
+        properties=m.schema_metadata_sql(d)
+        self.assertIn('ALTER SCHEMA "cron" OWNER TO "postgres";',properties)
+        self.assertIn('COMMENT ON SCHEMA "cron" IS \'Owner\'\'s cron fixture\';',properties)
+        self.assertNotIn("CREATE SCHEMA",properties)
+        d["extensionNamespaces"]=[]
+        self.assertIn('CREATE SCHEMA IF NOT EXISTS "cron";',m.schema_setup_sql(d))
+        for change in [lambda d:d.pop("extensionNamespaces"),
+                       lambda d:d.update(extensionNamespaces=[{"name":"unobserved","extension":"pg_cron"}]),
+                       lambda d:d.update(extensionNamespaces=[{"name":"cron","extension":"unknown"}])]:
+            bad=copy.deepcopy(d);change(bad)
+            with self.subTest(change=change),self.assertRaisesRegex(m.Stopped,"source_extension_namespace_unqualified"):
+                m.validate_metadata(bad,source_sha="a"*40)
 
     def test_extension_bootstrap_uses_source_owner_and_restores_every_source_role_flag(self):
         d=metadata();d["roles"][0].update(super=False,login=False,replication=False,bypassRls=False)
@@ -307,9 +330,11 @@ class NativeProbeTests(unittest.TestCase):
         catalog.update(tables=[],sequences=[],roleSettings=[],largeObjects=[])
         census={"serverVersionNum":170006,"counts":{"unownedNamespaceObjects":0},
                 "tables":[],"namespaceObjects":[],"globalObjects":[]}
+        namespace_members=[]
         def client_sql(_target,sql,**_):
             if m.recovery.CATALOG_SQL in sql:return 0,json.dumps(catalog).encode()
             if "pg_extension e JOIN pg_namespace" in sql:return 0,json.dumps(catalog["extensions"]).encode()
+            if m.metadata_source.EXTENSION_NAMESPACES_SQL in sql:return 0,json.dumps(namespace_members).encode()
             return 0,json.dumps(census).encode()
         p.client_sql=client_sql;p.docker=lambda *_args,**_kwargs:(0,b"-- schema\n")
         snapshot=p.native_snapshot("a")
@@ -317,6 +342,71 @@ class NativeProbeTests(unittest.TestCase):
         self.assertTrue(snapshot["roleMatch"])
         catalog["extensions"][0]["owner"]="wrong_owner"
         self.assertFalse(p.native_snapshot("a")["extensionMatch"])
+        catalog["extensions"][0]["owner"]="postgres"
+        namespace_members.append({"name":"cron","extension":"pg_cron"})
+        self.assertFalse(p.native_snapshot("a")["extensionMatch"])
+
+    def test_blank_census_bounds_table_components_without_reclassifying_ownership(self):
+        obj={"catalog":"pg_attrdef","schema":"cron","identity":"for cron.job.jobid",
+             "directExtension":None,"internalExtension":None,"details":{"catalogRowSha256":"a"*64}}
+        census={"serverVersionNum":170006,"counts":{"unownedNamespaceObjects":1},
+                "namespaceObjects":[obj],"tables":[{"schema":"cron","name":"job","kind":"r",
+                    "directExtension":"pg_cron","internalExtension":"pg_cron"}]}
+        associated=[{"catalog":"pg_attrdef","schema":"cron","identity":"for cron.job.jobid","extension":"pg_cron"}]
+        before=copy.deepcopy(census)
+        self.assertEqual(m.native_blank_surface(census,{"largeObjects":[]},{"pg_cron"},associated),1)
+        self.assertEqual(census,before)
+        self.assertIsNone(census["namespaceObjects"][0]["directExtension"])
+        self.assertIsNone(census["namespaceObjects"][0]["internalExtension"])
+        self.assertIn("WHERE d.deptype='i'",m.NATIVE_RELATION_SURFACE_SQL)
+        self.assertNotIn("d.deptype IN",m.NATIVE_RELATION_SURFACE_SQL)
+        self.assertNotIn("WHERE d.deptype='a'",m.NATIVE_RELATION_SURFACE_SQL)
+
+    def test_blank_census_rejects_unrelated_objects_tables_and_malformed_surface_proofs(self):
+        obj={"catalog":"pg_attrdef","schema":"cron","identity":"for cron.job.jobid",
+             "directExtension":None,"internalExtension":None}
+        census={"serverVersionNum":170006,"counts":{"unownedNamespaceObjects":1},
+                "namespaceObjects":[obj],"tables":[{"schema":"cron","name":"job","kind":"r",
+                    "directExtension":"pg_cron","internalExtension":"pg_cron"}]}
+        associated=[{"catalog":"pg_attrdef","schema":"cron","identity":"for cron.job.jobid","extension":"pg_cron"}]
+        for mutate in [lambda c,a:c.update(serverVersionNum=180003),
+                       lambda c,a:c["counts"].update(unownedNamespaceObjects=True),
+                       lambda c,a:c["counts"].update(unownedNamespaceObjects=0),
+                       lambda c,a:c["tables"][0].update(directExtension=None,internalExtension=None),
+                       lambda c,a:c["namespaceObjects"][0].update(catalog="pg_proc"),
+                       lambda c,a:c["namespaceObjects"][0].update(catalog=[]),
+                       lambda c,a:c["namespaceObjects"][0].update(identity="cron.unrelated_function()"),
+                       lambda c,a:a.clear(),
+                       lambda c,a:a.append(dict(a[0])),
+                       lambda c,a:a[0].update(extension="unobserved"),
+                       lambda c,a:a[0].update(catalog="pg_proc"),
+                       lambda c,a:a[0].update(identity="PRIVATE_CANARY\n"),
+                       lambda c,a:a[0].update(untrusted="PRIVATE_CANARY")]:
+            c=copy.deepcopy(census);a=copy.deepcopy(associated);mutate(c,a)
+            with self.subTest(mutate=mutate),self.assertRaisesRegex(m.Stopped,"native_blank_census_unqualified"):
+                m.native_blank_surface(c,{"largeObjects":[]},{"pg_cron"},a)
+        with self.assertRaisesRegex(m.Stopped,"native_blank_census_unqualified"):
+            m.native_blank_surface(census,{"largeObjects":[{"oid":"synthetic"}]},{"pg_cron"},associated)
+
+    def test_blank_failure_diagnostics_only_expose_fixed_typed_counts_and_booleans(self):
+        census={"serverVersionNum":170006,"counts":{"unownedNamespaceObjects":1},
+                "namespaceObjects":[{"catalog":"pg_proc","schema":"PRIVATE_SCHEMA_CANARY",
+                    "identity":"PRIVATE_FUNCTION_CANARY"}],"tables":[]}
+        value=m.native_blank_observations(census,{"largeObjects":[]},{"pg_cron"},[])
+        error=m.Stopped("native_blank_census_unqualified");error.native_blank_observations=value
+        self.assertEqual(m.safe_native_blank_observations(error),value)
+        self.assertEqual(value["unownedByCatalog"]["pg_proc"],1)
+        self.assertEqual(value["unassociatedObjectCount"],1)
+        self.assertNotIn("PRIVATE_",json.dumps(value))
+        for change in [lambda d:d.update(untrusted="PRIVATE_CANARY"),
+                       lambda d:d.update(ordinaryTableCount=True),
+                       lambda d:d.update(versionMatches=1),
+                       lambda d:d["unownedByCatalog"].update(PRIVATE_CANARY=1)]:
+            bad=copy.deepcopy(value);change(bad);error.native_blank_observations=bad
+            self.assertIsNone(m.safe_native_blank_observations(error))
+        for foreign in [ValueError("native_blank_census_unqualified"),m.Stopped("PRIVATE_CANARY")]:
+            foreign.native_blank_observations=value
+            self.assertIsNone(m.safe_native_blank_observations(foreign))
 
     def test_optional_extension_coverage_is_identical_readonly_query_and_never_semantics(self):
         p=self.probe()

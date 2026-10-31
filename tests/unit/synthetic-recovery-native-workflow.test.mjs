@@ -16,6 +16,35 @@ function validate(text) {
   assert.deepEqual(Object.keys(workflow.on), ["pull_request"]);
   assert.equal(workflow.permissions.contents, "read");
   assert.equal(Object.keys(workflow.permissions).length, 1);
+  const memory = workflow.jobs["native-capture-memory"];
+  assert.equal(memory["runs-on"], "ubuntu-24.04");
+  assert.equal(memory.environment, undefined);
+  assert.equal(memory.env, undefined);
+  assert.equal(memory["timeout-minutes"], 5);
+  assert.match(memory.if, /github\.event_name == 'pull_request'/);
+  assert.equal(memory.steps[0].with["persist-credentials"], false);
+  const memoryPrepare = memory.steps.findIndex((step) =>
+    step.run?.endsWith("private-capture-memory.py prepare"),
+  );
+  const memoryVerify = memory.steps.findIndex((step) =>
+    step.run?.endsWith("private-capture-memory.py verify"),
+  );
+  const memoryCleanup = memory.steps.findIndex((step) =>
+    step.run?.endsWith("private-capture-memory.py cleanup"),
+  );
+  assert.ok(memoryPrepare > 0 && memoryPrepare < memoryVerify && memoryVerify < memoryCleanup);
+  const memoryCrypto = memory.steps.findIndex((step) =>
+    step.run?.includes("module.crypt(os.environ"),
+  );
+  assert.ok(memoryVerify < memoryCrypto && memoryCrypto < memoryCleanup);
+  assert.match(memory.steps[memoryCrypto].run, /KOVA_SYNTHETIC_ONLY_NOT_A_PRODUCTION_PASSPHRASE/);
+  assert.match(memory.steps[memoryCrypto].run, /decrypt=True/);
+  assert.equal(memory.steps[memoryCleanup].if, "always()");
+  assert.equal(memory.steps[memoryCleanup]["continue-on-error"], undefined);
+  assert.equal(
+    memory.steps.filter((step) => step.uses?.startsWith("actions/upload-artifact@")).length,
+    0,
+  );
   const job = workflow.jobs["native-synthetic"];
   assert.equal(job["runs-on"], "ubuntu-24.04");
   assert.equal(job.environment, undefined);
