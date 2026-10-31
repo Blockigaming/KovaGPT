@@ -33,6 +33,12 @@ function validate(text) {
     step.run?.endsWith("private-capture-memory.py cleanup"),
   );
   assert.ok(memoryPrepare > 0 && memoryPrepare < memoryVerify && memoryVerify < memoryCleanup);
+  const memoryCrypto = memory.steps.findIndex((step) =>
+    step.run?.includes("module.crypt(os.environ"),
+  );
+  assert.ok(memoryVerify < memoryCrypto && memoryCrypto < memoryCleanup);
+  assert.match(memory.steps[memoryCrypto].run, /KOVA_SYNTHETIC_ONLY_NOT_A_PRODUCTION_PASSPHRASE/);
+  assert.match(memory.steps[memoryCrypto].run, /decrypt=True/);
   assert.equal(memory.steps[memoryCleanup].if, "always()");
   assert.equal(memory.steps[memoryCleanup]["continue-on-error"], undefined);
   assert.equal(

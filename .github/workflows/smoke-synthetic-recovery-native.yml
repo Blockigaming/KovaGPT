@@ -36,6 +36,24 @@ jobs:
         run: python3 scripts/release/private-capture-memory.py prepare
       - name: Prove Python temporary files and a data-free file roundtrip use this mount
         run: python3 scripts/release/private-capture-memory.py verify
+      - name: Exercise actual capture encryption and decryption with synthetic bytes only
+        run: |
+          python3 - <<'PY'
+          import importlib.util, json, os, pathlib, tempfile
+          source = pathlib.Path('scripts/release/managed-auth-recovery.py')
+          spec = importlib.util.spec_from_file_location('capture_memory_crypto_smoke', source)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          with tempfile.TemporaryDirectory(prefix='data-free-capture-crypto-') as directory:
+              root = pathlib.Path(directory)
+              plain, encrypted, restored = [root / name for name in ['synthetic.txt', 'synthetic.gpg', 'roundtrip.txt']]
+              plain.write_bytes(b'KOVA_DATA_FREE_CAPTURE_MEMORY_CRYPTO_PROBE\n')
+              phrase = b'KOVA_SYNTHETIC_ONLY_NOT_A_PRODUCTION_PASSPHRASE'
+              module.crypt(os.environ, phrase, plain, encrypted)
+              module.crypt(os.environ, phrase, encrypted, restored, decrypt=True)
+              assert plain.read_bytes() == restored.read_bytes()
+          print(json.dumps({'dataFreeCaptureCryptoRoundtripVerified': True, 'sourceConnected': False, 'customerRowsUsed': False, 'protectedPhraseUsed': False}))
+          PY
       - name: Require exact run-owned memory cleanup
         if: always()
         run: python3 scripts/release/private-capture-memory.py cleanup
