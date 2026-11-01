@@ -161,24 +161,11 @@ test("sidebar search and all main destinations keep honest service states", asyn
     .filter({ hasText: /^More$/ })
     .click();
   await expect(page.getByRole("link", { name: "Work", exact: true })).toHaveCount(0);
-  await page.getByRole("link", { name: "Discover", exact: true }).click();
-  await expect(
-    page.getByRole("main").getByRole("heading", { name: "Search and discovery" }),
-  ).toBeVisible();
-  await expect(page.getByText(/Live discovery is not available here yet/)).toBeVisible();
-  await page.getByRole("button", { name: "Local places", exact: true }).click();
-  await page.getByRole("textbox", { name: "What are you looking for?" }).fill("Quiet cafes");
-  await page
-    .getByRole("textbox", { name: "City, neighborhood, or place (entered manually)" })
-    .fill("London");
-  await expect(
-    page.getByRole("main").getByRole("button", { name: "Search", exact: true }),
-  ).toBeDisabled();
-  await expect(
-    page.getByRole("link", { name: "Open this search in Google Maps (shares the entered place)" }),
-  ).toHaveAttribute("href", /maps/);
-  await page.getByRole("button", { name: "Remove location" }).click();
-  await capture(page, info, "discovery");
+  await expect(page.getByRole("link", { name: "Discover", exact: true })).toHaveCount(0);
+  await page.goto("/discovery");
+  await expect(page).toHaveURL(/\/$/u);
+  await waitForKovaHydration(page);
+  await expect(page.getByRole("heading", { name: "Search and discovery" })).toHaveCount(0);
 
   await openSidebar(page);
   await page.getByRole("button", { name: "Account menu", exact: true }).click();
@@ -298,6 +285,11 @@ test("project sections and account settings remain navigable and cancel safely",
     await expect(page.getByRole("option", { name: "Responses", exact: true })).toHaveCount(0);
     await page.keyboard.press("Escape");
   }
+  await expect(
+    page.getByRole("navigation", { name: "Primary navigation", exact: true }),
+  ).toBeHidden();
+  await page.getByRole("button", { name: "Close settings", exact: true }).click();
+  await expect(settings).toBeHidden();
   const sidebar = await openSidebar(page);
   await sidebar
     .getByRole("navigation", { name: "KovaGPT features", exact: true })

@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { functionNames } from "./server-function-fixture";
+export { functionNames } from "./server-function-fixture";
 
 const applicationUrl = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:4189");
 if (!["http:", "https:"].includes(applicationUrl.protocol))
@@ -10,14 +10,6 @@ export const origin = applicationUrl.origin;
 export const owner = "22222222-2222-4222-8222-222222222222";
 export const chatA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 export const chatB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-export const functionNames = new Map<string, string>();
-const assets = ".nitro/vite/services/ssr/assets";
-for (const file of readdirSync(assets).filter((name) => name.startsWith("vendor-tanstack"))) {
-  const source = readFileSync(join(assets, file), "utf8");
-  for (const match of source.matchAll(/"([a-f0-9]{64})":\s*\{\s*functionName: "([^"]+)"/g))
-    functionNames.set(match[1], match[2]);
-}
-
 export async function fixture(
   page: Page,
   theme: "light" | "dark",

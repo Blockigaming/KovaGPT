@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture, functionNames, owner } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { revealSidebar } from "./current-ui";
 
 async function prepare(page: import("@playwright/test").Page) {
   await fixture(page, "dark", true, true, "free");
@@ -109,4 +110,26 @@ test("secondary-page chat menus include Rename, Pin, Share, project choices, and
   await page.getByRole("menuitem", { name: "Review project", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Move to project", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Move to project", exact: true })).toBeVisible();
+});
+
+test("New project from a chat can be canceled and opened again", async ({ page }) => {
+  await prepare(page);
+  await page.goto("/library");
+  await waitForKovaHydration(page);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const sidebar = await revealSidebar(page);
+    await sidebar
+      .getByRole("button", { name: "Options for Composer review chat", exact: true })
+      .click();
+    await page.getByRole("menuitem", { name: "Move to project", exact: true }).click();
+    await expect(page.getByRole("menuitem", { name: "New project", exact: true })).toBeInViewport({
+      ratio: 1,
+    });
+    await page.getByRole("menuitem", { name: "New project", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "New project", exact: true });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(/\/projects$/);
+  }
 });

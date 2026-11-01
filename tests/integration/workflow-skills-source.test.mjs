@@ -118,7 +118,7 @@ test("workflow skills remain usable across durable chat, image requests, and ava
     chat.indexOf("const MAX_ATTACHMENTS_PER_REQUEST"),
   );
   const contextBeforeChatQuota = chatQuotaBranch.indexOf("assertSelectedContextsCurrent");
-  const chatQuota = chatQuotaBranch.indexOf("enforceDailyMessageQuota(auth,");
+  const chatQuota = chatQuotaBranch.search(/enforceDailyMessageQuota\(\s*auth,/u);
   assert.ok(
     contextBeforeChatQuota > -1 && contextBeforeChatQuota < chatQuota,
     "selected context must be current immediately before generic chat quota",

@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { settingsSectionForTab } from "@/lib/settings-types";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -384,17 +385,6 @@ function ImagesPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
-  const openSettings = (tab?: string) => {
-    settingsReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setSettingsTab(tab);
-    setSettingsOpen(true);
-  };
-  useEffect(() => {
-    const h = (e: Event) => openSettings((e as CustomEvent<{ tab?: string }>).detail?.tab);
-    window.addEventListener("kova-open-settings", h);
-    return () => window.removeEventListener("kova-open-settings", h);
-  }, []);
   const openHelp = () => navigate({ to: "/help" as never });
 
   const [editSelection, setEditSelection] = useState<ImageEditSelection>(null);
@@ -412,6 +402,51 @@ function ImagesPage() {
   const [history, setHistory] = useState<ImageHistoryItem[]>([]);
   const [lightbox, setLightbox] = useState<ImageHistoryItem | null>(null);
   const [savingImage, setSavingImage] = useState(false);
+  const openSettings = useCallback(
+    (tab?: string) => {
+      // Keep unsaved image work mounted. An empty workspace uses the shared
+      // full Settings route, with its closed navigation rail and close control.
+      if (
+        tab !== "logout" &&
+        !prompt.trim() &&
+        !editSelection &&
+        !loading &&
+        !result &&
+        !lightbox &&
+        !savingImage &&
+        aspectRatio === "1:1" &&
+        customWidth === "1536" &&
+        customHeight === "864"
+      ) {
+        void navigate({
+          to: "/settings/$section",
+          params: { section: settingsSectionForTab(tab) },
+        });
+        return;
+      }
+      settingsReturnFocusRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setSettingsTab(tab);
+      setSettingsOpen(true);
+    },
+    [
+      navigate,
+      prompt,
+      editSelection,
+      loading,
+      result,
+      lightbox,
+      savingImage,
+      aspectRatio,
+      customWidth,
+      customHeight,
+    ],
+  );
+  useEffect(() => {
+    const h = (e: Event) => openSettings((e as CustomEvent<{ tab?: string }>).detail?.tab);
+    window.addEventListener("kova-open-settings", h);
+    return () => window.removeEventListener("kova-open-settings", h);
+  }, [openSettings]);
   const saveImage = useServerFn(saveImageToLibrary);
   const saveGenerationRef = useRef(0);
   const savePendingRef = useRef(false);

@@ -2,8 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 import { coreFixture } from "./core-app-fixture";
 import { openResponseOptions, revealSidebar } from "./current-ui";
-import { fixture, functionNames } from "./actual-app-fixture";
-import { choosePickerValue } from "./select-control";
+import { fixture, functionNames, owner, chatA } from "./actual-app-fixture";
 
 async function geometry(page: Page) {
   const composer = page.locator(".spec400-composer");
@@ -275,21 +274,49 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
     await page.getByRole("button", { name: "Open chat Composer review chat", exact: true }).hover();
   }
   await page.getByRole("button", { name: "Options for Composer review chat", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Add to project", exact: true }).click();
-  const projectDialog = page.getByRole("dialog", { name: "Add to project", exact: true });
+  await page.getByRole("menuitem", { name: "Move to project", exact: true }).click();
+  const projectChoice = page.getByRole("menuitem", { name: "Review project", exact: true });
+  await expect(projectChoice).toBeInViewport({ ratio: 1 });
+  await projectChoice.click();
+  const projectDialog = page.getByRole("dialog", { name: "Move to project", exact: true });
   await expect(
-    projectDialog.getByRole("button", { name: "Add to project", exact: true }),
-  ).toBeDisabled();
-  await choosePickerValue(
-    page,
-    projectDialog.getByLabel("Project", { exact: true }),
-    "33333333-3333-4333-8333-333333333333",
-  );
-  await projectDialog.getByRole("button", { name: "Add to project", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Chat added", exact: true })).toBeVisible();
+    projectDialog.getByRole("button", { name: "Move to project", exact: true }),
+  ).toBeEnabled();
+  await projectDialog.getByRole("button", { name: "Move to project", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Chat moved", exact: true })).toBeVisible();
   expect(copied).toHaveLength(1);
   expect(copied[0]).toContain("Draft a release checklist.");
   expect(copied[0]).not.toContain("Keep this unsent draft");
+  const retained = await page.evaluate(
+    async ({ owner, chatA }) => {
+      const record = await new Promise<{
+        archived: boolean;
+        local: { messages: { content: string }[] };
+      }>((resolve, reject) => {
+        const opening = indexedDB.open("kovagpt-chat-history-v1", 1);
+        opening.onerror = () => reject(opening.error);
+        opening.onupgradeneeded = () => {
+          opening.transaction?.abort();
+          reject(new Error("The durable history store is missing"));
+        };
+        opening.onsuccess = () => {
+          const db = opening.result;
+          const tx = db.transaction("records", "readonly");
+          const request = tx.objectStore("records").get([owner, chatA]);
+          request.onsuccess = () => resolve(request.result?.record);
+          request.onerror = () => reject(request.error);
+          tx.oncomplete = () => db.close();
+        };
+      });
+      return { record, draft: localStorage.getItem(`kova-draft-v2:user:${owner}:${chatA}`) };
+    },
+    { owner, chatA },
+  );
+  expect(retained.record.archived).toBe(true);
+  expect(retained.record.local.messages).toEqual(
+    expect.arrayContaining([expect.objectContaining({ content: "Draft a release checklist." })]),
+  );
+  expect(retained.draft).toBe("Keep this unsent draft");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await expect(input).toHaveValue("Keep this unsent draft");
   await expect(page.getByText("Draft a release checklist.", { exact: true })).toBeVisible();

@@ -9,6 +9,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 
 export function ChatProjectSubmenu({
@@ -53,31 +54,37 @@ export function ChatProjectSubmenu({
         <Folder className="mr-2 h-4 w-4" />
         Move to project
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="kova-sidebar-chat-menu max-h-80 overflow-y-auto">
-        <DropdownMenuItem asChild>
-          <Link to="/projects" search={{ new: true }}>
-            <FolderPlus className="mr-2 h-4 w-4" />
-            New project
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        {state?.owner !== ownerId ? (
-          <DropdownMenuItem disabled>Loading projects…</DropdownMenuItem>
-        ) : state.error ? (
-          <DropdownMenuItem onSelect={() => setState(null)}>
-            Couldn't load projects. Retry
+      <DropdownMenuPortal>
+        <DropdownMenuSubContent
+          className="kova-sidebar-chat-menu"
+          // Keep nested targets stationary while the pointer crosses the parent menu's hover grace area.
+          style={{ animation: "none", transition: "none" }}
+        >
+          <DropdownMenuItem asChild>
+            <Link to="/projects" search={{ new: true }}>
+              <FolderPlus className="mr-2 h-4 w-4" />
+              New project
+            </Link>
           </DropdownMenuItem>
-        ) : state.items.length ? (
-          state.items.map((p) => (
-            <DropdownMenuItem key={p.id} onSelect={() => onSelect(p.id)}>
-              <Folder className="mr-2 h-4 w-4" />
-              <span className="max-w-52 truncate">{p.name}</span>
+          <DropdownMenuSeparator />
+          {state?.owner !== ownerId ? (
+            <DropdownMenuItem disabled>Loading projects…</DropdownMenuItem>
+          ) : state.error ? (
+            <DropdownMenuItem onSelect={() => setState(null)}>
+              Couldn't load projects. Retry
             </DropdownMenuItem>
-          ))
-        ) : (
-          <DropdownMenuItem disabled>No projects yet</DropdownMenuItem>
-        )}
-      </DropdownMenuSubContent>
+          ) : state.items.length ? (
+            state.items.map((p) => (
+              <DropdownMenuItem key={p.id} onSelect={() => onSelect(p.id)}>
+                <Folder className="mr-2 h-4 w-4" />
+                <span className="max-w-52 truncate">{p.name}</span>
+              </DropdownMenuItem>
+            ))
+          ) : (
+            <DropdownMenuItem disabled>No projects yet</DropdownMenuItem>
+          )}
+        </DropdownMenuSubContent>
+      </DropdownMenuPortal>
     </DropdownMenuSub>
   );
 }

@@ -103,9 +103,8 @@ import {
 
 export const Route = createFileRoute("/projects")({
   component: ProjectsRoute,
-  validateSearch: (search: Record<string, unknown>): { new?: boolean } => ({
-    new: search.new === true || search.new === "true" || search.new === "1",
-  }),
+  validateSearch: (search: Record<string, unknown>): { new?: boolean } =>
+    search.new === true || search.new === "true" || search.new === "1" ? { new: true } : {},
   head: () => ({
     meta: [
       { title: "KovaGPT Projects" },
@@ -177,6 +176,7 @@ function ProjectsPage() {
 
   useEffect(() => {
     createActiveRef.current = true;
+    openedFromLink.current = false;
     createEpochRef.current++;
     createSessionRef.current = null;
     createOriginRef.current = null;
@@ -234,19 +234,13 @@ function ProjectsPage() {
     setCreateError(null);
     setCreateOpen(true);
   }
-  useEffect(() => {
-    if (!search.new || openedFromLink.current || !isLoaded || !isSignedIn || !userKey) return;
-    openedFromLink.current = true;
-    openCreate(null);
-    // Opening is tied to the resolved account, not later form changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.new, isLoaded, isSignedIn, userKey]);
   function closeCreate() {
     if (createBusyRef.current) return;
     createSessionRef.current = null;
     createFailureFocusRef.current = null;
     setCreateError(null);
     setCreateOpen(false);
+    if (search.new) void navigate({ to: "/projects", search: {}, replace: true });
   }
   function restoreCreateFocus(event: Event) {
     event.preventDefault();
@@ -705,6 +699,20 @@ function ProjectsPage() {
     setResolvedUserKey(null);
     void refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [isLoaded, isSignedIn, userKey]);
+
+  // Open a requested dialog after both principal-reset effects have finished.
+  // Otherwise the project loader closes it in the same effect flush.
+  useEffect(() => {
+    if (!search.new) {
+      openedFromLink.current = false;
+      return;
+    }
+    if (openedFromLink.current || !isLoaded || !isSignedIn || !userKey) return;
+    openCreate(null);
+    openedFromLink.current = createSessionRef.current !== null;
+    // Opening is tied to the resolved account, not later form changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.new, isLoaded, isSignedIn, userKey]);
 
   async function handleCreate() {
     const session = renderedCreateSession;

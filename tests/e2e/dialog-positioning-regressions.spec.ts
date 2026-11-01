@@ -84,7 +84,7 @@ async function focusStaysInside(page: Page, surface: Locator) {
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`${theme}: real Settings modal remains contained and scrollable beside the themed fullpage workspace`, async ({
+  test(`${theme}: Settings workspace keeps its closed rail and reachable close control while content scrolls`, async ({
     page,
   }, info) => {
     await coreFixture(page, theme, "free", { preserveStorageOnReload: true });
@@ -101,25 +101,14 @@ for (const theme of ["light", "dark"] as const) {
     );
     await page.goto("/images");
     await waitForKovaHydration(page);
-    await openCurrentSettings(page);
-    const modal = page.getByRole("dialog", { name: "Settings", exact: true });
+    const modal = await openCurrentSettings(page);
     await contained(page, modal);
     const heading = modal.getByRole("heading").filter({ visible: true }).first();
     await expect(heading).toBeInViewport({ ratio: 1 });
     const close = modal.getByRole("button", { name: "Close settings", exact: true });
     await usableClose(page, close);
-    const colors = await modal.evaluate((element) => {
-      const probe = document.createElement("span");
-      probe.style.cssText =
-        "position:absolute;visibility:hidden;background-color:var(--surface-modal)";
-      element.append(probe);
-      const expected = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-      return { expected, actual: getComputedStyle(element).backgroundColor };
-    });
-    expect(colors.actual).toBe(colors.expected);
-    expect(colors.actual).not.toBe("rgba(0, 0, 0, 0)");
-    const content = modal.getByRole("tabpanel").filter({ visible: true }).first();
+    await expect(modal).toHaveCSS("background-color", pageColor);
+    const content = modal.locator(".kova-settings-content");
     await expect(content).toHaveCSS("overflow-y", "auto");
     await expect
       .poll(() =>
@@ -130,20 +119,42 @@ for (const theme of ["light", "dark"] as const) {
       )
       .toBe(true);
     await usableClose(page, close);
-    await focusStaysInside(page, modal);
+    await expect(
+      page.getByRole("navigation", { name: "Primary navigation", exact: true }),
+    ).toBeHidden();
+    if (page.viewportSize()!.width >= 1024)
+      await expect(
+        page.getByRole("navigation", { name: "Collapsed navigation", exact: true }),
+      ).toBeVisible();
     await page.screenshot({
       path: info.outputPath(`settings-contained-${theme}.png`),
       animations: "disabled",
       caret: "hide",
     });
-    await page.keyboard.press("Escape");
+    await close.click();
+    await expect(modal).toBeHidden();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toBeVisible();
+  });
+
+  test(`${theme}: Settings preserves a private image draft in its contained dialog`, async ({
+    page,
+  }) => {
+    await coreFixture(page, theme);
+    await page.goto("/images");
+    await waitForKovaHydration(page);
+    const prompt = page.getByRole("textbox", { name: "Describe the image to generate" });
+    await prompt.fill("Keep this unsaved image idea");
+    await openCurrentSettings(page);
+    const modal = page.getByRole("dialog", { name: "Settings", exact: true });
+    await contained(page, modal);
+    const close = modal.getByRole("button", { name: "Close settings", exact: true });
+    await usableClose(page, close);
+    await focusStaysInside(page, modal);
+    await close.click();
     await expect(modal).toBeHidden();
     await expect(page).toHaveURL(/\/images(?:[?#]|$)/);
-    const invoker =
-      page.viewportSize()!.width < 768
-        ? page.getByRole("button", { name: "Toggle sidebar", exact: true })
-        : page.getByRole("button", { name: "Account menu", exact: true });
-    await expect(invoker).toBeFocused();
+    await expect(prompt).toHaveValue("Keep this unsaved image idea");
   });
 
   test(`${theme}: Connections metadata details have one centering transform and a reachable close control`, async ({
