@@ -42,6 +42,15 @@ function fixture(results, options = {}) {
   };
   const exports = {};
   const dependencies = {
+    "@/lib/github-chat-tools.server": {
+      githubChatTools: {
+        getContext: async (ownerId) => {
+          calls.push({ readContextOwner: ownerId });
+          if (options.readContextError) throw new Error(options.readContextError);
+          return options.readContext ?? { tools: [] };
+        },
+      },
+    },
     "@tanstack/react-start": {
       createServerFn: () => ({
         middleware() {
@@ -138,6 +147,33 @@ const connected = {
     error: null,
   },
 };
+
+test("composer GitHub read status uses the authenticated owner's chat binding without exposing it", async () => {
+  const f = fixture([], {
+    readContext: {
+      ownerId: "owner",
+      repositories: [{ name: "owner/private", credential: "must-stay-server-side" }],
+      tools: [{ function: { name: "github_read" } }],
+    },
+  });
+  const result = await f.handlers.getGitHubChatReadAccess({ context: f.context });
+  assert.equal(JSON.stringify(result), '{"readable":true}');
+  assert.deepEqual(f.calls, [{ readContextOwner: "owner" }]);
+  assert.equal(f.discoveries.length, 0);
+});
+
+test("composer does not report read access for missing tools or an unavailable binding", async () => {
+  for (const tools of [[], [{ function: { name: "github_write" } }]]) {
+    const f = fixture([], { readContext: { tools } });
+    const result = await f.handlers.getGitHubChatReadAccess({ context: f.context });
+    assert.equal(result.readable, false);
+  }
+  const f = fixture([], { readContextError: "github_read_context_unavailable" });
+  await assert.rejects(
+    f.handlers.getGitHubChatReadAccess({ context: f.context }),
+    /github_read_context_unavailable/,
+  );
+});
 
 test("GitHub refresh rejects an installation or repository write failure", async () => {
   for (const failedTable of ["github_installations", "github_repositories"]) {
