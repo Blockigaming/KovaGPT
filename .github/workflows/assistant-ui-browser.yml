@@ -296,6 +296,7 @@ jobs:
               "api-tools-access.spec.ts", "connectors-tasks-settings.spec.ts",
               "dialog-positioning-regressions.spec.ts", "high-impact-chat.spec.ts",
               "settings-theme-transition.spec.ts", "composer-preferences-refresh.spec.ts",
+              "composer-actual-app.spec.ts",
             ],
             outputDir: path.join(root, "test-results/assistant-quality/results"),
             reporter: [
