@@ -33,7 +33,12 @@ const MOCKS = {
     "runGoogleTool",
     "stagePendingAction",
   ],
-  "@/lib/ai/accounting.server": ["acquireGeneration", "finalizeGeneration", "hashGuestIp"],
+  "@/lib/ai/accounting.server": [
+    "acquireGeneration",
+    "finalizeGeneration",
+    "getGenerationTokenHeadroom",
+    "hashGuestIp",
+  ],
   "@/lib/pricing/developer-billing.server": ["meterProviderRequest"],
   "@/lib/runtime-env.server": ["runtimeEnv"],
   "@/lib/distributed-rate-limit.server": ["consumeApplicationRateLimit"],
@@ -243,6 +248,7 @@ async function makeFixture(options = {}) {
       stagePendingAction: denied("pending-action"),
     },
     "@/lib/ai/accounting.server": {
+      getGenerationTokenHeadroom: denied("read-usage-headroom"),
       acquireGeneration: denied("acquire-usage"),
       finalizeGeneration: denied("finalize-usage"),
       hashGuestIp: denied("guest-identity"),
@@ -346,6 +352,7 @@ async function makeFixture(options = {}) {
 const SIDE_EFFECTS = new Set([
   "quota",
   "acquire-usage",
+  "read-usage-headroom",
   "finalize-usage",
   "guest-identity",
   "developer-meter",
