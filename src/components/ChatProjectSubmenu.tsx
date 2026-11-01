@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, Folder, FolderPlus } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useLayout } from "@/hooks/use-mobile";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import {
   DropdownMenuSub,
@@ -22,7 +22,8 @@ export function ChatProjectSubmenu({
   onSelect: (id: string) => void;
 }) {
   const list = useServerFn(listProjects);
-  const phone = useIsMobile();
+  const { isMobile, interaction } = useLayout();
+  const inlineChoices = isMobile || interaction === "touch";
   const [expandedOwner, setExpandedOwner] = useState<string | null>(null);
   const [state, setState] = useState<{
     owner: string;
@@ -81,9 +82,9 @@ export function ChatProjectSubmenu({
       )}
     </>
   );
-  // A phone cannot fit two full-width menus side by side. Keep its choices in
-  // the existing scrollable menu so taps never cross a narrow hover grace area.
-  if (phone) {
+  // Keep touch choices in the existing scrollable menu. This also handles
+  // landscape phones and tablets without relying on a pointer hover grace area.
+  if (inlineChoices) {
     const expanded = expandedOwner === ownerId;
     return (
       <>
