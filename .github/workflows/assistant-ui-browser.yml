@@ -17,6 +17,8 @@ on:
       - tests/e2e/chatgpt-shell-parity.spec.ts
       - tests/e2e/composer-actual-app.spec.ts
       - tests/e2e/chat-image-actions.spec.ts
+      - tests/e2e/api-tools-access.spec.ts
+      - tests/e2e/connectors-tasks-settings.spec.ts
       - tests/e2e/core-app-review.spec.ts
       - tests/e2e/recovery-shell.spec.ts
       - tests/e2e/rounded-actual-app.spec.ts
@@ -286,7 +288,10 @@ jobs:
           export default defineConfig({
             ...quality,
             testDir: path.join(root, "tests/e2e"),
-            testMatch: ["ui-quality.spec.ts", "chat-image-actions.spec.ts"],
+            testMatch: [
+              "ui-quality.spec.ts", "chat-image-actions.spec.ts",
+              "api-tools-access.spec.ts", "connectors-tasks-settings.spec.ts",
+            ],
             outputDir: path.join(root, "test-results/assistant-quality/results"),
             reporter: [
               ["list"],
