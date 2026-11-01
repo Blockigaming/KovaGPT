@@ -346,9 +346,7 @@ test("unknown routes retain the themed shell state and semantic landmarks", asyn
   ).toBeVisible();
   const home = page.getByRole("link", { name: "Go to chat", exact: true });
   await expect(home).toBeVisible();
-  const homeBox = await home.boundingBox();
-  expect(homeBox).not.toBeNull();
-  expect(homeBox!.height).toBeGreaterThanOrEqual(44);
+  await expect.poll(async () => (await home.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   await expect(home).toHaveAttribute("href", "/");
   await home.click();
   await waitForKovaHydration(page);

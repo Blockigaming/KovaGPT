@@ -614,18 +614,20 @@ test("requested polish: empty composer swaps voice and send and has compact atta
   await input.fill("A draft stays editable");
   await expect(page.getByTestId("voice-button")).toBeHidden();
   await expect(page.getByTestId("send-button")).toBeVisible();
+  const touchLayout = await page.evaluate(
+    () => innerWidth < 1024 || matchMedia("(any-pointer: coarse)").matches,
+  );
   const sendTarget = await page.getByTestId("send-button").boundingBox();
-  expect(sendTarget!.width).toBe(info.project.name === "phone" ? 44 : 36);
-  expect(sendTarget!.height).toBe(info.project.name === "phone" ? 44 : 36);
+  expect(sendTarget!.width).toBe(touchLayout ? 44 : 36);
+  expect(sendTarget!.height).toBe(touchLayout ? 44 : 36);
   await input.clear();
   await page.getByRole("button", { name: "Attach", exact: true }).click();
-  const menu =
-    info.project.name === "phone"
-      ? page.getByRole("dialog", { name: "Attach", exact: true })
-      : page.getByRole("dialog", { name: "Attach files and tools", exact: true });
+  const menu = touchLayout
+    ? page.getByRole("dialog", { name: "Attach", exact: true })
+    : page.getByRole("dialog", { name: "Attach files and tools", exact: true });
   await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeVisible();
   await expect(menu.locator("summary").filter({ hasText: /^Plugins$/ })).toBeVisible();
-  if (info.project.name === "phone") {
+  if (touchLayout) {
     await expect(menu.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
     await expect(menu.getByRole("button", { name: "Camera", exact: true })).toBeVisible();
   }
