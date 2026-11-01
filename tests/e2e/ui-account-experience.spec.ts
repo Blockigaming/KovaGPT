@@ -122,6 +122,14 @@ test("New project from a chat can be canceled and opened again", async ({ page }
       .getByRole("button", { name: "Options for Composer review chat", exact: true })
       .click();
     await page.getByRole("menuitem", { name: "Move to project", exact: true }).click();
+    const back = page.getByRole("menuitem", { name: "Back to chat actions", exact: true });
+    if (await back.isVisible()) {
+      await expect(page.getByRole("menuitem", { name: "Rename", exact: true })).toBeHidden();
+      await back.click();
+      await expect(page.getByRole("menuitem", { name: "Rename", exact: true })).toBeVisible();
+      await page.getByRole("menuitem", { name: "Move to project", exact: true }).click();
+    }
+    await page.getByRole("menuitem", { name: "New project", exact: true }).scrollIntoViewIfNeeded();
     await expect(page.getByRole("menuitem", { name: "New project", exact: true })).toBeInViewport({
       ratio: 1,
     });

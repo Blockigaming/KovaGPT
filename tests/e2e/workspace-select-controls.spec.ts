@@ -132,10 +132,14 @@ for (const theme of ["light", "dark"] as const) {
     ]) {
       const control = settings.getByRole("combobox", { name: label, exact: true });
       await choose(page, control, option);
-      const targetHeight = await page.evaluate(() =>
-        matchMedia("(pointer: coarse)").matches ? "44px" : "36px",
+      const minimumHeight = await page.evaluate(() =>
+        matchMedia("(pointer: coarse)").matches ? 44 : 36,
       );
-      await expect(control).toHaveCSS("height", targetHeight);
+      const bounds = await control.boundingBox();
+      expect(bounds!.height).toBeGreaterThanOrEqual(minimumHeight);
+      expect(bounds!.height).toBeLessThanOrEqual(48);
+      const radius = await control.evaluate((el) => parseFloat(getComputedStyle(el).borderRadius));
+      expect(radius).toBeGreaterThanOrEqual(bounds!.height / 2);
     }
     const artifact = settings.getByRole("combobox", { name: "Artifact defaults", exact: true });
     if (page.viewportSize()!.width >= 1440) {

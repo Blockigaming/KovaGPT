@@ -625,3 +625,10 @@ button.kova-auth-sign-up:hover {
     min-height: 44px;
   }
 }
+
+/* Touch project selection uses one menu page, keeping its first choices visible. */
+.kova-sidebar-chat-menu:has(> .kova-inline-project-choices)
+  > [role="menuitem"]:not([data-project-menu-trigger]),
+.kova-sidebar-chat-menu:has(> .kova-inline-project-choices) > [role="separator"] {
+  display: none;
+}
