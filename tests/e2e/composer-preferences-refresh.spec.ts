@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { coreFixture } from "./core-app-fixture";
 import { waitForKovaHydration } from "./hydration";
+import { chooseSettingsSection } from "./current-ui";
 
 for (const [tier, choices] of [
   ["free", ["instant", "thinking"]],
@@ -146,14 +147,7 @@ test("every primary settings destination opens its own working section", async (
     ["Subscriptions", "billing"],
     ["Appearance", "appearance"],
   ]) {
-    const tab = page.getByRole("tab", { name: label, exact: true });
-    const sectionPicker = page.getByRole("button", { name: "Section", exact: true });
-    await expect(tab.or(sectionPicker).filter({ visible: true })).toBeVisible();
-    if (await tab.isVisible()) await tab.click();
-    else {
-      await sectionPicker.click();
-      await page.getByRole("option", { name: new RegExp(`^${label}(?: Selected)?$`) }).click();
-    }
+    await chooseSettingsSection(page, label);
     await expect(page).toHaveURL(new RegExp(`/settings/${route}$`));
     await expect(
       page
