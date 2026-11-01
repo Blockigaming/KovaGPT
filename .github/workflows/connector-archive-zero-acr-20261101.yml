@@ -1,0 +1,70 @@
+name: Kova connector archive (zero ACR tasks)
+'on':
+  push:
+    branches:
+    - ops/connector-archive-zero-acr-20261101
+    paths:
+    - .github/workflows/connector-archive-zero-acr-20261101.yml
+permissions:
+  contents: read
+concurrency:
+  group: connector-archive-zero-acr-3e3578e2d54dff644409adb138211181a15b6a85
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    container:
+      image: node:24-bookworm-slim@sha256:a43f7fc3e52e87d12a905f46eea0275def84ca8f2981a5b53fed44d7fb398ee0
+      options: --cpus 2 --memory 7g
+    defaults:
+      run:
+        shell: bash
+    env:
+      KOVA_BUILDER_IMAGE: node:24-bookworm-slim@sha256:a43f7fc3e52e87d12a905f46eea0275def84ca8f2981a5b53fed44d7fb398ee0
+      KOVA_EXPECTED_BUILDER_SHA256: 8c50ce3e0586a2b20af44d2c5618f5decd7677083b0064913fccd7d52b8a4db2
+      KOVA_BUILD_SHA: 3e3578e2d54dff644409adb138211181a15b6a85
+      KOVA_BROWSER_PREVIEW: node
+      AI_GENERATION_ENABLED: 'false'
+      NODE_OPTIONS: --max-old-space-size=5120
+      VITE_SUPABASE_URL: https://mfbycmbjygcfkrsuepxf.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_3_JjqZc2hdxn2Q0xAWwMOw_EaZsryWw
+      VITE_PAYMENTS_CLIENT_TOKEN: pk_live_51UAeDgAEZlsb6DBYSih2ThfV6cEbGBHb1RvpoFEx98fwkzZtJhtnlPt2UBStUljwL1eVkSTnUZdpoRXR30NAcfDG002tzYuFFo
+      VITE_KOVA_AUTH_MODE: dual
+      VITE_KOVA_GOOGLE_AUTH_ENABLED: 'false'
+      VITE_KOVA_AUTH_ORIGIN: https://kovagpt.com
+      KOVA_EXPECTED_SUPABASE_PROJECT_REF: mfbycmbjygcfkrsuepxf
+      KOVA_EXPECTED_PUBLIC_KEY_SHA256: e4145db8f59583533f00480a60ba89faed93981242dc7f48ac7790bb9eb86ec7
+      KOVA_EXPECTED_STRIPE_KEY_SHA256: 8e55a05729ae811369cf9b4b33d313a58b2e0b774ec6c1449d88f38104267fd8
+      KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS: ''
+    steps:
+    - name: Install source archive tools
+      run: 'apt-get update -qq
+
+        apt-get install -y --no-install-recommends git python3 ca-certificates
+
+        '
+    - name: Checkout the exact build operator
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: ${{ github.sha }}
+        path: operator
+        persist-credentials: false
+        fetch-depth: 1
+    - name: Checkout approved application source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        ref: 3e3578e2d54dff644409adb138211181a15b6a85
+        path: source
+        persist-credentials: false
+        fetch-depth: 0
+    - name: Build and verify the exact Git archive
+      run: python3 operator/scripts/azure/build-connector-archive-20261101.py
+    - name: Retain the verified application layer
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      with:
+        name: kova-connector-3e3578e2d54dff644409adb138211181a15b6a85
+        path: /tmp/kova-connector-output
+        if-no-files-found: error
+        compression-level: 6
+        retention-days: 1
