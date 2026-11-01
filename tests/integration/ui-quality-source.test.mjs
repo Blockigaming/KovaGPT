@@ -75,7 +75,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   // The current prompts are vertical rows. Portaled menus own a higher,
   // viewport-bounded layer instead of hiding an obsolete starter grid.
-  assert.match(starters, /className="spec400-starter-actions"/);
+  assert.doesNotMatch(starters, /className="spec400-starter-actions"/);
   assert.doesNotMatch(starters, /kova-starter-grid/);
   assert.match(popover, /<PopoverPrimitive\.Portal>/);
   assert.match(popover, /z-50/);
@@ -94,7 +94,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(home, /id="chat-greeting"[^>]*>\s*\{greeting\}\s*<\/h1>/);
   assert.match(composer, /COMPOSER_TOOLS/);
   assert.match(composer, /renderComposerActions\(false\)/);
-  assert.match(starters, /EMPTY_STATE_STARTERS\.map/);
+  assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS\.map/);
 
   // A blocked attachment may explain the blocker, but it must not submit the message.
   assert.match(composer, /const blockedAttachmentMessage = blockedAttachment/);
@@ -350,9 +350,10 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(stopButton, /onClick=\{onStop\}/);
   assert.doesNotMatch(stopButton, /disabled=|aria-disabled=/);
   assert.match(home, /surface="empty"/);
-  assert.match(home, /<HomeChatStarters setInput=\{setInput\}/);
-  assert.match(starters, /EMPTY_STATE_STARTERS/);
-  assert.match(starters, /setInput\(\(current\) => \(current\.trim\(\) \? current : prompt\)\)/);
+  assert.doesNotMatch(home, /<HomeChatStarters/);
+  assert.doesNotMatch(starters, /EMPTY_STATE_STARTERS/);
+  assert.match(starters, /<div className="kova-empty-composer">\{children\}<\/div>/);
+  assert.match(starters, /<ContinueWorking/);
   assert.doesNotMatch(starters, /onSubmit|triggerSubmit|fetch\(/);
   assert.match(modelSelector, /kova-model-static/);
 

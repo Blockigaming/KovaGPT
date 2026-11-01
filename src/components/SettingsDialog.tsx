@@ -1261,7 +1261,10 @@ export function SettingsDialog({
               className={`kova-settings-sidebar ${mobileHome ? "mobile-home" : "mobile-hidden"}`}
               aria-label="Settings navigation"
             >
-              <div className="kova-settings-sidebar-top" aria-hidden="true" />
+              <div className="kova-settings-navigation-heading">
+                <h2>Settings</h2>
+                <p>Make Kova yours</p>
+              </div>
               <label className="kova-settings-search">
                 <Search aria-hidden="true" />
                 <span className="sr-only">Search settings</span>
@@ -1281,6 +1284,7 @@ export function SettingsDialog({
                         key={v}
                         value={v}
                         className="kova-settings-nav-item"
+                        aria-label={label}
                         onClick={() => {
                           // An already-selected Radix tab does not emit onValueChange.
                           if (mobileHome && v === tab) selectTab(v);
@@ -1306,7 +1310,7 @@ export function SettingsDialog({
               <header className="kova-settings-content-header">
                 <button
                   type="button"
-                  className={`kova-settings-back ${page ? "hidden" : ""}`}
+                  className="kova-settings-back"
                   aria-label="Back to settings"
                   onClick={() => {
                     pendingMobileFocusRef.current = "navigation";

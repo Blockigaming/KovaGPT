@@ -1,7 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 import { coreFixture } from "./core-app-fixture";
-import { openResponseOptions, revealSidebar } from "./current-ui";
+import {
+  openResponseOptions,
+  revealSidebar,
+  openCurrentSettings,
+  chooseSettingsSection,
+} from "./current-ui";
 import { fixture, functionNames, owner, chatA } from "./actual-app-fixture";
 
 async function geometry(page: Page) {
@@ -19,7 +24,7 @@ async function geometry(page: Page) {
   await expect(hasDraft ? voice : send).toBeHidden();
   for (const button of [
     composer.getByRole("button", { name: "Attach", exact: true }),
-    composer.getByRole("button", { name: "Dictate", exact: true }),
+    composer.getByRole("button", { name: "Type with voice", exact: true }),
     primary,
   ]) {
     await expect(button).toBeVisible();
@@ -58,7 +63,7 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
   const coarsePointer = await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches);
   const attachmentActions = [
     "Library",
-    "Photos & Files",
+    "Files",
     "Open a project",
     "Search the web",
     "Analyze data",
@@ -79,6 +84,14 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
     await trigger.click();
     await expect(menu).toBeVisible();
     await expect(menu).toHaveAttribute("data-side", /^(top|bottom)$/);
+    await menu
+      .locator("summary")
+      .filter({ hasText: /^Plugins$/ })
+      .click();
+    await menu
+      .locator("summary")
+      .filter({ hasText: /^More tools$/ })
+      .click();
     await expectViewportBounds();
     await expect
       .poll(() =>
@@ -113,20 +126,17 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
         animations: "disabled",
       });
 
+    const controls = menu
+      .locator("button:not(:disabled),a[href],summary")
+      .filter({ visible: true });
     await page.keyboard.press("End");
-    const browse = menu.getByRole("link", { name: "Browse all plugins", exact: true });
-    await expect(browse).toBeFocused();
-    await expect(browse).toBeInViewport({ ratio: 1 });
-    const drive = menu.getByRole("link", { name: /^Google Drive / });
-    await drive.focus();
-    await expect(drive).toBeInViewport({ ratio: 1 });
+    await expect(controls.last()).toBeFocused();
+    await expect(controls.last()).toBeInViewport({ ratio: 1 });
     await page.keyboard.press("Home");
-    await expect(menu.getByRole("button", { name: "Retry allowance", exact: true })).toBeFocused();
-    for (const name of attachmentActions) {
+    for (let index = 0; index < (await controls.count()); index++) {
+      await expect(controls.nth(index)).toBeFocused();
+      await expect(controls.nth(index)).toBeInViewport({ ratio: 1 });
       await page.keyboard.press("ArrowDown");
-      const action = menu.getByRole("button", { name, exact: true });
-      await expect(action).toBeFocused();
-      await expect(action).toBeInViewport({ ratio: 1 });
     }
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();
@@ -170,7 +180,7 @@ for (const theme of ["light", "dark"] as const) {
     });
     await expect(menu).toBeVisible();
     if (page.viewportSize()!.width < 768) {
-      for (const name of ["Photos", "Camera", "Files", "Library"])
+      for (const name of ["Photos", "Camera", "Files"])
         await expect(menu.getByRole("button", { name, exact: true })).toBeVisible();
     }
     await page.screenshot({
@@ -189,7 +199,14 @@ for (const theme of ["light", "dark"] as const) {
     const contextButton = page.getByRole("button", { name: "Context", exact: true });
     const attach = page.getByRole("button", { name: "Attach", exact: true });
     const contextInAttach = !(await contextButton.isVisible());
-    if (contextInAttach) await attach.click();
+    if (contextInAttach) {
+      await attach.click();
+      await page
+        .locator("summary")
+        .filter({ hasText: /^More tools$/ })
+        .filter({ visible: true })
+        .click();
+    }
     await contextButton.click();
     const settings = page.getByRole("dialog", { name: "Context", exact: true });
     await expect(settings).toBeVisible();
@@ -446,7 +463,7 @@ test("voice stays disconnected while typing, attachments and Stop retain their c
   await page.goto("/");
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT" });
-  const voice = page.getByRole("button", { name: "Dictate", exact: true });
+  const voice = page.getByRole("button", { name: "Type with voice", exact: true });
   await expect(input).toBeEnabled();
   await expect(voice).toBeEnabled();
   await expect(page.getByTestId("send-button")).toBeDisabled();
@@ -560,3 +577,139 @@ for (const tier of ["plus", "pro"] as const) {
     });
   });
 }
+
+test("requested polish: empty composer swaps voice and send and has compact attachment choices", async ({
+  page,
+}, info) => {
+  await fixture(page, "dark", true);
+  if (info.project.name === "desktop") {
+    await page.addInitScript(() =>
+      Object.defineProperty(navigator, "userAgent", {
+        configurable: true,
+        value: "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/537.36",
+      }),
+    );
+  }
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await expect(
+    page.getByRole("button", { name: "Start with Write something", exact: true }),
+  ).toHaveCount(0);
+  const input = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await input.clear();
+  await expect(page.getByTestId("voice-button")).toBeVisible();
+  await expect(page.getByTestId("send-button")).toBeHidden();
+  await expect(
+    page
+      .getByRole("button", { name: "Type with voice", exact: true })
+      .locator(".kova-dictation-wave i"),
+  ).toHaveCount(3);
+  await input.fill("A draft stays editable");
+  await expect(page.getByTestId("voice-button")).toBeHidden();
+  await expect(page.getByTestId("send-button")).toBeVisible();
+  await input.clear();
+  await page.getByRole("button", { name: "Attach", exact: true }).click();
+  const menu =
+    info.project.name === "phone"
+      ? page.getByRole("dialog", { name: "Attach", exact: true })
+      : page.getByRole("dialog", { name: "Attach files and tools", exact: true });
+  await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeVisible();
+  await expect(menu.locator("summary").filter({ hasText: /^Plugins$/ })).toBeVisible();
+  if (info.project.name === "phone") {
+    await expect(menu.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
+    await expect(menu.getByRole("button", { name: "Camera", exact: true })).toBeVisible();
+  }
+  if (info.project.name === "desktop") {
+    await expect(menu.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
+    await expect(menu.getByRole("button", { name: "Camera", exact: true })).toHaveCount(0);
+  }
+  await menu
+    .locator("summary")
+    .filter({ hasText: /^Plugins$/ })
+    .click();
+  const logos = menu.locator("img.kova-composer-plugin-logo");
+  expect(await logos.count()).toBeGreaterThan(0);
+  await expect
+    .poll(() =>
+      logos.evaluateAll((images) =>
+        images.every(
+          (img) => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0,
+        ),
+      ),
+    )
+    .toBe(true);
+  await page.screenshot({
+    path: info.outputPath("polish-attachment-menu.png"),
+    animations: "disabled",
+  });
+});
+
+test("requested polish: Health and Finances own separate connection panels without tab counts", async ({
+  page,
+}, info) => {
+  await coreFixture(page, "dark");
+  await page.goto("/apps");
+  await waitForKovaHydration(page);
+  const tabs = page.getByRole("tablist", { name: "Connections", exact: true });
+  for (const name of ["All", "Connected", "Health", "Finances"]) {
+    await expect(tabs.getByRole("tab", { name, exact: true })).toBeVisible();
+  }
+  await tabs.getByRole("tab", { name: "Finances", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Bank accounts", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Health accounts", exact: true })).toBeHidden();
+  await page.screenshot({ path: info.outputPath("polish-finances.png"), animations: "disabled" });
+  await tabs.getByRole("tab", { name: "Health", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Health accounts", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bank accounts", exact: true })).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath("polish-health.png"), animations: "disabled" });
+});
+
+test("requested polish: phone sidebar leaves a chat preview and settings has touch navigation", async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== "phone", "Mobile drawer geometry");
+  await fixture(page, "dark", true);
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  const sidebar = await revealSidebar(page);
+  const box = await sidebar.boundingBox();
+  expect(box!.width).toBeLessThanOrEqual(page.viewportSize()!.width - 64);
+  expect(box!.width).toBeGreaterThan(260);
+  await page.screenshot({ path: info.outputPath("polish-sidebar.png"), animations: "disabled" });
+  const settings = await openCurrentSettings(page);
+  await expect(settings).toBeVisible();
+  await chooseSettingsSection(page, "General");
+  await expect(
+    settings.getByRole("switch", { name: "Live web search", exact: true }),
+  ).toBeVisible();
+  await expect(
+    settings.getByRole("button", { name: "Back to settings", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({ path: info.outputPath("polish-settings.png"), animations: "disabled" });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("requested polish: temporary-chat notice remains compact and its privacy details expand", async ({
+  page,
+}, info) => {
+  await fixture(page, "dark", true);
+  await page.goto("/");
+  await waitForKovaHydration(page);
+  await page
+    .getByRole("button", { name: "Start temporary chat", exact: true })
+    .filter({ visible: true })
+    .first()
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Start a temporary chat", exact: true });
+  await dialog.getByRole("button", { name: "Start temporary chat", exact: true }).click();
+  const banner = page.locator(".kova-temporary-banner");
+  await expect(banner).toBeVisible();
+  await expect(banner).toHaveCSS("border-top-width", "0px");
+  await banner.locator("summary").click();
+  await expect(banner.getByText(/does not use or update saved memory/)).toBeVisible();
+  await page.screenshot({
+    path: info.outputPath("polish-temporary-chat.png"),
+    animations: "disabled",
+  });
+});

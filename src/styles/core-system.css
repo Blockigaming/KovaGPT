@@ -79,3 +79,31 @@
     min-height: 44px;
   }
 }
+
+.kova-assistant .kova-temporary-banner {
+  border: 0;
+  border-radius: 18px;
+  background: var(--muted);
+  padding: 10px 14px;
+  color: var(--muted-foreground);
+}
+.kova-temporary-banner summary {
+  color: var(--foreground);
+  line-height: 1.5;
+}
+.kova-temporary-banner button {
+  border-radius: 999px;
+  min-height: 36px;
+}
+@media (max-width: 479px) {
+  .kova-assistant .kova-temporary-banner {
+    width: calc(100% - 24px);
+    gap: 8px;
+  }
+  .kova-temporary-banner details {
+    flex-basis: 100%;
+  }
+  .kova-temporary-banner > div {
+    margin-left: auto;
+  }
+}

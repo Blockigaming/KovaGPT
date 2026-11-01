@@ -1,8 +1,8 @@
 import {
   ArrowUp,
   Brain,
-  Mic,
   AudioLines,
+  PanelsTopLeft,
   Paperclip,
   Plug,
   Plus,
@@ -330,6 +330,12 @@ export function ChatInput({
   const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const effectiveSendOnEnter = sendOnEnter ?? sharedSendOnEnter;
   const isMobileLayout = !isDesktop;
+  const [isAppleDevice, setIsAppleDevice] = useState(false);
+  useEffect(() => {
+    setIsAppleDevice(
+      typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent),
+    );
+  }, []);
   const isCoarsePointer = interaction === "touch";
 
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -1298,7 +1304,7 @@ export function ChatInput({
 
   const renderComposerActions = (
     mobile: boolean,
-    section: "all" | "files" | "plugins" = "all",
+    section: "all" | "files" | "plugins" | "more" = "all",
     trigger: HTMLElement | null = plusTriggerRef.current,
   ) => {
     const closeActions = () => {
@@ -1326,9 +1332,51 @@ export function ChatInput({
       setLibraryOpen(true);
       onRecentLibraryRetry?.();
     };
+    if (section === "all") {
+      return (
+        <div className="kova-composer-quick-menu">
+          <button type="button" className={rowClass} onClick={() => pickFile(fileRef)}>
+            <Paperclip aria-hidden="true" />
+            <span>Files</span>
+          </button>
+          {mobile && (
+            <>
+              <button type="button" className={rowClass} onClick={() => pickFile(photoRef)}>
+                <ImageIcon aria-hidden="true" />
+                <span>Photos</span>
+              </button>
+              <button type="button" className={rowClass} onClick={() => pickFile(cameraRef)}>
+                <Camera aria-hidden="true" />
+                <span>Camera</span>
+              </button>
+            </>
+          )}
+          <details className="kova-composer-menu-group">
+            <summary className={rowClass}>
+              <PanelsTopLeft aria-hidden="true" />
+              <span>Plugins</span>
+            </summary>
+            {renderComposerActions(mobile, "plugins", trigger)}
+          </details>
+          {!mobile && isAppleDevice && (
+            <button type="button" className={rowClass} onClick={() => pickFile(photoRef)}>
+              <ImageIcon aria-hidden="true" />
+              <span>Photos</span>
+            </button>
+          )}
+          <details className="kova-composer-menu-group">
+            <summary className={rowClass}>
+              <SlidersHorizontal aria-hidden="true" />
+              <span>More tools</span>
+            </summary>
+            {renderComposerActions(mobile, "more", trigger)}
+          </details>
+        </div>
+      );
+    }
     return (
       <>
-        {mobile && section === "all" && (
+        {mobile && section === "more" && (
           <div className="kova-composer-primary-actions" aria-label="Message preferences">
             <button type="button" className={rowClass} onClick={() => openMessageSettings(trigger)}>
               <Files aria-hidden="true" />
@@ -1364,13 +1412,13 @@ export function ChatInput({
                 <span>Library</span>
               </button>
             )}
-            {mobile && (
+            {mobile && section === "files" && (
               <button type="button" className={rowClass} onClick={() => pickFile(photoRef)}>
                 <ImageIcon aria-hidden="true" />
                 <span>Photos</span>
               </button>
             )}
-            {mobile && (
+            {mobile && section === "files" && (
               <button type="button" className={rowClass} onClick={() => pickFile(cameraRef)}>
                 <Camera aria-hidden="true" />
                 <span>Camera</span>
@@ -1378,7 +1426,7 @@ export function ChatInput({
             )}
             <button type="button" className={rowClass} onClick={() => pickFile(fileRef)}>
               <Paperclip aria-hidden="true" />
-              <span>{mobile ? "Files" : "Photos & Files"}</span>
+              <span>Upload a file</span>
             </button>
             {mobile && (
               <button type="button" className={rowClass} disabled={!isLoaded} onClick={openLibrary}>
@@ -1386,7 +1434,7 @@ export function ChatInput({
                 <span>Library</span>
               </button>
             )}
-            {(!mobile || section !== "all") && (attachments.length > 0 || onOpenChatContext) && (
+            {(attachments.length > 0 || onOpenChatContext) && (
               <button
                 type="button"
                 className={rowClass}
@@ -1398,7 +1446,7 @@ export function ChatInput({
                 <span>Context{attachments.length ? ` · ${attachments.length}` : ""}</span>
               </button>
             )}
-            {showChooseProject && section === "all" && (
+            {showChooseProject && section === "more" && (
               <button
                 ref={projectTriggerRef}
                 type="button"
@@ -1421,7 +1469,7 @@ export function ChatInput({
                 <span>Open a project</span>
               </button>
             )}
-            {section === "all" && (
+            {section === "more" && (
               <button
                 type="button"
                 className={rowClass}
@@ -1433,7 +1481,7 @@ export function ChatInput({
                 <span>Search the web</span>
               </button>
             )}
-            {section === "all" &&
+            {section === "more" &&
               COMPOSER_TOOLS.filter(
                 (tool) => tool.id === "data_analysis" || tool.id === "file_analysis",
               ).map((tool) => (
@@ -1452,7 +1500,7 @@ export function ChatInput({
                   <span>{tool.label}</span>
                 </button>
               ))}
-            {section === "all" && (
+            {section === "more" && (
               <button
                 type="button"
                 className={rowClass}
@@ -1484,7 +1532,7 @@ export function ChatInput({
                 <span>Tasks and audio</span>
               </button>
             )}
-            {!mobile && section === "all" && (
+            {!mobile && section === "more" && (
               <>
                 <button
                   type="button"
@@ -1540,7 +1588,7 @@ export function ChatInput({
             )}
           </div>
         )}
-        {!mobile && section !== "files" && (
+        {section === "plugins" && (
           <ComposerPluginList
             userId={isLoaded ? (user?.id ?? null) : null}
             authLoaded={isLoaded}
@@ -1612,8 +1660,8 @@ export function ChatInput({
   const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
     const controls = Array.from(
-      event.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled),a[href]"),
-    );
+      event.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled),a[href],summary"),
+    ).filter((control) => control.getClientRects().length > 0);
     if (!controls.length) return;
     event.preventDefault();
     const index = controls.indexOf(document.activeElement as HTMLElement);
@@ -1927,16 +1975,20 @@ export function ChatInput({
             <button
               type="button"
               data-testid="dictate-button"
-              className="spec400-toolbar-button spec400-toolbar-icon"
-              aria-label="Dictate"
+              className="spec400-toolbar-button spec400-toolbar-icon kova-dictation-button"
+              aria-label="Type with voice"
               aria-haspopup="dialog"
               aria-expanded={activeVoiceMode === "dictate"}
               disabled={disabled || isStreaming || !isLoaded || !online}
-              title="Dictate into an editable message draft"
+              title="Type with voice"
               onClick={(event) => openVoice("dictate", event.currentTarget)}
             >
-              <Mic aria-hidden="true" />
-              <span className="sr-only">Dictate</span>
+              <span className="kova-dictation-wave" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="sr-only">Type with voice</span>
             </button>
             <button
               type="button"

@@ -835,6 +835,13 @@ function AppsPage() {
       isLoaded ? userKey : undefined,
       parsePluginFilters,
     );
+  const [connectionGroup, setConnectionGroup] = useState<"health" | "finances" | null>(null);
+  useEffect(() => {
+    const params = new URL(window.location.href).searchParams;
+    if (params.has("oauth_state_id")) setConnectionGroup("finances");
+    else if (["oura", "whoop"].includes(params.get("integration_connected") ?? ""))
+      setConnectionGroup("health");
+  }, []);
   const setQuery = (query: string) => setListPreferences({ query });
   const setCategory = (category: string) => setListPreferences({ category });
   const setConnectionFilter = (value: string) =>
@@ -1790,15 +1797,23 @@ function AppsPage() {
               </section>
             )}
             <Tabs
-              value={connectionFilter}
-              onValueChange={setConnectionFilter}
+              value={connectionGroup ?? connectionFilter}
+              onValueChange={(value) => {
+                if (value === "health" || value === "finances") setConnectionGroup(value);
+                else {
+                  setConnectionGroup(null);
+                  setConnectionFilter(value);
+                }
+              }}
               className="spec400-plugin-directory"
             >
               <TabsList className="spec400-plugin-tabs" aria-label="Connections">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="connected">Connected</TabsTrigger>
+                <TabsTrigger value="health">Health</TabsTrigger>
+                <TabsTrigger value="finances">Finances</TabsTrigger>
               </TabsList>
-              <div className="spec400-plugin-filters">
+              <div className="spec400-plugin-filters" hidden={connectionGroup !== null}>
                 <label className="spec400-plugin-search">
                   <span className="sr-only">Search connections</span>
                   <Search aria-hidden="true" />
@@ -1873,19 +1888,23 @@ function AppsPage() {
                   </section>
                 )}
               </TabsContent>
+              <TabsContent forceMount value="finances" className="spec400-connection-group">
+                <BankConnectionsPanel
+                  key={`banks:${userKey ?? "guest"}`}
+                  ownerId={isSignedIn ? userKey : null}
+                />
+              </TabsContent>
+              <TabsContent forceMount value="health" className="spec400-connection-group">
+                <HealthConnectionsPanel
+                  key={`health:${userKey ?? "guest"}`}
+                  ownerId={isSignedIn ? userKey : null}
+                  data={otherConnections.data}
+                  loading={otherConnections.loading}
+                  error={otherConnections.error}
+                  reload={otherConnections.reload}
+                />
+              </TabsContent>
             </Tabs>
-            <BankConnectionsPanel
-              key={`banks:${userKey ?? "guest"}`}
-              ownerId={isSignedIn ? userKey : null}
-            />
-            <HealthConnectionsPanel
-              key={`health:${userKey ?? "guest"}`}
-              ownerId={isSignedIn ? userKey : null}
-              data={otherConnections.data}
-              loading={otherConnections.loading}
-              error={otherConnections.error}
-              reload={otherConnections.reload}
-            />
             {isSignedIn && (
               <details className="spec400-plugin-skills">
                 <summary>Workflow skills</summary>

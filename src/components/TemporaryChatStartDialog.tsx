@@ -142,7 +142,7 @@ export function TemporaryChatBanner({
   onTurnOff: () => void;
 }) {
   return (
-    <div className="kova-temporary-banner mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
+    <div className="kova-temporary-banner mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 text-sm">
       <details>
         <summary>Temporary chat · not saved to history</summary>
         <p>
