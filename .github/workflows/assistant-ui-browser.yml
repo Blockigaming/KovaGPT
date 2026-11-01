@@ -286,7 +286,7 @@ jobs:
           export default defineConfig({
             ...quality,
             testDir: path.join(root, "tests/e2e"),
-            testMatch: "ui-quality.spec.ts",
+            testMatch: ["ui-quality.spec.ts", "chat-image-actions.spec.ts"],
             outputDir: path.join(root, "test-results/assistant-quality/results"),
             reporter: [
               ["list"],
