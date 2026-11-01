@@ -1914,26 +1914,7 @@ export function SettingsDialog({
                     ) : usageLoading && !usage ? (
                       <p className="text-xs text-muted-foreground">Loading usage…</p>
                     ) : usage ? (
-                      <>
-                        <dl className="kova-billing-metrics">
-                          <div>
-                            <dt>Messages used</dt>
-                            <dd>{usage.chats}</dd>
-                          </div>
-                          <div>
-                            <dt>Images used</dt>
-                            <dd>{usage.images}</dd>
-                          </div>
-                          <div>
-                            <dt>File uploads used</dt>
-                            <dd>{usage.uploads}</dd>
-                          </div>
-                        </dl>
-                        <p className="kova-billing-usage-note">
-                          Daily counts are shown here. Account allowance totals aren’t currently
-                          available.
-                        </p>
-                      </>
+                      <PlanUsageBars tier={tier} usage={usage} />
                     ) : (
                       <p className="text-xs text-muted-foreground">
                         Usage data isn't available right now. If you need help understanding your
