@@ -283,7 +283,7 @@ function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
   const { tier } = useTier();
   const navigate = useNavigate();
-  const { openSignUp } = useClerkSafe();
+  const { openSignUp, openSignIn } = useClerkSafe();
   const userKey = user?.id ?? null;
   const storagePrincipal = chatStoragePrincipal(userKey);
   const storagePrincipalRef = useRef(storagePrincipal);
@@ -1878,6 +1878,10 @@ function KovaGPT() {
       voiceRequest?: { signal: AbortSignal },
     ) => {
       if (voiceRequest?.signal.aborted) return;
+      if (!isSignedIn) {
+        if (isLoaded) openSignIn();
+        return;
+      }
       const trimmed = text.trim();
       if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
       if (!canSendChatHistory(userKey)) {
@@ -2532,6 +2536,7 @@ function KovaGPT() {
       storagePrincipal,
       isLoaded,
       isSignedIn,
+      openSignIn,
       userKey,
       pendingWorkflowSkill,
       updateNextPrompt,
