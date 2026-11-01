@@ -960,7 +960,12 @@ export const Route = createFileRoute("/api/chat")({
             if (auth && !isOwner && !capture) {
               await assertSelectedContextsCurrent(request.signal);
               const quota = await preflight.run("chat_quota", (signal) =>
-                enforceDailyMessageQuota(auth, callerTier, m.id !== "instant", signal),
+                enforceDailyMessageQuota(
+                  auth,
+                  callerTier,
+                  m.id !== "instant" && m.id !== "medium",
+                  signal,
+                ),
               );
               if (quota) return quota;
             }
