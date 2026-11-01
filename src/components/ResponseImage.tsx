@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Bookmark, Download, Maximize2, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
+import { ChatImage, type ChatImageActions } from "./ChatImage";
+import { downloadChatImage } from "@/lib/chat-image-actions";
 
 export function ResponseImage({
   src,
   alt,
   onSave,
+  imageActions,
 }: {
   src: string;
   alt: string;
   onSave?: (src: string, title: string) => Promise<void>;
+  imageActions?: ChatImageActions;
 }) {
   const [full, setFull] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -29,22 +33,7 @@ export function ResponseImage({
     setDownloading(true);
     setError(null);
     try {
-      const response = await fetch(src, { credentials: "omit", referrerPolicy: "no-referrer" });
-      if (!response.ok)
-        throw new Error(
-          "The image could not be downloaded. Open it full size to save it manually.",
-        );
-      const blob = await response.blob();
-      if (!/^image\/(png|jpeg|webp|gif)$/i.test(blob.type))
-        throw new Error(
-          "This image format cannot be downloaded here. Open it full size to save it manually.",
-        );
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `generated-image.${blob.type.split("/")[1] === "jpeg" ? "jpg" : blob.type.split("/")[1]}`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 0);
+      await downloadChatImage(src, () => alive.current);
     } catch (error) {
       if (alive.current)
         setError(error instanceof Error ? error.message : "Couldn’t download the image.");
@@ -53,8 +42,13 @@ export function ResponseImage({
     }
   };
   return (
-    <span className="kova-response-image">
-      <img src={src} alt={alt} loading="lazy" />
+    <ChatImage
+      src={src}
+      alt={alt}
+      actions={imageActions}
+      className="kova-response-image"
+      onHide={() => setFull(false)}
+    >
       <span className="kova-image-actions">
         {onSave && (
           <button
@@ -113,10 +107,16 @@ export function ResponseImage({
             }}
           >
             <DialogTitle>{alt}</DialogTitle>
-            <img src={src} alt={alt} className="max-h-[75dvh] w-auto max-w-full object-contain" />
+            <ChatImage
+              src={src}
+              alt={alt}
+              actions={imageActions}
+              imageClassName="max-h-[75dvh] w-auto max-w-full object-contain"
+              onHide={() => setFull(false)}
+            />
           </DialogContent>
         </Dialog>
       )}
-    </span>
+    </ChatImage>
   );
 }
