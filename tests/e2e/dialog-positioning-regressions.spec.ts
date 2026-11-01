@@ -164,7 +164,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/apps");
     await waitForKovaHydration(page);
     const card = page.locator('[data-plugin-id="github"]');
-    const details = card.getByRole("button", { name: "Unavailable GitHub", exact: true });
+    const details = card.getByRole("button", { name: "Coming soon GitHub", exact: true });
     await expect(details).toBeVisible();
     await details.click(); // This card action opens metadata; it never connects a provider.
     const modal = page.getByRole("dialog", { name: "GitHub", exact: true });

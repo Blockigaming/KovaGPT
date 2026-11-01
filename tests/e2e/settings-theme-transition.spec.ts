@@ -147,10 +147,9 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
   expect([...mockedBackendOrigins]).toEqual([`https://${storageMatch![1]}.supabase.co`]);
 
   const settingsDialog = await openCurrentSettings(page);
-  await settingsDialog.getByRole("button", { name: "Section", exact: true }).click();
-  const options = page
-    .getByRole("listbox", { name: "Suggestions", exact: true })
-    .getByRole("option");
+  const back = settingsDialog.getByRole("button", { name: "Back to settings", exact: true });
+  if (await back.isVisible()) await back.click();
+  const options = settingsDialog.locator(".kova-settings-nav").getByRole("tab");
   await expect(options).toHaveCount(11);
   for (let index = 0; index < (await options.count()); index++) {
     await expect(options.nth(index)).toBeVisible();

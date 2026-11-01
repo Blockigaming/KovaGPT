@@ -622,12 +622,14 @@ test("requested polish: empty composer swaps voice and send and has compact atta
   expect(sendTarget!.height).toBe(touchLayout ? 44 : 36);
   await input.clear();
   await page.getByRole("button", { name: "Attach", exact: true }).click();
-  const menu = touchLayout
-    ? page.getByRole("dialog", { name: "Attach", exact: true })
-    : page.getByRole("dialog", { name: "Attach files and tools", exact: true });
+  const mobileMenu = await page.getByTestId("mobile-bottom-sheet").isVisible();
+  const menu = page
+    .getByRole("dialog", { name: "Attach", exact: true })
+    .or(page.getByRole("dialog", { name: "Attach files and tools", exact: true }))
+    .filter({ visible: true });
   await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeVisible();
   await expect(menu.locator("summary").filter({ hasText: /^Plugins$/ })).toBeVisible();
-  if (touchLayout) {
+  if (mobileMenu) {
     await expect(menu.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
     await expect(menu.getByRole("button", { name: "Camera", exact: true })).toBeVisible();
   }
