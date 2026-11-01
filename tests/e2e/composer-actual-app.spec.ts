@@ -604,9 +604,13 @@ test("requested polish: empty composer swaps voice and send and has compact atta
       .getByRole("button", { name: "Type with voice", exact: true })
       .locator(".kova-dictation-wave i"),
   ).toHaveCount(3);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await input.fill("A draft stays editable");
   await expect(page.getByTestId("voice-button")).toBeHidden();
   await expect(page.getByTestId("send-button")).toBeVisible();
+  const sendTarget = await page.getByTestId("send-button").boundingBox();
+  expect(sendTarget!.width).toBe(info.project.name === "phone" ? 44 : 36);
+  expect(sendTarget!.height).toBe(info.project.name === "phone" ? 44 : 36);
   await input.clear();
   await page.getByRole("button", { name: "Attach", exact: true }).click();
   const menu =

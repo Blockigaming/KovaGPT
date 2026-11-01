@@ -251,7 +251,7 @@
     opacity: 0.6;
   }
 }
-.spec400-send-button {
+.spec400-send-button > svg {
   animation: kova-primary-enter 140ms ease-out;
 }
 @keyframes kova-primary-enter {
@@ -266,7 +266,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .kova-dictation-wave i,
-  .spec400-send-button {
+  .spec400-send-button > svg {
     animation: none;
   }
 }
