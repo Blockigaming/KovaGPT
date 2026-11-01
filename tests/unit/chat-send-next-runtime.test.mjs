@@ -20,6 +20,17 @@ const helperJs = ts.transpileModule(helperSource, {
 const helpers = await import(
   `data:text/javascript;base64,${Buffer.from(helperJs).toString("base64")}`
 );
+const attachmentAst = ts.createSourceFile(
+  "chat-store.ts",
+  readFileSync("src/lib/chat-store.ts", "utf8"),
+  ts.ScriptTarget.Latest,
+  true,
+  ts.ScriptKind.TS,
+);
+const pendingAttachmentsDefinition = attachmentAst.statements
+  .find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "pendingMessageAttachments")
+  .getText(attachmentAst)
+  .replace(/^export /u, "");
 const source = readFileSync("src/routes/index.tsx", "utf8");
 const ast = ts.createSourceFile(
   "index.tsx",
@@ -94,7 +105,7 @@ const keptPreviewDefinition = keptPreviewAst.statements
   .replace(/^export /u, "");
 const compiled = ts.transpileModule(
   `${keptPreviewDefinition}
-  globalThis.pendingMessageAttachments = ${find((node) => ts.isFunctionDeclaration(node) && node.name?.text === "pendingMessageAttachments").getText(ast)};
+  globalThis.pendingMessageAttachments = ${pendingAttachmentsDefinition};
   globalThis.send = ${sendSource};\nglobalThis.queue = ${initializer("queueNextPrompt").getText(ast)};\nglobalThis.dispatch = ${dispatch};\nglobalThis.reconcileScope = ${scopeEffect};\nglobalThis.stop = ${arrow("stop")};\nglobalThis.cancel = ${cancel};\nglobalThis.startLifetime = ${unmountEffect};
   globalThis.reconcileNotice = ${noticeScopeEffect};
   globalThis.readVisibleNotice = () => ${initializer("visibleRequestNotice").getText(ast)};

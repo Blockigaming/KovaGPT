@@ -4,6 +4,40 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
 const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
+export type ChatImageAttachmentHandler = (file: File, isCurrent: () => boolean) => Promise<void>;
+export type ChatImageAttachmentRequest = { accept: (handler: ChatImageAttachmentHandler) => void };
+
+/** Capture the current composer's own guarded file handler before any image read. */
+export function prepareChatImageAttachment(
+  principal: string,
+  chatId: string,
+): ChatImageAttachmentHandler {
+  const boxes = document.querySelectorAll<HTMLElement>("[data-chat-image-context]");
+  const target = Array.from(boxes).find((box) => {
+    if (!box.getClientRects().length) return false;
+    try {
+      const context = JSON.parse(box.getAttribute("data-chat-image-context") ?? "null");
+      return Array.isArray(context) && context[0] === principal && context[1] === chatId;
+    } catch {
+      return false;
+    }
+  });
+  if (!target) throw new Error("Open this chat's message box before adding the image.");
+  let attach: ChatImageAttachmentHandler | undefined;
+  target.dispatchEvent(
+    new CustomEvent<ChatImageAttachmentRequest>("kova:prepare-chat-image-attachment", {
+      bubbles: true,
+      detail: {
+        accept: (handler) => {
+          attach ??= handler;
+        },
+      },
+    }),
+  );
+  if (!attach) throw new Error("The message box is not ready. Try again.");
+  return attach;
+}
+
 export function chatImageUrl(src: string): string {
   const safe = safeImageUrl(src);
   if (!safe) throw new Error("This image is unavailable.");
@@ -27,18 +61,33 @@ function current(allowed: () => boolean) {
   if (!allowed()) throw new DOMException("The image action was cancelled.", "AbortError");
 }
 
+function inlineImageBlob(src: string): Blob {
+  const [header, encoded] = src.split(",", 2);
+  const declared = header.slice(5).split(";", 1)[0].toLowerCase();
+  const type = declared === "image/jpg" ? "image/jpeg" : declared;
+  if (!RASTER_TYPES.has(type)) throw new Error("This image format is not supported.");
+  const bytes = Uint8Array.from(atob(encoded), (value) => value.charCodeAt(0));
+  if (!bytes.length || bytes.length > MAX_IMAGE_BYTES)
+    throw new Error("This image is empty or larger than 8 MB.");
+  return new Blob([bytes], { type });
+}
+
 export async function readChatImage(src: string, allowed: () => boolean): Promise<Blob> {
   current(allowed);
+  const safe = chatImageUrl(src);
+  // Inline images are already local. Decoding them does not require connect-src data:.
+  if (safe.startsWith("data:")) return inlineImageBlob(safe);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30_000);
   try {
-    const response = await fetch(chatImageUrl(src), {
+    const response = await fetch(safe, {
       credentials: "same-origin",
       referrerPolicy: "no-referrer",
       signal: controller.signal,
     });
     if (!response.ok) throw new Error("Could not read this image. Try opening it in a new tab.");
-    const type = (response.headers.get("content-type") ?? "").split(";", 1)[0].toLowerCase();
+    const declared = (response.headers.get("content-type") ?? "").split(";", 1)[0].toLowerCase();
+    const type = declared === "image/jpg" ? "image/jpeg" : declared;
     if (!RASTER_TYPES.has(type)) throw new Error("This image format is not supported.");
     if (Number(response.headers.get("content-length")) > MAX_IMAGE_BYTES)
       throw new Error("This image is larger than 8 MB.");
@@ -172,9 +221,7 @@ export function openChatImage(src: string) {
     return;
   }
   // Browsers reject top-level data: navigation. A local raster blob opens normally.
-  const [header, encoded] = safe.split(",", 2);
-  const bytes = Uint8Array.from(atob(encoded), (value) => value.charCodeAt(0));
-  const url = URL.createObjectURL(new Blob([bytes], { type: header.slice(5).split(";", 1)[0] }));
+  const url = URL.createObjectURL(inlineImageBlob(safe));
   clickImageLink(url);
   setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000);
 }

@@ -14,6 +14,7 @@ import {
   copyChatImage,
   downloadChatImage,
   openChatImage,
+  type ChatImageAttachmentHandler,
 } from "@/lib/chat-image-actions";
 import {
   isPrincipalBrowserStorageClearedEvent,
@@ -26,7 +27,7 @@ export type ChatImageActions = {
   ownerId: string | null;
   scope: string;
   temporary: boolean;
-  onAdd: (file: File, isCurrent: () => boolean) => Promise<void>;
+  prepareAdd: () => ChatImageAttachmentHandler;
 };
 const HIDDEN_CHANGED = "kova:hidden-chat-images-changed";
 const HIDDEN_BASE = "kova-hidden-chat-images";
@@ -240,8 +241,10 @@ export function ChatImage({
           disabled={busy || !actions}
           onSelect={() =>
             void run(async (allowed) => {
+              if (!actions || !allowed()) return;
+              const add = actions.prepareAdd();
               const file = await chatImageFile(src, allowed);
-              if (allowed()) await actions?.onAdd(file, allowed);
+              if (allowed()) await add(file, allowed);
             })
           }
         >

@@ -5,6 +5,7 @@ import { ResponseMarkdown } from "./ResponseMarkdown";
 import { TaskCreatedBubble } from "./TaskCreatedBubble";
 import { HistoricalLibraryAttachment } from "./HistoricalLibraryAttachment";
 import { ChatImage, type ChatImageActions } from "./ChatImage";
+import { prepareChatImageAttachment } from "@/lib/chat-image-actions";
 import type { ResultDescriptor } from "./ArtifactEditor";
 import { splitGenerativeContent, type GenerativeWidget } from "@/lib/generative-ui.mjs";
 import { GenerativeCanvas } from "./generative-ui/GenerativeCanvas";
@@ -229,7 +230,6 @@ function ChatMessageInner({
   onOpenResult,
   onOpenCanvas,
   onSelectSuggestion,
-  onAddImage,
 }: {
   message: Message;
   streaming?: boolean;
@@ -259,7 +259,6 @@ function ChatMessageInner({
   ) => void;
   onOpenCanvas?: (widget: GenerativeWidget, trigger?: HTMLElement, sourceKey?: string) => void;
   onSelectSuggestion?: (prompt: string) => void;
-  onAddImage?: ChatImageActions["onAdd"];
 }) {
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const principalRef = useRef(principal);
@@ -273,14 +272,15 @@ function ChatMessageInner({
     lifecycleGenerationRef.current += 1;
   }, [principal]);
   const isUser = message.role === "user";
-  const imageActions: ChatImageActions | undefined = onAddImage
-    ? {
-        ownerId: principalResolved ? userKey : null,
-        scope: JSON.stringify([principal, chatId, message.id]),
-        temporary,
-        onAdd: onAddImage,
-      }
-    : undefined;
+  const imageActions: ChatImageActions | undefined =
+    isSignedIn && principalResolved && userKey && principal && chatId
+      ? {
+          ownerId: principalResolved ? userKey : null,
+          scope: JSON.stringify([principal, chatId, message.id]),
+          temporary,
+          prepareAdd: () => prepareChatImageAttachment(principal, chatId),
+        }
+      : undefined;
   const retryActionLabel = message.generationStatus ? "Retry response" : "Regenerate response";
   const [copied, setCopied] = useState(false);
   const [copyFallbackOpen, setCopyFallbackOpen] = useState(false);

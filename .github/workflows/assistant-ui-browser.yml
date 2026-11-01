@@ -26,6 +26,7 @@ on:
       - tests/e2e/select-control.ts
       - src/lib/dialog-return-focus.ts
       - src/lib/chat-image-actions.ts
+      - src/lib/chat-store.ts
       - src/routes/**
       - tests/e2e/spec400-chat.spec.ts
       - tests/e2e/model-selector.spec.ts

@@ -31,6 +31,12 @@ function operations(overrides = {}) {
     {
       window: { location: { origin: "https://kova.test" } },
       URL: ImageURL,
+      CustomEvent: class {
+        constructor(type, options) {
+          this.type = type;
+          this.detail = options.detail;
+        }
+      },
       Blob,
       File,
       Uint8Array,
@@ -89,14 +95,15 @@ test("download and attachment use the actual PNG bytes and preserve same-origin 
   await image.downloadChatImage("/private-image.png", () => true);
   assert.deepEqual(Buffer.from(await image.objects[0].arrayBuffer()), bytes);
   assert.equal(image.links[0].download, "kova-image.png");
-  assert.equal(image.requests[1].options.credentials, "same-origin");
-  assert.equal(image.requests[1].options.referrerPolicy, "no-referrer");
+  assert.equal(image.requests.length, 1, "Inline images must never fetch or require a wider CSP");
+  assert.equal(image.requests[0].options.credentials, "same-origin");
+  assert.equal(image.requests[0].options.referrerPolicy, "no-referrer");
 });
 
 test("copy starts inside the gesture and writes image bytes rather than URL text", async () => {
   const pending = deferred();
   const image = operations({ fetch: () => pending.promise });
-  const write = image.copyChatImage(data, () => true);
+  const write = image.copyChatImage("/delayed-copy.png", () => true);
   assert.equal(image.clipboard.length, 1);
   assert.equal(typeof image.clipboard[0][0].values["image/png"].then, "function");
   pending.resolve(new Response(bytes, { headers: { "content-type": "image/png" } }));
@@ -137,7 +144,7 @@ test("invalid content and oversized streaming images never become downloads", as
     fetch: async () => new Response("<svg/>", { headers: { "content-type": "image/svg+xml" } }),
   });
   await assert.rejects(
-    svg.downloadChatImage(data, () => true),
+    svg.downloadChatImage("/invalid-image.png", () => true),
     /format/,
   );
   const large = operations({
@@ -147,7 +154,7 @@ test("invalid content and oversized streaming images never become downloads", as
       }),
   });
   await assert.rejects(
-    large.downloadChatImage(data, () => true),
+    large.downloadChatImage("/large-image.png", () => true),
     /8 MB/,
   );
   assert.equal(svg.links.length + large.links.length, 0);
@@ -157,12 +164,55 @@ test("late image reads cannot download or attach after the owning view changes",
   const response = deferred();
   const image = operations({ fetch: () => response.promise });
   let current = true;
-  const download = image.downloadChatImage(data, () => current);
+  const download = image.downloadChatImage("/delayed-image.png", () => current);
   current = false;
   response.resolve(new Response(bytes, { headers: { "content-type": "image/png" } }));
   await assert.rejects(download, { name: "AbortError" });
   assert.equal(image.links.length, 0);
   assert.equal(image.objects.length, 0);
+});
+
+test("image attachment prepares the matching current composer synchronously", () => {
+  const accepted = async () => {};
+  let dispatched = 0;
+  const image = operations({
+    document: {
+      querySelectorAll: () => [
+        {
+          getClientRects: () => [{}],
+          getAttribute: () => JSON.stringify(["user:other", "chat-a"]),
+        },
+        {
+          getClientRects: () => [{}],
+          getAttribute: () => JSON.stringify(["user:owner-a", "chat-a", null]),
+          dispatchEvent: (event) => {
+            dispatched++;
+            assert.equal(event.type, "kova:prepare-chat-image-attachment");
+            event.detail.accept(accepted);
+          },
+        },
+      ],
+    },
+  });
+  assert.equal(image.prepareChatImageAttachment("user:owner-a", "chat-a"), accepted);
+  assert.equal(dispatched, 1);
+  assert.throws(() => image.prepareChatImageAttachment("user:owner-b", "chat-a"), /message box/);
+  assert.equal(dispatched, 1);
+});
+
+test("an unmounted or unavailable composer cannot accept an image handoff", () => {
+  const image = operations({
+    document: {
+      querySelectorAll: () => [
+        {
+          getClientRects: () => [{}],
+          getAttribute: () => JSON.stringify(["user:owner-a", "chat-a"]),
+          dispatchEvent() {},
+        },
+      ],
+    },
+  });
+  assert.throws(() => image.prepareChatImageAttachment("user:owner-a", "chat-a"), /not ready/);
 });
 
 function menuFixture() {
@@ -230,7 +280,9 @@ function menuFixture() {
         ownerId: "owner-a",
         scope: "owner-a:chat-a:message-a",
         temporary: false,
-        onAdd: async (file) => added.push(file),
+        prepareAdd: () => async (file) => {
+          added.push(file);
+        },
       },
     },
     tree;
@@ -293,7 +345,7 @@ test("hidden image preferences are isolated by owner and cleared by account priv
       ownerId: "owner-b",
       scope: "owner-b:chat-a:message-a",
       temporary: false,
-      onAdd: async () => {},
+      prepareAdd: () => async () => {},
     },
   });
   view.render();
@@ -303,7 +355,7 @@ test("hidden image preferences are isolated by owner and cleared by account priv
       ownerId: "owner-a",
       scope: "owner-a:chat-a:message-a",
       temporary: false,
-      onAdd: async () => {},
+      prepareAdd: () => async () => {},
     },
   });
   view.render();

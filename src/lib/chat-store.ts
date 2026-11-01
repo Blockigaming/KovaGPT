@@ -1,3 +1,4 @@
+import type { PendingAttachment } from "@/components/ChatInput";
 import { normalizeResponseFollowups } from "./response-followups.mjs";
 import {
   normalizeTaskCreatedReceipt,
@@ -74,6 +75,39 @@ export type Attachment =
       size?: number | null;
       sourceProject?: string | null;
     };
+export function pendingMessageAttachments(items: Message["attachments"]): PendingAttachment[] {
+  const COMPLETE = "complete" as const;
+  return (items ?? []).map((attachment) =>
+    attachment.kind === "image"
+      ? {
+          kind: "image" as const,
+          dataUrl: attachment.dataUrl,
+          name: "Attached image",
+          status: COMPLETE,
+        }
+      : attachment.kind === "text_file"
+        ? {
+            kind: "text_file" as const,
+            dataUrl: "",
+            name: attachment.name,
+            size: attachment.size ?? undefined,
+            fileType: attachment.fileType,
+            textContent: attachment.content,
+            status: COMPLETE,
+          }
+        : {
+            kind: "library_file" as const,
+            dataUrl: "",
+            name: attachment.name,
+            size: attachment.size ?? undefined,
+            libraryItemId: attachment.libraryItemId,
+            fileType: attachment.fileType,
+            sourceProject: attachment.sourceProject,
+            status: COMPLETE,
+          },
+  );
+}
+
 export type Activity = {
   browser?: import("./browser-activity-contract.mjs").BrowserActivityMetadata;
   taskReceipt?: TaskCreatedReceipt;
