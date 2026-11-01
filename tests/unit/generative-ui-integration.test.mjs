@@ -273,7 +273,7 @@ function descendants(root, predicate) {
   return result;
 }
 
-test("the schema instruction is in final API system content and the isolated workflow planner is unchanged", () => {
+test("the schema instruction stays in final API content across isolated workflow and Free planning", () => {
   // This source guard verifies prompt construction, not live model/backend acceptance.
   const path = new URL("../../src/routes/api/chat.ts", import.meta.url);
   const source = ts.createSourceFile(
@@ -306,26 +306,35 @@ test("the schema instruction is in final API system content and the isolated wor
   const planner = declaration("toolPlanningMessages").initializer;
   assert.ok(ts.isConditionalExpression(planner));
   assert.equal(planner.condition.getText(source), "workflowSkill");
+  const ordinaryPlanner = planner.whenFalse;
+  assert.ok(ts.isConditionalExpression(ordinaryPlanner));
+  assert.equal(ordinaryPlanner.condition.getText(source), "freeConnectorRequest");
   assert.equal(
-    planner.whenFalse.getText(source),
+    ordinaryPlanner.whenFalse.getText(source),
     "finalMessages",
-    "existing non-workflow fallback is preserved",
+    "ordinary paid planning keeps the complete existing context",
+  );
+  assert.ok(ts.isArrayLiteralExpression(ordinaryPlanner.whenTrue));
+  assert.match(
+    ordinaryPlanner.whenTrue.getText(source),
+    /FREE_CONNECTOR_PLANNING_INSTRUCTION[\s\S]*\.\.\.finalMessages\.slice\(1\)/,
+    "Free planning keeps the conversation after its compact authoritative instructions",
   );
   assert.equal(
     descendants(
-      planner.whenTrue,
+      planner,
       (node) => ts.isIdentifier(node) && node.text === "GENERATIVE_UI_INSTRUCTIONS",
     ).length,
     0,
   );
-  // The normalized expression is from verified source tree 2d624be2. Whitespace
-  // and comments do not matter; provenance isolation and tool-planning text do.
+  // Bind the reviewed workflow and bounded Free planner structure. Whitespace
+  // and comments do not matter; provenance isolation and planning text do.
   const normalized = ts
     .createPrinter({ removeComments: true })
     .printNode(ts.EmitHint.Expression, planner, source);
   assert.equal(
     createHash("sha256").update(normalized).digest("hex"),
-    "ebfd935afcaf11a3005357ca4047f345cbe11a0497eda10c4611b0ae29f501d5",
+    "672ea45e0cf4777defe0d67f6abafe36a597b823a498469c13bceb05c33bff1b",
   );
   assert.equal(
     declaration("workingMessages").initializer.getText(source),
