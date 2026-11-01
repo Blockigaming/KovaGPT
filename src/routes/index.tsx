@@ -334,6 +334,13 @@ function KovaGPT() {
     tool: null as ComposerToolId | null,
   });
   const composerRevisionRef = useRef(0);
+  const imageAttachmentHandlerRef = useRef<((file: File) => Promise<boolean>) | null>(null);
+  const registerImageAttachmentHandler = useCallback(
+    (handler: ((file: File) => Promise<boolean>) | null) => {
+      imageAttachmentHandlerRef.current = handler;
+    },
+    [],
+  );
   const [input, setInputState] = useState("");
   const setInput = useCallback((next: SetStateAction<string>) => {
     const text = typeof next === "function" ? next(composerDraftRef.current.text) : next;
@@ -810,6 +817,29 @@ function KovaGPT() {
     };
   };
   const [workspaceWidth, setWorkspaceWidth] = useState(0);
+  const addImageToChat = async (file: File, imageIsCurrent: () => boolean) => {
+    const isCurrent = () =>
+      principalReady &&
+      isSignedIn &&
+      Boolean(userKey) &&
+      imageIsCurrent() &&
+      nextPromptMountedRef.current &&
+      storagePrincipalRef.current === storagePrincipal &&
+      responseDraftGeneration === storageGenerationRef.current &&
+      sameNextPromptScope(nextPromptScope, nextPromptScopeRef.current) &&
+      window.location.href === responseDraftUrl;
+    if (!isCurrent()) throw new Error("Open this chat in your signed-in account to add the image.");
+    const attach = imageAttachmentHandlerRef.current;
+    if (!attach) throw new Error("The message box is not ready. Try again.");
+    const attached = await attach(file);
+    if (!isCurrent() || !attached) return;
+    toast.success("Image added to your message");
+    const focused = document.activeElement;
+    if (focused === document.body || focused?.closest('[data-chat-image], [role="menuitem"]'))
+      workspaceRef.current
+        ?.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')
+        ?.focus({ preventScroll: true });
+  };
   const [paneRatio, setPaneRatio] = useState(0.45);
   const wideResult = workspaceWidth >= 1000;
   const setLayoutRatio = (next: number) => {
@@ -3031,6 +3061,7 @@ function KovaGPT() {
         }
         userKey={userKey}
         principalResolved={isLoaded}
+        onAddImage={addImageToChat}
         streaming={isStreaming && isLastAssistant}
         streamingStartedAt={
           isStreaming &&
@@ -3430,6 +3461,7 @@ function KovaGPT() {
                     saveAttachmentsToLibrary={principalReady && !tempChat}
                     attachments={principalReady ? attachments : []}
                     onAttachmentsChange={setAttachments}
+                    onImageAttachmentHandler={registerImageAttachmentHandler}
                     attachmentContext={JSON.stringify([
                       storagePrincipal,
                       activeId,
@@ -3565,6 +3597,7 @@ function KovaGPT() {
                     saveAttachmentsToLibrary={principalReady && !tempChat}
                     attachments={principalReady ? attachments : []}
                     onAttachmentsChange={setAttachments}
+                    onImageAttachmentHandler={registerImageAttachmentHandler}
                     attachmentContext={JSON.stringify([
                       storagePrincipal,
                       activeId,

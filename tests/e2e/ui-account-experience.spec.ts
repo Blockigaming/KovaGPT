@@ -103,7 +103,10 @@ test("secondary-page chat menus include Rename, Pin, Share, project choices, and
   await expect(rename.getByRole("textbox")).toHaveValue("Composer review chat");
   await rename.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: "Options for Composer review chat", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Move to project", exact: true }).hover();
+  const projectMenu = page.getByRole("menuitem", { name: "Move to project", exact: true });
+  if (await page.evaluate(() => matchMedia("(any-pointer: coarse)").matches))
+    await projectMenu.click();
+  else await projectMenu.hover();
   await expect(page.getByRole("menuitem", { name: "New project", exact: true })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Review project", exact: true })).toBeVisible();
   await page.screenshot({ path: info.outputPath("chat-project-menu.png"), animations: "disabled" });

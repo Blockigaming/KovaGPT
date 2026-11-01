@@ -185,6 +185,7 @@ export function ChatInput({
   saveAttachmentsToLibrary = false,
   attachments,
   onAttachmentsChange,
+  onImageAttachmentHandler,
   mode,
   onModeChange,
   userTier = "free",
@@ -235,6 +236,8 @@ export function ChatInput({
   saveAttachmentsToLibrary?: boolean;
   attachments: PendingAttachment[];
   onAttachmentsChange: (a: PendingAttachment[]) => void;
+  /** Reuse the normal account, size, duplicate, quota and draft-lifetime checks. */
+  onImageAttachmentHandler?: (handler: ((file: File) => Promise<boolean>) | null) => void;
   mode?: ModeId;
   onModeChange?: (m: ModeId) => void;
   userTier?: Tier;
@@ -1021,6 +1024,13 @@ export function ChatInput({
       uploadBatchRef.current = false;
     }
   }
+
+  const externalImageFiles = useRef(addFiles);
+  externalImageFiles.current = addFiles;
+  useEffect(() => {
+    onImageAttachmentHandler?.((file) => externalImageFiles.current([file]));
+    return () => onImageAttachmentHandler?.(null);
+  }, [onImageAttachmentHandler]);
 
   const removeAttachment = (index: number) => {
     const attachment = attachments[index];

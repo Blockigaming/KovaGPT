@@ -4,6 +4,7 @@ import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
 import { ResponseMarkdown } from "./ResponseMarkdown";
 import { TaskCreatedBubble } from "./TaskCreatedBubble";
 import { HistoricalLibraryAttachment } from "./HistoricalLibraryAttachment";
+import { ChatImage, type ChatImageActions } from "./ChatImage";
 import type { ResultDescriptor } from "./ArtifactEditor";
 import { splitGenerativeContent, type GenerativeWidget } from "@/lib/generative-ui.mjs";
 import { GenerativeCanvas } from "./generative-ui/GenerativeCanvas";
@@ -228,6 +229,7 @@ function ChatMessageInner({
   onOpenResult,
   onOpenCanvas,
   onSelectSuggestion,
+  onAddImage,
 }: {
   message: Message;
   streaming?: boolean;
@@ -257,6 +259,7 @@ function ChatMessageInner({
   ) => void;
   onOpenCanvas?: (widget: GenerativeWidget, trigger?: HTMLElement, sourceKey?: string) => void;
   onSelectSuggestion?: (prompt: string) => void;
+  onAddImage?: ChatImageActions["onAdd"];
 }) {
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const principalRef = useRef(principal);
@@ -270,6 +273,14 @@ function ChatMessageInner({
     lifecycleGenerationRef.current += 1;
   }, [principal]);
   const isUser = message.role === "user";
+  const imageActions: ChatImageActions | undefined = onAddImage
+    ? {
+        ownerId: principalResolved ? userKey : null,
+        scope: JSON.stringify([principal, chatId, message.id]),
+        temporary,
+        onAdd: onAddImage,
+      }
+    : undefined;
   const retryActionLabel = message.generationStatus ? "Retry response" : "Regenerate response";
   const [copied, setCopied] = useState(false);
   const [copyFallbackOpen, setCopyFallbackOpen] = useState(false);
@@ -899,7 +910,7 @@ function ChatMessageInner({
                       attachment.kind === "image",
                   )
                   .map((attachment, index) => (
-                    <img
+                    <ChatImage
                       key={index}
                       src={attachment.dataUrl}
                       alt={
@@ -907,7 +918,8 @@ function ChatMessageInner({
                           ? `User-uploaded image: ${message.content.slice(0, 120)}`
                           : "User-uploaded image attached to message"
                       }
-                      className="max-h-64 rounded-lg border border-border"
+                      actions={imageActions}
+                      imageClassName="max-h-64 max-w-full rounded-2xl border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                   ))}
                 {message.attachments
@@ -1088,6 +1100,7 @@ function ChatMessageInner({
                             sources={message.sources}
                             onSourceClick={openSource}
                             onSaveImage={saveResponseImage}
+                            imageActions={imageActions}
                           >
                             {part.text}
                           </ResponseMarkdown>
@@ -1107,6 +1120,7 @@ function ChatMessageInner({
                             sources={message.sources}
                             onSourceClick={openSource}
                             onSaveImage={saveResponseImage}
+                            imageActions={imageActions}
                           >
                             {part.value}
                           </ResponseMarkdown>
@@ -1118,6 +1132,7 @@ function ChatMessageInner({
                       sources={message.sources}
                       onSourceClick={openSource}
                       onSaveImage={saveResponseImage}
+                      imageActions={imageActions}
                     >
                       {cleaned}
                     </ResponseMarkdown>
