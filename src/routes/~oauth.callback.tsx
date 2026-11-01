@@ -64,10 +64,13 @@ function OAuthCallbackPage() {
       }
     }
 
-    finishSignIn();
+    // Let effect replay clean up before consuming the one-use callback URL.
+    // A cancelled first mount must not scrub credentials needed by its replacement.
+    const start = window.setTimeout(() => void finishSignIn(), 0);
     return () => {
       cancelled = true;
       controller.abort();
+      window.clearTimeout(start);
       window.clearTimeout(revealTransition);
       window.clearTimeout(timeout);
     };

@@ -268,6 +268,7 @@ function loginSurface(dialog, options = {}) {
     },
     "@/lib/auth-retry-delay.mjs": { authRetryDelay },
     "@/lib/utils": { cn: (...args) => args.filter(Boolean).join(" ") },
+    "@/assets/plugins/github.svg": { default: "github.svg" },
     "@/components/NovaLogo": { NovaLogo: "logo" },
     "@/components/auth/ForgotPasswordDialog": { ForgotPasswordDialog: "forgot" },
     "@/hooks/useAuthProviders": {
@@ -304,8 +305,8 @@ function loginSurface(dialog, options = {}) {
   );
   return { ...f, events };
 }
-test("both owned sign-in surfaces use WebAuthn without a Supabase fallback and block duplicate clicks", async () => {
-  for (const dialog of [false, true]) {
+test("the owned account page uses WebAuthn without a Supabase fallback and block duplicate clicks", async () => {
+  for (const dialog of [false]) {
     let release;
     const hold = new Promise((r) => {
       release = r;
@@ -328,8 +329,8 @@ test("both owned sign-in surfaces use WebAuthn without a Supabase fallback and b
     assert.deepEqual(f.events, ["owned", dialog ? "reload" : "/library"]);
   }
 });
-test("passkey cancellation keeps both login surfaces open and never falls back or leaks provider text", async () => {
-  for (const dialog of [false, true]) {
+test("passkey cancellation keeps the account page open and never falls back or leaks provider text", async () => {
+  for (const dialog of [false]) {
     const f = loginSurface(dialog, { fail: true });
     await f.flush();
     await f.click("Continue with a passkey");
@@ -339,8 +340,8 @@ test("passkey cancellation keeps both login surfaces open and never falls back o
   }
 });
 
-test("passkey capability appears only after hydration and the legacy dialog retains its own provider", async () => {
-  for (const dialog of [false, true]) {
+test("account-page passkey capability appears only after hydration and requires device support", async () => {
+  for (const dialog of [false]) {
     const f = loginSurface(dialog);
     f.render();
     assert.ok(!f.text().includes("Continue with a passkey"));
@@ -350,8 +351,14 @@ test("passkey capability appears only after hydration and the legacy dialog reta
     await unsupported.flush();
     assert.ok(!unsupported.text().includes("Continue with a passkey"));
   }
-  const legacy = loginSurface(true, { owned: false });
-  await legacy.flush();
-  await legacy.click("Continue with a passkey");
-  assert.deepEqual(legacy.events, ["legacy"]);
+});
+
+test("the identity modal replaces passkeys with GitHub without attempting WebAuthn", async () => {
+  for (const owned of [true, false]) {
+    const modal = loginSurface(true, { owned });
+    await modal.flush();
+    assert.ok(!modal.text().includes("Continue with a passkey"));
+    assert.ok(modal.text().includes("Continue with GitHub"));
+    assert.deepEqual(modal.events, []);
+  }
 });

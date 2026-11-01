@@ -68,6 +68,7 @@ function fixture({
     },
     "@/components/ui/input": { Input: "input" },
     "@/components/ui/button": { Button: "button" },
+    "@/assets/plugins/github.svg": { default: "github.svg" },
     "@/components/NovaLogo": { NovaLogo: "logo" },
     "lucide-react": Object.fromEntries(
       ["AlertTriangle", "ArrowLeft", "KeyRound", "Loader2"].map((name) => [name, name]),
