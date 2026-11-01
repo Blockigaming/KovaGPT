@@ -166,6 +166,7 @@ for (const theme of ["light", "dark"] as const) {
     const card = page.locator('[data-plugin-id="github"]');
     const details = card.getByRole("button", { name: "Coming soon GitHub", exact: true });
     await expect(details).toBeVisible();
+    await expect(details).toHaveAttribute("data-coming-soon", "true");
     await details.click(); // This card action opens metadata; it never connects a provider.
     const modal = page.getByRole("dialog", { name: "GitHub", exact: true });
     await contained(page, modal);

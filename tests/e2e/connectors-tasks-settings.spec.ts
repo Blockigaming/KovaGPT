@@ -27,6 +27,6 @@ test("Settings remains reachable from the responsive shell", async ({ page }) =>
   }
   await openCurrentSettings(page);
   await expect(
-    page.getByRole("main").getByRole("heading", { name: "Settings", level: 1 }),
+    page.getByRole("main").getByRole("heading", { name: "Settings", level: 1, exact: true }),
   ).toBeVisible();
 });
