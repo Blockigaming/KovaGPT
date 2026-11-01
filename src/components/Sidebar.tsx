@@ -16,7 +16,7 @@ import {
   Brain,
   Bell,
   PanelLeft,
-  Home,
+  ArrowLeft,
   MessageSquare,
   ChevronDown,
   BarChart3,
@@ -1299,7 +1299,7 @@ export function Sidebar({
                   className="kova-rail-button kova-sidebar-toggle"
                   aria-label={compactOnly ? "Back to chat" : "Expand sidebar"}
                 >
-                  {compactOnly ? <Home aria-hidden="true" /> : <PanelLeft aria-hidden="true" />}
+                  {compactOnly ? <ArrowLeft aria-hidden="true" /> : <PanelLeft aria-hidden="true" />}
                 </button>
               </RailTooltip>
             </div>
