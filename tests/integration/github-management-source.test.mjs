@@ -68,7 +68,7 @@ test("Apps GitHub experience has truthful credential account installation and re
   );
   assert.match(
     ui,
-    /!data\.configured \? \([\s\S]*?>Unavailable<\/span>[\s\S]*?\) : !activeAccounts\.length \? \([\s\S]*?onClick=\{\(\) => void connect\(\)\}[\s\S]*?"Connect"/,
+    /!data\.configured \? \([\s\S]*?>\s*Coming soon\s*<\/span>[\s\S]*?\) : !activeAccounts\.length \? \([\s\S]*?onClick=\{\(\) => void connect\(\)\}[\s\S]*?"Connect"/,
   );
   assert.match(
     ui,

@@ -195,7 +195,7 @@ for (const [name, props, expectedDisabled] of [
     assert.match(html, /data-testid="dictate-button"/);
     assert.match(html, /data-testid="voice-button"/);
     assert.equal(
-      controlProps.get("Dictate").disabled,
+      controlProps.get("Type with voice").disabled,
       Boolean(props.disabled || props.isStreaming),
     );
     assert.equal(

@@ -233,7 +233,12 @@ export function BankConnectionsPanel({ ownerId }: { ownerId: string | null }) {
       ) : (
         <>
           {status && !status.configured && (
-            <p role="status">Bank connections are not enabled yet.</p>
+            <p
+              role="status"
+              className="w-fit rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-700 dark:text-amber-300"
+            >
+              Coming soon
+            </p>
           )}
           {status && !status.planEligible && (
             <p>

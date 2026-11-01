@@ -190,3 +190,34 @@
     padding-inline: 16px;
   }
 }
+
+/* Phone settings use a single list/detail flow instead of a second section picker. */
+@media (max-width: 767px) {
+  .kova-settings-route .kova-settings-section-select {
+    display: none;
+  }
+  .kova-settings-route section.kova-settings-page .kova-settings-sidebar.mobile-home {
+    display: flex;
+    width: 100%;
+    flex: 1 1 0;
+    padding: 16px;
+    background: var(--background);
+    margin: 0;
+  }
+  .kova-settings-route section.kova-settings-page .kova-settings-content.mobile-hidden,
+  .kova-settings-route section.kova-settings-page .kova-settings-sidebar.mobile-hidden {
+    display: none;
+  }
+  .kova-settings-route section.kova-settings-page .kova-settings-content.mobile-content {
+    display: flex;
+  }
+  .kova-settings-route section.kova-settings-page .kova-settings-back {
+    display: grid;
+  }
+  .kova-settings-route .kova-settings-page-header p {
+    display: none;
+  }
+  .kova-settings-route .kova-settings-navigation-heading {
+    display: none;
+  }
+}

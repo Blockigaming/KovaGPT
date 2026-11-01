@@ -12,10 +12,10 @@ export async function openResponseOptions(page: Page, recordTrigger?: (trigger: 
       const attach = page.getByRole("button", { name: "Attach", exact: true });
       recordTrigger?.(attach);
       await attach.click();
-      await page
-        .getByTestId("mobile-bottom-sheet")
-        .getByRole("button", { name: "Response options", exact: true })
-        .click();
+      const sheet = page.getByTestId("mobile-bottom-sheet");
+      const moreTools = sheet.locator("summary").filter({ hasText: /^More tools$/ });
+      if (await moreTools.isVisible()) await moreTools.click();
+      await sheet.getByRole("button", { name: "Response options", exact: true }).click();
     }
   }
   await expect(panel).toBeVisible();
@@ -105,6 +105,10 @@ export async function chooseSettingsSection(page: Page, section: string) {
       .getByRole("option", { name: new RegExp(`^${label}(?: Selected)?$`) })
       .click();
   };
+  if (!(await tab.isVisible()) && !(await picker.isVisible())) {
+    const back = surface.getByRole("button", { name: "Back to settings", exact: true });
+    if (await back.isVisible()) await back.click();
+  }
   if (await tab.isVisible()) {
     try {
       await tab.click({ timeout: 4_000 });

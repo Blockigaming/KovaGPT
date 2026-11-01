@@ -171,7 +171,7 @@ export function inspectConfiguredVoiceComposer(source) {
     .map(() => "composer capture/provider boundary bypass");
   const approved = new Set();
   for (const [id, mode, label] of [
-    ["dictate-button", "dictate", "Dictate"],
+    ["dictate-button", "dictate", "Type with voice"],
     ["voice-button", "voice", "Voice"],
   ]) {
     const buttons = elements.filter(

@@ -281,7 +281,7 @@ for (const entry of [
     const f = fixture();
     const file = f.file();
     let prevented = false;
-    if (entry === "picker") await f.click("Photos & Files");
+    if (entry === "picker") await f.click("Files");
     if (entry === "file input")
       await f
         .nodes()
@@ -346,7 +346,7 @@ test("guest pasted-text attachment requires sign-in but ordinary text pasting re
 
 test("signed-in file selection, reads and drawing creation keep working", async () => {
   const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
-  await f.click("Photos & Files");
+  await f.click("Files");
   assert.deepEqual(f.choosers, ["Choose files"]);
   assert.equal(await f.drawing().onAttach([f.file()]), true);
   await f.flush();

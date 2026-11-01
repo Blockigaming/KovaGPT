@@ -8,7 +8,7 @@ test("launch directory exposes planned details without unsupported connect actio
   assert.match(route, /connectionFilter === "connected" && !hasConnection/);
   assert.match(route, /category !== "all" && c.category !== category/);
   assert.match(route, /setCategory\("all"\)/);
-  assert.match(route, /!configured \|\| state === "temporarily_unavailable"\s*\? "Unavailable"/);
+  assert.match(route, /!configured\s*\? "Coming soon"/);
   assert.match(route, /selectedReview.permissions.map/);
   assert.doesNotMatch(route, /google.com\/s2\/favicons|label.slice\(0, 2\)/);
   assert.doesNotMatch(route, /PluginConnectionPreview|plugin-preview/);

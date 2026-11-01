@@ -175,7 +175,7 @@ test("opening and dismissing details never starts OAuth; Connect is explicit", a
 
 test("unavailable providers have readable details and no connection action", async ({ page }) => {
   await boot(page);
-  await page.getByRole("button", { name: "Unavailable Slack" }).click();
+  await page.getByRole("button", { name: "Coming soon Slack" }).click();
   await expect(page.getByRole("dialog")).toContainText(
     "Connection setup is incomplete in this deployment.",
   );

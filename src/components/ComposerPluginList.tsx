@@ -8,7 +8,7 @@ import {
 } from "@/lib/connectors-catalog";
 import { getGoogleStatus } from "@/lib/google-client";
 import { getGitHubChatReadAccess, getGitHubManagement } from "@/lib/github.functions";
-import { Plug } from "lucide-react";
+import { PLUGIN_BRAND_ASSET_URLS } from "@/lib/plugin-review-catalog";
 import {
   composerPluginConnection,
   rankConnectedComposerPlugins,
@@ -79,12 +79,20 @@ export function ComposerPluginList({
   const hasRequests = connected.some((plugin) => plugin.count > 0);
   const row = (plugin: ConnectorItem, count?: number) => {
     const status = connection(plugin.id);
+    const comingSoon = ["Not available yet", "Requires setup"].includes(status.label);
     const contents = (
       <>
-        <Plug className="kova-composer-plugin-logo" aria-hidden="true" />
+        <img
+          src={PLUGIN_BRAND_ASSET_URLS[plugin.id]}
+          className="kova-composer-plugin-logo"
+          alt=""
+          aria-hidden="true"
+        />
         <span>
           <span>{plugin.label}</span>
-          <small>{status.label}</small>
+          <small data-coming-soon={comingSoon || undefined}>
+            {comingSoon ? "Coming soon" : status.label}
+          </small>
         </span>
         {count === undefined && <span>{status.action}</span>}
       </>
