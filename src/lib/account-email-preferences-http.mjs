@@ -48,7 +48,7 @@ export function makeAccountEmailPreferenceHandlers({
       const admission = await consumeRateLimit({
         identity: `account:${auth.userId}`,
         action: mutation ? "account_email_preferences_update" : "account_email_preferences_read",
-        limit: mutation ? 30 : 120,
+        limit: mutation ? 30 : 100,
         windowSeconds: 900,
       });
       if (!admission.allowed)

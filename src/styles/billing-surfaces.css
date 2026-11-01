@@ -415,3 +415,52 @@ body .kova-settings-dialog .kova-billing-workspace > [role="tabpanel"].kova-bill
     max-width: 60%;
   }
 }
+
+/* Keep plan comparisons compact, with clear hierarchy and comfortable controls. */
+.kova-billing-workspace .kova-billing-tabs {
+  border-radius: var(--kova-radius-button);
+  min-height: 42px;
+  gap: 2px;
+  margin-bottom: 28px;
+}
+.kova-billing-tabs [role="tab"] {
+  border-radius: var(--kova-radius-button);
+  min-height: 34px;
+  padding: 6px 18px;
+}
+.kova-billing-plan-grid {
+  gap: 18px;
+}
+.kova-billing-plan-card {
+  border-radius: 28px;
+  padding: 22px;
+  gap: 10px;
+  background: color-mix(in oklab, var(--card) 65%, transparent);
+}
+.kova-billing-plan-card[data-current-plan="true"] {
+  border-color: color-mix(in oklab, var(--foreground) 45%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 14%, transparent);
+}
+.kova-billing-plan-card h4 {
+  font-size: 21px;
+  font-weight: 600;
+}
+.kova-billing-plan-price strong {
+  font-size: 32px;
+  letter-spacing: -0.04em;
+}
+.kova-billing-plan-features {
+  gap: 12px;
+}
+.kova-billing-plan-action {
+  border-radius: var(--kova-radius-button);
+  margin-top: 8px;
+}
+.kova-billing-plan-card[data-current-plan="false"] .kova-billing-plan-action:not(:disabled) {
+  background: var(--foreground);
+  color: var(--background);
+}
+.kova-billing-management-row button,
+.kova-billing-view-plans {
+  border-radius: var(--kova-radius-button);
+}

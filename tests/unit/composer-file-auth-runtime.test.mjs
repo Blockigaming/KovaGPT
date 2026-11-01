@@ -791,3 +791,80 @@ test("stale analysis Send and queued Send callbacks cannot run for a replacement
   await next.click("Send next");
   assert.deepEqual(queued, ["data_analysis"]);
 });
+
+test("task and audio tools open for the current account without sending or changing its draft", async () => {
+  const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
+  await f.click("Tasks and audio");
+  const tools = f.nodes().find((node) => node.type === "ComposerToolsDialog");
+  assert.ok(tools);
+  assert.equal(tools.props.ownerId, "owner-a");
+  assert.equal(f.input().value, "Keep my draft");
+  assert.deepEqual([f.submissions, f.quotas, f.saves, f.reads], [[], [], [], []]);
+  tools.props.onClose();
+  await f.flush();
+  assert.equal(
+    f.nodes().some((node) => node.type === "ComposerToolsDialog"),
+    false,
+  );
+});
+
+test("task and audio tools require sign-in and reject an earlier account's opener", async () => {
+  const guest = fixture();
+  await guest.click("Tasks and audio");
+  assert.match(guest.signIn().description, /Sign in to run Agent tasks or use audio tools/);
+  assert.equal(
+    guest.nodes().some((node) => node.type === "ComposerToolsDialog"),
+    false,
+  );
+  const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
+  const staleOpen = f.button("Tasks and audio").onClick;
+  await f.account({ isLoaded: true, user: { id: "owner-b" } });
+  staleOpen();
+  await f.flush();
+  assert.equal(
+    f.nodes().some((node) => node.type === "ComposerToolsDialog"),
+    false,
+  );
+  await f.click("Tasks and audio");
+  assert.equal(
+    f.nodes().find((node) => node.type === "ComposerToolsDialog").props.ownerId,
+    "owner-b",
+  );
+});
+
+test("an open tools dialog disappears immediately when its account changes", async () => {
+  const f = fixture({}, { isLoaded: true, user: { id: "owner-a" } });
+  const staleOpen = f.button("Tasks and audio").onClick;
+  await f.click("Tasks and audio");
+  await f.account({ isLoaded: true, user: { id: "owner-b" } });
+  assert.equal(
+    f.nodes().some((node) => node.type === "ComposerToolsDialog"),
+    false,
+  );
+  await f.account({ isLoaded: true, user: { id: "owner-a" } });
+  staleOpen();
+  await f.flush();
+  assert.equal(
+    f.nodes().some((node) => node.type === "ComposerToolsDialog"),
+    false,
+  );
+  assert.equal(f.input().value, "Keep my draft");
+});
+
+test("phone attachment sheet yields focus when task and audio tools open", async () => {
+  const f = fixture(
+    {},
+    { isLoaded: true, user: { id: "owner-a" } },
+    { isDesktop: false, isMobile: true, interaction: "touch" },
+  );
+  await f.click("Tasks and audio");
+  const sheet = f
+    .nodes()
+    .find((node) => node.type === "MobileBottomSheet" && node.props.title === "Attach");
+  assert.ok(sheet);
+  assert.equal(sheet.props.restoreFocus, false);
+  assert.equal(
+    f.nodes().find((node) => node.type === "ComposerToolsDialog").props.ownerId,
+    "owner-a",
+  );
+});

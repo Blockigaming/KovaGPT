@@ -12,7 +12,7 @@ const [chat, memory, client, worker, server, exports, snapshot] = await Promise.
   read("src/lib/chat-summary-snapshot.mjs"),
 ]);
 
-test("same-chat summary reads require paid consent and an explicit non-Temporary privacy boundary", () => {
+test("same-chat summary reads require explicit consent and an explicit non-Temporary privacy boundary", () => {
   const section = chat.slice(
     chat.indexOf("let conversationSummary:"),
     chat.indexOf("// Project workspace context:"),
@@ -21,7 +21,7 @@ test("same-chat summary reads require paid consent and an explicit non-Temporary
     section,
     /auth &&[\s\S]*chatId &&[\s\S]*!temporary &&[\s\S]*memoryStartIndex !== undefined/,
   );
-  assert.match(section, /callerTier === "plus" \|\| callerTier === "pro"/);
+  assert.doesNotMatch(section, /callerTier === "plus" \|\| callerTier === "pro"/);
   assert.match(section, /personalContext\?\.rememberAcross === true/);
   assert.match(section, /buildChatSummaryContext/);
   assert.doesNotMatch(chat, /queueChatSummary/);
@@ -30,7 +30,7 @@ test("same-chat summary reads require paid consent and an explicit non-Temporary
 });
 
 test("durable admission stays in the existing serialized memory POST and deletion removes jobs first", () => {
-  assert.match(client, /scheduleMemoryWrites\(active, userKey, controller\.signal\)/);
+  assert.match(client, /scheduleMemoryWrites\(active, userKey, controller\.signal,/);
   assert.match(
     snapshot,
     /enqueueMemoryWrite\([\s\S]*?run: async \(\) =>[\s\S]*?writeMemoryForPrincipal\(active, principal/,

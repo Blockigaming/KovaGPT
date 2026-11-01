@@ -21,7 +21,7 @@ test("context menus retain bounded widths and compact SDK rows with coarse targe
   const values = Object.fromEntries(
     menu.nodes.filter((node) => node.type === "decl").map((node) => [node.prop, node.value]),
   );
-  assert.equal(values.width, "208px");
+  assert.equal(values.width, "236px");
   assert.match(values["max-width"], /--radix-dropdown-menu-content-available-width/);
   assert.match(values["max-width"], /calc\(100vw - 24px\)/);
   assert.ok(
@@ -36,11 +36,6 @@ test("context menus retain bounded widths and compact SDK rows with coarse targe
     /@media \(max-width: 1023px\), \(any-pointer: coarse\)[\s\S]*min-height: 44px/,
   );
   const shared = readFileSync("src/components/ui/dropdown-menu.tsx", "utf8");
-  for (const token of [
-    "min-h-8",
-    "rounded-[6px]",
-    "px-2 py-1.5",
-    "[@media(pointer:coarse)]:min-h-11",
-  ])
+  for (const token of ["min-h-8", "rounded-xl", "px-2 py-1.5", "[@media(pointer:coarse)]:min-h-11"])
     assert.ok(shared.includes(token));
 });

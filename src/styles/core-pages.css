@@ -858,3 +858,95 @@ input.kova-image-adjustment-range:disabled {
   outline-offset: 2px;
   box-shadow: 0 0 0 6px #171717 !important;
 }
+
+/* Library tools share compact pill controls and contained disclosures. */
+.kova-library-utilities.spec400-library-secondary {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kova-library-utilities.spec400-library-secondary > details.kova-library-disclosure {
+  flex: 0 1 auto;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 22px;
+  padding: 0;
+  background: var(--surface-secondary);
+}
+.kova-core-page.kova-file-directory
+  .kova-library-utilities.spec400-library-secondary
+  > details
+  > summary,
+.kova-core-page.kova-file-directory .kova-library-utilities.spec400-library-secondary > button {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: var(--kova-radius-button);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+.kova-library-utilities.spec400-library-secondary > details > summary::-webkit-details-marker {
+  display: none;
+}
+.kova-library-utilities.spec400-library-secondary > details[open] {
+  flex-basis: 100%;
+  order: 1;
+  padding: 0 16px 16px;
+}
+.kova-library-utilities.spec400-library-secondary > details[open] > summary {
+  margin-inline: -16px;
+}
+.kova-library-utilities.spec400-library-secondary > details > :not(summary) {
+  max-width: 100%;
+}
+.kova-library-utilities.spec400-library-secondary > details > p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.kova-library-image-edit {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  background: var(--surface-secondary);
+  text-align: left;
+}
+.kova-library-image-edit > button {
+  justify-content: flex-start;
+  gap: 10px;
+  border-radius: 999px;
+  padding-inline: 14px;
+}
+.kova-library-image-edit label {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.kova-library-image-edit p {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.kova-library-image-edit [data-slot="select-trigger"] {
+  border-radius: 999px;
+  background: var(--background);
+}
+
+@media (pointer: coarse), (max-width: 767px) {
+  .kova-core-page.kova-file-directory
+    .kova-library-utilities.spec400-library-secondary
+    > details
+    > summary,
+  .kova-core-page.kova-file-directory .kova-library-utilities.spec400-library-secondary > button {
+    min-height: 44px;
+  }
+}

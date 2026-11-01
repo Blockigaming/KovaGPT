@@ -358,10 +358,10 @@ test("guest paste is local pending input, blocks omission on Send, and still req
   assert.equal(f.input().value, "Keep" + exactText + "draft");
 });
 
-test("local paste remove/re-add does not consume server upload allowance; daily Free allowance is ten while per-message slots remain two", async () => {
+test("local paste remove/re-add does not consume server upload allowance; daily Free allowance is three while per-message slots remain two", async () => {
   const modes = readFileSync("src/lib/modes.ts", "utf8");
   assert.match(modes, /free: DAILY_PLAN_ALLOWANCES.free.uploads/);
-  assert.equal(usagePolicy.DAILY_PLAN_ALLOWANCES.free.uploads, 10);
+  assert.equal(usagePolicy.DAILY_PLAN_ALLOWANCES.free.uploads, 3);
   const f = fixture({}, signedIn);
   for (let index = 0; index < 2; index++) {
     await f.root().onPaste(paste(exactText));

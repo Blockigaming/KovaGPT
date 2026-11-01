@@ -68,7 +68,7 @@ test("does not expose a Checkout return URL browser input", async () => {
   );
   assert.match(
     serverSource,
-    /billingPortalAvailable:[\s\S]*?monthlyPolicy &&[\s\S]*?billingReturnOriginConfigured\(process\.env\.KOVA_BILLING_RETURN_ORIGIN\)/,
+    /billingPortalAvailable:[\s\S]*?hasBillingAccount &&[\s\S]*?billingReturnOriginConfigured\(process\.env\.KOVA_BILLING_RETURN_ORIGIN\)/,
   );
   assert.doesNotMatch(serverSource, /data\.(?:returnUrl|return_url)/);
   const policySource = await readFile(

@@ -1,4 +1,5 @@
 import type { BrowserContext, Page } from "@playwright/test";
+import { functionNames } from "./server-function-fixture";
 
 const supabaseAuthStorageKeyPattern = /^sb-([a-z0-9]{20})-auth-token$/;
 const supabaseRequestPattern = /^https:\/\/[a-z0-9]{20}\.supabase\.co(?:\/|$)/;
@@ -96,6 +97,13 @@ export async function installAuthenticatedFixture(
   );
 
   const mockedBackendOrigins = new Set<string>();
+  await page.route("**/_serverFn/**", (route) => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+    if (!functionNames.get(id)?.startsWith("getMyPlanTier_")) return route.fallback();
+    return route.fulfill({
+      json: { result: { ownerId: e2eUser.id, tier: options.tier ?? "free" }, context: {} },
+    });
+  });
   await page.route(supabaseRequestPattern, async (route) => {
     const url = new URL(route.request().url());
     mockedBackendOrigins.add(url.origin);

@@ -18,7 +18,10 @@ test("current Chat packaging stays consistent across server, picker, composer an
   assert.match(selector, /aria-pressed=\{mode === "thinking"\}/);
   assert.match(selector, /onChange\(mode === "thinking" \? "instant" : "thinking"\)/);
   assert.match(chat, /if \(auth && !isOwner\)/);
-  assert.match(chat, /enforceQuota\(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER\[callerTier\]/);
+  assert.match(
+    chat,
+    /enforceDailyMessageQuota\(\s*auth,\s*callerTier,\s*m\.id !== "instant" && m\.id !== "medium",/,
+  );
   assert.match(read("src/components/StudyPanel.tsx"), /mode: "instant",[\s\S]*clientTool: "study"/);
   assert.match(read("public/llms.txt"), /Free users can select Default or Thinking/);
 });

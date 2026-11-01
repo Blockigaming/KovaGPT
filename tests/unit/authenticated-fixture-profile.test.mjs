@@ -6,16 +6,19 @@ import vm from "node:vm";
 
 const source = stripTypeScriptTypes(readFileSync("tests/e2e/authenticated-fixture.ts", "utf8"), {
   mode: "transform",
-}).replace(
-  "export async function installAuthenticatedFixture",
-  "async function installAuthenticatedFixture",
-);
+})
+  .replace('import { functionNames } from "./server-function-fixture";', "")
+  .replace(
+    "export async function installAuthenticatedFixture",
+    "async function installAuthenticatedFixture",
+  );
 
 function installer() {
   let sequence = 0;
   return vm.runInNewContext(`${source}\n({ installAuthenticatedFixture })`, {
     URL,
     crypto: { randomUUID: () => `fixture-${++sequence}` },
+    functionNames: new Map([["fixture-owned-plan", "getMyPlanTier_fixture"]]),
   }).installAuthenticatedFixture;
 }
 
@@ -156,8 +159,13 @@ test("the fixture still blocks unsupported backend requests instead of reaching 
   const install = installer();
   const page = await pageFixture(install, {});
   let aborted = null;
-  await page.routes[0].handler({
-    request: () => ({ url: () => "https://aaaaaaaaaaaaaaaaaaaa.supabase.co/not-a-mocked-path" }),
+  const requestUrl = "https://aaaaaaaaaaaaaaaaaaaa.supabase.co/not-a-mocked-path";
+  const backend = page.routes.find(
+    ({ pattern }) => typeof pattern?.test === "function" && pattern.test(requestUrl),
+  );
+  assert.ok(backend, "the backend isolation route must be installed");
+  await backend.handler({
+    request: () => ({ url: () => requestUrl }),
     abort: async (reason) => {
       aborted = reason;
     },
@@ -167,3 +175,25 @@ test("the fixture still blocks unsupported backend requests instead of reaching 
   });
   assert.equal(aborted, "blockedbyclient");
 });
+
+for (const tier of ["free", "plus", "pro"]) {
+  test(`the ${tier} fixture returns an account-bound plan without a real backend call`, async () => {
+    const page = await pageFixture(installer(), {}, { tier });
+    const server = page.routes.find(({ pattern }) => pattern === "**/_serverFn/**");
+    assert.ok(server);
+    let response;
+    await server.handler({
+      request: () => ({ url: () => "https://example.invalid/_serverFn/fixture-owned-plan" }),
+      fulfill: async (value) => {
+        response = value.json;
+      },
+      fallback: async () => {
+        throw new Error("owned plan fixture must not reach a backend");
+      },
+    });
+    assert.deepEqual(JSON.parse(JSON.stringify(response)), {
+      result: { ownerId: "22222222-2222-4222-8222-222222222222", tier },
+      context: {},
+    });
+  });
+}

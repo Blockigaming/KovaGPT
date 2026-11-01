@@ -180,7 +180,7 @@ test("sidebar colors and bounded drawer width come from one shared owner without
   assert.equal(property(mobile, "max-width"), "calc(100vw - 24px)");
   assert.equal(property(mobile, "border-radius"), "0 24px 24px 0");
   assert.equal(tokens.get("--kova-sidebar-width"), "260px");
-  assert.equal(tokens.get("--kova-sidebar-rail-width"), "84px");
+  assert.equal(tokens.get("--kova-sidebar-rail-width"), "60px");
   assert.equal(tokens.get("--kova-sidebar-drawer-width"), "min(320px, calc(100vw - 32px))");
   assert.ok(
     !rules.some(

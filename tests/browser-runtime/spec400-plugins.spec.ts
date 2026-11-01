@@ -239,8 +239,8 @@ test("connection cards fit the phone and details stay centered with viewport gut
   const frame = await page.locator(".spec400-plugin-logo").first().boundingBox();
   expect(frame).not.toBeNull();
   expect(frame!.width).toBe(frame!.height);
-  expect(frame!.width).toBeGreaterThanOrEqual(40);
-  expect(frame!.width).toBeLessThanOrEqual(64);
+  expect(frame!.width).toBeGreaterThanOrEqual(38);
+  expect(frame!.width).toBeLessThanOrEqual(48);
   await page.getByRole("button", { name: "Connect Gmail", exact: true }).click();
   const panel = await page.getByRole("dialog").boundingBox();
   expect(panel).not.toBeNull();

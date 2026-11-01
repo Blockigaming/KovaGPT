@@ -33,7 +33,7 @@ test("home chat and shared shell hide stale account state before loading the nex
   );
   assert.match(
     shell,
-    /if \(!\(await moveChatToTrash\(userKey, chat, conversations, current\)\) \|\| !current\(\)\) return;\s*setConversationState\(\{ principal: storagePrincipal, items: next \}\)/,
+    /if \(!\(await moveChatToTrash\(userKey, chat, conversations, current\)\) \|\| !current\(\)\) return;\s*setConversationState\(\{ principal: storagePrincipal, items: loadConversations\(userKey\) \}\)/,
   );
   assert.match(trash, /if \(!current\(\) \|\| !canWriteChatHistory\(owner\)\) return false/);
   assert.match(

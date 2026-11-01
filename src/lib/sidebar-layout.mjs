@@ -7,7 +7,6 @@ export const SIDEBAR_ITEMS = Object.freeze([
   { id: "projects", label: "Projects", to: "/projects" },
   { id: "scheduled-tasks", label: "Scheduled tasks", to: "/scheduled-tasks" },
   { id: "apps", label: "Plugins", to: "/apps" },
-  { id: "discovery", label: "Discover", to: "/discovery" },
   { id: "maps", label: "Maps", to: "/maps" },
   { id: "memory", label: "Memory", to: "/memory" },
   { id: "settings", label: "Settings", to: "/settings/appearance" },
@@ -16,7 +15,7 @@ export const SIDEBAR_ITEMS = Object.freeze([
   { id: "notifications", label: "Notifications", to: "/notifications" },
 ]);
 export const DEFAULT_SIDEBAR_LAYOUT = Object.freeze({
-  shortcuts: ["images", "library", "projects", "scheduled-tasks", "apps", "discovery"],
+  shortcuts: ["images", "library", "projects", "scheduled-tasks", "apps"],
   width: 280,
   color: "default",
   searchPosition: "header",

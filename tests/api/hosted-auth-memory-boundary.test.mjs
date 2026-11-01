@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@supabase/supabase-js";
+import * as memoryTiers from "../../src/lib/memory-tier-policy.mjs";
 import { authHttp } from "../helpers/kova-auth-http.mjs";
 
 // Real memory GET handler, API admission and installed Supabase SDK. Only the
@@ -66,6 +67,9 @@ function fixture({ status = 200, claimsThrow = false } = {}) {
       "@/lib/ai/model-config.mjs": {},
       "@/lib/chat-summary-policy.server.mjs": {},
       "@/lib/chat-summary.server": {},
+      "@/lib/memory-tier-policy.mjs": memoryTiers,
+      "@/lib/supabase-loose": { loose: (x) => x },
+      "@/lib/distributed-rate-limit.server": {},
       "@supabase/supabase-js": {
         createClient(url, key, options) {
           if (key === "fixture-admin") {

@@ -1344,7 +1344,6 @@ function KovaGPT() {
     isSignedIn &&
     userKey &&
     settings.rememberAcross &&
-    tier !== "free" &&
     !isStreaming &&
     active &&
     !active.temporary,
@@ -1453,7 +1452,7 @@ function KovaGPT() {
     if (userKey && !settings.rememberAcross) blockMemoryWrites(userKey);
     configureMemoryWrites({
       principal: userKey,
-      enabled: Boolean(isSignedIn && settings.rememberAcross && tier !== "free"),
+      enabled: Boolean(isSignedIn && settings.rememberAcross),
     });
   }, [isSignedIn, settings.rememberAcross, settingsReady, tier, userKey]);
 
@@ -1477,19 +1476,14 @@ function KovaGPT() {
   // Cross-chat memory is opt-in in each browser. Only eligible paid accounts
   // may enqueue bounded, non-temporary conversation windows for summarization.
   useEffect(() => {
-    if (
-      !settingsReady ||
-      !isSignedIn ||
-      !userKey ||
-      isStreaming ||
-      !settings.rememberAcross ||
-      tier === "free"
-    )
+    if (!settingsReady || !isSignedIn || !userKey || isStreaming || !settings.rememberAcross)
       return;
     if (!active || active.temporary) return;
     const controller = new AbortController();
     void import("@/lib/chat-summary-snapshot.mjs")
-      .then(({ scheduleMemoryWrites }) => scheduleMemoryWrites(active, userKey, controller.signal))
+      .then(({ scheduleMemoryWrites }) =>
+        scheduleMemoryWrites(active, userKey, controller.signal, settings.automaticMemory === true),
+      )
       .catch(() => undefined);
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1500,6 +1494,7 @@ function KovaGPT() {
     isStreaming,
     isSignedIn,
     settings.rememberAcross,
+    settings.automaticMemory,
     settingsReady,
     tier,
     userKey,

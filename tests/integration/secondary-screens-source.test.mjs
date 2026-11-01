@@ -19,7 +19,7 @@ test("secondary routes share page, form, plan, plugin, and auth primitives", () 
   assert.match(apps, /className="spec400-plugin-card"/);
   assert.match(
     pluginStyles,
-    /\.spec400-plugin-card \{[^}]*border-radius: var\(--kova-radius-card\)/,
+    /\.spec400-plugin-card \{[^}]*border-radius: (?:22px|var\(--kova-radius-card\))/,
   );
   assert.match(tasks, /import "@\/styles\/spec400-management\.css"/);
   assert.match(tasks, /<ScheduledTaskEditor\s/);

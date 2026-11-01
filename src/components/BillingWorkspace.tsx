@@ -248,7 +248,13 @@ export function BillingPlans({ onNavigate, ...props }: BillingProps & { onNaviga
                 ))}
                 <div>
                   <dt>Adaptive Memory</dt>
-                  <dd>{tier === "free" ? "Not included" : "When enabled and available"}</dd>
+                  <dd>
+                    {tier === "free"
+                      ? "Basic memory"
+                      : tier === "plus"
+                        ? "Enhanced memory"
+                        : "Extended memory"}
+                  </dd>
                 </div>
               </dl>
               <p className="kova-billing-plan-trial">

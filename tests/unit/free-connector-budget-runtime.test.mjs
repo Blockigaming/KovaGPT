@@ -158,7 +158,8 @@ function fixture(options = {}) {
     providers = [],
     normalizedProviders = [],
     reads = [],
-    logs = [];
+    logs = [],
+    messageReservations = [];
   const abort = new AbortController();
   const env = {
     KOVA_TEXT_PROVIDER: "openai",
@@ -188,8 +189,16 @@ function fixture(options = {}) {
       };
       return q;
     },
-    rpc() {
-      throw new Error("Unexpected backend RPC");
+    rpc(name, args) {
+      assert.equal(name, "try_consume_daily_message");
+      assert.equal(args._user_id, owner);
+      messageReservations.push(args);
+      const result = { data: options.messageQuota !== false, error: null };
+      const query = {
+        abortSignal: () => query,
+        then: (yes, no) => Promise.resolve(result).then(yes, no),
+      };
+      return query;
     },
   };
   const auth = {
@@ -315,6 +324,7 @@ function fixture(options = {}) {
     settlements,
     providers,
     normalizedProviders,
+    messageReservations,
     reads,
     logs,
     async post() {
@@ -506,6 +516,27 @@ test("a missing planning usage receipt retains its bounded fallback instead of r
     f.settlements[0].inputTokens + f.settlements[0].outputTokens <=
       f.acquisitions[0].reservedTokens,
   );
+});
+
+test("resolved Lite and Medium use the regular allowance; reasoning modes use Thinking", async () => {
+  for (const [mode, thinking] of [
+    ["instant", false],
+    ["medium", false],
+    ["thinking", true],
+    ["high", true],
+  ]) {
+    const f = fixture({ tier: "plus", mode, noTools: true });
+    const { response, text } = await f.post();
+    assert.equal(response.status, 200, text);
+    assert.deepEqual(JSON.parse(JSON.stringify(f.messageReservations)), [
+      { _user_id: owner, _thinking: thinking, _regular_limit: 250, _thinking_limit: 50 },
+    ]);
+    const blocked = fixture({ tier: "plus", mode, noTools: true, messageQuota: false });
+    const denied = await blocked.post();
+    assert.equal(denied.response.status, 429);
+    assert.equal(JSON.parse(denied.text).kind, thinking ? "thinking" : "regular");
+    assert.equal(blocked.providers.length, 0);
+  }
 });
 
 test("paid connector planning retains its existing hop and reservation policy", async () => {

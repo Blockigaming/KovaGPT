@@ -1,3 +1,5 @@
+import { MEMORY_TIERS } from "@/lib/memory-tier-policy.mjs";
+import { enforceDailyMessageQuota } from "@/lib/message-quota.server";
 import { reserveUploads } from "@/lib/upload-quota.server.mjs";
 import { memorySourcesDelta, type MemorySourceRef } from "@/lib/memory-sources.mjs";
 import { readAccountIdentity } from "@/lib/account-identity.server.mjs";
@@ -8,7 +10,6 @@ import {
   isModeAllowedForTier,
   studyModeForTier,
   DAILY_IMAGE_LIMIT_BY_TIER,
-  DAILY_CHAT_LIMIT_BY_TIER,
   DAILY_UPLOAD_LIMIT_BY_TIER,
 } from "@/lib/modes";
 import { GENERATIVE_UI_INSTRUCTIONS } from "@/lib/generative-ui.mjs";
@@ -938,12 +939,6 @@ export const Route = createFileRoute("/api/chat")({
               // after it and before quota so a revoked skill cannot consume a
               // chat request without reaching a provider.
               await assertSelectedContextsCurrent(request.signal);
-              if (!capture) {
-                const quota = await preflight.run("chat_quota", (signal) =>
-                  enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier], 1, signal),
-                );
-                if (quota) return quota;
-              }
             }
 
             // SECURITY: Server-side tier enforcement. Client-supplied `mode` is
@@ -962,6 +957,18 @@ export const Route = createFileRoute("/api/chat")({
             // Guests always receive the basic instant agent, even if a custom
             // client attempts to submit a higher mode directly to the API.
             const m = !auth ? getMode("instant") : allowed ? requested : getMode("auto");
+            if (auth && !isOwner && !capture) {
+              await assertSelectedContextsCurrent(request.signal);
+              const quota = await preflight.run("chat_quota", (signal) =>
+                enforceDailyMessageQuota(
+                  auth,
+                  callerTier,
+                  m.id !== "instant" && m.id !== "medium",
+                  signal,
+                ),
+              );
+              if (quota) return quota;
+            }
             const MAX_ATTACHMENTS_PER_REQUEST = 2;
             // Quotas apply to files submitted in this turn, not attachments in
             // older conversation history. This also keeps edit/regenerate from
@@ -1163,12 +1170,7 @@ export const Route = createFileRoute("/api/chat")({
             // Temporary Chat may read existing memory but never writes it.
             let memoryBlock = "";
             const memorySourceRefs: MemorySourceRef[] = [];
-            if (
-              auth &&
-              (callerTier === "plus" || callerTier === "pro") &&
-              personalContext?.rememberAcross === true &&
-              usesExistingContext
-            ) {
+            if (auth && personalContext?.rememberAcross === true && usesExistingContext) {
               try {
                 const memoryResult = await preflight.run(
                   "memory_context",
@@ -1182,7 +1184,7 @@ export const Route = createFileRoute("/api/chat")({
                       .select("id, title, summary, updated_at")
                       .eq("user_id", auth.userId)
                       .order("updated_at", { ascending: false })
-                      .limit(callerTier === "pro" ? 500 : callerTier === "plus" ? 12 : 0),
+                      .limit(MEMORY_TIERS[callerTier].returned),
                   { required: false },
                 );
                 const memRows = memoryResult?.data;
@@ -1198,7 +1200,7 @@ export const Route = createFileRoute("/api/chat")({
                   const selectedMemories = selectRelevantMemories(memories, lastText, {
                     enabled: personalContext.rememberAcross === true,
                     temporary: !usesExistingContext,
-                    maxItems: callerTier === "pro" ? 200 : callerTier === "plus" ? 12 : 0,
+                    maxItems: MEMORY_TIERS[callerTier].returned,
                   });
                   memoryBlock = formatMemoryBlock(selectedMemories);
                   memorySourceRefs.push(
@@ -1225,7 +1227,6 @@ export const Route = createFileRoute("/api/chat")({
               chatId &&
               !temporary &&
               memoryStartIndex !== undefined &&
-              (callerTier === "plus" || callerTier === "pro") &&
               personalContext?.rememberAcross === true
             ) {
               const { buildChatSummaryContext } = await import("@/lib/chat-summary.server");
@@ -1347,7 +1348,8 @@ export const Route = createFileRoute("/api/chat")({
                           "project_retrieval",
                           (signal) =>
                             retrieveProjectContext({
-                              supabase: admin,
+                              // The matching RPC checks auth.uid(); retain the verified caller.
+                              supabase: auth.supabaseUser as unknown as SupabaseAdminLike,
                               project_id: projectId,
                               query: q,
                               k: 6,

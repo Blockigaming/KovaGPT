@@ -12,7 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Conversation } from "@/lib/chat-store";
+import {
+  type Conversation,
+  archiveConversation,
+  loadConversations,
+  saveConversations,
+} from "@/lib/chat-store";
+import { chatHistorySnapshot } from "@/lib/chat-history-bridge";
+import { completeProjectChatMove } from "@/lib/project-chat-move.mjs";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import { importChatToProject } from "@/lib/project-workspace.functions";
 
@@ -20,10 +27,12 @@ export function ChatProjectDialog({
   open,
   onOpenChange,
   conversation,
+  initialProjectId = "",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   conversation: Conversation | null;
+  initialProjectId?: string;
 }) {
   const { user, isLoaded, isSignedIn } = useUser();
   const principalId = isLoaded && isSignedIn ? (user?.id ?? "") : "";
@@ -51,7 +60,12 @@ export function ChatProjectDialog({
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [added, setAdded] = useState<{ id: string; projectId: string; name: string } | null>(null);
+  const [added, setAdded] = useState<{
+    id: string;
+    projectId: string;
+    name: string;
+    moved: boolean;
+  } | null>(null);
   const generation = useRef(0);
   const inFlight = useRef(false);
   const completed = useRef(false);
@@ -91,7 +105,7 @@ export function ChatProjectDialog({
     const request = ++generation.current;
     let active = true;
     setProjects([]);
-    setProjectId("");
+    setProjectId(initialProjectId);
     setLoadError("");
     setError("");
     setTitleTouched(false);
@@ -134,7 +148,7 @@ export function ChatProjectDialog({
     };
     // Refresh when the selected chat or account changes, not while the user edits the title.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, canAccess, principalId, conversation?.id, getProjects, attempt]);
+  }, [open, canAccess, principalId, conversation?.id, getProjects, attempt, initialProjectId]);
 
   const renderGeneration = generation.current;
   const submit = async () => {
@@ -198,7 +212,21 @@ export function ChatProjectDialog({
       if (!isCurrent()) return;
       if (!result?.id) throw new Error("No saved chat was returned.");
       completed.current = true;
-      setAdded({ id: result.id, projectId: selected.id, name: selected.name });
+      let moved = false;
+      try {
+        moved = await completeProjectChatMove({
+          source: conversation,
+          isCurrent,
+          readActive: () => loadConversations(principalId),
+          archive: (chat) => archiveConversation(principalId, chat),
+          remove: (items) =>
+            saveConversations(principalId, items, { snapshot: chatHistorySnapshot(principalId) }),
+        });
+      } catch {
+        /* The confirmed project copy remains available; keep the original on uncertainty. */
+      }
+      if (!isCurrent()) return;
+      setAdded({ id: result.id, projectId: selected.id, name: selected.name, moved });
     } catch {
       if (isCurrent()) {
         setError("Could not confirm the chat was added. Check the project before trying again.");
@@ -220,10 +248,13 @@ export function ChatProjectDialog({
     >
       <DialogContent className="sm:max-w-md" aria-busy={busy}>
         <DialogHeader>
-          <DialogTitle>{added ? "Chat added" : "Add to project"}</DialogTitle>
+          <DialogTitle>
+            {added ? (added.moved ? "Chat moved" : "Project copy saved") : "Move to project"}
+          </DialogTitle>
           <DialogDescription>
-            Copy this chat’s text into a project. Project members can view the copy. Your original
-            chat stays here, and future replies won’t update the copy. Attachments aren’t copied.
+            Move this chat’s text into a project. Project members can view it. After the project
+            copy is saved, the original goes to Archived chats for recovery. Attachments stay with
+            the archived original. Future replies in the project update only the project chat.
           </DialogDescription>
         </DialogHeader>
         {!canAccess ? (
@@ -233,7 +264,9 @@ export function ChatProjectDialog({
         ) : added ? (
           <div className="space-y-4">
             <p role="status" className="text-sm">
-              Added to {added.name}.
+              {added.moved
+                ? `Moved to ${added.name}.`
+                : `Saved to ${added.name}. The original was kept because it changed or could not be archived. You can open the project copy below.`}
             </p>
             <Button asChild className="w-full">
               <Link
@@ -358,7 +391,7 @@ export function ChatProjectDialog({
           </Button>
           {canAccess && !added && projects.length > 0 && !loadError && (
             <Button disabled={busy || loading || !projectId} onClick={submit}>
-              {busy ? "Adding…" : "Add to project"}
+              {busy ? "Moving…" : "Move to project"}
             </Button>
           )}
         </div>

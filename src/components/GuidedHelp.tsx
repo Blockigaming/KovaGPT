@@ -4,6 +4,7 @@ import {
   HELP_ENVIRONMENTS,
   HELP_CONNECTIONS,
   HELP_PLANS,
+  HELP_STAGES,
   contextualHelp,
   diagnosticCoverage,
 } from "@/lib/help-diagnostics.mjs";
@@ -11,7 +12,8 @@ export function GuidedHelp() {
   const [issue, setIssue] = useState(HELP_FAQS[0].id),
     [environment, setEnvironment] = useState(HELP_ENVIRONMENTS[0].id),
     [connection, setConnection] = useState("online"),
-    [plan, setPlan] = useState("free");
+    [plan, setPlan] = useState("free"),
+    [stage, setStage] = useState("first");
   const faq = HELP_FAQS.find((item) => item.id === issue)!;
   return (
     <details className="kova-guided-help">
@@ -20,9 +22,9 @@ export function GuidedHelp() {
         <small>{diagnosticCoverage(HELP_FAQS.length).toLocaleString()} guided combinations</small>
       </summary>
       <p>
-        Choose your issue, browser, connection, and plan for specific next steps. These paths
-        combine our help articles with setup checks; they are not separate reports of every possible
-        problem.
+        Choose your issue, browser, connection, plan, and when it began for specific next steps.
+        These paths combine our help articles with setup checks; they are not separate reports of
+        every possible problem.
       </p>
       <div className="kova-guided-help-selects">
         <label>
@@ -73,9 +75,19 @@ export function GuidedHelp() {
             ))}
           </select>
         </label>
+        <label>
+          When it started
+          <select aria-label="Help stage" value={stage} onChange={(e) => setStage(e.target.value)}>
+            {HELP_STAGES.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       <ol aria-label="Troubleshooting steps">
-        {contextualHelp(faq, { environment, connection, plan }).map((step, i) => (
+        {contextualHelp(faq, { environment, connection, plan, stage }).map((step, i) => (
           <li key={i}>{step}</li>
         ))}
       </ol>

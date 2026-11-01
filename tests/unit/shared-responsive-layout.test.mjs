@@ -120,7 +120,10 @@ test("public cards and the closing action remain shrinkable and bounded", () => 
 test("signed-in desktop collapse restores focus to the replacement rail control", () => {
   const sidebar = read("src/components/Sidebar.tsx");
   assert.match(sidebar, /const expandButtonRef = useRef<HTMLButtonElement \| null>\(null\)/);
-  assert.match(sidebar, /ref=\{expandButtonRef\}[\s\S]*?aria-label="Expand sidebar"/);
+  assert.match(
+    sidebar,
+    /ref=\{expandButtonRef\}[\s\S]*?aria-label=\{compactOnly \? "Back to chat" : "Expand sidebar"\}/,
+  );
   assert.match(
     sidebar,
     /onToggle\(\);[\s\S]*?requestAnimationFrame\(\(\) => \{[\s\S]*?if \(signedIn\) expandButtonRef\.current\?\.focus\(\)/,

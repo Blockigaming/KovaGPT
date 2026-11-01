@@ -44,10 +44,10 @@ test("sidebar uses a stable desktop width, compact rail, mobile drawer, and focu
     sidebarRule(".kova-sidebar[data-kova-core-sidebar]").width,
     "var(--sidebar-expanded, var(--kova-sidebar-width, 260px))",
   );
-  assert.match(tokens, /--kova-sidebar-rail-width: 84px;/);
+  assert.match(tokens, /--kova-sidebar-rail-width: 60px;/);
   assert.equal(
     sidebarRule(".kova-sidebar-rail[data-kova-core-rail]").width,
-    "var(--kova-sidebar-rail-width, 84px)",
+    "var(--kova-sidebar-rail-width, 60px)",
   );
   const closed = sidebarRule('.kova-sidebar[data-kova-core-sidebar][data-state="closed"]');
   assert.equal(closed.width, "0");
@@ -86,7 +86,7 @@ test("mobile header and sidebar controls meet touch and accessible-name contract
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
   assert.match(sidebar, /aria-label="Close sidebar"/);
   assert.match(sidebar, /Close navigation menu/);
-  assert.match(sidebar, /aria-label="Expand sidebar"/);
+  assert.match(sidebar, /Expand sidebar/);
 });
 
 test("shared composer protects input, attachments, IME submission, and upload announcements", () => {

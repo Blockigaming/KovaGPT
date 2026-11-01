@@ -397,24 +397,6 @@ export function ConversationHeaderActions({
                   <ProjectsGlyph aria-hidden="true" />
                   Add copy to project
                 </DropdownMenuItem>
-                {conversation.messages.some(
-                  (message) =>
-                    message.role === "user" &&
-                    message.attachments?.some((attachment) => attachment.kind === "image"),
-                ) && (
-                  <DropdownMenuItem asChild disabled={navigationBlocked}>
-                    <Link
-                      to="/discovery"
-                      search={{ mode: "images" }}
-                      onClick={(event) => {
-                        if (navigationBlocked) event.preventDefault();
-                      }}
-                      title="Search by description. Your attached image is not sent to search."
-                    >
-                      <Image aria-hidden="true" /> Find similar images
-                    </Link>
-                  </DropdownMenuItem>
-                )}
               </>
             ) : (
               <>
@@ -499,25 +481,7 @@ export function ConversationHeaderActions({
                     Find in chat
                   </DropdownMenuItem>
                 )}
-                {!compact &&
-                  conversation.messages.some(
-                    (message) =>
-                      message.role === "user" &&
-                      message.attachments?.some((attachment) => attachment.kind === "image"),
-                  ) && (
-                    <DropdownMenuItem asChild disabled={navigationBlocked}>
-                      <Link
-                        to="/discovery"
-                        search={{ mode: "images" }}
-                        onClick={(event) => {
-                          if (navigationBlocked) event.preventDefault();
-                        }}
-                        title="Search by description. Your attached image is not sent to search."
-                      >
-                        <Image aria-hidden="true" /> Find similar images
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
+
                 {compact && (
                   <DropdownMenuItem
                     ref={phoneMoreRef}

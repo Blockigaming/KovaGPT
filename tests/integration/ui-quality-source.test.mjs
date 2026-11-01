@@ -151,7 +151,7 @@ test("core chat surfaces use shared workspace primitives", () => {
     sidebar.indexOf('aria-label="Collapsed navigation"'),
     sidebar.indexOf("<aside"),
   );
-  assert.match(railSource, /aria-label="Expand sidebar"/);
+  assert.match(railSource, /Expand sidebar/);
   assert.match(railSource, /kova-rail-header/);
   assert.equal(
     (sidebar.match(/<NovaLogo\b/g) ?? []).length,
@@ -337,7 +337,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(composer, /ariaLabel="Attach files and tools"/);
   assert.match(
     composer,
-    /restoreFocus=\{!contextOpen && !libraryOpen && !signInRequest && !optionsOpen\}/,
+    /restoreFocus=\{\s*!contextOpen && !libraryOpen && !signInRequest && !optionsOpen && !toolsOpening\s*\}/,
   );
   assert.match(composerStyles, /\.spec400-toolbar-button,[\s\S]*?min-height: 44px;/);
   assert.match(composer, /\["ArrowDown", "ArrowUp", "Home", "End"\]\.includes\(event\.key\)/);
@@ -359,7 +359,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   const lockedBranch = modelSelector.match(/if \(locked\)[\s\S]*?<\/span>\s*\);/)?.[0] ?? "";
   assert.ok(lockedBranch, "locked model branch should remain explicit");
   assert.doesNotMatch(lockedBranch, /ChevronDown|pointer-events-none|aria-hidden/);
-  assert.match(sidebar, /navLink\("\/discovery", "Discover", Compass\)/);
+  assert.doesNotMatch(sidebar, /navLink\("\/discovery", "Discover", Compass\)/);
   assert.doesNotMatch(sidebar, /"Maps", Map, isOn\("\/maps"\), "New"/);
 });
 

@@ -136,7 +136,7 @@ test("listbox and menu rows use the source 32px density with 44px coarse-pointer
     const source = read(`src/components/ui/${name}.tsx`);
     assert.match(source, /min-h-8/);
     assert.match(source, /\[@media\(pointer:coarse\)\]:min-h-11/);
-    assert.match(source, /rounded-\[6px\]/);
+    assert.match(source, /rounded-xl/);
   }
   const options = rules("src/styles/spec400-system.css", 'body [role="option"]');
   assert.equal(options.length, 0, "No global role selector may override component row density");
@@ -167,7 +167,7 @@ test("sidebar geometry has one owner and keeps compact desktop rows separate fro
   assert.match(css, /width: var\(--kova-sidebar-drawer-width/);
   assert.match(css, /max-width: calc\(100vw - 24px\)/);
   assert.match(tokens, /--kova-sidebar-width: 260px/);
-  assert.match(tokens, /--kova-sidebar-rail-width: 84px/);
+  assert.match(tokens, /--kova-sidebar-rail-width: 60px/);
   assert.match(tokens, /--kova-sidebar-drawer-width: min\(320px, calc\(100vw - 32px\)\)/);
   const row = rules("src/styles/sidebar-core.css", ".kova-sidebar .kova-nav-row").find(
     (rule) => rule.selector === ".kova-sidebar .kova-nav-row",

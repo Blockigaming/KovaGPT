@@ -33,7 +33,14 @@ export function createOpenAiServices(input: {
   maxOutputTokens?: number;
   instructions?: string;
   browserDomains?: string[];
-  reportCleanupFailure?: (resources: { kind: string; id: string }[]) => void;
+  reportCleanupFailure?: (
+    resources: {
+      kind: string;
+      id: string;
+      httpStatus?: number;
+      requestId?: string;
+    }[],
+  ) => void;
 }): {
   search(
     query: string,

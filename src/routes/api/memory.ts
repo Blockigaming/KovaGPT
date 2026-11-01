@@ -1,4 +1,4 @@
-// Existing saved memory reads/deletion and same-chat summary admission for Plus+ users.
+// Owner-bound saved memory, optional conversation notes, and same-chat summaries.
 import { createFileRoute } from "@tanstack/react-router";
 import {
   assertFeatureEnabled,
@@ -26,6 +26,9 @@ import {
   readChatSummaryDescriptor,
 } from "@/lib/chat-summary.server";
 
+import { MEMORY_TIERS, conversationMemoryNotes } from "@/lib/memory-tier-policy.mjs";
+import { loose } from "@/lib/supabase-loose";
+import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server";
 import { parseReviewedMemoryRequest, reviewedMemorySource } from "@/lib/reviewed-memory-policy.mjs";
 
 type HistoryQuery = PromiseLike<{ data: unknown; error?: unknown }> & {
@@ -35,11 +38,6 @@ type HistoryQuery = PromiseLike<{ data: unknown; error?: unknown }> & {
   maybeSingle(): HistoryQuery;
   abortSignal(signal: AbortSignal): HistoryQuery;
 };
-
-const MEMORY_LIMITS = {
-  plus: { returned: 12, stored: 250 },
-  pro: { returned: 500 },
-} as const;
 
 type DatabaseResult<T = unknown> = { data: T | null; error?: unknown };
 type MemoryTableQuery = PromiseLike<DatabaseResult> & {
@@ -72,7 +70,7 @@ async function identifyMemoryCaller(request: Request) {
   return { auth, tier } as const;
 }
 
-async function authorizePaidMemory(
+async function authorizeMemory(
   caller: Exclude<Awaited<ReturnType<typeof identifyMemoryCaller>>, Response>,
 ) {
   const banned = await assertNotBanned(caller.auth);
@@ -154,15 +152,13 @@ async function saveReviewedMemory(
           summary: input.text,
           message_count: source.messageCount,
         }),
-      listOverflow:
-        caller.tier === "plus"
-          ? () =>
-              tbl(caller.auth)
-                .select("id")
-                .eq("user_id", caller.auth.userId)
-                .order("updated_at", { ascending: false })
-                .range(MEMORY_LIMITS.plus.stored, MEMORY_LIMITS.plus.stored + 50)
-          : null,
+      listOverflow: () =>
+        tbl(caller.auth)
+          .select("id")
+          .eq("user_id", caller.auth.userId)
+          .eq("automatic", true)
+          .order("updated_at", { ascending: false })
+          .range(MEMORY_TIERS[caller.tier].stored, MEMORY_TIERS[caller.tier].stored + 50),
       deleteOverflow: async (overflow: unknown[]) =>
         await tbl(caller.auth)
           .delete()
@@ -190,11 +186,7 @@ export const Route = createFileRoute("/api/memory")({
       GET: async ({ request }) => {
         const caller = await identifyMemoryCaller(request);
         if (caller instanceof Response) return caller;
-        // Preserve the existing client contract: memory is invisible on free plans.
-        if (caller.tier === "free") {
-          return Response.json({ memories: [] }, { headers: { "Cache-Control": "no-store" } });
-        }
-        const authorized = await authorizePaidMemory(caller);
+        const authorized = await authorizeMemory(caller);
         if (authorized instanceof Response) return authorized;
 
         try {
@@ -215,8 +207,7 @@ export const Route = createFileRoute("/api/memory")({
               { headers: { "Cache-Control": "no-store" } },
             );
           }
-          const returned =
-            authorized.tier === "pro" ? MEMORY_LIMITS.pro.returned : MEMORY_LIMITS.plus.returned;
+          const returned = MEMORY_TIERS[authorized.tier].returned;
           const result = await tbl(authorized.auth)
             .select("chat_id, title, summary, updated_at")
             .eq("user_id", authorized.auth.userId)
@@ -239,13 +230,13 @@ export const Route = createFileRoute("/api/memory")({
         }
         const caller = await identifyMemoryCaller(request);
         if (caller instanceof Response) return caller;
-        const authorized = caller.tier === "free" ? caller : await authorizePaidMemory(caller);
+        const authorized = await authorizeMemory(caller);
         if (authorized instanceof Response) return authorized;
 
         // Capture the durable privacy epoch before reading the request body.
         // A DELETE on another device invalidates writes from this admitted request.
-        let memoryEpoch = 0;
-        if (caller.tier !== "free") {
+        let memoryEpoch: number;
+        {
           try {
             memoryEpoch = await beginChatMemoryWrite(
               authorized.auth.supabaseAdmin,
@@ -267,7 +258,15 @@ export const Route = createFileRoute("/api/memory")({
           console.error("[memory] body read failed", error);
           return jsonError("Invalid request body.", 400);
         }
-        let body: { operation?: unknown; contextSummary?: unknown; contextOnly?: unknown };
+        let body: {
+          operation?: unknown;
+          contextSummary?: unknown;
+          contextOnly?: unknown;
+          chatId?: unknown;
+          memoryEnabled?: unknown;
+          temporary?: unknown;
+          automaticMemory?: unknown;
+        };
         try {
           body = JSON.parse(raw);
         } catch {
@@ -276,12 +275,76 @@ export const Route = createFileRoute("/api/memory")({
         if (!body || typeof body !== "object" || Array.isArray(body))
           return jsonError("Invalid payload.", 400);
         if (body.operation === "save_reviewed_memory") {
-          if (caller.tier === "free") return jsonError("Saving memory requires Plus or Pro.", 403);
           return saveReviewedMemory(body, authorized, memoryEpoch, request);
         }
-        // Legacy automatic requests from free plans remain a silent no-op.
-        if (caller.tier === "free")
-          return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+        if (body.operation === "update_conversation_notes") {
+          if (
+            body.memoryEnabled !== true ||
+            body.automaticMemory !== true ||
+            body.temporary !== false ||
+            typeof body.chatId !== "string" ||
+            !/^[A-Za-z0-9._:-]{1,100}$/u.test(body.chatId) ||
+            request.headers.get("X-Kova-Owner") !== caller.auth.userId
+          )
+            return jsonError("Enable conversation memory in Settings before saving notes.", 400);
+          const admission = await consumeApplicationRateLimit({
+            identity: `account:${caller.auth.userId}`,
+            action: "automatic_memory",
+            limit: 60,
+            windowSeconds: 900,
+          });
+          if (!admission.allowed)
+            return jsonError(
+              "Memory updates will resume shortly.",
+              admission.status === "limited" ? 429 : 503,
+            );
+          const record = await loose(caller.auth.supabaseUser)
+            .from("chat_history_records")
+            .select("payload,revision")
+            .eq("owner_id", caller.auth.userId)
+            .eq("id", body.chatId)
+            .is("deleted_at", null)
+            .maybeSingle()
+            .abortSignal(AbortSignal.any([request.signal, AbortSignal.timeout(10_000)]));
+          if (record.error) return jsonError("Synced chat is unavailable.", 503);
+          if (!record.data)
+            return jsonError("Wait for this chat to sync before updating memory.", 409);
+          try {
+            const source = reviewedMemorySource(record.data.payload, caller.auth.userId);
+            if (source.conversation.id !== body.chatId)
+              return jsonError("Memory source changed.", 409);
+            const notes = conversationMemoryNotes(
+              source.conversation.messages.slice(source.conversation.memoryStartIndex ?? 0),
+              caller.tier,
+            );
+            if (!notes)
+              return Response.json(
+                { ok: true, saved: false },
+                { headers: { "Cache-Control": "no-store" } },
+              );
+            if (caller.auth.revalidateSession && !(await caller.auth.revalidateSession()))
+              return jsonError("Your account changed.", 401);
+            const saved = await loose(caller.auth.supabaseAdmin)
+              .rpc("persist_automatic_chat_memory", {
+                p_user_id: caller.auth.userId,
+                p_epoch: memoryEpoch,
+                p_chat_id: body.chatId,
+                p_revision: record.data.revision,
+                p_title: source.title,
+                p_summary: notes,
+                p_message_count: source.messageCount,
+                p_stored_limit: MEMORY_TIERS[caller.tier].stored,
+              })
+              .abortSignal(AbortSignal.any([request.signal, AbortSignal.timeout(10_000)]));
+            if (saved.error) return jsonError("Memory could not be updated.", 503);
+            return Response.json(
+              { ok: true, saved: saved.data === true },
+              { headers: { "Cache-Control": "no-store" } },
+            );
+          } catch {
+            return jsonError("This chat is not eligible for conversation memory.", 409);
+          }
+        }
         const parsed = parseMemoryPayload(raw);
         if (!parsed.ok) return jsonError(parsed.error, parsed.status);
         // Old clients must not silently promote a temporary instruction into

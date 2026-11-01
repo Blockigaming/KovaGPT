@@ -5,6 +5,7 @@ import ts from "typescript";
 import * as reliability from "../../src/lib/endpoint-reliability.mjs";
 import * as policy from "../../src/lib/chat-summary-policy.server.mjs";
 import * as reviewedPolicy from "../../src/lib/reviewed-memory-policy.mjs";
+import * as memoryTiers from "../../src/lib/memory-tier-policy.mjs";
 import * as security from "../../src/lib/auth-security.mjs";
 
 export function memoryHandlerFixture(options = {}) {
@@ -26,6 +27,11 @@ export function memoryHandlerFixture(options = {}) {
       assertFeatureEnabled: async () => options.feature ?? null,
     },
     "@/lib/endpoint-reliability.mjs": reliability,
+    "@/lib/memory-tier-policy.mjs": memoryTiers,
+    "@/lib/supabase-loose": { loose: (value) => value },
+    "@/lib/distributed-rate-limit.server": {
+      consumeApplicationRateLimit: async () => ({ allowed: true, status: "allowed" }),
+    },
     "@/lib/reviewed-memory-policy.mjs": reviewedPolicy,
     "@/lib/auth-security.mjs": security,
     "@/lib/chat-summary-policy.server.mjs": policy,

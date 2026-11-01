@@ -17,7 +17,7 @@ test("project Delete and Retry deletion labels retain foreground contrast in nor
 test("destructive icon and owner/deletion guards remain on the same action", () => {
   assert.match(item, /<Trash2 className="w-4 h-4 text-destructive"/);
   const primitive = readFileSync("src/components/ui/dropdown-menu.tsx", "utf8");
-  assert.match(primitive, /items-center gap-1\.5 rounded-\[6px\]/);
+  assert.match(primitive, /items-center gap-1\.5 rounded-xl/);
   assert.doesNotMatch(item, /\bmr-2\b/, "Menu gap owns spacing instead of a second icon margin");
   assert.match(item, /disabled=\{p\.role !== "owner" \|\| deletingProjectIds\.has\(p\.id\)\}/);
   assert.match(item, /onClick=\{\(\) => setDeletingProject\(p\)\}/);

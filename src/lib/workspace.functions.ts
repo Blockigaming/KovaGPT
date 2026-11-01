@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { loose } from "@/lib/supabase-loose";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -144,7 +146,7 @@ export const updateMemoryRecord = createServerFn({ method: "POST" })
     const target = data.source === "conversation" ? "chat_memories" : "project_memory";
     const values =
       data.source === "conversation"
-        ? { summary: data.content, updated_at: new Date().toISOString() }
+        ? { summary: data.content, automatic: false, updated_at: new Date().toISOString() }
         : { content: data.content };
     const { error } = await table(context.supabase, target)
       .update(values)
@@ -160,10 +162,14 @@ export const deleteMemoryRecord = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), source: z.enum(["conversation", "project"]) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await table(
-      context.supabase,
-      data.source === "conversation" ? "chat_memories" : "project_memory",
-    )
+    if (data.source === "conversation") {
+      const result = await loose(supabaseAdmin)
+        .rpc("forget_chat_memory_record", { p_user_id: context.userId, p_record_id: data.id })
+        .abortSignal(AbortSignal.timeout(10_000));
+      if (result.error || result.data !== true) throw new Error("Memory could not be deleted");
+      return { ok: true };
+    }
+    const { error } = await table(context.supabase, "project_memory")
       .delete()
       .eq("id", data.id)
       .select("id")

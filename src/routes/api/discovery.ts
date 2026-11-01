@@ -1,10 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { handleDiscovery } from "@/lib/discovery/discovery.server";
+const retired = () =>
+  Response.json(
+    { error: "This feature has been retired. Use chat search instead." },
+    { status: 410, headers: { "Cache-Control": "no-store" } },
+  );
 export const Route = createFileRoute("/api/discovery")({
-  server: {
-    handlers: {
-      GET: ({ request }) => handleDiscovery(request),
-      POST: ({ request }) => handleDiscovery(request),
-    },
-  },
+  server: { handlers: { GET: retired, POST: retired } },
 });

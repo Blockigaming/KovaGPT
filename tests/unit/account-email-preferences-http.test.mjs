@@ -176,3 +176,18 @@ test("a revoked or replaced current session does not read or disclose saved pref
     false,
   );
 });
+
+test("GET admission obeys the real shared rate-limit contract", async () => {
+  const { consumeDistributedRateLimit } = await import("../../src/lib/distributed-rate-limit.mjs");
+  const { handlers } = fixture({
+    consumeRateLimit: (input) =>
+      consumeDistributedRateLimit({
+        ...input,
+        backendUrl: "https://database.example.test",
+        serviceRoleKey: "test-service-key",
+        hashSecret: "test-identity-hash-secret-32-characters",
+        fetchImpl: async () => Response.json([{ allowed: true, retry_after: 900 }]),
+      }),
+  });
+  assert.equal((await handlers.GET({ request: request() })).status, 200);
+});

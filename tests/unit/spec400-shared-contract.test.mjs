@@ -20,7 +20,7 @@ test("shared specification leaves the canonical ChatGPT palette and geometry in 
   assert.match(geometry, /--radius: var\(--kova-radius-card\)/);
   assert.match(geometry, /--kova-radius-card:\s*16px;/);
   assert.match(geometry, /--kova-sidebar-width:\s*260px;/);
-  assert.match(geometry, /--kova-sidebar-rail-width:\s*84px;/);
+  assert.match(geometry, /--kova-sidebar-rail-width:\s*60px;/);
   const sidebar = read("src/styles/sidebar-core.css");
   assert.match(
     sidebar,
@@ -28,7 +28,7 @@ test("shared specification leaves the canonical ChatGPT palette and geometry in 
   );
   assert.match(
     sidebar,
-    /width: var\(--kova-sidebar-rail-width, 84px\);\s*min-width: var\(--kova-sidebar-rail-width, 84px\)/,
+    /width: var\(--kova-sidebar-rail-width, 60px\);\s*min-width: var\(--kova-sidebar-rail-width, 60px\)/,
   );
 });
 test("all six locally hosted IBM font files are actual WOFF2 assets", () => {

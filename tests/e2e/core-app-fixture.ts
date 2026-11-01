@@ -55,6 +55,7 @@ export async function coreFixture(
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
     const name = (functionNames.get(id) ?? "").split("_")[0];
     const reads: Record<string, unknown> = {
+      getMyPlanTier: { ownerId: owner, tier },
       listProjects: [reviewProject],
       getProject: reviewProject,
       listMembers: [

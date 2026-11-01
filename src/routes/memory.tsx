@@ -92,6 +92,21 @@ function MemoryPage() {
       active = false;
     };
   }, [isLoaded, isSignedIn, list, reloadKey, userKey]);
+  useEffect(() => {
+    if (!isSignedIn || !userKey) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible" && !editing && !deleting && !selected.length)
+        setReloadKey((value) => value + 1);
+    };
+    window.addEventListener("focus", refresh);
+    window.addEventListener(MEMORY_SOURCES_CHANGED_EVENT, refresh);
+    const timer = window.setInterval(refresh, 30000);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener(MEMORY_SOURCES_CHANGED_EVENT, refresh);
+      window.clearInterval(timer);
+    };
+  }, [isSignedIn, userKey, editing, deleting, selected.length]);
   const visible = useMemo(
     () =>
       items.filter(
@@ -189,6 +204,25 @@ function MemoryPage() {
           title="Memory"
           description="Review saved account memories and project context. Temporary chats are never stored here."
         />
+        {isSignedIn && !isLoading && !error && items.length > 0 ? (
+          <section
+            className="my-6 rounded-3xl border border-border bg-card/40 p-5"
+            aria-label="Memory summary"
+          >
+            <h2 className="text-base font-semibold">What Kova remembers</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your latest saved notes. Edit any memory below to keep it accurate.
+            </p>
+            <ul className="mt-4 space-y-3 text-sm">
+              {items.slice(0, 5).map((item) => (
+                <li key={memoryRecordKey(item)} className="whitespace-pre-wrap">
+                  {item.content.slice(0, 300)}
+                  {item.content.length > 300 ? "…" : ""}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         {isSignedIn && !isLoading && !error ? (
           <div className="my-6 grid gap-3 sm:grid-cols-[1fr_auto]">
             <label className="relative">
@@ -461,6 +495,25 @@ function MemoryPage() {
             ))}
           </ul>
         )}
+        {isSignedIn && !isLoading && !error && items.length > 0 ? (
+          <section
+            className="my-6 rounded-3xl border border-border bg-card/40 p-5"
+            aria-label="Memory summary"
+          >
+            <h2 className="text-base font-semibold">What Kova remembers</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your latest saved notes. Edit any memory below to keep it accurate.
+            </p>
+            <ul className="mt-4 space-y-3 text-sm">
+              {items.slice(0, 5).map((item) => (
+                <li key={memoryRecordKey(item)} className="whitespace-pre-wrap">
+                  {item.content.slice(0, 300)}
+                  {item.content.length > 300 ? "…" : ""}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         {isSignedIn && !isLoading && !error ? (
           <aside className="mt-8 rounded-2xl bg-muted/50 p-4 text-sm">
             <strong>How memory is used</strong>

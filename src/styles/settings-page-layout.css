@@ -9,20 +9,24 @@
   position: static;
   width: 100%;
   max-width: none;
-  min-height: 600px;
-  height: auto;
   max-height: none;
   transform: none;
   box-shadow: none;
-  border: 1px solid var(--border-subtle);
-  border-radius: 20px;
   background: var(--background);
   overflow: clip;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
 }
 .kova-settings-route .kova-settings-page-header {
   padding-inline: 0;
   text-align: left;
-  padding: 24px 28px 20px;
+  flex-shrink: 0;
+  padding: 16px 24px;
 }
 .kova-settings-route .kova-settings-page-header > div {
   align-items: flex-start;
@@ -114,5 +118,75 @@
   }
   .kova-settings-route .kova-settings-page-header {
     padding: 12px 0 20px;
+  }
+}
+
+/* Settings owns its navigation; the chat drawer stays a narrow rail. */
+.kova-settings-route.kova-secondary-page {
+  --page-max: none;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  height: 100dvh;
+}
+.kova-settings-route section.kova-settings-page > [data-orientation="vertical"] {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.kova-settings-route section.kova-settings-page .kova-settings-sidebar {
+  position: static;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 16px;
+  background: var(--surface-sidebar, var(--sidebar));
+  border-radius: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+}
+.kova-settings-route section.kova-settings-page .kova-settings-content {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+}
+.kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] {
+  overflow: visible;
+  width: 100%;
+  max-width: 900px;
+  margin-inline: auto;
+}
+.kova-settings-reference .kova-settings-nav [role="tab"] {
+  border-radius: 14px;
+}
+.kova-settings-reference [role="tabpanel"] [data-slot="select-trigger"] {
+  border-radius: 999px;
+}
+@container settings (max-width: 719px) {
+  .kova-settings-route section.kova-settings-page .kova-settings-sidebar {
+    display: none;
+  }
+  .kova-settings-route section.kova-settings-page .kova-settings-content > [role="tabpanel"] {
+    padding: 16px;
+  }
+  .kova-settings-route .kova-settings-page-header {
+    padding: 16px;
+  }
+  .kova-settings-route .kova-settings-section-select {
+    margin: 16px;
+  }
+}
+
+.kova-settings-route section.kova-settings-page .kova-settings-content-header {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 900px;
+  margin-inline: auto;
+  padding-inline: 28px;
+}
+@media (max-width: 767px) {
+  .kova-settings-route section.kova-settings-page .kova-settings-content-header {
+    padding-inline: 16px;
   }
 }

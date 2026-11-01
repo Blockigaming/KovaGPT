@@ -8,7 +8,7 @@ const source = readFileSync(
 const section = source.split("{/* MEMORY */}")[1].split('<TabsContent value="linked"')[0];
 test("page Memory uses its shared title without losing the plan designation or review navigation", () => {
   assert.match(section, /\{!page \? <h3 className="text-sm font-semibold">Memory<\/h3> : null\}/);
-  assert.match(section, />\s*Plus\s*<\/span>/);
+  assert.match(section, /"Extended" : tier === "plus" \? "Enhanced" : "Basic"/);
   assert.match(section, /title="Use saved memory"/);
   assert.match(section, /to="\/memory"/);
   assert.match(section, /Open Memory Center/);

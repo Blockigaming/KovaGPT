@@ -25,7 +25,7 @@ function fixture({ signedIn = true, loaded = true, desktop = true, menuOpen = fa
     ["@/components/NovaLogo", "src/components/NovaLogo.tsx"],
   ]);
   function load(id) {
-    if (id === "./plan-usage-policy.mjs") return planUsage;
+    if (id === "./plan-usage-policy.mjs" || id === "@/lib/plan-usage-policy.mjs") return planUsage;
     if (id === "@/lib/mode-entitlements.mjs") return entitlements;
     if (id === "@/lib/kova-model-identity.mjs") return modelIdentity;
     if (id === "@/hooks/use-mobile")
@@ -109,7 +109,7 @@ for (const desktop of [true, false]) {
         assert.doesNotMatch(openHtml, /model-option-/);
         continue;
       }
-      assert.ok(openHtml.includes(`KovaGPT ${modelIdentity.KOVA_MODEL_VERSION}`));
+      assert.ok(openHtml.includes(`KovaGPT Model ${modelIdentity.KOVA_MODEL_VERSION}`));
       const options = Array.from(
         openHtml.matchAll(
           /<button\b[^>]*data-testid="model-option-([^"]+)"[^>]*>[\s\S]*?<span[^>]*>([^<]+)<\/span>/g,
@@ -249,13 +249,13 @@ test("new usage ratios preserve prices and billing identifiers", () => {
     assert.match(registry.plans[tier].features[1], /messages per day/);
     assert.equal(
       registry.plans[tier].features.at(-1),
-      "Adaptive Memory when enabled and available",
+      tier === "plus" ? "Enhanced memory when enabled" : "Extended memory when enabled",
     );
   }
   assert.deepEqual(Array.from(registry.plans.free.features.slice(1, 5)), [
-    "100 messages per day · one fifth of Plus usage",
+    "50 regular + 10 Thinking messages per day · one fifth of Plus usage",
     "8 image generations per day",
-    "10 file uploads per day",
+    "3 file uploads per day",
     "Small published storage allowance",
   ]);
 });

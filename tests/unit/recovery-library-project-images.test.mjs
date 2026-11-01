@@ -230,6 +230,6 @@ test("Project inline rows and shared controls retain at least 44px coarse-pointe
     "Role picker leaves height to the shared Select",
   );
   const select = readFileSync("src/components/ui/select.tsx", "utf8");
-  assert.match(select, /flex h-9 w-full/);
+  assert.match(select, /flex min-h-9 w-full/);
   assert.match(select, /\[@media\(pointer:coarse\)\]:min-h-11/);
 });

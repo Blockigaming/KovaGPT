@@ -102,41 +102,13 @@ export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: Record<string, never>) => data)
   .handler(async ({ context }): Promise<PortalResult> => {
-    if (!monthlyIntroBillingEnabled())
-      return { error: "Billing is awaiting its verified rollout. Contact support." };
+    let customerId: string | null;
     try {
-      await requireMonthlyIntroReadiness(supabaseAdmin);
+      customerId = await resolvePortalCustomer(context.userId);
     } catch {
       return { error: "Billing account couldn't be verified. Try again." };
     }
-    const { data: mapping, error: mappingError } = await loose(supabaseAdmin)
-      .rpc("kova_policy_customer_for_portal", {
-        p_user: context.userId,
-        p_environment: BILLING_ENV,
-      })
-      .abortSignal(AbortSignal.timeout(10_000));
-    if (mappingError) {
-      return { error: "Billing account couldn't be verified. Try again." };
-    }
-    if (!mapping?.customerId) {
-      return { error: "No billing account found. Start a subscription first." };
-    }
-    const { data: rows, error: subscriptionError } = await loose(context.supabase)
-      .from("subscriptions")
-      .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
-      .eq("user_id", context.userId)
-      .eq("environment", BILLING_ENV)
-      .order("created_at", { ascending: false })
-      .abortSignal(AbortSignal.timeout(10_000));
-    if (subscriptionError) return { error: "Billing account couldn't be verified. Try again." };
-    const sub = selectSubscriptionSummaryRow(rows ?? []);
-    if (
-      sub &&
-      hasVerifiedSubscriptionAccess(sub) &&
-      sub.stripe_customer_id !== mapping.customerId
-    ) {
-      return { error: "Billing Customer identity needs reconciliation. Contact support." };
-    }
+    if (!customerId) return { error: "No billing account found. Choose a plan to get started." };
     const configuration = billingPortalConfigurationId();
     if (!configuration) {
       return {
@@ -146,7 +118,7 @@ export const createPortalSession = createServerFn({ method: "POST" })
     try {
       const stripe = createStripeClient(BILLING_ENV);
       const portal = await stripe.billingPortal.sessions.create({
-        customer: mapping.customerId,
+        customer: customerId,
         configuration,
         // The browser cannot choose an arbitrary post-portal redirect.
         return_url: billingReturnUrls(process.env.KOVA_BILLING_RETURN_ORIGIN).portal,
@@ -249,47 +221,8 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
     const cancelAtPeriodEnd = summary.cancelAtPeriodEnd === true;
     const trialing = summary.trialing === true;
 
-    const { data: mapping, error: mappingError } = await loose(supabaseAdmin)
-      .from("kova_policy_customer_bindings")
-      .select("stripe_customer_id")
-      .eq("user_id", userId)
-      .eq("environment", BILLING_ENV)
-      .maybeSingle()
-      .abortSignal(AbortSignal.timeout(10_000));
-    if (mappingError) {
-      // The production billing baseline can temporarily lack this later policy
-      // table. Expose the outage only when the authoritative summary has no
-      // subscription or paid entitlement; block Checkout and plan changes.
-      if (
-        ["PGRST205", "42P01"].includes(mappingError.code ?? "") &&
-        tier === "free" &&
-        effectiveTier === "free" &&
-        activeSubscriptionCount === 0 &&
-        !billingConflict &&
-        !inherited &&
-        status === null &&
-        priceId === null
-      ) {
-        return {
-          tier: "free",
-          effectiveTier: "free",
-          inherited: false,
-          activeSubscriptionCount: 0,
-          billingConflict: true,
-          billingSetupIncomplete: true,
-          status: null,
-          priceId: null,
-          currentPeriodEnd: null,
-          cancelAtPeriodEnd: false,
-          trialing: false,
-          hasBillingAccount: false,
-          billingPortalAvailable: false,
-        };
-      }
-      throw new Error("Billing details couldn't be verified.");
-    }
-
-    const hasBillingAccount = !!mapping?.stripe_customer_id;
+    const customerId = await resolvePortalCustomer(userId);
+    const hasBillingAccount = customerId !== null;
     return {
       tier,
       effectiveTier,
@@ -304,11 +237,64 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       hasBillingAccount,
       billingPortalAvailable:
         hasBillingAccount &&
-        monthlyPolicy &&
         !!billingPortalConfigurationId() &&
         billingReturnOriginConfigured(process.env.KOVA_BILLING_RETURN_ORIGIN),
     };
   });
+
+/** Existing webhook-owned subscription rows remain usable before the new
+ * Checkout policy is activated. Never resolve a customer by email or browser input. */
+async function resolvePortalCustomer(userId: string): Promise<string | null> {
+  if (monthlyIntroBillingEnabled()) {
+    await requireMonthlyIntroReadiness(supabaseAdmin);
+    const { data, error } = await loose(supabaseAdmin)
+      .rpc("kova_policy_customer_for_portal", { p_user: userId, p_environment: BILLING_ENV })
+      .abortSignal(AbortSignal.timeout(10_000));
+    if (error) throw new Error("billing_identity_unavailable");
+    if (data?.customerId && !/^cus_[A-Za-z0-9]+$/u.test(data.customerId))
+      throw new Error("billing_identity_invalid");
+    return data?.customerId ?? null;
+  }
+  const { data: rows, error } = await loose(supabaseAdmin)
+    .from("subscriptions")
+    .select("stripe_customer_id,status,current_period_end,created_at")
+    .eq("user_id", userId)
+    .eq("environment", BILLING_ENV)
+    .order("created_at", { ascending: false })
+    .abortSignal(AbortSignal.timeout(10_000));
+  if (error) throw new Error("billing_identity_unavailable");
+  type CustomerRow = {
+    stripe_customer_id: unknown;
+    status: string;
+    current_period_end: string | null;
+  };
+  const history = (rows ?? []) as CustomerRow[];
+  const current = history.filter(
+    (row) =>
+      ["active", "trialing", "past_due", "unpaid", "incomplete", "paused"].includes(row.status) ||
+      (row.status === "canceled" &&
+        row.current_period_end &&
+        Date.parse(row.current_period_end) > Date.now()),
+  );
+  // Past, closed Customers do not hide the one current subscription. Without a
+  // current subscription, the most recent webhook-owned Customer is used for history.
+  const candidates = current.length ? current : history.slice(0, 1);
+  const ids = [...new Set(candidates.map((row) => row.stripe_customer_id))];
+  if (!ids.length) return null;
+  if (ids.length !== 1 || typeof ids[0] !== "string" || !/^cus_[A-Za-z0-9]+$/u.test(ids[0]))
+    throw new Error("billing_identity_ambiguous");
+  const customerId = ids[0];
+  const { data: owners, error: ownerError } = await loose(supabaseAdmin)
+    .from("subscriptions")
+    .select("user_id")
+    .eq("stripe_customer_id", customerId)
+    .eq("environment", BILLING_ENV)
+    .neq("user_id", userId)
+    .limit(1)
+    .abortSignal(AbortSignal.timeout(10_000));
+  if (ownerError || owners?.length) throw new Error("billing_identity_ambiguous");
+  return customerId;
+}
 
 type CheckoutSubscriptionRow = {
   status: string;

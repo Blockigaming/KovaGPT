@@ -534,7 +534,7 @@
 }
 .kova-core-page.kova-file-directory.spec400-library .spec400-library-secondary {
   align-items: center;
-  gap: 0 12px;
+  gap: 8px;
   margin-block: 0;
 }
 .kova-core-page.kova-file-directory.spec400-library .spec400-library-secondary summary {

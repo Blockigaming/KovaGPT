@@ -94,7 +94,10 @@
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: auto;
+  scrollbar-width: thin;
 }
 .kova-sidebar-primary {
   display: flex;
@@ -192,8 +195,7 @@
 .kova-sidebar-history {
   min-height: 0;
   flex: 1 1 auto;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: visible;
   padding: 16px 8px;
   scroll-padding-block: 8px;
   scrollbar-width: thin;
@@ -358,8 +360,8 @@
 }
 .kova-sidebar-rail[data-kova-core-rail] {
   display: none;
-  width: var(--kova-sidebar-rail-width, 84px);
-  min-width: var(--kova-sidebar-rail-width, 84px);
+  width: var(--kova-sidebar-rail-width, 60px);
+  min-width: var(--kova-sidebar-rail-width, 60px);
   height: 100dvh;
   flex: 0 0 auto;
   flex-direction: column;
@@ -395,7 +397,7 @@
   align-items: center;
   gap: 12px;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
   scrollbar-width: none;
 }
 .kova-sidebar-rail .kova-rail-button {
@@ -407,7 +409,7 @@
   flex: 0 0 36px;
   place-items: center;
   border: 0;
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 0;
   background: transparent;
   color: var(--muted-foreground);
@@ -420,7 +422,9 @@
   margin-top: 8px;
 }
 .kova-sidebar-chat-menu {
-  width: 208px;
+  width: 236px;
+  padding: 8px;
+  border-radius: 22px;
   max-width: min(var(--radix-dropdown-menu-content-available-width, 100vw), calc(100vw - 24px));
 }
 .kova-sidebar :is(button, input, summary, a):focus-visible,
@@ -524,14 +528,13 @@ button.kova-sidebar-scrim {
 @media (max-width: 1023px) and (min-height: 421px) {
   .kova-sidebar-primary {
     min-height: 0;
-    flex-shrink: 1;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    flex-shrink: 0;
+    overflow: visible;
     scroll-padding-block: 8px;
   }
   .kova-sidebar-history {
-    flex: 1 1 160px;
-    min-height: min(160px, 50%);
+    flex: 0 0 auto;
+    min-height: 0;
     scroll-padding-block: 8px;
     mask-image: none;
   }
@@ -605,6 +608,20 @@ button.kova-auth-sign-up:hover {
   .kova-desktop-topbar button.kova-auth-primary,
   button.kova-auth-sign-up {
     height: 44px;
+    min-height: 44px;
+  }
+}
+
+.kova-sidebar-chat-menu [role="menuitem"] {
+  min-height: 40px;
+  border-radius: 12px;
+}
+.kova-sidebar-chat-menu [role="separator"] {
+  margin-block: 7px;
+}
+
+@media (pointer: coarse), (max-width: 1023px) {
+  .kova-sidebar-chat-menu [role="menuitem"] {
     min-height: 44px;
   }
 }

@@ -14,9 +14,11 @@ export const DAILY_PLAN_ALLOWANCES = Object.freeze(
     ["free", "plus", "pro"].map((plan) => [
       plan,
       Object.freeze({
-        chats: planAllowance(500, plan),
+        chats: planAllowance(300, plan),
+        regularMessages: planAllowance(250, plan),
+        thinkingMessages: planAllowance(50, plan),
         images: planAllowance(40, plan),
-        uploads: planAllowance(50, plan),
+        uploads: planAllowance(15, plan),
       }),
     ]),
   ),

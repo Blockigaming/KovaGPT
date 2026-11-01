@@ -116,7 +116,7 @@ const CommandItem = React.forwardRef<
     data-ui-reference="chatgpt.menu.search-result"
     ref={ref}
     className={cn(
-      "relative flex min-h-8 min-w-0 cursor-pointer gap-1.5 select-none items-center rounded-[6px] px-2 py-1.5 text-sm leading-5 outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 [@media(pointer:coarse)]:min-h-11 [&_svg]:pointer-events-none [&_svg]:size-[18px] [&_svg]:shrink-0",
+      "relative flex min-h-8 min-w-0 cursor-pointer gap-1.5 select-none items-center rounded-xl px-2 py-1.5 text-sm leading-5 outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 [@media(pointer:coarse)]:min-h-11 [&_svg]:pointer-events-none [&_svg]:size-[18px] [&_svg]:shrink-0",
       className,
     )}
     {...props}
