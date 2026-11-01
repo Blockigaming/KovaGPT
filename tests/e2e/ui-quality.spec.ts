@@ -164,6 +164,10 @@ test("empty workspace remains contained and composer focus is deliberate", async
     await expect
       .poll(async () => (await fileAction.boundingBox())?.height ?? 0)
       .toBeGreaterThanOrEqual(36);
+    // The allowance request can add Retry above Library after the menu opens.
+    // Settle that real state before checking keyboard order; otherwise Home
+    // correctly focuses Library while this live locator changes underneath it.
+    await expect(menu.getByText(/Checking (today’s|your plan’s) upload allowance…/)).toBeHidden();
     const menuControls = menu.locator("button:not(:disabled),a[href]");
     await page.keyboard.press("Home");
     await expect(menuControls.first()).toBeFocused();

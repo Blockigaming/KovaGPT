@@ -17,6 +17,7 @@ export const READ_ONLY_PLUGIN_TOOLS = Object.freeze({
   "slack.search": "slack",
   "notion.search": "notion",
   "linear.search_issues": "linear",
+  github_read: "github",
   "github.search_code": "github",
   "github.file": "github",
   "github.tree": "github",
@@ -100,25 +101,20 @@ export function composerPluginConnection(id, { userId, authLoaded, snapshot }) {
       return state("Status unavailable");
     if (!github.accounts.some((account) => ["connected", "degraded"].includes(account?.status)))
       return state("Not connected", false, "Connect");
-    if (!["none", "view", "write"].includes(snapshot.githubAccess))
-      return state("Access unverified");
-    if (snapshot.githubAccess === "none") return state("Disabled");
+    if (typeof snapshot.githubReadAccess !== "boolean") return state("Access unverified");
     if (
       !github.repositories.some(
         (repository) => repository?.explicitly_granted === true && repository.revoked_at === null,
       )
     )
       return state("Choose repositories");
+    if (!snapshot.githubReadAccess) return state("Read access unavailable");
     if (github.health === "degraded") return state("Connection needs attention", true);
-    return state(
-      snapshot.githubAccess === "write" ? "View + write · approval required" : "View only",
-      true,
-    );
+    return state("View only", true);
   }
   const google = snapshot.google;
   if (!google || google.state === "temporarily_unavailable") return state("Status unavailable");
   if (google.configured === false) return state("Requires setup", false, "Review setup");
-  if (google.configured !== true) return state("Status unavailable");
   if (google.state === "reauthorization_required") return state("Reconnect required");
   if (google.state === "disconnected" && google.connected === false)
     return state("Not connected", false, "Connect");

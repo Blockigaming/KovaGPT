@@ -13,7 +13,7 @@ export type ComposerConnectionSnapshot = {
   principal: string;
   google?: GoogleStatus;
   github?: GitHubManagement;
-  githubAccess?: "none" | "view" | "write";
+  githubReadAccess?: boolean;
   loading: boolean;
 };
 export const READ_ONLY_PLUGIN_TOOLS: Readonly<Record<string, string>>;
