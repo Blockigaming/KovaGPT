@@ -170,7 +170,11 @@ export function ChatImage({
     );
   return (
     <ContextMenu>
-      <span className={className} data-chat-image="true" aria-busy={busy || undefined}>
+      <span
+        className={`inline-block min-w-0 max-w-full ${className ?? ""}`}
+        data-chat-image="true"
+        aria-busy={busy || undefined}
+      >
         <ContextMenuTrigger asChild>
           <img
             ref={imageRef}
@@ -178,6 +182,7 @@ export function ChatImage({
             alt={alt}
             loading="lazy"
             decoding="async"
+            referrerPolicy="no-referrer"
             tabIndex={0}
             aria-haspopup="menu"
             className={imageClassName}
