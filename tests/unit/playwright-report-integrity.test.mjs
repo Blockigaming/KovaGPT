@@ -71,10 +71,22 @@ test("CI retries transport in fresh directories, then validates before merging",
 
 test("settings touch-target coverage measures the visible mobile list", () => {
   const source = readFileSync("tests/e2e/settings-theme-transition.spec.ts", "utf8");
-  const openSections = source.indexOf('name: "Section", exact: true }).click()');
-  const visibleList = source.indexOf('.getByRole("listbox", { name: "Suggestions", exact: true })');
+  assert.match(
+    source,
+    /const navigation = settingsDialog\.getByRole\("complementary", \{\s*name: "Settings navigation",\s*exact: true,/,
+  );
+  const openSections = source.indexOf('name: "Back to settings", exact: true }).click()');
+  const visibleList = source.indexOf("await expect(navigation).toBeVisible()");
+  const tabOptions = source.indexOf('const options = navigation.getByRole("tab")');
   const primarySections = source.indexOf("await expect(options).toHaveCount(11)");
-  assert.ok(openSections > 0 && openSections < visibleList && visibleList < primarySections);
+  assert.ok(
+    openSections > 0 &&
+      openSections < visibleList &&
+      visibleList < tabOptions &&
+      tabOptions < primarySections,
+  );
+  assert.match(source, /await options\.nth\(index\)\.scrollIntoViewIfNeeded\(\)/);
   assert.match(source, /await expect\(options\.nth\(index\)\)\.toBeVisible\(\)/);
+  assert.match(source, /await expect\(options\.nth\(index\)\)\.toBeInViewport\(\{ ratio: 1 \}\)/);
   assert.match(source, /toBeGreaterThanOrEqual\(\s*44/);
 });
