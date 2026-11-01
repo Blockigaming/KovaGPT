@@ -53,6 +53,7 @@ test("chat exposes task and audio tools without opening Work or sending the draf
   await waitForKovaHydration(page);
   const input = page.getByRole("textbox", { name: "Message KovaGPT", exact: true });
   await input.fill("Keep this unsent draft.");
+  const attach = page.getByRole("button", { name: "Attach", exact: true });
   await openComposerMoreTools(page);
   await page.getByRole("button", { name: "Tasks and audio", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Tools", exact: true });
