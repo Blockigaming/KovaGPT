@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { ChevronDown, Folder, FolderPlus } from "lucide-react";
+import { ChevronDown, ChevronLeft, Folder, FolderPlus } from "lucide-react";
 import { useLayout } from "@/hooks/use-mobile";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import {
@@ -82,13 +82,14 @@ export function ChatProjectSubmenu({
       )}
     </>
   );
-  // Keep touch choices in the existing scrollable menu. This also handles
-  // landscape phones and tablets without relying on a pointer hover grace area.
+  // Touch navigation replaces the parent actions with a project list and Back.
+  // Its targets stay full width, including on short landscape screens.
   if (inlineChoices) {
     const expanded = expandedOwner === ownerId;
     return (
       <>
         <DropdownMenuItem
+          data-project-menu-trigger=""
           aria-expanded={expanded}
           onSelect={(event) => {
             event.preventDefault();
@@ -96,15 +97,16 @@ export function ChatProjectSubmenu({
             if (!expanded) loadProjects();
           }}
         >
-          <Folder className="mr-2 h-4 w-4" />
-          Move to project
-          <ChevronDown className="ml-auto" />
+          {expanded ? (
+            <ChevronLeft className="mr-2 h-4 w-4" />
+          ) : (
+            <Folder className="mr-2 h-4 w-4" />
+          )}
+          {expanded ? "Back to chat actions" : "Move to project"}
+          {!expanded && <ChevronDown className="ml-auto" />}
         </DropdownMenuItem>
         {expanded && (
-          <DropdownMenuGroup
-            aria-label="Project choices"
-            className="ml-2 border-l border-border pl-2"
-          >
+          <DropdownMenuGroup aria-label="Project choices" className="kova-inline-project-choices">
             {choices}
           </DropdownMenuGroup>
         )}
