@@ -371,7 +371,7 @@ export function AuthDialog({
                 >
                   {!providers.resolved && !providers.error && browserKovaAuthMode() !== "kova"
                     ? "Checking GitHub availability…"
-                    : "GitHub sign-in is not configured for this deployment. Continue with email or Google."}
+                    : "GitHub sign-in is currently unavailable. Continue with email or Google."}
                 </p>
               ) : null}
 
