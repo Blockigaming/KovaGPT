@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useId, useMemo, useRef, useState 
 import type { ComponentProps, ReactNode } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import { ResponseImage } from "./ResponseImage";
+import type { ChatImageActions } from "./ChatImage";
 import type { Components, ExtraProps } from "react-markdown";
 import type { Element, Root, RootContent } from "hast";
 import remarkGfm from "remark-gfm";
@@ -354,6 +355,7 @@ type MarkdownActions = {
   sources?: ResponseSource[];
   onSourceClick?: (sourceId: string, trigger: HTMLButtonElement) => void;
   onSaveImage?: (src: string, title: string) => Promise<void>;
+  imageActions?: ChatImageActions;
 };
 
 const MarkdownActionsContext = createContext<MarkdownActions>({});
@@ -379,9 +381,15 @@ function MarkdownLink({ node: _node, children, href, ...props }: ComponentProps<
 }
 
 function MarkdownImage({ src, alt }: ComponentProps<"img"> & ExtraProps) {
-  const { onSaveImage } = useContext(MarkdownActionsContext);
+  const { onSaveImage, imageActions } = useContext(MarkdownActionsContext);
   return typeof src === "string" && src ? (
-    <ResponseImage key={src} src={src} alt={alt || "Generated image"} onSave={onSaveImage} />
+    <ResponseImage
+      key={src}
+      src={src}
+      alt={alt || "Generated image"}
+      onSave={onSaveImage}
+      imageActions={imageActions}
+    />
   ) : (
     <span>Image unavailable</span>
   );
@@ -418,13 +426,14 @@ export function ResponseMarkdown({
   sources,
   onSourceClick,
   onSaveImage,
+  imageActions,
 }: MarkdownActions & {
   children: string;
   boxLongProse?: boolean;
 }) {
   const actions = useMemo(
-    () => ({ sources, onSourceClick, onSaveImage }),
-    [sources, onSourceClick, onSaveImage],
+    () => ({ sources, onSourceClick, onSaveImage, imageActions }),
+    [sources, onSourceClick, onSaveImage, imageActions],
   );
   return (
     <MarkdownActionsContext.Provider value={actions}>

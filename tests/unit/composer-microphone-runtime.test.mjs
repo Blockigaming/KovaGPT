@@ -218,6 +218,24 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     focus,
     dialog,
     button,
+    imageHandoff() {
+      const target = targets.get("Message KovaGPT");
+      assert.ok(target);
+      const box = new Target("image composer");
+      target.closest = (selector) => (selector === "[data-chat-image-context]" ? box : null);
+      let handler;
+      window.dispatchEvent({
+        type: "kova:prepare-chat-image-attachment",
+        target: box,
+        detail: {
+          accept: (value) => {
+            handler = value;
+          },
+        },
+      });
+      assert.equal(typeof handler, "function");
+      return handler;
+    },
     get props() {
       return props;
     },
@@ -241,6 +259,28 @@ function fixture(initial = {}, initialAccount = { isLoaded: true, user: { id: "o
     },
     unmount: () => hooks.unmount(),
   };
+}
+
+for (const change of ["chat", "chat-roundtrip", "owner", "unmount", "cancelled-image"]) {
+  test(`a prepared image attachment cannot cross ${change}`, async () => {
+    const view = fixture();
+    const attach = view.imageHandoff();
+    if (change === "chat" || change === "chat-roundtrip")
+      view.update({ attachmentContext: "chat-b" });
+    if (change === "chat-roundtrip") view.update({ attachmentContext: "chat-a" });
+    if (change === "owner") view.account({ isLoaded: true, user: { id: "owner-b" } });
+    if (change === "unmount") view.unmount();
+    await assert.rejects(
+      attach(
+        { name: "image.png", type: "image/png", size: 10 },
+        () => change !== "cancelled-image",
+      ),
+      { name: "AbortError" },
+    );
+    assert.deepEqual(view.props.attachments, []);
+    assert.equal(view.props.value, "Keep my typed draft");
+    assert.deepEqual(view.submissions, []);
+  });
 }
 
 test("the composer mounts the real voice dialog closed with live owner, context and completed assistant context", () => {

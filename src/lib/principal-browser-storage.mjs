@@ -23,6 +23,7 @@ export const PRINCIPAL_LOCAL_STORAGE_BASES = Object.freeze([
   "kova-library-favorites",
   "kovagpt-saved-message-ids",
   "kova-message-feedback",
+  "kova-hidden-chat-images",
   "kova-personality",
   "kova-personality-auto-adapt",
   "kova-shortcuts",

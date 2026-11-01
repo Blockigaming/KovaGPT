@@ -140,7 +140,6 @@ const TemporaryChatBanner = lazy(() =>
     default: m.TemporaryChatBanner,
   })),
 );
-const COMPLETE = "complete" as const;
 
 function clearRetryTimer(timer: { current: number | null }) {
   if (timer.current === null) return;
@@ -192,6 +191,7 @@ import {
   isConversationWorkflowSkill,
   saveConversations,
   persistTemporaryConversation,
+  pendingMessageAttachments,
   saveDraft,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
@@ -246,38 +246,6 @@ export const Route = createFileRoute("/")({
 });
 
 const EMPTY_CONVERSATIONS: Conversation[] = [];
-
-function pendingMessageAttachments(items: Message["attachments"]): PendingAttachment[] {
-  return (items ?? []).map((attachment) =>
-    attachment.kind === "image"
-      ? {
-          kind: "image" as const,
-          dataUrl: attachment.dataUrl,
-          name: "Attached image",
-          status: COMPLETE,
-        }
-      : attachment.kind === "text_file"
-        ? {
-            kind: "text_file" as const,
-            dataUrl: "",
-            name: attachment.name,
-            size: attachment.size ?? undefined,
-            fileType: attachment.fileType,
-            textContent: attachment.content,
-            status: COMPLETE,
-          }
-        : {
-            kind: "library_file" as const,
-            dataUrl: "",
-            name: attachment.name,
-            size: attachment.size ?? undefined,
-            libraryItemId: attachment.libraryItemId,
-            fileType: attachment.fileType,
-            sourceProject: attachment.sourceProject,
-            status: COMPLETE,
-          },
-  );
-}
 
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();

@@ -50,6 +50,8 @@ function fixture(initial = {}) {
       react,
       "lucide-react": icons,
       "./ui/dialog": { Dialog: "dialog", DialogContent: "dialog-content", DialogTitle: "title" },
+      "./ChatImage": { ChatImage: "chat-image" },
+      "@/lib/chat-image-actions": { downloadChatImage: async () => {} },
     },
     { Error },
   );
