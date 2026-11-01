@@ -84,6 +84,12 @@ test("signed-in Add menu uses one scroll region in a short desktop viewport", as
     await trigger.click();
     await expect(menu).toBeVisible();
     await expect(menu).toHaveAttribute("data-side", /^(top|bottom)$/);
+    await page.keyboard.press("Home");
+    await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeFocused();
+    await page.keyboard.press("End");
+    await expect(menu.locator("summary").filter({ hasText: /^More tools$/ })).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeFocused();
     await menu
       .locator("summary")
       .filter({ hasText: /^Plugins$/ })

@@ -323,10 +323,15 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   const sheet = page.getByTestId("mobile-bottom-sheet");
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Files", exact: true })).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Context", exact: true })).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Response options", exact: true })).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Camera", exact: true })).toBeVisible();
+  await expect(sheet.locator("summary").filter({ hasText: /^Plugins$/ })).toBeVisible();
+  await sheet
+    .locator("summary")
+    .filter({ hasText: /^More tools$/ })
+    .click();
+  await expect(sheet.getByRole("button", { name: "Context", exact: true })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Response options", exact: true })).toBeVisible();
   await sheet.getByRole("button", { name: "Close sheet" }).click();
   await expect(sheet).toBeHidden();
   await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeFocused();

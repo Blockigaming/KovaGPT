@@ -1693,9 +1693,16 @@ export function ChatInput({
 
   const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const closedGroups = Array.from(event.currentTarget.querySelectorAll("details:not([open])"));
     const controls = Array.from(
       event.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled),a[href],summary"),
-    ).filter((control) => control.getClientRects().length > 0);
+    ).filter(
+      (control) =>
+        control.getClientRects().length > 0 &&
+        closedGroups.every(
+          (group) => !group.contains(control) || group.firstElementChild === control,
+        ),
+    );
     if (!controls.length) return;
     event.preventDefault();
     const index = controls.indexOf(document.activeElement as HTMLElement);
