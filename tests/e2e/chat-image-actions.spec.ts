@@ -90,11 +90,16 @@ for (const role of ["user", "assistant"] as const) {
         "Add to chat",
         "Hide from chat",
       ]);
-      const box = (await menu.boundingBox())!;
       const viewport = page.viewportSize()!;
-      expect(box.x).toBeGreaterThanOrEqual(0);
-      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
-      expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
+      // Radix may update collision sizing after the menu becomes visible.
+      // Require the same viewport bounds before exercising any menu action.
+      await expect(async () => {
+        const box = await menu.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width + 1);
+        expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height + 1);
+      }).toPass({ timeout: 5_000 });
     };
     await open();
     await page.screenshot({
