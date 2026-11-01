@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction, ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { Conversation } from "@/lib/chat-store";
 import { useHomeGreeting } from "@/lib/use-home-greeting";
 export function ContinueWorking({
@@ -47,7 +47,6 @@ export function HomeWelcome({
   chatId: string | null;
   conversations: Conversation[];
   onSelect: (id: string) => void;
-  setInput: Dispatch<SetStateAction<string>>;
   children: ReactNode;
 }) {
   const greeting = useHomeGreeting(owner, firstName, chatId);
