@@ -1028,6 +1028,40 @@ export function ChatInput({
     }
   }
 
+  const externalImageFiles = useRef(addFiles);
+  externalImageFiles.current = addFiles;
+  useEffect(() => {
+    let mounted = true;
+    const prepare = (event: Event) => {
+      if (event.target !== ref.current?.closest("[data-chat-image-context]")) return;
+      const detail = (
+        event as CustomEvent<import("@/lib/chat-image-actions").ChatImageAttachmentRequest>
+      ).detail;
+      if (!detail || typeof detail.accept !== "function") return;
+      const context = attachmentContextRef.current;
+      const scope = attachmentScopeRef.current;
+      detail.accept(async (file, isCurrent) => {
+        const current = () =>
+          mounted &&
+          isCurrent() &&
+          context === attachmentContextRef.current &&
+          scope === attachmentScopeRef.current;
+        if (!current()) throw new DOMException("The image action was cancelled.", "AbortError");
+        const attached = await externalImageFiles.current([file]);
+        if (!current() || !attached) return;
+        toast.success("Image added to your message");
+        const focused = document.activeElement;
+        if (focused === document.body || focused?.closest('[data-chat-image], [role="menuitem"]'))
+          ref.current?.focus({ preventScroll: true });
+      });
+    };
+    window.addEventListener("kova:prepare-chat-image-attachment", prepare);
+    return () => {
+      mounted = false;
+      window.removeEventListener("kova:prepare-chat-image-attachment", prepare);
+    };
+  }, []);
+
   const removeAttachment = (index: number) => {
     const attachment = attachments[index];
     const id = attachment?.clientId;
@@ -1732,6 +1766,7 @@ export function ChatInput({
       )}
       <div
         className="spec400-composer"
+        data-chat-image-context={attachmentContext}
         data-ui-reference="chatgpt-composer"
         data-has-draft={hasDraft ? "true" : "false"}
         data-focus-origin={composerFocusOrigin}
