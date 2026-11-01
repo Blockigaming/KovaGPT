@@ -622,12 +622,15 @@ test("requested polish: empty composer swaps voice and send and has compact atta
   expect(sendTarget!.height).toBe(touchLayout ? 44 : 36);
   await input.clear();
   await page.getByRole("button", { name: "Attach", exact: true }).click();
-  const menu = touchLayout
+  // Touch pointers keep 44px targets at desktop widths; the sheet breakpoint
+  // still follows the layout width, including a 1024px touch tablet.
+  const mobileMenu = page.viewportSize()!.width < 1024;
+  const menu = mobileMenu
     ? page.getByRole("dialog", { name: "Attach", exact: true })
     : page.getByRole("dialog", { name: "Attach files and tools", exact: true });
   await expect(menu.getByRole("button", { name: "Files", exact: true })).toBeVisible();
   await expect(menu.locator("summary").filter({ hasText: /^Plugins$/ })).toBeVisible();
-  if (touchLayout) {
+  if (mobileMenu) {
     await expect(menu.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
     await expect(menu.getByRole("button", { name: "Camera", exact: true })).toBeVisible();
   }
