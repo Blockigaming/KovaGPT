@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { fixture, owner, chatA } from "./actual-app-fixture";
+import { fixture, owner, chatA, functionNames } from "./actual-app-fixture";
 import { waitForKovaHydration } from "./hydration";
 
 test("a signed-out visitor must choose login or signup", async ({ page }) => {
@@ -81,27 +81,46 @@ test("sidebar resizes, customizes, scrolls and matches account popup insets", as
   expect(Math.abs(a!.x - b!.x)).toBeLessThan(2);
   expect(Math.abs(a!.width - b!.width)).toBeLessThan(2);
 });
-test("settings display actual usage with the requested plan ratios", async ({ page }) => {
-  await fixture(page, "dark", true, false, "pro");
-  await page.goto("/settings/usage");
-  await waitForKovaHydration(page);
-  await expect(page.getByRole("progressbar", { name: "Messages used today" })).toHaveAttribute(
-    "aria-valuemax",
-    "7500",
-  );
-  await expect(page.getByRole("progressbar", { name: "Images used today" })).toHaveAttribute(
-    "aria-valuemax",
-    "600",
-  );
-  await expect(page.getByRole("progressbar", { name: "File uploads used today" })).toHaveAttribute(
-    "aria-valuemax",
-    "750",
-  );
-  await page.screenshot({
-    path: `artifacts/ui-finish-${test.info().project.name}-usage.png`,
-    fullPage: true,
+for (const [tier, limits] of [
+  ["free", { regular: 50, thinking: 10, images: 8, uploads: 3 }],
+  ["plus", { regular: 250, thinking: 50, images: 40, uploads: 15 }],
+  ["pro", { regular: 3750, thinking: 750, images: 600, uploads: 225 }],
+] as const)
+  test(`${tier} settings display percentages from actual mode-specific usage`, async ({ page }) => {
+    await fixture(page, "dark", true, false, tier);
+    const usage = {
+      chats: Math.floor(limits.regular / 2) + Math.floor(limits.thinking / 5),
+      thinking: Math.floor(limits.thinking / 5),
+      images: limits.images / 4,
+      uploads: limits.uploads,
+      resetsAt: "2026-11-02T00:00:00Z",
+    };
+    await page.route("**/_serverFn/**", (route) => {
+      const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+      if (!functionNames.get(id)?.startsWith("getMyDailyUsage_")) return route.fallback();
+      return route.fulfill({ json: { result: usage, context: {} } });
+    });
+    for (const section of ["usage", "billing"]) {
+      await page.goto(`/settings/${section}`);
+      await waitForKovaHydration(page);
+      for (const [label, percent] of [
+        ["Regular messages", 50],
+        ["Thinking", 20],
+        ["Images", 25],
+        ["File uploads", 100],
+      ] as const) {
+        const bar = page.getByRole("progressbar", { name: `${label} used today`, exact: true });
+        await expect(bar).toHaveAttribute("aria-valuemax", "100");
+        await expect(bar).toHaveAttribute("aria-valuenow", String(percent));
+        await expect(bar).toHaveAttribute("aria-valuetext", `${percent}% used`);
+      }
+      await expect(page.locator(".kova-plan-usage")).not.toContainText(/\d+\s*\/\s*\d+/);
+    }
+    await page.screenshot({
+      path: `artifacts/ui-finish-${test.info().project.name}-${tier}-usage.png`,
+      fullPage: true,
+    });
   });
-});
 test("five image shapes and Custom keep exact validated dimensions", async ({ page }) => {
   await fixture(page, "dark", true);
   await page.route("**/api/generate-image*", (route) =>

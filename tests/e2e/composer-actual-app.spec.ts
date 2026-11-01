@@ -276,7 +276,20 @@ test("v11 shared controls preserve chat data and return focus", async ({ page },
   await page.getByRole("button", { name: "Options for Composer review chat", exact: true }).click();
   await page.getByRole("menuitem", { name: "Move to project", exact: true }).click();
   const projectChoice = page.getByRole("menuitem", { name: "Review project", exact: true });
+  // Touch menus expand inline; short landscape screens scroll their own list.
+  await projectChoice.scrollIntoViewIfNeeded();
   await expect(projectChoice).toBeInViewport({ ratio: 1 });
+  expect((await projectChoice.boundingBox())!.width).toBeGreaterThanOrEqual(160);
+  await expect
+    .poll(() =>
+      projectChoice.evaluate((el) => {
+        const rect = el.getBoundingClientRect();
+        return el.contains(
+          document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2),
+        );
+      }),
+    )
+    .toBe(true);
   await projectChoice.click();
   const projectDialog = page.getByRole("dialog", { name: "Move to project", exact: true });
   await expect(
