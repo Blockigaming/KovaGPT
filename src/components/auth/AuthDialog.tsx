@@ -359,7 +359,7 @@ export function AuthDialog({
                 {loadingMethod === "github" ? (
                   <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
                 ) : (
-                  <img src={githubLogo} alt="" className="h-5 w-5" aria-hidden="true" />
+                  <img src={githubLogo} alt="" className="h-5 w-5 dark:invert" aria-hidden="true" />
                 )}
                 Continue with GitHub
               </button>
