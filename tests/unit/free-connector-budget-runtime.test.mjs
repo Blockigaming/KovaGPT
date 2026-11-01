@@ -296,7 +296,12 @@ function fixture(options = {}) {
           : null,
       TOOL_ACTIVITY: {},
       WRITE_TOOL_NAMES: new Set(),
-      runGoogleTool: denied,
+      runGoogleTool: options.planningCalls
+        ? async (...args) => {
+            reads.push(args);
+            return { results: [], count: 0 };
+          }
+        : denied,
       stagePendingAction: denied,
     },
     "@/integrations/connected-tools.server": {
@@ -356,7 +361,11 @@ function fixture(options = {}) {
         return Response.json({
           choices: [
             {
-              message: { role: "assistant", content: null, tool_calls: [call] },
+              message: {
+                role: "assistant",
+                content: null,
+                tool_calls: options.planningCalls ?? [call],
+              },
               finish_reason: "tool_calls",
             },
           ],
@@ -506,6 +515,32 @@ test("a Free connector request fits the remaining allowance after an ordinary ch
     0,
   );
   assert.ok(maximum <= f.acquisitions[0].reservedTokens);
+});
+
+test("five minimal connector results fit after prior usage without losing any tool-call ID", async () => {
+  const planningCalls = [
+    ["gmail_search", { query: "kova-impossible-fixture", max_results: 1 }],
+    ["calendar_list_events", { max_results: 1 }],
+    ["drive_search", { query: "kova-impossible-fixture", max_results: 1 }],
+    ["github_read", { repository: "owner/repo", operation: "readme" }],
+    ["linear_search", { account_id: "linear-fixture", query: "kova-impossible-fixture" }],
+  ].map(([name, args], index) => ({
+    id: `call_${index}`,
+    type: "function",
+    function: { name, arguments: JSON.stringify(args) },
+  }));
+  const f = fixture({ googleTools: "all", linear: true, usedToday: 1_953, planningCalls });
+  const { response, text } = await f.post();
+  assert.equal(response.status, 200, text);
+  assert.equal(f.providers.length, 2);
+  assert.equal(f.reads.length, 5);
+  assert.ok(f.acquisitions[0].reservedTokens <= 8_047);
+  assert.deepEqual(
+    f.providers[1].messages
+      .filter((message) => message.role === "tool")
+      .map((message) => message.tool_call_id),
+    planningCalls.map((entry) => entry.id),
+  );
 });
 
 for (const code of ["daily_tokens", "monthly_tokens", "premium_period", "premium_quota"]) {
