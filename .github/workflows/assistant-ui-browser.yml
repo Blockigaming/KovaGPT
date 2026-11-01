@@ -19,6 +19,8 @@ on:
       - tests/e2e/chat-image-actions.spec.ts
       - tests/e2e/api-tools-access.spec.ts
       - tests/e2e/connectors-tasks-settings.spec.ts
+      - tests/e2e/dialog-positioning-regressions.spec.ts
+      - tests/e2e/high-impact-chat.spec.ts
       - tests/e2e/core-app-review.spec.ts
       - tests/e2e/recovery-shell.spec.ts
       - tests/e2e/rounded-actual-app.spec.ts
@@ -291,6 +293,7 @@ jobs:
             testMatch: [
               "ui-quality.spec.ts", "chat-image-actions.spec.ts",
               "api-tools-access.spec.ts", "connectors-tasks-settings.spec.ts",
+              "dialog-positioning-regressions.spec.ts", "high-impact-chat.spec.ts",
             ],
             outputDir: path.join(root, "test-results/assistant-quality/results"),
             reporter: [
