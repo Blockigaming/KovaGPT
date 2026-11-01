@@ -1299,7 +1299,11 @@ export function Sidebar({
                   className="kova-rail-button kova-sidebar-toggle"
                   aria-label={compactOnly ? "Back to chat" : "Expand sidebar"}
                 >
-                  {compactOnly ? <ArrowLeft aria-hidden="true" /> : <PanelLeft aria-hidden="true" />}
+                  {compactOnly ? (
+                    <ArrowLeft aria-hidden="true" />
+                  ) : (
+                    <PanelLeft aria-hidden="true" />
+                  )}
                 </button>
               </RailTooltip>
             </div>
