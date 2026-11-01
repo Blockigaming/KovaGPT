@@ -16,12 +16,12 @@ import {
   Brain,
   Bell,
   PanelLeft,
+  Home,
   MessageSquare,
   ChevronDown,
   BarChart3,
   LogOut,
   BriefcaseBusiness,
-  Compass,
   Map,
   CircleHelp,
   Copy as CopyIcon,
@@ -33,6 +33,7 @@ import {
   Pencil,
   Settings as SettingsIcon,
   Share2,
+  Sparkles,
   Trash2,
   X,
   UserRound,
@@ -50,6 +51,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ChatProjectSubmenu } from "@/components/ChatProjectSubmenu";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -82,7 +84,6 @@ const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   "scheduled-tasks": TasksGlyph,
   apps: PluginsGlyph,
   work: BriefcaseBusiness,
-  discovery: Compass,
   maps: Map,
   memory: Brain,
   settings: SettingsGlyph,
@@ -127,6 +128,7 @@ export function Sidebar({
   onOpenWorkspaceSearch,
   hideGuestLogin = false,
   mapsReleaseApproved = false,
+  compactOnly = false,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -145,6 +147,7 @@ export function Sidebar({
   onOpenWorkspaceSearch?: () => void;
   hideGuestLogin?: boolean;
   mapsReleaseApproved?: boolean;
+  compactOnly?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier, status: tierStatus } = useTier();
@@ -177,6 +180,7 @@ export function Sidebar({
   const [renameChat, setRenameChat] = useState<Conversation | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
   const [projectChat, setProjectChat] = useState<Conversation | null>(null);
+  const [projectChoice, setProjectChoice] = useState("");
   const [renamePending, setRenamePending] = useState(false);
   const [renameError, setRenameError] = useState("");
   const [renameDiscard, setRenameDiscard] = useState(false);
@@ -795,7 +799,7 @@ export function Sidebar({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
@@ -853,16 +857,16 @@ export function Sidebar({
               Duplicate
             </DropdownMenuItem>
           ) : null}
-          {signedIn ? (
-            <DropdownMenuItem
-              onSelect={() => {
+          {signedIn && user?.id ? (
+            <ChatProjectSubmenu
+              ownerId={user.id}
+              onSelect={(projectId) => {
                 cancelPendingSelection();
+                setProjectChoice(projectId);
                 setProjectChat(conversation);
                 closeAfterMobileNavigation();
               }}
-            >
-              <Folder className="mr-2 h-4 w-4" /> Add to project
-            </DropdownMenuItem>
+            />
           ) : null}
           {onArchive ? (
             <DropdownMenuItem
@@ -904,7 +908,7 @@ export function Sidebar({
           : tier === "plus"
             ? "Plus"
             : "Free"
-        : "Plan unavailable";
+        : "View your plan";
 
   return (
     <>
@@ -1095,6 +1099,7 @@ export function Sidebar({
           <ChatProjectDialog
             open
             conversation={projectChat}
+            initialProjectId={projectChoice}
             onOpenChange={(value) => {
               if (!value) setProjectChat(null);
             }}
@@ -1205,7 +1210,7 @@ export function Sidebar({
               </Button>
             </div>
             <label className="mt-4 block text-sm" htmlFor="rename-chat-name">
-              Chat name
+              Keep it short and recognizable
             </label>
             <input
               id="rename-chat-name"
@@ -1245,7 +1250,7 @@ export function Sidebar({
                     Saving…
                   </span>
                 ) : (
-                  "Rename"
+                  "Save"
                 )}
               </Button>
             </div>
@@ -1277,8 +1282,7 @@ export function Sidebar({
             inert={!collapsed}
           >
             <div className="kova-rail-header">
-              {layout.searchPosition === "header" ? searchButton(true) : null}
-              <RailTooltip label="Expand sidebar">
+              <RailTooltip label={compactOnly ? "Back to chat" : "Expand sidebar"}>
                 <button
                   ref={expandButtonRef}
                   type="button"
@@ -1293,9 +1297,9 @@ export function Sidebar({
                     );
                   }}
                   className="kova-rail-button kova-sidebar-toggle"
-                  aria-label="Expand sidebar"
+                  aria-label={compactOnly ? "Back to chat" : "Expand sidebar"}
                 >
-                  <PanelLeft aria-hidden="true" />
+                  {compactOnly ? <Home aria-hidden="true" /> : <PanelLeft aria-hidden="true" />}
                 </button>
               </RailTooltip>
             </div>
@@ -1317,7 +1321,6 @@ export function Sidebar({
                     </button>
                   </RailTooltip>
                 ) : null}
-                {layout.searchPosition === "navigation" ? searchButton(true) : null}
                 {railLink("/", "Chat", MessageSquare)}
               </div>
               {railShortcuts.some((id) => availableShortcuts.some((item) => item.id === id)) ? (
@@ -1478,15 +1481,12 @@ export function Sidebar({
               <details
                 className="kova-sidebar-more-disclosure"
                 data-ui-reference="gemini-sidebar-disclosure"
-                open={isOn("/discovery") || isOn("/maps") || undefined}
+                open={isOn("/maps") || undefined}
               >
                 <summary className="kova-nav-row cursor-pointer">
                   {icon(MoreGlyph)}
                   <span>More</span>
                 </summary>
-                {railShortcuts.includes("discovery")
-                  ? navLink("/discovery", "Discover", Compass)
-                  : null}
                 {mapsReleaseApproved && railShortcuts.includes("maps")
                   ? navLink("/maps", "Maps", Map)
                   : null}
@@ -1595,6 +1595,20 @@ export function Sidebar({
                       {accountEmail || "Email unavailable"}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    {tierStatus === "ready" && tier !== "pro" ? (
+                      <>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            closeAfterMobileNavigation("/settings/billing");
+                            onOpenSettings("billing");
+                          }}
+                        >
+                          <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+                          Upgrade plan
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    ) : null}
                     <DropdownMenuItem
                       onSelect={() => {
                         closeAfterMobileNavigation("/settings/profile");

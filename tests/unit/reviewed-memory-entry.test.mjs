@@ -77,7 +77,7 @@ for (const [label, change] of Object.entries({
     assert.equal(compile(init(route, "currentMemoryTarget"), { ...scope, ...change }), null);
   });
 
-test("entry is opt-in, resolved, signed-in, paid, non-temporary, and idle", () => {
+test("entry is opt-in, resolved, signed-in, non-temporary, and idle", () => {
   const ready = {
     principalReady: true,
     settingsReady: true,
@@ -90,6 +90,7 @@ test("entry is opt-in, resolved, signed-in, paid, non-temporary, and idle", () =
     active: conversation,
   };
   assert.equal(compile(init(route, "canReviewMemory"), ready), true);
+  assert.equal(compile(init(route, "canReviewMemory"), { ...ready, tier: "free" }), true);
   for (const change of [
     { principalReady: false },
     { settingsReady: false },
@@ -97,7 +98,6 @@ test("entry is opt-in, resolved, signed-in, paid, non-temporary, and idle", () =
     { isSignedIn: false },
     { userKey: null },
     { settings: { rememberAcross: false } },
-    { tier: "free" },
     { isStreaming: true },
     { active: { ...conversation, temporary: true } },
   ])

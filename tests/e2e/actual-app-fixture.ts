@@ -90,23 +90,25 @@ export async function fixture(
   await page.route("**/_serverFn/**", (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
     const name = functionNames.get(id) ?? "";
-    const result = name.startsWith("listProjects_")
-      ? [
-          {
-            id: "33333333-3333-4333-8333-333333333333",
-            name: "Review project",
-            role: "owner",
-            archived_at: null,
-            deletion_requested_at: null,
-          },
-        ]
-      : name.startsWith("getMyDailyUsage_")
-        ? { chats: 0, images: 0, uploads: 0, resetsAt: "2026-10-17T00:00:00Z" }
-        : name.startsWith("getSubscriptionSummary_")
-          ? { effectiveTier: tier, tier }
-          : name.startsWith("getChatCustomRules_")
-            ? { instructions: "", enabled: false }
-            : [];
+    const result = name.startsWith("getMyPlanTier_")
+      ? { ownerId: owner, tier }
+      : name.startsWith("listProjects_")
+        ? [
+            {
+              id: "33333333-3333-4333-8333-333333333333",
+              name: "Review project",
+              role: "owner",
+              archived_at: null,
+              deletion_requested_at: null,
+            },
+          ]
+        : name.startsWith("getMyDailyUsage_")
+          ? { chats: 0, images: 0, uploads: 0, resetsAt: "2026-10-17T00:00:00Z" }
+          : name.startsWith("getSubscriptionSummary_")
+            ? { effectiveTier: tier, tier }
+            : name.startsWith("getChatCustomRules_")
+              ? { instructions: "", enabled: false }
+              : [];
     return route.fulfill({ json: { result, context: {} } });
   });
   await page.route("**/api/library/items**", (route) =>

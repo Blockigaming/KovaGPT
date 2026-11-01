@@ -188,8 +188,15 @@ function fixture(options = {}) {
       };
       return q;
     },
-    rpc() {
-      throw new Error("Unexpected backend RPC");
+    rpc(name, args) {
+      assert.equal(name, "try_consume_daily_message");
+      assert.equal(args._user_id, owner);
+      const result = { data: options.messageQuota !== false, error: null };
+      const query = {
+        abortSignal: () => query,
+        then: (yes, no) => Promise.resolve(result).then(yes, no),
+      };
+      return query;
     },
   };
   const auth = {

@@ -1,4 +1,4 @@
-import { DAILY_PLAN_ALLOWANCES, PLAN_USAGE_FACTOR } from "@/lib/plan-usage-policy.mjs";
+import { DAILY_PLAN_ALLOWANCES } from "@/lib/plan-usage-policy.mjs";
 import type { Tier } from "@/lib/modes";
 
 export function PlanUsageBars({
@@ -6,51 +6,51 @@ export function PlanUsageBars({
   usage,
 }: {
   tier: Tier;
-  usage: { chats: number; images: number; uploads: number };
+  usage: { chats: number; thinking?: number; images: number; uploads: number };
 }) {
+  const limits = DAILY_PLAN_ALLOWANCES[tier];
+  const thinking = Math.max(0, usage.thinking ?? 0);
+  const rows = [
+    {
+      label: "Regular messages",
+      used: Math.max(0, usage.chats - thinking),
+      total: limits.regularMessages,
+    },
+    { label: "Thinking", used: thinking, total: limits.thinkingMessages },
+    { label: "Images", used: usage.images, total: limits.images },
+    { label: "File uploads", used: usage.uploads, total: limits.uploads },
+  ];
   return (
     <div className="kova-plan-usage">
       <div className="kova-plan-usage-heading">
         <strong>Kova {tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"}</strong>
-        <span>{PLAN_USAGE_FACTOR[tier]}× Plus allowance</span>
+        <span>Daily usage</span>
       </div>
-      {(["chats", "images", "uploads"] as const).map((kind) => {
-        const total = DAILY_PLAN_ALLOWANCES[tier][kind];
-        const used = Math.max(0, usage[kind]);
-        const label = kind === "chats" ? "Messages" : kind === "images" ? "Images" : "File uploads";
+      {rows.map(({ label, used, total }) => {
+        const percent = Math.min(100, Math.max(0, Math.round((used / total) * 100)));
         return (
-          <div key={kind} className="kova-plan-usage-row">
+          <div key={label} className="kova-plan-usage-row">
             <div>
               <span>{label}</span>
-              <span>
-                <strong>{used.toLocaleString()}</strong> / {total.toLocaleString()}
-              </span>
+              <strong>{percent}% used</strong>
             </div>
             <div
               className="kova-usage-track"
               role="progressbar"
               aria-label={`${label} used today`}
               aria-valuemin={0}
-              aria-valuemax={total}
-              aria-valuenow={Math.min(total, used)}
-              aria-valuetext={`${used} of ${total} used`}
+              aria-valuemax={100}
+              aria-valuenow={percent}
+              aria-valuetext={`${percent}% used`}
             >
-              <span style={{ width: `${Math.min(100, (used / total) * 100)}%` }} />
+              <span style={{ width: `${percent}%` }} />
             </div>
-            <small>{Math.max(0, total - used).toLocaleString()} remaining today</small>
           </div>
         );
       })}
-      <p className="kova-plan-usage-comparison">
-        <span>
-          Free <strong>⅕×</strong>
-        </span>
-        <span>
-          Plus · $16/month <strong>1×</strong>
-        </span>
-        <span>
-          Pro · $80/month <strong>15×</strong>
-        </span>
+      <p className="text-xs text-muted-foreground">
+        Updated from your account activity. Allowances reset daily; model and context limits also
+        apply.
       </p>
     </div>
   );

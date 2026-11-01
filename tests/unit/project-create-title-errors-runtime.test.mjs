@@ -1,3 +1,4 @@
+import { completeProjectChatMove } from "../../src/lib/project-chat-move.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -72,7 +73,14 @@ function base() {
     flush: () => {
       while (effects.length) effects.shift()();
     },
-    deps: { React, ...components, ...h.react, document, window },
+    deps: {
+      React,
+      ...components,
+      ...h.react,
+      document,
+      window,
+      Route: { useSearch: () => ({ new: false }) },
+    },
   };
 }
 const source = readFileSync("src/routes/projects.tsx", "utf8");
@@ -431,6 +439,13 @@ function titleFixture() {
       "@/components/ui/dialog": components,
       "@/components/ui/searchable-picker": { SearchablePicker: "SearchablePicker" },
       "@/lib/projects.functions": { listProjects: getProjects },
+      "@/lib/chat-store": {
+        loadConversations: () => [props.conversation],
+        archiveConversation: async () => true,
+        saveConversations: async () => true,
+      },
+      "@/lib/chat-history-bridge": { chatHistorySnapshot: () => 0 },
+      "@/lib/project-chat-move.mjs": { completeProjectChatMove },
       "@/lib/project-workspace.functions": {
         importChatToProject: (args) => {
           const pending = deferred();
@@ -475,7 +490,7 @@ function titleFixture() {
     },
     field: () => find((node) => node.type === "Input"),
     submit: () =>
-      find((node) => node.type === "Button" && text(node) === "Add to project").props.onClick(),
+      find((node) => node.type === "Button" && text(node) === "Move to project").props.onClick(),
     type(value) {
       find((node) => node.type === "Input").props.onChange({ target: { value } });
       render();
@@ -526,7 +541,7 @@ test("invalid title submit gives a field summary and focus without sending; vali
   f.requests[0].resolve({ id: "copied" });
   await send;
   f.render();
-  assert.match(text(f.render()), /Added to\s+Writable/);
+  assert.match(text(f.render()), /Moved to\s+Writable/);
 });
 
 test("chat-copy failure remains focused and preserves corrected title and destination", async () => {

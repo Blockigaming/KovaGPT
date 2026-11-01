@@ -166,8 +166,8 @@ test("guided diagnostics vary by actual setup without generating duplicate artic
   });
   assert.notDeepEqual(offline, online);
   assert.match(offline.join(" "), /Reconnect/);
-  assert.match(online.join(" "), /7,500/);
-  assert.equal(diagnosticCoverage(100), 14400);
+  assert.match(online.join(" "), /3,750 regular messages and 750 Thinking/);
+  assert.equal(diagnosticCoverage(100), 115200);
   assert.throws(() =>
     contextualHelp(faq, { environment: "fake", connection: "online", plan: "pro" }),
   );

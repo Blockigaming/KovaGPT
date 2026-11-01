@@ -12,9 +12,9 @@ import { KOVA_WORK_FAMILIES } from "../../src/lib/kova-work-policy.mjs";
 
 test("server-routed basic, advanced and premium responses use the approved exact names", () => {
   for (const [mode, tier, expected] of [
-    ["instant", "free", "KovaGPT 4.6 Cosmo"],
-    ["thinking", "plus", "KovaGPT 4.6 Orion"],
-    ["max", "pro", "KovaGPT 4.6 Nova"],
+    ["instant", "free", "KovaGPT Model 4.6 Cosmo"],
+    ["thinking", "plus", "KovaGPT Model 4.6 Orion"],
+    ["max", "pro", "KovaGPT Model 4.6 Nova"],
   ]) {
     const route = routeModel({ task: "chat", mode, tier, text: "Hello" });
     const prompt = buildKovaModelIdentityInstructions({
@@ -24,7 +24,9 @@ test("server-routed basic, advanced and premium responses use the approved exact
       hasAssistantHistory: false,
     });
     assert.equal(kovaModelIdentityForRole(route.role).label, expected);
-    assert.ok(prompt.includes(`Your exact product name for this response is ${expected}.`));
+    assert.ok(
+      prompt.includes(`Your exact product name for this response is ${expected}, built by Kova.`),
+    );
     assert.ok(prompt.includes(`configured provider model is ${route.modelId}.`));
     assert.match(prompt, /first assistant reply/);
     assert.match(prompt, /For a direct task, answer it/);
@@ -36,14 +38,14 @@ test("identity follows authorized routing and locked Free requests have no respo
     () => routeModel({ task: "chat", mode: "max", tier: "free", text: "Hello" }),
     /mode_not_entitled/,
   );
-  assert.equal(kovaModelIdentityForRole("IMAGE_ANALYSIS").label, "KovaGPT 4.6 Cosmo");
+  assert.equal(kovaModelIdentityForRole("IMAGE_ANALYSIS").label, "KovaGPT Model 4.6 Cosmo");
   const upgraded = routeModel({
     task: "chat",
     mode: "medium",
     tier: "plus",
     text: "debug this race condition and refactor the multi-file architecture",
   });
-  assert.equal(kovaModelIdentityForRole(upgraded.role).label, "KovaGPT 4.6 Orion");
+  assert.equal(kovaModelIdentityForRole(upgraded.role).label, "KovaGPT Model 4.6 Orion");
 });
 
 test("later replies suppress repeated introductions and distinguish branding from provider", () => {
@@ -83,7 +85,7 @@ test("unknown identities and unsafe metadata fail closed without echoing input",
 test("catalogs share approved names without adding self-hosted routes", () => {
   assert.deepEqual(
     KOVA_MODEL_FAMILIES.map((family) => family.label),
-    ["KovaGPT 4.6 Cosmo", "KovaGPT 4.6 Orion", "KovaGPT 4.6 Nova"],
+    ["KovaGPT Model 4.6 Cosmo", "KovaGPT Model 4.6 Orion", "KovaGPT Model 4.6 Nova"],
   );
   assert.deepEqual(KOVA_CHAT_FAMILIES, KOVA_MODEL_FAMILIES.slice(0, 2));
   assert.equal(KOVA_WORK_FAMILIES, KOVA_MODEL_FAMILIES);

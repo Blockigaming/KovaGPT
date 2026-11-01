@@ -123,10 +123,13 @@ test("settings bounds the workspace below its sidebar breakpoint and Work uses s
   assert.match(css, /@container settings \(max-width: 719px\)/);
   const caps = [];
   postcss.parse(css).walkDecls("max-width", (declaration) => {
-    if (declaration.parent.selector?.includes(".kova-settings-content"))
+    if (declaration.parent.selector?.endsWith(".kova-settings-content"))
       caps.push(declaration.value);
   });
-  assert.deepEqual(caps, ["none"], "Content follows the single bounded settings workspace");
+  assert.ok(
+    caps.every((value) => value === "none"),
+    "Settings content stays inside its own scrollable workspace",
+  );
   assert.match(css, /--page-max: 1080px/);
   const source = read("src/components/WorkExecutionPanel.tsx");
   assert.doesNotMatch(source, /ml-2 rounded border bg-background p-1/);

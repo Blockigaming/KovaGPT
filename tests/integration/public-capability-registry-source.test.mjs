@@ -34,7 +34,7 @@ test("Modes, Pricing, and Help consume one typed capability registry", () => {
   assert.match(registry, /satisfies CapabilityRegistry/);
   assert.match(registry, /MODES/);
   assert.match(registry, /modesForTier/);
-  assert.match(registry, /DAILY_CHAT_LIMIT_BY_TIER/);
+  assert.match(registry, /DAILY_PLAN_ALLOWANCES/);
   assert.match(registry, /DAILY_IMAGE_LIMIT_BY_TIER/);
   assert.match(registry, /DAILY_UPLOAD_LIMIT_BY_TIER/);
   assert.match(registry, /STORAGE_LIMITS_BYTES/);

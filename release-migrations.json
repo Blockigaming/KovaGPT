@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 205,
-  "latest": "20261031014600_scheduled_task_plan_allowances.sql",
+  "count": 207,
+  "latest": "20261101012355_kova_daily_message_modes_and_memory_tiers.sql",
   "migrations": [
     {
       "order": 1,
@@ -4344,6 +4344,45 @@
       "reversible": false,
       "rls": [],
       "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 206,
+      "filename": "20261031220329_task_project_membership_argument_order.sql",
+      "timestamp": "20261031220329",
+      "sha256": "4f9a248ffa9fde2fa7e89b74ec7b0b35aae45b15d0b027125bf6ceda0abe519c",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 207,
+      "filename": "20261101012355_kova_daily_message_modes_and_memory_tiers.sql",
+      "timestamp": "20261101012355",
+      "sha256": "1e269c81ded03fe8b1db5de9ba01e4418e0d672cdd18fe2bb991d4ac17fbe970",
+      "tables": ["chat_memory_automatic_blocks"],
+      "functions": [
+        "try_consume_daily_message",
+        "persist_automatic_chat_memory",
+        "persist_chat_memory",
+        "forget_chat_memory_record",
+        "delete_chat_memory"
+      ],
+      "destructive": true,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["chat_memory_automatic_blocks"],
+      "policies": [
+        "kova_owned_session_guard",
+        "kova_owned_session_guard",
+        "kova_owned_session_guard",
+        "kova_owned_session_guard"
+      ],
       "indexes": []
     }
   ]

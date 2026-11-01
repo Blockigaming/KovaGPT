@@ -63,19 +63,21 @@ async function fixture(page: Page, theme: "light" | "dark") {
   await page.route("**/_serverFn/**", (route) => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
     const name = functionNames.get(id) ?? "";
-    const result = name.startsWith("listProjects_")
-      ? [project]
-      : name.startsWith("getMyDailyUsage_")
-        ? { chats: 3, images: 1, uploads: 2, resetsAt: "2026-10-17T00:00:00Z" }
-        : name.startsWith("getSubscriptionSummary_")
-          ? {
-              effectiveTier: "free",
-              tier: "free",
-              hasBillingAccount: false,
-              billingPortalAvailable: false,
-              activeSubscriptionCount: 0,
-            }
-          : [];
+    const result = name.startsWith("getMyPlanTier_")
+      ? { ownerId: owner, tier: "free" }
+      : name.startsWith("listProjects_")
+        ? [project]
+        : name.startsWith("getMyDailyUsage_")
+          ? { chats: 3, images: 1, uploads: 2, resetsAt: "2026-10-17T00:00:00Z" }
+          : name.startsWith("getSubscriptionSummary_")
+            ? {
+                effectiveTier: "free",
+                tier: "free",
+                hasBillingAccount: false,
+                billingPortalAvailable: false,
+                activeSubscriptionCount: 0,
+              }
+            : [];
     return route.fulfill({ json: { result, context: {} } });
   });
   await page.route("**/api/library/folders**", (route) => route.fulfill({ json: { folders: [] } }));

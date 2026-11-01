@@ -84,20 +84,65 @@ export const HELP_CONNECTIONS = Object.freeze([
     step: "If permitted, compare with another trusted network. Ask the network administrator whether KovaGPT's sign-in, streaming, file, or payment requests are being blocked; do not bypass workplace controls.",
   },
 ]);
+export const HELP_STAGES = Object.freeze([
+  {
+    id: "first",
+    label: "First attempt",
+    step: "Try one small example first. Record the exact error and keep the original item until the result is confirmed.",
+  },
+  {
+    id: "signin",
+    label: "After signing in",
+    step: "Check the account shown in your profile menu. Items and billing belong to that account; signing in with another address will show a different workspace.",
+  },
+  {
+    id: "plan",
+    label: "After a plan change",
+    step: "Return to Settings → Billing and refresh once. Check the verified plan before retrying a paid feature; do not submit another payment while the first is pending.",
+  },
+  {
+    id: "interrupted",
+    label: "After an interrupted save",
+    step: "Reopen the destination and check whether the item was saved. Keep your draft and retry only after checking for a duplicate.",
+  },
+  {
+    id: "update",
+    label: "After a browser update",
+    step: "Keep unsaved drafts, then reload the page. Review site permissions if the update changed microphone, camera, pop-up, or cookie access.",
+  },
+  {
+    id: "device",
+    label: "On another device",
+    step: "Confirm that both devices use the same account. Wait for the original device to finish syncing; local drafts and browser preferences may differ.",
+  },
+  {
+    id: "moved",
+    label: "After moving or deleting an item",
+    step: "Look in its project, Library folder, or Chat Trash. Do not recreate or permanently delete it before checking its destination and recovery options.",
+  },
+  {
+    id: "permissions",
+    label: "After permissions changed",
+    step: "Review your current project role and connection permissions. Ask the owner to restore access if needed; reconnect a service only after reviewing the requested permissions.",
+  },
+]);
 export const HELP_PLANS = Object.freeze(["free", "plus", "pro"]);
 export function diagnosticCoverage(answerCount) {
   return (
     Math.max(0, answerCount) *
     HELP_ENVIRONMENTS.length *
     HELP_CONNECTIONS.length *
-    HELP_PLANS.length
+    HELP_PLANS.length *
+    HELP_STAGES.length
   );
 }
-export function contextualHelp(faq, { environment, connection, plan }) {
+export function contextualHelp(faq, { environment, connection, plan, stage = "first" }) {
   const device = HELP_ENVIRONMENTS.find((item) => item.id === environment);
   const network = HELP_CONNECTIONS.find((item) => item.id === connection);
   if (!device || !network || !HELP_PLANS.includes(plan) || !faq || typeof faq.answer !== "string")
     throw new Error("Choose a valid help setup.");
+  const situation = HELP_STAGES.find((item) => item.id === stage);
+  if (!situation) throw new Error("Choose a valid help stage.");
   const limits = DAILY_PLAN_ALLOWANCES[plan];
   const needsBrowser = /Troubleshooting|Account|Chat|Search|Files|Apps|Settings|Privacy/.test(
     faq.category,
@@ -106,8 +151,9 @@ export function contextualHelp(faq, { environment, connection, plan }) {
     faq.answer,
     ...(needsBrowser ? [device.step] : []),
     network.step,
+    situation.step,
     /Billing|Chat|Files/.test(faq.category)
-      ? `Kova ${plan === "free" ? "Free" : plan === "plus" ? "Plus" : "Pro"} includes ${limits.chats.toLocaleString()} messages, ${limits.images} images, and ${limits.uploads} uploads per UTC day. Check Settings → Usage for your actual counters. Token and technical limits also apply.`
+      ? `Kova ${plan === "free" ? "Free" : plan === "plus" ? "Plus" : "Pro"} includes ${limits.regularMessages.toLocaleString()} regular messages and ${limits.thinkingMessages.toLocaleString()} Thinking messages, ${limits.images} images, and ${limits.uploads} uploads per UTC day. Check Settings → Usage for your actual percentage used. Token and technical limits also apply.`
       : "Confirm that you are signed in to the account that owns the affected item.",
     "If this still fails, send Support the exact error, page, time, browser, and steps that reproduce it. Never include passwords, verification codes, API keys, or card details.",
   ];

@@ -20,6 +20,9 @@ const SettingsDialog = lazy(() =>
 const OnboardingDialog = lazy(() =>
   import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
 );
+const ShareChatDialog = lazy(() =>
+  import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
+);
 import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
@@ -34,7 +37,9 @@ import {
   loadConversations,
   subscribeToConversationChanges,
   savePendingActive,
+  saveConversations,
 } from "@/lib/chat-store";
+import { chatHistorySnapshot } from "@/lib/chat-history-bridge";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { saveStoredSettings } from "@/lib/settings-storage";
 import { stageOnboardingHandoff } from "@/lib/onboarding-handoff";
@@ -59,6 +64,7 @@ export function AppShell({
 }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const settingsWorkspace = pathname.startsWith("/settings/");
   const pageTitle =
     (
       {
@@ -124,6 +130,7 @@ export function AppShell({
     }
   }, [sidebarOpen, sidebarPreferenceRestored]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shareChatId, setShareChatId] = useState<string | null>(null);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openHelp = useCallback(() => {
@@ -138,6 +145,7 @@ export function AppShell({
       return;
     }
     setSettingsOpen(false);
+    setShareChatId(null);
     setConversationState({
       principal: storagePrincipal,
       items: loadConversations(userKey),
@@ -243,7 +251,6 @@ export function AppShell({
 
   const handleDelete = async (id: string) => {
     if (!principalReady) return;
-    const next = conversations.filter((c) => c.id !== id);
     const chat = conversations.find((item) => item.id === id);
     if (!chat) return;
     const generation = trashPrincipalRef.current.generation;
@@ -251,7 +258,7 @@ export function AppShell({
       trashPrincipalRef.current.generation === generation && trashPrincipalRef.current.ready;
     try {
       if (!(await moveChatToTrash(userKey, chat, conversations, current)) || !current()) return;
-      setConversationState({ principal: storagePrincipal, items: next });
+      setConversationState({ principal: storagePrincipal, items: loadConversations(userKey) });
       toast.success("Chat removed. Recoverable chats are in Settings → Data controls → Trash.");
     } catch {
       if (current()) toast.error("Could not save Trash. Your chat was kept.");
@@ -267,6 +274,20 @@ export function AppShell({
       />
     </div>
   );
+
+  const updateSidebarChat = async (id: string, update: (chat: Conversation) => Conversation) => {
+    if (!principalReady) return false;
+    const generation = trashPrincipalRef.current.generation;
+    const current = () =>
+      trashPrincipalRef.current.generation === generation && trashPrincipalRef.current.ready;
+    const snapshot = chatHistorySnapshot(userKey);
+    const latest = loadConversations(userKey);
+    if (!latest.some((chat) => chat.id === id) || !current()) return false;
+    const next = latest.map((chat) => (chat.id === id ? update(chat) : chat));
+    if (!(await saveConversations(userKey, next, { snapshot })) || !current()) return false;
+    setConversationState({ principal: storagePrincipal, items: next });
+    return true;
+  };
 
   return (
     <div
@@ -306,8 +327,26 @@ export function AppShell({
         onSelect={goToConversation}
         onNew={handleNew}
         onDelete={handleDelete}
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen((v) => !v)}
+        onRename={async (id, title) =>
+          updateSidebarChat(id, (chat) => ({ ...chat, title, updatedAt: Date.now() }))
+        }
+        onTogglePin={(id) => {
+          void updateSidebarChat(id, (chat) => ({
+            ...chat,
+            pinned: !chat.pinned,
+            pinnedAt: chat.pinned ? undefined : Date.now(),
+          }))
+            .then((saved) => {
+              if (!saved) toast.error("Your chat wasn't changed. Reopen it and try again.");
+            })
+            .catch(() => toast.error("Your chat wasn't changed. Try again."));
+        }}
+        onShare={setShareChatId}
+        open={settingsWorkspace ? false : sidebarOpen}
+        compactOnly={settingsWorkspace}
+        onToggle={() =>
+          settingsWorkspace ? void navigate({ to: "/" }) : setSidebarOpen((v) => !v)
+        }
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
         mapsReleaseApproved={MAPS_RELEASE_APPROVED}
@@ -315,18 +354,20 @@ export function AppShell({
 
       <div
         className="kova-app-content flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]"
-        data-sidebar={sidebarOpen ? "open" : "closed"}
+        data-sidebar={!settingsWorkspace && sidebarOpen ? "open" : "closed"}
       >
         <OfflineBanner />
-        <MobileTopBar
-          title={pageTitle}
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onNewChat={handleNew}
-        />
+        {!settingsWorkspace && (
+          <MobileTopBar
+            title={pageTitle}
+            onOpenSidebar={() => setSidebarOpen(true)}
+            onNewChat={handleNew}
+          />
+        )}
         {!utilitiesInHeader && !hideUtilities ? (
           <div className="kova-workspace-utilities flex shrink-0 justify-end">{utilities}</div>
         ) : null}
-        {!sidebarOpen && !user && (
+        {!settingsWorkspace && !sidebarOpen && !user && (
           <button
             type="button"
             onClick={(event) => {
@@ -345,6 +386,15 @@ export function AppShell({
       </div>
 
       <Suspense fallback={null}>
+        {shareChatId !== null && (
+          <ShareChatDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) setShareChatId(null);
+            }}
+            conversation={conversations.find((chat) => chat.id === shareChatId) ?? null}
+          />
+        )}
         {settingsOpen && (
           <SettingsDialog
             open={settingsOpen}

@@ -5,7 +5,6 @@ export type SidebarShortcutId =
   | "scheduled-tasks"
   | "apps"
   | "work"
-  | "discovery"
   | "maps"
   | "usage"
   | "settings"

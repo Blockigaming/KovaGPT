@@ -339,7 +339,6 @@ function countFixture(overrides = {}) {
   for (const name of [
     "connectedCount",
     "connectionCountState",
-    "connectedCountLabel",
     "connectedStatusMessage",
     "connectedStatusUnverified",
   ]) {
@@ -367,7 +366,7 @@ function countFixture(overrides = {}) {
 test("verified disconnected providers alone produce a zero count and disconnected empty state", () => {
   const f = countFixture();
   assert.equal(f.connectionCountState, "ready");
-  assert.equal(f.connectedCountLabel, 0);
+  assert.equal(f.connectedCount, 0);
   assert.match(textOf(f.summary()), /0 connections/);
   assert.match(textOf(f.empty()), /No connections yet/);
 });
@@ -393,7 +392,10 @@ for (const [name, overrides, expected] of [
 ]) {
   test(`${name} does not claim Connected 0 or No connections yet`, () => {
     const f = countFixture(overrides);
-    assert.equal(f.connectedCountLabel, expected);
+    assert.equal(
+      f.connectionCountState,
+      { Unknown: "unknown", "Checking…": "checking", Unavailable: "unavailable" }[expected],
+    );
     assert.equal(f.connectedStatusUnverified, true);
     assert.doesNotMatch(textOf(f.summary()), /0 connections/);
     assert.doesNotMatch(textOf(f.empty()), /No connections yet|connect an account/);
@@ -405,17 +407,17 @@ test("pending/error counts never re-label stale retained records as current tota
   const ready = countFixture({
     visibleGoogleStatus: { connected: false, state: "reauthorization_required", accounts },
   });
-  assert.equal(ready.connectedCountLabel, 4);
+  assert.equal(ready.connectedCount, 4);
   assert.equal(ready.hasConnection("gmail"), true);
   const pending = countFixture({
     visibleGoogleStatus: ready.visibleGoogleStatus,
     visibleGoogleLoading: true,
   });
-  assert.equal(pending.connectedCountLabel, "Checking…");
+  assert.equal(pending.connectionCountState, "checking");
   const failed = countFixture({
     visibleGoogleStatus: { ...ready.visibleGoogleStatus, state: "temporarily_unavailable" },
   });
-  assert.equal(failed.connectedCountLabel, "Unavailable");
+  assert.equal(failed.connectionCountState, "unavailable");
   assert.equal(failed.hasConnection("gmail"), true);
 });
 
@@ -444,7 +446,7 @@ test("verified connected providers report their real total without planned plugi
     },
   });
   assert.equal(f.connectionCountState, "ready");
-  assert.equal(f.connectedCountLabel, 5);
+  assert.equal(f.connectedCount, 5);
   assert.equal(f.stateOf("slack"), "temporarily_unavailable");
   assert.equal(f.hasConnection("slack"), false);
 });

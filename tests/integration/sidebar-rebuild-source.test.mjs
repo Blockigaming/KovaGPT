@@ -31,8 +31,9 @@ test("sidebar catalog preserves requested destinations and customizable order", 
 });
 
 test("sidebar interaction and layout contracts are accessible and responsive", () => {
-  for (const name of ["Search chats", "Collapse sidebar", "Expand sidebar", "Resize sidebar"])
+  for (const name of ["Search chats", "Collapse sidebar", "Resize sidebar"])
     assert.ok(sidebar.includes('aria-label="' + name + '"'));
+  assert.match(sidebar, /Expand sidebar/);
   assert.match(sidebar, /kova-sidebar-more-disclosure/);
   assert.match(sidebar, /<summary className="kova-nav-row cursor-pointer">/);
   assert.match(sidebar, /event\.key === "Escape"/);

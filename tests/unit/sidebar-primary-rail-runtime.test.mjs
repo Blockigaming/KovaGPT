@@ -69,6 +69,7 @@ function fixture(options = {}) {
     mapsReleaseApproved: false,
     railShortcuts: [],
     collapsed: true,
+    compactOnly: false,
     open: false,
     displayName: "Synthetic user",
     planLabel: "Plan",
@@ -183,7 +184,6 @@ for (const [path, label] of [
   ["/library", "Library"],
   ["/apps/plugin-1", "Plugins"],
   ["/images", "Images"],
-  ["/discovery", "Discover"],
 ]) {
   test(`selected destination remains marked on ${path}`, () => {
     const f = fixture({ path, railShortcuts: SIDEBAR_ITEMS.map((item) => item.id) });
@@ -288,12 +288,12 @@ test("every collapsed action is wrapped in the shared pointer-and-keyboard Toolt
   assert.equal(f.tree.type, "TooltipProvider");
 });
 
-test("rail places search beside the same rounded PanelLeft control used to collapse", () => {
+test("collapsed rail hides search and retains its expand control", () => {
   const f = fixture();
   const header = all(f.tree).find(({ props }) => props.className === "kova-rail-header");
   assert.deepEqual(
     controls(header).map(({ props }) => props["aria-label"]),
-    ["Search chats", "Expand sidebar"],
+    ["Expand sidebar"],
   );
   assert.equal(all(header).filter(({ type }) => type === "PanelLeft").length, 1);
   f.find("Expand sidebar").props.onClick({ detail: 1 });
@@ -301,7 +301,7 @@ test("rail places search beside the same rounded PanelLeft control used to colla
   const moved = fixture({ layout: { searchPosition: "navigation", newChat: false } });
   assert.deepEqual(
     controls(moved.find("Primary destinations")).map(({ props }) => props["aria-label"]),
-    ["Search chats", "Chat"],
+    ["Chat"],
   );
 });
 
@@ -314,9 +314,9 @@ test("rail geometry has a single shared owner and expands touch controls without
   const shape = rules.find((rule) => rule.selector === ".kova-sidebar-rail .kova-rail-button");
   assert.equal(property(shape, "min-width"), "36px");
   assert.equal(property(shape, "min-height"), "36px");
-  assert.equal(property(shape, "border-radius"), "8px");
+  assert.equal(property(shape, "border-radius"), "14px");
   const width = rules.find((rule) => rule.selector === ".kova-sidebar-rail[data-kova-core-rail]");
-  assert.equal(property(width, "width"), "var(--kova-sidebar-rail-width, 84px)");
+  assert.equal(property(width, "width"), "var(--kova-sidebar-rail-width, 60px)");
   const touch = rules.find(
     (rule) =>
       rule.parent.params === "(pointer: coarse), (max-width: 1023px)" &&

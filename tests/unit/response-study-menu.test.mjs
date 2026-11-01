@@ -108,7 +108,7 @@ test("study stays inside response More, with no standalone workspace chip", () =
   assert.doesNotMatch(workspace, /StudyControl|Practice this explanation/);
   for (const existing of ["HistoryStatus", "Custom Kova"]) assert.ok(workspace.includes(existing));
   assert.doesNotMatch(workspace, /Find images or products by description/);
-  assert.match(
+  assert.doesNotMatch(
     readFileSync("src/components/ConversationHeaderActions.tsx", "utf8"),
     /Find similar images/,
   );

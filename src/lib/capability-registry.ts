@@ -1,5 +1,4 @@
 import {
-  DAILY_CHAT_LIMIT_BY_TIER,
   DAILY_IMAGE_LIMIT_BY_TIER,
   DAILY_UPLOAD_LIMIT_BY_TIER,
   MODES,
@@ -8,6 +7,7 @@ import {
   type ModeId,
   type Tier,
 } from "@/lib/modes";
+import { DAILY_PLAN_ALLOWANCES } from "@/lib/plan-usage-policy.mjs";
 import { BILLING_PLANS, type BillingLookupKey } from "@/lib/billing-plans";
 import { modeDisplayLabel } from "@/lib/mode-display-label";
 
@@ -121,19 +121,19 @@ function formatStorage(bytes: number): string {
 
 export const PLAN_ALLOWANCE_COPY = {
   free: {
-    chat: `${DAILY_CHAT_LIMIT_BY_TIER.free} messages per day · one fifth of Plus usage`,
+    chat: `${DAILY_PLAN_ALLOWANCES.free.regularMessages} regular + ${DAILY_PLAN_ALLOWANCES.free.thinkingMessages} Thinking messages per day · one fifth of Plus usage`,
     image: `${DAILY_IMAGE_LIMIT_BY_TIER.free} image generations per day`,
     upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.free} file uploads per day`,
     storage: "Small published storage allowance",
   },
   plus: {
-    chat: `${DAILY_CHAT_LIMIT_BY_TIER.plus} messages per day · baseline usage`,
+    chat: `${DAILY_PLAN_ALLOWANCES.plus.regularMessages} regular + ${DAILY_PLAN_ALLOWANCES.plus.thinkingMessages} Thinking messages per day · baseline usage`,
     image: `${DAILY_IMAGE_LIMIT_BY_TIER.plus} image generations per day`,
     upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.plus} file uploads per day`,
     storage: "Higher published storage allowance",
   },
   pro: {
-    chat: `${DAILY_CHAT_LIMIT_BY_TIER.pro} messages per day · 15× Plus usage`,
+    chat: `${DAILY_PLAN_ALLOWANCES.pro.regularMessages} regular + ${DAILY_PLAN_ALLOWANCES.pro.thinkingMessages} Thinking messages per day · 15× Plus usage`,
     image: `${DAILY_IMAGE_LIMIT_BY_TIER.pro} image generations per day`,
     upload: `${DAILY_UPLOAD_LIMIT_BY_TIER.pro} file uploads per day`,
     storage: "Highest published storage allowance",
@@ -154,8 +154,13 @@ function planFeatures(tier: Tier): readonly string[] {
     allowance.storage,
     "Search and image generation when their configured providers are available",
   ];
-  if (tier === "plus" || tier === "pro")
-    features.push("Adaptive Memory when enabled and available");
+  features.push(
+    tier === "free"
+      ? "Basic memory when enabled"
+      : tier === "plus"
+        ? "Enhanced memory when enabled"
+        : "Extended memory when enabled",
+  );
   return features;
 }
 
@@ -200,9 +205,9 @@ export const CAPABILITY_REGISTRY = Object.freeze({
     memory: {
       label: "Adaptive Memory",
       availability: "available",
-      minimumTier: "plus",
+      minimumTier: "free",
       summary:
-        "Signed-in Plus and Pro users can use cross-chat memory when it is enabled. Temporary Chat does not use or update it.",
+        "Memory is available on Free, with more capacity and context on Plus and Pro. Conversation updates are optional; saved notes can be edited or deleted. Temporary chats never use or update memory.",
     },
     imageGeneration: {
       label: "Image generation",

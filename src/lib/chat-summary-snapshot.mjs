@@ -154,7 +154,36 @@ export async function writeMemoryForPrincipal(active, principal, dependencies = 
   const session = await sessionFor(principal, dependencies);
   if (!session) return { continue: false };
   const state = await descriptorFor(active.id, session, dependencies);
-  // Automatic work may summarize this chat only; it never creates account memory.
+  if (
+    dependencies.automaticMemory === true &&
+    !active.temporary &&
+    active.messages.length - (active.memoryStartIndex ?? 0) >= 4
+  ) {
+    const response = await fetchForPrincipal(
+      principal,
+      "/api/memory",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operation: "update_conversation_notes",
+          chatId: active.id,
+          memoryEnabled: true,
+          automaticMemory: true,
+          temporary: false,
+        }),
+        signal: dependencies.signal,
+      },
+      dependencies,
+    );
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error("memory_notes_write_failed");
+    }
+    const saved = await response.json();
+    if (saved.saved && typeof window !== "undefined")
+      window.dispatchEvent(new Event("kova-memory-sources-changed"));
+  }
   if (!state.enabled) return { continue: false };
   const payload = await createMemoryWritePayload(active, state.descriptor);
   if (!payload || dependencies.signal?.aborted) return { continue: false };
@@ -189,7 +218,7 @@ export async function writeMemoryForPrincipal(active, principal, dependencies = 
 }
 
 /** Catch up incrementally while this conversation remains open and consented. */
-export function startMemoryWrites(active, principal) {
+export function startMemoryWrites(active, principal, automaticMemory = false) {
   const controller = new AbortController();
   let timer;
   let stopped = false;
@@ -202,6 +231,7 @@ export function startMemoryWrites(active, principal) {
         run: async () => {
           const result = await writeMemoryForPrincipal(active, principal, {
             signal: controller.signal,
+            automaticMemory,
           });
           more = result.continue;
         },
@@ -223,11 +253,11 @@ export function startMemoryWrites(active, principal) {
   };
 }
 
-export function scheduleMemoryWrites(active, principal, signal) {
+export function scheduleMemoryWrites(active, principal, signal, automaticMemory = false) {
   if (signal.aborted || active.messages.length - (active.memoryStartIndex ?? 0) < 4) return;
   let cancel;
   const timer = setTimeout(() => {
-    if (!signal.aborted) cancel = startMemoryWrites(active, principal);
+    if (!signal.aborted) cancel = startMemoryWrites(active, principal, automaticMemory);
   }, 4000);
   signal.addEventListener(
     "abort",

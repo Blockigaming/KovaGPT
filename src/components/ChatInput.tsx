@@ -95,6 +95,11 @@ const ComposerProjectPicker = lazy(() =>
     default: module.ComposerProjectPicker,
   })),
 );
+const ComposerToolsDialog = lazy(() =>
+  import("@/components/ComposerToolsDialog").then((module) => ({
+    default: module.ComposerToolsDialog,
+  })),
+);
 
 export type PendingAttachment = {
   clientId?: string;
@@ -382,9 +387,17 @@ export function ChatInput({
     setUtilityMenu(null);
     setLibraryOpen(false);
     setDrawingOpen(false);
+    setToolsOpening(null);
     contextReturnToInputRef.current = false;
   }, [isLoaded, user?.id, attachmentContext]);
   const [drawingOpen, setDrawingOpen] = useState(false);
+  const toolsContext = attachmentContextRef.current;
+  const [toolsOpening, setToolsOpening] = useState<{
+    ownerId: string;
+    context: typeof toolsContext;
+  } | null>(null);
+  const toolsReturnTriggerRef = useRef<HTMLElement | null>(null);
+  const toolsReturnUrlRef = useRef<string | undefined>(undefined);
   const online = useSyncExternalStore(
     subscribeToOnlineStatus,
     getOnlineStatusSnapshot,
@@ -1439,6 +1452,38 @@ export function ChatInput({
                   <span>{tool.label}</span>
                 </button>
               ))}
+            {section === "all" && (
+              <button
+                type="button"
+                className={rowClass}
+                aria-haspopup="dialog"
+                disabled={!isLoaded || disabled || isStreaming}
+                onClick={() => {
+                  const account = fileAccountRef.current;
+                  if (
+                    !account.isLoaded ||
+                    account.userId !== (user?.id ?? null) ||
+                    attachmentContextRef.current !== toolsContext
+                  )
+                    return;
+                  closeActions();
+                  if (!user) {
+                    setSignInRequest({
+                      description:
+                        "Sign in to run Agent tasks or use audio tools. Your current message is unchanged.",
+                      trigger,
+                    });
+                    return;
+                  }
+                  toolsReturnTriggerRef.current = trigger;
+                  toolsReturnUrlRef.current = window.location.href;
+                  setToolsOpening({ ownerId: user.id, context: toolsContext });
+                }}
+              >
+                <SlidersHorizontal aria-hidden="true" />
+                <span>Tasks and audio</span>
+              </button>
+            )}
             {!mobile && section === "all" && (
               <>
                 <button
@@ -1859,6 +1904,7 @@ export function ChatInput({
                       if (
                         libraryOpen ||
                         drawingOpen ||
+                        toolsOpening ||
                         signInRequest ||
                         contextOpen ||
                         projectPickerOpen
@@ -2241,7 +2287,9 @@ export function ChatInput({
           onOpenChange={setPlusOpen}
           title="Attach"
           ariaLabel="Attach files and tools"
-          restoreFocus={!contextOpen && !libraryOpen && !signInRequest && !optionsOpen}
+          restoreFocus={
+            !contextOpen && !libraryOpen && !signInRequest && !optionsOpen && !toolsOpening
+          }
         >
           <div className="spec400-attach-menu">{renderComposerActions(true)}</div>
         </MobileBottomSheet>
@@ -2543,6 +2591,32 @@ export function ChatInput({
             onClose={() => setSignInRequest(null)}
             returnFocusTarget={signInRequest.trigger}
             hasPendingMessage={Boolean(value.length || attachments.length || pasteOffer)}
+          />
+        </Suspense>
+      ) : null}
+      {isLoaded &&
+      toolsOpening &&
+      toolsOpening.context === toolsContext &&
+      toolsOpening.ownerId === user?.id ? (
+        <Suspense
+          fallback={
+            <p role="status" className="sr-only">
+              Opening tools…
+            </p>
+          }
+        >
+          <ComposerToolsDialog
+            ownerId={toolsOpening.ownerId}
+            onClose={() => setToolsOpening(null)}
+            onReturnFocus={() => {
+              if (
+                !fileAccountRef.current.isLoaded ||
+                fileAccountRef.current.userId !== toolsOpening.ownerId ||
+                attachmentContextRef.current !== toolsOpening.context
+              )
+                return;
+              restoreDialogFocus(toolsReturnTriggerRef.current, toolsReturnUrlRef.current);
+            }}
           />
         </Suspense>
       ) : null}

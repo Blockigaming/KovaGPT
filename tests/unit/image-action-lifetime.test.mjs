@@ -160,7 +160,7 @@ test("image-edit fields keep full-width rounded phone geometry and 44px controls
   );
   assert.match(edit, /SelectContent,\s*SelectItem,\s*SelectTrigger,\s*SelectValue/);
   assert.doesNotMatch(edit, /<select\b/);
-  assert.equal((edit.match(/min-h-11 items-center justify-center rounded-lg/g) || []).length, 3);
+  assert.equal((edit.match(/min-h-11 items-center justify-center rounded-full/g) || []).length, 3);
   assert.match(
     source,
     /Output shape[\s\S]*?<SelectTrigger[\s\S]*?aria-label="Output image shape"[\s\S]*?className="min-h-11 w-auto max-w-full"/,
@@ -169,6 +169,6 @@ test("image-edit fields keep full-width rounded phone geometry and 44px controls
     new URL("../../src/components/ui/select.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(sharedSelect, /rounded-\[8px\]/);
+  assert.match(sharedSelect, /rounded-full/);
   assert.match(sharedSelect, /\[@media\(pointer:coarse\)\]:min-h-11/);
 });

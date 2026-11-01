@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ImagePlus, ArrowLeft } from "lucide-react";
 import { imageApiRequest } from "@/lib/image-api-client";
 import {
   Select,
@@ -55,7 +56,7 @@ export default function ImageEditControls({
     return () => controller.abort();
   }, [ownerId, choosing, pageCursor]);
   return (
-    <div className="mt-3 rounded-xl border border-border p-3 text-sm">
+    <div className="kova-library-image-edit text-sm">
       {error && <p role="alert">{error}</p>}
       {enabled === null && !error ? (
         <p>Checking image-edit availability…</p>
@@ -67,12 +68,17 @@ export default function ImageEditControls({
           <button
             type="button"
             disabled={disabled}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 underline-offset-4 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            className="inline-flex min-h-11 items-center justify-center rounded-full px-3 py-2 underline-offset-4 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             onClick={() => {
               setChoosing(!choosing);
               if (choosing) onChange(null);
             }}
           >
+            {choosing ? (
+              <ArrowLeft className="size-4" aria-hidden="true" />
+            ) : (
+              <ImagePlus className="size-4" aria-hidden="true" />
+            )}
             {choosing ? "Generate a new image instead" : "Edit an image from Library"}
           </button>
           {choosing && (
@@ -155,7 +161,7 @@ export default function ImageEditControls({
                     type="button"
                     disabled={disabled}
                     onClick={() => setPageCursor("")}
-                    className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 underline-offset-4 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full px-3 py-2 underline-offset-4 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                   >
                     First page
                   </button>
@@ -165,7 +171,7 @@ export default function ImageEditControls({
                     type="button"
                     disabled={disabled}
                     onClick={() => setPageCursor(cursor)}
-                    className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 underline-offset-4 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full px-3 py-2 underline-offset-4 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                   >
                     Next images
                   </button>

@@ -64,8 +64,15 @@ function setup(options = {}) {
     },
   };
   const admin = {
-    from: () => {
-      throw new Error("unexpected table write");
+    from: (name) => {
+      assert.equal(name, "chat_memories");
+      const q = {
+        select: () => q,
+        eq: () => q,
+        order: () => q,
+        range: async () => ({ data: [], error: null }),
+      };
+      return q;
     },
   };
   const fixture = memoryHandlerFixture({ tier: "pro", db: admin, userDb, ...options });
@@ -150,7 +157,6 @@ test("converted temporary content is excluded and a real bounded count is used",
   assert.equal(JSON.stringify(row).includes("temporary secret"), false);
 });
 for (const options of [
-  { tier: "free" },
   { verified: false },
   { banned: Response.json({}, { status: 403 }) },
   { feature: Response.json({}, { status: 503 }) },
@@ -183,4 +189,10 @@ test("privacy epoch rejection never produces success", async () => {
   const response = await fixture.handlers.POST({ request: request() });
   assert.equal(response.status, 503);
   assert.equal((await response.json()).saved, undefined);
+});
+
+test("Free accounts can save reviewed memory with the same ownership and privacy checks", async () => {
+  const f = setup({ tier: "free" });
+  assert.equal((await f.handlers.POST({ request: request() })).status, 200);
+  assert.ok(f.calls.some(([name]) => name === "persist"));
 });

@@ -1,53 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { createHookHarness, loadUiModule, deferred, settle } from "../helpers/ui-state-harness.mjs";
+import { settle } from "../helpers/ui-state-harness.mjs";
 
-function fixture({ configured = true } = {}) {
-  const h = createHookHarness();
-  let callback;
-  const requests = [];
-  let user = { id: "owner-a" };
-  const client = {
-    auth: {
-      getUser: async () => ({ data: { user } }),
-      onAuthStateChange(fn) {
-        callback = fn;
-        return { data: { subscription: { unsubscribe() {} } } };
-      },
-    },
-    rpc() {
-      const request = deferred();
-      requests.push(request);
-      return request.promise;
-    },
-  };
-  const { useTier } = loadUiModule("src/hooks/useTier.ts", {
-    react: h.react,
-    "@/integrations/supabase/client": {
-      supabase: client,
-      getSupabaseClientConfigStatus: () => ({ configured }),
-    },
-    "@/lib/supabase-loose": { loose: (x) => x },
-  });
-  const render = () => h.render(useTier);
-  render();
-  return {
-    render,
-    requests,
-    h,
-    change(next) {
-      user = next;
-      callback(next ? "SIGNED_IN" : "SIGNED_OUT");
-    },
-  };
-}
+import { planTierFixture as fixture } from "../helpers/plan-tier-fixture.mjs";
 
 test("display does not call loading or failed entitlement Free", async () => {
   const f = fixture();
   assert.equal(f.render().status, "loading");
   await settle();
-  f.requests[0].resolve({ data: null, error: { message: "Unavailable" } });
+  f.requests[0].resolve({ ownerId: "owner-a", tier: null });
   await settle();
   assert.equal(f.render().status, "unavailable");
   assert.equal(f.render().tier, "free", "conservative compatibility fallback remains");
@@ -57,7 +19,7 @@ test("display does not call loading or failed entitlement Free", async () => {
 test("only an authoritative known plan becomes ready; thrown failures settle", async () => {
   const f = fixture();
   await settle();
-  f.requests[0].resolve({ data: { effectiveTier: "plus" }, error: null });
+  f.requests[0].resolve({ ownerId: "owner-a", tier: "plus" });
   await settle();
   assert.equal(f.render().status, "ready");
   assert.equal(f.render().tier, "plus");
@@ -74,9 +36,9 @@ test("old account replies cannot replace a new account plan", async () => {
   await settle();
   f.change({ id: "owner-b" });
   await settle();
-  f.requests[1].resolve({ data: { effectiveTier: "free" }, error: null });
+  f.requests[1].resolve({ ownerId: "owner-b", tier: "free" });
   await settle();
-  f.requests[0].resolve({ data: { effectiveTier: "pro" }, error: null });
+  f.requests[0].resolve({ ownerId: "owner-a", tier: "pro" });
   await settle();
   assert.equal(f.render().tier, "free");
   assert.equal(f.render().status, "ready");
@@ -86,11 +48,18 @@ test("old account replies cannot replace a new account plan", async () => {
 });
 
 test("missing configuration and unmounted results never become known plans", async () => {
-  assert.equal(fixture({ configured: false }).render().status, "unavailable");
+  const withoutPublicConfig = fixture({ configured: false });
+  withoutPublicConfig.requests[0].resolve({ ownerId: "owner-a", tier: "plus" });
+  await settle();
+  assert.equal(
+    withoutPublicConfig.render().tier,
+    "plus",
+    "verified server display is independent of public SDK configuration",
+  );
   const f = fixture();
   await settle();
   f.h.unmount();
-  f.requests[0].resolve({ data: { effectiveTier: "pro" }, error: null });
+  f.requests[0].resolve({ ownerId: "owner-a", tier: "pro" });
   await settle();
   assert.equal(f.render().status, "loading");
 });

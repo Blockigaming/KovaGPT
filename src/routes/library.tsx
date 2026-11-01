@@ -44,6 +44,9 @@ import {
 import { useLibraryDetail } from "@/hooks/use-library-detail";
 import {
   Upload,
+  Share2,
+  Info,
+  ChevronDown,
   Download,
   Eye,
   FileText,
@@ -1838,7 +1841,9 @@ function LibraryPage() {
             <>
               <details className="kova-library-disclosure" aria-labelledby="shared-chats-title">
                 <summary className="cursor-pointer">
+                  <Share2 className="size-4" aria-hidden="true" />
                   <span id="shared-chats-title">Shared chats</span>
+                  <ChevronDown className="size-3" aria-hidden="true" />
                 </summary>
                 {sharesError ? (
                   <div role="alert" className="rounded-xl border border-destructive/30 p-4">
@@ -1938,7 +1943,11 @@ function LibraryPage() {
                   className="kova-library-disclosure"
                   key={`folders:${principal}`}
                 >
-                  <summary>Folders{folderScope !== "all" ? " · Filter active" : ""}</summary>
+                  <summary>
+                    <FolderOpen className="size-4" aria-hidden="true" />
+                    Folders{folderScope !== "all" ? " · Filter active" : ""}
+                    <ChevronDown className="size-3" aria-hidden="true" />
+                  </summary>
                   <LibraryFolderOrganizer
                     key={principal}
                     enabled={!libraryCleared}
@@ -2011,7 +2020,11 @@ function LibraryPage() {
             open={storageDetailsOpen}
             onToggle={(event) => setStorageDetailsOpen(event.currentTarget.open)}
           >
-            <summary aria-label="Library details and availability">Details</summary>
+            <summary aria-label="Library details and availability">
+              <Info className="size-4" aria-hidden="true" />
+              Details
+              <ChevronDown className="size-3" aria-hidden="true" />
+            </summary>
             {storageTotal !== null && <p>Loaded file sizes: {humanBytes(storageTotal)}</p>}
             <p>Loaded file sizes cover this list only and are not account storage usage.</p>
             {storageDetailsOpen && !libraryCleared ? (

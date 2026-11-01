@@ -102,6 +102,15 @@ function fixture({
     userId: ownerId,
     emailVerified: true,
     supabaseAdmin: {
+      rpc(name, args) {
+        assert.equal(name, "try_consume_daily_message");
+        assert.equal(args._user_id, ownerId);
+        const query = {
+          abortSignal: () => query,
+          then: (yes, no) => Promise.resolve({ data: true, error: null }).then(yes, no),
+        };
+        return query;
+      },
       from() {
         const q = {
           select: () => q,

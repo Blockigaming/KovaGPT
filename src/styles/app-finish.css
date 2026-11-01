@@ -732,7 +732,7 @@
   background: color-mix(in srgb, var(--foreground) 3%, transparent);
 }
 .kova-settings-reference .kova-settings-search input {
-  border-radius: 12px;
+  border-radius: 999px;
 }
 .kova-settings-reference .kova-settings-nav [role="tab"] {
   border-radius: 12px;
@@ -751,7 +751,7 @@
 .kova-settings-reference [role="tabpanel"] input:not([type="checkbox"]):not([type="radio"]),
 .kova-settings-reference [role="tabpanel"] textarea,
 .kova-settings-reference [role="tabpanel"] [data-slot="select-trigger"] {
-  border-radius: 14px;
+  border-radius: 24px;
 }
 .kova-billing-plan-grid {
   gap: 16px !important;

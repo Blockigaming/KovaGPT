@@ -21,7 +21,7 @@ const SelectTrigger = React.forwardRef<
     data-ui-reference="chatgpt.select-control"
     ref={ref}
     className={cn(
-      "font-[family-name:var(--font-ui)] flex h-9 w-full min-w-0 max-w-full items-center justify-between gap-2 whitespace-nowrap rounded-[8px] border border-input bg-transparent px-3 py-0 text-base font-medium leading-5 shadow-none ring-offset-background cursor-pointer transition-colors duration-150 hover:border-foreground/25 data-[placeholder]:text-muted-foreground focus-visible:outline-none focus-visible:border-foreground/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm [@media(pointer:coarse)]:min-h-11 [&>span]:min-w-0 [&>span]:line-clamp-1 [&>span]:text-start",
+      "font-[family-name:var(--font-ui)] flex min-h-9 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-full border border-input bg-transparent px-4 py-2 text-base font-medium leading-5 shadow-none ring-offset-background cursor-pointer transition-colors duration-150 hover:border-foreground/25 data-[placeholder]:text-muted-foreground focus-visible:outline-none focus-visible:border-foreground/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm [@media(pointer:coarse)]:min-h-11 [&>span]:min-w-0 [&>span]:text-start [&>span]:leading-snug",
       className,
     )}
     {...props}
@@ -119,7 +119,7 @@ const SelectItem = React.forwardRef<
     data-select-value={props.value}
     ref={ref}
     className={cn(
-      "relative flex min-h-8 w-full min-w-0 cursor-pointer select-none items-center [overflow-wrap:anywhere] rounded-[6px] py-1.5 pl-2 pr-8 text-sm leading-5 outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [@media(pointer:coarse)]:min-h-11",
+      "relative flex min-h-8 w-full min-w-0 cursor-pointer select-none items-center [overflow-wrap:anywhere] rounded-xl py-1.5 pl-2 pr-8 text-sm leading-5 outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [@media(pointer:coarse)]:min-h-11",
       className,
     )}
     {...props}

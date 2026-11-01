@@ -8,7 +8,7 @@ test("dropdown actions use SDK18px icons,6px menu inset and32px desktop/44px coa
   assert.match(source, /\[&>svg\]:size-\[18px\]/);
   assert.match(source, /bg-popover p-1\.5/);
   assert.match(source, /min-h-8/);
-  assert.match(source, /rounded-\[6px\] px-2 py-1\.5/);
+  assert.match(source, /rounded-xl px-2 py-1\.5/);
   assert.match(source, /\[@media\(pointer:coarse\)\]:min-h-11/);
   assert.match(read("src/styles/visual-tokens.css"), /--kova-radius-menu: 16px/);
 });
@@ -22,7 +22,7 @@ test("sidebar uses pinned filled SDK glyphs and plugin status retains its20px Lu
   assert.match(glyphs, /fill="currentColor"/);
   const plugin = read("src/styles/spec400-plugins.css");
   assert.match(plugin, /\.spec400-plugin-status svg \{\s*width: 20px;\s*height: 20px;/);
-  assert.doesNotMatch(plugin, /(?:gap: (?:6|10)px|padding: 8px 14px)/);
+  assert.match(plugin, /gap: (?:10px|var\(--space-3\))/);
   assert.match(plugin, /gap: var\(--space-2\)/);
   assert.match(plugin, /gap: var\(--space-3\)/);
 });

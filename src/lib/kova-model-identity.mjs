@@ -1,9 +1,9 @@
 /** Product names only. This catalog does not authorize or activate any route. */
 export const KOVA_MODEL_VERSION = "4.6";
 export const KOVA_MODEL_FAMILIES = Object.freeze([
-  Object.freeze({ id: "cosmo", label: "KovaGPT 4.6 Cosmo" }),
-  Object.freeze({ id: "orion", label: "KovaGPT 4.6 Orion" }),
-  Object.freeze({ id: "nova", label: "KovaGPT 4.6 Nova" }),
+  Object.freeze({ id: "cosmo", label: "KovaGPT Model 4.6 Cosmo" }),
+  Object.freeze({ id: "orion", label: "KovaGPT Model 4.6 Orion" }),
+  Object.freeze({ id: "nova", label: "KovaGPT Model 4.6 Nova" }),
 ]);
 
 const FAMILY_BY_ROLE = Object.freeze({
@@ -38,7 +38,7 @@ export function buildKovaModelIdentityInstructions({
     throw new Error("kova_model_identity_unavailable");
 
   return `\n\nSERVER-RESOLVED MODEL IDENTITY:
-Your exact product name for this response is ${identity.label}.
+Your exact product name for this response is ${identity.label}, built by Kova.
 The configured provider is ${provider === "openai" ? "OpenAI" : "Azure OpenAI"}; the configured provider model is ${modelId}.
 The product version 4.6 is KovaGPT branding, not an OpenAI model ID or proof of separately trained weights. Configuration is not independent verification of deployed weights.
 When asked who you are, use the exact product name above in a brief, natural answer. When asked about the underlying provider or model, disclose the configured values accurately and distinguish them from the product name.

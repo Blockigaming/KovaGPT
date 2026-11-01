@@ -103,6 +103,9 @@ import {
 
 export const Route = createFileRoute("/projects")({
   component: ProjectsRoute,
+  validateSearch: (search: Record<string, unknown>): { new?: boolean } => ({
+    new: search.new === true || search.new === "true" || search.new === "1",
+  }),
   head: () => ({
     meta: [
       { title: "KovaGPT Projects" },
@@ -136,6 +139,8 @@ function ProjectsPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const search = Route.useSearch();
+  const openedFromLink = useRef(false);
   const createReturnFocusRef = useRef<HTMLElement | null>(null);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const templatesReturnFocusRef = useRef<HTMLButtonElement | null>(null);
@@ -210,7 +215,7 @@ function ProjectsPage() {
       (!operation || createOperationRef.current === operation)
     );
   }
-  function openCreate(trigger: HTMLButtonElement) {
+  function openCreate(trigger: HTMLElement | null) {
     const context = createContextRef.current;
     if (
       !createActiveRef.current ||
@@ -229,6 +234,13 @@ function ProjectsPage() {
     setCreateError(null);
     setCreateOpen(true);
   }
+  useEffect(() => {
+    if (!search.new || openedFromLink.current || !isLoaded || !isSignedIn || !userKey) return;
+    openedFromLink.current = true;
+    openCreate(null);
+    // Opening is tied to the resolved account, not later form changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.new, isLoaded, isSignedIn, userKey]);
   function closeCreate() {
     if (createBusyRef.current) return;
     createSessionRef.current = null;

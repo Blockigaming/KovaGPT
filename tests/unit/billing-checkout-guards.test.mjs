@@ -211,9 +211,9 @@ test("subscription summary prefers an older active row over a newer expired row"
     payments.indexOf("export const createPortalSession"),
     payments.indexOf("export type SubscriptionSummary"),
   );
-  assert.match(portal, /selectSubscriptionSummaryRow\(rows \?\? \[\]\)/u);
-  assert.match(portal, /customer: mapping\.customerId/u);
-  assert.match(portal, /sub\.stripe_customer_id !== mapping\.customerId/u);
-  assert.match(portal, /kova_policy_customer_for_portal/u);
+  assert.match(portal, /resolvePortalCustomer\(context\.userId\)/u);
+  assert.match(portal, /customer: customerId/u);
+  assert.match(payments, /kova_policy_customer_for_portal/u);
+  assert.match(payments, /\.neq\("user_id", userId\)/u);
   assert.doesNotMatch(portal, /\.limit\(1\)\s*\.maybeSingle\(\)/u);
 });

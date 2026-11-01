@@ -60,7 +60,7 @@ test("customizable core destinations precede the scrollable More disclosure", ()
   const disclosure = sidebar.match(/<details[^>]*>[\s\S]*?<\/details>/)?.[0];
   assert.ok(disclosure);
   assert.match(disclosure, /<summary[^>]*>[\s\S]*?<span>More<\/span>/);
-  assert.match(disclosure, /navLink\("\/discovery", "Discover", Compass\)/);
+  assert.doesNotMatch(disclosure, /navLink\("\/discovery", "Discover", Compass\)/);
   assert.match(disclosure, /Customize sidebar/);
   assert.doesNotMatch(disclosure, /navLink\("\/work"/);
   for (const path of ["/library", "/projects", "/apps", "/scheduled-tasks"])
@@ -73,8 +73,8 @@ test("customizable core destinations precede the scrollable More disclosure", ()
 
 test("secondary navigation remains discoverable without active unavailable destinations", () => {
   assert.match(sidebar, /data-ui-reference="gemini-sidebar-disclosure"/);
-  assert.match(sidebar, /open=\{isOn\("\/discovery"\) \|\| isOn\("\/maps"\) \|\| undefined\}/);
-  assert.match(sidebar, /aria-label="Expand sidebar"/);
+  assert.match(sidebar, /open=\{isOn\("\/maps"\) \|\| undefined\}/);
+  assert.match(sidebar, /Expand sidebar/);
   assert.match(sidebar, /mapsReleaseApproved && railShortcuts.includes\("maps"\)/);
   assert.doesNotMatch(sidebar, /navLink\("\/(?:health|finances|work)"/);
 });

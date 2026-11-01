@@ -115,10 +115,10 @@ test("workflow skills remain usable across durable chat, image requests, and ava
   assert.ok(imageQuota < imageBranch.lastIndexOf("assertSelectedContextsCurrent"));
   const chatQuotaBranch = chat.slice(
     chat.indexOf("if (auth && !isOwner)"),
-    chat.indexOf("// SECURITY: Server-side tier enforcement"),
+    chat.indexOf("const MAX_ATTACHMENTS_PER_REQUEST"),
   );
   const contextBeforeChatQuota = chatQuotaBranch.indexOf("assertSelectedContextsCurrent");
-  const chatQuota = chatQuotaBranch.indexOf('enforceQuota(auth, "chats"');
+  const chatQuota = chatQuotaBranch.indexOf("enforceDailyMessageQuota(auth,");
   assert.ok(
     contextBeforeChatQuota > -1 && contextBeforeChatQuota < chatQuota,
     "selected context must be current immediately before generic chat quota",

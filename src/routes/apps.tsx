@@ -1380,14 +1380,6 @@ function AppsPage() {
           : !visibleGoogleStatus || !visibleGithubData
             ? "unknown"
             : "ready";
-  const connectedCountLabel =
-    connectionCountState === "ready"
-      ? connectedCount
-      : connectionCountState === "checking"
-        ? "Checking…"
-        : connectionCountState === "unavailable"
-          ? "Unavailable"
-          : "Unknown";
   const connectedStatusMessage =
     connectionCountState === "checking"
       ? "Checking connections…"
@@ -1799,12 +1791,8 @@ function AppsPage() {
               className="spec400-plugin-directory"
             >
               <TabsList className="spec400-plugin-tabs" aria-label="Connections">
-                <TabsTrigger value="all">
-                  All <span>{catalog.length}</span>
-                </TabsTrigger>
-                <TabsTrigger value="connected">
-                  Connected <span>{connectedCountLabel}</span>
-                </TabsTrigger>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="connected">Connected</TabsTrigger>
               </TabsList>
               <div className="spec400-plugin-filters">
                 <label className="spec400-plugin-search">

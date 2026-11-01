@@ -7,7 +7,7 @@ const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 const memoryPayload = read("src/lib/chat-summary-snapshot.mjs");
 
-test("saved-memory reads and POSTs require explicit browser consent and paid entitlement", () => {
+test("saved-memory reads and POSTs require explicit browser consent on every plan", () => {
   const settings = read("src/components/SettingsDialog.tsx");
   const page = read("src/routes/index.tsx");
   const chatApi = read("src/routes/api/chat.ts");
@@ -18,16 +18,13 @@ test("saved-memory reads and POSTs require explicit browser consent and paid ent
   assert.match(settings, /from "@\/lib\/settings-types"/);
   assert.match(page, /setSettingsPrincipal\(storagePrincipal\)/);
   assert.match(page, /if \(!settingsReady\) return;[\s\S]{0,120}blockMemoryWrites/);
-  assert.match(
-    page,
-    /!settings\.rememberAcross[\s\S]{0,80}tier === "free"[\s\S]{0,220}!active \|\| active\.temporary/,
-  );
+  assert.match(page, /!settings\.rememberAcross[\s\S]{0,220}!active \|\| active\.temporary/);
   assert.match(memoryPayload, /memoryEnabled: true,[\s\S]{0,40}temporary: false/);
-  assert.match(page, /scheduleMemoryWrites\(active, userKey, controller\.signal\)/);
+  assert.match(page, /scheduleMemoryWrites\(active, userKey, controller\.signal,/);
   assert.match(memoryPayload, /enqueueMemoryWrite\(\{/);
   assert.match(
     chatApi,
-    /\(callerTier === "plus" \|\| callerTier === "pro"\)[\s\S]*?personalContext\?\.rememberAcross === true[\s\S]*?usesExistingContext/,
+    /auth &&[\s\S]*?personalContext\?\.rememberAcross === true[\s\S]*?usesExistingContext/,
   );
   assert.doesNotMatch(chatApi, /rememberAcross !== false/);
   assert.match(parser, /body\.memoryEnabled !== true/);

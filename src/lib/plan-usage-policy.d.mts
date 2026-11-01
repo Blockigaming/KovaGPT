@@ -4,5 +4,14 @@ export function planAllowance(
   plan: "guest" | "free" | "plus" | "pro",
 ): number;
 export const DAILY_PLAN_ALLOWANCES: Readonly<
-  Record<"free" | "plus" | "pro", Readonly<{ chats: number; images: number; uploads: number }>>
+  Record<
+    "free" | "plus" | "pro",
+    Readonly<{
+      chats: number;
+      regularMessages: number;
+      thinkingMessages: number;
+      images: number;
+      uploads: number;
+    }>
+  >
 >;

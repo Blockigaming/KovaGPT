@@ -79,7 +79,7 @@ test("spec400 directory uses approved catalog, primary tabs, neutral scoped styl
   assert.match(source, /Scheduled tasks or projects that depend on this account/);
   assert.match(source, /account.scopes.map/);
   const css = readFileSync("src/styles/spec400-plugins.css", "utf8");
-  assert.match(css, /width: 48px/);
+  assert.match(css, /width: 38px/);
   assert.match(css, /max-width: 1080px/);
   assert.doesNotMatch(css, /gradient/);
 });

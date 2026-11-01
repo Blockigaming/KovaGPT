@@ -216,7 +216,8 @@ test("billing checkout and entitlements use exact supported plan keys", () => {
     assert.doesNotMatch(source, /\.includes\(["'](?:plus|pro)["']\)/);
   assert.match(apiAuth, /resolveEffectiveBillingTier\(caller\.supabaseAdmin, userId\)/);
   assert.match(apiAuth, /return getUserTier\(caller, caller\.userId\)/);
-  assert.match(clientTier, /rpc\("current_subscription_summary"\)/);
+  assert.match(clientTier, /getMyPlanTier/);
+  assert.match(read("src/utils/plan.functions.ts"), /resolveEffectiveBillingTier/);
   assert.doesNotMatch(apiAuth, /tierForLookupKey|\.from\("subscriptions"\)/);
   assert.doesNotMatch(clientTier, /tierForLookupKey|\.from\("subscriptions"\)/);
   assert.match(webhook, /from\("billing_plan_tiers"\)/);

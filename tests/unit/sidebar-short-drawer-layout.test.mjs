@@ -27,16 +27,15 @@ const history = rule(".kova-sidebar-history", query);
 // Source flex-size arithmetic only. Native scrolling/focus remains browser coverage.
 test("mobile navigation can shrink and scroll while history retains a usable viewport", () => {
   assert.equal(property(rule(".kova-sidebar-primary"), "flex"), "0 0 auto");
-  assert.equal(property(primary, "flex-shrink"), "1");
+  assert.equal(property(primary, "flex-shrink"), "0");
   assert.equal(property(primary, "min-height"), "0");
-  assert.equal(property(primary, "overflow-y"), "auto");
-  assert.equal(property(primary, "overscroll-behavior"), "contain");
-  assert.equal(property(history, "flex"), "1 1 160px");
-  assert.equal(property(history, "min-height"), "min(160px, 50%)");
-  assert.equal(property(rule(".kova-sidebar-history"), "overflow-y"), "auto");
+  assert.equal(property(primary, "overflow"), "visible");
+  assert.equal(property(history, "flex"), "0 0 auto");
+  assert.equal(property(history, "min-height"), "0");
+  assert.equal(property(rule(".kova-sidebar-history"), "overflow"), "visible");
   const body = rule(".kova-sidebar-scroll");
   assert.equal(property(body, "display"), "flex");
-  assert.equal(property(body, "overflow"), "hidden");
+  assert.equal(property(body, "overflow-y"), "auto");
   assert.equal(property(body, "min-height"), "0");
   assert.equal(property(rule(".kova-sidebar-footer"), "flex"), "0 0 auto");
 });

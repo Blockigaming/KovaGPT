@@ -365,7 +365,7 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
   ).declarations;
   assert.equal(page.position, "static");
   assert.equal(page.width, "100%");
-  assert.equal(page.height, "auto");
+  assert.equal(page.height, "100dvh");
   assert.equal(page["max-height"], "none");
   assert.equal(page.background, "var(--background)");
   for (const selector of [

@@ -20,6 +20,7 @@ export type Settings = {
   density: "comfortable" | "compact";
   motion: "full" | "reduced";
   rememberAcross: boolean;
+  automaticMemory?: boolean;
   webSearch: boolean;
   sendOnEnter: boolean;
   mode: ThemeMode;
@@ -58,6 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ...APPEARANCE_DEFAULTS,
   timeFormat: "system",
   rememberAcross: false,
+  automaticMemory: false,
   webSearch: true,
   sendOnEnter: true,
   notifyEmail: true,

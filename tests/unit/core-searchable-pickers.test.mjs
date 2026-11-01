@@ -570,7 +570,7 @@ test("searchable selectors retain the reference row density and coarse-pointer t
   const command = source("src/components/ui/command.tsx");
   const picker = source(pickerPath);
   assert.match(command, /min-h-8/);
-  assert.match(command, /rounded-\[6px\]/);
+  assert.match(command, /rounded-xl/);
   assert.match(command, /\[@media\(pointer:coarse\)\]:min-h-11/);
   assert.match(picker, /className="min-h-8 \[@media\(pointer:coarse\)\]:min-h-11"/);
   const css = source("src/styles/spec400-system.css");

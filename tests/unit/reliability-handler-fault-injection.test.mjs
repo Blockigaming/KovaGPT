@@ -184,8 +184,8 @@ test("automatic memory summarization never consumes the foreground chat quota", 
   const source = await readFile(new URL("../../src/routes/api/memory.ts", import.meta.url), "utf8");
   assert.doesNotMatch(source, /\benforceQuota\b/);
   assert.doesNotMatch(source, /DAILY_CHAT_LIMIT_BY_TIER/);
-  assert.match(source, /caller\.tier === "free"/);
-  assert.match(source, /status: 204/);
+  assert.match(source, /MEMORY_TIERS\[authorized\.tier\]/);
+  assert.doesNotMatch(source, /Saving memory requires Plus/);
 
   const clientSource = await readFile(
     new URL("../../src/routes/index.tsx", import.meta.url),
@@ -195,7 +195,7 @@ test("automatic memory summarization never consumes the foreground chat quota", 
     new URL("../../src/lib/chat-summary-snapshot.mjs", import.meta.url),
     "utf8",
   );
-  assert.match(clientSource, /scheduleMemoryWrites\(active, userKey, controller\.signal\)/);
+  assert.match(clientSource, /scheduleMemoryWrites\(active, userKey, controller\.signal,/);
   assert.match(memoryPayload, /memoryMessages\s*\.slice\(-30\)/);
   assert.match(memoryPayload, /const memoryTitle = deriveTitle\(/);
   assert.match(memoryPayload, /title: memoryTitle\.slice\(0, 120\)/);

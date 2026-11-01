@@ -1,3 +1,4 @@
+import { MemoryOverview } from "@/components/MemoryOverview";
 import { PublicShareLinks } from "@/components/PublicShareLinks";
 import { PlanUsageBars } from "@/components/PlanUsageBars";
 import "@/styles/billing-surfaces.css";
@@ -71,6 +72,7 @@ import {
   MapPin,
   Search,
   ArrowLeft,
+  X,
   BarChart3,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
@@ -273,7 +275,6 @@ export function SettingsDialog({
   const clerk = useClerk();
   const loggedIn = !clerkEnabled || isSignedIn;
   const { tier } = useTier();
-  const adaptiveMemoryUnlocked = tierRank(tier) >= 1;
   const normalizedInitialTab = initialTab === "subscription" ? "billing" : initialTab;
   const [tab, setTab] = useState<string>(normalizedInitialTab ?? "general");
   const [settingsQuery, setSettingsQuery] = useState("");
@@ -523,6 +524,19 @@ export function SettingsDialog({
       cancelled = true;
     };
   }, [open, tab, loggedIn, userKey]);
+
+  useEffect(() => {
+    if (!open || !loggedIn || (tab !== "usage" && tab !== "billing")) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") setUsageRetry((value) => value + 1);
+    };
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [open, loggedIn, tab, userKey]);
 
   const handleManageBilling = async () => {
     if (
@@ -1182,6 +1196,17 @@ export function SettingsDialog({
               </p>
             </div>
             {page ? pageUtilities : null}
+            {page ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Close settings"
+                onClick={() => onOpenChange(false)}
+              >
+                <X aria-hidden="true" />
+              </Button>
+            ) : null}
             {loggedIn && !page && (
               <div
                 aria-live="polite"
@@ -1438,7 +1463,9 @@ export function SettingsDialog({
                       onValueChange={(v) => onChange({ ...settings, mood: v as Mood })}
                     >
                       <SelectTrigger aria-label="Additional response style">
-                        <SelectValue />
+                        <SelectValue>
+                          {MOODS.find((mood) => mood.value === settings.mood)?.label}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {MOODS.map((m) => (
@@ -1451,6 +1478,9 @@ export function SettingsDialog({
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {MOODS.find((mood) => mood.value === settings.mood)?.hint}
+                    </p>
                   </div>
                   <p id="settings-instruction-scope" className="text-sm text-muted-foreground">
                     Applies to normal chats for this account in this browser. These instructions are
@@ -1547,51 +1577,46 @@ export function SettingsDialog({
                     <Brain className="w-4 h-4" />
                     {!page ? <h3 className="text-sm font-semibold">Memory</h3> : null}
                     <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground">
-                      Plus
+                      {tier === "pro" ? "Extended" : tier === "plus" ? "Enhanced" : "Basic"}
                     </span>
                   </div>
-                  {adaptiveMemoryUnlocked ? (
-                    <>
-                      <ToggleRow
-                        title="Use saved memory"
-                        hint="Use existing saved memories and bounded summaries within the same non-temporary chat. New cross-chat preferences require Save a reviewed memory from a response in an eligible synced chat. This browser has its own setting."
-                        checked={settings.rememberAcross}
-                        onCheckedChange={(value) => {
-                          if (value) allowMemoryWrites(userKey);
-                          else blockMemoryWrites(userKey);
-                          configureMemoryWrites({
-                            principal: userKey,
-                            enabled: value && isSignedIn,
-                          });
-                          onChange({ ...settings, rememberAcross: value });
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Turning this off stops saved-memory reads and new summary POSTs from chats
-                        sent in this browser. It does not delete summaries already saved to your
-                        account. Temporary Chat never sends profile, custom-instruction, or
-                        personality settings and never reads or writes saved memory.
-                      </p>
-                    </>
-                  ) : (
-                    <div className="rounded-lg border border-border p-4 flex items-start gap-3">
-                      <Lock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                      <div className="flex-1 text-sm">
-                        <div className="font-medium">Available on Kova Plus and Pro</div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Paid plans can use existing saved memories and bounded summaries within
-                          the same non-temporary chat.
-                        </div>
-                        <Link
-                          to="/pricing"
-                          onClick={() => onOpenChange(false)}
-                          className="kova-button inline-flex items-center gap-1.5 text-xs font-medium mt-3 px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" /> Upgrade to unlock
-                        </Link>
-                      </div>
-                    </div>
-                  )}
+
+                  <>
+                    <ToggleRow
+                      title="Use saved memory"
+                      hint="Use your saved preferences and conversation notes in future chats. Temporary chats never read or write memory. This browser has its own setting."
+                      checked={settings.rememberAcross}
+                      onCheckedChange={(value) => {
+                        if (value) allowMemoryWrites(userKey);
+                        else blockMemoryWrites(userKey);
+                        configureMemoryWrites({
+                          principal: userKey,
+                          enabled: value && isSignedIn,
+                        });
+                        onChange({ ...settings, rememberAcross: value });
+                      }}
+                    />
+                    <ToggleRow
+                      title="Update memory from conversations"
+                      hint="Save explicit preferences and facts you share in synced chats. You can review, edit, or delete these notes. Editing a note prevents automatic replacement."
+                      checked={settings.automaticMemory === true}
+                      onCheckedChange={(value) => onChange({ ...settings, automaticMemory: value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {tier === "pro"
+                        ? "Pro has the largest memory and brings more relevant notes into each chat."
+                        : tier === "plus"
+                          ? "Plus keeps more detailed notes and remembers more context than Free."
+                          : "Free includes basic memory. Plus and Pro expand detail and capacity."}
+                    </p>
+                    <MemoryOverview ownerId={userKey} />
+                    <p className="text-xs text-muted-foreground">
+                      Turning this off stops saved-memory reads and new summary POSTs from chats
+                      sent in this browser. It does not delete summaries already saved to your
+                      account. Temporary Chat never sends profile, custom-instruction, or
+                      personality settings and never reads or writes saved memory.
+                    </p>
+                  </>
                 </section>
 
                 <section className="rounded-lg border border-border p-4 space-y-3">
@@ -1608,7 +1633,7 @@ export function SettingsDialog({
                     <Link
                       to="/memory"
                       onClick={() => onOpenChange(false)}
-                      className="kova-button inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="kova-button inline-flex min-h-11 items-center justify-center rounded-full border border-border px-4 py-2 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       Open Memory Center
                     </Link>

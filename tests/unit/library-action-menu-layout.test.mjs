@@ -119,7 +119,7 @@ test("Library actions inherit the shared SDK menu gutter and 32px/44px pointer g
   for (const expected of [
     "min-h-8",
     "gap-1.5",
-    "rounded-[6px]",
+    "rounded-xl",
     "px-2",
     "py-1.5",
     "[@media(pointer:coarse)]:min-h-11",

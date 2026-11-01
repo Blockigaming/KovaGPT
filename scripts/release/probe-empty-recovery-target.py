@@ -74,6 +74,11 @@ NATIVE_RELATION_SURFACE_SQL = """WITH RECURSIVE
   UNION SELECT r.extension,'pg_constraint','pg_catalog.pg_constraint'::regclass,a.oid,n.nspname
    FROM relations r JOIN pg_catalog.pg_constraint a ON a.conrelid=r.relid
    JOIN pg_catalog.pg_namespace n ON n.oid=a.connamespace
+  UNION SELECT o.extension,'pg_constraint','pg_catalog.pg_constraint'::regclass,a.oid,n.nspname
+   FROM owned o JOIN pg_catalog.pg_type t
+    ON o.classid='pg_catalog.pg_type'::regclass AND o.objsubid=0 AND t.oid=o.objid AND t.typtype='d'
+   JOIN pg_catalog.pg_constraint a ON a.contypid=t.oid AND a.conrelid=0 AND a.contype='c'
+   JOIN pg_catalog.pg_namespace n ON n.oid=a.connamespace
   UNION SELECT r.extension,'pg_trigger','pg_catalog.pg_trigger'::regclass,a.oid,n.nspname
    FROM relations r JOIN pg_catalog.pg_trigger a ON a.tgrelid=r.relid
    JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
