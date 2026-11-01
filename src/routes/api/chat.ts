@@ -1347,7 +1347,8 @@ export const Route = createFileRoute("/api/chat")({
                           "project_retrieval",
                           (signal) =>
                             retrieveProjectContext({
-                              supabase: admin,
+                              // The matching RPC checks auth.uid(); retain the verified caller.
+                              supabase: auth.supabaseUser as unknown as SupabaseAdminLike,
                               project_id: projectId,
                               query: q,
                               k: 6,

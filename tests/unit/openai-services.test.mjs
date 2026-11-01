@@ -23,7 +23,11 @@ const completed = (items = []) => ({
   usage: { input_tokens: 10, output_tokens: 5 },
 });
 const services = (client) =>
-  createOpenAiServices({ client, model: "gpt-5.6-luna", agentModel: "gpt-5.6-sol" });
+  createOpenAiServices({
+    client,
+    model: "gpt-5.6-luna",
+    agentModel: "gpt-5.6-sol",
+  });
 
 test("web search requires a completed search and keeps only actual safe citations", async () => {
   const response = completed([
@@ -40,7 +44,10 @@ test("web search requires a completed search and keeps only actual safe citation
               title: "Evidence",
             },
             { type: "url_citation", url: "javascript:alert(1)" },
-            { type: "url_citation", url: "https://user:password@example.com/private" },
+            {
+              type: "url_citation",
+              url: "https://user:password@example.com/private",
+            },
             { type: "url_citation", url: "https://example.com/evidence" },
           ],
         },
@@ -76,14 +83,20 @@ test("web search uses completed action sources when a short answer has no inline
       action: {
         type: "search",
         sources: [
-          { type: "url", url: "https://developers.openai.com/api/docs/#overview" },
+          {
+            type: "url",
+            url: "https://developers.openai.com/api/docs/#overview",
+          },
           { type: "url", url: "https://developers.openai.com/api/docs/" },
         ],
       },
     },
   ]);
   const expected = [
-    { url: "https://developers.openai.com/api/docs/", title: "developers.openai.com" },
+    {
+      url: "https://developers.openai.com/api/docs/",
+      title: "developers.openai.com",
+    },
   ];
   let calls = 0;
   const result = await services({
@@ -119,7 +132,11 @@ test("web search preserves annotated source titles and order before considering 
         {
           type: "output_text",
           annotations: [
-            { type: "url_citation", url: "https://example.com/cited#section", title: "Citation" },
+            {
+              type: "url_citation",
+              url: "https://example.com/cited#section",
+              title: "Citation",
+            },
           ],
         },
       ],
@@ -173,18 +190,31 @@ test("web search rejects unsafe and malformed fallback sources and respects the 
 
 test("web search never adopts failed, non-search, or caller-like source objects", () => {
   const response = completed([
-    { type: "web_search_call", status: "completed", action: { type: "search", sources: {} } },
+    {
+      type: "web_search_call",
+      status: "completed",
+      action: { type: "search", sources: {} },
+    },
     {
       type: "web_search_call",
       status: "failed",
-      action: { type: "search", sources: [{ type: "url", url: "https://example.com/failed" }] },
+      action: {
+        type: "search",
+        sources: [{ type: "url", url: "https://example.com/failed" }],
+      },
     },
     {
       type: "web_search_call",
       status: "completed",
-      action: { type: "open_page", sources: [{ type: "url", url: "https://example.com/other" }] },
+      action: {
+        type: "open_page",
+        sources: [{ type: "url", url: "https://example.com/other" }],
+      },
     },
-    { type: "user", sources: [{ type: "url", url: "https://example.com/input" }] },
+    {
+      type: "user",
+      sources: [{ type: "url", url: "https://example.com/input" }],
+    },
   ]);
   assert.deepEqual(webSearchSources(response), []);
   assert.throws(
@@ -252,7 +282,11 @@ test("successful analysis verifies execution belongs to the created container be
     responses: {
       create: async () =>
         completed([
-          { type: "code_interpreter_call", status: "completed", container_id: "cntr_owned" },
+          {
+            type: "code_interpreter_call",
+            status: "completed",
+            container_id: "cntr_owned",
+          },
         ]),
     },
   };
@@ -262,7 +296,11 @@ test("successful analysis verifies execution belongs to the created container be
   assert.equal(deleted, true);
   client.responses.create = async () =>
     completed([
-      { type: "code_interpreter_call", status: "completed", container_id: "cntr_unowned" },
+      {
+        type: "code_interpreter_call",
+        status: "completed",
+        container_id: "cntr_unowned",
+      },
     ]);
   await assert.rejects(services(client).analyze("Sum 1, 2, 3"), /analysis_not_completed/);
 });
@@ -303,7 +341,10 @@ test("file search bounds uploads and deletes the store before the uploaded file 
 test("file search passes only newly owned IDs to OpenAI and returns a completed answer", async () => {
   let sent;
   const client = {
-    files: { create: async () => ({ id: "file-owned" }), delete: async () => {} },
+    files: {
+      create: async () => ({ id: "file-owned" }),
+      delete: async () => {},
+    },
     vectorStores: {
       create: async () => ({ id: "vs_owned" }),
       delete: async () => {},
@@ -345,7 +386,11 @@ test("cleanup uncertainty cannot be reported as successful execution", async () 
       responses: {
         create: async () =>
           completed([
-            { type: "code_interpreter_call", status: "completed", container_id: "cntr_owned" },
+            {
+              type: "code_interpreter_call",
+              status: "completed",
+              container_id: "cntr_owned",
+            },
           ]),
       },
     },
@@ -422,7 +467,10 @@ function agentClient(
 test("Agents requires the completed root turn and cleans its network-disabled sandbox session", async () => {
   const f = agentClient([
     { type: "agent.session.created", session: { id: "session_owned" } },
-    { type: "agent.session.turn.completed", turn: { id: "turn_owned", subagent_id: null } },
+    {
+      type: "agent.session.turn.completed",
+      turn: { id: "turn_owned", subagent_id: null },
+    },
   ]);
   assert.equal((await services(f.client).agent("Compute one result")).text, "Actual answer");
   const body = f.calls[0][1];
@@ -448,10 +496,14 @@ test("failed agent cancellation still deletes only its owned session with an ind
   let deleteCalls = 0;
   f.client.beta.agents.sessions.events.create = async (id, body, options) => {
     assert.equal(id, "session_owned");
-    assert.deepEqual(body, { events: [{ type: "agent.session.input.cancel" }] });
+    assert.deepEqual(body, {
+      events: [{ type: "agent.session.input.cancel" }],
+    });
     f.calls.push(["cancel", id]);
     cancellationSignal = options.signal;
-    throw Object.assign(new Error("synthetic cancellation timeout"), { name: "TimeoutError" });
+    throw Object.assign(new Error("synthetic cancellation timeout"), {
+      name: "TimeoutError",
+    });
   };
   f.client.beta.agents.sessions.delete = async (id, options) => {
     assert.equal(id, "session_owned");
@@ -511,7 +563,10 @@ test("agent results are withheld unless deletion acknowledges the exact owned se
   ]) {
     const f = agentClient([
       { type: "agent.session.created", session: { id: "session_owned" } },
-      { type: "agent.session.turn.completed", turn: { id: "turn_owned", subagent_id: null } },
+      {
+        type: "agent.session.turn.completed",
+        turn: { id: "turn_owned", subagent_id: null },
+      },
     ]);
     const pending = [];
     let deleteCalls = 0;
@@ -535,7 +590,10 @@ test("agent results are withheld unless deletion acknowledges the exact owned se
 test("an already absent agent session retains the existing not-found cleanup behavior", async () => {
   const f = agentClient([
     { type: "agent.session.created", session: { id: "session_owned" } },
-    { type: "agent.session.turn.completed", turn: { id: "turn_owned", subagent_id: null } },
+    {
+      type: "agent.session.turn.completed",
+      turn: { id: "turn_owned", subagent_id: null },
+    },
   ]);
   f.client.beta.agents.sessions.delete = async (id) => {
     assert.equal(id, "session_owned");
@@ -544,18 +602,233 @@ test("an already absent agent session retains the existing not-found cleanup beh
   assert.equal((await services(f.client).agent("Compute one result")).text, "Actual answer");
 });
 
-test("forbidden or rate-limited agent deletion never counts as confirmed removal", async () => {
-  for (const status of [403, 429]) {
+test("transient Agent deletion reconciles the same idle session through the installed SDK", async () => {
+  for (const status of [409, 503]) {
     const f = agentClient([
       { type: "agent.session.created", session: { id: "session_owned" } },
-      { type: "agent.session.turn.completed", turn: { id: "turn_owned", subagent_id: null } },
+      {
+        type: "agent.session.turn.completed",
+        turn: { id: "turn_owned", subagent_id: null },
+      },
+    ]);
+    const requests = [];
+    let deletes = 0;
+    const sdk = createOpenAiServiceClient("synthetic-not-a-real-api-key", async (url, init) => {
+      requests.push({
+        url: String(url),
+        method: init.method,
+        signal: init.signal,
+      });
+      let body;
+      let responseStatus = 200;
+      if (init.method === "DELETE" && deletes++ === 0) {
+        responseStatus = status;
+        body = { error: { message: "Synthetic transient deletion failure" } };
+      } else if (init.method === "GET") {
+        body = {
+          id: "session_owned",
+          object: "agent.session",
+          status: "idle",
+        };
+      } else {
+        body = {
+          id: "session_owned",
+          deleted: true,
+          object: "agent.session.deleted",
+        };
+      }
+      return new Response(JSON.stringify(body), {
+        status: responseStatus,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    const sessions = sdk.beta.agents.sessions;
+    f.client.beta.agents.sessions.delete = sessions.delete.bind(sessions);
+    f.client.beta.agents.sessions.retrieve = sessions.retrieve.bind(sessions);
+    assert.equal((await services(f.client).agent("Compute one result")).text, "Actual answer");
+    assert.deepEqual(
+      requests.map(({ method }) => method),
+      ["DELETE", "GET", "DELETE"],
+    );
+    assert.ok(
+      requests.every(
+        ({ url }) => url === "https://api.openai.com/v1/agents/sessions/session_owned",
+      ),
+    );
+    assert.notEqual(requests[0].signal, requests[2].signal);
+    assert.equal(requests[2].signal.aborted, false);
+    assert.equal(f.calls.filter(([kind]) => kind === "create").length, 1);
+  }
+});
+
+test("a lost deletion response is reconciled by a confirmed SDK not-found read", async () => {
+  const f = agentClient([
+    { type: "agent.session.created", session: { id: "session_owned" } },
+    {
+      type: "agent.session.turn.completed",
+      turn: { id: "turn_owned", subagent_id: null },
+    },
+  ]);
+  const requests = [];
+  const sdk = createOpenAiServiceClient("synthetic-not-a-real-api-key", async (url, init) => {
+    requests.push({ url: String(url), method: init.method });
+    if (init.method === "DELETE") throw new TypeError("Synthetic lost connection");
+    return new Response(JSON.stringify({ error: { message: "Synthetic session absent" } }), {
+      status: 404,
+      headers: { "content-type": "application/json" },
+    });
+  });
+  const sessions = sdk.beta.agents.sessions;
+  f.client.beta.agents.sessions.delete = sessions.delete.bind(sessions);
+  f.client.beta.agents.sessions.retrieve = sessions.retrieve.bind(sessions);
+  assert.equal((await services(f.client).agent("Compute one result")).text, "Actual answer");
+  assert.deepEqual(
+    requests.map(({ method }) => method),
+    ["DELETE", "GET"],
+  );
+  assert.ok(requests.every(({ url }) => url.endsWith("/session_owned")));
+  assert.equal(f.calls.filter(([kind]) => kind === "create").length, 1);
+});
+
+test("cleanup recovery refuses a busy, unrelated or malformed session without a second deletion", async () => {
+  for (const current of [
+    { id: "session_owned", object: "agent.session", status: "running" },
+    { id: "session_other", object: "agent.session", status: "idle" },
+    { id: "session_owned", object: "other", status: "idle" },
+  ]) {
+    const f = agentClient([
+      { type: "agent.session.created", session: { id: "session_owned" } },
+      {
+        type: "agent.session.turn.completed",
+        turn: { id: "turn_owned", subagent_id: null },
+      },
+    ]);
+    let deletes = 0;
+    f.client.beta.agents.sessions.delete = async () => {
+      deletes++;
+      throw Object.assign(new Error("Synthetic conflict"), { status: 409 });
+    };
+    f.client.beta.agents.sessions.retrieve = async (id) => {
+      assert.equal(id, "session_owned");
+      return current;
+    };
+    await assert.rejects(
+      services(f.client).agent("Compute one result"),
+      /provider_cleanup_unconfirmed/,
+    );
+    assert.equal(deletes, 1);
+    assert.equal(f.calls.filter(([kind]) => kind === "create").length, 1);
+  }
+});
+
+test("exhausted cleanup recovery reports only safe status and request identifiers", async () => {
+  const f = agentClient([
+    { type: "agent.session.created", session: { id: "session_owned" } },
+    {
+      type: "agent.session.turn.completed",
+      turn: { id: "turn_owned", subagent_id: null },
+    },
+  ]);
+  let deletes = 0;
+  const pending = [];
+  f.client.beta.agents.sessions.delete = async () => {
+    deletes++;
+    throw Object.assign(new Error("Synthetic private payload must not be logged"), {
+      status: 503,
+      requestID: "req_synthetic123",
+      code: "synthetic-private-provider-data",
+    });
+  };
+  f.client.beta.agents.sessions.retrieve = async () => ({
+    id: "session_owned",
+    object: "agent.session",
+    status: "idle",
+  });
+  const provider = createOpenAiServices({
+    client: f.client,
+    model: "gpt-5.6-luna",
+    reportCleanupFailure: (resources) => pending.push(...resources),
+  });
+  await assert.rejects(provider.agent("Compute one result"), /provider_cleanup_unconfirmed/);
+  assert.equal(deletes, 2);
+  assert.deepEqual(pending, [
+    {
+      kind: "agent_session",
+      id: "session_owned",
+      httpStatus: 503,
+      requestId: "req_synthetic123",
+    },
+  ]);
+});
+
+test("a retry still requires an exact deletion acknowledgement", async () => {
+  const f = agentClient([
+    { type: "agent.session.created", session: { id: "session_owned" } },
+    {
+      type: "agent.session.turn.completed",
+      turn: { id: "turn_owned", subagent_id: null },
+    },
+  ]);
+  let deletes = 0;
+  f.client.beta.agents.sessions.delete = async () => {
+    if (++deletes === 1) throw Object.assign(new Error("Synthetic conflict"), { status: 409 });
+    return {
+      id: "session_other",
+      deleted: true,
+      object: "agent.session.deleted",
+    };
+  };
+  f.client.beta.agents.sessions.retrieve = async () => ({
+    id: "session_owned",
+    object: "agent.session",
+    status: "idle",
+  });
+  await assert.rejects(
+    services(f.client).agent("Compute one result"),
+    /provider_cleanup_unconfirmed/,
+  );
+  assert.equal(deletes, 2);
+});
+
+test("recovered cleanup preserves the original failed turn outcome", async () => {
+  const f = agentClient([
+    { type: "agent.session.created", session: { id: "session_owned" } },
+    { type: "agent.session.failed" },
+  ]);
+  let deletes = 0;
+  f.client.beta.agents.sessions.delete = async (id) => {
+    if (++deletes === 1) throw Object.assign(new Error("Synthetic unavailable"), { status: 503 });
+    return { id, deleted: true, object: "agent.session.deleted" };
+  };
+  f.client.beta.agents.sessions.retrieve = async () => ({
+    id: "session_owned",
+    object: "agent.session",
+    status: "idle",
+  });
+  await assert.rejects(services(f.client).agent("Compute one result"), /agent_failed/);
+  assert.equal(deletes, 2);
+  assert.equal(f.calls.filter(([kind]) => kind === "cancel").length, 1);
+  assert.equal(f.calls.filter(([kind]) => kind === "create").length, 1);
+});
+
+test("forbidden or rate-limited agent deletion never counts as confirmed removal", async () => {
+  for (const status of [401, 403, 429]) {
+    const f = agentClient([
+      { type: "agent.session.created", session: { id: "session_owned" } },
+      {
+        type: "agent.session.turn.completed",
+        turn: { id: "turn_owned", subagent_id: null },
+      },
     ]);
     const pending = [];
     let deleteCalls = 0;
     f.client.beta.agents.sessions.delete = async (id) => {
       assert.equal(id, "session_owned");
       deleteCalls++;
-      throw Object.assign(new Error("synthetic deletion refused"), { status });
+      throw Object.assign(new Error("synthetic deletion refused"), {
+        status,
+        requestID: "Authorization: Bearer sk-synthetic-private-data",
+      });
     };
     const provider = createOpenAiServices({
       client: f.client,
@@ -564,7 +837,7 @@ test("forbidden or rate-limited agent deletion never counts as confirmed removal
     });
     await assert.rejects(provider.agent("Compute one result"), /provider_cleanup_unconfirmed/);
     assert.equal(deleteCalls, 1);
-    assert.deepEqual(pending, [{ kind: "agent_session", id: "session_owned" }]);
+    assert.deepEqual(pending, [{ kind: "agent_session", id: "session_owned", httpStatus: status }]);
   }
 });
 
@@ -576,7 +849,10 @@ test("hosted browser requires real browser activity and only approves configured
       type: "agent.session.turn.item.done",
       item: { type: "computer_use_call", status: "completed" },
     },
-    { type: "agent.session.turn.completed", turn: { id: "turn_owned", subagent_id: null } },
+    {
+      type: "agent.session.turn.completed",
+      turn: { id: "turn_owned", subagent_id: null },
+    },
   ];
   const f = agentClient(events);
   const approvals = [];
@@ -586,7 +862,10 @@ test("hosted browser requires real browser activity and only approves configured
       {
         type: "computer_use_approval_request",
         request_id: "approval_owned",
-        request: { type: "browser_origin_access", origin: "https://developers.openai.com" },
+        request: {
+          type: "browser_origin_access",
+          origin: "https://developers.openai.com",
+        },
       },
     ],
   });
@@ -613,7 +892,10 @@ test("hosted browser requires real browser activity and only approves configured
   for (const request of [
     { type: "browser_authentication" },
     { type: "browser_origin_access", origin: "https://127.0.0.1" },
-    { type: "browser_origin_access", origin: "https://developers.openai.com.evil.example" },
+    {
+      type: "browser_origin_access",
+      origin: "https://developers.openai.com.evil.example",
+    },
     { type: "browser_origin_access", origin: "http://developers.openai.com" },
   ]) {
     const blocked = agentClient(events);
@@ -661,7 +943,10 @@ function fixture({
   const calls = [],
     seen = new Set();
   const handle = createOpenAiServiceHandler({
-    requireVerifiedUser: async () => ({ userId: "owner", revalidateSession: revalidate }),
+    requireVerifiedUser: async () => ({
+      userId: "owner",
+      revalidateSession: revalidate,
+    }),
     assertNotBanned: async () => null,
     getCallerTier: async () => tier,
     operatorAccess: typeof operator === "function" ? operator : async () => operator,
@@ -683,7 +968,12 @@ function fixture({
         OPENAI_API_KEY: "synthetic-test-key",
         KOVA_OPENAI_BROWSER_ALLOWED_DOMAINS_JSON: browserDomains,
       })[name],
-    services: () => ({ agent: execute, browser: execute, analyze: execute, moderate: execute }),
+    services: () => ({
+      agent: execute,
+      browser: execute,
+      analyze: execute,
+      moderate: execute,
+    }),
   });
   const request = (body = { operation: "analysis", input: "Count samples" }, headers = {}) =>
     new Request("https://kovagpt.com/api/ai/services", {
@@ -823,7 +1113,11 @@ test("webhook verifies real SDK signatures, rejects stale/bad signatures and fai
   const request = (sig = signature, stamp = timestamp) =>
     new Request("https://kovagpt.com/api/openai/webhook", {
       method: "POST",
-      headers: { "webhook-id": id, "webhook-timestamp": stamp, "webhook-signature": `v1,${sig}` },
+      headers: {
+        "webhook-id": id,
+        "webhook-timestamp": stamp,
+        "webhook-signature": `v1,${sig}`,
+      },
       body,
     });
   assert.equal((await handler(request())).status, 200);
@@ -851,7 +1145,9 @@ test("hosted analysis uses the normal composer SSE parser with real token usage 
     text: "Computed 6",
     usage: { input_tokens: 12, output_tokens: 5 },
   });
-  await consumeChatSse(response.body, { onEvent: (event) => events.push(event) });
+  await consumeChatSse(response.body, {
+    onEvent: (event) => events.push(event),
+  });
   assert.equal(events[0].choices[0].delta.content, "Computed 6");
   assert.equal(events.at(-1).usage.prompt_tokens, 12);
   assert.equal(events.at(-1).choices[0].finish_reason, "stop");

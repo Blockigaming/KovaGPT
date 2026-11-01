@@ -337,7 +337,7 @@ test("composer focus, menu placement, and truthful guest controls cannot regress
   assert.match(composer, /ariaLabel="Attach files and tools"/);
   assert.match(
     composer,
-    /restoreFocus=\{!contextOpen && !libraryOpen && !signInRequest && !optionsOpen\}/,
+    /restoreFocus=\{\s*!contextOpen && !libraryOpen && !signInRequest && !optionsOpen && !toolsOpening\s*\}/,
   );
   assert.match(composerStyles, /\.spec400-toolbar-button,[\s\S]*?min-height: 44px;/);
   assert.match(composer, /\["ArrowDown", "ArrowUp", "Home", "End"\]\.includes\(event\.key\)/);
