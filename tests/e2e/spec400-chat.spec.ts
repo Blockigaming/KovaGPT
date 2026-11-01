@@ -26,7 +26,7 @@ async function expectRestingComposer(page: Page) {
 }
 
 for (const theme of ["dark", "light"] as const) {
-  test(`${theme}: empty composer, starter drafts, expand input, Context and Options`, async ({
+  test(`${theme}: empty composer, editable drafts, expand input, Context and Options`, async ({
     page,
   }, info) => {
     await fixture(page, theme, true);
@@ -47,14 +47,14 @@ for (const theme of ["dark", "light"] as const) {
     await expect(voice).toBeEnabled();
     await expect(page.getByText("Continue working", { exact: true })).toHaveCount(0);
     for (const action of ["Write something", "Summarize a file", "Compare options"]) {
-      await input.fill("");
-      await page.getByRole("button", { name: `Start with ${action}`, exact: true }).click();
-      await expect(input).not.toHaveValue("");
-      await expect(input).toBeFocused();
-      await expect(send).toBeVisible();
-      await expect(voice).toBeHidden();
-      await expect(page.locator("[data-chat-transcript]")).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: `Start with ${action}`, exact: true }),
+      ).toHaveCount(0);
     }
+    await input.fill("An editable draft");
+    await expect(send).toBeVisible();
+    await expect(voice).toBeHidden();
+    await expect(page.locator("[data-chat-transcript]")).toHaveCount(0);
     await input.fill("Keep the original requirement.");
     const expand = page.getByRole("button", { name: "Expand input", exact: true });
     await input.press("Tab");
@@ -76,6 +76,11 @@ for (const theme of ["dark", "light"] as const) {
     if (await contextTrigger.isVisible()) await contextTrigger.click();
     else {
       await contextReturn.click();
+      await page
+        .getByTestId("mobile-bottom-sheet")
+        .locator("summary")
+        .filter({ hasText: /^More tools$/ })
+        .click();
       await page
         .getByTestId("mobile-bottom-sheet")
         .getByRole("button", { name: "Context", exact: true })
@@ -138,9 +143,20 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   await expect(input).toHaveValue("First line\n");
   await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
   const context = page.getByRole("button", { name: "Context", exact: true });
-  if (!(await context.isVisible()))
+  if (!(await context.isVisible())) {
     await page.getByRole("button", { name: "Attach", exact: true }).click();
-  await context.click();
+    await page
+      .getByTestId("mobile-bottom-sheet")
+      .locator("summary")
+      .filter({ hasText: /^More tools$/ })
+      .click();
+    await page
+      .getByTestId("mobile-bottom-sheet")
+      .getByRole("button", { name: "Context", exact: true })
+      .click();
+  } else {
+    await context.click();
+  }
   await expect(page.getByRole("dialog", { name: "Context", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(input).toHaveValue("First line\n");

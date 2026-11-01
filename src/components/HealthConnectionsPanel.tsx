@@ -152,7 +152,9 @@ export function HealthConnectionsPanel({
                     account.
                   </p>
                   {!loading && !error && !configured && (
-                    <p>{provider.label} connections are not enabled yet.</p>
+                    <p className="w-fit rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-700 dark:text-amber-300">
+                      Coming soon
+                    </p>
                   )}
                   <Button
                     variant="outline"
@@ -248,6 +250,9 @@ export function HealthConnectionsPanel({
         </div>
       )}
       <p className="text-sm text-muted-foreground">
+        <span className="rounded-full bg-amber-500/10 px-3 py-1 text-amber-700 dark:text-amber-300">
+          Coming soon
+        </span>{" "}
         Apple Health and Android Health Connect require a mobile app. Other wearables and
         medical-record services are not connected here.
       </p>

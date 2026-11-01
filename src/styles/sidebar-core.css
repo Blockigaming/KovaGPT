@@ -632,3 +632,61 @@ button.kova-auth-sign-up:hover {
 .kova-sidebar-chat-menu:has(> .kova-inline-project-choices) > [role="separator"] {
   display: none;
 }
+
+/* Phone navigation leaves a readable sliver of the current conversation. */
+@media (max-width: 767px) {
+  .kova-sidebar[data-kova-core-sidebar],
+  .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
+    width: min(360px, calc(100vw - 80px));
+    max-width: calc(100vw - 64px);
+    border-radius: 0;
+    --sidebar-row-height: 48px;
+    --sidebar-icon-slot: 22px;
+    font-size: 16px;
+  }
+  .dark .kova-sidebar[data-kova-core-sidebar] {
+    background: #090909;
+  }
+  .kova-sidebar-header {
+    padding-inline: 20px 12px;
+    min-height: calc(76px + var(--safe-top, 0px));
+  }
+  .kova-sidebar-header .kova-header-button {
+    border-radius: 50%;
+    background: var(--sidebar-active);
+  }
+  .kova-sidebar-primary {
+    padding-inline: 12px;
+    gap: 6px;
+  }
+  .kova-sidebar .kova-nav-row {
+    border-radius: 14px;
+    padding-inline: 12px;
+  }
+  .kova-sidebar .kova-chat-row {
+    border-radius: 14px;
+  }
+  .kova-sidebar-history {
+    padding-top: 20px;
+  }
+  .kova-sidebar-footer {
+    padding-bottom: max(16px, var(--safe-bottom));
+  }
+  .kova-assistant:has(.kova-sidebar[data-state="open"]) > .kova-chat-main,
+  .kova-app-content[data-sidebar="open"] {
+    transform: translateX(min(360px, calc(100vw - 80px)));
+    border-radius: 28px 0 0 28px;
+    overflow: hidden;
+  }
+}
+@media (max-width: 767px) {
+  .kova-sidebar-header .kova-header-button.kova-sidebar-toggle {
+    border-radius: 50%;
+  }
+}
+@media (max-width: 767px) {
+  .kova-sidebar .kova-nav-row,
+  .kova-sidebar .kova-chat-row-main {
+    font-size: 16px;
+  }
+}

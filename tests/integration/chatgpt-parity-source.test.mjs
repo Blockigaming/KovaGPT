@@ -103,14 +103,12 @@ test("Chat uses the current greeting and reports model availability truthfully",
   assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
 });
 
-test("empty chat offers draft starters and scopes recent work to signed-in history", () => {
+test("empty chat removes prompt examples and scopes recent work to signed-in history", () => {
   assert.doesNotMatch(route, /kova-greeting-mark/);
   assert.doesNotMatch(route, /Think through a question, shape an idea/);
-  assert.match(homeView, /<HomeChatStarters setInput=\{setInput\}/);
+  assert.doesNotMatch(homeView, /<HomeChatStarters|EMPTY_STATE_STARTERS/);
   for (const label of ["Write something", "Summarize a file", "Compare options"])
-    assert.ok(starters.includes(`label: "${label}"`));
-  assert.match(starters, /setInput\(\(current\) => \(current\.trim\(\) \? current : prompt\)\)/);
-  assert.match(starters, /\.focus\(\{ preventScroll: true \}\)/);
+    assert.equal(starters.includes(label), false);
   assert.doesNotMatch(starters, /onSubmit|\.submit\(/);
   assert.match(route, /conversations=\{isLoaded && isSignedIn \? historyConversations : \[\]\}/);
   assert.match(homeView, /Continue working/);
@@ -197,7 +195,7 @@ test("compact composer groups actions and preserves message editing and markdown
     assert.ok(chatInput.includes(`aria-label="${label}"`));
   assert.match(chatInput, /renderComposerActions\(false\)/);
   assert.match(chatInput, /section !== "plugins" && \(\s*<div[^>]*aria-label="Attachment options"/);
-  assert.match(chatInput, /!mobile && section !== "files" && \(\s*<ComposerPluginList/);
+  assert.match(chatInput, /section === "plugins" && \(\s*<ComposerPluginList/);
   assert.match(chatInput, /Open a project/);
   assert.match(chatInput, /setProjectPickerOpen\(true\)/);
   assert.match(chatInput, /chooseTool\(imageTool\)/);

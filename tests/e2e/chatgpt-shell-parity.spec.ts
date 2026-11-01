@@ -20,7 +20,7 @@ async function verifyConversationShell(
 
   await waitForKovaHydration(page);
   if (signedIn) {
-    await expect(page.getByRole("button", { name: "Dictate", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Type with voice", exact: true })).toBeVisible();
     await expect(page.locator("textarea:visible").first()).toBeVisible();
   } else {
     await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
@@ -28,7 +28,7 @@ async function verifyConversationShell(
       page.getByRole("button", { name: "Create an account", exact: true }),
     ).toBeVisible();
     await expect(page.locator("textarea:visible")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Dictate", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Type with voice", exact: true })).toHaveCount(0);
   }
 
   const overflow = await page.evaluate(() => ({

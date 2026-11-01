@@ -130,7 +130,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
     await expect(menu).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Start with Write something", exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     // Radix applies a short entrance transform. Wait for the real anchor gap,
     // rather than sampling an in-flight animation or widening its tolerance.
     await expect
@@ -157,7 +157,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
     expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width - 11);
     expect(menuBox!.y).toBeGreaterThanOrEqual(11);
     expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height - 11);
-    const fileAction = menu.getByRole("button", { name: "Photos & Files", exact: true });
+    const fileAction = menu.getByRole("button", { name: "Files", exact: true });
     await expect(fileAction).toBeVisible();
     // The SDK entrance scales the entire menu. Measure the target after that
     // native animation has settled, preserving the 36px fine-pointer minimum.
@@ -168,7 +168,9 @@ test("empty workspace remains contained and composer focus is deliberate", async
     // Settle that real state before checking keyboard order; otherwise Home
     // correctly focuses Library while this live locator changes underneath it.
     await expect(menu.getByText(/Checking (today’s|your plan’s) upload allowance…/)).toBeHidden();
-    const menuControls = menu.locator("button:not(:disabled),a[href]");
+    const menuControls = menu
+      .locator("button:not(:disabled),a[href],summary")
+      .filter({ visible: true });
     await page.keyboard.press("Home");
     await expect(menuControls.first()).toBeFocused();
     await page.keyboard.press("End");
@@ -180,69 +182,14 @@ test("empty workspace remains contained and composer focus is deliberate", async
     await expect(attach).toBeFocused();
   }
 
-  const starterActions = page.locator(".spec400-starter-actions");
-  await expect(starterActions.locator("strong, small, .kova-home-starter-arrow")).toHaveCount(0);
+  await expect(page.locator(".spec400-starter-actions")).toHaveCount(0);
   await expect(page.locator(".kova-home-eyebrow")).toHaveCount(0);
-  const starterLayout = await starterActions.evaluate((container) => {
-    const style = getComputedStyle(container);
-    const visibleLabels = Array.from(container.querySelectorAll(".kova-home-starter-copy"))
-      .filter((label) => (label as HTMLElement).offsetParent !== null)
-      .map((label) => {
-        const box = label.getBoundingClientRect();
-        const button = label.closest("button")!;
-        const target = button.getBoundingClientRect();
-        return {
-          text: label.textContent?.trim(),
-          clientWidth: label.clientWidth,
-          scrollWidth: label.scrollWidth,
-          left: box.left,
-          right: box.right,
-          top: box.top,
-          bottom: box.bottom,
-          target: {
-            left: target.left,
-            right: target.right,
-            top: target.top,
-            bottom: target.bottom,
-            width: target.width,
-            height: target.height,
-            radius: Number.parseFloat(getComputedStyle(button).borderTopLeftRadius),
-          },
-        };
-      });
-    return {
-      display: style.display,
-      flexDirection: style.flexDirection,
-      alignItems: style.alignItems,
-      gap: style.gap,
-      visibleLabels,
-    };
-  });
-  expect(starterLayout.display).toBe("flex");
-  expect(starterLayout.flexDirection).toBe("column");
-  expect(starterLayout.alignItems).toBe("stretch");
-  expect(starterLayout.gap).toBe("0px");
-  expect(starterLayout.visibleLabels).toHaveLength(3);
-  expect(starterLayout.visibleLabels.map((label) => label.text)).toEqual([
-    "Write something",
-    "Summarize a file",
-    "Compare options",
-  ]);
-  for (const label of starterLayout.visibleLabels) {
-    expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth + 1);
-    expect(label.left).toBeGreaterThanOrEqual(label.target.left);
-    expect(label.right).toBeLessThanOrEqual(label.target.right);
-    expect(label.top).toBeGreaterThanOrEqual(label.target.top);
-    expect(label.bottom).toBeLessThanOrEqual(label.target.bottom);
-    expect(label.target.width).toBeGreaterThanOrEqual(44);
-    expect(label.target.height).toBeGreaterThanOrEqual(44);
-    expect(label.target.height).toBeCloseTo(44, 1);
-    expect(label.target.radius).toBe(10);
-  }
   await input.clear();
-  await page.getByRole("button", { name: "Start with Write something", exact: true }).click();
-  await expect(input).toHaveValue("Help me write ");
-  await expect(input).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Start with Write something", exact: true }),
+  ).toHaveCount(0);
+  await input.fill("My own draft");
+  await expect(input).toHaveValue("My own draft");
   await expect(page.locator(".kova-user-message")).toHaveCount(0);
   const overflow = await page.evaluate(() => ({
     client: document.documentElement.clientWidth,
@@ -350,7 +297,7 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   for (const action of [
     page.getByRole("button", { name: "Open menu" }),
     page.getByRole("button", { name: "Attach", exact: true }),
-    page.getByRole("button", { name: "Dictate", exact: true }),
+    page.getByRole("button", { name: "Type with voice", exact: true }),
     page.getByRole("button", { name: "Voice", exact: true }),
   ]) {
     const actionBox = await action.first().boundingBox();
@@ -376,10 +323,15 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   const sheet = page.getByTestId("mobile-bottom-sheet");
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Files", exact: true })).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Context", exact: true })).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Response options", exact: true })).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Photos", exact: true })).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Camera", exact: true })).toBeVisible();
+  await expect(sheet.locator("summary").filter({ hasText: /^Plugins$/ })).toBeVisible();
+  await sheet
+    .locator("summary")
+    .filter({ hasText: /^More tools$/ })
+    .click();
+  await expect(sheet.getByRole("button", { name: "Context", exact: true })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Response options", exact: true })).toBeVisible();
   await sheet.getByRole("button", { name: "Close sheet" }).click();
   await expect(sheet).toBeHidden();
   await expect(page.getByRole("button", { name: "Attach", exact: true })).toBeFocused();
@@ -394,9 +346,7 @@ test("unknown routes retain the themed shell state and semantic landmarks", asyn
   ).toBeVisible();
   const home = page.getByRole("link", { name: "Go to chat", exact: true });
   await expect(home).toBeVisible();
-  const homeBox = await home.boundingBox();
-  expect(homeBox).not.toBeNull();
-  expect(homeBox!.height).toBeGreaterThanOrEqual(44);
+  await expect.poll(async () => (await home.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   await expect(home).toHaveAttribute("href", "/");
   await home.click();
   await waitForKovaHydration(page);

@@ -48,7 +48,8 @@ test("spec400 card actions always open details, including unavailable and recove
     ["connected", true, "Manage"],
     ["reauthorize", true, "Reconnect"],
     ["permission_incomplete", true, "Reconnect"],
-    ["temporarily_unavailable", false, "Unavailable"],
+    ["temporarily_unavailable", false, "Coming soon"],
+    ["temporarily_unavailable", true, "Unavailable"],
   ]) {
     let trigger;
     const button = buttonOf(

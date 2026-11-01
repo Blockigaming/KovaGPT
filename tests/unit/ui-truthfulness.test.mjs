@@ -28,7 +28,7 @@ test("production composer mounts the two explicit controls through the real dial
 
 const configuredComposer = `
 const review = <>
-<button type="button" data-testid="dictate-button" aria-label="Dictate" aria-haspopup="dialog"
+<button type="button" data-testid="dictate-button" aria-label="Type with voice" aria-haspopup="dialog"
   disabled={disabled} onClick={(event) => openVoice("dictate", event.currentTarget)}><Mic /></button>
 <button type="button" data-testid="voice-button" aria-label="Voice" aria-haspopup="dialog"
   disabled={disabled} onClick={(event) => openVoice("voice", event.currentTarget)}><AudioLines /></button>
@@ -43,6 +43,10 @@ test("configured composer admits both explicit modes while the absence validator
   assert.ok(inspectUnavailableVoiceSource(configuredComposer).errors.length > 0);
 });
 for (const [name, source] of [
+  [
+    "stale dictation label",
+    configuredComposer.replace('aria-label="Type with voice"', 'aria-label="Dictate"'),
+  ],
   ["unlabelled trigger", configuredComposer.replace('aria-label="Voice"', "")],
   [
     "capture click",
