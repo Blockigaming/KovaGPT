@@ -52,7 +52,12 @@ import type { KovaSource } from "@/lib/ai/sources.server";
 import { normalizeSourceRetrievedAt } from "@/lib/response-source-time.mjs";
 
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
-import { acquireGeneration, finalizeGeneration, hashGuestIp } from "@/lib/ai/accounting.server";
+import {
+  acquireGeneration,
+  finalizeGeneration,
+  getGenerationTokenHeadroom,
+  hashGuestIp,
+} from "@/lib/ai/accounting.server";
 import {
   estimateMaximumCostUsd,
   modelForPolicy,
@@ -1630,6 +1635,34 @@ export const Route = createFileRoute("/api/chat")({
             }
             let freeConnectorBudget: FreeConnectorBudget | null = null;
             if (freeConnectorRequest) {
+              let headroom;
+              try {
+                headroom = await preflight.run("usage_headroom", (signal) =>
+                  getGenerationTokenHeadroom({ userId: auth!.userId, plan: "free", signal }),
+                );
+              } catch (error) {
+                if (error instanceof ChatPreflightError) throw error;
+                return Response.json(
+                  {
+                    error: "Usage authorization is temporarily unavailable.",
+                    code: "usage_authorization_unavailable",
+                    retryable: true,
+                  },
+                  { status: 503, headers: { "Retry-After": "5" } },
+                );
+              }
+              if (headroom.tokenLimit === 0) {
+                return Response.json(
+                  {
+                    error: "Your generation allowance has been reached. Try again when it resets.",
+                    code: headroom.limitingQuota,
+                    category: "quota_exceeded",
+                    retryable: false,
+                    requestId,
+                  },
+                  { status: 429 },
+                );
+              }
               try {
                 freeConnectorBudget = new FreeConnectorBudget({
                   planningMessages: toolPlanningMessages,
@@ -1637,6 +1670,7 @@ export const Route = createFileRoute("/api/chat")({
                   tools: availableTools,
                   outputCeiling,
                   tokenLimit: Math.min(
+                    headroom.tokenLimit,
                     planAllowance(runtimeConfig.maxTokensPerUserDay, "free"),
                     planAllowance(runtimeConfig.maxTokensPerUserMonth, "free"),
                   ),
