@@ -1,3 +1,4 @@
+import { providerActivityDeltas } from "./provider-activity.mjs";
 // Bound the native provider bytes as well as the translated chat stream. Native
 // Responses metadata and unknown events must not bypass the chat byte limit.
 const MAX_RESPONSES_STREAM_BYTES = 8 * 1024 * 1024;
@@ -63,18 +64,10 @@ export function responsesStreamToChatStream(response) {
             if (!event || typeof event !== "object" || Array.isArray(event)) {
               throw streamError("invalid_provider_sse_event");
             }
-            // Public provider lifecycle events are delivered immediately, using
-            // one identity so the activity row updates rather than duplicating.
-            if (/^response\.(web_search_call|file_search_call)\.(in_progress|searching|completed)$/.test(event.type)) {
-              const search = event.type.includes("web_search_call");
-              const complete = event.type.endsWith(".completed");
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-                kind: "activity",
-                activity_id: `provider-${event.item_id ?? event.output_index ?? "search"}`,
-                tool: search ? "search_web" : "project_files",
-                label: search ? (complete ? "Web search completed" : "Searching the web…") : (complete ? "File search completed" : "Finding references in files…"),
-                status: complete ? "complete" : "running",
-              })}\n\n`));
+            for (const delta of providerActivityDeltas(event)) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ choices: [{ index: 0, delta }] })}\n\n`),
+              );
               emitted = true;
             }
             if (event.type === "response.output_text.delta" && typeof event.delta === "string") {

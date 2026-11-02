@@ -230,10 +230,11 @@ const TAB_GROUPS: TabGroup[] = [
   },
 ];
 
-function SettingsPageContent({ children, className }: ComponentProps<typeof DialogContent>) {
+function SettingsPageContent({ children, className, style }: ComponentProps<typeof DialogContent>) {
   return (
     <section
       className={`kova-settings-page ${className ?? ""}`}
+      style={style}
       aria-label="Settings"
       data-ui-reference="chatgpt.settings"
     >
@@ -562,7 +563,10 @@ export function SettingsDialog({
     try {
       const res = await createPortalSession({ data: {} });
       if (!billingIsCurrent(epoch) || billingScopeRef.current.view !== view) return;
-      if ("error" in res) throw new Error("billing_portal_unavailable");
+      if ("error" in res) {
+        toast.error(res.error);
+        return;
+      }
       const portalUrl = parseAllowedBillingPortalUrl(res.url);
       if (!portalUrl) throw new Error("billing_portal_url_rejected");
       window.location.assign(portalUrl);
@@ -1123,7 +1127,20 @@ export function SettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <Surface
-        style={tab === "billing" ? { width: "100vw", maxWidth: "100vw", height: "100dvh", maxHeight: "100dvh", inset: 0, transform: "none", borderRadius: 0 } : undefined}
+        style={
+          tab === "billing"
+            ? {
+                width: "100vw",
+                maxWidth: "100vw",
+                height: "100dvh",
+                maxHeight: "100dvh",
+                inset: 0,
+                transform: "none",
+                translate: "none",
+                borderRadius: 0,
+              }
+            : undefined
+        }
         closeLabel="Close settings"
         data-ui-reference="chatgpt.settings"
         className={`kova-settings-dialog kova-settings-reference ${loggedIn ? "is-authenticated" : "is-guest"} bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border overflow-hidden flex flex-col gap-0 p-0`}

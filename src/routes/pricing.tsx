@@ -1,3 +1,6 @@
+import { getSubscriptionSummary, createPortalSession } from "@/utils/payments.functions";
+import { BILLING_ENV } from "@/lib/billing-plans";
+import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
@@ -128,6 +131,10 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function PricingPage() {
+  const starting = useRef(false);
+  const currentOwner = useRef<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [startingCheckout, setStartingCheckout] = useState(false);
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const [checkoutStatus, setCheckoutStatus] = useState<"idle" | "loading" | "loaded" | "error">(
     "idle",
@@ -137,6 +144,18 @@ function PricingPage() {
   const { user, isSignedIn, isLoaded } = useUser();
   const { openSignIn } = useClerk();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
+
+  currentOwner.current = isLoaded && isSignedIn ? (user?.id ?? null) : null;
+  useEffect(
+    () => () => {
+      currentOwner.current = null;
+    },
+    [],
+  );
+  useEffect(() => {
+    closeCheckout();
+    setStartError(null);
+  }, [user?.id, isSignedIn, closeCheckout]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -171,22 +190,51 @@ function PricingPage() {
     return () => observer.disconnect();
   }, [isOpen]);
 
-  const startCheckout = (priceId: string, trigger: HTMLButtonElement) => {
-    if (isLoaded && !isSignedIn) {
-      try {
-        openSignIn();
-      } catch {
-        /* clerk not ready */
-      }
+  const startCheckout = async (priceId: string, trigger: HTMLButtonElement) => {
+    if (!isLoaded || starting.current) return;
+    if (!isSignedIn || !user?.id) {
+      openSignIn();
       return;
     }
+    const capturedOwner = user.id;
+    starting.current = true;
+    setStartingCheckout(true);
+    setStartError(null);
     checkoutReturnFocusRef.current = trigger;
-    setCheckoutStatus("loading");
-    openCheckout({
-      priceId,
-      customerEmail: user?.email,
-      userId: user?.id,
-    });
+    try {
+      const summary = await getSubscriptionSummary({ data: { environment: BILLING_ENV } });
+      if (currentOwner.current !== capturedOwner) return;
+      if (summary.billingConflict || summary.inherited) {
+        setStartError(
+          "Review your current subscription in Settings → Billing before changing plans.",
+        );
+        return;
+      }
+      if (summary.activeSubscriptionCount > 0) {
+        if (!summary.billingPortalAvailable) {
+          setStartError("Plan management is temporarily unavailable. Please contact support.");
+          return;
+        }
+        const result = await createPortalSession({ data: {} });
+        if (currentOwner.current !== capturedOwner) return;
+        if ("error" in result) {
+          setStartError(result.error);
+          return;
+        }
+        const url = parseAllowedBillingPortalUrl(result.url);
+        if (!url) throw new Error("Invalid portal URL");
+        window.location.assign(url);
+        return;
+      }
+      setCheckoutStatus("loading");
+      openCheckout({ priceId, customerEmail: user.email, userId: capturedOwner });
+    } catch {
+      if (currentOwner.current === capturedOwner)
+        setStartError("Billing status couldn’t be verified. Try again before starting checkout.");
+    } finally {
+      starting.current = false;
+      setStartingCheckout(false);
+    }
   };
 
   return (
@@ -197,6 +245,11 @@ function PricingPage() {
         data-ui-reference="chatgpt-pricing"
         className="kova-secondary-page kova-pricing-page mx-auto w-full max-w-6xl flex-1 px-5 py-14 sm:px-6 sm:py-20"
       >
+        {(startError || startingCheckout) && (
+          <p role={startError ? "alert" : "status"} className="mx-auto mb-6 max-w-2xl text-center">
+            {startError ?? "Checking your current plan…"}
+          </p>
+        )}
         <section aria-labelledby="pricing-title" className="mx-auto max-w-3xl text-center">
           <p className="mb-4 text-sm font-semibold text-muted-foreground">Plans and pricing</p>
           <h1
@@ -341,6 +394,17 @@ function PricingPage() {
 
       <Dialog open={isOpen} onOpenChange={(open) => !open && closeCheckout()}>
         <DialogContent
+          constrainToViewport={false}
+          style={{
+            inset: 0,
+            width: "100vw",
+            maxWidth: "100vw",
+            height: "100dvh",
+            maxHeight: "100dvh",
+            transform: "none",
+            translate: "none",
+            borderRadius: 0,
+          }}
           className="gap-0 overflow-hidden p-0 sm:p-0 [&>button]:h-11 [&>button]:w-11"
           onCloseAutoFocus={(event) => {
             const trigger = checkoutReturnFocusRef.current;
@@ -367,7 +431,7 @@ function PricingPage() {
           <div
             ref={checkoutRegionRef}
             aria-busy={checkoutStatus === "loading"}
-            className="max-h-[calc(92dvh-6rem)] overflow-y-auto overscroll-contain"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
           >
             {checkoutElement}
           </div>

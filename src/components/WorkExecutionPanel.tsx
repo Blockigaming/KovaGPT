@@ -1,3 +1,6 @@
+import { MessageActivityList } from "./MessageActivityList";
+import type { Activity } from "@/lib/chat-store";
+import { appendMessageActivity } from "@/lib/message-activity-list.mjs";
 import { Textarea } from "@/components/ui/textarea";
 import { WorkQuestionCard } from "@/components/WorkQuestionCard";
 import { Button } from "@/components/ui/button";
@@ -41,6 +44,7 @@ export function WorkExecutionPanel({
   session?: { id: string; revision: number } | null;
 }) {
   const [cleared, setCleared] = useState(false);
+  const [activity, setActivity] = useState<{ runId: string; rows: Activity[] } | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [objective, setObjective] = useState(initialObjective);
@@ -154,6 +158,85 @@ export function WorkExecutionPanel({
     }
   }
   const run = snapshot?.runs.find((item) => item.id === selected);
+  const progressRunId = run?.id,
+    progressRunStatus = run?.status;
+  useEffect(() => {
+    if (!progressRunId || !progressRunStatus || cleared) return;
+    const controller = new AbortController();
+    const parent = lifetime.current?.signal;
+    const abort = () => controller.abort();
+    parent?.addEventListener("abort", abort, { once: true });
+    let cursor = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    setActivity({ runId: progressRunId, rows: [] });
+    const poll = async () => {
+      let more = false,
+        terminal = WORK_TERMINAL.includes(progressRunStatus);
+      try {
+        const page = (await requestWorkSync(
+          ownerId,
+          `/api/work/execution?activity=true&id=${encodeURIComponent(progressRunId)}&after=${cursor}`,
+          controller.signal,
+        )) as { cursor: number; activities: Activity[]; state: WorkRun; hasMore: boolean };
+        if (controller.signal.aborted) return;
+        if (page.state?.id !== progressRunId || page.state?.ownerId !== ownerId)
+          throw new Error("invalid_snapshot");
+        more = page.hasMore === true;
+        terminal = WORK_TERMINAL.includes(page.state.status);
+        setSnapshot((previous) =>
+          previous
+            ? {
+                ...previous,
+                runs: previous.runs.map((item) => (item.id === progressRunId ? page.state : item)),
+              }
+            : previous,
+        );
+        if (
+          Number.isSafeInteger(page.cursor) &&
+          page.cursor >= cursor &&
+          Array.isArray(page.activities)
+        ) {
+          cursor = page.cursor;
+          setActivity((previous) => {
+            const rows = page.activities
+              .reduce(appendMessageActivity, previous?.runId === progressRunId ? previous.rows : [])
+              .slice(-256);
+            return {
+              runId: progressRunId,
+              rows:
+                terminal && !more
+                  ? rows.map((row) =>
+                      row.status === "running"
+                        ? {
+                            ...row,
+                            status:
+                              page.state.status === "completed"
+                                ? ("done" as const)
+                                : page.state.status === "cancelled"
+                                  ? ("canceled" as const)
+                                  : ("failed" as const),
+                          }
+                        : row,
+                    )
+                  : rows,
+            };
+          });
+        }
+      } catch {
+        /* saved history remains; the execution status has its own error surface */
+      }
+      if (!controller.signal.aborted && (more || !terminal))
+        timer = setTimeout(() => void poll(), more ? 0 : 2000);
+    };
+    void poll();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+      parent?.removeEventListener("abort", abort);
+    };
+    // The cursor belongs to this run. A status transition restarts the projection
+    // so terminal rows are fetched once and polling stops.
+  }, [ownerId, progressRunId, progressRunStatus, cleared]);
   const modelOptions = snapshot?.readiness.modelOptions ?? [];
   const selectedModel = modelOptions.find((item) => item.mode === mode);
   const selectedSupported =
@@ -353,6 +436,8 @@ export function WorkExecutionPanel({
       )}
       {run && (
         <div className="mt-4 space-y-3 border-t pt-3">
+          <p className="text-sm">Follow the agent’s progress as each step runs.</p>
+          <MessageActivityList activities={activity?.runId === run.id ? activity.rows : []} />
           {!WORK_TERMINAL.includes(run.status) && (
             <Suspense fallback={null}>
               <WorkBrowserPanel key={`${ownerId}:${run.id}`} ownerId={ownerId} run={run} />

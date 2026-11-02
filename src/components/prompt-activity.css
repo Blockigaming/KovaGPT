@@ -98,3 +98,14 @@
     animation: none;
   }
 }
+
+.kova-progress-commentary {
+  color: var(--foreground);
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.kova-progress-commentary p {
+  margin: 0;
+}

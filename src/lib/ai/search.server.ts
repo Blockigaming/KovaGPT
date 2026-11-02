@@ -149,7 +149,13 @@ export function shouldRunWebSearch(text: string, userWantsWebSearch?: boolean): 
 
 export async function searchWeb(
   query: string,
-  opts: { wantsNews?: boolean; limit?: number; signal?: AbortSignal; requestId?: string } = {},
+  opts: {
+    wantsNews?: boolean;
+    limit?: number;
+    signal?: AbortSignal;
+    requestId?: string;
+    onActivity?: (delta: Record<string, unknown>) => void;
+  } = {},
 ): Promise<SearchResponse> {
   const apiKey = runtimeEnv("FIRECRAWL_API_KEY");
   const useOpenAi =
@@ -201,6 +207,7 @@ export async function searchWeb(
       const result = await openAiServices().search(safeQuery, {
         signal: controller.signal,
         limit: opts.limit,
+        onActivity: opts.onActivity,
       });
       const sources = dedupeSources(
         result.sources.map((source, index) => ({

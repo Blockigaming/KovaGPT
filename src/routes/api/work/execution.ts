@@ -6,6 +6,7 @@ import { consumeApplicationRateLimit } from "@/lib/distributed-rate-limit.server
 import { getAgentEntitlement } from "@/agents/execution.server";
 import { hasKovaWorkSelection, kovaWorkSubmissionBoundary } from "@/lib/kova-work-submission.mjs";
 import {
+  listWorkProgress,
   controlWorkExecution,
   getWorkExecution,
   listWorkExecutions,
@@ -48,6 +49,13 @@ export const Route = createFileRoute("/api/work/execution")({
           return json({ error: "work_rate_limited" }, rate.status === "limited" ? 429 : 503);
         try {
           const url = new URL(request.url);
+          if (url.searchParams.get("activity") === "true") {
+            const runId = url.searchParams.get("id");
+            if (!runId) return json({ error: "work_run_required" }, 400);
+            return json(
+              await listWorkProgress(auth, runId, Number(url.searchParams.get("after") ?? 0)),
+            );
+          }
           const readiness = await workExecutionReadiness(auth);
           if (url.searchParams.get("readiness") === "true") return json({ readiness });
           const id = url.searchParams.get("id");

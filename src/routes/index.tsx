@@ -2138,6 +2138,7 @@ function KovaGPT() {
             "Content-Type": "application/json",
             "Idempotency-Key": userMsg.id,
             "X-Kova-Assistant-Message-Id": assistantMsg.id,
+            "X-Kova-Progress": "1",
           },
           body: JSON.stringify({
             ...historyPayload,
@@ -2220,7 +2221,10 @@ function KovaGPT() {
               markPendingImage();
             }
 
-            if (delta?.kind === "activity" && delta?.label) {
+            if (
+              (delta?.kind === "activity" || delta?.kind === "progress") &&
+              typeof delta?.label === "string"
+            ) {
               const { messageActivitiesFromDelta } =
                 await import("@/lib/message-activity-list.mjs");
               if (!isCurrentRequest()) return;
@@ -2353,7 +2357,13 @@ function KovaGPT() {
           const failedResponseKey = JSON.stringify([requestPrincipal, nextConvId, assistantMsg.id]);
           if (canManualRetry) retryableFailedResponsesRef.current.add(failedResponseKey);
           else retryableFailedResponsesRef.current.delete(failedResponseKey);
-          updateAssistantMessage((message) => ({ ...message, generationStatus: "failed" }));
+          updateAssistantMessage((message) => ({
+            ...message,
+            generationStatus: "failed",
+            activities: message.activities?.map((activity) =>
+              activity.status === "running" ? { ...activity, status: "failed" as const } : activity,
+            ),
+          }));
 
           // A failed transport/stream may already have generated billable output.
           // Keep the partial response and require an explicit Retry action;

@@ -1,3 +1,5 @@
+import { createChatProgressResponse } from "@/lib/chat-progress.server.mjs";
+import { activityHostname, connectorActivity } from "@/lib/activity-display.mjs";
 import { MEMORY_TIERS } from "@/lib/memory-tier-policy.mjs";
 import { enforceDailyMessageQuota } from "@/lib/message-quota.server";
 import { reserveUploads } from "@/lib/upload-quota.server.mjs";
@@ -500,10 +502,50 @@ export const Route = createFileRoute("/api/chat")({
             return res;
           }
         };
+        let progress: { emit: (delta: Record<string, unknown>) => void } | undefined;
+        const say = (label: string, id: string) =>
+          progress?.emit({ kind: "progress", activity_id: id, label });
+        const report = (
+          activity_id: string,
+          tool: string,
+          label: string,
+          status: string,
+          hostname?: string,
+        ) =>
+          progress?.emit({
+            kind: "activity",
+            activity_id,
+            tool,
+            label,
+            status,
+            ...(hostname ? { hostname } : {}),
+          });
         const run = async (): Promise<Response> => {
           const preflight = createChatPreflightRunner({
             signal: request.signal,
             onMilestone: (event) => {
+              const phases: Record<string, [string, string]> = {
+                library_attachment: ["project_files", "Reading an attached Library file"],
+                memory_context: ["memory", "Checking saved memory"],
+                conversation_summary: ["memory", "Reading earlier conversation context"],
+                project_context: ["project_files", "Reading project instructions"],
+                project_retrieval: ["project_files", "Finding references in project files"],
+                chat_workspace: ["project_files", "Checking chat files and instructions"],
+              };
+              const phase = phases[event.stage];
+              if (phase && event.state === "started")
+                say("I’m checking the context provided for this request.", "context-intro");
+              if (phase)
+                report(
+                  `context-${event.stage}`,
+                  phase[0],
+                  `${phase[1]}${event.state === "started" ? "…" : ""}`,
+                  event.state === "started"
+                    ? "running"
+                    : event.state === "completed"
+                      ? "done"
+                      : "failed",
+                );
               console.info("[chat] preflight stage", {
                 requestId,
                 stage: event.stage,
@@ -1137,12 +1179,22 @@ export const Route = createFileRoute("/api/chat")({
               (m.id !== "instant" || explicitWebSearch)
             ) {
               if (explicitWebSearch || shouldRunWebSearch(lastText, personalContext?.webSearch)) {
+                const observedHosts = new Set<string>();
+                say("I’m searching the web for sources relevant to your request.", "web-start");
+                report("web-search", "search_web", "Searching the web…", "running");
                 const search = async (signal: AbortSignal) => {
                   await assertSelectedContextsCurrent(signal);
                   return searchWeb(lastText, {
                     wantsNews: NEWS_TRIGGER.test(lastText),
                     signal,
                     requestId,
+                    onActivity: progress
+                      ? (delta) => {
+                          const hostname = activityHostname(delta.hostname);
+                          if (hostname) observedHosts.add(hostname);
+                          progress?.emit(delta);
+                        }
+                      : undefined,
                   });
                 };
                 const result = explicitWebSearch
@@ -1154,6 +1206,29 @@ export const Route = createFileRoute("/api/chat")({
                       required: false,
                       timeoutMs: 8_000,
                     });
+                report(
+                  "web-search",
+                  "search_web",
+                  result?.status === "ok" ? "Web search completed" : "Web search unavailable",
+                  result?.status === "ok" ? "done" : "failed",
+                );
+                if (result?.status === "ok") {
+                  for (const [index, source] of result.kovaSources.entries()) {
+                    const hostname = activityHostname(source.url);
+                    if (hostname && !observedHosts.has(hostname))
+                      report(
+                        `web-source-${index}`,
+                        "read_source",
+                        `Found a source on ${hostname}`,
+                        "done",
+                        hostname,
+                      );
+                  }
+                  say(
+                    "I have the search results. I’ll use the relevant sources to build the answer.",
+                    "web-results",
+                  );
+                }
                 if (explicitWebSearch && result?.status !== "ok")
                   return Response.json(
                     {
@@ -1985,7 +2060,7 @@ export const Route = createFileRoute("/api/chat")({
                             enc.encode(sseEvent(responseSourcesDelta(webSources))),
                           );
                         }
-                        for (const a of activityEvents) {
+                        for (const a of progress ? [] : activityEvents) {
                           controller.enqueue(
                             enc.encode(
                               sseEvent({
@@ -2070,6 +2145,10 @@ export const Route = createFileRoute("/api/chat")({
                   content: msg.content ?? null,
                   tool_calls: msg.tool_calls,
                 });
+                say(
+                  "I’m checking the connected services needed for this step.",
+                  `connector-hop-${hop}`,
+                );
                 const results = await Promise.all(
                   msg.tool_calls.map(async (tc): Promise<ToolResultMsg> => {
                     if (!availableTools.some((tool) => tool.function.name === tc.function.name))
@@ -2095,7 +2174,17 @@ export const Route = createFileRoute("/api/chat")({
                     } catch {
                       /* keep empty */
                     }
-                    const activityLabel = TOOL_ACTIVITY[tc.function.name]?.done ?? tc.function.name;
+                    const display = connectorActivity(tc.function.name);
+                    const activityId = `connector-${hop}-${tc.id}`;
+                    const stagedWrite = WRITE_TOOL_NAMES.has(tc.function.name);
+                    report(
+                      activityId,
+                      tc.function.name,
+                      stagedWrite ? "Preparing an action for your review…" : display.label,
+                      "running",
+                      display.hostname,
+                    );
+                    const activityLabel = TOOL_ACTIVITY[tc.function.name]?.done ?? display.done;
                     activityEvents.push({
                       tool: tc.function.name,
                       label: activityLabel,
@@ -2105,6 +2194,13 @@ export const Route = createFileRoute("/api/chat")({
                     const key = dedupKey(tc.function.name, parsedArgs);
                     const cached = dedupCache.get(key);
                     if (cached) {
+                      report(
+                        activityId,
+                        tc.function.name,
+                        "Using this step’s existing result",
+                        "done",
+                        display.hostname,
+                      );
                       return {
                         role: "tool",
                         tool_call_id: tc.id,
@@ -2118,6 +2214,13 @@ export const Route = createFileRoute("/api/chat")({
                           tc.function.name,
                           parsedArgs,
                           googleBinding,
+                        );
+                        report(
+                          activityId,
+                          tc.function.name,
+                          "Action prepared · awaiting your confirmation",
+                          "done",
+                          display.hostname,
                         );
                         pendingConfirms.push({
                           id: staged.id,
@@ -2134,6 +2237,13 @@ export const Route = createFileRoute("/api/chat")({
                         dedupCache.set(key, content);
                         return { role: "tool", tool_call_id: tc.id, content };
                       } catch {
+                        report(
+                          activityId,
+                          tc.function.name,
+                          "Could not prepare the action",
+                          "failed",
+                          display.hostname,
+                        );
                         return {
                           role: "tool",
                           tool_call_id: tc.id,
@@ -2160,10 +2270,30 @@ export const Route = createFileRoute("/api/chat")({
                             parsedArgs,
                             googleBinding,
                           );
+                      const failed = !!(
+                        out &&
+                        typeof out === "object" &&
+                        "error" in out &&
+                        out.error
+                      );
+                      report(
+                        activityId,
+                        tc.function.name,
+                        failed ? "Connected service request failed" : display.done,
+                        failed ? "failed" : "done",
+                        display.hostname,
+                      );
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };
                     } catch {
+                      report(
+                        activityId,
+                        tc.function.name,
+                        "Connected service request failed",
+                        "failed",
+                        display.hostname,
+                      );
                       return {
                         role: "tool",
                         tool_call_id: tc.id,
@@ -2176,6 +2306,10 @@ export const Route = createFileRoute("/api/chat")({
                   }),
                 );
                 for (const r of results) appendToolMessage(r);
+                say(
+                  "The connected-service checks have returned. I’m reviewing their results.",
+                  `connector-results-${hop}`,
+                );
                 if (finish === "stop") break;
                 if (request.signal?.aborted) {
                   await settleDisconnectedConnector();
@@ -2245,6 +2379,18 @@ export const Route = createFileRoute("/api/chat")({
               providerCalls += 1;
               const hostedTool = selectedHostedTool;
               if (hostedTool) {
+                say(
+                  hostedTool === "data_analysis"
+                    ? "I’m analyzing the supplied data."
+                    : "I’m finding references in the supplied files.",
+                  "hosted-start",
+                );
+                report(
+                  "hosted-tool",
+                  hostedTool,
+                  hostedTool === "data_analysis" ? "Analyzing data…" : "Searching files…",
+                  "running",
+                );
                 const { hostedChatCompletion } = await import("@/lib/ai/hosted-chat.server");
                 upstream = await hostedChatCompletion(
                   finalBody,
@@ -2254,6 +2400,7 @@ export const Route = createFileRoute("/api/chat")({
                   request.signal,
                 );
                 await assertSelectedContextsCurrent(request.signal);
+                report("hosted-tool", hostedTool, "Analysis completed", "done");
                 activityEvents.push({
                   tool: hostedTool === "data_analysis" ? "data_analysis" : "project_files",
                   label:
@@ -2342,7 +2489,7 @@ export const Route = createFileRoute("/api/chat")({
                 const enc = new TextEncoder();
                 const stream = new ReadableStream({
                   start(controller) {
-                    for (const a of activityEvents) {
+                    for (const a of progress ? [] : activityEvents) {
                       controller.enqueue(
                         enc.encode(
                           sseEvent({
@@ -2555,7 +2702,7 @@ export const Route = createFileRoute("/api/chat")({
                 if (webSources.length) {
                   controller.enqueue(enc.encode(sseEvent(responseSourcesDelta(webSources))));
                 }
-                for (const a of activityEvents) {
+                for (const a of progress ? [] : activityEvents) {
                   controller.enqueue(
                     enc.encode(
                       sseEvent({
@@ -2726,6 +2873,22 @@ export const Route = createFileRoute("/api/chat")({
             preflight.close();
           }
         };
+        if (
+          request.headers.get("x-kova-progress") === "1" &&
+          !request.headers.has("x-kova-request-capture") &&
+          (!runtimeEnv("KOVA_REQUEST_CAPTURE_ENABLED") ||
+            runtimeEnv("KOVA_REQUEST_CAPTURE_ENABLED") === "false")
+        ) {
+          const originalSignal = request.signal;
+          return createChatProgressResponse(
+            async (channel) => {
+              progress = channel;
+              request = new Request(request, { signal: channel.signal });
+              return withRequestId(await run());
+            },
+            { signal: originalSignal, requestId },
+          );
+        }
         return await withRequestId(await run());
       },
     },

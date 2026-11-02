@@ -988,7 +988,7 @@ function ChatMessageInner({
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                   <span>Generating image…</span>
                 </div>
-              ) : waitingForFirstToken ? (
+              ) : waitingForFirstToken && !message.activities?.length ? (
                 <StreamingStatus
                   activities={message.activities}
                   startedAt={resolvedStreamingStartedAt}

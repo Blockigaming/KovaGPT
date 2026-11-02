@@ -308,6 +308,7 @@ function fixture(options = {}) {
       getConnectedToolContext: async () =>
         options.noTools ? null : { tools: options.linear ? allConnectedTools : [tool] },
       runConnectedTool: async (...args) => {
+        if (options.toolGate) await options.toolGate;
         reads.push(args);
         if (options.abortAfterRead) abort.abort();
         return (
@@ -400,6 +401,8 @@ function fixture(options = {}) {
     crypto,
     setTimeout,
     clearTimeout,
+    setInterval,
+    clearInterval,
     process: { env, platform: process.platform, cwd: process.cwd.bind(process) },
     console: Object.fromEntries(
       ["info", "warn", "error", "log"].map((key) => [key, (...args) => logs.push(args)]),
@@ -417,13 +420,14 @@ function fixture(options = {}) {
     messageReservations,
     reads,
     logs,
-    async post() {
+    async start() {
       const response = await context.module.exports.Route.server.handlers.POST({
         request: new Request("https://kova.test/api/chat", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "idempotency-key": "offline-generation-001",
+            ...(options.progress ? { "x-kova-progress": "1" } : {}),
           },
           body: JSON.stringify({
             mode: options.mode ?? "instant",
@@ -435,6 +439,10 @@ function fixture(options = {}) {
           signal: abort.signal,
         }),
       });
+      return response;
+    },
+    async post() {
+      const response = await this.start();
       const text = await response.text();
       return { response, text };
     },
@@ -722,4 +730,31 @@ test("an already consumed generation identifier never causes a second provider r
   assert.equal(error.retryable, false);
   assert.equal(f.providers.length, 0);
   assert.equal(f.reads.length, 0);
+});
+
+test("real route streams connected-tool work before a deferred GitHub request returns", async () => {
+  let finish;
+  const toolGate = new Promise((resolve) => {
+    finish = resolve;
+  });
+  const f = fixture({ progress: true, toolGate });
+  const response = await f.start();
+  const reader = response.body.getReader();
+  let received = "";
+  for (let i = 0; i < 30 && !received.includes('"status":"running"'); i++) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    received += new TextDecoder().decode(chunk.value);
+  }
+  assert.match(received, /Searching|Reading/);
+  assert.match(received, /github.com/);
+  assert.doesNotMatch(received, /Read the repository fixture/);
+  finish();
+  for (;;) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    received += new TextDecoder().decode(chunk.value);
+  }
+  assert.match(received, /Checked GitHub/);
+  assert.match(received, /Read the repository fixture/);
 });

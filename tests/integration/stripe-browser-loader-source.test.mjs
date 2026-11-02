@@ -25,11 +25,12 @@ test("Stripe.js uses the pure entry and initializes only for an opened checkout"
     /if \(!stripePromise\)[\s\S]*stripePromise = loadStripe\(clientToken\)/,
   );
 
-  assert.match(checkout, /<EmbeddedCheckoutProvider stripe=\{getStripe\(\)\}/);
-  assert.match(
-    hook,
-    /const checkoutElement = isOpen && options \? <StripeEmbeddedCheckout \{\.\.\.options\} \/> : null;/,
-  );
+  assert.match(checkout, /<EmbeddedCheckoutProvider stripe=\{stripe\}/);
+  assert.match(checkout, /useEffect\(\(\) =>/);
+  assert.match(checkout, /then\(\(\) => getStripe\(\)\)/);
+  assert.match(hook, /isOpen && options/);
+  assert.match(hook, /<StripeEmbeddedCheckout/);
+  assert.match(hook, /key=\{`\$\{options.userId/);
 
   for (const e2e of [responsive, migration]) {
     assert.doesNotMatch(e2e, /STRIPE_PAYMENT_PERMISSION_WARNING|permissions policy violation/);

@@ -16,6 +16,7 @@ const menus = Object.fromEntries(
   ]),
 );
 const { MessageActivityList } = loadUiModule("src/components/MessageActivityList.tsx", {
+  "./ActivityIcon": { ActivityIcon: icon("ActivityIcon") },
   "lucide-react": icons,
 });
 const { PromptMessage } = loadUiModule("src/components/PromptMessage.tsx", {

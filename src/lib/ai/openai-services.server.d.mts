@@ -44,7 +44,10 @@ export function createOpenAiServices(input: {
 }): {
   search(
     query: string,
-    options?: ServiceOptions & { limit?: number },
+    options?: ServiceOptions & {
+      limit?: number;
+      onActivity?: (delta: Record<string, unknown>) => void;
+    },
   ): Promise<{
     sources: { url: string; title: string }[];
     summary: string;

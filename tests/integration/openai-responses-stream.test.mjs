@@ -232,3 +232,59 @@ test("bare or malformed completed events cannot manufacture stream success", asy
     );
   }
 });
+
+test("native search/open-page statuses reach the chat delta envelope with separate website rows", async () => {
+  const mock = await mockResponses([
+    { type: "response.web_search_call.in_progress", item_id: "search-a" },
+    {
+      type: "response.output_item.done",
+      item: {
+        id: "search-a",
+        type: "web_search_call",
+        status: "completed",
+        action: {
+          type: "search",
+          sources: [
+            { url: "https://github.com/repo?secret=hidden" },
+            { url: "https://google.com/source" },
+          ],
+        },
+      },
+    },
+    {
+      type: "response.output_item.added",
+      item: {
+        id: "open-a",
+        type: "web_search_call",
+        status: "in_progress",
+        action: { type: "open_page", url: "https://github.com/repo" },
+      },
+    },
+    {
+      type: "response.output_item.done",
+      item: {
+        id: "open-a",
+        type: "web_search_call",
+        status: "completed",
+        action: { type: "open_page", url: "https://github.com/repo" },
+      },
+    },
+    { type: "response.output_text.delta", delta: "Answer" },
+    { type: "response.completed", response: { status: "completed", usage: {} } },
+  ]);
+  const raw = await mock.response.text();
+  mock.close();
+  const deltas = raw
+    .split("\n")
+    .filter((line) => line.startsWith("data: {"))
+    .map((line) => JSON.parse(line.slice(6)).choices?.[0]?.delta)
+    .filter(Boolean);
+  assert.equal(deltas[0].status, "running");
+  assert.equal(deltas.filter((delta) => delta.hostname === "github.com").length, 3);
+  assert.equal(
+    deltas.find((delta) => delta.activity_id === "provider-open-a" && delta.status === "done")
+      .label,
+    "Opened github.com",
+  );
+  assert.doesNotMatch(raw, /secret|hidden/);
+});

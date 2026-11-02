@@ -4,6 +4,7 @@ import vm from "node:vm";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import * as protocol from "../../src/lib/work-execution-protocol.mjs";
+import * as activityDisplay from "../../src/lib/activity-display.mjs";
 import * as policy from "../../src/lib/work-model-policy.mjs";
 const owner = crypto.randomUUID();
 const roles = { DEFAULT_CHAT: "luna", ADVANCED_REASONING: "terra", PREMIUM_REASONING: "sol" };
@@ -36,6 +37,7 @@ function load(file, modules) {
     {
       exports,
       require: (name) => {
+        if (name === "@/lib/activity-display.mjs") return activityDisplay;
         if (!(name in modules)) throw Error(name);
         return modules[name];
       },
