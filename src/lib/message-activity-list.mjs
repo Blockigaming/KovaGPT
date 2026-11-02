@@ -6,17 +6,15 @@ export function appendMessageActivity(current, next) {
   } else {
     // Legacy streams omit IDs. Match a live operation by label first; a terminal
     // label may differ only when there is one unambiguous live operation.
-    const running = current
-      .map((item, index) => ({ item, index }))
-      .filter(
-        ({ item }) => !item.activityId && item.tool === next.tool && item.status === "running",
-      );
-    match =
-      running
-        .slice()
-        .reverse()
-        .find(({ item }) => item.label === next.label)?.index ?? -1;
-    if (match < 0 && next.status !== "running" && running.length === 1) match = running[0].index;
+    let count = 0;
+    let only = -1;
+    current.forEach((item, index) => {
+      if (item.activityId || item.tool !== next.tool || item.status !== "running") return;
+      count++;
+      only = index;
+      if (item.label === next.label) match = index;
+    });
+    if (match < 0 && next.status !== "running" && count === 1) match = only;
   }
   if (match < 0) return [...current, next];
   return current.map((item, index) => (index === match ? { ...item, ...next } : item));
