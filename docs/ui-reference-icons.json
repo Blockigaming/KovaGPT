@@ -1332,13 +1332,12 @@
       "sourceGitBlobSha": "5c48392bf9def85f48b67b965a5e1b9c049640c3",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Pulse.tsx",
       "reason": "Literal SDK Pulse glyph for the existing Activity action; preserves labels and behavior.",
-      "uses": 5,
+      "uses": 4,
       "files": [
         "src/components/DeveloperConsole.tsx",
         "src/components/TitanWorkspaceSystems.tsx",
         "src/routes/omega.tsx",
-        "src/routes/projects.$projectId.tsx",
-        "src/routes/work.tsx"
+        "src/routes/projects.$projectId.tsx"
       ]
     },
     {
@@ -1370,14 +1369,13 @@
       "sourceGitBlobSha": "afb717e6d94a2203af01c48ebce16334c4f1adcd",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/TriangleExclamationErrorWarning.tsx",
       "reason": "Literal SDK TriangleExclamationErrorWarning glyph for the existing AlertTriangle action; preserves labels and behavior.",
-      "uses": 6,
+      "uses": 5,
       "files": [
         "src/components/ArtifactEditor.tsx",
         "src/components/ConfirmActionDialog.tsx",
         "src/components/OperationalState.tsx",
         "src/components/auth/AuthDialog.tsx",
-        "src/routes/brain.tsx",
-        "src/routes/work.tsx"
+        "src/routes/brain.tsx"
       ]
     },
     {
@@ -1406,9 +1404,8 @@
       "sourceGitBlobSha": "ad6df2cce292af9765d5bf8ef5222a1dc5903948",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/RestoreUntrash.tsx",
       "reason": "Literal SDK RestoreUntrash glyph for the existing ArchiveRestore action; preserves labels and behavior.",
-      "uses": 4,
+      "uses": 3,
       "files": [
-        "src/components/ArchivedChatsDialog.tsx",
         "src/routes/omega.tsx",
         "src/routes/projects.$projectId.tsx",
         "src/routes/projects.tsx"
@@ -1437,15 +1434,15 @@
       "files": [
         "src/components/AutomationBuilder.tsx",
         "src/components/ConversationHeaderActions.tsx",
+        "src/components/ImageEditControls.tsx",
         "src/components/OnboardingDialog.tsx",
         "src/components/SettingsDialog.tsx",
+        "src/components/Sidebar.tsx",
         "src/components/auth/AuthDialog.tsx",
-        "src/components/ui/carousel.tsx",
         "src/routes/auth.tsx",
         "src/routes/help.tsx",
         "src/routes/projects.$projectId.chat.$chatId.tsx",
-        "src/routes/projects.$projectId.tsx",
-        "src/routes/scheduled-tasks.tsx"
+        "src/routes/projects.$projectId.tsx"
       ]
     },
     {
@@ -1467,15 +1464,16 @@
       "sourceGitBlobSha": "4ae471daec7cbdb680a5c348954749fd993efb1a",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/ArrowRight.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 9,
+      "uses": 10,
       "files": [
+        "src/components/AccountWelcome.tsx",
         "src/components/AutomationBuilder.tsx",
         "src/components/public/PublicSite.tsx",
-        "src/components/ui/carousel.tsx",
         "src/routes/$slug.tsx",
         "src/routes/academy.tsx",
         "src/routes/brain.tsx",
         "src/routes/connect.tsx",
+        "src/routes/share.$token.tsx",
         "src/routes/summary.tsx",
         "src/routes/writing.index.tsx"
       ]
@@ -1488,9 +1486,10 @@
       "sourceGitBlobSha": "a36a99e762efc5faf2c76879c4b262e345b095e7",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/ArrowUp.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 6,
+      "uses": 7,
       "files": [
         "src/components/ChatInput.tsx",
+        "src/components/ComposerVoiceDialog.tsx",
         "src/components/KovaMaps.tsx",
         "src/components/public/ProductOverview.tsx",
         "src/components/writing/WritingToolWorkspace.tsx",
@@ -1567,9 +1566,10 @@
       "sourceGitBlobSha": "863f17bfc1d621c009565c1de9ca8a33d8931404",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Bell.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 3,
+      "uses": 4,
       "files": [
         "src/components/SettingsDialog.tsx",
+        "src/components/Sidebar.tsx",
         "src/components/TimersWidget.tsx",
         "src/routes/notifications.tsx"
       ]
@@ -1597,9 +1597,8 @@
       "sourceGitBlobSha": "de92f8a4851c947d3468d9a2e8ac1a9a5881008b",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/SavedXs.tsx",
       "reason": "Literal SDK SavedXs glyph for the existing Bookmark action; preserves labels and behavior.",
-      "uses": 5,
+      "uses": 4,
       "files": [
-        "src/components/ArtifactEditor.tsx",
         "src/components/ChatMessage.tsx",
         "src/components/ResponseImage.tsx",
         "src/routes/images.tsx",
@@ -1614,12 +1613,8 @@
       "sourceGitBlobSha": "40b50a16b60f2300be1c2bfbeec0c67189213f18",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Robot.tsx",
       "reason": "Literal SDK Robot glyph for the existing Bot action; preserves labels and behavior.",
-      "uses": 3,
-      "files": [
-        "src/components/AgentTeamWorkspace.tsx",
-        "src/components/AgentWorkspace.tsx",
-        "src/routes/omega.tsx"
-      ]
+      "uses": 2,
+      "files": ["src/components/AgentWorkspace.tsx", "src/routes/omega.tsx"]
     },
     {
       "symbol": "Boxes",
@@ -1645,11 +1640,13 @@
       "sourceGitBlobSha": "f956af789495fdff78d0df54f4ceb76786ae9283",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Brain.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 7,
+      "uses": 9,
       "files": [
         "src/components/ChatInput.tsx",
         "src/components/ChatMessage.tsx",
+        "src/components/ResponsiveModelSelector.tsx",
         "src/components/SettingsDialog.tsx",
+        "src/components/Sidebar.tsx",
         "src/components/WorkspaceIntelligence.tsx",
         "src/routes/brain.tsx",
         "src/routes/memory.tsx",
@@ -1740,8 +1737,8 @@
       "sourceGitBlobSha": "f7506ba4f0edd08915380a3d26252d2ad36e34e8",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Calendar.tsx",
       "reason": "Literal SDK Calendar glyph for the existing CalendarDays action; preserves labels and behavior.",
-      "uses": 1,
-      "files": ["src/routes/brain.tsx"]
+      "uses": 2,
+      "files": ["src/components/MessageActivityList.tsx", "src/routes/brain.tsx"]
     },
     {
       "symbol": "Camera",
@@ -1762,21 +1759,20 @@
       "sourceGitBlobSha": "fb2189f81fbec6da6d36763cbf816cda166dec15",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Check.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 27,
+      "uses": 25,
       "files": [
         "src/components/AgentTeamWorkspace.tsx",
-        "src/components/AppearanceSettings.tsx",
-        "src/components/ArtifactEditor.tsx",
         "src/components/AutomationBuilder.tsx",
         "src/components/ChatBranchBar.tsx",
         "src/components/ChatMessage.tsx",
-        "src/components/EditableResponseBlock.tsx",
         "src/components/InfoChip.tsx",
         "src/components/OnboardingDialog.tsx",
+        "src/components/PromptMessage.tsx",
         "src/components/ResponseImage.tsx",
         "src/components/ResponseMarkdown.tsx",
         "src/components/ResponsiveModelSelector.tsx",
         "src/components/SettingsDialog.tsx",
+        "src/components/ShareChatDialog.tsx",
         "src/components/TaskCreatedBubble.tsx",
         "src/components/TemporaryChatStartDialog.tsx",
         "src/components/ToolConfirmCard.tsx",
@@ -1789,7 +1785,6 @@
         "src/routes/pricing.tsx",
         "src/routes/projects.tsx",
         "src/routes/scheduled-tasks.tsx",
-        "src/routes/work.tsx",
         "src/routes/write.tsx"
       ]
     },
@@ -1842,18 +1837,17 @@
       "sourceGitBlobSha": "11d760b4f97e396274baa30335b29993bb8ceb98",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/ChevronDown.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 10,
+      "uses": 9,
       "files": [
+        "src/components/ChatProjectSubmenu.tsx",
         "src/components/ComposerModelStatus.tsx",
-        "src/components/EditableResponseBlock.tsx",
         "src/components/ResponsiveModelSelector.tsx",
         "src/components/Sidebar.tsx",
         "src/components/WorkBrowserPanel.tsx",
-        "src/components/ui/accordion.tsx",
         "src/routes/help.tsx",
+        "src/routes/library.tsx",
         "src/routes/projects.$projectId.tsx",
-        "src/routes/projects.tsx",
-        "src/routes/work.tsx"
+        "src/routes/projects.tsx"
       ]
     },
     {
@@ -1864,8 +1858,12 @@
       "sourceGitBlobSha": "8af6616e21a7f19acc763f49fc9f05a2c573f489",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/ChevronLeft.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 2,
-      "files": ["src/components/WorkspaceResultContent.tsx", "src/routes/images.tsx"]
+      "uses": 3,
+      "files": [
+        "src/components/ChatProjectSubmenu.tsx",
+        "src/components/WorkspaceResultContent.tsx",
+        "src/routes/images.tsx"
+      ]
     },
     {
       "symbol": "ChevronRight",
@@ -1875,11 +1873,10 @@
       "sourceGitBlobSha": "436f1142ccf7f08397c3a923fa70ab95c87aed39",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/ChevronRight.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 6,
+      "uses": 5,
       "files": [
         "src/components/ConversationSourcesView.tsx",
         "src/components/WorkspaceResultContent.tsx",
-        "src/components/ui/breadcrumb.tsx",
         "src/routes/images.tsx",
         "src/routes/projects.$projectId.tsx",
         "src/routes/projects.tsx"
@@ -1893,8 +1890,8 @@
       "sourceGitBlobSha": "914d65115a432ec1eb26f26217610f37872580d2",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/ChevronUp.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 1,
-      "files": ["src/components/EditableResponseBlock.tsx"]
+      "uses": 0,
+      "files": []
     },
     {
       "symbol": "Circle",
@@ -1904,12 +1901,11 @@
       "sourceGitBlobSha": "4e5c70eb61dda4a56c1e1a18b8fbe24b4556f0a1",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/EmptyCircle.tsx",
       "reason": "Remaining Lucide Circle is an unselected completion/status ring. Use literal24px EmptyCircle. The existing reference-icons Circle6px dot stays unchanged in radio primitives.",
-      "uses": 4,
+      "uses": 3,
       "files": [
         "src/components/AgentTeamWorkspace.tsx",
         "src/components/public/ReviewFamilySurface.tsx",
-        "src/routes/goals.tsx",
-        "src/routes/work.tsx"
+        "src/routes/goals.tsx"
       ]
     },
     {
@@ -1984,8 +1980,8 @@
       "sourceGitBlobSha": "ebfb474950fdce1b9bb5833764fe8a33e2b6daa0",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/GlobeOffRealTimeSearch.tsx",
       "reason": "Literal SDK GlobeOffRealTimeSearch glyph for the existing CloudOff action; preserves labels and behavior.",
-      "uses": 2,
-      "files": ["src/components/CollaborationStatus.tsx", "src/components/RealtimeReadiness.tsx"]
+      "uses": 1,
+      "files": ["src/components/CollaborationStatus.tsx"]
     },
     {
       "symbol": "CloudSun",
@@ -1995,8 +1991,8 @@
       "sourceGitBlobSha": "730f21239d8feea8fd0c3450a306d66a9541da89",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Sun.tsx",
       "reason": "Literal SDK Sun glyph for the existing CloudSun action; preserves labels and behavior.",
-      "uses": 1,
-      "files": ["src/routes/summary.tsx"]
+      "uses": 2,
+      "files": ["src/components/ConversationSourcesView.tsx", "src/routes/summary.tsx"]
     },
     {
       "symbol": "Code2",
@@ -2017,8 +2013,8 @@
       "sourceGitBlobSha": "47d964c18bb6d01a26fbd0cf8937f6d2cb811427",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Compare.tsx",
       "reason": "Root-reviewed literal SDK Compare glyph for split/compare controls; source contextual pixel parity is not claimed.",
-      "uses": 2,
-      "files": ["src/components/ArtifactEditor.tsx", "src/components/HomeChatStarters.tsx"]
+      "uses": 0,
+      "files": []
     },
     {
       "symbol": "Compass",
@@ -2028,8 +2024,8 @@
       "sourceGitBlobSha": "b63ccadfade9e845b03bedd0f42fa41ce618e8e6",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Compass.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 1,
-      "files": ["src/components/Sidebar.tsx"]
+      "uses": 0,
+      "files": []
     },
     {
       "symbol": "Copy",
@@ -2039,16 +2035,17 @@
       "sourceGitBlobSha": "741d9c10ae7e59814b326f7189cbef0342629067",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Copy.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 15,
+      "uses": 16,
       "files": [
-        "src/components/ArtifactEditor.tsx",
         "src/components/ChatChart.tsx",
+        "src/components/ChatImage.tsx",
         "src/components/ChatMessage.tsx",
-        "src/components/EditableResponseBlock.tsx",
         "src/components/FamilySharingPanel.tsx",
         "src/components/InfoChip.tsx",
         "src/components/ProjectTemplatesDialog.tsx",
+        "src/components/PromptMessage.tsx",
         "src/components/ResponseMarkdown.tsx",
+        "src/components/ShareChatDialog.tsx",
         "src/components/Sidebar.tsx",
         "src/components/translation/TranslationWorkspace.tsx",
         "src/components/writing/WritingToolWorkspace.tsx",
@@ -2099,8 +2096,8 @@
       "sourceGitBlobSha": "a4b9ff66a34ea76d271a05db3058dec0e4861172",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Storage.tsx",
       "reason": "Literal SDK Storage glyph for the existing Database action; preserves labels and behavior.",
-      "uses": 1,
-      "files": ["src/components/SettingsDialog.tsx"]
+      "uses": 2,
+      "files": ["src/components/ConversationSourcesView.tsx", "src/components/SettingsDialog.tsx"]
     },
     {
       "symbol": "Dna",
@@ -2125,6 +2122,7 @@
       "files": [
         "src/components/ArtifactEditor.tsx",
         "src/components/ChatChart.tsx",
+        "src/components/ChatImage.tsx",
         "src/components/ConversationHeaderActions.tsx",
         "src/components/LibrarySelectedDownloadsDialog.tsx",
         "src/components/OrganizationAdminPage.tsx",
@@ -2136,7 +2134,6 @@
         "src/routes/library.tsx",
         "src/routes/omega.tsx",
         "src/routes/projects.$projectId.tsx",
-        "src/routes/work.tsx",
         "src/routes/write.tsx"
       ]
     },
@@ -2173,7 +2170,7 @@
       "uses": 4,
       "files": [
         "src/components/BillingWorkspace.tsx",
-        "src/components/ResponseMarkdown.tsx",
+        "src/components/ChatImage.tsx",
         "src/components/SettingsDialog.tsx",
         "src/components/SitesPage.tsx"
       ]
@@ -2201,8 +2198,8 @@
       "sourceGitBlobSha": "355e59cd46f81f503a9231e774504b9e0b976bb3",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/EyeOff.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 1,
-      "files": ["src/routes/auth.tsx"]
+      "uses": 2,
+      "files": ["src/components/ChatImage.tsx", "src/routes/auth.tsx"]
     },
     {
       "symbol": "File",
@@ -2249,8 +2246,8 @@
       "sourceGitBlobSha": "b2df32cc93e32b3cf557e7674c00c2d0d8772394",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/SearchConnector.tsx",
       "reason": "Source-search action uses literal SearchConnector; source filename is exact but product-level contextual pixel parity is unverified.",
-      "uses": 1,
-      "files": ["src/components/CommandPalette.tsx"]
+      "uses": 0,
+      "files": []
     },
     {
       "symbol": "FileStack",
@@ -2271,20 +2268,18 @@
       "sourceGitBlobSha": "9a3ccdfedef885e77058262d66c0e9befa65469b",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/FileDocument.tsx",
       "reason": "Literal SDK FileDocument glyph for the existing FileText action; preserves labels and behavior.",
-      "uses": 12,
+      "uses": 10,
       "files": [
-        "src/components/AppearanceSettings.tsx",
         "src/components/BillingWorkspace.tsx",
         "src/components/ChatInput.tsx",
         "src/components/ChatMessage.tsx",
         "src/components/ConversationHeaderActions.tsx",
         "src/components/HistoricalLibraryAttachment.tsx",
-        "src/components/HomeChatStarters.tsx",
+        "src/components/MessageActivityList.tsx",
         "src/components/WorkspaceIntelligence.tsx",
         "src/components/public/ProductOverview.tsx",
         "src/routes/library.tsx",
-        "src/routes/projects.$projectId.tsx",
-        "src/routes/work.tsx"
+        "src/routes/projects.$projectId.tsx"
       ]
     },
     {
@@ -2339,8 +2334,8 @@
       "uses": 4,
       "files": [
         "src/components/ChatInput.tsx",
+        "src/components/ChatProjectSubmenu.tsx",
         "src/components/LibraryFolderOrganizer.tsx",
-        "src/components/Sidebar.tsx",
         "src/routes/projects.tsx"
       ]
     },
@@ -2378,11 +2373,10 @@
       "sourceGitBlobSha": "b7a2401dca37ddab4932ef72923d3f09b617a02a",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/FolderOpen.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 6,
+      "uses": 5,
       "files": [
         "src/components/CommandPalette.tsx",
         "src/components/LibraryFolderOrganizer.tsx",
-        "src/components/SettingsDialog.tsx",
         "src/components/writing/WritingToolWorkspace.tsx",
         "src/routes/library.tsx",
         "src/routes/summary.tsx"
@@ -2396,8 +2390,11 @@
       "sourceGitBlobSha": "f3cb0961ed6b2b100bbd12820001075119b18e9d",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/FolderPlus.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 1,
-      "files": ["src/components/LibraryFolderOrganizer.tsx"]
+      "uses": 2,
+      "files": [
+        "src/components/ChatProjectSubmenu.tsx",
+        "src/components/LibraryFolderOrganizer.tsx"
+      ]
     },
     {
       "symbol": "GitBranch",
@@ -2407,10 +2404,11 @@
       "sourceGitBlobSha": "0550babedd1fa56b4a66bf641a7b8b845cfdc943",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Branch.tsx",
       "reason": "Literal SDK Branch glyph for the existing GitBranch action; preserves labels and behavior.",
-      "uses": 3,
+      "uses": 4,
       "files": [
         "src/components/ChatBranchBar.tsx",
         "src/components/ChatMessage.tsx",
+        "src/components/ConversationSourcesView.tsx",
         "src/routes/omega.tsx"
       ]
     },
@@ -2438,8 +2436,8 @@
         "src/components/ChatInput.tsx",
         "src/components/ChatMessage.tsx",
         "src/components/ConversationSourcesView.tsx",
-        "src/components/SitesPage.tsx",
-        "src/routes/work.tsx"
+        "src/components/MessageActivityList.tsx",
+        "src/components/SitesPage.tsx"
       ]
     },
     {
@@ -2483,8 +2481,8 @@
       "sourceGitBlobSha": "81ec024c3dae29eb9a5f37cd142fa182ed634031",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/DotsVertical.tsx",
       "reason": "No exact SDK grip glyph. Literal DotsVertical is a semantic drag/resize-handle adaptation; do not call it a pixel copy of a verified ChatGPT drag handle.",
-      "uses": 2,
-      "files": ["src/components/ui/resizable.tsx", "src/routes/projects.$projectId.tsx"]
+      "uses": 1,
+      "files": ["src/routes/projects.$projectId.tsx"]
     },
     {
       "symbol": "HardDrive",
@@ -2568,8 +2566,8 @@
       "sourceGitBlobSha": "aba0347ab7c0db230aba584aa7973c4b137e7a77",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/ImageSquare.tsx",
       "reason": "Unavailable-image state retains its explicit status text; source image glyph does not independently claim availability.",
-      "uses": 1,
-      "files": ["src/components/MessageImage.tsx"]
+      "uses": 0,
+      "files": []
     },
     {
       "symbol": "ImagePlus",
@@ -2579,8 +2577,12 @@
       "sourceGitBlobSha": "aba0347ab7c0db230aba584aa7973c4b137e7a77",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/ImageSquare.tsx",
       "reason": "Image creation action uses literal ImageSquare, with the action label carrying Create/Add.",
-      "uses": 1,
-      "files": ["src/components/ChatInput.tsx"]
+      "uses": 3,
+      "files": [
+        "src/components/ChatImage.tsx",
+        "src/components/ChatInput.tsx",
+        "src/components/ImageEditControls.tsx"
+      ]
     },
     {
       "symbol": "Info",
@@ -2590,8 +2592,12 @@
       "sourceGitBlobSha": "3f0eccf0ad47a4e6a319d5ee21ebfd6698613306",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Info.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 2,
-      "files": ["src/components/ComposerVoiceDialogView.tsx", "src/components/SettingsDialog.tsx"]
+      "uses": 3,
+      "files": [
+        "src/components/ComposerVoiceDialogView.tsx",
+        "src/components/SettingsDialog.tsx",
+        "src/routes/library.tsx"
+      ]
     },
     {
       "symbol": "KeyRound",
@@ -2601,13 +2607,12 @@
       "sourceGitBlobSha": "2db4e0b0149d54edfc5ce63cb78c81cb344163ee",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Key.tsx",
       "reason": "Literal SDK Key glyph for the existing KeyRound action; preserves labels and behavior.",
-      "uses": 6,
+      "uses": 5,
       "files": [
         "src/components/KovaPasskeyPanel.tsx",
         "src/components/KovaPasswordPanel.tsx",
         "src/components/MfaPanel.tsx",
         "src/components/PasskeyPanel.tsx",
-        "src/components/auth/AuthDialog.tsx",
         "src/components/auth/MfaChallengeDialog.tsx"
       ]
     },
@@ -2652,8 +2657,8 @@
       "sourceGitBlobSha": "e9a9412f92aa2bad6705a2629f4b7470fd214c45",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/BookOpen.tsx",
       "reason": "Literal SDK BookOpen glyph for the existing LibraryBig action; preserves labels and behavior.",
-      "uses": 1,
-      "files": ["src/components/ChatInput.tsx"]
+      "uses": 2,
+      "files": ["src/components/ChatInput.tsx", "src/components/ConversationSourcesView.tsx"]
     },
     {
       "symbol": "LifeBuoy",
@@ -2696,8 +2701,12 @@
       "sourceGitBlobSha": "3d094eb8fbb13a8e8579d6c10792b6453704e424",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Link.tsx",
       "reason": "Literal SDK Link glyph for the existing Link2 action; preserves labels and behavior.",
-      "uses": 2,
-      "files": ["src/components/SettingsDialog.tsx", "src/routes/summary.tsx"]
+      "uses": 3,
+      "files": [
+        "src/components/SettingsDialog.tsx",
+        "src/components/ShareChatDialog.tsx",
+        "src/routes/summary.tsx"
+      ]
     },
     {
       "symbol": "List",
@@ -2749,15 +2758,15 @@
       "source": "src/components/Indicator/LoadingIndicator.module.css",
       "sourceGitBlobSha": "b3dd935df972209c4de5c8bfe10198a92d596d4b",
       "reason": "Use the exact SDK LoadingIndicator CSS ring (0.8s conic fade). SDK Spin is the OpenAI logo and MUST NOT be used. SVG API wrapper proposal needs root review.",
-      "uses": 43,
+      "uses": 44,
       "files": [
         "src/components/AgentTeamWorkspace.tsx",
         "src/components/ChatBranchBar.tsx",
         "src/components/ChatInput.tsx",
         "src/components/ChatMessage.tsx",
         "src/components/ChatWorkspaceDialog.tsx",
+        "src/components/ComposerDictationView.tsx",
         "src/components/ComposerVoiceDialogView.tsx",
-        "src/components/EditableResponseBlock.tsx",
         "src/components/FamilySharingPanel.tsx",
         "src/components/HelpSupportForm.tsx",
         "src/components/HistoricalLibraryAttachment.tsx",
@@ -2766,7 +2775,7 @@
         "src/components/LibraryFolderOrganizer.tsx",
         "src/components/LibraryRenameDialog.tsx",
         "src/components/LibrarySelectedDownloadsDialog.tsx",
-        "src/components/MessageImage.tsx",
+        "src/components/MessageActivityList.tsx",
         "src/components/MessageVersionHistoryDialog.tsx",
         "src/components/MfaPanel.tsx",
         "src/components/PasskeyPanel.tsx",
@@ -2774,6 +2783,7 @@
         "src/components/ResponseSpeechButton.tsx",
         "src/components/ReviewedMemoryDialog.tsx",
         "src/components/SelectionEditDialog.tsx",
+        "src/components/ShareChatDialog.tsx",
         "src/components/StripeEmbeddedCheckout.tsx",
         "src/components/ToolConfirmCard.tsx",
         "src/components/auth/AuthDialog.tsx",
@@ -2791,8 +2801,8 @@
         "src/routes/projects.$projectId.tsx",
         "src/routes/projects.tsx",
         "src/routes/reset-password.tsx",
+        "src/routes/share.$token.tsx",
         "src/routes/unsubscribe.tsx",
-        "src/routes/work.tsx",
         "src/routes/write.tsx"
       ]
     },
@@ -2824,9 +2834,8 @@
       "sourceGitBlobSha": "1820b4adf95fe20f2da8c1f50635d57b4e258e47",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Lock.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 5,
+      "uses": 4,
       "files": [
-        "src/components/ChatInput.tsx",
         "src/components/ComposerVoiceDialog.tsx",
         "src/components/PersonalitySliders.tsx",
         "src/components/SettingsDialog.tsx",
@@ -2885,10 +2894,12 @@
       "sourceGitBlobSha": "23c03e6c6ac22762b6bf8ebd7c755063ce23a97f",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Mail.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 7,
+      "uses": 9,
       "files": [
         "src/components/ChatMessage.tsx",
+        "src/components/MessageActivityList.tsx",
         "src/components/SettingsDialog.tsx",
+        "src/components/ShareChatDialog.tsx",
         "src/components/ToolConfirmCard.tsx",
         "src/components/auth/ForgotPasswordDialog.tsx",
         "src/routes/help.tsx",
@@ -2990,9 +3001,8 @@
       "sourceGitBlobSha": "57cefed17e6e7b542be4e880032107dc9e02f178",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Chat.tsx",
       "reason": "Literal SDK Chat glyph for the existing MessageSquare action; preserves labels and behavior.",
-      "uses": 4,
+      "uses": 3,
       "files": [
-        "src/components/ArtifactEditor.tsx",
         "src/components/Sidebar.tsx",
         "src/components/WorkspaceIntelligence.tsx",
         "src/components/public/ProductOverview.tsx"
@@ -3028,8 +3038,8 @@
       "sourceGitBlobSha": "25765caec99a36ce216eaa147d5a34ebd37e82da",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Minus.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 1,
-      "files": ["src/components/ui/input-otp.tsx"]
+      "uses": 0,
+      "files": []
     },
     {
       "symbol": "Monitor",
@@ -3050,12 +3060,11 @@
       "sourceGitBlobSha": "f14768d0a4e39f83694303688babbf8c2f15a005",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/DotsHorizontal.tsx",
       "reason": "Literal SDK DotsHorizontal glyph for the existing MoreHorizontal action; preserves labels and behavior.",
-      "uses": 8,
+      "uses": 7,
       "files": [
         "src/components/ArtifactEditor.tsx",
         "src/components/ChatMessage.tsx",
         "src/components/ConversationHeaderActions.tsx",
-        "src/components/ui/breadcrumb.tsx",
         "src/routes/library.tsx",
         "src/routes/projects.$projectId.tsx",
         "src/routes/projects.tsx",
@@ -3118,7 +3127,7 @@
       "files": [
         "src/components/AppShell.tsx",
         "src/components/MobileTopBar.tsx",
-        "src/components/ui/sidebar.tsx",
+        "src/components/Sidebar.tsx",
         "src/routes/images.tsx",
         "src/routes/index.tsx"
       ]
@@ -3131,8 +3140,8 @@
       "sourceGitBlobSha": "c325b06c7b74b7ad83e1e32957704167f5b966a4",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/SidebarOpenRight.tsx",
       "reason": "Literal SDK SidebarOpenRight glyph for the existing PanelRightOpen action; preserves labels and behavior.",
-      "uses": 1,
-      "files": ["src/components/ConversationHeaderActions.tsx"]
+      "uses": 0,
+      "files": []
     },
     {
       "symbol": "PanelsTopLeft",
@@ -3142,8 +3151,8 @@
       "sourceGitBlobSha": "025c8c331019c79cedd5c2511c41c84c5981c20f",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/AllProductsExplore.tsx",
       "reason": "Literal SDK AllProductsExplore glyph for the existing PanelsTopLeft action; preserves labels and behavior.",
-      "uses": 1,
-      "files": ["src/routes/apps.tsx"]
+      "uses": 2,
+      "files": ["src/components/ChatInput.tsx", "src/routes/apps.tsx"]
     },
     {
       "symbol": "Paperclip",
@@ -3169,11 +3178,10 @@
       "sourceGitBlobSha": "e46a6df73ed884095356ef46805f311a6a2dda1f",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Pause.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 3,
+      "uses": 2,
       "files": [
         "src/components/AgentTeamWorkspace.tsx",
-        "src/components/public/ReviewFamilySurface.tsx",
-        "src/routes/scheduled-tasks.tsx"
+        "src/components/public/ReviewFamilySurface.tsx"
       ]
     },
     {
@@ -3184,8 +3192,8 @@
       "sourceGitBlobSha": "942595a92a5817d5e528a6c6d5fc457e96b9e820",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Pencil.tsx",
       "reason": "Literal SDK Pencil glyph for the existing PenLine action; preserves labels and behavior.",
-      "uses": 1,
-      "files": ["src/components/HomeChatStarters.tsx"]
+      "uses": 0,
+      "files": []
     },
     {
       "symbol": "Pencil",
@@ -3195,13 +3203,12 @@
       "sourceGitBlobSha": "942595a92a5817d5e528a6c6d5fc457e96b9e820",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Pencil.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 13,
+      "uses": 12,
       "files": [
         "src/components/ArtifactEditor.tsx",
         "src/components/ChatInput.tsx",
         "src/components/ChatMessage.tsx",
         "src/components/ConversationHeaderActions.tsx",
-        "src/components/EditableResponseBlock.tsx",
         "src/components/LibraryFolderOrganizer.tsx",
         "src/components/PasskeyPanel.tsx",
         "src/components/SelectionEditDialog.tsx",
@@ -3253,12 +3260,11 @@
       "sourceGitBlobSha": "60cd7642fb9189f5c90f6ad0a226fe36c051bee0",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Play.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 4,
+      "uses": 3,
       "files": [
         "src/components/AgentTeamWorkspace.tsx",
         "src/components/AgentWorkspace.tsx",
-        "src/routes/prompt-studio.tsx",
-        "src/routes/scheduled-tasks.tsx"
+        "src/routes/prompt-studio.tsx"
       ]
     },
     {
@@ -3270,7 +3276,7 @@
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Plugin.tsx",
       "reason": "Literal SDK Plugin glyph for the existing Plug action; preserves labels and behavior.",
       "uses": 2,
-      "files": ["src/components/ComposerPluginList.tsx", "src/routes/connect.tsx"]
+      "files": ["src/components/ChatInput.tsx", "src/routes/connect.tsx"]
     },
     {
       "symbol": "Plus",
@@ -3283,7 +3289,6 @@
       "uses": 14,
       "files": [
         "src/components/ChatInput.tsx",
-        "src/components/MobileFabs.tsx",
         "src/components/PasskeyPanel.tsx",
         "src/components/ProjectTemplatesDialog.tsx",
         "src/components/TimersWidget.tsx",
@@ -3291,6 +3296,7 @@
         "src/components/public/ProductOverview.tsx",
         "src/routes/context-packs.tsx",
         "src/routes/goals.tsx",
+        "src/routes/help.tsx",
         "src/routes/projects.$projectId.tsx",
         "src/routes/projects.tsx",
         "src/routes/prompt-studio.tsx",
@@ -3339,7 +3345,7 @@
       "sourceGitBlobSha": "fc2677f9c3c9275645a7fba6b0e1f9eeaad8ccbb",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Reload.tsx",
       "reason": "Literal SDK Reload glyph for the existing RefreshCw action; preserves labels and behavior.",
-      "uses": 17,
+      "uses": 16,
       "files": [
         "src/components/ChatMessage.tsx",
         "src/components/CollaborationStatus.tsx",
@@ -3356,8 +3362,7 @@
         "src/routes/audit-log.tsx",
         "src/routes/images.tsx",
         "src/routes/library.tsx",
-        "src/routes/scheduled-tasks.tsx",
-        "src/routes/work.tsx"
+        "src/routes/scheduled-tasks.tsx"
       ]
     },
     {
@@ -3368,17 +3373,15 @@
       "sourceGitBlobSha": "a5442790b225e5ae54c521932290568749b0250c",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/ArrowRotateCcw.tsx",
       "reason": "Literal SDK ArrowRotateCcw glyph for the existing RotateCcw action; preserves labels and behavior.",
-      "uses": 10,
+      "uses": 8,
       "files": [
         "src/components/AgentTeamWorkspace.tsx",
         "src/components/AgentWorkspace.tsx",
         "src/components/AppearanceSettings.tsx",
         "src/components/ArtifactEditor.tsx",
-        "src/components/ChatInput.tsx",
         "src/components/MessageVersionHistoryDialog.tsx",
         "src/components/WorkspaceResultContent.tsx",
         "src/components/writing/WritingToolWorkspace.tsx",
-        "src/routes/scheduled-tasks.tsx",
         "src/routes/summary.tsx"
       ]
     },
@@ -3401,8 +3404,8 @@
       "sourceGitBlobSha": "de92f8a4851c947d3468d9a2e8ac1a9a5881008b",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/SavedXs.tsx",
       "reason": "Literal SDK SavedXs glyph for the existing Save action; preserves labels and behavior.",
-      "uses": 2,
-      "files": ["src/components/EditableResponseBlock.tsx", "src/routes/projects.$projectId.tsx"]
+      "uses": 1,
+      "files": ["src/routes/projects.$projectId.tsx"]
     },
     {
       "symbol": "Search",
@@ -3412,9 +3415,8 @@
       "sourceGitBlobSha": "6c7fcb265c8b023a73781231db0ef60de0f35301",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Search.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 21,
+      "uses": 19,
       "files": [
-        "src/components/ArchivedChatsDialog.tsx",
         "src/components/ArtifactEditor.tsx",
         "src/components/CommandPalette.tsx",
         "src/components/ConversationHeaderActions.tsx",
@@ -3433,8 +3435,7 @@
         "src/routes/projects.$projectId.tsx",
         "src/routes/projects.tsx",
         "src/routes/prompt-studio.tsx",
-        "src/routes/scheduled-tasks.tsx",
-        "src/routes/work.tsx"
+        "src/routes/scheduled-tasks.tsx"
       ]
     },
     {
@@ -3467,13 +3468,11 @@
       "sourceGitBlobSha": "02027f336b7f6d38cbee49c822eb88a5770ae281",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/SettingsCog.tsx",
       "reason": "Literal SDK SettingsCog glyph for the existing Settings action; preserves labels and behavior.",
-      "uses": 5,
+      "uses": 3,
       "files": [
         "src/components/CommandPalette.tsx",
-        "src/components/MobileFabs.tsx",
         "src/components/SettingsDialog.tsx",
-        "src/components/Sidebar.tsx",
-        "src/routes/projects.$projectId.tsx"
+        "src/components/Sidebar.tsx"
       ]
     },
     {
@@ -3495,12 +3494,13 @@
       "sourceGitBlobSha": "f305c3c7dd75b24ba07be538b144e49cfc9cf152",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Share.tsx",
       "reason": "Literal SDK Share glyph for the existing Share2 action; preserves labels and behavior.",
-      "uses": 4,
+      "uses": 5,
       "files": [
         "src/components/ArtifactEditor.tsx",
         "src/components/ChatMessage.tsx",
         "src/components/ProjectTemplatesDialog.tsx",
-        "src/components/Sidebar.tsx"
+        "src/components/Sidebar.tsx",
+        "src/routes/library.tsx"
       ]
     },
     {
@@ -3555,8 +3555,12 @@
       "sourceGitBlobSha": "dee5036972bcbf9dac680f1959df1210ae4669ea",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/SettingsSlider.tsx",
       "reason": "Literal SDK SettingsSlider glyph for the existing SlidersHorizontal action; preserves labels and behavior.",
-      "uses": 2,
-      "files": ["src/components/ChatInput.tsx", "src/routes/library.tsx"]
+      "uses": 3,
+      "files": [
+        "src/components/ChatInput.tsx",
+        "src/components/ConversationHeaderActions.tsx",
+        "src/routes/library.tsx"
+      ]
     },
     {
       "symbol": "Sparkles",
@@ -3572,9 +3576,9 @@
         "src/components/OnboardingDialog.tsx",
         "src/components/PersonalitySliders.tsx",
         "src/components/SettingsDialog.tsx",
+        "src/components/Sidebar.tsx",
         "src/components/WorkspaceIntelligence.tsx",
         "src/components/translation/TranslationWorkspace.tsx",
-        "src/routes/projects.tsx",
         "src/routes/summary.tsx",
         "src/routes/write.tsx"
       ]
@@ -3587,13 +3591,12 @@
       "sourceGitBlobSha": "892e17e37213404810fa426990dc2a36dfb8fc06",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Stop.tsx",
       "reason": "All5currentcall sites stop/cancel recording, speech, generation or an agent run. Official Stop is appropriate; not the checkbox outline.",
-      "uses": 5,
+      "uses": 4,
       "files": [
         "src/components/AgentTeamWorkspace.tsx",
         "src/components/ChatInput.tsx",
         "src/components/ComposerVoiceDialog.tsx",
-        "src/components/ResponseSpeechButton.tsx",
-        "src/routes/work.tsx"
+        "src/components/ResponseSpeechButton.tsx"
       ]
     },
     {
@@ -3626,8 +3629,8 @@
       "sourceGitBlobSha": "95b7d7e9dcf969ff7330dc37b70d98327b7583c0",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/StickyNote.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 1,
-      "files": ["src/routes/projects.$projectId.tsx"]
+      "uses": 0,
+      "files": []
     },
     {
       "symbol": "SunMoon",
@@ -3718,14 +3721,14 @@
       "sourceGitBlobSha": "fb3f910b4846caaafea9c8b755d8791382cc7fa5",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Trash.tsx",
       "reason": "Literal SDK Trash glyph for the existing Trash2 action; preserves labels and behavior.",
-      "uses": 21,
+      "uses": 19,
       "files": [
-        "src/components/ArchivedChatsDialog.tsx",
         "src/components/ConversationHeaderActions.tsx",
         "src/components/LibraryFolderOrganizer.tsx",
         "src/components/PasskeyPanel.tsx",
         "src/components/ProjectCollaboration.tsx",
         "src/components/SettingsDialog.tsx",
+        "src/components/ShareChatDialog.tsx",
         "src/components/Sidebar.tsx",
         "src/components/TitanWorkspaceSystems.tsx",
         "src/components/WorkflowSkillsPanel.tsx",
@@ -3738,9 +3741,7 @@
         "src/routes/projects.$projectId.chat.$chatId.tsx",
         "src/routes/projects.$projectId.tsx",
         "src/routes/projects.tsx",
-        "src/routes/prompt-studio.tsx",
-        "src/routes/scheduled-tasks.tsx",
-        "src/routes/work.tsx"
+        "src/routes/prompt-studio.tsx"
       ]
     },
     {
@@ -3849,13 +3850,8 @@
       "sourceGitBlobSha": "82752ebbdebe96648e7494e89f9b137f7748c440",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/EditStar.tsx",
       "reason": "Literal SDK EditStar glyph for the existing Wand2 action; preserves labels and behavior.",
-      "uses": 4,
-      "files": [
-        "src/components/ArtifactEditor.tsx",
-        "src/components/SelectionEditDialog.tsx",
-        "src/routes/projects.tsx",
-        "src/routes/write.tsx"
-      ]
+      "uses": 2,
+      "files": ["src/components/SelectionEditDialog.tsx", "src/routes/write.tsx"]
     },
     {
       "symbol": "WandSparkles",
@@ -3865,8 +3861,8 @@
       "sourceGitBlobSha": "82752ebbdebe96648e7494e89f9b137f7748c440",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/EditStar.tsx",
       "reason": "Literal SDK EditStar glyph for the existing WandSparkles action; preserves labels and behavior.",
-      "uses": 2,
-      "files": ["src/components/AutomationBuilder.tsx", "src/routes/scheduled-tasks.tsx"]
+      "uses": 1,
+      "files": ["src/components/AutomationBuilder.tsx"]
     },
     {
       "symbol": "Waves",
@@ -3898,25 +3894,27 @@
       "sourceGitBlobSha": "006367f21db11a86891db2bdec260d2e1f7c2db0",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/X.tsx",
       "reason": "Same named source icon and action meaning.",
-      "uses": 17,
+      "uses": 19,
       "files": [
-        "src/components/ArchivedChatsDialog.tsx",
         "src/components/ArtifactEditor.tsx",
         "src/components/ChatInput.tsx",
         "src/components/CommandPalette.tsx",
+        "src/components/ComposerDictationView.tsx",
         "src/components/ComposerVoiceDialogView.tsx",
         "src/components/DeveloperConsole.tsx",
         "src/components/FamilySharingPanel.tsx",
         "src/components/MobileBottomSheet.tsx",
+        "src/components/SettingsDialog.tsx",
         "src/components/Sidebar.tsx",
         "src/components/TimersWidget.tsx",
         "src/components/ToolConfirmCard.tsx",
         "src/components/public/PublicShell.tsx",
         "src/routes/help.tsx",
+        "src/routes/index.tsx",
+        "src/routes/library.tsx",
         "src/routes/projects.$projectId.tsx",
         "src/routes/projects.tsx",
-        "src/routes/summary.tsx",
-        "src/routes/work.tsx"
+        "src/routes/summary.tsx"
       ]
     },
     {
@@ -3938,8 +3936,8 @@
       "sourceGitBlobSha": "9b9a685a5bd75ff7f2adbebf1d079442f26d220d",
       "sourceUrl": "https://raw.githubusercontent.com/openai/apps-sdk-ui/0f00143c7a639906f1621fe58e1b6be7b5bea46d/src/components/Icon/svg/Bolt.tsx",
       "reason": "Literal SDK Bolt glyph for the existing Zap action; preserves labels and behavior.",
-      "uses": 1,
-      "files": ["src/components/CommandPalette.tsx"]
+      "uses": 2,
+      "files": ["src/components/CommandPalette.tsx", "src/components/ConversationSourcesView.tsx"]
     }
   ],
   "paintPolicy": "Literal source child geometry is wrapped in currentColor/no-stroke paint group, preserving source paint even when legacy callers pass fill=none/stroke. Heart/Star/Bookmark/Pin fill-current state selects the exact corresponding filled source glyph.",

@@ -19,7 +19,6 @@ import {
   Folder,
   Files,
   AlertCircle,
-  RotateCcw,
   Maximize2,
   SlidersHorizontal,
   Loader2,

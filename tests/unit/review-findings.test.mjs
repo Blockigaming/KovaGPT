@@ -85,11 +85,12 @@ test("study assistant only promises upload formats supported by the composer", (
 });
 
 test("model selectors only advertise backed intelligence modes", () => {
-  const desktop = read("src/components/ModelSelector.tsx");
+  const desktop = read("src/components/ChatInput.tsx");
   const responsive = read("src/components/ResponsiveModelSelector.tsx");
   const chat = read("src/routes/api/chat.ts");
   const shell = read("src/routes/index.tsx");
-  assert.match(desktop, /ResponsiveModelSelector/);
+  assert.match(desktop, /ResponsiveModelSelector as ModelSelector/);
+  assert.match(desktop, /<ModelSelector/);
   assert.match(responsive, /versionGroupsForTier\(userTier\)/);
   for (const selector of [desktop, responsive])
     assert.doesNotMatch(selector, /KOVA_VERSIONS|kova-version|KovaGPT version|Kova 3\.[345]/);

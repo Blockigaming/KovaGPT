@@ -53,8 +53,6 @@ import {
   Check,
   X as XIcon,
   Loader2,
-  Sparkles,
-  Wand2,
   MoreHorizontal,
   Pin,
   PinOff,

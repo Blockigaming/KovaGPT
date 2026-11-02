@@ -51,7 +51,7 @@ import { createToolActivityEvent } from "@/lib/ai/activity.server";
 import type { KovaSource } from "@/lib/ai/sources.server";
 import { normalizeSourceRetrievedAt } from "@/lib/response-source-time.mjs";
 
-import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
+import { mapProviderError } from "@/lib/ai/registry.server";
 import {
   acquireGeneration,
   finalizeGeneration,

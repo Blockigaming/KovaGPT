@@ -2,7 +2,6 @@ import {
   DAILY_IMAGE_LIMIT_BY_TIER,
   DAILY_UPLOAD_LIMIT_BY_TIER,
   MODES,
-  STORAGE_LIMITS_BYTES,
   modesForTier,
   type ModeId,
   type Tier,
@@ -112,12 +111,6 @@ const modesByTier: Record<Tier, readonly PublishedMode[]> = {
   plus: publishedModesForTier("plus"),
   pro: publishedModesForTier("pro"),
 };
-
-function formatStorage(bytes: number): string {
-  const gib = bytes / 1024 ** 3;
-  if (gib >= 1) return `${Number.isInteger(gib) ? gib : gib.toFixed(1)} GB`;
-  return `${Math.round(bytes / 1024 ** 2)} MB`;
-}
 
 export const PLAN_ALLOWANCE_COPY = {
   free: {
