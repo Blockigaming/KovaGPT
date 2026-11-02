@@ -19,6 +19,10 @@ param imageVersion string
 @description('Public SSH key only. Public SSH is denied; recovery uses the existing authorized Azure management plane.')
 param adminPublicKey string
 
+@minLength(1)
+@maxLength(32)
+param adminUsername string = 'kovaworkadmin'
+
 @secure()
 @minLength(64)
 param runnerToken string
@@ -36,20 +40,8 @@ var tags = {
   purpose: 'isolated-work-browser'
   ownerScope: 'work-host-540'
 }
-var secretDefinitions = [
-  {
-    name: 'runner-token'
-    value: runnerToken
-  }
-  {
-    name: 'runner-signing-key'
-    value: runnerSigningKey
-  }
-  {
-    name: 'provider-key'
-    value: providerKey
-  }
-]
+var secretNames = ['runner-token', 'runner-signing-key', 'provider-key']
+var secretValues = [runnerToken, runnerSigningKey, providerKey]
 
 resource publicIp 'Microsoft.Network/publicIPAddresses@2024-05-01' = {
   name: '${namePrefix}-ip'
@@ -152,12 +144,12 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
     }
     osProfile: {
       computerName: '${namePrefix}-vm'
-      adminUsername: 'kovaworkadmin'
+      adminUsername: adminUsername
       linuxConfiguration: {
         disablePasswordAuthentication: true
         provisionVMAgent: true
         ssh: { publicKeys: [{
-          path: '/home/kovaworkadmin/.ssh/authorized_keys'
+          path: '/home/${adminUsername}/.ssh/authorized_keys'
           keyData: adminPublicKey
         }] }
       }
@@ -209,17 +201,17 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
-resource runnerSecrets 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = [for item in secretDefinitions: {
+resource runnerSecrets 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = [for (secretName, index) in secretNames: {
   parent: vault
-  name: item.name
+  name: secretName
   properties: {
-    value: item.value
+    value: secretValues[index]
     attributes: { enabled: true }
   }
 }]
 
 // Each grant covers one new secret, never the existing production vault.
-resource secretReaders 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (item, index) in secretDefinitions: {
+resource secretReaders 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (secretName, index) in secretNames: {
   name: guid(vm.id, runnerSecrets[index].id, 'KeyVaultSecretsUser')
   scope: runnerSecrets[index]
   properties: {
@@ -236,7 +228,7 @@ output hostname string = publicIp.properties.dnsSettings.fqdn
 output publicIpAddress string = publicIp.properties.ipAddress
 output vaultName string = vault.name
 // Versioned references only; no credential values in deployment outputs.
-output secretUris array = [for (item, index) in secretDefinitions: {
-  name: item.name
+output secretUris array = [for (secretName, index) in secretNames: {
+  name: secretName
   uri: runnerSecrets[index].properties.secretUriWithVersion
 }]
