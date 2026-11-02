@@ -463,6 +463,18 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(failure["code"],"toc_review_required")
         self.assertNotIn("private_object",json.dumps(failure))
 
+    def test_column_default_toc_is_lossless_and_not_confused_with_default_acl(self):
+        default="901; 2604 9001 DEFAULT public synthetic_table id postgres"
+        acl="902; 826 9002 DEFAULT ACL public DEFAULT PRIVILEGES FOR TABLES postgres"
+        entries=m.toc_entries(default+"\n"+acl+"\n")
+        self.assertEqual([e["kind"] for e in entries],["DEFAULT","DEFAULT ACL"])
+        for selector in [m.schema_restore_list,m.empty_schema_restore_list]:
+            result=selector(entries,catalog(),catalog())
+            self.assertEqual(result,(default+"\n"+acl+"\n").encode())
+        for kind in ["DEFAULTS","UNSUPPORTED PRIVATE_KIND"]:
+            with self.assertRaisesRegex(m.Stopped,"toc_review_required"):
+                m.toc_entries("903; 0 0 "+kind+" public synthetic_object postgres\n")
+
     def test_bootstrap_identity_is_required_even_when_role_flags_and_grants_match(self):
         source=catalog();target=catalog()
         m.role_compatibility(source,target,[])

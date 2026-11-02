@@ -444,6 +444,7 @@ class SyntheticProbe(operator.OperatorProbe):
         # database and extension OIDs in only one target.
         fixture_sql="CREATE ROLE "+base.ident(FIXTURE_OWNER)+" NOLOGIN;\n" \
             +"CREATE ROLE "+base.ident(FIXTURE_GRANT_MEMBER)+" NOLOGIN;\n"
+        fixture_sql+='CREATE ROLE "authenticator" NOLOGIN;\n'
         fixture_sql+="CREATE ROLE "+base.ident(FIXTURE_GRANT_ROLE)+" NOLOGIN;\n" \
             +"GRANT "+base.ident(FIXTURE_GRANT_ROLE)+" TO "+base.ident(FIXTURE_GRANT_MEMBER) \
             +" WITH ADMIN FALSE GRANTED BY "+base.ident(FIXTURE_BOOTSTRAP)+";\n"
@@ -475,6 +476,8 @@ class SyntheticProbe(operator.OperatorProbe):
                       "login":False,"replication":False,"bypassRls":False,"connectionLimit":-1,"validUntil":None}
         require([r for r in value["roles"] if r["name"]==FIXTURE_OWNER]==[fixture_role],
                 "synthetic_fixture_role_collision")
+        require([r for r in value["roles"] if r["name"]=="authenticator"]==[{**fixture_role,"name":"authenticator"}],
+                "synthetic_fixture_role_collision")
         extensions=[]
         for row in value["available"]:
             require(re.fullmatch(r"[a-zA-Z0-9_.+-]+",row["version"]),"synthetic_fixture_extension_version")
@@ -497,7 +500,9 @@ class SyntheticProbe(operator.OperatorProbe):
         next(s for s in schemas if s["name"]=="net")["acl"]=[
             FIXTURE_BOOTSTRAP+"=UC/"+FIXTURE_BOOTSTRAP,"=U/"+FIXTURE_BOOTSTRAP]
         self.metadata={"bootstrapRole":value["bootstrapRole"],"roles":value["roles"],"memberships":value["memberships"],
-                       "schemas":schemas,"extensions":extensions,"roleSettings":[],
+                       "schemas":schemas,"extensions":extensions,
+                       "roleSettings":[{"role":"authenticator","database":"*",
+                           "settings":["session_preload_libraries=supautils, safeupdate"]}],
                        "extensionNamespaces":extension_namespaces,
                        "fixtureSettingsComplete":True,"syntheticFixtureDerivedOnlyFromPinnedImage":True}
 

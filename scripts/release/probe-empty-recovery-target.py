@@ -407,6 +407,15 @@ def role_setup_sql(metadata):
                 # then immediately restore the private operator's fixed path.
                 statements += ["SELECT pg_catalog.set_config('search_path',"+literal(value)+",false);",
                                prefix+' SET "search_path" FROM CURRENT;',"SET search_path=pg_catalog;"]
+            elif key=="session_preload_libraries":
+                # This validated list belongs only to the inactive authenticator
+                # role. A single ALTER ROLE literal quotes the entire list as
+                # one library. Copy the exact GUC bytes inside this transaction;
+                # session preloads run only at connection start, never here.
+                # The private operator's setting reverts before the next SQL.
+                statements += ["BEGIN;",
+                    "SELECT pg_catalog.set_config('session_preload_libraries',"+literal(value)+",true);",
+                    prefix+' SET "session_preload_libraries" FROM CURRENT;',"COMMIT;"]
             else:
                 statements.append(prefix+" SET "+'"'+key+'"'+" TO "+literal(value)+";")
     return "\n".join(statements)+"\n"
@@ -1000,21 +1009,40 @@ while :; do sleep 1; done"""
         _,schema=self.docker(args+[self.names["client"],self.native_schema_dump_tool(),"--no-password","--schema-only"],timeout=60)
         expected={"bootstrapRole":self.metadata["bootstrapRole"],"roles":self.metadata["roles"],"memberships":self.metadata["memberships"],
                   "roleSettings":[{k:r[k] for k in ["role","database","settings"]} for r in self.metadata["roleSettings"]]}
-        role_match=True
+        role_match=True;role_failure=None
         try:recovery.role_compatibility(expected,catalog,[OPERATOR])
-        except recovery.Stopped:role_match=False
+        except recovery.Stopped as error:
+            role_match=False
+            # Exception text and source metadata stay private. Only these fixed
+            # comparison classes may leave the native process.
+            code=error.args[0] if len(error.args)==1 else None
+            role_failure=code if code in {"managed_bootstrap_role_mismatch",
+                "managed_role_baseline_mismatch","managed_role_privileges_mismatch"} else "unclassified"
         source_ns={s["name"]:s for s in self.metadata["schemas"]}
-        ns_match=source_ns=={s["name"]:s for s in catalog["schemas"]}
+        target_ns={s["name"]:s for s in catalog["schemas"]}
+        ns_match=source_ns==target_ns
         _,raw=self.client_sql(target,"SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname,'owner',pg_get_userbyid(e.extowner)) ORDER BY e.extname),'[]')::text FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace;\n")
         owned_extensions=json.loads(raw)
         _,raw=self.client_sql(target,metadata_source.EXTENSION_NAMESPACES_SQL+";\n")
         extension_namespace_match=encoded(json.loads(raw))==encoded(self.metadata["extensionNamespaces"])
-        extension_match=encoded(owned_extensions)==encoded(self.metadata["extensions"]) \
-            and encoded(catalog["extensions"])==encoded(self.metadata["extensions"]) and extension_namespace_match
+        extension_owner_match=encoded(owned_extensions)==encoded(self.metadata["extensions"])
+        extension_catalog_match=encoded(catalog["extensions"])==encoded(self.metadata["extensions"])
+        extension_match=extension_owner_match and extension_catalog_match and extension_namespace_match
+        # Bounded booleans/counts diagnose a failed exact comparison without
+        # publishing role names, settings, grants, comments or extension values.
+        common_ns=source_ns.keys() & target_ns.keys()
+        comparison={"roleMatch":role_match,"roleFailureCode":role_failure,"namespaceMatch":ns_match,
+            "namespaceDifferences":{"missing":len(source_ns.keys()-target_ns.keys()),
+                "unexpected":len(target_ns.keys()-source_ns.keys()),
+                **{key:sum(source_ns[name].get(key)!=target_ns[name].get(key) for name in common_ns)
+                   for key in ["owner","acl","comment"]}},
+            "extensionOwnerVersionMatch":extension_owner_match,"extensionCatalogMatch":extension_catalog_match,
+            "extensionNamespaceMatch":extension_namespace_match}
         return {"fingerprints":{"emptyBaselineCensusSha256":digest(encoded(census)),
                  "emptyBaselineCatalogSha256":digest(encoded(catalog)),"emptyBaselineRowsSha256":digest(encoded(rows)),
                  "emptyBaselineSchemaSha256":recovery.schema_hash(schema)},
                 "roleMatch":role_match,"namespaceMatch":ns_match,"extensionMatch":extension_match,
+                "metadataComparison":comparison,
                 "tableCount":len(rows),"namespaceObjectCount":len(census["namespaceObjects"]),
                 "globalObjectCount":len(census["globalObjects"])}
 
@@ -1285,6 +1313,7 @@ while :; do sleep 1; done"""
                 observedBaselineFingerprints=snapshots[0]["fingerprints"],
                 nativeNamespaceObjectCount=snapshots[0]["namespaceObjectCount"],
                 nativeGlobalObjectCount=snapshots[0]["globalObjectCount"],nativeTargetTableCount=snapshots[0]["tableCount"])
+            result["metadataComparison"]=[snapshot["metadataComparison"] for snapshot in snapshots]
             if extension_coverages[0] is not None:
                 require(encoded(extension_coverages[0])==encoded(extension_coverages[1]),
                         "independent_extension_coverage_differ")
