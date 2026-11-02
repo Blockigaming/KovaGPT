@@ -224,32 +224,9 @@
   background: #fff;
   border-radius: 6px;
 }
-.kova-dictation-wave {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  height: 16px;
-}
-.kova-dictation-wave i {
-  display: block;
-  width: 2px;
-  height: 7px;
-  border-radius: 999px;
-  background: currentColor;
-  animation: kova-dictation-breathe 1.8s ease-in-out infinite;
-}
-.kova-dictation-wave i:nth-child(2) {
-  height: 13px;
-  animation-delay: 150ms;
-}
-.kova-dictation-wave i:nth-child(3) {
-  animation-delay: 300ms;
-}
-@keyframes kova-dictation-breathe {
-  50% {
-    transform: scaleY(0.65);
-    opacity: 0.6;
-  }
+.spec400-composer[hidden],
+.kova-composer-tray[hidden] {
+  display: none;
 }
 .spec400-send-button > svg {
   animation: kova-primary-enter 140ms ease-out;
@@ -265,7 +242,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kova-dictation-wave i,
   .spec400-send-button > svg {
     animation: none;
   }

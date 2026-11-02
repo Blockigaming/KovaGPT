@@ -103,7 +103,7 @@ for (const theme of ["light", "dark"] as const) {
     await waitForKovaHydration(page);
     const modal = await openCurrentSettings(page);
     await contained(page, modal);
-    const heading = modal.getByRole("heading").filter({ visible: true }).first();
+    const heading = modal.getByRole("heading", { level: 2 }).filter({ visible: true }).first();
     await expect(heading).toBeInViewport({ ratio: 1 });
     const close = modal.getByRole("button", { name: "Close settings", exact: true });
     await usableClose(page, close);

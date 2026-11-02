@@ -2,6 +2,7 @@ import {
   ArrowUp,
   Brain,
   AudioLines,
+  Mic,
   PanelsTopLeft,
   Paperclip,
   Plug,
@@ -201,6 +202,7 @@ export function ChatInput({
   recentLibraryError = null,
   onRecentLibraryRetry,
   showChooseProject = false,
+  showResources = true,
   savedConversations = [],
   surface = "conversation",
   attachmentContext,
@@ -257,6 +259,8 @@ export function ChatInput({
   recentLibraryError?: string | null;
   onRecentLibraryRetry?: () => void;
   showChooseProject?: boolean;
+  /** The welcome tray disappears once a conversation has messages. */
+  showResources?: boolean;
   savedConversations?: readonly Conversation[];
   /** Controls whether the desktop add menu opens below the centered composer or above a docked one. */
   surface?: "empty" | "conversation";
@@ -1410,7 +1414,7 @@ export function ChatInput({
     }
     return (
       <>
-        {mobile && section === "more" && (
+        {section === "more" && (
           <div className="kova-composer-primary-actions" aria-label="Message preferences">
             <button type="button" className={rowClass} onClick={() => openMessageSettings(trigger)}>
               <Files aria-hidden="true" />
@@ -1468,7 +1472,7 @@ export function ChatInput({
                 <span>Library</span>
               </button>
             )}
-            {!(mobile && section === "more") && (attachments.length > 0 || onOpenChatContext) && (
+            {section !== "more" && (attachments.length > 0 || onOpenChatContext) && (
               <button
                 type="button"
                 className={rowClass}
@@ -1773,6 +1777,7 @@ export function ChatInput({
       )}
       <div
         className="spec400-composer"
+        hidden={activeVoiceMode === "dictate"}
         data-chat-image-context={attachmentContext}
         data-ui-reference="chatgpt-composer"
         data-has-draft={hasDraft ? "true" : "false"}
@@ -2019,17 +2024,13 @@ export function ChatInput({
               data-testid="dictate-button"
               className="spec400-toolbar-button spec400-toolbar-icon kova-dictation-button"
               aria-label="Type with voice"
-              aria-haspopup="dialog"
+              aria-controls="kova-inline-dictation"
               aria-expanded={activeVoiceMode === "dictate"}
               disabled={disabled || isStreaming || !isLoaded || !online}
               title="Type with voice"
               onClick={(event) => openVoice("dictate", event.currentTarget)}
             >
-              <span className="kova-dictation-wave" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-              </span>
+              <Mic aria-hidden="true" />
               <span className="sr-only">Type with voice</span>
             </button>
             <button
@@ -2097,6 +2098,7 @@ export function ChatInput({
       </div>
       <div
         className="kova-composer-tray"
+        hidden={!showResources || activeVoiceMode === "dictate"}
         data-has-add-menu={showAddMenu || undefined}
         role="group"
         aria-label="Chat resources"
@@ -2319,6 +2321,7 @@ export function ChatInput({
       )}
       <ComposerVoiceDialog
         open={activeVoiceMode !== null}
+        inlineDictation
         mode={activeVoiceMode ?? "dictate"}
         onOpenChange={(open) => {
           if (!open && voiceMountedRef.current && voiceIdentityRef.current === voiceScope)

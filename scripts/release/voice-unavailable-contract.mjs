@@ -162,14 +162,24 @@ const browserVoiceBypasses = [
   /["']\/api\/(?:voice|speech|audio)(?:["'/?]|$)/u,
 ];
 
-// Production controls delegate capture to one dialog; opening a dialog must not
-// directly request a microphone, call a provider or submit a chat message.
+// Production controls delegate capture to one scoped controller. Its inline
+// dictation surface and Voice dialog retain the same provider/capture boundary.
 export function inspectConfiguredVoiceComposer(source) {
   const { file, elements, opening, tag, attr, literal } = parseVoiceSurface(source);
   const errors = browserVoiceBypasses
     .filter((pattern) => pattern.test(source))
     .map(() => "composer capture/provider boundary bypass");
   const approved = new Set();
+  const dialogs = elements.filter((node) => tag(node) === "ComposerVoiceDialog");
+  const inlineAttribute = dialogs.length === 1 ? attr(dialogs[0], "inlineDictation") : undefined;
+  const inlineValue = inlineAttribute?.initializer;
+  const inlineDictation = Boolean(
+    inlineAttribute &&
+    (!inlineValue ||
+      (ts.isJsxExpression(inlineValue) &&
+        inlineValue.expression?.kind === ts.SyntaxKind.TrueKeyword)),
+  );
+  if (inlineAttribute && !inlineDictation) errors.push("invalid inline dictation binding");
   for (const [id, mode, label] of [
     ["dictate-button", "dictate", "Type with voice"],
     ["voice-button", "voice", "Voice"],
@@ -201,10 +211,17 @@ export function inspectConfiguredVoiceComposer(source) {
         (!/^on[A-Z]/u.test(property.name.getText(file)) ||
           property.name.getText(file) === "onClick"),
     );
+    const validSurface =
+      mode === "dictate" && inlineDictation
+        ? literal(button, "aria-controls") === "kova-inline-dictation" &&
+          !attr(button, "aria-haspopup") &&
+          attr(button, "aria-expanded")?.initializer?.getText(file).replace(/\s+/gu, "") ===
+            '{activeVoiceMode==="dictate"}'
+        : literal(button, "aria-haspopup") === "dialog";
     if (
       literal(button, "type") !== "button" ||
       literal(button, "aria-label") !== label ||
-      literal(button, "aria-haspopup") !== "dialog" ||
+      !validSurface ||
       !attr(button, "disabled") ||
       !safeAttributes ||
       !exactOpen
@@ -212,7 +229,6 @@ export function inspectConfiguredVoiceComposer(source) {
       errors.push(`invalid explicit ${mode} dialog trigger`);
     else approved.add(button);
   }
-  const dialogs = elements.filter((node) => tag(node) === "ComposerVoiceDialog");
   if (dialogs.length !== 1) errors.push("expected one real ComposerVoiceDialog mount");
   if (dialogs.length === 1) {
     for (const name of [
