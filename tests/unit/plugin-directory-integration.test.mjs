@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const route = readFileSync(new URL("../../src/routes/apps.tsx", import.meta.url), "utf8");
 test("launch directory exposes planned details without unsupported connect actions", () => {
-  assert.match(route, /LAUNCH_PLUGIN_REVIEW_CATALOG/);
+  assert.match(route, /MASTER_PLUGIN_REVIEW_CATALOG/);
   assert.match(route, /const filtered = catalog.filter/);
   assert.match(route, /connectionFilter === "connected" && !hasConnection/);
   assert.match(route, /category !== "all" && c.category !== category/);

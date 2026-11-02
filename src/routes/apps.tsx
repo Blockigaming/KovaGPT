@@ -9,8 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { GOOGLE_CONNECT_IDS, type ConnectorItem } from "@/lib/connectors-catalog";
+import { masterConnectorSearchText } from "@/lib/connector-master-list.mjs";
 import {
-  LAUNCH_PLUGIN_REVIEW_CATALOG,
+  MASTER_PLUGIN_REVIEW_CATALOG,
   getPluginReview,
   getPluginPreviewProvider,
 } from "@/lib/plugin-review-catalog";
@@ -104,7 +105,7 @@ const WORKING_IDS = new Set<string>([
 
 const CONFIGURED_CONNECTORS = WORKING_IDS;
 const PLUGIN_CATEGORIES = [
-  ...new Set(LAUNCH_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector.category)),
+  ...new Set(MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector.category)),
 ].sort();
 const parsePluginFilters = (raw: string | null) =>
   parsePluginListPreferences(raw, PLUGIN_CATEGORIES);
@@ -1283,7 +1284,7 @@ function AppsPage() {
       return;
     const id = url.searchParams.get("connection_view");
     if (id && Object.hasOwn(CONNECTION_FLOWS, id)) {
-      const item = LAUNCH_PLUGIN_REVIEW_CATALOG.find(
+      const item = MASTER_PLUGIN_REVIEW_CATALOG.find(
         (entry) => entry.connector.id === id,
       )?.connector;
       if (item) setSelectedApp(item);
@@ -1370,7 +1371,7 @@ function AppsPage() {
       );
     return false;
   };
-  const catalog = LAUNCH_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector);
+  const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map((entry) => entry.connector);
   const connectedCount = catalog.filter((item) => hasConnection(item.id)).length;
   const connectionCountState = !isLoaded
     ? "unknown"
@@ -1404,7 +1405,10 @@ function AppsPage() {
     if (category !== "all" && c.category !== category) return false;
     const q = query.trim().toLowerCase();
     return (
-      !q || [c.label, c.description, c.category].some((value) => value.toLowerCase().includes(q))
+      !q ||
+      [c.label, c.description, c.category, masterConnectorSearchText(c.id)].some((value) =>
+        value.toLowerCase().includes(q),
+      )
     );
   });
 
@@ -1487,6 +1491,7 @@ function AppsPage() {
                           <li key={permission}>{permission}</li>
                         ))}
                       </ul>
+                      <p className="spec400-plugin-notice">{selectedReview.availabilityNote}</p>
                       {!CONFIGURED_CONNECTORS.has(visibleSelectedApp.id) && (
                         <p className="spec400-plugin-notice">
                           This plugin is coming soon. Its listed capabilities are proposals. No
