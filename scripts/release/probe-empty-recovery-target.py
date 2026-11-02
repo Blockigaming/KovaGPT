@@ -407,6 +407,15 @@ def role_setup_sql(metadata):
                 # then immediately restore the private operator's fixed path.
                 statements += ["SELECT pg_catalog.set_config('search_path',"+literal(value)+",false);",
                                prefix+' SET "search_path" FROM CURRENT;',"SET search_path=pg_catalog;"]
+            elif key=="session_preload_libraries":
+                # This validated list belongs only to the inactive authenticator
+                # role. A single ALTER ROLE literal quotes the entire list as
+                # one library. Copy the exact GUC bytes inside this transaction;
+                # session preloads run only at connection start, never here.
+                # The private operator's setting reverts before the next SQL.
+                statements += ["BEGIN;",
+                    "SELECT pg_catalog.set_config('session_preload_libraries',"+literal(value)+",true);",
+                    prefix+' SET "session_preload_libraries" FROM CURRENT;',"COMMIT;"]
             else:
                 statements.append(prefix+" SET "+'"'+key+'"'+" TO "+literal(value)+";")
     return "\n".join(statements)+"\n"

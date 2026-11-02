@@ -317,7 +317,10 @@ class NativeProbeTests(unittest.TestCase):
             "settingFingerprints":[{"key":"session_preload_libraries","sha256":m.digest(raw.encode()),"retained":True}]}]
         m.validate_metadata(d,source_sha="a"*40)
         sql=m.role_setup_sql(d)
-        self.assertIn('ALTER ROLE "authenticator" SET "session_preload_libraries"',sql)
+        self.assertIn('ALTER ROLE "authenticator" SET "session_preload_libraries" FROM CURRENT;',sql)
+        self.assertIn("BEGIN;\nSELECT pg_catalog.set_config('session_preload_libraries','supautils, safeupdate',true);",sql)
+        self.assertIn('FROM CURRENT;\nCOMMIT;',sql)
+        self.assertNotIn('"session_preload_libraries" TO',sql)
         self.assertNotIn(m.OPERATOR,sql)
         for role in ["*","postgres",m.OPERATOR]:
             with self.subTest(role=role),self.assertRaises(m.Stopped):
