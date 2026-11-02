@@ -54,7 +54,7 @@ export async function prepareVoiceRecording(
       decoded.length > decoded.sampleRate * MAX_VOICE_SECONDS
     )
       throw new Error(
-        "Record between 0.1 and 60 seconds of mono or stereo audio. Your recording is still available.",
+        "This recording could not be processed. Please try again with a shorter clip.",
       );
     const channels = Array.from({ length: decoded.numberOfChannels }, (_, index) =>
       decoded.getChannelData(index),
