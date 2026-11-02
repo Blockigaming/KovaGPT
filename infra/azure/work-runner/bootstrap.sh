@@ -13,7 +13,7 @@ source /etc/os-release
 [[ -z $(swapon --show --noheadings) ]]
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y --no-install-recommends ca-certificates curl gnupg openssl python3 docker.io bzip2 git
+apt-get install -y --no-install-recommends ca-certificates curl gnupg openssl python3 docker.io docker-buildx bzip2 git
 install -d -m 0755 /etc/apt/keyrings
 curl --fail --silent --show-error --location --max-time 60 \
   https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
@@ -35,8 +35,11 @@ node_version=$(apt-cache policy nodejs | awk '/Candidate:/ {print $2}')
 caddy_version=$(apt-cache policy caddy | awk '/Candidate:/ {print $2}')
 [[ $node_version == 24.* && $caddy_version != '(none)' && -n $caddy_version ]]
 apt-get install -y --no-install-recommends "nodejs=$node_version" "caddy=$caddy_version"
-apt-mark hold docker.io nodejs caddy
+apt-mark hold docker.io docker-buildx nodejs caddy
 systemctl enable --now docker
+# Require the modern builder used by COPY --chmod; never fall back to legacy.
+export DOCKER_BUILDKIT=1
+docker buildx version >/dev/null
 
 install -d -m 0755 /opt/kova-work /usr/local/lib/kova-work
 install -d -m 0700 /etc/kova-work
