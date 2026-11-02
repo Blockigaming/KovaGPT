@@ -119,6 +119,11 @@ test("workflow skill mutations retain their replay identity until success is con
   await expect(page.getByText("Workflow skill created and installed")).toHaveCount(0);
   expect(mutationBodies).toHaveLength(1);
 
+  // On short viewports the animated error toast can slide over the submit
+  // button between Playwright's hit test and pointer-up. Dismiss the notice
+  // through its real control before exercising the retry.
+  await page.getByRole("button", { name: "Close toast", exact: true }).click();
+  await expect(page.getByText("Workflow skill update could not be confirmed.")).toHaveCount(0);
   const retryMutationResponse = page.waitForResponse((response) =>
     isWorkflowSkillDraftMutation(response.request()),
   );
