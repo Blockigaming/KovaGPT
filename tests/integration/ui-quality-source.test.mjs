@@ -422,7 +422,7 @@ test("streaming status reports only real activity instead of invented progressio
   assert.match(message, /kova-thinking-indicator/);
   assert.match(message, /role="status"/);
   assert.match(message, /aria-atomic="true"/);
-  assert.match(message, /activity\.status !== "running"/);
+  assert.match(message, /<MessageActivityList activities=\{message\.activities\}/);
 });
 
 test("the public visual gate executes the focused Chromium interactions and screenshots", () => {

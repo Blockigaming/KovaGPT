@@ -1,0 +1,100 @@
+/* Prompt actions stay below the bubble; every observed tool step remains visible. */
+.kova-prompt-actions {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.kova-user-message-group:hover .kova-prompt-actions,
+.kova-user-message-group:focus-within .kova-prompt-actions {
+  opacity: 1;
+}
+.kova-prompt-copy {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--kova-radius-compact);
+  background: transparent;
+}
+.kova-prompt-copy svg {
+  grid-area: 1 / 1;
+  width: 16px;
+  height: 16px;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+.kova-copy-check {
+  opacity: 0;
+  transform: scale(0.65) rotate(-20deg);
+}
+.kova-prompt-copy[data-copied="true"] .kova-copy-glyph {
+  opacity: 0;
+  transform: scale(0.65) rotate(20deg);
+}
+.kova-prompt-copy[data-copied="true"] .kova-copy-check {
+  opacity: 1;
+  transform: scale(1) rotate(0);
+}
+.kova-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+.kova-activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1.5;
+  animation: kova-activity-appear 180ms ease-out;
+}
+.kova-activity-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+.kova-activity-row[data-status="failed"] {
+  color: var(--destructive);
+}
+@keyframes kova-activity-appear {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (hover: none), (any-pointer: coarse), (max-width: 1023px) {
+  .kova-prompt-actions {
+    opacity: 1;
+    min-height: 44px;
+  }
+  .kova-prompt-copy {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-prompt-actions,
+  .kova-prompt-copy svg {
+    transition: none;
+  }
+  .kova-activity-row {
+    animation: none;
+  }
+}

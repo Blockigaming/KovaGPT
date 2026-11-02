@@ -1,5 +1,8 @@
 import { normalizeResponseFollowups } from "@/lib/response-followups.mjs";
 import "./response-action-refinement.css";
+import "./prompt-activity.css";
+import { PromptMessage } from "./PromptMessage";
+import { MessageActivityList } from "./MessageActivityList";
 import { normalizeMemorySources } from "@/lib/memory-sources.mjs";
 import { ResponseMarkdown } from "./ResponseMarkdown";
 import { TaskCreatedBubble } from "./TaskCreatedBubble";
@@ -315,10 +318,6 @@ function ChatMessageInner({
   const resolvedStreamingStartedAt =
     streamingStartedAt ?? localStreamingStartedAtRef.current ?? Date.now();
   const waitingForFirstToken = Boolean(streaming && !message.content && !message.pendingImage);
-  const visibleActivities = waitingForFirstToken
-    ? message.activities?.filter((activity) => activity.status !== "running")
-    : message.activities;
-
   useEffect(() => {
     const requestGeneration = lifecycleGenerationRef.current;
     const requestPrincipal = principal;
@@ -948,36 +947,13 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words bg-[var(--surface-secondary)] px-4 py-3 text-foreground">
-                {message.content}
-              </div>
-            )}
-
-            {(onEdit || onBranch) && (
-              <div className="mt-1 flex min-h-9 items-center opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
-                {onEdit && (
-                  <button
-                    type="button"
-                    onClick={onEdit}
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
-                    aria-label="Edit message"
-                    title="Edit message"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                )}
-                {onBranch && (
-                  <button
-                    type="button"
-                    onClick={onBranch}
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
-                    aria-label="Branch from this message in a new chat"
-                    title="Branch in new chat"
-                  >
-                    <GitBranch className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
+              <PromptMessage
+                content={message.content}
+                copied={copied}
+                onCopy={() => void copy()}
+                onEdit={onEdit}
+                onBranch={onBranch}
+              />
             )}
           </div>
         </div>
@@ -989,42 +965,7 @@ function ChatMessageInner({
               .map((activity, index) => (
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-            {visibleActivities &&
-              visibleActivities.some((activity) => activity.tool !== "scheduled_task") && (
-                <details className="mb-3 text-sm">
-                  <summary className="min-h-11 cursor-pointer py-3 text-muted-foreground">
-                    Activity
-                  </summary>
-                  <div className="flex flex-wrap gap-2">
-                    {visibleActivities
-                      .filter((activity) => activity.tool !== "scheduled_task")
-                      .map((activity, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/40 px-2.5 py-1 text-xs text-muted-foreground"
-                        >
-                          {activity.status === "running" ? (
-                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                          ) : activity.status === "failed" ? (
-                            <span className="font-semibold text-destructive" aria-hidden="true">
-                              !
-                            </span>
-                          ) : activity.status === "canceled" ? (
-                            <span
-                              className="font-semibold text-muted-foreground"
-                              aria-hidden="true"
-                            >
-                              ×
-                            </span>
-                          ) : (
-                            <Check className="h-3 w-3 text-primary" />
-                          )}
-                          {activity.label}
-                        </span>
-                      ))}
-                  </div>
-                </details>
-              )}
+            <MessageActivityList activities={message.activities} />
             {message.pendingConfirms?.map((confirm) => (
               <ToolConfirmCard
                 key={confirm.actionId}

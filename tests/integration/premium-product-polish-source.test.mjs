@@ -1,14 +1,27 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { messageActivitiesFromDelta } from "../../src/lib/message-activity-list.mjs";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("streaming batches token updates and deduplicates activity events", async () => {
+test("streaming batches tokens and updates matching activity operations without losing later calls", async () => {
   const source = await read("src/routes/index.tsx");
   assert.match(source, /pendingContent \+= chunk/);
   assert.match(source, /requestAnimationFrame\(flushAssistant\)/);
-  assert.match(source, /item\.tool === activity\.tool && item\.label === activity\.label/);
+  assert.match(source, /messageActivitiesFromDelta\(message\.activities \?\? \[\], delta\)/);
+  const delta = { activity_id: "first", tool: "search_web", label: "Read site", status: "pending" };
+  let rows = messageActivitiesFromDelta([], delta);
+  rows = messageActivitiesFromDelta(rows, { ...delta, status: "done" });
+  rows = messageActivitiesFromDelta(rows, { ...delta, status: "done" });
+  rows = messageActivitiesFromDelta(rows, { ...delta, activity_id: "second", status: "done" });
+  assert.deepEqual(
+    rows.map(({ activityId, status }) => ({ activityId, status })),
+    [
+      { activityId: "first", status: "done" },
+      { activityId: "second", status: "done" },
+    ],
+  );
   assert.match(source, /item\.actionId === confirmation\.actionId/);
   assert.match(source, /KovaGPT response complete/);
 });
