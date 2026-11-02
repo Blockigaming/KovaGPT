@@ -12,10 +12,12 @@ export async function openResponseOptions(page: Page, recordTrigger?: (trigger: 
       const attach = page.getByRole("button", { name: "Attach", exact: true });
       recordTrigger?.(attach);
       await attach.click();
-      const sheet = page.getByTestId("mobile-bottom-sheet");
-      const moreTools = sheet.locator("summary").filter({ hasText: /^More tools$/ });
+      const menu = page
+        .getByRole("dialog", { name: /^(Attach|Attach files and tools)$/ })
+        .filter({ visible: true });
+      const moreTools = menu.locator("summary").filter({ hasText: /^More tools$/ });
       if (await moreTools.isVisible()) await moreTools.click();
-      await sheet.getByRole("button", { name: "Response options", exact: true }).click();
+      await menu.getByRole("button", { name: "Response options", exact: true }).click();
     }
   }
   await expect(panel).toBeVisible();

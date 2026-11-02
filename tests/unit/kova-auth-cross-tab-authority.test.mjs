@@ -322,3 +322,25 @@ test("unrelated storage and hidden visibility are ignored, and unmount removes e
   await new Promise((r) => setImmediate(r));
   assert.equal(f.calls.length, count);
 });
+
+test("one return-to-tab event burst shares a probe while cross-tab credentials still supersede it", async () => {
+  const f = fixture();
+  f.next().resolve(principal("owner"));
+  await f.flush();
+  const returning = f.next();
+  f.event("focus");
+  f.event("pageshow");
+  f.event("visibilitychange", {}, f.document);
+  f.render();
+  assert.equal(f.calls.filter((value) => value === "probe").length, 2);
+  assert.equal(f.tree.props.value.user.id, "owner");
+  assert.equal(f.nodes().find((node) => node.props.inert).props.style.display, "none");
+  returning.resolve(principal("owner"));
+  await f.flush();
+  assert.equal(f.calls.filter((value) => value === "probe").length, 2);
+  assert.equal(
+    f.nodes().some((node) => node.props.inert),
+    false,
+  );
+  f.unmount();
+});

@@ -1441,8 +1441,8 @@ function KovaGPT() {
     return () => window.removeEventListener("storage", onStorage);
   }, [settingsReady, setSettings, userKey]);
 
-  // Cross-chat memory is opt-in in each browser. Only eligible paid accounts
-  // may enqueue bounded, non-temporary conversation windows for summarization.
+  // Eligible signed-in chats save bounded memory automatically. Explicit
+  // opt-outs, deletion fences and temporary chats never enqueue memory writes.
   useEffect(() => {
     if (!settingsReady || !isSignedIn || !userKey || isStreaming || !settings.rememberAcross)
       return;
@@ -3408,6 +3408,7 @@ function KovaGPT() {
                     canChangeAgent={!active?.kova}
                     showModelStatus
                     showChooseProject
+                    showResources={!chatStarted}
                     savedConversations={userKey && principalReady ? conversations : []}
                     onOpenChatContext={active ? openChatWorkspace : undefined}
                     chatRulesActive={chatRulesActive}
@@ -3543,6 +3544,7 @@ function KovaGPT() {
                     canChangeAgent={!active?.kova}
                     showModelStatus
                     showChooseProject
+                    showResources={!chatStarted}
                     savedConversations={userKey && principalReady ? conversations : []}
                     onOpenChatContext={active ? openChatWorkspace : undefined}
                     chatRulesActive={chatRulesActive}
