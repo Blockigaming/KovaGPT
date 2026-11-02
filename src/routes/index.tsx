@@ -1,4 +1,5 @@
 import { normalizeBrowserActivity } from "@/lib/browser-activity-contract.mjs";
+import { appendMessageActivity } from "@/lib/message-activity-list.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
 import {
   snapshotNextPrompt,
@@ -2225,6 +2226,9 @@ function KovaGPT() {
             if (delta?.kind === "activity" && delta?.label) {
               updateAssistantMessage((message) => {
                 const activity: Activity = {
+                  ...(typeof delta.activity_id === "string" && delta.activity_id.trim()
+                    ? { activityId: delta.activity_id.slice(0, 160) }
+                    : {}),
                   tool: String(delta.tool ?? ""),
                   label: String(delta.label),
                   ...(delta.tool === "browser_interact"
@@ -2237,20 +2241,7 @@ function KovaGPT() {
                         ? ("running" as const)
                         : ("done" as const),
                 };
-                const currentActivities = message.activities ?? [];
-                const matchingToolIndex = activity.tool
-                  ? currentActivities.findIndex((item) => item.tool === activity.tool)
-                  : -1;
-                const activities =
-                  matchingToolIndex >= 0
-                    ? currentActivities.map((item, index) =>
-                        index === matchingToolIndex ? activity : item,
-                      )
-                    : currentActivities.some(
-                          (item) => item.tool === activity.tool && item.label === activity.label,
-                        )
-                      ? currentActivities
-                      : [...currentActivities, activity];
+                const activities = appendMessageActivity(message.activities ?? [], activity);
                 return { ...message, activities };
               });
             }

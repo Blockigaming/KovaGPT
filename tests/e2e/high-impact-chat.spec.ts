@@ -267,6 +267,11 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
                 'data: {"choices":[{"delta":{"kind":"activity","tool":"search_web","label":"Search complete","status":"done"}}]}\n\n',
               ),
             );
+            controller.enqueue(
+              new TextEncoder().encode(
+                'data: {"choices":[{"delta":{"kind":"activity","tool":"search_web","label":"Read example.org","status":"done"}}]}\n\n',
+              ),
+            );
             const abort = () =>
               controller.error(signal?.reason ?? new DOMException("Aborted", "AbortError"));
             if (signal?.aborted) abort();
@@ -288,6 +293,10 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
   await expect(status).toContainText("Preparing reply…");
   await expect(page.getByRole("list", { name: "Activity", exact: true })).toBeVisible();
   await expect(page.getByText("Search complete", { exact: true })).toBeVisible();
+  await expect(page.getByText("Read example.org", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("list", { name: "Activity", exact: true }).getByRole("listitem"),
+  ).toHaveCount(2);
   await page.clock.runFor(8_000);
   await expect(status).toContainText("Still waiting for the response…");
   await page.clock.runFor(22_000);

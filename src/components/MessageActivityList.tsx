@@ -30,11 +30,15 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
                 ? "Canceled"
                 : "Completed";
         return (
-          <li key={index} className="kova-activity-row" data-status={activity.status}>
+          <li
+            key={activity.activityId ? `operation-${activity.activityId}` : index}
+            className="kova-activity-row"
+            data-status={activity.status}
+          >
             <Icon className="kova-activity-icon" aria-hidden="true" />
             <span className="min-w-0 break-words">
               <span className="sr-only">{status}: </span>
-              {activity.label}
+              <span>{activity.label}</span>
             </span>
             {(activity.status === "failed" || activity.status === "canceled") && (
               <span className="shrink-0 text-xs" aria-hidden="true">
