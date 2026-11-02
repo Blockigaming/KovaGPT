@@ -177,7 +177,7 @@ async function writeRunStart(task: ClaimedScheduledTask, workerId: string): Prom
     !result.data ||
     result.data.task.id !== task.id ||
     result.data.task.user_id !== task.user_id ||
-    !["plus", "pro"].includes(result.data.plan)
+    !["free", "plus", "pro"].includes(result.data.plan)
   )
     throw new Error("scheduled_run_admission_failed");
   return result.data;
