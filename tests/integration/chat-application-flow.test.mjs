@@ -6,6 +6,7 @@ import { build } from "esbuild";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { consumeChatSse, chatResponseError } from "../../src/lib/chat-sse-client.mjs";
+import { messageActivitiesFromDelta } from "../../src/lib/message-activity-list.mjs";
 import { withResponsePresentation } from "../../src/lib/spec400-response-preferences.mjs";
 import {
   createAcceptanceFixture,
@@ -206,6 +207,8 @@ function fixture({
     crypto,
     setTimeout,
     clearTimeout,
+    setInterval,
+    clearInterval,
     process: { env: {} },
     console: Object.fromEntries(
       ["info", "warn", "error", "log"].map((key) => [key, (...args) => logs.push(args)]),
@@ -395,6 +398,19 @@ function findSend(node) {
 }
 findSend(indexSource);
 assert.ok(sendSource, "actual composer callback must be found");
+// The callback is extracted from the React route. Resolve its lazy imports at
+// the fixture boundary and run it in the host realm so async steps advance just
+// as they do in the browser, while the authoritative services remain mocked.
+sendSource = sendSource
+  .replaceAll(
+    'await import("@/lib/chat-summary-snapshot.mjs")',
+    'require("@/lib/chat-summary-snapshot.mjs")',
+  )
+  .replaceAll(
+    'await import("@/lib/message-activity-list.mjs")',
+    'require("@/lib/message-activity-list.mjs")',
+  )
+  .replace("await createChatHistoryPayload(", "createChatHistoryPayload(");
 const compiledSend = ts.transpileModule(`globalThis.composerSend = ${sendSource};`, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
@@ -512,10 +528,11 @@ function composer(f) {
     Error,
     TypeError,
     require: (name) => {
+      if (name === "@/lib/message-activity-list.mjs") return { messageActivitiesFromDelta };
       assert.equal(name, "@/lib/chat-summary-snapshot.mjs");
       return {
         withResponsePresentation,
-        createChatHistoryPayload: async (messages) => ({ messages }),
+        createChatHistoryPayload: (messages) => ({ messages }),
         chatRequestProfile: () => ({}),
         fetchForPrincipal: async (owner, url, init) => {
           assert.equal(owner, ownerId);
@@ -532,7 +549,14 @@ function composer(f) {
       };
     },
   };
-  vm.runInNewContext(compiledSend, context);
+  const assignSendInHostRealm = compiledSend.replace(
+    "globalThis.composerSend =",
+    "context.composerSend =",
+  );
+  new Function("context", ...Object.keys(context), assignSendInHostRealm)(
+    context,
+    ...Object.values(context),
+  );
   return {
     context,
     send: () => context.composerSend(f.prompt, []),

@@ -564,7 +564,7 @@ export function SettingsDialog({
       const res = await createPortalSession({ data: {} });
       if (!billingIsCurrent(epoch) || billingScopeRef.current.view !== view) return;
       if ("error" in res) {
-        toast.error(res.error);
+        toast.error("The billing portal couldn't be opened. Try again.");
         return;
       }
       const portalUrl = parseAllowedBillingPortalUrl(res.url);
