@@ -36,6 +36,11 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
               <span className="sr-only">{status}: </span>
               {activity.label}
             </span>
+            {(activity.status === "failed" || activity.status === "canceled") && (
+              <span className="shrink-0 text-xs" aria-hidden="true">
+                {status}
+              </span>
+            )}
             {activity.status === "running" && (
               <Loader2
                 className="h-3.5 w-3.5 shrink-0 animate-spin motion-reduce:animate-none"
