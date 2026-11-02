@@ -21,7 +21,7 @@ import {
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
 import { authFetch } from "@/lib/auth-fetch";
-import { prepareVoiceRecording } from "@/lib/voice-recording";
+import { prepareVoiceRecording, prepareVoiceRecordingChunks } from "@/lib/voice-recording";
 import {
   createBrowserSpeechSink,
   createSpeechPlayback,
@@ -664,25 +664,35 @@ export function ComposerVoiceDialog({
     updatePhase("transcribing");
     const controller = beginRequest();
     try {
-      const audio = await prepareVoiceRecording(original, { signal: controller.signal });
-      if (!isCurrent(scope)) return;
-      const body = new FormData();
-      body.append("action", "stt");
-      body.append("audio", new File([audio], "recording.wav", { type: "audio/wav" }));
-      const response = await authFetch("/api/voice", {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "X-Kova-Voice-Owner": scope.userId },
-        body,
-      });
-      if (!isCurrent(scope)) return;
-      if (!response.ok)
-        throw new Error(await voiceError(response, "Your recording could not be transcribed."));
-      const result = (await response.json()) as { text?: unknown };
-      if (!isCurrent(scope)) return;
-      if (typeof result.text !== "string" || !result.text.trim()) {
-        throw new Error("No speech was detected. Try speaking a little closer to your microphone.");
+      const dictating = current.current.mode === "dictate";
+      const recordings = dictating
+        ? await prepareVoiceRecordingChunks(original, { signal: controller.signal })
+        : [await prepareVoiceRecording(original, { signal: controller.signal })];
+      const transcripts: string[] = [];
+      for (const audio of recordings) {
+        if (!isCurrent(scope)) return;
+        // Each provider-sized segment gets its own deadline, with one cancel signal.
+        if (requestDeadline.current !== null) clearTimeout(requestDeadline.current);
+        requestDeadline.current = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        const body = new FormData();
+        body.append("action", "stt");
+        body.append("audio", new File([audio], "recording.wav", { type: "audio/wav" }));
+        const response = await authFetch("/api/voice", {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "X-Kova-Voice-Owner": scope.userId },
+          body,
+        });
+        if (!isCurrent(scope)) return;
+        if (!response.ok)
+          throw new Error(await voiceError(response, "Your recording could not be transcribed."));
+        const segment = (await response.json()) as { text?: unknown };
+        if (typeof segment.text === "string" && segment.text.trim())
+          transcripts.push(segment.text.trim());
       }
+      const result = { text: transcripts.join(" ") };
+      if (!result.text)
+        throw new Error("No speech was detected. Try speaking a little closer to your microphone.");
       retainedRecording.current = null;
       setCanRetryRecording(false);
       setTranscript(result.text.trim());
@@ -690,7 +700,11 @@ export function ComposerVoiceDialog({
       finishRequest(controller);
       if (current.current.mode === "voice" && voiceSessionActive.current)
         await submitVoiceTurn(scope, result.text.trim());
-      else updatePhase("idle");
+      else if (dictating && inlineDictation) {
+        onTranscript(result.text);
+        onOpenChange(false);
+        updatePhase("idle");
+      } else updatePhase("idle");
     } catch (cause) {
       if (isCurrent(scope)) {
         failOperation(
@@ -716,7 +730,7 @@ export function ComposerVoiceDialog({
       return;
     }
     if (blob.size > MAX_AUDIO_BYTES) {
-      failOperation("Recording exceeded the 8 MB limit. Try a shorter recording.");
+      failOperation("Recording reached the audio processing limit. Try a shorter recording.");
       return;
     }
     await transcribeRecording(scope, blob);
@@ -807,8 +821,8 @@ export function ComposerVoiceDialog({
       next.ondataavailable = (event) => {
         if (!isCurrent(scope) || !event.data.size) return;
         audioBytes.current += event.data.size;
-        if (audioBytes.current > MAX_AUDIO_BYTES) {
-          failOperation("Recording exceeded the 8 MB limit. Try a shorter recording.");
+        if (audioBytes.current > (mode === "dictate" ? 64 * 1024 * 1024 : MAX_AUDIO_BYTES)) {
+          failOperation("Recording reached the audio processing limit. Try a shorter recording.");
           return;
         }
         chunks.current.push(event.data);
@@ -828,9 +842,10 @@ export function ComposerVoiceDialog({
       updatePhase("recording");
       const started = Date.now();
       recordingClock.current = setInterval(() => {
-        if (isCurrent(scope)) setElapsed(Math.min(59, Math.floor((Date.now() - started) / 1000)));
+        if (isCurrent(scope)) setElapsed(Math.floor((Date.now() - started) / 1000));
       }, 250);
-      recordingDeadline.current = setTimeout(stopRecording, MAX_RECORDING_MS);
+      if (mode !== "dictate")
+        recordingDeadline.current = setTimeout(stopRecording, MAX_RECORDING_MS);
     } catch (cause) {
       stopTracks(acquired);
       if (!isCurrent(scope)) return;
@@ -1020,7 +1035,7 @@ export function ComposerVoiceDialog({
         : phase === "requesting"
           ? "Waiting for microphone permission…"
           : phase === "recording"
-            ? `Recording · ${elapsed}s of 59s`
+            ? `Recording · ${elapsed}s`
             : phase === "stopping"
               ? "Finishing recording…"
               : phase === "transcribing"

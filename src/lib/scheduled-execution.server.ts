@@ -159,7 +159,7 @@ async function claimTasks(workerId: string, limit: number): Promise<ClaimedSched
 
 type BegunRun = {
   task: ClaimedScheduledTask;
-  plan: "plus" | "pro";
+  plan: "free" | "plus" | "pro";
   event: Record<string, unknown> | null;
   connectionGrants: TaskConnectionGrant[];
 };

@@ -317,6 +317,9 @@ function fixture(initial = {}, options = {}) {
       },
     },
   };
+  modules["@/lib/voice-recording"].prepareVoiceRecordingChunks = async (...args) => [
+    await modules["@/lib/voice-recording"].prepareVoiceRecording(...args),
+  ];
   const viewExports = {};
   vm.runInNewContext(compiledView, {
     exports: viewExports,
@@ -642,12 +645,14 @@ test("cancel aborts transcription and ignores its late success", async () => {
   f.unmount();
 });
 
-test("59-second capture deadline leaves codec headroom and the 8 MiB limit rejects oversized recordings", async () => {
+test("dictation has no 59-second deadline and retains the audio resource guard", async () => {
   const f = fixture();
   await f.ready();
   await f.click("Start recording");
   const stream = await f.acquire();
-  await f.timer(59_000);
+  assert.ok(![...f.timers.values()].some((timer) => timer.ms === 59_000));
+  assert.equal(f.recorders[0].state, "recording");
+  await f.click("Stop and transcribe");
   assert.equal(f.recorders[0].state, "inactive");
   assert.ok(stream.tracks.every((track) => track.stopped > 0));
   assert.equal(f.requests.length, 2);
@@ -655,9 +660,9 @@ test("59-second capture deadline leaves codec headroom and the 8 MiB limit rejec
   await f.flush();
   await f.click("Record again");
   await f.acquire();
-  f.recorders.at(-1).emit(8 * 1024 * 1024 + 1);
+  f.recorders.at(-1).emit(64 * 1024 * 1024 + 1);
   await f.flush();
-  assert.match(f.text(), /8 MB limit/);
+  assert.match(f.text(), /audio processing limit/);
   assert.equal(f.requests.length, 2);
   assert.equal(f.nodes().find((node) => node.type === "textarea").props.value, "Keep this draft");
   f.unmount();
@@ -1312,7 +1317,7 @@ test("idle status is visually quiet while actual recording progress stays announ
   await f.acquire();
   const recordingStatus = f.nodes().find((node) => node.props?.role === "status");
   assert.doesNotMatch(recordingStatus.props.className, /sr-only/);
-  assert.match(text(recordingStatus), /Recording · 0s of 59s/);
+  assert.match(text(recordingStatus), /Recording · 0s/);
   assert.equal(recordingStatus.props["aria-live"], "polite");
   f.unmount();
 });
@@ -1927,7 +1932,7 @@ for (const mode of ["dictate", "voice"]) {
   });
 }
 
-test("inline dictation starts once after the explicit open, adds reviewed text only, and closes safely", async () => {
+test("inline dictation starts once after the explicit open, inserts the transcript into the composer, and closes safely", async () => {
   const f = fixture({ inlineDictation: true });
   assert.equal(f.microphoneRequests.length, 0, "capability check precedes microphone request");
   await f.ready();
@@ -1939,15 +1944,6 @@ test("inline dictation starts once after the explicit open, adds reviewed text o
   await f.click("Stop and transcribe");
   assert.ok(stream.tracks.every((track) => track.stopped > 0));
   f.requests.at(-1).resolve(Response.json({ text: "A dictated message." }));
-  await f.flush();
-  assert.equal(
-    f.submitted.length,
-    0,
-    "transcription cannot send or change the draft automatically",
-  );
-  const use = f.nodes().find((node) => node.props["aria-label"] === "Use in chat");
-  assert.ok(use);
-  use.props.onClick();
   await f.flush();
   assert.deepEqual(f.submitted, ["A dictated message."]);
   assert.deepEqual(f.closed, [false]);

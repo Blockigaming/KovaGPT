@@ -1980,3 +1980,15 @@ body {
 
 /* Chat selection is one full row, including its options target. Pointer focus
    must not paint a second shorter capsule over the title button. */
+
+/* One focus indicator: shared buttons use the keyboard outline, not a second ring. */
+.kova-button:focus-visible {
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-ring-offset-shadow: 0 0 #0000;
+}
+:where(button, a, [role="button"]):focus:not(:focus-visible) {
+  outline: none;
+}
+.kova-sidebar-rail[data-state="open"] {
+  border-inline-end: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+}

@@ -816,3 +816,30 @@ test("Task claim and run admission enforce the same Free, Plus and Pro daily all
     await db.close();
   }
 });
+
+test("customer limits enforce Free 2, Plus 5, and Pro beyond the former total ceiling", async () => {
+  const db = await fixture();
+  try {
+    await db.exec("reset role");
+    await db.exec(sql("20261031014600_scheduled_task_plan_allowances.sql"));
+    await db.exec(sql("20261102223036_scheduled_task_customer_limits.sql"));
+    await db.exec("set role service_role");
+    await activate(db);
+    for (const [tier, count] of [
+      ["free", 2],
+      ["plus", 5],
+      ["pro", 201],
+    ]) {
+      await db.query("update public.test_plans set tier=$1 where user_id=$2", [tier, owner]);
+      for (let index = 0; index < count; index++)
+        assert.ok((await mutate(db, "create", createPayload())).taskId);
+      if (tier !== "pro")
+        await assert.rejects(mutate(db, "create", createPayload()), /task_capacity/);
+      await db.query("delete from public.scheduled_tasks where user_id=$1", [owner]);
+    }
+    await db.exec("update public.scheduled_task_runtime set enabled=false");
+    await assert.rejects(mutate(db, "create", createPayload()), /execution_unavailable/);
+  } finally {
+    await db.close();
+  }
+});

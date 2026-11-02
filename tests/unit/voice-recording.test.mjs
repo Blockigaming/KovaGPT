@@ -11,7 +11,7 @@ const js = ts.transpileModule(
   ),
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } },
 ).outputText;
-const { prepareVoiceRecording } = await import(
+const { prepareVoiceRecording, prepareVoiceRecordingChunks } = await import(
   `data:text/javascript;base64,${Buffer.from(js).toString("base64")}`
 );
 const recorded = new Blob(["synthetic-local-recorder-fixture"], { type: "audio/webm" });
@@ -206,6 +206,35 @@ test("decoder failure has useful safe error and preserves original", async () =>
     await assert.rejects(prepareVoiceRecording(recorded), /Your recording is still available/);
     assert.equal(fixture.closed, 1);
     assert.ok(recorded.size > 0);
+  } finally {
+    delete globalThis.window;
+  }
+});
+
+test("long dictation is split without losing a short final tail", async () => {
+  const seconds = 118.05;
+  const frames = Math.floor(seconds * 16000);
+  const fixture = withAudioContext(() => ({
+    duration: seconds,
+    numberOfChannels: 1,
+    sampleRate: 16000,
+    length: frames,
+    getChannelData: () => new Float32Array(frames),
+  }));
+  try {
+    const segments = await prepareVoiceRecordingChunks(recorded);
+    const durations = await Promise.all(
+      segments.map(
+        async (blob) => inspectVoicePcm(new Uint8Array(await blob.arrayBuffer())).durationSeconds,
+      ),
+    );
+    assert.equal(segments.length, 2);
+    assert.ok(durations.every((duration) => duration <= 60));
+    assert.equal(
+      durations.reduce((sum, duration) => sum + duration, 0),
+      seconds,
+    );
+    assert.equal(fixture.closed, 1);
   } finally {
     delete globalThis.window;
   }

@@ -595,6 +595,7 @@ export function SettingsDialog({
       onOpenChange(false);
     } catch (e) {
       toast.error("Couldn't sign out. Try again.");
+      throw e;
     }
   };
 

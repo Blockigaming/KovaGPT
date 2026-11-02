@@ -1,3 +1,4 @@
+import { AccountLogoutDialog } from "@/components/AccountLogoutDialog";
 import { moveChatToTrash } from "@/lib/chat-trash";
 import { toast } from "sonner";
 import {
@@ -386,6 +387,7 @@ export function AppShell({
       </div>
 
       <Suspense fallback={null}>
+        <AccountLogoutDialog />
         {shareChatId !== null && (
           <ShareChatDialog
             open

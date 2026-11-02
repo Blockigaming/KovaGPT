@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -12,6 +13,7 @@ export function LogoutConfirmDialog({
   onConfirm: () => void | Promise<void>;
 }) {
   const { user } = useUser();
+  const [pending, setPending] = useState(false);
   const name = user?.fullName || user?.firstName || user?.email || "You";
   const email = user?.email;
   const avatar = user?.imageUrl;
@@ -49,9 +51,18 @@ export function LogoutConfirmDialog({
           <Button
             data-ui-reference="chatgpt.auth.logout-confirmation.action"
             size="prominent"
+            disabled={pending}
             onClick={async () => {
-              await onConfirm();
-              onOpenChange(false);
+              if (pending) return;
+              setPending(true);
+              try {
+                await onConfirm();
+                onOpenChange(false);
+              } catch {
+                // The caller reports the failure. Keep confirmation available for retry.
+              } finally {
+                setPending(false);
+              }
             }}
             className="w-full"
           >
@@ -61,6 +72,7 @@ export function LogoutConfirmDialog({
             data-ui-reference="chatgpt.auth.logout-confirmation.action"
             variant="outline"
             size="prominent"
+            disabled={pending}
             onClick={() => onOpenChange(false)}
             className="w-full"
           >
