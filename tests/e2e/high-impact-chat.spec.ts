@@ -286,10 +286,7 @@ test("a longer first-token wait stays calm, truthful, and stoppable", async ({
 
   const status = page.locator(".kova-thinking-indicator");
   await expect(status).toContainText("Preparing reply…");
-  await page
-    .locator(".kova-assistant-message details > summary")
-    .filter({ hasText: "Activity" })
-    .click();
+  await expect(page.getByRole("list", { name: "Activity", exact: true })).toBeVisible();
   await expect(page.getByText("Search complete", { exact: true })).toBeVisible();
   await page.clock.runFor(8_000);
   await expect(status).toContainText("Still waiting for the response…");
@@ -343,7 +340,8 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await startAttachedConversation(page, "Updated response");
-  await page.getByRole("button", { name: "Edit message" }).click();
+  await page.locator(".kova-user-message").last().click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Edit message", exact: true }).click();
   const editingBanner = page.getByText("Editing a previous prompt", { exact: true });
   await expect(editingBanner).toBeVisible();
 
@@ -505,7 +503,8 @@ test("text files are attached as real request context and remain visible in hist
     }),
   ]);
 
-  await page.getByRole("button", { name: "Edit message" }).last().click();
+  await page.locator(".kova-user-message").last().click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Edit message", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toHaveValue(
     "What is the revenue?",
   );

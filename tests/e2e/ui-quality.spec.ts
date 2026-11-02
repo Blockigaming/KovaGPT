@@ -438,8 +438,33 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   expect(assistant).not.toBeNull();
   expect(assistant!.width).toBeLessThanOrEqual(Math.min(page.viewportSize()!.width, 820));
 
+  const userMessage = page.getByRole("article", { name: "Your message", exact: true }).last();
+  await expect(userMessage.getByRole("button")).toHaveCount(1);
+  await expect(
+    userMessage.getByRole("button", { name: "Copy prompt", exact: true }),
+  ).toBeAttached();
+  const copiedPrompts: string[] = [];
+  await page.exposeFunction("capturePromptCopy", (value: string) => copiedPrompts.push(value));
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: (value: string) =>
+          (
+            window as unknown as { capturePromptCopy: (value: string) => Promise<void> }
+          ).capturePromptCopy(value),
+      },
+    });
+  });
+  await userMessage.hover();
+  await userMessage.getByRole("button", { name: "Copy prompt", exact: true }).click();
+  await expect(
+    userMessage.getByRole("button", { name: "Copied prompt", exact: true }),
+  ).toBeVisible();
+  expect(copiedPrompts).toEqual([await userMessage.locator(".kova-user-message").innerText()]);
+  await expect(userMessage.getByRole("button", { name: "Copy prompt", exact: true })).toBeVisible();
   if (page.viewportSize()!.width < 1024) {
-    for (const label of ["Edit message", "Branch from this message in a new chat"]) {
+    for (const label of ["Copy prompt"]) {
       const promptAction = page.getByRole("button", { name: label, exact: true });
       await expect(promptAction).toBeVisible();
       const promptActionBox = (await promptAction.boundingBox())!;
