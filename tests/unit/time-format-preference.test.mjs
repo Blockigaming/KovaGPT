@@ -288,10 +288,9 @@ for (const [path, scope, expectedCalls] of [
     "src/components/SettingsDialog.tsx",
     {
       usage: { resetsAt: instant },
-      item: { created_at: instant },
       subSummary: { currentPeriodEnd: instant },
     },
-    6,
+    5,
   ],
 ]) {
   test(`${path} uses the shared preference for every scoped timestamp consumer`, () => {

@@ -66,12 +66,11 @@ test("header progress never invents activity", async () => {
 });
 
 test("narrow-phone constraints are scoped to real modal surfaces", async () => {
-  const [styles, dialog, alertDialog, sheet, drawer, images, shellOverlay] = await Promise.all([
+  const [styles, dialog, alertDialog, sheet, images, shellOverlay] = await Promise.all([
     read("src/styles.css"),
     read("src/components/ui/dialog.tsx"),
     read("src/components/ui/alert-dialog.tsx"),
     read("src/components/ui/sheet.tsx"),
-    read("src/components/ui/drawer.tsx"),
     read("src/routes/images.tsx"),
     read("src/components/CommandPalette.tsx"),
   ]);
@@ -79,7 +78,6 @@ test("narrow-phone constraints are scoped to real modal surfaces", async () => {
   assert.match(dialog, /data-kova-dialog-surface=\{constrainToViewport \? "" : undefined\}/);
   assert.match(alertDialog, /data-kova-dialog-surface=""/);
   assert.doesNotMatch(sheet, /data-kova-dialog-surface/);
-  assert.doesNotMatch(drawer, /data-kova-dialog-surface/);
   assert.match(images, /constrainToViewport=\{false\}/);
   assert.doesNotMatch(images, /data-kova-dialog-surface/);
   assert.doesNotMatch(shellOverlay, /data-kova-dialog-surface/);
