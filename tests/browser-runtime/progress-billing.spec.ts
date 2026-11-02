@@ -1,6 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
 import { build } from "esbuild";
 import { readFile, readdir } from "node:fs/promises";
+interface PreviewWindow extends Window {
+  fixture: {
+    summary: Record<string, unknown>;
+    checks: number;
+    advance: () => void;
+  };
+}
+
 test.use(
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
     ? { launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } }
@@ -97,7 +105,7 @@ test("progress sentences and branded website rows retain arrival order while wor
   const progress = page.getByRole("region", { name: "Progress preview" });
   await expect(progress.getByText("Searching GitHub…")).toBeVisible();
   await expect(progress.locator("img")).toHaveCount(1);
-  await page.evaluate(() => (window as any).fixture.advance());
+  await page.evaluate(() => (window as PreviewWindow).fixture.advance());
   await expect(progress.locator("li")).toHaveText([
     "I’m checking the sources.",
     /Completed: Checked GitHub/,
@@ -120,7 +128,7 @@ for (const width of [390, 1440])
     expect(box!.y).toBe(0);
     expect(box!.width).toBe(width);
     expect(box!.height).toBe(844);
-    expect(await page.evaluate(() => (window as any).fixture.checks)).toBe(1);
+    expect(await page.evaluate(() => (window as PreviewWindow).fixture.checks)).toBe(1);
     await expect(dialog.getByTitle("Secure checkout form")).toBeVisible();
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
     await expect(dialog).toBeHidden();
@@ -130,8 +138,8 @@ test("existing subscriptions go through plan management rather than a second che
 }) => {
   await mount(page);
   await page.evaluate(() => {
-    (window as any).fixture.summary = {
-      ...(window as any).fixture.summary,
+    (window as PreviewWindow).fixture.summary = {
+      ...(window as PreviewWindow).fixture.summary,
       activeSubscriptionCount: 1,
       hasBillingAccount: true,
       billingPortalAvailable: true,
