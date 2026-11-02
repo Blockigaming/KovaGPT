@@ -238,7 +238,8 @@ for (const theme of ["light", "dark"] as const) {
       buffer: Buffer.from("Keep this local draft."),
     });
     await expect(page.getByLabel("Remove Keep.txt", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Edit message", exact: true }).click();
+    await page.locator(".kova-user-message").last().click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Edit message", exact: true }).click();
     await expect(input).toHaveValue("Draft a release checklist.");
     await input.fill("A revised prompt");
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -252,7 +253,8 @@ for (const theme of ["light", "dark"] as const) {
     });
     if (page.viewportSize()!.width >= 1024) {
       await revealSidebar(page);
-      await page.getByRole("button", { name: "Edit message", exact: true }).click();
+      await page.locator(".kova-user-message").last().click({ button: "right" });
+      await page.getByRole("menuitem", { name: "Edit message", exact: true }).click();
       await page.getByRole("button", { name: "Open chat Second review chat", exact: true }).click();
       await expect(input).toHaveValue("Second chat draft");
       await expect(page.getByText("Editing a previous prompt", { exact: true })).toHaveCount(0);

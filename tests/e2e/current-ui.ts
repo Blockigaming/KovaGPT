@@ -123,9 +123,13 @@ export async function chooseSettingsSection(page: Page, section: string) {
       .getByRole("option", { name: new RegExp(`^${label}(?: Selected)?$`) })
       .click();
   };
+  const back = surface.getByRole("button", { name: "Back to settings", exact: true });
   if (!(await tab.isVisible()) && !(await picker.isVisible())) {
-    const back = surface.getByRole("button", { name: "Back to settings", exact: true });
-    if (await back.isVisible()) await back.click();
+    await expect(back.or(tab).filter({ visible: true }).first()).toBeVisible();
+    if (await back.isVisible()) {
+      await back.click();
+      await expect(tab).toBeVisible();
+    }
   }
   if (await tab.isVisible()) {
     try {

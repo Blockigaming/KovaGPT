@@ -64,11 +64,12 @@
 }
 .kova-settings-route section.kova-settings-page .kova-settings-content {
   min-width: 0;
+  max-width: none;
   min-height: 0;
   flex: 1;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  background: var(--background);
+  background: transparent;
 }
 .kova-settings-route section.kova-settings-page .kova-settings-content-header {
   box-sizing: border-box;

@@ -118,9 +118,9 @@ test("settings bounds the workspace below its sidebar breakpoint and Work uses s
   const css = read("src/styles/settings-page-layout.css");
   assert.match(
     css,
-    /\.kova-settings-route \.kova-settings-page \.kova-settings-content \{[^}]*max-width: none/,
+    /\.kova-settings-route section\.kova-settings-page \.kova-settings-content \{[^}]*max-width: none/,
   );
-  assert.match(css, /@container settings \(max-width: 719px\)/);
+  assert.match(css, /@media \(max-width: 767px\)/);
   const caps = [];
   postcss.parse(css).walkDecls("max-width", (declaration) => {
     if (declaration.parent.selector?.endsWith(".kova-settings-content"))
@@ -130,7 +130,8 @@ test("settings bounds the workspace below its sidebar breakpoint and Work uses s
     caps.every((value) => value === "none"),
     "Settings content stays inside its own scrollable workspace",
   );
-  assert.match(css, /--page-max: 1080px/);
+  assert.match(css, /--page-max: none/);
+  assert.match(css, /\.kova-settings-content \{[^}]*overflow-y: auto/);
   const source = read("src/components/WorkExecutionPanel.tsx");
   assert.doesNotMatch(source, /ml-2 rounded border bg-background p-1/);
   assert.match(source, /import \{ Button \} from "@\/components\/ui\/button"/);

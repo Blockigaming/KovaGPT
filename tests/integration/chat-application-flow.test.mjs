@@ -36,7 +36,12 @@ const mocks = {
     "runGoogleTool",
     "stagePendingAction",
   ],
-  "@/lib/ai/accounting.server": ["acquireGeneration", "finalizeGeneration", "hashGuestIp"],
+  "@/lib/ai/accounting.server": [
+    "acquireGeneration",
+    "finalizeGeneration",
+    "getGenerationTokenHeadroom",
+    "hashGuestIp",
+  ],
   "@/lib/pricing/developer-billing.server": ["meterProviderRequest"],
   "@/lib/runtime-env.server": ["runtimeEnv"],
   "@/lib/distributed-rate-limit.server": ["consumeApplicationRateLimit"],
@@ -145,6 +150,9 @@ function fixture({
       stagePendingAction: noop,
     },
     "@/lib/ai/accounting.server": {
+      getGenerationTokenHeadroom: async () => {
+        throw new Error("Headroom must not be read without connected tools");
+      },
       acquireGeneration: async (input) => {
         assert.equal(input.userId, ownerId);
         calls.push("usage");

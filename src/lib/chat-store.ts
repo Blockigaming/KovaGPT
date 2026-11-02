@@ -109,6 +109,8 @@ export function pendingMessageAttachments(items: Message["attachments"]): Pendin
 }
 
 export type Activity = {
+  /** Optional operation identity from the active response stream. */
+  activityId?: string;
   browser?: import("./browser-activity-contract.mjs").BrowserActivityMetadata;
   taskReceipt?: TaskCreatedReceipt;
   taskFailure?: TaskCreationFailureReceipt;

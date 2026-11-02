@@ -145,15 +145,14 @@ test("conversation composer keeps drafts and mobile Enter inserts a newline", as
   const context = page.getByRole("button", { name: "Context", exact: true });
   if (!(await context.isVisible())) {
     await page.getByRole("button", { name: "Attach", exact: true }).click();
-    await page
-      .getByTestId("mobile-bottom-sheet")
+    const menu = page
+      .getByRole("dialog", { name: /^(Attach|Attach files and tools)$/ })
+      .filter({ visible: true });
+    await menu
       .locator("summary")
       .filter({ hasText: /^More tools$/ })
       .click();
-    await page
-      .getByTestId("mobile-bottom-sheet")
-      .getByRole("button", { name: "Context", exact: true })
-      .click();
+    await menu.getByRole("button", { name: "Context", exact: true }).click();
   } else {
     await context.click();
   }

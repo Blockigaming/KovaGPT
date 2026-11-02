@@ -278,7 +278,7 @@ export function SettingsDialog({
   const normalizedInitialTab = initialTab === "subscription" ? "billing" : initialTab;
   const [tab, setTab] = useState<string>(normalizedInitialTab ?? "general");
   const [settingsQuery, setSettingsQuery] = useState("");
-  const [mobileHome, setMobileHome] = useState(true);
+  const [mobileHome, setMobileHome] = useState(!initialTab);
   const [usage, setUsage] = useState<DailyUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageLoaded, setUsageLoaded] = useState(false);
