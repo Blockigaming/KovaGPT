@@ -24,6 +24,11 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+/* Mouse / touch clicks should not leave a thick focus ring behind */
+:where(button, a[role="button"], [role="tab"]):focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
 .spec400-composer:focus-within {
   border-color: color-mix(in srgb, var(--foreground) 30%, transparent);
 }
