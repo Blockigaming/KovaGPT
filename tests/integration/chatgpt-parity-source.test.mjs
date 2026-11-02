@@ -9,12 +9,10 @@ const [
   sidebar,
   chatInput,
   chatMessage,
-  modelSelector,
   responsiveSelector,
   mobileTopBar,
   searchServer,
   modes,
-  workspaceModeSwitch,
   workRoute,
   onboarding,
   shellSpec,
@@ -30,12 +28,10 @@ const [
   readFile("src/components/Sidebar.tsx", "utf8"),
   readFile("src/components/ChatInput.tsx", "utf8"),
   readFile("src/components/ChatMessage.tsx", "utf8"),
-  readFile("src/components/ModelSelector.tsx", "utf8"),
   readFile("src/components/ResponsiveModelSelector.tsx", "utf8"),
   readFile("src/components/MobileTopBar.tsx", "utf8"),
   readFile("src/lib/ai/search.server.ts", "utf8"),
   readFile("src/lib/modes.ts", "utf8"),
-  readFile("src/components/WorkspaceModeSwitch.tsx", "utf8"),
   readFile("src/routes/work.tsx", "utf8"),
   readFile("src/components/OnboardingDialog.tsx", "utf8"),
   readFile("tests/e2e/chatgpt-shell-parity.spec.ts", "utf8"),
@@ -49,7 +45,7 @@ const [
 const homeView = await readFile("src/components/HomeChatStarters.tsx", "utf8");
 const sidebarCatalog = await readFile("src/lib/sidebar-layout.mjs", "utf8");
 test("chat stays primary and retired Work bookmarks do not expose a workspace switch", () => {
-  assert.match(workspaceModeSwitch, /return null/);
+  assert.doesNotMatch(appShell, /WorkspaceModeSwitch/);
   assert.doesNotMatch(mobileTopBar, /WorkspaceModeSwitch/);
   assert.match(workRoute, /throw redirect\(\{ to: "\/", replace: true \}\)/);
   assert.doesNotMatch(sidebarCatalog, /to: "\/work"/);
@@ -94,7 +90,8 @@ test("Chat uses the current greeting and reports model availability truthfully",
   assert.match(modelStatus, /aria-label="Model availability"/);
   assert.match(modelStatus, /Model selection isn’t available in this session/);
   assert.match(modelStatus, /The current serving model isn’t\s*confirmed/);
-  assert.match(modelSelector, /ResponsiveModelSelector/);
+  assert.match(chatInput, /ResponsiveModelSelector as ModelSelector/);
+  assert.match(chatInput, /<ModelSelector/);
   assert.match(responsiveSelector, /placement\?: "composer" \| "topbar"/);
   assert.equal((responsiveSelector.match(/data-testid="model-selector-trigger"/g) ?? []).length, 1);
   assert.match(responsiveSelector, /const useSheet = !isDesktop \|\| interaction === "touch"/);

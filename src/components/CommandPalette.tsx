@@ -13,7 +13,6 @@ import {
   FlaskConical,
   ShieldCheck,
   SunMoon,
-  FileSearch,
   Boxes,
   Star,
   Zap,

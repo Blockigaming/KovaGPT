@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Bot, Check, Circle, Loader2, Pause, Play, RotateCcw, Square, Users } from "lucide-react";
+import { Check, Circle, Loader2, Pause, Play, RotateCcw, Square, Users } from "lucide-react";
 import { authFetch } from "@/lib/auth-fetch";
 import { useTier } from "@/hooks/useTier";
 import { AGENT_WORKFLOW_TEMPLATES, type AgentRole, type AgentTaskInput } from "@/agents/team";

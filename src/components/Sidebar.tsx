@@ -27,7 +27,6 @@ import {
   Copy as CopyIcon,
   CreditCard,
   Ellipsis,
-  Folder,
   Pin,
   PinOff,
   Pencil,

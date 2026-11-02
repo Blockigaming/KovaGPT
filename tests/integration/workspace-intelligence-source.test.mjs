@@ -13,11 +13,16 @@ test("workspace resources have reduced-click truthful handoffs", async () => {
     read("src/components/ArtifactEditor.tsx"),
     read("src/routes/context-packs.tsx"),
   ]);
-  for (const source of [library, files, memory, artifact]) {
+  for (const source of [library, files, memory]) {
     assert.match(source, /openInWork/);
     assert.match(source, /continueInChat/);
     assert.match(source, /addToContextPack/);
   }
+  assert.match(
+    artifact,
+    /onSelect=\{\(\) =>\s*openInWork\(\s*\{ type: "artifact", id: kind, title: artifactTitle, content: value \},\s*userKey,/,
+  );
+  assert.match(artifact, /Continue in chat/);
   assert.doesNotMatch(handoffs, /kova-work-draft|location.href = "\/work"/);
   assert.match(handoffs, /kova-app-chat-context/);
   assert.match(packs, /Use in Search/);

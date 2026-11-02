@@ -9,7 +9,7 @@ const read = (path) => readFileSync(join(root, path), "utf8");
 test("chat API delegates model routing, activity, memory, web search, and failure isolation", () => {
   const chat = read("src/routes/api/chat.ts");
   for (const token of [
-    "selectModelForMode",
+    "routeAiModel",
     "routeDecision.modelId",
     "createToolActivityEvent",
     "selectRelevantMemories",
@@ -32,7 +32,7 @@ test("web-search responses stream bounded source records to the message UI", () 
   const message = read("src/components/ChatMessage.tsx");
   const history = read("src/lib/chat-history-policy.mjs");
   const projectChat = read("src/routes/projects.$projectId.chat.$chatId.tsx");
-  const styles = read("src/styles/chatgpt-parity.css");
+  const styles = read("src/components/response-action-refinement.css");
 
   assert.match(chat, /kind: "web_sources"/u);
   assert.match(chat, /responseSourcesDelta\(webSources\)/u);
@@ -44,6 +44,7 @@ test("web-search responses stream bounded source records to the message UI", () 
   assert.match(history, /item\.sources = message\.sources\.map\(responseSource\)/u);
   assert.match(projectChat, /normalizeResponseSources\(delta\.sources\)/u);
   assert.match(styles, /button\.kova-message-source-toggle\s*\{[\s\S]*?width: auto/u);
+  assert.match(message, /import "\.\/response-action-refinement\.css"/u);
   assert.doesNotMatch(
     chat,
     /if \(!upstream\.ok\)[\s\S]*?start\(controller\) \{\s*if \(webSources\.length\)/u,
