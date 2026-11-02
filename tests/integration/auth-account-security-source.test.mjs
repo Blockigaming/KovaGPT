@@ -87,7 +87,7 @@ test("browser auth gates aal1 sessions and keeps normal sign-out device-local", 
   assert.match(panel, /kovaAuthJson\("\/api\/auth\/sessions\/revoke-others", \{\}\)/);
 });
 
-test("GitHub modal sign-in and passkey credential management retain their own capability gates", async () => {
+test("GitHub stays Coming Soon and passkey credential management retains its capability gates", async () => {
   const [client, providers, support, dialog, panel] = await Promise.all([
     read("src/integrations/supabase/client.ts"),
     read("src/lib/auth-providers.ts"),
@@ -101,12 +101,14 @@ test("GitHub modal sign-in and passkey credential management retain their own ca
   assert.match(providers, /bool\(data\.passkey_enabled\)/);
   assert.match(support, /typeof navigator\.credentials\?\.create === "function"/);
   assert.match(support, /typeof navigator\.credentials\?\.get === "function"/);
-  assert.match(dialog, /providers\.resolved && providers\.github/);
-  assert.match(dialog, /browserKovaAuthMode\(\) !== "kova"/);
+  assert.match(dialog, /browserKovaAuthMode\(\) === "dual" && !isSignUp/);
   assert.match(dialog, /resolveLegacyAuthContext\(\)/);
   assert.match(dialog, /context\.assertCurrent\(\)/);
-  assert.match(dialog, /provider: "github"/);
-  assert.match(dialog, /disabled=\{loading \|\| !githubAvailable\}/);
+  assert.match(dialog, /disabled=\{true\}[\s\S]*aria-label="GitHub · Coming Soon"/);
+  assert.match(dialog, /src=\{githubLogo\}/);
+  assert.match(dialog, /Coming Soon[\s\S]*onClick=\{handleGoogle\}/);
+  assert.match(dialog, /disabled=\{loading \|\| !googleAvailable\}/);
+  assert.doesNotMatch(dialog, /provider: "github"|handleGithub/);
   assert.doesNotMatch(dialog, /signInWithPasskey|Continue with a passkey/);
   assert.match(panel, /auth\.registerPasskey\(\)/);
   assert.match(panel, /auth\.passkey\.list\(\)/);

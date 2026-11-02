@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { reactFixture } from "../helpers/kova-react-fixture.mjs";
+import { reactFixture, text } from "../helpers/kova-react-fixture.mjs";
 
 test("callback effect replay cancels the first start before consuming one-use credentials", async () => {
   const timers = new Map(),
@@ -112,34 +112,28 @@ function dialogFixture({ mode = "dual", github = true, rejected = false } = {}) 
   return { f, calls, redirects };
 }
 
-test("GitHub replaces passkey and starts the guarded identity OAuth flow", async () => {
+test("GitHub Coming Soon has its logo immediately above Google and cannot start OAuth", async () => {
   const { f, calls, redirects } = dialogFixture();
   await f.flush();
   assert.ok(!f.text().includes("passkey"));
-  await f.click("Continue with GitHub");
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].provider, "github");
-  assert.equal(calls[0].options.redirectTo, "https://kovagpt.com/~oauth/callback");
-  assert.equal(calls[0].options.skipBrowserRedirect, true);
-  assert.deepEqual(redirects, ["https://auth.example.test/authorize"]);
+  const buttons = f.nodes().filter((n) => n.type === "button");
+  const index = buttons.findIndex((n) => n.props["aria-label"] === "GitHub · Coming Soon");
+  assert.ok(index >= 0);
+  assert.equal(buttons[index].props.disabled, true);
+  assert.equal(buttons[index].props.onClick, undefined);
+  assert.match(text(buttons[index + 1]), /Google/);
+  assert.equal(f.find("img", (n) => n.props.src === "github.svg").props["aria-hidden"], "true");
+  assert.deepEqual(calls, []);
+  assert.deepEqual(redirects, []);
 });
 
-for (const options of [{ github: false }, { mode: "kova" }])
-  test(`GitHub stays disabled when unavailable: ${JSON.stringify(options)}`, async () => {
+for (const options of [{ github: false }, { mode: "kova" }, { rejected: true }])
+  test(`GitHub cannot start a flow while Coming Soon: ${JSON.stringify(options)}`, async () => {
     const { f, calls, redirects } = dialogFixture(options);
     await f.flush();
-    const button = f.find("button", (n) => n.props["aria-describedby"] === "github-sign-in-status");
+    const button = f.find("button", (n) => n.props["aria-label"] === "GitHub · Coming Soon");
     assert.equal(button.props.disabled, true);
-    await button.props.onClick();
+    assert.equal(button.props.onClick, undefined);
     assert.equal(calls.length, 0);
     assert.equal(redirects.length, 0);
   });
-
-test("GitHub cannot bypass a rejected owned session", async () => {
-  const { f, calls, redirects } = dialogFixture({ rejected: true });
-  await f.flush();
-  await f.click("Continue with GitHub");
-  assert.equal(calls.length, 0);
-  assert.equal(redirects.length, 0);
-  assert.equal(f.messages[0][0], "error");
-});

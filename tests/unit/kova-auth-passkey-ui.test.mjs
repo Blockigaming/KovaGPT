@@ -353,12 +353,14 @@ test("account-page passkey capability appears only after hydration and requires 
   }
 });
 
-test("the identity modal replaces passkeys with GitHub without attempting WebAuthn", async () => {
+test("the identity modal shows GitHub Coming Soon without attempting WebAuthn", async () => {
   for (const owned of [true, false]) {
     const modal = loginSurface(true, { owned });
     await modal.flush();
     assert.ok(!modal.text().includes("Continue with a passkey"));
-    assert.ok(modal.text().includes("Continue with GitHub"));
+    const github = modal.find("button", (n) => n.props["aria-label"] === "GitHub · Coming Soon");
+    assert.equal(github.props.disabled, true);
+    assert.equal(github.props.onClick, undefined);
     assert.deepEqual(modal.events, []);
   }
 });
