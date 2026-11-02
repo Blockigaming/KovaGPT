@@ -2002,6 +2002,7 @@ export function ChatInput({
                         toolsOpening ||
                         signInRequest ||
                         contextOpen ||
+                        optionsOpen ||
                         projectPickerOpen
                       )
                         event.preventDefault();
