@@ -8,7 +8,7 @@ const other = "20000000-0000-4000-8000-000000000002";
 const deleting = "30000000-0000-4000-8000-000000000003";
 const migration = await readFile(
   new URL(
-    "../../supabase/migrations/20261102230840_scheduled_task_private_fence_reads.sql",
+    "../../supabase/migrations/20261102231924_scheduled_task_private_fence_reads.sql",
     import.meta.url,
   ),
   "utf8",
