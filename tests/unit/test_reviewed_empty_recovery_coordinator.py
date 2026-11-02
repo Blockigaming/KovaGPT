@@ -505,6 +505,25 @@ class CoordinatorTests(unittest.TestCase):
             self.assertEqual(p.probe.consumer_proof.call_args_list,
                              [unittest.mock.call("a"), unittest.mock.call("b")])
 
+    def test_private_client_failure_retains_only_fixed_stage_and_code(self):
+        cases=[({"stage":"restore","code":"empty_target_user_objects_present"},True),
+               ({"stage":"restore","code":"unclassified_private_failure"},True),
+               ({"stage":"private-client-input","code":"client_input_or_runtime_unqualified"},True),
+               ({"stage":"PRIVATE_STAGE_CANARY","code":"empty_target_user_objects_present"},False),
+               ({"stage":"restore","code":"PRIVATE_CODE_CANARY"},False)]
+        for index,(report,accepted) in enumerate(cases):
+            p,plan,attestation,_,_,_,_=self.qualified_import_fixture("client-failure-"+str(index))
+            original=p.probe.docker
+            def docker(args,**kwargs):
+                if "--execute" in args:return 1,m.canonical({**report,"private":"PRIVATE_PAYLOAD_CANARY"})
+                return original(args,**kwargs)
+            p.probe.docker=docker
+            with self.subTest(report=report),patch.object(p,"check_plan",return_value=object()):
+                with self.assertRaisesRegex(m.Stopped,"private_client_restore_failed"):
+                    p.import_qualified(plan,attestation)
+            self.assertEqual(getattr(p,"client_failure",None),report if accepted else None)
+            self.assertNotIn("PRIVATE_",json.dumps(getattr(p,"client_failure",None)))
+
     def test_stale_qualification_does_not_release_phrase(self):
         p = self.bare_coordinator(); phrase = "SYNTHETIC_PHRASE_CANARY_" * 3
         p.env["KOVA_PRODUCTION_BACKUP_PASSPHRASE"] = phrase

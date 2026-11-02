@@ -454,8 +454,11 @@ class SyntheticTests(unittest.TestCase):
         pins={k:"c"*64 for k in ["emptyBaselineCensusSha256","emptyBaselineCatalogSha256","emptyBaselineRowsSha256","emptyBaselineSchemaSha256"]}
         p.native_snapshot=lambda *_:{"fingerprints":pins,"roleMatch":True,"namespaceMatch":True,"extensionMatch":True}
         p.verify_effective_firewalls=lambda:None;p.denial_probes=lambda *_:12;p.inspect_and_recheck_runtime=lambda *_:None
+        p.restore_preflight=lambda *_:{"ok":True,"preflightPassed":True,"changedPinsRejected":4}
         p.cleanup=lambda:True
         result=p.execute_synthetic();self.assertTrue(result["syntheticNativeProofComplete"])
+        self.assertEqual(result["nativeRestorePreflightPassedCount"],2)
+        self.assertEqual(result["nativeRestoreChangedBaselineRejectedCount"],8)
         self.assertEqual(result["serverImageTransport"],p.server_image_qualification)
         self.assertEqual(result["serverImageTransport"]["actualRepoDigest"],m.base.server_image.TRANSPORT_REF)
         self.assertNotEqual(result["serverImageTransport"]["actualRepoDigest"],m.base.server_image.ORIGINAL_ECR_REF)
