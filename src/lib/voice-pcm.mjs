@@ -1,7 +1,7 @@
 // Portable fixed-width PCM contract shared by browser normalization and server
 // validation. No decoder, provider, credentials or runtime configuration here.
 export const VOICE_SAMPLE_RATE = 16000;
-export const MAX_VOICE_SECONDS = 60;
+export const MAX_VOICE_SECONDS = 600;
 export const MIN_VOICE_SECONDS = 0.1;
 export const MAX_PCM_WAV_BYTES = 44 + VOICE_SAMPLE_RATE * MAX_VOICE_SECONDS * 2;
 const tag = (view, offset) =>
