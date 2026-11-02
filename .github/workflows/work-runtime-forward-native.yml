@@ -11,6 +11,8 @@ on:
       - tests/fixtures/work-runtime-forward-native-smoke-20261030.sql
       - tests/unit/test_work_runtime_forward_native.py
       - supabase/migrations/20261030163511_kova_work_runtime_forward.sql
+      - scripts/release/managed-auth-recovery.py
+      - tests/unit/test_managed_auth_native_archive.py
   workflow_dispatch:
 
 permissions:
@@ -70,6 +72,14 @@ jobs:
           "$tools/extracted/usr/lib/postgresql/17/bin/psql" --version
           "$tools/extracted/usr/lib/postgresql/17/bin/postgres" --version
           if ldd "$tools/extracted/usr/lib/postgresql/17/bin/postgres" | grep 'not found'; then exit 1; fi
+
+      - name: Verify actual PostgreSQL17 serial defaults survive archive parsing and restore
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LD_LIBRARY_PATH="$RUNNER_TEMP/work-native-pg17-tools/extracted/usr/lib/x86_64-linux-gnu"
+          export KOVA_NATIVE_PG17_BIN="$RUNNER_TEMP/work-native-pg17-tools/extracted/usr/lib/postgresql/17/bin"
+          python3 -m unittest discover -s tests/unit -p test_managed_auth_native_archive.py -v
 
       - name: Replay only synthetic Work state on its newly pinned native target
         shell: bash
