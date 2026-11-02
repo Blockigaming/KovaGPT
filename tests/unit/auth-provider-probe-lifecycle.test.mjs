@@ -36,7 +36,19 @@ function fixture() {
     clearTimeout: (timer) => {
       timer.cleared = true;
     },
-    TEST_ENV: environment,
+    require: (id) => {
+      assert.equal(id, "@/integrations/supabase/config");
+      return {
+        SUPABASE_BROWSER_CONFIG: {
+          get url() {
+            return environment.VITE_SUPABASE_URL;
+          },
+          get publishableKey() {
+            return environment.VITE_SUPABASE_PUBLISHABLE_KEY;
+          },
+        },
+      };
+    },
     fetch: (url, options) =>
       new Promise((resolve, reject) => {
         requests.push({ url, options, resolve, reject });

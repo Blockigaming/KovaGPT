@@ -2,6 +2,7 @@ import { createHookHarness, loadUiModule, deferred } from "./ui-state-harness.mj
 export function planTierFixture({ configured = true } = {}) {
   const h = createHookHarness();
   const requests = [];
+  const timers = [];
   let user = { id: "owner-a" },
     callback;
   const read = ({ data }) => {
@@ -33,7 +34,19 @@ export function planTierFixture({ configured = true } = {}) {
         getSupabaseClientConfigStatus: () => ({ configured }),
       },
     },
-    { window, document, queueMicrotask },
+    {
+      window,
+      document,
+      queueMicrotask,
+      setTimeout(callback, delay) {
+        const timer = { callback, delay, cleared: false };
+        timers.push(timer);
+        return timer;
+      },
+      clearTimeout(timer) {
+        if (timer) timer.cleared = true;
+      },
+    },
   );
   const render = () => h.render(useTier);
   render();
@@ -41,6 +54,8 @@ export function planTierFixture({ configured = true } = {}) {
     h,
     render,
     requests,
+    timers,
+    window,
     change(next) {
       user = next;
       render();

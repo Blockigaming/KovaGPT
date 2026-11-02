@@ -10,6 +10,8 @@
  * No secrets are involved: only the publishable anon/publishable key is sent.
  */
 
+import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
+
 export type AuthProviderAvailability = {
   /** Provider probe completed and the answer is trustworthy. */
   resolved: boolean;
@@ -118,9 +120,9 @@ export async function fetchAuthProviderAvailability(
 ): Promise<AuthProviderAvailability> {
   if (signal?.aborted) return unavailable();
 
-  const url = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
-  const key = (import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ??
-    import.meta.env["VITE_SUPABASE_ANON_KEY"]) as string | undefined;
+  // Probe the same public deployment as the client, including its checked-in
+  // public configuration fallback when no VITE_SUPABASE_* override is supplied.
+  const { url, publishableKey: key } = SUPABASE_BROWSER_CONFIG;
   if (!url || !key) {
     return unavailable();
   }

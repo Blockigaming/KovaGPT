@@ -72,3 +72,45 @@ test("sidebar shows real email and a neutral placeholder rather than invented in
   assert.match(source, /tierStatus === "ready"/);
   assert.doesNotMatch(source, /displayName.charAt|email\?\.split/);
 });
+
+test("temporary plan failure recovers with a bounded delayed retry", async () => {
+  const f = fixture();
+  f.requests[0].reject(new Error("temporary network failure"));
+  await settle();
+  assert.equal(f.render().status, "unavailable");
+  assert.equal(f.timers[0].delay, 1000);
+  f.timers[0].callback();
+  await settle();
+  f.requests[1].resolve({ ownerId: "owner-a", tier: "plus" });
+  await settle();
+  assert.equal(f.render().status, "ready");
+  assert.equal(f.render().tier, "plus");
+  f.h.unmount();
+});
+
+test("plan recovery stops after two retries and cancels on account change", async () => {
+  const f = fixture();
+  for (let i = 0; i < 3; i++) {
+    f.requests[i].reject(new Error("offline"));
+    await settle();
+    if (i < 2) {
+      f.timers[i].callback();
+      await settle();
+    }
+  }
+  assert.equal(f.requests.length, 3);
+  assert.equal(f.timers.length, 2);
+  assert.equal(f.render().status, "unavailable");
+  f.window.dispatchEvent(new Event("online"));
+  await settle();
+  f.requests[3].reject(new Error("offline"));
+  await settle();
+  const timer = f.timers.at(-1);
+  f.change({ id: "owner-b" });
+  await settle();
+  assert.equal(timer.cleared, true);
+  timer.callback();
+  await settle();
+  assert.equal(f.requests.length, 5, "old account cannot start a retry");
+  f.h.unmount();
+});
