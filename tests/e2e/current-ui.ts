@@ -22,6 +22,22 @@ export async function openResponseOptions(page: Page, recordTrigger?: (trigger: 
   return panel;
 }
 
+export async function openComposerMoreTools(page: Page) {
+  await page.getByRole("button", { name: "Attach", exact: true }).click();
+  const menu = page
+    .getByRole("dialog", { name: "Attach", exact: true })
+    .or(page.getByRole("dialog", { name: "Attach files and tools", exact: true }))
+    .filter({ visible: true });
+  await expect(menu).toBeVisible();
+  const group = menu.locator("details").filter({
+    has: page.locator("summary").filter({ hasText: /^More tools$/ }),
+  });
+  if (!(await group.evaluate((node) => (node as HTMLDetailsElement).open))) {
+    await group.locator("summary").click();
+  }
+  return menu;
+}
+
 export async function revealSidebar(page: Page) {
   const navigation = page
     .getByRole("navigation", { name: "Primary navigation", exact: true })

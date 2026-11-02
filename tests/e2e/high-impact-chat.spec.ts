@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { fixture } from "./actual-app-fixture";
 import { installAuthenticatedFixture } from "./authenticated-fixture";
 import { waitForKovaHydration } from "./hydration";
-import { openCurrentSettings, chooseSettingsSection } from "./current-ui";
+import { openCurrentSettings, chooseSettingsSection, openComposerMoreTools } from "./current-ui";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
@@ -123,13 +123,7 @@ test("stopping before the first token preserves an honest response with immediat
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page.getByRole("button", { name: "Attach", exact: true }).click();
-  const moreTools = page
-    .locator("summary")
-    .filter({ hasText: /^More tools$/ })
-    .filter({ visible: true });
-  await expect(moreTools).toBeVisible();
-  await moreTools.click();
+  await openComposerMoreTools(page);
   await page.getByRole("button", { name: "Search the web" }).click();
   await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("Find a mountain sunset");
   await page.evaluate(() => {
