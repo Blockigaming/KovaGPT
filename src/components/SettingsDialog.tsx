@@ -1179,7 +1179,11 @@ export function SettingsDialog({
         }}
       >
         <DialogHeader
-          className={`${page ? "kova-settings-page-header" : "px-5 sm:px-7"} pt-5 pb-4 border-b border-border ${loggedIn && !page ? "hidden" : ""}`}
+          className={
+            loggedIn
+              ? "sr-only"
+              : "kova-settings-page-header px-5 sm:px-7 pt-5 pb-4 border-b border-border"
+          }
         >
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -1195,18 +1199,6 @@ export function SettingsDialog({
                   : "Appearance and preferences for this browser."}
               </p>
             </div>
-            {page ? pageUtilities : null}
-            {page ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Close settings"
-                onClick={() => onOpenChange(false)}
-              >
-                <X aria-hidden="true" />
-              </Button>
-            ) : null}
             {loggedIn && !page && (
               <div
                 aria-live="polite"
@@ -1222,6 +1214,21 @@ export function SettingsDialog({
             )}
           </div>
         </DialogHeader>
+
+        {page ? (
+          <div className="kova-settings-page-actions">
+            {pageUtilities}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Close settings"
+              onClick={() => onOpenChange(false)}
+            >
+              <X aria-hidden="true" />
+            </Button>
+          </div>
+        ) : null}
 
         {!loggedIn ? (
           <SignedOutSettings
@@ -1597,14 +1604,28 @@ export function SettingsDialog({
                           principal: userKey,
                           enabled: value && isSignedIn,
                         });
-                        onChange({ ...settings, rememberAcross: value });
+                        onChange({
+                          ...settings,
+                          rememberAcross: value,
+                          ...(!value ? { automaticMemory: false } : {}),
+                        });
                       }}
                     />
                     <ToggleRow
                       title="Update memory from conversations"
                       hint="Save explicit preferences and facts you share in synced chats. You can review, edit, or delete these notes. Editing a note prevents automatic replacement."
                       checked={settings.automaticMemory === true}
-                      onCheckedChange={(value) => onChange({ ...settings, automaticMemory: value })}
+                      onCheckedChange={(value) => {
+                        if (value) {
+                          allowMemoryWrites(userKey);
+                          configureMemoryWrites({ principal: userKey, enabled: isSignedIn });
+                        }
+                        onChange({
+                          ...settings,
+                          automaticMemory: value,
+                          ...(value ? { rememberAcross: true } : {}),
+                        });
+                      }}
                     />
                     <p className="text-xs text-muted-foreground">
                       {tier === "pro"
@@ -1613,7 +1634,10 @@ export function SettingsDialog({
                           ? "Plus keeps more detailed notes and remembers more context than Free."
                           : "Free includes basic memory. Plus and Pro expand detail and capacity."}
                     </p>
-                    <MemoryOverview ownerId={userKey} />
+                    <MemoryOverview
+                      ownerId={userKey}
+                      automaticMemory={settings.rememberAcross && settings.automaticMemory === true}
+                    />
                     <p className="text-xs text-muted-foreground">
                       Turning this off stops saved-memory reads and new summary POSTs from chats
                       sent in this browser. It does not delete summaries already saved to your

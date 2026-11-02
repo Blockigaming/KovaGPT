@@ -363,9 +363,14 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     settingsPageStylesSource,
     ".kova-settings-route section.kova-settings-page.kova-settings-dialog",
   ).declarations;
-  assert.equal(page.position, "static");
+  assert.equal(page.position, "relative");
   assert.equal(page.width, "100%");
-  assert.equal(page.height, "100dvh");
+  assert.equal(page.height, "100%");
+  assert.equal(
+    styleRule(settingsPageStylesSource, ".kova-settings-route.kova-secondary-page").declarations
+      .height,
+    "100dvh",
+  );
   assert.equal(page["max-height"], "none");
   assert.equal(page.background, "var(--background)");
   for (const selector of [

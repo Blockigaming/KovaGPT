@@ -1,10 +1,11 @@
 import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { Lock, Mic, Square, Volume2 } from "lucide-react";
+import { ArrowUp, Lock, Mic, Square, Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { DialogContent } from "@/components/ui/dialog";
 import { ComposerVoiceDialogView } from "@/components/ComposerVoiceDialogView";
+import { ComposerDictationView } from "@/components/ComposerDictationView";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -120,6 +121,7 @@ export interface ComposerVoiceDialogProps {
   disabled: boolean;
   onTranscript: (text: string) => void;
   mode?: "dictate" | "voice";
+  inlineDictation?: boolean;
   onVoiceSubmit?: (text: string, signal: AbortSignal) => Promise<ComposerVoiceTurn>;
   latestAssistantText?: string;
   latestAssistantReply?: { chatId: string; messageId: string; content: string };
@@ -176,6 +178,7 @@ export function ComposerVoiceDialog({
   disabled,
   onTranscript,
   mode = "dictate",
+  inlineDictation = false,
   onVoiceSubmit,
   latestAssistantText = "",
   latestAssistantReply,
@@ -199,6 +202,14 @@ export function ComposerVoiceDialog({
   const [selectedVoiceId, setSelectedVoiceId] = useState("");
   const [preferenceNotice, setPreferenceNotice] = useState("");
   const [lastVoiceReply, setLastVoiceReply] = useState("");
+  const dictationStartScope = useRef<string | null>(null);
+  const inlineWasOpen = useRef(false);
+
+  useLayoutEffect(() => {
+    const wasOpen = inlineWasOpen.current;
+    inlineWasOpen.current = open && inlineDictation && mode === "dictate";
+    if (wasOpen && !open) onCloseAutoFocus?.(new Event("closeAutoFocus", { cancelable: true }));
+  }, [open, inlineDictation, mode, onCloseAutoFocus]);
 
   const current = useRef({
     open,
@@ -1029,8 +1040,25 @@ export function ComposerVoiceDialog({
     capabilities?.configured &&
     (mode !== "voice" || conversationReady);
 
+  // Clicking Type with voice is the explicit recording action. Availability
+  // still resolves before requesting the microphone, once per opening/scope.
+  useLayoutEffect(() => {
+    if (!open) {
+      dictationStartScope.current = null;
+      return;
+    }
+    if (!inlineDictation || mode !== "dictate" || !ready || !capabilities?.stt) return;
+    const scope = JSON.stringify([userId, contextKey]);
+    if (dictationStartScope.current === scope) return;
+    dictationStartScope.current = scope;
+    void resumeRecording.current?.();
+  }, [open, inlineDictation, mode, ready, capabilities?.stt, userId, contextKey]);
+
+  const VoiceView =
+    inlineDictation && mode === "dictate" ? ComposerDictationView : ComposerVoiceDialogView;
+
   return (
-    <ComposerVoiceDialogView
+    <VoiceView
       open={open}
       onOpenChange={closeDialog}
       onCloseAutoFocus={handleCloseAutoFocus}
@@ -1241,8 +1269,14 @@ export function ComposerVoiceDialog({
       }
       useTranscriptControl={
         mode === "dictate" && hasTranscript && !unavailable ? (
-          <Button type="button" onClick={useTranscript} disabled={busy || !transcript.trim()}>
-            Use in chat
+          <Button
+            type="button"
+            onClick={useTranscript}
+            disabled={busy || !transcript.trim()}
+            aria-label="Use in chat"
+            title="Add transcript to message"
+          >
+            {inlineDictation ? <ArrowUp aria-hidden="true" /> : "Use in chat"}
           </Button>
         ) : undefined
       }

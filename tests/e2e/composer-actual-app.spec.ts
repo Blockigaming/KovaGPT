@@ -477,9 +477,9 @@ test("voice stays disconnected while typing, attachments and Stop retain their c
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: info.outputPath("voice-empty-dark.png"), animations: "disabled" });
   await voice.click();
-  const dialog = page.getByRole("dialog", { name: "Dictate", exact: true });
+  const dialog = page.getByRole("region", { name: "Type with voice", exact: true });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Voice is not available yet");
+  await expect(dialog).toContainText("Dictation is unavailable right now");
   await page.screenshot({
     path: info.outputPath("voice-not-connected.png"),
     animations: "disabled",
@@ -606,10 +606,9 @@ test("requested polish: empty composer swaps voice and send and has compact atta
   await expect(page.getByTestId("voice-button")).toBeVisible();
   await expect(page.getByTestId("send-button")).toBeHidden();
   await expect(
-    page
-      .getByRole("button", { name: "Type with voice", exact: true })
-      .locator(".kova-dictation-wave i"),
-  ).toHaveCount(3);
+    page.getByRole("button", { name: "Type with voice", exact: true }).locator("svg"),
+  ).toHaveCount(1);
+  await expect(page.locator(".kova-dictation-wave")).toHaveCount(0);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await input.fill("A draft stays editable");
   await expect(page.getByTestId("voice-button")).toBeHidden();

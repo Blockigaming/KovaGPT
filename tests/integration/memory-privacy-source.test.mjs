@@ -7,14 +7,15 @@ const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 const memoryPayload = read("src/lib/chat-summary-snapshot.mjs");
 
-test("saved-memory reads and POSTs require explicit browser consent on every plan", () => {
+test("automatic memory defaults retain browser opt-outs and per-request privacy checks on every plan", () => {
   const settings = read("src/components/SettingsDialog.tsx");
   const page = read("src/routes/index.tsx");
   const chatApi = read("src/routes/api/chat.ts");
   const parser = read("src/lib/endpoint-reliability.mjs");
 
   const settingsModel = read("src/lib/settings-types.ts");
-  assert.match(settingsModel, /rememberAcross: false/);
+  assert.match(settingsModel, /rememberAcross: true/);
+  assert.match(settingsModel, /automaticMemory: true/);
   assert.match(settings, /from "@\/lib\/settings-types"/);
   assert.match(page, /setSettingsPrincipal\(storagePrincipal\)/);
   assert.match(page, /if \(!settingsReady\) return;[\s\S]{0,120}blockMemoryWrites/);
