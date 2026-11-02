@@ -60,9 +60,24 @@ export function selectOAuthTokens(providerId, payload) {
 }
 
 export function oauthRefreshRequest({ providerId, clientId, clientSecret, refreshToken }) {
-  if (!["microsoft", "linear", "slack", "oura", "whoop", "salesforce"].includes(providerId))
+  if (
+    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce", "notion"].includes(providerId)
+  )
     throw new Error("refresh_not_supported");
   if (!clientId || !clientSecret || !refreshToken) throw new Error("refresh_not_configured");
+  if (providerId === "notion")
+    return {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28",
+        Authorization: "Basic " + Buffer.from(clientId + ":" + clientSecret).toString("base64"),
+      },
+      body: JSON.stringify({ grant_type: "refresh_token", refresh_token: refreshToken }),
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+    };
   return {
     method: "POST",
     headers: {
@@ -86,8 +101,10 @@ export function selectRefreshTokens(providerId, payload) {
   if (providerId === "slack" && payload?.token_type !== "user")
     throw new Error("oauth_access_token_missing");
   const tokens = selectOAuthTokens("refresh", payload);
-  // Salesforce session lifetime is controlled by the org, not expires_in.
-  // Its rejected API read triggers a claimed refresh instead of inventing TTL.
-  if (!tokens.expires_in && providerId !== "salesforce") throw new Error("refresh_expiry_missing");
+  // Salesforce and Notion may omit expires_in. A rejected API read triggers
+  // a claimed refresh instead of inventing a lifetime for those tokens.
+  if (!tokens.expires_in && !["salesforce", "notion"].includes(providerId))
+    throw new Error("refresh_expiry_missing");
+  if (providerId === "notion" && !tokens.refresh_token) throw new Error("refresh_token_missing");
   return tokens;
 }

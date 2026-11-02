@@ -117,6 +117,12 @@ function fixture() {
     "./oauth-providers.server": {
       configuredOAuthProviders: () => (state.configured ? [{ id: state.row.provider_id }] : []),
       OAUTH_PROVIDERS: {
+        notion: {
+          id: "notion",
+          tokenEndpoint: "https://api.notion.com/v1/oauth/token",
+          clientIdEnv: "TEST_ID",
+          clientSecretEnv: "TEST_SECRET",
+        },
         salesforce: {
           id: "salesforce",
           tokenEndpoint: "https://login.salesforce.com/services/oauth2/token",
@@ -613,6 +619,217 @@ test("forced Salesforce renewal cannot read another owner or a workspace credent
     { deleted_at: "now" },
   ]) {
     const f = salesforceFixture();
+    Object.assign(f.state.row, patch);
+    assert.equal(
+      await f.refreshExpiringConnection("owner-a", f.state.row.id, f.state.row.updated_at, true),
+      null,
+    );
+    assert.equal(f.state.decrypts, 0);
+    assert.equal(f.state.refreshCalls ?? 0, 0);
+  }
+});
+
+function notionFixture() {
+  const f = fixture();
+  Object.assign(f.state.row, {
+    provider_id: "notion",
+    granted_scopes: [],
+    access_token_ciphertext: "encrypted:old-notion-access",
+    refresh_token_ciphertext: "encrypted:old-notion-refresh",
+    token_expires_at: null,
+  });
+  f.state.onFetch = () =>
+    Response.json({
+      access_token: "renewed-notion-access",
+      refresh_token: "rotated-notion-refresh",
+    });
+  return f;
+}
+
+test("Notion renews a rejected read once with Basic JSON and retains the rotated pair", async () => {
+  const f = notionFixture();
+  const context = await f.getConnectedToolContext("owner-a");
+  assert.equal(f.state.refreshCalls ?? 0, 0);
+  f.state.onRead = () => {
+    if (f.state.reads === 1) throw new Error("connection_reauthorization_required");
+  };
+  const result = await f.runConnectedTool(
+    "owner-a",
+    "notion_search",
+    { account_id: f.state.row.id, query: "example" },
+    context,
+  );
+  assert.equal(result.results.length, 1);
+  assert.equal(f.state.reads, 2);
+  assert.equal(f.state.refreshCalls, 1);
+  const request = f.calls.find((call) => call[0] === "fetch");
+  assert.equal(request[1], "https://api.notion.com/v1/oauth/token");
+  assert.equal(request[2].headers["Content-Type"], "application/json");
+  assert.equal(
+    request[2].headers.Authorization,
+    "Basic " + Buffer.from("fake-client:fake-secret").toString("base64"),
+  );
+  assert.deepEqual(JSON.parse(request[2].body), {
+    grant_type: "refresh_token",
+    refresh_token: "old-notion-refresh",
+  });
+  assert.equal(f.state.row.token_expires_at, null);
+  assert.equal(f.state.row.access_token_ciphertext, "encrypted:renewed-notion-access");
+  assert.equal(f.state.row.refresh_token_ciphertext, "encrypted:rotated-notion-refresh");
+  assert.deepEqual(f.state.row.granted_scopes, []);
+  const reads = f.calls.filter((call) => call[0] === "read");
+  assert.equal(reads[0][3], "old-notion-access");
+  assert.equal(reads[1][3], "renewed-notion-access");
+  assert.equal(context.accounts[0].updated_at, f.state.row.updated_at);
+  assert.doesNotMatch(JSON.stringify(context), /renewed-notion-access|rotated-notion-refresh/);
+});
+
+test("a second Notion rejection stops without another refresh or success audit", async () => {
+  const f = notionFixture();
+  const context = await f.getConnectedToolContext("owner-a");
+  f.state.onRead = () => {
+    throw new Error("connection_reauthorization_required");
+  };
+  await assert.rejects(
+    f.runConnectedTool(
+      "owner-a",
+      "notion_search",
+      { account_id: f.state.row.id, query: "example" },
+      context,
+    ),
+    /connection_reauthorization_required/,
+  );
+  assert.equal(f.state.reads, 2);
+  assert.equal(f.state.refreshCalls, 1);
+  assert.equal(
+    f.calls.filter((call) => call[0] === "integration_audit_events" && call[1] === "insert").length,
+    0,
+  );
+});
+
+test("Notion permission, rate-limit and ordinary provider errors never rotate tokens", async () => {
+  for (const message of [
+    "connection_permission_required",
+    "connection_rate_limited",
+    "connection_read_failed",
+  ]) {
+    const f = notionFixture();
+    const context = await f.getConnectedToolContext("owner-a");
+    f.state.onRead = () => {
+      throw new Error(message);
+    };
+    await assert.rejects(
+      f.runConnectedTool(
+        "owner-a",
+        "notion_search",
+        { account_id: f.state.row.id, query: "example" },
+        context,
+      ),
+      (error) => error.message === message,
+    );
+    assert.equal(f.state.reads, 1);
+    assert.equal(f.state.refreshCalls ?? 0, 0);
+    assert.equal(f.state.row.access_token_ciphertext, "encrypted:old-notion-access");
+  }
+});
+
+test("concurrent rejected Notion reads claim only one token rotation", async () => {
+  const f = notionFixture();
+  const contexts = [
+    await f.getConnectedToolContext("owner-a"),
+    await f.getConnectedToolContext("owner-a"),
+  ];
+  f.state.onRead = () => {
+    const read = f.calls.filter((call) => call[0] === "read").at(-1);
+    if (read[3] === "old-notion-access") throw new Error("connection_reauthorization_required");
+  };
+  const results = await Promise.allSettled(
+    contexts.map((context) =>
+      f.runConnectedTool(
+        "owner-a",
+        "notion_search",
+        { account_id: f.state.row.id, query: "example" },
+        context,
+      ),
+    ),
+  );
+  assert.equal(f.state.refreshCalls, 1);
+  assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
+  assert.equal(f.state.row.refresh_token_ciphertext, "encrypted:rotated-notion-refresh");
+});
+
+test("a missing Notion rotation token fails closed and is not exchanged twice", async () => {
+  const f = notionFixture();
+  const context = await f.getConnectedToolContext("owner-a");
+  f.state.onRead = () => {
+    throw new Error("connection_reauthorization_required");
+  };
+  f.state.onFetch = () => Response.json({ access_token: "must-not-store" });
+  await assert.rejects(
+    f.runConnectedTool(
+      "owner-a",
+      "notion_search",
+      { account_id: f.state.row.id, query: "example" },
+      context,
+    ),
+    /connection_reauthorization_required/,
+  );
+  assert.equal(f.state.reads, 1);
+  assert.equal(f.state.refreshCalls, 1);
+  assert.equal(f.state.row.status, "expired");
+  assert.equal(f.state.row.access_token_ciphertext, "encrypted:old-notion-access");
+  assert.equal(
+    await f.refreshExpiringConnection("owner-a", f.state.row.id, f.state.row.updated_at, true),
+    null,
+  );
+  assert.equal(f.state.refreshCalls, 1);
+});
+
+test("Notion disconnect, reconnect and Lockdown changes during rotation withhold results", async () => {
+  for (const change of ["disconnect", "reconnect", "lockdown", "disabled"]) {
+    const f = notionFixture();
+    const context = await f.getConnectedToolContext("owner-a");
+    f.state.onRead = () => {
+      throw new Error("connection_reauthorization_required");
+    };
+    f.state.onFetch = () => {
+      if (change === "disconnect") f.state.row.deleted_at = "now";
+      if (change === "reconnect")
+        Object.assign(f.state.row, {
+          status: "connected",
+          updated_at: "new-reconnect",
+          access_token_ciphertext: "new-owner-bound-credential",
+        });
+      if (change === "lockdown") f.state.lockdown = true;
+      if (change === "disabled") f.state.configured = false;
+      return Response.json({
+        access_token: "must-not-store",
+        refresh_token: "must-not-store-refresh",
+      });
+    };
+    await assert.rejects(
+      f.runConnectedTool(
+        "owner-a",
+        "notion_search",
+        { account_id: f.state.row.id, query: "example" },
+        context,
+      ),
+      /connection_reauthorization_required/,
+    );
+    assert.equal(f.state.reads, 1);
+    assert.equal(f.state.refreshCalls, 1);
+    assert.doesNotMatch(f.state.row.access_token_ciphertext, /must-not-store/);
+    assert.doesNotMatch(f.state.row.refresh_token_ciphertext, /must-not-store/);
+  }
+});
+
+test("forced Notion renewal cannot access another owner, workspace or deleted account", async () => {
+  for (const patch of [
+    { owner_id: "owner-b" },
+    { workspace_id: "workspace-a" },
+    { deleted_at: "now" },
+  ]) {
+    const f = notionFixture();
     Object.assign(f.state.row, patch);
     assert.equal(
       await f.refreshExpiringConnection("owner-a", f.state.row.id, f.state.row.updated_at, true),
