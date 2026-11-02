@@ -134,7 +134,6 @@ test("history, primary navigation, Help and account retain their source order an
   });
   assert.deepEqual(siblings.slice(siblings.indexOf("kova-sidebar-scroll")), [
     "kova-sidebar-scroll",
-    "kova-sidebar-help",
     "kova-sidebar-footer",
   ]);
   assert.match(source, /pinned\.slice\(0, 8\)\.map\(chatRow\)/);

@@ -1153,3 +1153,55 @@ test("hosted analysis uses the normal composer SSE parser with real token usage 
   assert.equal(events.at(-1).choices[0].finish_reason, "stop");
   assert.throws(() => hostedChatResult({ text: "Incomplete" }), /hosted_chat_result_invalid/);
 });
+
+test("streamed search delivers each observed site before the completed search response", async () => {
+  let finish,
+    aborted = false;
+  const gate = new Promise((resolve) => {
+    finish = resolve;
+  });
+  const observed = [];
+  const searchCall = {
+    id: "web-1",
+    type: "web_search_call",
+    status: "completed",
+    action: {
+      type: "search",
+      sources: [
+        { type: "url", url: "https://github.com/source" },
+        { type: "url", url: "https://example.com/source" },
+      ],
+    },
+  };
+  const stream = {
+    controller: {
+      abort() {
+        aborted = true;
+      },
+    },
+    async *[Symbol.asyncIterator]() {
+      yield { type: "response.web_search_call.in_progress", item_id: "web-1" };
+      yield { type: "response.output_item.done", item: searchCall };
+      await gate;
+      yield { type: "response.completed", response: completed([searchCall]) };
+    },
+  };
+  const pending = services({
+    responses: {
+      create: async (body) => {
+        assert.equal(body.stream, true);
+        return stream;
+      },
+    },
+  }).search("Find evidence", { onActivity: (delta) => observed.push(delta) });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(
+    observed.filter((row) => row.hostname).map((row) => row.hostname),
+    ["github.com", "example.com"],
+  );
+  assert.equal(aborted, false);
+  finish();
+  const result = await pending;
+  assert.equal(result.sources.length, 2);
+  assert.equal(aborted, true);
+});

@@ -27,11 +27,14 @@ export function useTier(): { tier: Tier; loading: boolean; status: TierDisplaySt
   useEffect(() => {
     let active = true;
     let generation = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let retries = 0;
     if (!isLoaded || !owner) {
       setSnapshot({ owner, tier: "free", status: isLoaded ? "signed_out" : "loading" });
       return;
     }
     const load = async (force = false) => {
+      clearTimeout(retryTimer);
       const request = ++generation;
       const current = () => active && request === generation;
       const cached = verified.get(owner);
@@ -56,12 +59,26 @@ export function useTier(): { tier: Tier; loading: boolean; status: TierDisplaySt
           pending.set(owner, operation);
         }
         const tier = await operation;
-        if (current()) setSnapshot({ owner, tier, status: "ready" });
+        if (current()) {
+          retries = 0;
+          setSnapshot({ owner, tier, status: "ready" });
+        }
       } catch {
-        if (current()) setSnapshot({ owner, tier: "free", status: "unavailable" });
+        if (current()) {
+          setSnapshot({ owner, tier: "free", status: "unavailable" });
+          // A temporary session/network failure should recover without requiring
+          // the customer to switch tabs. Never infer a paid plan from failure.
+          if (retries < 2) {
+            const delay = ++retries === 1 ? 1_000 : 3_000;
+            retryTimer = setTimeout(() => {
+              if (current()) void load(true);
+            }, delay);
+          }
+        }
       }
     };
     const refresh = () => {
+      retries = 0;
       void load(true);
     };
     const visible = () => {
@@ -69,6 +86,7 @@ export function useTier(): { tier: Tier; loading: boolean; status: TierDisplaySt
     };
     void load();
     window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
     window.addEventListener("kova-plan-changed", refresh);
     document.addEventListener("visibilitychange", visible);
     // Supabase holds an auth lock while dispatching. Never read auth or issue
@@ -83,8 +101,10 @@ export function useTier(): { tier: Tier; loading: boolean; status: TierDisplaySt
     return () => {
       active = false;
       generation++;
+      clearTimeout(retryTimer);
       subscription?.unsubscribe();
       window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
       window.removeEventListener("kova-plan-changed", refresh);
       document.removeEventListener("visibilitychange", visible);
     };

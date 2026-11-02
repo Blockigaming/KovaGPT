@@ -148,6 +148,18 @@ function pricingFixture(isSignedIn) {
     sourceSuffix: "\nexport { PricingPage };",
     modules: {
       "@tanstack/react-router": { createFileRoute: () => (config) => config },
+      "@/utils/payments.functions": {
+        getSubscriptionSummary: async () => ({
+          activeSubscriptionCount: 0,
+          inherited: false,
+          billingConflict: false,
+        }),
+        createPortalSession: async () => {
+          throw Error("unexpected portal");
+        },
+      },
+      "@/lib/billing-plans": { BILLING_ENV: "live" },
+      "@/lib/billing-portal-url.mjs": { parseAllowedBillingPortalUrl: (url) => url },
       "@/components/auth/ClerkSafe": {
         useUser: () => ({
           user: { id: "sample", email: "sample@example.test" },
@@ -182,7 +194,7 @@ function pricingFixture(isSignedIn) {
   return { ...f, calls };
 }
 
-test("pricing routes signed-in paid CTAs to canonical checkout and guests to sign-in without claiming eligibility", () => {
+test("pricing checks the account before checkout and routes guests to sign-in without claiming eligibility", async () => {
   for (const signedIn of [true, false]) {
     const f = pricingFixture(signedIn);
     const paid = f
@@ -194,8 +206,8 @@ test("pricing routes signed-in paid CTAs to canonical checkout and guests to sig
       assert.equal(card.props.cta, card.props.name === "Plus" ? "Start Plus" : "Upgrade to Pro");
       assert.match(card.props.note, /first paid month, once per account/);
       assert.match(card.props.paymentNote, /^If eligible: .*first month, then/);
-      card.props.onCta({ currentTarget: {} });
-      card.props.onCta({ currentTarget: {} });
+      await card.props.onCta({ currentTarget: {} });
+      await card.props.onCta({ currentTarget: {} });
     }
     assert.deepEqual(
       f.calls,

@@ -71,6 +71,7 @@ import { Route as Char91DotwellKnownChar93OauthAuthorizationServerRouteImport } 
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AdminKovasRouteImport } from './routes/admin/kovas'
 import { Route as ApiAccountRouteImport } from './routes/api/account'
+import { Route as ApiActivityIconRouteImport } from './routes/api/activity-icon'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiChatShareRouteImport } from './routes/api/chat-share'
 import { Route as ApiDiscoveryRouteImport } from './routes/api/discovery'
@@ -540,6 +541,11 @@ const AdminKovasRoute = AdminKovasRouteImport.update({
 const ApiAccountRoute = ApiAccountRouteImport.update({
   id: '/api/account',
   path: '/api/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiActivityIconRoute = ApiActivityIconRouteImport.update({
+  id: '/api/activity-icon',
+  path: '/api/activity-icon',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -1424,6 +1430,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
+  '/api/activity-icon': typeof ApiActivityIconRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/chat-share': typeof ApiChatShareRouteWithChildren
   '/api/discovery': typeof ApiDiscoveryRoute
@@ -1645,6 +1652,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
+  '/api/activity-icon': typeof ApiActivityIconRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/chat-share': typeof ApiChatShareRouteWithChildren
   '/api/discovery': typeof ApiDiscoveryRoute
@@ -1867,6 +1875,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/kovas': typeof AdminKovasRoute
   '/api/account': typeof ApiAccountRouteWithChildren
+  '/api/activity-icon': typeof ApiActivityIconRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/chat-share': typeof ApiChatShareRouteWithChildren
   '/api/discovery': typeof ApiDiscoveryRoute
@@ -2090,6 +2099,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/admin/kovas'
     | '/api/account'
+    | '/api/activity-icon'
     | '/api/chat'
     | '/api/chat-share'
     | '/api/discovery'
@@ -2311,6 +2321,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/admin/kovas'
     | '/api/account'
+    | '/api/activity-icon'
     | '/api/chat'
     | '/api/chat-share'
     | '/api/discovery'
@@ -2532,6 +2543,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/admin/kovas'
     | '/api/account'
+    | '/api/activity-icon'
     | '/api/chat'
     | '/api/chat-share'
     | '/api/discovery'
@@ -2754,6 +2766,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdminKovasRoute: typeof AdminKovasRoute
   ApiAccountRoute: typeof ApiAccountRouteWithChildren
+  ApiActivityIconRoute: typeof ApiActivityIconRoute
   ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiChatShareRoute: typeof ApiChatShareRouteWithChildren
   ApiDiscoveryRoute: typeof ApiDiscoveryRoute
@@ -3335,6 +3348,13 @@ declare module '@tanstack/react-router' {
       path: '/api/account'
       fullPath: '/api/account'
       preLoaderRoute: typeof ApiAccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/activity-icon': {
+      id: '/api/activity-icon'
+      path: '/api/activity-icon'
+      fullPath: '/api/activity-icon'
+      preLoaderRoute: typeof ApiActivityIconRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -4624,6 +4644,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdminKovasRoute: AdminKovasRoute,
   ApiAccountRoute: ApiAccountRouteWithChildren,
+  ApiActivityIconRoute: ApiActivityIconRoute,
   ApiChatRoute: ApiChatRouteWithChildren,
   ApiChatShareRoute: ApiChatShareRouteWithChildren,
   ApiDiscoveryRoute: ApiDiscoveryRoute,

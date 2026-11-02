@@ -23,6 +23,14 @@ type WorkTables = {
     created_at: string;
     updated_at: string;
   }>;
+  work_execution_events: Table<{
+    run_id: string;
+    owner_id: string;
+    revision: number;
+    kind: string;
+    detail: Record<string, unknown>;
+    created_at: string;
+  }>;
   work_execution_receipts: Table<{
     owner_id: string;
     mutation_id: string;

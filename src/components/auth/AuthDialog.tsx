@@ -190,29 +190,6 @@ export function AuthDialog({
     }
   };
 
-  const githubAvailable =
-    browserKovaAuthMode() !== "kova" && providers.resolved && providers.github;
-  const handleGithub = async () => {
-    if (!githubAvailable || !guard("github")) return;
-    try {
-      const context = await resolveLegacyAuthContext();
-      context.assertCurrent();
-      rememberPostAuthRedirect();
-      const { data, error } = await context.auth.signInWithOAuth({
-        provider: "github",
-        options: { redirectTo: getOAuthRedirectUri(), skipBrowserRedirect: true },
-      });
-      context.assertCurrent();
-      if (error) throw error;
-      if (!data?.url) throw new Error("github_redirect_missing");
-      window.location.assign(data.url);
-    } catch {
-      toast.error("GitHub sign in could not start. Please try again.");
-    } finally {
-      release();
-    }
-  };
-
   const requestMagicLink = useCallback(
     async (resend: boolean) => {
       if (!isValidEmail(email)) {
@@ -350,10 +327,8 @@ export function AuthDialog({
 
               <button
                 type="button"
-                onClick={() => void handleGithub()}
-                disabled={loading || !githubAvailable}
-                aria-busy={loadingMethod === "github"}
-                aria-describedby={!githubAvailable ? "github-sign-in-status" : undefined}
+                disabled={true}
+                aria-label="GitHub · Coming Soon"
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-border bg-background px-4 text-base font-medium transition hover:bg-accent disabled:opacity-60"
               >
                 {loadingMethod === "github" ? (
@@ -361,20 +336,8 @@ export function AuthDialog({
                 ) : (
                   <img src={githubLogo} alt="" className="h-5 w-5 dark:invert" aria-hidden="true" />
                 )}
-                Continue with GitHub
+                Coming Soon
               </button>
-              {!githubAvailable ? (
-                <p
-                  id="github-sign-in-status"
-                  role="status"
-                  className="text-xs text-muted-foreground"
-                >
-                  {!providers.resolved && !providers.error && browserKovaAuthMode() !== "kova"
-                    ? "Checking GitHub availability…"
-                    : "GitHub sign-in is currently unavailable. Continue with email or Google."}
-                </p>
-              ) : null}
-
               {googleUnavailable || googleCheckFailed ? (
                 hostedGoogleAvailable || hostedGooglePending ? null : (
                   <div

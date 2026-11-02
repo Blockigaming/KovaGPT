@@ -1,3 +1,4 @@
+import { ActivityIcon } from "./ActivityIcon";
 import { CalendarDays, FileText, Globe, Loader2, Mail } from "lucide-react";
 import type { Activity } from "@/lib/chat-store";
 
@@ -29,16 +30,31 @@ export function MessageActivityList({ activities }: { activities?: Activity[] })
               : activity.status === "canceled"
                 ? "Canceled"
                 : "Completed";
+        if (activity.presentation === "commentary")
+          return (
+            <li
+              key={activity.activityId ?? `progress-${index}`}
+              className="kova-progress-commentary"
+            >
+              <p>{activity.label}</p>
+            </li>
+          );
+        const hostname = activity.hostname ?? activity.browser?.hostname;
         return (
           <li
             key={activity.activityId ? `operation-${activity.activityId}` : index}
             className="kova-activity-row"
             data-status={activity.status}
           >
-            <Icon className="kova-activity-icon" aria-hidden="true" />
+            {hostname ? (
+              <ActivityIcon hostname={hostname} />
+            ) : (
+              <Icon className="kova-activity-icon" aria-hidden="true" />
+            )}
             <span className="min-w-0 break-words">
               <span className="sr-only">{status}: </span>
               <span>{activity.label}</span>
+              {hostname && <span className="ml-2 text-xs text-muted-foreground">{hostname}</span>}
             </span>
             {(activity.status === "failed" || activity.status === "canceled") && (
               <span className="shrink-0 text-xs" aria-hidden="true">

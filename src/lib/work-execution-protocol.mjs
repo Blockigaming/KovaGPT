@@ -1,3 +1,4 @@
+import { publicWorkActivity } from "./work-progress.mjs";
 import { parseWorkModelChoice, assertWorkRunnerModel } from "./work-model-policy.mjs";
 import { parseWorkQuestionOptions } from "./work-question.mjs";
 // Shared protocol only. This module never executes a shell, browser, URL, or provider call.
@@ -477,7 +478,8 @@ function worker(run, input, now) {
 function update(run, now, kind, detail = {}) {
   run.revision++;
   run.updatedAt = now;
-  run.event = { kind, at: now, detail };
+  const publicActivity = publicWorkActivity(run, kind, detail);
+  run.event = { kind, at: now, detail: publicActivity ? { ...detail, publicActivity } : detail };
   return run;
 }
 function cancelOpenSpecialists(run, now) {
@@ -920,7 +922,13 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
     run.directions = run.directions.filter((item) => !sentIds.has(item.id));
     run.step = null;
     run.reconciling = false;
-    return update(run, now, "step_completed", { id: command.id, result: run.status });
+    return update(run, now, "step_completed", {
+      id: command.id,
+      result: run.status,
+      ...(directive?.kind === "effect_result" && run.approval?.action === "browser_interact"
+        ? { browserAction: true }
+        : {}),
+    });
   }
   if (command.type === "record_step_receipt") {
     const receipt = command.receipt;

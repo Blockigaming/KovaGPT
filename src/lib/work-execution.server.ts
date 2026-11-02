@@ -1,3 +1,4 @@
+import { activityHostname } from "@/lib/activity-display.mjs";
 import { workExecutionDatabase } from "@/lib/work-execution-database.server";
 import { assertNotBanned } from "@/lib/api-auth.server";
 import type { AuthedCaller } from "@/lib/api-auth.server";
@@ -338,4 +339,75 @@ export async function controlWorkExecution(caller: AuthedCaller, body: Record<st
     runner: currentRunner,
   });
   return committed(caller, run, mutationId, hash, Number(body.expectedRevision));
+}
+
+/** Owner-scoped, bounded event cursor. Only the public projection is exposed. */
+export async function listWorkProgress(caller: AuthedCaller, runId: string, after = 0) {
+  if (!Number.isSafeInteger(after) || after < 0) throw new Error("work_cursor_invalid");
+  const state = await getWorkExecution(caller, runId);
+  const { data, error } = await database(caller)
+    .from("work_execution_events")
+    .select("revision,detail,kind")
+    .eq("owner_id", caller.userId)
+    .eq("run_id", workUuid(runId))
+    .gt("revision", after)
+    .order("revision", { ascending: true })
+    .limit(100)
+    .abortSignal(AbortSignal.timeout(10000));
+  if (error) throw new Error("work_storage_unavailable");
+  const rows = data ?? [];
+  return {
+    state,
+    hasMore: rows.length === 100,
+    cursor: rows.at(-1)?.revision ?? after,
+    activities: rows.flatMap((row) => {
+      const raw = row.detail.publicActivity as Record<string, unknown> | undefined;
+      if (
+        !raw ||
+        typeof raw.label !== "string" ||
+        typeof raw.activityId !== "string" ||
+        !["running", "done", "failed", "canceled"].includes(String(raw.status))
+      )
+        return [];
+      const hostname = activityHostname(raw.hostname);
+      const narration: Record<string, string> = {
+        step_started: "I’m working through the next step.",
+        step_completed: "The step has returned. I’m checking its result.",
+        effect_started: "I’m carrying out the action you approved.",
+      };
+      return [
+        ...(row.kind === "step_completed" &&
+        typeof row.detail.id === "string" &&
+        raw.activityId !== `work-${row.detail.id}`
+          ? [
+              {
+                activityId: `work-${row.detail.id}`,
+                tool: "agent",
+                label:
+                  row.detail.result === "failed" ? "Agent step failed" : "Agent step completed",
+                status: row.detail.result === "failed" ? "failed" : "done",
+              },
+            ]
+          : []),
+        ...(narration[row.kind]
+          ? [
+              {
+                activityId: `commentary-${row.revision}`,
+                tool: "progress",
+                presentation: "commentary",
+                label: narration[row.kind],
+                status: "done",
+              },
+            ]
+          : []),
+        {
+          activityId: raw.activityId.slice(0, 160),
+          tool: raw.tool === "browser_interact" ? "browser_interact" : "agent",
+          label: raw.label.slice(0, 300),
+          status: raw.status,
+          ...(hostname ? { hostname } : {}),
+        },
+      ];
+    }),
+  };
 }

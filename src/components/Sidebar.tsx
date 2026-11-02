@@ -1558,21 +1558,6 @@ export function Sidebar({
             </section>
           </div>
 
-          {signedIn ? (
-            <div className="kova-sidebar-help">
-              <button
-                className="kova-nav-row"
-                type="button"
-                onClick={() => {
-                  closeAfterMobileNavigation("/help");
-                  onOpenHelp();
-                }}
-              >
-                {icon(CircleHelp)}
-                <span>Help</span>
-              </button>
-            </div>
-          ) : null}
           <footer className="kova-sidebar-footer">
             {signedIn ? (
               <>

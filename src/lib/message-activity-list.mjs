@@ -1,3 +1,4 @@
+import { activityHostname } from "./activity-display.mjs";
 import { normalizeBrowserActivity } from "./browser-activity-contract.mjs";
 
 export function messageActivitiesFromDelta(current, delta) {
@@ -5,8 +6,10 @@ export function messageActivitiesFromDelta(current, delta) {
     ...(typeof delta.activity_id === "string" && delta.activity_id.trim()
       ? { activityId: delta.activity_id.slice(0, 160) }
       : {}),
-    tool: String(delta.tool ?? ""),
-    label: String(delta.label),
+    ...(delta.kind === "progress" ? { presentation: "commentary" } : {}),
+    ...(activityHostname(delta.hostname) ? { hostname: activityHostname(delta.hostname) } : {}),
+    tool: delta.kind === "progress" ? "progress" : String(delta.tool ?? ""),
+    label: String(delta.label).slice(0, 800),
     ...(delta.tool === "browser_interact"
       ? { browser: normalizeBrowserActivity(delta.browser) }
       : {}),

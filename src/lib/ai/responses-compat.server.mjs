@@ -1,3 +1,4 @@
+import { providerActivityDeltas } from "./provider-activity.mjs";
 // Bound the native provider bytes as well as the translated chat stream. Native
 // Responses metadata and unknown events must not bypass the chat byte limit.
 const MAX_RESPONSES_STREAM_BYTES = 8 * 1024 * 1024;
@@ -62,6 +63,12 @@ export function responsesStreamToChatStream(response) {
             }
             if (!event || typeof event !== "object" || Array.isArray(event)) {
               throw streamError("invalid_provider_sse_event");
+            }
+            for (const delta of providerActivityDeltas(event)) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ choices: [{ index: 0, delta }] })}\n\n`),
+              );
+              emitted = true;
             }
             if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
               controller.enqueue(

@@ -29,7 +29,7 @@ test("pricing keeps the published prices and production checkout lookup keys", a
   assert.match(pricing, /useStripeCheckout\(\)/);
   assert.match(
     pricing,
-    /openCheckout\(\{\s*priceId,\s*customerEmail: user\?\.email,\s*userId: user\?\.id/,
+    /openCheckout\(\{\s*priceId,\s*customerEmail: user\.email,\s*userId: capturedOwner/,
   );
   assert.match(pricing, /CAPABILITY_REGISTRY\.plans\.plus\.lookupKey!/);
   assert.match(pricing, /CAPABILITY_REGISTRY\.plans\.pro\.lookupKey!/);
@@ -93,7 +93,7 @@ test("checkout uses an accessible modal with truthful loading and safe errors", 
   assert.doesNotMatch(pricing, /fixed inset-0 z-50 bg-black\/70/);
   assert.match(checkout, /const CHECKOUT_ERROR_MESSAGE =/);
   assert.match(checkout, /const ACTIVE_SUBSCRIPTION_ERROR_MESSAGE =/);
-  assert.match(checkout, /result\.error === ACTIVE_SUBSCRIPTION_ERROR_MESSAGE/);
+  assert.match(checkout, /result\.code === "active_subscription"/);
   assert.match(checkout, /setCheckoutErrorMessage\(publicErrorMessage\)/);
   assert.match(checkout, /onLoadCapture=/);
   assert.match(checkout, /event\.target instanceof HTMLIFrameElement/);
