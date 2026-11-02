@@ -87,7 +87,10 @@ function validate(text) {
   assert.equal(generated["timeout-minutes"], 35);
   assert.match(generated.if, /github\.event_name == 'pull_request'/);
   assert.match(generated.if, /github\.repository == 'Blockigaming\/KovaGPT'/);
-  assert.deepEqual(Object.keys(generated.env).sort(), ["KOVA_SYNTHETIC_NATIVE_CONFIRMATION", "KOVA_SYNTHETIC_SOURCE_SHA"]);
+  assert.deepEqual(Object.keys(generated.env).sort(), [
+    "KOVA_SYNTHETIC_NATIVE_CONFIRMATION",
+    "KOVA_SYNTHETIC_SOURCE_SHA",
+  ]);
   assert.equal(generated.env.KOVA_SYNTHETIC_NATIVE_CONFIRMATION, "SYNTHETIC_ONLY");
   assert.equal(generated.env.KOVA_SYNTHETIC_SOURCE_SHA, "${{ github.sha }}");
   assert.equal(generated.steps[0].with["persist-credentials"], false);
@@ -99,7 +102,9 @@ function validate(text) {
   assert.equal(generatedCleanup.if, "always()");
   assert.match(generatedCleanup.run, /smoke-synthetic-schema-restore-native\.py --cleanup-only/);
   assert.ok(generated.steps.every((step) => step["continue-on-error"] === undefined));
-  const generatedUploads = generated.steps.filter((step) => step.uses?.startsWith("actions/upload-artifact@"));
+  const generatedUploads = generated.steps.filter((step) =>
+    step.uses?.startsWith("actions/upload-artifact@"),
+  );
   assert.equal(generatedUploads.length, 1);
   assert.equal(generatedUploads[0].if, "always()");
   assert.equal(generatedUploads[0].with["retention-days"], 7);
@@ -109,10 +114,19 @@ function validate(text) {
 
 test("generated schema restore cannot acquire credentials or bypass cleanup", () => {
   for (const mutate of [
-    (job) => { job.environment = "production"; },
-    (job) => { job.env.EXTRA = "private-input"; },
-    (job) => { job.steps.find((step) => step.run?.includes("--cleanup-only")).if = "success()"; },
-    (job) => { job.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@")).with.path = "**/*"; },
+    (job) => {
+      job.environment = "production";
+    },
+    (job) => {
+      job.env.EXTRA = "private-input";
+    },
+    (job) => {
+      job.steps.find((step) => step.run?.includes("--cleanup-only")).if = "success()";
+    },
+    (job) => {
+      job.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@")).with.path =
+        "**/*";
+    },
   ]) {
     const changed = yaml.load(source);
     mutate(changed.jobs["native-generated-schema-restore"]);
