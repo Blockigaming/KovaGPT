@@ -26,14 +26,14 @@
 .kova-account-gate-eyebrow {
   font-size: 13px;
   color: #74716a;
-  letter-spacing: .02em;
+  letter-spacing: 0.02em;
 }
 .kova-account-gate-card h1 {
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(38px, 6vw, 60px);
   line-height: 1.08;
   font-weight: 400;
-  letter-spacing: -.045em;
+  letter-spacing: -0.045em;
   margin: 18px 0 20px;
   text-wrap: balance;
 }
@@ -72,11 +72,24 @@
   outline: 2px solid #a35036;
   outline-offset: 4px;
 }
-.kova-account-gate-actions svg { width: 18px; height: 18px; }
-.kova-account-gate-primary { background: #292823; color: #fffefa; }
-.kova-account-gate-primary:hover { background: #444139; }
-.kova-account-gate-secondary { border: 1px solid #dedcd4; background: transparent; }
-.kova-account-gate-secondary:hover { background: #eeede7; }
+.kova-account-gate-actions svg {
+  width: 18px;
+  height: 18px;
+}
+.kova-account-gate-primary {
+  background: #292823;
+  color: #fffefa;
+}
+.kova-account-gate-primary:hover {
+  background: #444139;
+}
+.kova-account-gate-secondary {
+  border: 1px solid #dedcd4;
+  background: transparent;
+}
+.kova-account-gate-secondary:hover {
+  background: #eeede7;
+}
 .kova-account-gate-links {
   display: flex;
   flex-wrap: wrap;
@@ -86,16 +99,35 @@
   color: #74716a;
   font-size: 12px;
 }
-.dark .kova-account-gate { background: #262624; color: #eeeae1; }
-.dark .kova-account-gate-brand { color: #eeeae1; }
+.dark .kova-account-gate {
+  background: #262624;
+  color: #eeeae1;
+}
+.dark .kova-account-gate-brand {
+  color: #eeeae1;
+}
 .dark .kova-account-gate-eyebrow,
 .dark .kova-account-gate-card > p,
-.dark .kova-account-gate-links { color: #b4b0a7; }
-.dark .kova-account-gate-actions { background: #30302d; border-color: #4a4841; }
-.dark .kova-account-gate-primary { background: #eeeae1; color: #262624; }
-.dark .kova-account-gate-primary:hover { background: #d8d3c8; }
-.dark .kova-account-gate-secondary { border-color: #68645a; }
-.dark .kova-account-gate-secondary:hover { background: #3c3b36; }
+.dark .kova-account-gate-links {
+  color: #b4b0a7;
+}
+.dark .kova-account-gate-actions {
+  background: #30302d;
+  border-color: #4a4841;
+}
+.dark .kova-account-gate-primary {
+  background: #eeeae1;
+  color: #262624;
+}
+.dark .kova-account-gate-primary:hover {
+  background: #d8d3c8;
+}
+.dark .kova-account-gate-secondary {
+  border-color: #68645a;
+}
+.dark .kova-account-gate-secondary:hover {
+  background: #3c3b36;
+}
 
 .kova-account-gate-loading {
   display: flex;

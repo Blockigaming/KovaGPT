@@ -1,4 +1,5 @@
 import { parseWorkModelCapabilities } from "./work-model-policy.mjs";
+import { parseWorkQuestionOptions } from "./work-question.mjs";
 import {
   canonicalWorkInput,
   canonicalWorkRunnerRequest,
@@ -244,6 +245,7 @@ function validateAttempt(result, binding) {
         directive.text.length > 4000)
     )
       fail("work_runner_directive_invalid");
+    if (status === "question") parseWorkQuestionOptions(directive.options);
     if (
       status === "approval_required" &&
       (directive?.kind !== "approval" ||

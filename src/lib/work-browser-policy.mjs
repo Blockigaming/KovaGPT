@@ -42,7 +42,12 @@ export function parseBrowserOwnerInput(value) {
   }[value.operation];
   if (
     !fields ||
-    Object.keys(value).some((key) => !allowed.slice(0, 6).includes(key) && !fields.includes(key))
+    Object.keys(value).some(
+      (key) =>
+        !allowed.slice(0, 6).includes(key) &&
+        !fields.includes(key) &&
+        !(value.operation === "click" && key === "text"),
+    )
   )
     fail();
   for (const key of fields) if (value[key] === undefined) fail();

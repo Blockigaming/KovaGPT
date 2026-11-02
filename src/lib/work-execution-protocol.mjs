@@ -1,4 +1,5 @@
 import { parseWorkModelChoice, assertWorkRunnerModel } from "./work-model-policy.mjs";
+import { parseWorkQuestionOptions } from "./work-question.mjs";
 // Shared protocol only. This module never executes a shell, browser, URL, or provider call.
 export const WORK_EXECUTION_PROTOCOL = "kova-work-v1";
 export const WORK_RUNNER_CAPABILITIES = Object.freeze([
@@ -842,6 +843,9 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       run.question = {
         id: workUuid(directive.id),
         text: bounded(directive.text, 4000),
+        ...(directive.options !== undefined
+          ? { options: parseWorkQuestionOptions(directive.options) }
+          : {}),
         answer: null,
       };
       run.status = "waiting_for_user";
@@ -877,7 +881,13 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
           fail("work_effect_result_invalid");
         run.effect.result = structuredClone(directive.result);
       }
-      run.status = directive.outcome === "failed" ? "failed" : "queued";
+      const browserHandoff =
+        directive.outcome === "completed" &&
+        run.step.input.approval?.action === "browser_interact" &&
+        ["sign_in", "popup", "dialog"].includes(directive.result?.handoff) &&
+        directive.result.runId === run.id &&
+        directive.result.sessionId === JSON.parse(run.step.input.approval.canonicalInput).sessionId;
+      run.status = directive.outcome === "failed" ? "failed" : browserHandoff ? "paused" : "queued";
       run.lease = null;
       run.reconciling = false;
       if (run.status === "failed") failSpecialists(run, now);
@@ -973,7 +983,14 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
   }
   if (run.step || run.effect?.status === "started") fail("work_step_unsettled");
   if (command.type === "question") {
-    run.question = { id: workUuid(command.id), text: bounded(command.text, 4000), answer: null };
+    run.question = {
+      id: workUuid(command.id),
+      text: bounded(command.text, 4000),
+      answer: null,
+      ...(command.options !== undefined
+        ? { options: parseWorkQuestionOptions(command.options) }
+        : {}),
+    };
     run.status = "waiting_for_user";
     run.lease = null;
     return update(run, now, "question_requested", { id: command.id });

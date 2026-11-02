@@ -1,4 +1,5 @@
 import { randomUUID, createHash } from "node:crypto";
+import { createBrowserInteractions } from "./interactions.mjs";
 const fail = () => {
   throw new Error("work_browser_action_denied");
 };
@@ -23,6 +24,12 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
     view = null,
     targets = new Map(),
     activeActor = null;
+  let page;
+  const approvedPages = new Set(),
+    popups = new Map(),
+    initialNavigations = new Set(),
+    popupTasks = new Set(),
+    interactions = createBrowserInteractions();
   const context = await browser.newContext({
     acceptDownloads: false,
     serviceWorkers: "block",
@@ -41,6 +48,36 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
         requestSequence = sequence;
       const request = route.request(),
         body = request.postDataBuffer() ?? Buffer.alloc(0);
+      let candidate;
+      try {
+        candidate = request.frame().page();
+      } catch {
+        // A popup's first navigation can precede its Page object. Hold before
+        // any upstream traffic, then pair the exact Request with the created Page.
+        if (
+          request.isNavigationRequest() &&
+          request.method() === "GET" &&
+          initialNavigations.size < 3 &&
+          request.url().length <= 4096
+        )
+          initialNavigations.add({ request, actor, sequence: requestSequence });
+        if (request.isNavigationRequest() && request.method() === "GET") await holdPopup(route);
+        else await route.abort();
+        return;
+      }
+      if (!approvedPages.has(candidate)) {
+        if (
+          request.isNavigationRequest() &&
+          request.frame() === candidate.mainFrame() &&
+          request.method() === "GET"
+        )
+          await queuePopup(candidate, request.url(), actor, requestSequence);
+        if (!popups.has(candidate)) {
+          void candidate.close();
+          await route.abort();
+        } else await holdPopup(route);
+        return;
+      }
       if (body.length > 65536) fail();
       const result = await exchange(
         {
@@ -70,12 +107,142 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
       await route.abort().catch(() => {});
     }
   });
-  const page = await context.newPage();
+  page = await context.newPage();
+  approvedPages.add(page);
+  function observe(candidate) {
+    candidate.on("download", (download) => void download.cancel());
+    candidate.on("dialog", (dialog) => {
+      if (closed || !activeActor || !approvedPages.has(candidate) || interactions.size >= 3) {
+        void dialog.dismiss().catch(() => {});
+        return;
+      }
+      let origin;
+      try {
+        const url = new URL(candidate.url());
+        if (url.protocol !== "https:" || url.origin.length > 300) throw Error("origin");
+        origin = url.origin;
+      } catch {
+        void dialog.dismiss().catch(() => {});
+        return;
+      }
+      const id = interactions.add({
+        kind: "dialog",
+        origin,
+        message: dialog.message(),
+        prompt: dialog.type() === "prompt",
+        allow: (text) => dialog.accept(dialog.type() === "prompt" ? text : undefined),
+        deny: () => dialog.dismiss(),
+      });
+      if (!id) void dialog.dismiss().catch(() => {});
+    });
+    candidate.on("close", () => {
+      approvedPages.delete(candidate);
+      const id = popups.get(candidate);
+      if (id) {
+        interactions.remove(id);
+        popups.delete(candidate);
+      }
+      if (page === candidate)
+        page = [...approvedPages].find((item) => !item.isClosed()) ?? candidate;
+    });
+  }
+  observe(page);
   context.on("page", (candidate) => {
-    if (candidate !== page) void candidate.close();
+    observe(candidate);
+    if (!activeActor || approvedPages.size >= 4 || context.pages().length > 7) {
+      void candidate.close();
+      return;
+    }
+    for (const initial of initialNavigations) {
+      let match = false;
+      try {
+        match = initial.request.frame().page() === candidate;
+      } catch {}
+      if (match) {
+        initialNavigations.delete(initial);
+        const task = queuePopup(
+          candidate,
+          initial.request.url(),
+          initial.actor,
+          initial.sequence,
+        ).catch(() => candidate.close().catch(() => {}));
+        popupTasks.add(task);
+        void task.finally(() => popupTasks.delete(task));
+        return;
+      }
+    }
+    // Blank/script-created windows have no approved destination to display.
+    void candidate.close();
   });
-  page.on("download", (download) => void download.cancel());
-  page.on("dialog", (dialog) => void dialog.dismiss());
+  async function holdPopup(route) {
+    // An inert local document preserves window.opener without fetching or
+    // executing the destination. The owner must approve its real navigation.
+    await route.fulfill({
+      status: 200,
+      headers: { "content-type": "text/html", "content-security-policy": "default-src 'none'" },
+      body: "<!doctype html><title>Waiting for permission</title>",
+    });
+  }
+  async function queuePopup(candidate, rawUrl, actor, requestSequence) {
+    if (popups.has(candidate)) return;
+    const opener = await candidate.opener();
+    if (
+      closed ||
+      activeActor !== actor ||
+      sequence !== requestSequence ||
+      !approvedPages.has(opener) ||
+      candidate.isClosed() ||
+      rawUrl.length > 4096 ||
+      approvedPages.size >= 4
+    ) {
+      await candidate.close();
+      return;
+    }
+    const url = new URL(rawUrl);
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.port ||
+      url.origin.length > 300
+    ) {
+      await candidate.close();
+      return;
+    }
+    const id = interactions.add({
+      kind: "popup",
+      origin: url.origin,
+      message: `This page wants to open ${url.origin} in a new window.`,
+      allow: async () => {
+        if (candidate.isClosed() || opener.isClosed()) fail();
+        popups.delete(candidate);
+        approvedPages.add(candidate);
+        page = candidate;
+        await pageAction(() => candidate.goto(url.href, { waitUntil: "domcontentloaded" })).catch(
+          (error) => {
+            if (!candidate.isClosed() || opener.isClosed()) throw error;
+          },
+        );
+      },
+      deny: async () => {
+        popups.delete(candidate);
+        await candidate.close();
+      },
+    });
+    if (id) popups.set(candidate, id);
+    else await candidate.close();
+  }
+  async function pageAction(action) {
+    // Keep the command's exact actor/sequence alive while initial popup events
+    // settle. Later/background windows are rejected rather than silently opened.
+    const popup = page.waitForEvent("popup", { timeout: 750 }).catch(() => null);
+    return interactions.during(async () => {
+      const result = await action();
+      await popup;
+      await Promise.all([...popupTasks]);
+      return result;
+    });
+  }
   const safeUrl = () => {
     try {
       const url = new URL(page.url());
@@ -138,9 +305,26 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
   }
   async function snapshot(actor) {
     if (actor === "agent" && mode !== "agent") fail();
-    for (const old of targets.values()) await old.handle.dispose().catch(() => {});
+    for (const old of targets.values()) await old.handle?.dispose().catch(() => {});
     targets = new Map();
     view = randomUUID();
+    const pending = interactions.describe(actor);
+    if (pending) {
+      targets = pending.controls;
+      const result = {
+        sequence,
+        mode,
+        view,
+        url: safeUrl(),
+        title: "Your input is needed",
+        text: "",
+        handoff: pending.handoff,
+        interaction: pending.interaction,
+        nodes: pending.nodes,
+      };
+      if (Buffer.byteLength(JSON.stringify(result)) > (actor === "owner" ? 50000 : 10000)) fail();
+      return result;
+    }
     const nodes = [];
     const locator = page.locator('a[href],button,input,textarea,select,[role="button"]');
     const limit = Math.min(await locator.count(), actor === "owner" ? 60 : 20);
@@ -185,6 +369,9 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
       title: await page.evaluate(() => document.title.slice(0, 200)),
       text: text.slice(0, actor === "owner" ? 6000 : 3000),
       nodes,
+      ...(actor === "agent" && (await page.locator('input[type="password"]:visible').count()) > 0
+        ? { handoff: "sign_in" }
+        : {}),
     };
     // Work effect accounting bounds serialized UTF-8, not JavaScript characters.
     const maximum = actor === "owner" ? 50000 : 10000;
@@ -192,7 +379,7 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
       const removed = nodes.pop(),
         saved = targets.get(removed.id);
       targets.delete(removed.id);
-      await saved?.handle.dispose().catch(() => {});
+      await saved?.handle?.dispose().catch(() => {});
     }
     while (Buffer.byteLength(JSON.stringify(result)) > maximum && result.text.length)
       result.text = result.text.slice(0, Math.floor(result.text.length / 2));
@@ -203,6 +390,10 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
     if (command.view !== view || typeof command.target !== "string") fail();
     const saved = targets.get(command.target);
     if (!saved) fail();
+    if (saved.interactionId) {
+      if (command.actor !== "owner" || saved.interactionId !== interactions.pending?.id) fail();
+      return saved;
+    }
     const current = await describe(saved.handle).catch(() => null);
     if (!current || current.disabled || digest(current) !== saved.fingerprint) fail();
     return { handle: saved.handle, description: current };
@@ -227,6 +418,7 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
         fail();
       sequence = command.sequence;
       activeActor = command.actor;
+      initialNavigations.clear();
       try {
         if (command.operation === "close") {
           closed = true;
@@ -240,26 +432,34 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
         }
         if (command.operation === "release") {
           if (command.actor !== "owner" || mode !== "takeover") fail();
+          if (interactions.pending) fail();
           // Credentials and owner-entered form values are never returned to the model.
-          await page.locator("input,textarea").evaluateAll((elements) => {
-            for (const element of elements) if ("value" in element) element.value = "";
-          });
+          for (const tab of approvedPages)
+            await tab.locator("input,textarea").evaluateAll((elements) => {
+              for (const element of elements) if ("value" in element) element.value = "";
+            });
           mode = "agent";
           view = null;
           targets = new Map();
           return { sequence, mode, url: safeUrl() };
         }
         if (command.operation === "navigate") {
+          if (interactions.pending) fail();
           if (
             typeof command.url !== "string" ||
             command.url.length > 4096 ||
             !/^https:\/\//.test(command.url)
           )
             fail();
-          await page.goto(command.url, { waitUntil: "domcontentloaded" });
+          await pageAction(() => page.goto(command.url, { waitUntil: "domcontentloaded" }));
         } else if (command.operation === "click") {
           const selected = await target(command);
-          await selected.handle.click({ timeout: 5000 });
+          if (selected.interactionId) {
+            await interactions.respond(selected.interactionId, selected.action, command.text);
+          } else {
+            if (command.text !== undefined) fail();
+            await pageAction(() => selected.handle.click({ timeout: 5000 }));
+          }
         } else if (command.operation === "fill") {
           if (
             command.actor !== "owner" ||
@@ -277,12 +477,12 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
           )
             fail();
           const selected = await target(command);
-          await selected.handle.press(command.key, { timeout: 5000 });
+          await pageAction(() => selected.handle.press(command.key, { timeout: 5000 }));
         } else if (command.operation === "scroll") {
           if (!Number.isInteger(command.delta) || Math.abs(command.delta) > 900) fail();
           await page.mouse.wheel(0, command.delta);
         } else if (command.operation !== "snapshot") fail();
-        if (["navigate", "click", "press"].includes(command.operation))
+        if (!interactions.pending && ["navigate", "click", "press"].includes(command.operation))
           await page.waitForLoadState("networkidle", { timeout: 1500 }).catch(() => {});
         return await snapshot(command.actor);
       } finally {
@@ -293,6 +493,8 @@ export async function createInteractiveBrowser({ chromium, exchange }) {
       closed = true;
       activeActor = null;
       targets.clear();
+      interactions.clear();
+      initialNavigations.clear();
       await browser.close();
     },
   };

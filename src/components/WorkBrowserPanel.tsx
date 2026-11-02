@@ -1,4 +1,6 @@
 import { Input } from "@/components/ui/input";
+import { BrowserPrivateEntryCard } from "@/components/BrowserPrivateEntryCard";
+import { BrowserInteractionCard } from "@/components/BrowserInteractionCard";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -16,7 +18,7 @@ import { requestWorkSync } from "@/lib/work-sync-client";
 import { createWorkViewLifetime } from "@/lib/work-view-lifetime.mjs";
 type Session = { id: string; sequence: number; mode: string; expires_at: string };
 type Snapshot = {
-  readiness: { available: boolean; origins: string[] };
+  readiness: { available: boolean; origins: string[]; publicWeb?: boolean };
   runRevision: number;
   runStatus: string;
   sessions: Session[];
@@ -33,6 +35,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
     [statusConfirmed, setStatusConfirmed] = useState(false),
     [controlsOpen, setControlsOpen] = useState(false),
     [cleared, setCleared] = useState(false);
+  const [dismissedSignIn, setDismissedSignIn] = useState<string | null>(null);
   const controlsId = useId();
   const lifetime = useRef<AbortController | null>(null),
     serial = useRef(0),
@@ -194,6 +197,18 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
               ? "Agent control · run paused"
               : "Agent control"
             : "No open session";
+  const passwordNode =
+    session?.mode === "takeover" &&
+    view?.nodes?.find((node) => node.editable && !node.disabled && node.inputType === "password");
+  const handoff =
+    run.status === "paused" &&
+    run.effect?.result?.sessionId === session?.id &&
+    run.effect?.result?.sequence === session?.sequence &&
+    ["sign_in", "popup", "dialog"].includes(String(run.effect?.result?.handoff))
+      ? String(run.effect?.result?.handoff)
+      : null;
+  const allowInteraction = view?.nodes?.find((node) => node.kind === "interaction_allow");
+  const denyInteraction = view?.nodes?.find((node) => node.kind === "interaction_deny");
   function toggleControls() {
     setControlsOpen((open) => !open);
     // Hiding the controls also discards any unsubmitted private entry.
@@ -245,7 +260,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
                   : checking
                     ? "Checking whether private browsing is available."
                     : available
-                      ? "Open a reviewed website to begin a private session."
+                      ? "Open a website to begin a private session."
                       : "Private browser execution is unavailable."}
           </span>
         </span>
@@ -267,13 +282,17 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
               }}
               className="work-browser-primary-action"
             >
-              Take over
+              {handoff === "sign_in"
+                ? "Sign in privately"
+                : handoff
+                  ? "Review website request"
+                  : "Take over"}
             </Button>
           ) : (
             <Button
               variant="ghost"
               type="button"
-              disabled={disabled}
+              disabled={disabled || Boolean(view?.interaction)}
               onClick={() => void command("release")}
               className="work-browser-primary-action"
             >
@@ -298,7 +317,9 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       )}
       {session?.mode === "agent" && paused && (
         <p className="text-sm text-muted-foreground">
-          Browser control is with the agent. This run is still paused; use Resume run to continue.
+          {handoff
+            ? "Work paused because a website needs your input. Take control to continue privately."
+            : "Browser control is with the agent. This run is still paused; use Resume run to continue."}
         </p>
       )}
       {!paused && available && (
@@ -327,18 +348,53 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       </Button>
       {controlsOpen && (
         <div id={controlsId} className="work-browser-controls">
+          {session?.mode === "takeover" &&
+            view?.interaction &&
+            view.view &&
+            allowInteraction &&
+            denyInteraction && (
+              <BrowserInteractionCard
+                key={view.view}
+                interaction={view.interaction}
+                disabled={disabled}
+                onAllow={(text) =>
+                  void command("click", {
+                    view: view.view,
+                    target: allowInteraction.id,
+                    ...(text !== undefined ? { text } : {}),
+                  })
+                }
+                onDeny={() =>
+                  void command("click", { view: view.view, target: denyInteraction.id })
+                }
+              />
+            )}
+          {passwordNode && view?.view && view.url && dismissedSignIn !== view.view && (
+            <BrowserPrivateEntryCard
+              key={view.view}
+              origin={domain}
+              label={passwordNode.label}
+              disabled={disabled}
+              onCancel={() => setDismissedSignIn(view.view!)}
+              onFill={(text) =>
+                void command("fill", { view: view.view, target: passwordNode.id, text })
+              }
+            />
+          )}
           <p className="text-sm text-muted-foreground">
             Pause Work before taking over. The model cannot read or act during takeover. Sessions
             close after five minutes; sign-in data is not saved to Work history. Hiding these
             controls does not end the session.
           </p>
           <p className="break-words text-xs">
-            Reviewed sites: {snapshot?.readiness.origins.join(", ")}
+            {snapshot?.readiness.publicWeb
+              ? "Public HTTPS browsing · your site rules apply"
+              : `Configured sites: ${snapshot?.readiness.origins.join(", ")}`}
           </p>
           {!session && (
             <div className="flex flex-wrap items-end gap-2">
               <label className="flex-1 text-sm">
-                Reviewed website URL
+                Website URL
                 <Input
                   type="url"
                   value={url}
@@ -363,7 +419,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
               <p className="text-xs text-muted-foreground">
                 Session expires {new Date(session.expires_at).toLocaleTimeString()}.
               </p>
-              {session.mode === "takeover" && (
+              {session.mode === "takeover" && !view?.interaction && (
                 <div className="work-browser-actions">
                   <Button
                     variant="ghost"
@@ -391,7 +447,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
                   </Button>
                 </div>
               )}
-              {view && session.mode === "takeover" && (
+              {view && session.mode === "takeover" && !view.interaction && (
                 <div className="space-y-2">
                   <p className="break-words text-sm">
                     {view.title} {view.url}
