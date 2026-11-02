@@ -351,7 +351,7 @@ export function AuthDialog({
               <button
                 type="button"
                 onClick={() => void handleGithub()}
-                disabled={loading || !githubAvailable}
+                disabled={true}
                 aria-busy={loadingMethod === "github"}
                 aria-describedby={!githubAvailable ? "github-sign-in-status" : undefined}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-border bg-background px-4 text-base font-medium transition hover:bg-accent disabled:opacity-60"
@@ -361,20 +361,8 @@ export function AuthDialog({
                 ) : (
                   <img src={githubLogo} alt="" className="h-5 w-5 dark:invert" aria-hidden="true" />
                 )}
-                Continue with GitHub
+                Coming Soon
               </button>
-              {!githubAvailable ? (
-                <p
-                  id="github-sign-in-status"
-                  role="status"
-                  className="text-xs text-muted-foreground"
-                >
-                  {!providers.resolved && !providers.error && browserKovaAuthMode() !== "kova"
-                    ? "Checking GitHub availability…"
-                    : "GitHub sign-in is currently unavailable. Continue with email or Google."}
-                </p>
-              ) : null}
-
               {googleUnavailable || googleCheckFailed ? (
                 hostedGoogleAvailable || hostedGooglePending ? null : (
                   <div
