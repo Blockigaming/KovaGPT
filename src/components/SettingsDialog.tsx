@@ -1181,7 +1181,9 @@ export function SettingsDialog({
         <DialogHeader
           className={
             loggedIn
-              ? "sr-only"
+              ? page
+                ? "sr-only"
+                : "hidden"
               : "kova-settings-page-header px-5 sm:px-7 pt-5 pb-4 border-b border-border"
           }
         >
