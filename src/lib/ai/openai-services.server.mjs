@@ -231,39 +231,40 @@ export function createOpenAiServices({
     return result;
   }
   async function deleteAgentSession(sessionId, options) {
-    const remove = async () => {
-      const deleted = await client.beta.agents.sessions.delete(sessionId, {
-        ...options,
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (
-        deleted?.id !== sessionId ||
-        deleted.deleted !== true ||
-        deleted.object !== "agent.session.deleted"
-      )
-        fail("provider_cleanup_unconfirmed", 503);
-    };
-    try {
-      await remove();
-    } catch (error) {
-      const transient =
-        !(error instanceof OpenAiServiceError) &&
-        (error instanceof OpenAI.APIConnectionError ||
-          error?.status === 409 ||
-          (Number.isInteger(error?.status) && error.status >= 500 && error.status <= 599));
-      if (!transient) throw error;
-      // Reconcile only this request's session. Never repeat the task or accept an uncertain receipt.
-      const current = await client.beta.agents.sessions.retrieve(sessionId, {
-        ...options,
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (
-        current?.id !== sessionId ||
-        current.object !== "agent.session" ||
-        current.status !== "idle"
-      )
-        fail("provider_cleanup_unconfirmed", 503);
-      await remove();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const deleted = await client.beta.agents.sessions.delete(sessionId, {
+          ...options,
+          signal: AbortSignal.timeout(attempt === 2 ? 2_000 : 10_000),
+        });
+        if (
+          deleted?.id !== sessionId ||
+          deleted.deleted !== true ||
+          deleted.object !== "agent.session.deleted"
+        )
+          fail("provider_cleanup_unconfirmed", 503);
+        return;
+      } catch (error) {
+        const transient =
+          !(error instanceof OpenAiServiceError) &&
+          (error instanceof OpenAI.APIConnectionError ||
+            error?.status === 409 ||
+            (Number.isInteger(error?.status) && error.status >= 500 && error.status <= 599));
+        // Only a second cleanup conflict gets one additional reconciliation.
+        // Never repeat task execution, or accept a conflict as deletion proof.
+        if (!transient || attempt === 2 || (attempt === 1 && error?.status !== 409)) throw error;
+        if (attempt === 1) await new Promise((resolve) => setTimeout(resolve, 250));
+        const current = await client.beta.agents.sessions.retrieve(sessionId, {
+          ...options,
+          signal: AbortSignal.timeout(attempt === 1 ? 2_000 : 10_000),
+        });
+        if (
+          current?.id !== sessionId ||
+          current.object !== "agent.session" ||
+          current.status !== "idle"
+        )
+          fail("provider_cleanup_unconfirmed", 503);
+      }
     }
   }
   async function runAgent(input, { signal, browser = false } = {}) {

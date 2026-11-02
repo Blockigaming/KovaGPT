@@ -661,6 +661,52 @@ test("transient Agent deletion reconciles the same idle session through the inst
   }
 });
 
+test("a second cleanup conflict is reconciled once without repeating the Agent task", async () => {
+  for (const finalState of ["deleted", "conflict", "busy", "wrong_owner", "wrong_receipt"]) {
+    const f = agentClient([
+      { type: "agent.session.created", session: { id: "session_owned" } },
+      { type: "agent.session.turn.completed", turn: { id: "turn_owned", subagent_id: null } },
+    ]);
+    let deletes = 0,
+      reads = 0;
+    f.client.beta.agents.sessions.delete = async (id) => {
+      assert.equal(id, "session_owned");
+      if (++deletes <= 2 || finalState === "conflict")
+        throw Object.assign(new Error("Synthetic cleanup conflict"), { status: 409 });
+      return {
+        id: finalState === "wrong_receipt" ? "session_other" : id,
+        deleted: true,
+        object: "agent.session.deleted",
+      };
+    };
+    f.client.beta.agents.sessions.retrieve = async (id) => {
+      assert.equal(id, "session_owned");
+      reads++;
+      return {
+        id: reads === 2 && finalState === "wrong_owner" ? "session_other" : id,
+        object: "agent.session",
+        status: reads === 2 && finalState === "busy" ? "running" : "idle",
+      };
+    };
+    const pending = [];
+    const provider = createOpenAiServices({
+      client: f.client,
+      model: "gpt-5.6-luna",
+      reportCleanupFailure: (resources) => pending.push(...resources),
+    });
+    if (finalState === "deleted") {
+      assert.equal((await provider.agent("Compute one result")).text, "Actual answer");
+      assert.deepEqual(pending, []);
+    } else {
+      await assert.rejects(provider.agent("Compute one result"), /provider_cleanup_unconfirmed/);
+      assert.equal(pending.length, 1);
+    }
+    assert.equal(reads, 2);
+    assert.equal(deletes, ["busy", "wrong_owner"].includes(finalState) ? 2 : 3);
+    assert.equal(f.calls.filter(([kind]) => kind === "create").length, 1);
+  }
+});
+
 test("a lost deletion response is reconciled by a confirmed SDK not-found read", async () => {
   const f = agentClient([
     { type: "agent.session.created", session: { id: "session_owned" } },
