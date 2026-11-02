@@ -124,8 +124,10 @@ export async function chooseSettingsSection(page: Page, section: string) {
       .click();
   };
   const back = surface.getByRole("button", { name: "Back to settings", exact: true });
+  // Route changes can briefly hide navigation while React replaces the section.
+  // Wait for whichever responsive navigation control is actually available.
+  await expect(tab.or(picker).or(back).filter({ visible: true }).first()).toBeVisible();
   if (!(await tab.isVisible()) && !(await picker.isVisible())) {
-    await expect(back.or(tab).filter({ visible: true }).first()).toBeVisible();
     if (await back.isVisible()) {
       await back.click();
       await expect(tab).toBeVisible();

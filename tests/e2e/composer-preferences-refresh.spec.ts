@@ -142,6 +142,7 @@ test("every primary settings destination opens its own working section", async (
     ["Storage", "storage"],
     ["Notifications", "notifications"],
     ["Connections", "connections"],
+    ["Cloud Browser", "cloud-browser"],
     ["Privacy", "privacy"],
     ["Usage", "usage"],
     ["Subscriptions", "billing"],

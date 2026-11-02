@@ -66,7 +66,7 @@ export type WorkRun = {
   limits: { maxActions: number; maxTokens: number; maxCostMicros: number; runtimeMs: number };
   usage: { actions: number; tokens: number; costMicros: number };
   directions: { id: string; text: string; at: number }[];
-  question: { id: string; text: string; answer: string | null } | null;
+  question: { id: string; text: string; options?: string[]; answer: string | null } | null;
   approval: {
     id: string;
     action: string;

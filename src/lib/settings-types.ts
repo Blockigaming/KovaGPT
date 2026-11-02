@@ -75,6 +75,7 @@ export const SETTINGS_SECTIONS = {
   responses: "general",
   notifications: "notifications",
   connections: "linked",
+  "cloud-browser": "cloud-browser",
   privacy: "data",
   usage: "usage",
   billing: "billing",
