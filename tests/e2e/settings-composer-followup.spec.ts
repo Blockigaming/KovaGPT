@@ -23,18 +23,20 @@ for (const theme of ["dark", "light"] as const) {
       expect((await navigation.boundingBox())!.y - top).toBeLessThanOrEqual(1);
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       expect(
-        await surface
-          .locator("h1")
-          .evaluate((node) => node.closest(".sr-only")!.getBoundingClientRect().width),
-      ).toBeLessThanOrEqual(1);
+        await surface.locator("h1").evaluate((node) => {
+          const style = getComputedStyle(node.closest(".sr-only")!);
+          return { position: style.position, clipPath: style.clipPath };
+        }),
+      ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
     } else {
       await surface.getByRole("button", { name: "Back to settings", exact: true }).click();
       await expect(surface.locator(".kova-settings-navigation-heading h2")).toBeVisible();
       expect(
-        await surface
-          .locator("h1")
-          .evaluate((node) => node.closest(".sr-only")!.getBoundingClientRect().width),
-      ).toBeLessThanOrEqual(1);
+        await surface.locator("h1").evaluate((node) => {
+          const style = getComputedStyle(node.closest(".sr-only")!);
+          return { position: style.position, clipPath: style.clipPath };
+        }),
+      ).toEqual({ position: "absolute", clipPath: "inset(50%)" });
       await surface.getByRole("tab", { name: "Appearance", exact: true }).click();
       await expect(surface.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
     }
