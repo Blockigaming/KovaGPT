@@ -27,6 +27,12 @@ export function connectionReadRequest(id, query, token, options = {}) {
     url.searchParams.set("$search", JSON.stringify(query));
     url.searchParams.set("$select", "id,subject,from,receivedDateTime,bodyPreview,webLink");
     url.searchParams.set("$top", "10");
+  } else if (id === "outlook-calendar") {
+    url = new URL("https://graph.microsoft.com/v1.0/me/calendar/events");
+    url.searchParams.set("$filter", `startsWith(subject,'${query.replaceAll("'", "''")}')`);
+    url.searchParams.set("$select", "id,subject,start,end,webLink");
+    url.searchParams.set("$top", "10");
+    headers.Prefer = 'outlook.timezone="UTC"';
   } else if (id === "onedrive") {
     const literal = encodeURIComponent(query.replaceAll("'", "''")).replaceAll("'", "%27");
     url = new URL(`https://graph.microsoft.com/v1.0/me/drive/root/search(q='${literal}')`);
@@ -111,7 +117,17 @@ export async function readConnection(id, query, token, fetchImpl = fetch, option
           ? title(row)
           : str(row.subject ?? row.name ?? row.displayName ?? row.title ?? row.text, 300),
       url: typeof url === "string" && url.length <= 2048 ? safeConnectionLink(url) : null,
-      snippet: str(row.bodyPreview ?? row.description ?? row.text),
+      snippet:
+        id === "outlook-calendar"
+          ? [
+              row.start?.dateTime &&
+                `Start: ${str(row.start.dateTime, 60)} (${str(row.start.timeZone, 80)})`,
+              row.end?.dateTime &&
+                `End: ${str(row.end.dateTime, 60)} (${str(row.end.timeZone, 80)})`,
+            ]
+              .filter(Boolean)
+              .join("; ")
+          : str(row.bodyPreview ?? row.description ?? row.text),
     };
     // Measure the serialized UTF-8 result, including JSON escaping. A provider
     // can return control characters or very large URLs; never cut serialized

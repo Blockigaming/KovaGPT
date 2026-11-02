@@ -70,7 +70,7 @@ test("spec400 card actions always open details, including unavailable and recove
   }
 });
 test("spec400 directory uses approved catalog, primary tabs, neutral scoped styles, and verified redirects", () => {
-  assert.match(source, /const catalog = LAUNCH_PLUGIN_REVIEW_CATALOG.map/);
+  assert.match(source, /const catalog = MASTER_PLUGIN_REVIEW_CATALOG.map/);
   assert.match(source, /title="Connections"/);
   assert.match(source, /description="Connect tools and sources to Kova"/);
   assert.match(source, /<TabsTrigger value="all">/);
