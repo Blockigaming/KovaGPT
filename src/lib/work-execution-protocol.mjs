@@ -1,4 +1,5 @@
 import { parseWorkModelChoice, assertWorkRunnerModel } from "./work-model-policy.mjs";
+import { parseWorkQuestionOptions } from "./work-question.mjs";
 // Shared protocol only. This module never executes a shell, browser, URL, or provider call.
 export const WORK_EXECUTION_PROTOCOL = "kova-work-v1";
 export const WORK_RUNNER_CAPABILITIES = Object.freeze([
@@ -842,6 +843,9 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
       run.question = {
         id: workUuid(directive.id),
         text: bounded(directive.text, 4000),
+        ...(directive.options !== undefined
+          ? { options: parseWorkQuestionOptions(directive.options) }
+          : {}),
         answer: null,
       };
       run.status = "waiting_for_user";
@@ -973,7 +977,14 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
   }
   if (run.step || run.effect?.status === "started") fail("work_step_unsettled");
   if (command.type === "question") {
-    run.question = { id: workUuid(command.id), text: bounded(command.text, 4000), answer: null };
+    run.question = {
+      id: workUuid(command.id),
+      text: bounded(command.text, 4000),
+      answer: null,
+      ...(command.options !== undefined
+        ? { options: parseWorkQuestionOptions(command.options) }
+        : {}),
+    };
     run.status = "waiting_for_user";
     run.lease = null;
     return update(run, now, "question_requested", { id: command.id });

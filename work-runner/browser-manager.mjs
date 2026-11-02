@@ -38,11 +38,17 @@ export function validateBrowserAction(action, input) {
 /** In-memory browser content only. Durable DB sequence is authoritative; an
  * ambiguous command closes its container and cannot be replayed. */
 export function createBrowserManager(
-  { store, factory, authorize, origins },
+  { store, factory, authorize, origins, publicWeb = false },
   egressFactory = createBrowserEgress,
 ) {
   const allowed = origins.map(browserOrigin);
-  if (!allowed.length || allowed.length > 20 || new Set(allowed).size !== allowed.length) fail();
+  if (
+    typeof publicWeb !== "boolean" ||
+    (!publicWeb && !allowed.length) ||
+    allowed.length > 20 ||
+    new Set(allowed).size !== allowed.length
+  )
+    fail();
   const sessions = new Map(),
     retired = new Map();
   const capabilities = {
@@ -50,6 +56,8 @@ export function createBrowserManager(
     available: true,
     origins: allowed,
     maxSessionSeconds: 300,
+    siteRulesVersion: 1,
+    ...(publicWeb ? { publicWeb: true } : {}),
   };
   async function check(row, binding, signal) {
     if (
@@ -59,7 +67,16 @@ export function createBrowserManager(
       row.closed
     )
       fail();
-    const current = await authorize(binding, signal);
+    const current = await authorize(
+      {
+        ...binding,
+        ...(binding.destination || row.origin
+          ? { destination: binding.destination ?? row.origin }
+          : {}),
+        siteRulesVersion: 1,
+      },
+      signal,
+    );
     if (
       current.expiresAt !== row.expiresAt ||
       (binding.phase === "check" && current.sequence !== binding.sequence)
@@ -87,8 +104,15 @@ export function createBrowserManager(
       AbortSignal.timeout(20000),
     ]);
     try {
-      await check(row, binding, current);
+      await check(
+        row,
+        command.operation === "navigate"
+          ? { ...binding, destination: new URL(command.url).origin }
+          : binding,
+        current,
+      );
       const result = await row.container.command(command);
+      if (result.url?.startsWith("https://")) row.origin = new URL(result.url).origin;
       await check(row, binding, current);
       if (result.sequence !== command.sequence) fail();
       if (command.operation === "release") row.mode = "agent";
@@ -189,7 +213,13 @@ export function createBrowserManager(
                   fail();
                 const egress = egressFactory({
                   origins: allowed,
-                  assertAuthority: () => check(row, active.binding, active.controller.signal),
+                  publicWeb,
+                  assertAuthority: () =>
+                    check(
+                      row,
+                      { ...active.binding, destination: new URL(request.url).origin },
+                      active.controller.signal,
+                    ),
                 });
                 return egress(request, {
                   signal: active.controller.signal,

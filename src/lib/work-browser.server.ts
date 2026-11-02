@@ -10,6 +10,8 @@ import {
 } from "@/lib/work-browser-transport.mjs";
 import { workUuid } from "@/lib/work-execution-protocol.mjs";
 import { parseBrowserOwnerInput } from "@/lib/work-browser-policy.mjs";
+import { readCloudBrowserRules } from "@/lib/cloud-browser-preferences.server.mjs";
+import { assertCloudBrowserDestination } from "@/lib/cloud-browser-rules.mjs";
 
 type Session = {
   id: string;
@@ -86,7 +88,7 @@ export async function browserReadiness() {
     value.available !== true ||
     value.maxSessionSeconds !== 300 ||
     !Array.isArray(value.origins) ||
-    value.origins.length < 1 ||
+    (value.origins.length < 1 && value.publicWeb !== true) ||
     value.origins.length > 20
   )
     return { available: false, origins: [] as string[] };
@@ -103,7 +105,12 @@ export async function browserReadiness() {
       return { available: false, origins: [] as string[] };
     origins.push(origin);
   }
-  return { available: true, origins };
+  return {
+    available: true,
+    origins,
+    siteRulesEnforced: value.siteRulesVersion === 1,
+    publicWeb: value.publicWeb === true,
+  };
 }
 export async function listWorkBrowsers(caller: AuthedCaller, runId: string) {
   if ((await getCallerTier(caller)) === "free") throw Error("work_browser_paid_plan_required");
@@ -142,8 +149,12 @@ export async function commandWorkBrowser(
   if (input.operation !== "close") {
     const ready = await browserReadiness();
     if (!ready.available) throw Error("work_browser_unavailable");
-    if (input.url && !ready.origins.includes(new URL(input.url).origin))
+    if (input.url && !ready.publicWeb && !ready.origins.includes(new URL(input.url).origin))
       throw Error("work_browser_origin_denied");
+    const rules = await readCloudBrowserRules(caller.supabaseAdmin, caller.userId);
+    if (rules.sites.some((site) => site.access === "block") && !ready.siteRulesEnforced)
+      throw Error("work_browser_site_rules_runner_required");
+    if (input.url) assertCloudBrowserDestination(rules, input.url);
   }
   const db = database(caller),
     deadline = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
@@ -209,6 +220,12 @@ export async function authorizeWorkBrowser(caller: AuthedCaller, binding: Browse
           .maybeSingle()
       : null;
   if (closing?.error) throw Error("work_browser_unavailable");
+  if (closing?.data?.operation !== "close" || closing.data.sequence !== binding.sequence) {
+    const rules = await readCloudBrowserRules(caller.supabaseAdmin, caller.userId);
+    if (rules.sites.some((site) => site.access === "block") && binding.siteRulesVersion !== 1)
+      throw Error("work_browser_site_rules_runner_required");
+    if (binding.destination) assertCloudBrowserDestination(rules, binding.destination);
+  }
   if (closing?.data?.operation !== "close" || closing.data.sequence !== binding.sequence)
     await createWorkExecutionRepository(caller).authorize(run);
   const configuration = workRunnerConfiguration();

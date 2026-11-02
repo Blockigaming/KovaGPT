@@ -137,6 +137,7 @@ import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, type ThemeMode } from "@/lib/theme";
 import { authFetch } from "@/lib/auth-fetch";
+import { CloudBrowserSettings } from "@/components/CloudBrowserSettings";
 
 import {
   DEFAULT_SETTINGS,
@@ -200,6 +201,12 @@ const TAB_GROUPS: TabGroup[] = [
     hint: "Your account, storage, and privacy",
     tabs: [
       { v: "security", label: "Safety & security", icon: ShieldCheck },
+      {
+        v: "cloud-browser",
+        label: "Cloud Browser",
+        icon: ShieldCheck,
+        keywords: ["permissions", "websites", "login", "rules"],
+      },
       { v: "data", label: "Data control", icon: Database },
       { v: "storage", label: "Storage", icon: HardDrive },
     ],
@@ -1024,6 +1031,12 @@ export function SettingsDialog({
         { v: "storage", label: "Storage", icon: HardDrive },
         { v: "notifications", label: "Notifications", icon: Bell },
         { v: "linked", label: "Connections", icon: Link2 },
+        {
+          v: "cloud-browser",
+          label: "Cloud Browser",
+          icon: ShieldCheck,
+          keywords: ["permissions", "websites", "login", "rules"],
+        },
         { v: "data", label: "Privacy", icon: ShieldCheck },
         { v: "usage", label: "Usage", icon: BarChart3 },
         {
@@ -1355,6 +1368,13 @@ export function SettingsDialog({
                 </details>
               ) : null}
               {/* GENERAL */}
+              <TabsContent
+                value="cloud-browser"
+                aria-labelledby={currentSectionHeadingId}
+                className="overflow-y-auto px-7 pb-8 py-5"
+              >
+                {userKey && <CloudBrowserSettings key={userKey} ownerId={userKey} />}
+              </TabsContent>
               <TabsContent
                 aria-labelledby={currentSectionHeadingId}
                 value="general"

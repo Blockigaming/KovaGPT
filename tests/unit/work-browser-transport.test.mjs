@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   browserRunnerCommand,
+  browserRunnerCapabilities,
   createBrowserBackendAuthority,
   verifyBrowserInvocation,
 } from "../../src/lib/work-browser-transport.mjs";
@@ -22,6 +23,68 @@ const payload = {
   sessionId: crypto.randomUUID(),
   sequence: 1,
 };
+test("signed public-web capabilities permit an empty allowlist only with explicit public scope", async () => {
+  const fetcher = (publicWeb) => async (_, init) => {
+    const request = JSON.parse(init.body);
+    const raw = JSON.stringify({
+      protocol: WORK_EXECUTION_PROTOCOL,
+      runnerId: configuration.id,
+      build: configuration.build,
+      requestId: request.requestId,
+      at: Date.now(),
+      payload: {
+        status: "ready",
+        expiresAt: Date.now() + 10000,
+        browserCapabilities: {
+          protocol: "kova-browser-v1",
+          available: true,
+          origins: [],
+          maxSessionSeconds: 300,
+          siteRulesVersion: 1,
+          publicWeb,
+        },
+      },
+    });
+    return new Response(raw, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Kova-Signature": await signRunnerEnvelope(configuration.signingKey, "response", raw),
+      },
+    });
+  };
+  const result = await browserRunnerCapabilities(configuration, undefined, fetcher(true));
+  assert.equal(result.publicWeb, true);
+  assert.equal(result.siteRulesVersion, 1);
+  for (const value of [false, "true", undefined])
+    await assert.rejects(browserRunnerCapabilities(configuration, undefined, fetcher(value)));
+});
+test("site-rule bindings accept only an origin, excluding credentials, paths and query tokens", async () => {
+  async function verify(destination, siteRulesVersion = 1) {
+    const raw = JSON.stringify({
+      protocol: WORK_EXECUTION_PROTOCOL,
+      runnerId: configuration.id,
+      build: configuration.build,
+      requestId: crypto.randomUUID(),
+      at: Date.now(),
+      operation: "browser_authorize",
+      payload: { ...payload, destination, siteRulesVersion },
+    });
+    return verifyBrowserInvocation(
+      configuration,
+      raw,
+      await signRunnerEnvelope(configuration.signingKey, "request", raw),
+    );
+  }
+  assert.equal((await verify("https://example.com")).payload.destination, "https://example.com");
+  for (const value of [
+    "https://example.com/private",
+    "https://example.com?token=secret",
+    "https://user:pass@example.com",
+    "http://example.com",
+  ])
+    await assert.rejects(verify(value));
+  await assert.rejects(verify("https://example.com", 2));
+});
 test("backend authorizer verifies exact signed principal binding and signed requestId response", async () => {
   const authority = createBrowserBackendAuthority(
     configuration,

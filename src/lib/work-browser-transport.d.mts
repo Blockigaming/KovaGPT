@@ -9,6 +9,8 @@ export type BrowserBinding = {
   stepId?: string;
   inputHash?: string;
   approvalId?: string;
+  destination?: string;
+  siteRulesVersion?: 1;
 };
 export type BrowserCommand = {
   ownerId: string;
@@ -74,6 +76,8 @@ export function browserRunnerCapabilities(
   available: true;
   origins: string[];
   maxSessionSeconds: 300;
+  siteRulesVersion?: 1;
+  publicWeb?: true;
 }>;
 export function createBrowserBackendAuthority(
   configuration: unknown,

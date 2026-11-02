@@ -7,6 +7,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { validateWorkCsv } from "./csv-safety.mjs";
 import { compileTerminalPlan, TERMINAL_COMMANDS } from "./terminal.mjs";
 import { compileWorkSiteBundle } from "../src/lib/work-sites-output.mjs";
+import { parseWorkQuestionOptions } from "../src/lib/work-question.mjs";
 
 /** Pinned operator endpoints only. Model output never becomes a host command or URL. */
 export function configuredProvider(
@@ -249,7 +250,14 @@ export function configuredProvider(
             status: "question",
             receipt: {
               ...receipt,
-              directive: { kind: "question", id: randomUUID(), text: result.text },
+              directive: {
+                kind: "question",
+                id: randomUUID(),
+                text: result.text,
+                ...(result.options !== undefined
+                  ? { options: parseWorkQuestionOptions(result.options) }
+                  : {}),
+              },
             },
           };
         }

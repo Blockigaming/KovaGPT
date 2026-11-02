@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import { BrowserPrivateEntryCard } from "@/components/BrowserPrivateEntryCard";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -16,7 +17,7 @@ import { requestWorkSync } from "@/lib/work-sync-client";
 import { createWorkViewLifetime } from "@/lib/work-view-lifetime.mjs";
 type Session = { id: string; sequence: number; mode: string; expires_at: string };
 type Snapshot = {
-  readiness: { available: boolean; origins: string[] };
+  readiness: { available: boolean; origins: string[]; publicWeb?: boolean };
   runRevision: number;
   runStatus: string;
   sessions: Session[];
@@ -33,6 +34,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
     [statusConfirmed, setStatusConfirmed] = useState(false),
     [controlsOpen, setControlsOpen] = useState(false),
     [cleared, setCleared] = useState(false);
+  const [dismissedSignIn, setDismissedSignIn] = useState<string | null>(null);
   const controlsId = useId();
   const lifetime = useRef<AbortController | null>(null),
     serial = useRef(0),
@@ -194,6 +196,9 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
               ? "Agent control · run paused"
               : "Agent control"
             : "No open session";
+  const passwordNode =
+    session?.mode === "takeover" &&
+    view?.nodes?.find((node) => node.editable && !node.disabled && node.inputType === "password");
   function toggleControls() {
     setControlsOpen((open) => !open);
     // Hiding the controls also discards any unsubmitted private entry.
@@ -245,7 +250,7 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
                   : checking
                     ? "Checking whether private browsing is available."
                     : available
-                      ? "Open a reviewed website to begin a private session."
+                      ? "Open a website to begin a private session."
                       : "Private browser execution is unavailable."}
           </span>
         </span>
@@ -327,18 +332,32 @@ export function WorkBrowserPanel({ ownerId, run }: { ownerId: string; run: WorkR
       </Button>
       {controlsOpen && (
         <div id={controlsId} className="work-browser-controls">
+          {passwordNode && view?.view && view.url && dismissedSignIn !== view.view && (
+            <BrowserPrivateEntryCard
+              key={view.view}
+              origin={domain}
+              label={passwordNode.label}
+              disabled={disabled}
+              onCancel={() => setDismissedSignIn(view.view!)}
+              onFill={(text) =>
+                void command("fill", { view: view.view, target: passwordNode.id, text })
+              }
+            />
+          )}
           <p className="text-sm text-muted-foreground">
             Pause Work before taking over. The model cannot read or act during takeover. Sessions
             close after five minutes; sign-in data is not saved to Work history. Hiding these
             controls does not end the session.
           </p>
           <p className="break-words text-xs">
-            Reviewed sites: {snapshot?.readiness.origins.join(", ")}
+            {snapshot?.readiness.publicWeb
+              ? "Public HTTPS browsing · your site rules apply"
+              : `Configured sites: ${snapshot?.readiness.origins.join(", ")}`}
           </p>
           {!session && (
             <div className="flex flex-wrap items-end gap-2">
               <label className="flex-1 text-sm">
-                Reviewed website URL
+                Website URL
                 <Input
                   type="url"
                   value={url}

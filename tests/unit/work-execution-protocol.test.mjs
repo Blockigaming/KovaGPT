@@ -165,7 +165,7 @@ test("queued directions can be edited or removed only until acknowledged; questi
   );
   run = await transitionWorkRun(
     run,
-    { type: "question", id: ID, text: "Which region?" },
+    { type: "question", id: ID, text: "Which region?", options: ["US", "Europe"] },
     worker(run),
     now,
   );
@@ -181,6 +181,7 @@ test("queued directions can be edited or removed only until acknowledged; questi
   );
   assert.equal(run.status, "queued");
   assert.equal(run.question.answer, "US");
+  assert.deepEqual(run.question.options, ["US", "Europe"]);
 });
 async function approved() {
   let run = await claim(await fresh());

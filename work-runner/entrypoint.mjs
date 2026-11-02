@@ -54,6 +54,7 @@ export async function startConfiguredWorkRunner(env = process.env) {
           store,
           factory: createBrowserContainerFactory({ image: env.KOVA_WORK_BROWSER_IMAGE }),
           origins: JSON.parse(env.KOVA_WORK_BROWSER_ORIGINS_JSON ?? "[]"),
+          publicWeb: env.KOVA_WORK_BROWSER_PUBLIC_WEB === "true",
           authorize: createBrowserBackendAuthority(configuration, env.KOVA_WORK_BACKEND_ORIGIN),
         })
       : null;
