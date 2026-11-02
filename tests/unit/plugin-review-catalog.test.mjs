@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 import * as flows from "../../src/integrations/connection-flows.mjs";
+import * as master from "../../src/lib/connector-master-list.mjs";
 function load(path, modules = {}) {
   const source = readFileSync(path, "utf8");
   const code = ts.transpileModule(source, {
@@ -29,6 +30,7 @@ const assetModules = Object.fromEntries(
 const review = load("src/lib/plugin-review-catalog.ts", {
   "@/integrations/connection-flows.mjs": flows,
   "./connectors-catalog": original,
+  "./connector-master-list.mjs": master,
   ...assetModules,
 });
 const expected = [
@@ -52,17 +54,38 @@ test("launch review includes exactly 12 providers, preserving original catalog i
     expected,
   );
   for (const item of review.LAUNCH_PLUGIN_REVIEW_CATALOG) {
-    if (item.connector.id !== "sharepoint")
-      assert.equal(item.connector, original.getConnector(item.connector.id));
-    else assert.equal(item.connector.status, "setup_required");
+    assert.equal(item.connector, original.getConnector(item.connector.id));
     assert.equal("connected" in item, false);
     assert.equal("connectionState" in item, false);
   }
-  assert.equal(
-    original.getConnector("sharepoint"),
-    undefined,
-    "review must not mutate production catalog",
-  );
+  assert.equal(original.getConnector("sharepoint").status, "setup_required");
+});
+
+test("master directory contains the 31 requested services and six retained services exactly once", () => {
+  assert.equal(master.USER_REQUESTED_MASTER_CONNECTORS.length, 31);
+  assert.equal(master.MASTER_CONNECTORS.length, 37);
+  const ids = review.MASTER_PLUGIN_REVIEW_CATALOG.map((item) => item.connector.id);
+  assert.deepEqual([...ids].sort(), [...master.MASTER_CONNECTOR_IDS].sort());
+  assert.equal(new Set(ids).size, 37);
+  for (const item of review.MASTER_PLUGIN_REVIEW_CATALOG) {
+    assert.equal(item.connector, original.getConnector(item.connector.id));
+    if (!expected.includes(item.connector.id)) {
+      assert.deepEqual(item.permissions, []);
+      assert.equal(item.brandAsset.status, "generic_placeholder");
+      assert.equal(item.brandAsset.src, "");
+      assert.equal(item.connector.status === "live", false);
+    }
+  }
+  for (const [id, alias] of [
+    ["interactive-brokers", "IBKR"],
+    ["outlook", "Outlook Mail"],
+    ["custom-mcp", "bring your own server"],
+  ]) {
+    assert.ok(master.masterConnectorSearchText(id).includes(alias));
+  }
+  assert.equal(master.masterConnectorSearchText("unknown"), "");
+  assert.match(review.getPluginPreviewProvider("apple-health").availabilityNote, /native mobile/);
+  assert.match(review.getPluginPreviewProvider("plaid").availabilityNote, /Finances/);
 });
 
 test("planned provider permissions are explicitly unconfirmed and carry no invented contracts", () => {
