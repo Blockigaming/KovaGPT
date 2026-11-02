@@ -113,3 +113,28 @@ test("question card submits the selected answer and replaces it when a custom an
   f.tree().props.onSubmit({ preventDefault() {} });
   assert.equal(answers.length, 2);
 });
+
+test("website prompt cards keep responses private and clear them before approval", () => {
+  const responses = [];
+  const f = card("src/components/BrowserInteractionCard.tsx", "BrowserInteractionCard", {
+    interaction: {
+      kind: "dialog",
+      origin: "https://example.com",
+      message: "Sign-in code",
+      prompt: true,
+    },
+    disabled: false,
+    onAllow: (value) => {
+      assert.equal(f.find("input").props.value, "");
+      responses.push(value);
+    },
+    onDeny() {},
+  });
+  assert.equal(f.find("input").props.type, "password");
+  f.find("input").props.onChange({ target: { value: "PRIVATE-CODE" } });
+  f.tree().props.onSubmit({ preventDefault() {} });
+  assert.deepEqual(responses, ["PRIVATE-CODE"]);
+  f.setProps({ disabled: true });
+  f.tree().props.onSubmit({ preventDefault() {} });
+  assert.equal(responses.length, 1);
+});

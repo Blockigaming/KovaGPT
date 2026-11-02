@@ -427,6 +427,48 @@ async function finishSpecialistTestStep(run, id, directive) {
   );
 }
 
+test("browser login and permission handoffs pause only the exact approved session after settling its effect", async () => {
+  for (const handoff of ["sign_in", "popup", "dialog"]) {
+    const sessionId = crypto.randomUUID();
+    let run = await claim(await fresh());
+    run = await transitionWorkRun(
+      run,
+      {
+        type: "request_approval",
+        id: ID,
+        action: "browser_interact",
+        input: { sessionId, operation: "snapshot" },
+      },
+      worker(run),
+      now,
+    );
+    run = await transitionWorkRun(
+      run,
+      {
+        type: "approve",
+        approvalId: ID,
+        actionRevision: run.approval.revision,
+        inputHash: run.approval.inputHash,
+        canonicalInput: run.approval.canonicalInput,
+      },
+      owner(run),
+      now,
+    );
+    const active = await beginSpecialistTestStep(run);
+    run = await finishSpecialistTestStep(active.run, active.id, {
+      kind: "effect_result",
+      id: ID,
+      outcome: "completed",
+      result: { runId: RUN, sessionId, handoff },
+    });
+    assert.equal(run.status, "paused");
+    assert.equal(run.step, null);
+    assert.equal(run.effect.status, "completed");
+    assert.equal(run.lease, null);
+    assert.equal(run.effect.result.handoff, handoff);
+  }
+});
+
 test("specialist cost estimates include the exact long coordinator objective", async () => {
   const coordinatorObjective = "c".repeat(12000);
   let run = await admitWorkRun(

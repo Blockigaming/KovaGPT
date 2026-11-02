@@ -223,8 +223,8 @@ export function CloudBrowserSettings({ ownerId }: { ownerId: string }) {
           Return control when you are ready for the agent to use the signed-in session.
         </p>
         <p className="text-sm text-muted-foreground">
-          Popup windows, downloads and device permission prompts are currently blocked by the
-          runner. Site rules cannot enable them.
+          Compatible browser images pause for popup and website confirmation requests. Downloads and
+          device permission prompts remain blocked.
         </p>
       </div>
     </section>

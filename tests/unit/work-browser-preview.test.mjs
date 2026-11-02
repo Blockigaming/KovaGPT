@@ -83,6 +83,7 @@ function fixture(options = {}) {
     react,
     "@/components/ui/input": { Input: "input" },
     "@/components/BrowserPrivateEntryCard": { BrowserPrivateEntryCard: "private-entry-card" },
+    "@/components/BrowserInteractionCard": { BrowserInteractionCard: "browser-interaction-card" },
     "@/components/ui/button": { Button: "button" },
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": { ChevronDown: "svg", Globe2: "svg", Monitor: "svg" },

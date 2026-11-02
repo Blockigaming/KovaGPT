@@ -112,7 +112,8 @@ export function createBrowserManager(
         current,
       );
       const result = await row.container.command(command);
-      if (result.url?.startsWith("https://")) row.origin = new URL(result.url).origin;
+      const destination = result.interaction?.origin ?? result.url;
+      if (destination?.startsWith("https://")) row.origin = new URL(destination).origin;
       await check(row, binding, current);
       if (result.sequence !== command.sequence) fail();
       if (command.operation === "release") row.mode = "agent";

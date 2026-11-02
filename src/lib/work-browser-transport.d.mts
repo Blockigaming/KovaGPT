@@ -55,6 +55,8 @@ export type BrowserResult = {
     editable: boolean;
     disabled: boolean;
   }>;
+  handoff?: "sign_in" | "popup" | "dialog";
+  interaction?: { kind: "popup" | "dialog"; origin: string; message: string; prompt?: boolean };
 };
 export function verifyBrowserInvocation(
   configuration: unknown,

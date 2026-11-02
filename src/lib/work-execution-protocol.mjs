@@ -881,7 +881,13 @@ export async function transitionWorkRun(previous, command, context, now = Date.n
           fail("work_effect_result_invalid");
         run.effect.result = structuredClone(directive.result);
       }
-      run.status = directive.outcome === "failed" ? "failed" : "queued";
+      const browserHandoff =
+        directive.outcome === "completed" &&
+        run.step.input.approval?.action === "browser_interact" &&
+        ["sign_in", "popup", "dialog"].includes(directive.result?.handoff) &&
+        directive.result.runId === run.id &&
+        directive.result.sessionId === JSON.parse(run.step.input.approval.canonicalInput).sessionId;
+      run.status = directive.outcome === "failed" ? "failed" : browserHandoff ? "paused" : "queued";
       run.lease = null;
       run.reconciling = false;
       if (run.status === "failed") failSpecialists(run, now);
