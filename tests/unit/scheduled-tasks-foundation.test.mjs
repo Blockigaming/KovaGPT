@@ -822,7 +822,7 @@ test("customer limits enforce Free 2, Plus 5, and Pro beyond the former total ce
   try {
     await db.exec("reset role");
     await db.exec(sql("20261031014600_scheduled_task_plan_allowances.sql"));
-    await db.exec(sql("20261102223036_scheduled_task_customer_limits.sql"));
+    await db.exec(sql("20261102233035_scheduled_task_customer_limits.sql"));
     await db.exec("set role service_role");
     await activate(db);
     for (const [tier, count] of [
