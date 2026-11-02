@@ -121,9 +121,13 @@ export async function chooseSettingsSection(page: Page, section: string) {
       .getByRole("option", { name: new RegExp(`^${label}(?: Selected)?$`) })
       .click();
   };
+  const back = surface.getByRole("button", { name: "Back to settings", exact: true });
+  // Route changes can briefly hide all three controls while React replaces the
+  // current section. Wait for the actual navigation before choosing its layout.
+  await expect(tab.or(picker).or(back).filter({ visible: true }).first()).toBeVisible();
   if (!(await tab.isVisible()) && !(await picker.isVisible())) {
-    const back = surface.getByRole("button", { name: "Back to settings", exact: true });
-    if (await back.isVisible()) await back.click();
+    await back.click();
+    await expect(tab).toBeVisible();
   }
   if (await tab.isVisible()) {
     try {

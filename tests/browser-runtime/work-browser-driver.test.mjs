@@ -3,6 +3,105 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { createInteractiveBrowser } from "../../work-runner/browser-image/driver.mjs";
 const origin = "https://browser-fixture.net";
+test("a browser prompt waits for owner takeover and its response stays out of snapshots", async (t) => {
+  const driver = await createInteractiveBrowser({
+    chromium,
+    exchange: async () => ({
+      status: 200,
+      headers: { "content-type": "text/html" },
+      bodyBase64: Buffer.from(
+        "<html><body><input id=\"code\"><button onclick=\"document.getElementById('code').value=prompt('Enter sign-in code')\">Continue</button></body></html>",
+      ).toString("base64"),
+    }),
+  });
+  t.after(() => driver.close());
+  await driver.command({ actor: "owner", sequence: 1, operation: "navigate", url: origin });
+  await driver.command({ actor: "owner", sequence: 2, operation: "release" });
+  const page = await driver.command({ actor: "agent", sequence: 3, operation: "snapshot" });
+  const prompt = await driver.command({
+    actor: "agent",
+    sequence: 4,
+    operation: "click",
+    view: page.view,
+    target: page.nodes.find((node) => node.label === "Continue").id,
+  });
+  assert.equal(prompt.handoff, "dialog");
+  assert.equal(prompt.nodes.length, 0);
+  const owner = await driver.command({ actor: "owner", sequence: 5, operation: "takeover" });
+  assert.equal(owner.interaction.prompt, true);
+  const response = await driver.command({
+    actor: "owner",
+    sequence: 6,
+    operation: "click",
+    view: owner.view,
+    target: owner.nodes.find((node) => node.kind === "interaction_allow").id,
+    text: "PRIVATE-CODE",
+  });
+  assert.equal(JSON.stringify(response).includes("PRIVATE-CODE"), false);
+  await driver.command({ actor: "owner", sequence: 7, operation: "release" });
+  const resumed = await driver.command({ actor: "agent", sequence: 8, operation: "snapshot" });
+  assert.equal(JSON.stringify(resumed).includes("PRIVATE-CODE"), false);
+});
+test("popup navigation has no upstream traffic before approval and keeps its opener for sign-in callbacks", async (t) => {
+  const reads = [],
+    popupUrl = "https://login-provider.net/start?private=synthetic";
+  const driver = await createInteractiveBrowser({
+    chromium,
+    exchange: async (request) => {
+      reads.push(request.url);
+      const body = request.url.startsWith("https://login-provider.net")
+        ? '<html><body><script>window.opener.postMessage("done","https://browser-fixture.net");window.close();</script></body></html>'
+        : `<html><body><p id="status">Signed out</p><button onclick="window.open('${popupUrl}','auth')">Sign in</button><script>window.addEventListener('message',event=>{if(event.origin==='https://login-provider.net')document.getElementById('status').textContent='Signed in';});</script></body></html>`;
+      return {
+        status: 200,
+        headers: { "content-type": "text/html" },
+        bodyBase64: Buffer.from(body).toString("base64"),
+      };
+    },
+  });
+  t.after(() => driver.close());
+  const page = await driver.command({
+    actor: "owner",
+    sequence: 1,
+    operation: "navigate",
+    url: origin,
+  });
+  const popup = await driver.command({
+    actor: "owner",
+    sequence: 2,
+    operation: "click",
+    view: page.view,
+    target: page.nodes.find((node) => node.label === "Sign in").id,
+  });
+  assert.equal(popup.handoff, "popup");
+  assert.equal(reads.includes(popupUrl), false);
+  assert.equal(JSON.stringify(popup).includes("private=synthetic"), false);
+  const allowed = await driver.command({
+    actor: "owner",
+    sequence: 3,
+    operation: "click",
+    view: popup.view,
+    target: popup.nodes.find((node) => node.kind === "interaction_allow").id,
+  });
+  assert.equal(reads.includes(popupUrl), true);
+  assert.match(allowed.text, /Signed in/);
+  const next = await driver.command({
+    actor: "owner",
+    sequence: 4,
+    operation: "click",
+    view: allowed.view,
+    target: allowed.nodes.find((node) => node.label === "Sign in").id,
+  });
+  const count = reads.length;
+  await driver.command({
+    actor: "owner",
+    sequence: 5,
+    operation: "click",
+    view: next.view,
+    target: next.nodes.find((node) => node.kind === "interaction_deny").id,
+  });
+  assert.equal(reads.length, count);
+});
 test("multibyte DOM snapshots fit the actual owner transport and Work effect byte budgets", async (t) => {
   const body =
     "<html><body><p>" +

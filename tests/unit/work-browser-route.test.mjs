@@ -4,6 +4,7 @@ import vm from "node:vm";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import * as protocol from "../../src/lib/work-execution-protocol.mjs";
+import * as cloudRules from "../../src/lib/cloud-browser-rules.mjs";
 import * as policy from "../../src/lib/work-browser-policy.mjs";
 import * as bodyReader from "../../src/lib/bounded-json.server.mjs";
 import * as authSecurity from "../../src/lib/auth-security.mjs";
@@ -71,6 +72,11 @@ function fixture(tier = "plus") {
     },
   };
   const caller = { userId: owner, supabaseAdmin: db };
+  let currentRules = { sites: [] };
+  const preferences = {
+    readCloudBrowserRules: async () => currentRules,
+    saveCloudBrowserRules: async (_, __, value) => cloudRules.parseCloudBrowserRules(value),
+  };
   const server = load("src/lib/work-browser.server.ts", {
     "@/lib/api-auth.server": { getCallerTier: async () => tier },
     "@/lib/work-execution.server": {
@@ -103,6 +109,8 @@ function fixture(tier = "plus") {
     },
     "@/lib/work-execution-protocol.mjs": protocol,
     "@/lib/work-browser-policy.mjs": policy,
+    "@/lib/cloud-browser-preferences.server.mjs": preferences,
+    "@/lib/cloud-browser-rules.mjs": cloudRules,
   });
   const route = load("src/routes/api/work/browser.ts", {
     "@tanstack/react-router": { createFileRoute: () => () => ({}) },
@@ -115,6 +123,7 @@ function fixture(tier = "plus") {
       consumeApplicationRateLimit: async () => ({ allowed: true }),
     },
     "@/lib/work-browser.server": server,
+    "@/lib/cloud-browser-preferences.server.mjs": preferences,
   });
   const input = {
     expectedUserId: owner,
@@ -140,6 +149,9 @@ function fixture(tier = "plus") {
     server,
     input,
     request,
+    setRules: (value) => {
+      currentRules = value;
+    },
     loseEntitlement: () => (entitlement = false),
     signOut: () => (confirmed = false),
   };
@@ -256,4 +268,57 @@ test("Free cannot list or control Cloud browser; verified owner may still close 
     (await f.route.handleWorkBrowser(f.request({ ...f.input, operation: "close" }))).status,
     200,
   );
+});
+
+test("saved blocks stop an old runner before admission while session close remains available", async () => {
+  const f = fixture();
+  f.setRules({ sites: [{ origin: "https://browser-fixture.net", access: "block" }] });
+  const denied = await f.route.handleWorkBrowser(f.request());
+  assert.equal(denied.status, 403);
+  assert.equal(
+    f.calls.some((call) => call.name === "admit_work_browser_owner"),
+    false,
+  );
+  assert.equal(
+    (await f.route.handleWorkBrowser(f.request({ ...f.input, operation: "close" }))).status,
+    200,
+  );
+});
+test("permissions endpoints bind the account before reading or saving rules", async () => {
+  const f = fixture();
+  const endpoint = "https://app-fixture.net/api/work/browser?scope=permissions";
+  const bad = await f.route.handleWorkBrowser(
+    new Request(endpoint + "&expectedUserId=" + crypto.randomUUID()),
+  );
+  assert.equal(bad.status, 409);
+  const good = await f.route.handleWorkBrowser(new Request(endpoint + "&expectedUserId=" + owner));
+  assert.equal(good.status, 200);
+  assert.deepEqual((await good.json()).rules, { sites: [] });
+  for (const [body, status] of [
+    [{ expectedUserId: crypto.randomUUID(), rules: { sites: [] } }, 409],
+    [{ expectedUserId: owner, rules: { sites: [] }, password: "never" }, 400],
+    [
+      {
+        expectedUserId: owner,
+        rules: { sites: [{ origin: "https://example.com", access: "always" }] },
+      },
+      400,
+    ],
+    [
+      {
+        expectedUserId: owner,
+        rules: { sites: [{ origin: "https://example.com", access: "block" }] },
+      },
+      200,
+    ],
+  ]) {
+    const result = await f.route.handleWorkBrowser(
+      new Request(endpoint, {
+        method: "POST",
+        headers: { origin: "https://app-fixture.net", "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
+    assert.equal(result.status, status);
+  }
 });

@@ -17,16 +17,28 @@ const browser = await factory.create({
   onNetwork: async (request, authority) => {
     requests.push({ url: request.url, actor: authority.actor });
     if (
-      !["https://browser-fixture.net/", "https://browser-fixture.net/large"].includes(request.url)
+      ![
+        "https://browser-fixture.net/",
+        "https://browser-fixture.net/large",
+        "https://browser-fixture.net/interactions",
+        "https://browser-popup-fixture.net/",
+      ].includes(request.url)
     )
       throw new Error("unapproved destination");
-    const body = request.url.endsWith("/large")
-      ? "<html><body><p>" +
-        "界".repeat(6000) +
-        "</p>" +
-        Array.from({ length: 60 }, () => "<button>" + "界".repeat(200) + "</button>").join("") +
-        "</body></html>"
-      : '<html><body><p>Isolated browser ready</p><label>Password<input type="password"></label><button type="button" onclick="this.textContent=\'Clicked\'">Continue</button><script>fetch("http://169.254.169.254/latest/meta-data").catch(()=>{})</script></body></html>';
+    const body =
+      request.url === "https://browser-popup-fixture.net/"
+        ? "<html><body><p>Approved popup</p></body></html>"
+        : request.url.endsWith("/interactions")
+          ? "<html><body><button onclick=\"confirm('Allow this fixture?')\">Confirm</button><button onclick=\"window.open('https://browser-popup-fixture.net/','auth')\">Open popup</button></body></html>"
+          : request.url.endsWith("/large")
+            ? "<html><body><p>" +
+              "界".repeat(6000) +
+              "</p>" +
+              Array.from({ length: 60 }, () => "<button>" + "界".repeat(200) + "</button>").join(
+                "",
+              ) +
+              "</body></html>"
+            : '<html><body><p>Isolated browser ready</p><label>Password<input type="password"></label><button type="button" onclick="this.textContent=\'Clicked\'">Continue</button><script>fetch("http://169.254.169.254/latest/meta-data").catch(()=>{})</script></body></html>';
     return {
       status: 200,
       headers: { "content-type": "text/html; charset=utf-8" },
@@ -82,8 +94,56 @@ try {
   await browser.command({ actor: "owner", sequence: 8, operation: "release" });
   const bounded = await browser.command({ actor: "agent", sequence: 9, operation: "snapshot" });
   assert.ok(Buffer.byteLength(JSON.stringify(bounded)) <= 10000);
+  await browser.command({ actor: "owner", sequence: 10, operation: "takeover" });
+  const interactionPage = await browser.command({
+    actor: "owner",
+    sequence: 11,
+    operation: "navigate",
+    url: "https://browser-fixture.net/interactions",
+  });
+  const dialog = await browser.command({
+    actor: "owner",
+    sequence: 12,
+    operation: "click",
+    view: interactionPage.view,
+    target: interactionPage.nodes.find((node) => node.label === "Confirm").id,
+  });
+  assert.equal(dialog.handoff, "dialog");
+  const dismissed = await browser.command({
+    actor: "owner",
+    sequence: 13,
+    operation: "click",
+    view: dialog.view,
+    target: dialog.nodes.find((node) => node.kind === "interaction_deny").id,
+  });
+  const popup = await browser.command({
+    actor: "owner",
+    sequence: 14,
+    operation: "click",
+    view: dismissed.view,
+    target: dismissed.nodes.find((node) => node.label === "Open popup").id,
+  });
+  assert.equal(popup.handoff, "popup");
+  assert.equal(
+    requests.some((request) => request.url === "https://browser-popup-fixture.net/"),
+    false,
+  );
+  const approvedPopup = await browser.command({
+    actor: "owner",
+    sequence: 15,
+    operation: "click",
+    view: popup.view,
+    target: popup.nodes.find((node) => node.kind === "interaction_allow").id,
+  });
+  assert.match(approvedPopup.text, /Approved popup/);
+  assert.ok(
+    requests.some(
+      (request) =>
+        request.url === "https://browser-popup-fixture.net/" && request.actor === "owner",
+    ),
+  );
   process.stdout.write(
-    "Interactive Chromium: runsc, no network, readonly filesystem, owner takeover and replay guards passed.\n",
+    "Interactive Chromium: runsc, no network, readonly filesystem, owner takeover, replay guards and one-use dialog/popup approval passed.\n",
   );
 } finally {
   await browser.close();

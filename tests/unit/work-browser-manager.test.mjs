@@ -133,3 +133,64 @@ test("browser worker cannot fetch outside an active exact actor and sequence", a
   await f.manager.closeOwner(ownerId);
   assert.equal(f.calls.at(-1), "purge");
 });
+
+test("saved site blocks revoke an already loaded page before its next snapshot", async () => {
+  const expiresAt = Date.now() + 60000;
+  const checks = [];
+  let blocked = false,
+    closed = false,
+    executions = 0;
+  const manager = createBrowserManager({
+    store: { ownerRetired: async () => false, withOwnerLock: async (_, action) => action() },
+    publicWeb: true,
+    origins: [],
+    authorize: async (binding) => {
+      checks.push(binding);
+      if (blocked && binding.destination === "https://example.com") throw Error("site denied");
+      return { allowed: true, sequence: binding.sequence, expiresAt };
+    },
+    factory: {
+      create: async () => ({
+        command: async (command) => {
+          executions++;
+          return {
+            sequence: command.sequence,
+            mode: "takeover",
+            url: "https://example.com/private",
+          };
+        },
+        close: async () => {
+          closed = true;
+        },
+      }),
+    },
+  });
+  await manager.command({
+    ownerId,
+    runId,
+    sessionId,
+    actor: "owner",
+    expiresAt,
+    sequence: 1,
+    operation: "open",
+    url: "https://example.com/private",
+  });
+  assert.equal(manager.capabilities.publicWeb, true);
+  assert.equal(checks.at(-1).destination, "https://example.com");
+  assert.equal(checks.at(-1).siteRulesVersion, 1);
+  blocked = true;
+  await assert.rejects(
+    manager.command({
+      ownerId,
+      runId,
+      sessionId,
+      actor: "owner",
+      expiresAt,
+      sequence: 2,
+      operation: "snapshot",
+    }),
+    /denied/,
+  );
+  assert.equal(executions, 1);
+  assert.equal(closed, true);
+});

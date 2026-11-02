@@ -9,6 +9,8 @@ export type BrowserBinding = {
   stepId?: string;
   inputHash?: string;
   approvalId?: string;
+  destination?: string;
+  siteRulesVersion?: 1;
 };
 export type BrowserCommand = {
   ownerId: string;
@@ -53,6 +55,8 @@ export type BrowserResult = {
     editable: boolean;
     disabled: boolean;
   }>;
+  handoff?: "sign_in" | "popup" | "dialog";
+  interaction?: { kind: "popup" | "dialog"; origin: string; message: string; prompt?: boolean };
 };
 export function verifyBrowserInvocation(
   configuration: unknown,
@@ -74,6 +78,8 @@ export function browserRunnerCapabilities(
   available: true;
   origins: string[];
   maxSessionSeconds: 300;
+  siteRulesVersion?: 1;
+  publicWeb?: true;
 }>;
 export function createBrowserBackendAuthority(
   configuration: unknown,

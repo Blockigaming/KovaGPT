@@ -55,11 +55,25 @@ export async function verifyBrowserInvocation(configuration, raw, signature) {
           "stepId",
           "inputHash",
           "approvalId",
+          "destination",
+          "siteRulesVersion",
         ].includes(k),
     )
   )
     fail();
   for (const key of ["ownerId", "runId", "sessionId"]) workUuid(input[key]);
+  if (input.siteRulesVersion !== undefined && input.siteRulesVersion !== 1) fail();
+  if (input.destination !== undefined) {
+    if (typeof input.destination !== "string" || input.destination.length > 4096) fail();
+    const destination = new URL(input.destination);
+    if (
+      destination.protocol !== "https:" ||
+      destination.username ||
+      destination.password ||
+      destination.origin !== input.destination
+    )
+      fail();
+  }
   if (input.actor === "agent") {
     workUuid(input.stepId);
     if (
@@ -169,7 +183,7 @@ export async function browserRunnerCapabilities(configuration, signal, fetcher =
     value.available !== true ||
     value.maxSessionSeconds !== 300 ||
     !Array.isArray(value.origins) ||
-    !value.origins.length ||
+    (!value.origins.length && value.publicWeb !== true) ||
     value.origins.length > 20
   )
     fail();
@@ -191,6 +205,8 @@ export async function browserRunnerCapabilities(configuration, signal, fetcher =
     available: true,
     origins: [...value.origins],
     maxSessionSeconds: 300,
+    ...(value.siteRulesVersion === 1 ? { siteRulesVersion: 1 } : {}),
+    ...(value.publicWeb === true ? { publicWeb: true } : {}),
   };
 }
 export function createBrowserBackendAuthority(configuration, rawOrigin, fetcher = fetch) {

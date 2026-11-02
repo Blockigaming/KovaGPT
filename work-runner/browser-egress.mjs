@@ -44,7 +44,7 @@ export function browserOrigin(value) {
     fail();
   return url.origin;
 }
-export function browserDestination(raw, origins) {
+export function browserDestination(raw, origins, publicWeb = false) {
   if (typeof raw !== "string" || raw.length > 4096) fail();
   const url = new URL(raw);
   if (
@@ -52,10 +52,11 @@ export function browserDestination(raw, origins) {
     url.username ||
     url.password ||
     (url.port && url.port !== "443") ||
-    !origins.includes(url.origin) ||
+    (!publicWeb && !origins.includes(url.origin)) ||
     isIP(url.hostname)
   )
     fail();
+  if (publicWeb) browserOrigin(url.origin);
   url.hash = "";
   return url;
 }
@@ -103,13 +104,19 @@ const responseHeaders = new Set([
 /** Only this host broker has network. The browser container has --network=none.
  * No ambient credentials, proxy settings, redirects, or connection reuse. */
 export function createBrowserEgress(
-  { origins, assertAuthority },
+  { origins, assertAuthority, publicWeb = false },
   { resolve = lookup, request = httpsRequest } = {},
 ) {
   const allowed = origins.map(browserOrigin);
-  if (!allowed.length || allowed.length > 20 || new Set(allowed).size !== allowed.length) fail();
+  if (
+    typeof publicWeb !== "boolean" ||
+    (!publicWeb && !allowed.length) ||
+    allowed.length > 20 ||
+    new Set(allowed).size !== allowed.length
+  )
+    fail();
   return async (input, { signal, allowWrites = false } = {}) => {
-    const url = browserDestination(input?.url, allowed),
+    const url = browserDestination(input?.url, allowed, publicWeb),
       method = input.method;
     if (
       ![
@@ -212,7 +219,7 @@ export function createBrowserEgress(
               safe["set-cookie"] = cookies.join("\n");
             }
             if (response.statusCode >= 300 && response.statusCode < 400 && safe.location)
-              browserDestination(new URL(safe.location, url).href, allowed);
+              browserDestination(new URL(safe.location, url).href, allowed, publicWeb);
             const encoding = response.headers["content-encoding"];
             const decoder =
               encoding === "gzip"

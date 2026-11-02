@@ -21,6 +21,7 @@ function fixture({
   headers = {},
   body = Buffer.from("hello"),
   authority = async () => {},
+  publicWeb = false,
 } = {}) {
   const calls = [];
   const request = (options, callback) => {
@@ -40,7 +41,7 @@ function fixture({
   return {
     calls,
     execute: createBrowserEgress(
-      { origins: [origin], assertAuthority: authority },
+      { origins: [origin], assertAuthority: authority, publicWeb },
       { resolve: async () => addresses, request },
     ),
   };
@@ -125,4 +126,30 @@ test("decompression and final authority are bounded before response reaches brow
   });
   await assert.rejects(revoked.execute(input));
   assert.equal(n, 3);
+});
+
+test("public HTTPS mode admits other public hosts but preserves DNS, TLS, write and redirect checks", async () => {
+  const f = fixture({ publicWeb: true });
+  await f.execute({ ...input, url: "https://another-public.net/path" });
+  assert.equal(f.calls[0].servername, "another-public.net");
+  for (const url of [
+    "http://another-public.net",
+    "https://127.0.0.1",
+    "https://metadata.internal",
+    "https://a.test",
+    "https://user:pass@another-public.net",
+    "https://another-public.net:444",
+  ]) {
+    await assert.rejects(f.execute({ ...input, url }));
+  }
+  await assert.rejects(f.execute({ ...input, method: "POST" }));
+  const privateDns = fixture({ publicWeb: true, addresses: [{ address: "10.0.0.1", family: 4 }] });
+  await assert.rejects(privateDns.execute({ ...input, url: "https://another-public.net" }));
+  assert.equal(privateDns.calls.length, 0);
+  const redirect = fixture({
+    publicWeb: true,
+    status: 302,
+    headers: { location: "https://127.0.0.1/private" },
+  });
+  await assert.rejects(redirect.execute(input));
 });
