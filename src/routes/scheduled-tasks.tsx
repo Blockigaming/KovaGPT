@@ -30,22 +30,7 @@ import {
   isScheduledTasksEligible,
   type ScheduledTask,
 } from "@/lib/scheduled-tasks.functions";
-import {
-  Calendar,
-  Clock,
-  Plus,
-  Trash2,
-  Pause,
-  Play,
-  ArrowLeft,
-  Lock,
-  RefreshCw,
-  Search,
-  RotateCcw,
-  WandSparkles,
-  AlertCircle,
-  Check,
-} from "lucide-react";
+import { Calendar, Clock, Plus, Lock, RefreshCw, Search, AlertCircle, Check } from "lucide-react";
 import { toast } from "sonner";
 import { AutomationBuilder, type AutomationDraft } from "@/components/AutomationBuilder";
 import { ScheduledTaskEditor } from "@/components/ScheduledTaskEditor";

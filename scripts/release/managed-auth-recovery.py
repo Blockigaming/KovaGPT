@@ -63,7 +63,14 @@ PUBLIC_FAILURE_CODES = frozenset({"explicit_execution_required", "capture_not_en
     "extension_data_coverage_missing", "extension_target_definition_mismatch",
     "source_snapshot_encoding_unqualified", "extension_semantic_capture_unqualified",
     "extension_semantic_source_unqualified", "extension_semantic_target_mismatch",
-    "isolation_server_transport_unqualified", "toc_review_required", "empty_archive", "dump_wrapper_invalid"})
+    "isolation_server_transport_unqualified", "toc_review_required", "empty_archive", "dump_wrapper_invalid",
+    "empty_target_census_unqualified", "empty_target_user_objects_present", "empty_target_global_census_missing",
+    "empty_target_structural_census_missing", "isolated_large_objects_not_empty", "empty_target_seed_data_present",
+    "empty_baseline_output_exists", "empty_target_baseline_pin_mismatch", "empty_target_fingerprint_mismatch",
+    "empty_target_not_blank", "target_postgres_patch_mismatch", "cron_not_disabled",
+    "managed_bootstrap_role_mismatch", "managed_role_baseline_mismatch", "managed_role_privileges_mismatch",
+    "isolation_attestation_unbound", "isolation_attestation_rejected", "isolation_attestation_time_invalid",
+    "isolation_attestation_stale", "isolation_attestation_changed"})
 STDOUT_BYTES = 128 * 1024**2
 MAX_BYTES = 4 * 1024**3
 CANONICAL_PG = "-c TimeZone=UTC -c DateStyle=ISO,YMD -c bytea_output=hex -c extra_float_digits=3 -c search_path=pg_catalog"
@@ -585,7 +592,7 @@ def schema_hash(data):
 
 # pg_restore's ordered TOC grammar; unsupported types/quoted identifiers stop
 # before execution rather than guessing which managed objects to skip.
-TOC_TYPES = sorted(["SCHEMA", "EXTENSION", "COMMENT", "ACL", "DEFAULT ACL", "TABLE", "TABLE DATA", "SEQUENCE", "SEQUENCE OWNED BY", "SEQUENCE SET", "FUNCTION", "PROCEDURE", "TYPE", "DOMAIN", "SHELL TYPE", "VIEW", "MATERIALIZED VIEW", "MATERIALIZED VIEW DATA", "CONSTRAINT", "CHECK CONSTRAINT", "FK CONSTRAINT", "INDEX", "INDEX ATTACH", "TABLE ATTACH", "RULE", "TRIGGER", "POLICY", "ROW SECURITY", "PUBLICATION", "PUBLICATION TABLE", "PUBLICATION TABLES IN SCHEMA", "EVENT TRIGGER", "COLLATION", "CONVERSION", "TEXT SEARCH CONFIGURATION", "TEXT SEARCH DICTIONARY", "TEXT SEARCH PARSER", "TEXT SEARCH TEMPLATE", "OPERATOR", "OPERATOR CLASS", "OPERATOR FAMILY", "CAST", "AGGREGATE", "BLOB", "BLOBS", "BLOB COMMENTS", "BLOB ACL", "ENCODING", "STDSTRINGS", "SEARCHPATH"], key=len, reverse=True)
+TOC_TYPES = sorted(["SCHEMA", "EXTENSION", "COMMENT", "ACL", "DEFAULT ACL", "DEFAULT", "TABLE", "TABLE DATA", "SEQUENCE", "SEQUENCE OWNED BY", "SEQUENCE SET", "FUNCTION", "PROCEDURE", "TYPE", "DOMAIN", "SHELL TYPE", "VIEW", "MATERIALIZED VIEW", "MATERIALIZED VIEW DATA", "CONSTRAINT", "CHECK CONSTRAINT", "FK CONSTRAINT", "INDEX", "INDEX ATTACH", "TABLE ATTACH", "RULE", "TRIGGER", "POLICY", "ROW SECURITY", "PUBLICATION", "PUBLICATION TABLE", "PUBLICATION TABLES IN SCHEMA", "EVENT TRIGGER", "COLLATION", "CONVERSION", "TEXT SEARCH CONFIGURATION", "TEXT SEARCH DICTIONARY", "TEXT SEARCH PARSER", "TEXT SEARCH TEMPLATE", "OPERATOR", "OPERATOR CLASS", "OPERATOR FAMILY", "CAST", "AGGREGATE", "BLOB", "BLOBS", "BLOB COMMENTS", "BLOB ACL", "ENCODING", "STDSTRINGS", "SEARCHPATH"], key=len, reverse=True)
 TOC = re.compile(r"^(\d+); \d+ \d+ (" + "|".join(map(re.escape, TOC_TYPES)) + r") (\S+) (.+)$")
 
 
@@ -1052,6 +1059,93 @@ def empty_target_identity(target, approved, *, require_blank):
     return observed
 
 
+# These are associated surfaces, not extension ownership. The complete original
+# census (including every AUTO/normal dependency and catalog payload hash) is
+# still compared between two independently initialized pinned-image targets.
+EMPTY_RELATION_SURFACE_SQL = """WITH RECURSIVE
+ owned(classid,objid,objsubid,extension) AS (
+  SELECT d.classid,d.objid,d.objsubid,e.extname::text
+  FROM pg_catalog.pg_depend d JOIN pg_catalog.pg_extension e
+   ON d.refclassid='pg_catalog.pg_extension'::regclass AND d.refobjid=e.oid AND d.deptype='e'
+  UNION
+  SELECT d.classid,d.objid,d.objsubid,o.extension FROM pg_catalog.pg_depend d JOIN owned o
+   ON d.refclassid=o.classid AND d.refobjid=o.objid AND d.refobjsubid=o.objsubid
+   WHERE d.deptype='i'
+ ),
+ relations(extension,relid) AS (
+  SELECT extension,objid FROM owned WHERE classid='pg_catalog.pg_class'::regclass AND objsubid=0
+ ),
+ associated(extension,catalog,classid,objid,schema) AS (
+  SELECT r.extension,'pg_class','pg_catalog.pg_class'::regclass,i.indexrelid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_index i ON i.indrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=i.indexrelid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_attrdef','pg_catalog.pg_attrdef'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_attrdef a ON a.adrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_constraint','pg_catalog.pg_constraint'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_constraint a ON a.conrelid=r.relid
+   JOIN pg_catalog.pg_namespace n ON n.oid=a.connamespace
+  UNION SELECT o.extension,'pg_constraint','pg_catalog.pg_constraint'::regclass,a.oid,n.nspname
+   FROM owned o JOIN pg_catalog.pg_type t
+    ON o.classid='pg_catalog.pg_type'::regclass AND o.objsubid=0 AND t.oid=o.objid AND t.typtype='d'
+   JOIN pg_catalog.pg_constraint a ON a.contypid=t.oid AND a.conrelid=0 AND a.contype='c'
+   JOIN pg_catalog.pg_namespace n ON n.oid=a.connamespace
+  UNION SELECT r.extension,'pg_trigger','pg_catalog.pg_trigger'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_trigger a ON a.tgrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_policy','pg_catalog.pg_policy'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_policy a ON a.polrelid=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  UNION SELECT r.extension,'pg_rewrite','pg_catalog.pg_rewrite'::regclass,a.oid,n.nspname
+   FROM relations r JOIN pg_catalog.pg_rewrite a ON a.ev_class=r.relid
+   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+ )
+ SELECT coalesce(jsonb_agg(jsonb_build_object('extension',a.extension,'catalog',a.catalog,
+  'schema',a.schema,'identity',(pg_catalog.pg_identify_object(a.classid,a.objid,0)).identity)
+  ORDER BY a.extension,a.catalog,a.schema,a.objid),'[]'::jsonb)::text
+ FROM associated a WHERE a.schema<>'information_schema' AND a.schema !~ '^pg_'"""
+EMPTY_SURFACE_CATALOGS={"pg_class","pg_attrdef","pg_constraint","pg_trigger","pg_policy","pg_rewrite"}
+
+
+def empty_target_surface(census,catalog,extensions,associated):
+    """Bound auxiliary objects without declaring AUTO/normal objects owned.
+
+    This is only a preparation check. It cannot qualify a baseline: both fresh
+    complete census/catalog/row/schema fingerprints and later stability checks
+    must still match. An ordinary table or unrelated namespace object fails.
+    """
+    require(census.get("serverVersionNum")==170006 and not catalog.get("largeObjects"),
+            "empty_target_user_objects_present")
+    objects=census.get("namespaceObjects");tables=census.get("tables")
+    count=census.get("counts",{}).get("unownedNamespaceObjects")
+    require(type(objects) is list and type(tables) is list and type(count) is int and 0<=count<=1000000,
+            "empty_target_user_objects_present")
+    def member(row):
+        return any(type(row.get(k)) is str and row[k] in extensions for k in ["directExtension","internalExtension"])
+    require(all(type(t) is dict and member(t) for t in tables),"empty_target_user_objects_present")
+    unowned=[o for o in objects if type(o) is dict and not member(o)]
+    require(all(type(o) is dict for o in objects) and len(unowned)==count,
+            "empty_target_user_objects_present")
+    require(type(associated) is list,"empty_target_user_objects_present")
+    bound={}
+    for row in associated:
+        require(type(row) is dict and set(row)=={"extension","catalog","schema","identity"}
+                and type(row["extension"]) is str and row["extension"] in extensions
+                and type(row["catalog"]) is str and row["catalog"] in EMPTY_SURFACE_CATALOGS
+                and type(row["schema"]) is str and IDENT.fullmatch(row["schema"])
+                and type(row["identity"]) is str and 0<len(row["identity"])<=4096
+                and not any(c in row["identity"] for c in "\x00\r\n"),"empty_target_user_objects_present")
+        key=tuple(row[k] for k in ["catalog","schema","identity"])
+        require(key not in bound,"empty_target_user_objects_present")
+        bound[key]=row["extension"]
+    require(all(all(type(o.get(k)) is str for k in ["catalog","schema","identity"])
+                and o["catalog"] in EMPTY_SURFACE_CATALOGS
+                and tuple(o[k] for k in ["catalog","schema","identity"]) in bound for o in unowned),
+            "empty_target_user_objects_present")
+    return count
+
+
+
 def empty_target_preflight(target, approved, attestation, work, label):
     """Prove the reviewed blank target before receiving any backup plaintext.
 
@@ -1066,10 +1160,6 @@ def empty_target_preflight(target, approved, attestation, work, label):
     require(census.get("format") == 1 and census.get("serverVersionNum") == 170006
             and census.get("completeness", {}).get("explicitPg17CatalogEnumeration") is True,
             "empty_target_census_unqualified")
-    objects = census.get("namespaceObjects")
-    require(isinstance(objects, list) and all(isinstance(o, dict) and
-            (o.get("directExtension") is not None or o.get("internalExtension") is not None)
-            for o in objects), "empty_target_user_objects_present")
     # Global objects are not guessed to be built-ins by OID or lack of schema.
     # Their full census is bound to the independently reviewed image baseline.
     require(isinstance(census.get("globalObjects"), list), "empty_target_global_census_missing")
@@ -1080,6 +1170,12 @@ def empty_target_preflight(target, approved, attestation, work, label):
     catalog = json.loads(psql(target, CATALOG_SQL))
     identifiers(catalog)
     require(catalog.get("largeObjects") == [], "isolated_large_objects_not_empty")
+    # Use the same finite extension-relation association check as native
+    # qualification. AUTO/normal dependants are never relabelled as owned.
+    # All four independently reviewed full baseline pins still bind them.
+    associated = (json.loads(psql(target, EMPTY_RELATION_SURFACE_SQL + ";\n"))
+                  if census.get("counts", {}).get("unownedNamespaceObjects") else [])
+    empty_target_surface(census, catalog, {e["name"] for e in catalog["extensions"]}, associated)
     rows = row_fingerprints(target, catalog)
     require(all(r.get("rows") == 0 and r.get("sha256") == digest(b"") for r in rows),
             "empty_target_seed_data_present")

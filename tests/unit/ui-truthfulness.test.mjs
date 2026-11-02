@@ -42,6 +42,35 @@ test("configured composer admits both explicit modes while the absence validator
   assert.deepEqual(inspect(configuredComposer), { errors: [], configuredControlCount: 2 });
   assert.ok(inspectUnavailableVoiceSource(configuredComposer).errors.length > 0);
 });
+
+const inlineComposer = configuredComposer
+  .replace(
+    'aria-haspopup="dialog"',
+    'aria-controls="kova-inline-dictation" aria-expanded={activeVoiceMode === "dictate"}',
+  )
+  .replace("<ComposerVoiceDialog open", "<ComposerVoiceDialog inlineDictation open");
+test("inline dictation keeps the exact scoped controller, expansion state and microphone boundary", () => {
+  assert.deepEqual(inspect(inlineComposer), { errors: [], configuredControlCount: 2 });
+});
+for (const [name, source] of [
+  [
+    "wrong inline target",
+    inlineComposer.replace('aria-controls="kova-inline-dictation"', 'aria-controls="other"'),
+  ],
+  [
+    "missing expansion state",
+    inlineComposer.replace('aria-expanded={activeVoiceMode === "dictate"}', ""),
+  ],
+  [
+    "unscoped expansion state",
+    inlineComposer.replace('aria-expanded={activeVoiceMode === "dictate"}', "aria-expanded={true}"),
+  ],
+  ["missing inline controller", inlineComposer.replace(" inlineDictation", "")],
+  ["false inline binding", inlineComposer.replace(" inlineDictation", " inlineDictation={false}")],
+  ["string inline binding", inlineComposer.replace(" inlineDictation", ' inlineDictation="true"')],
+  ["extra inline microphone", inlineComposer + "\nconst extra = <button><Mic /></button>;"],
+])
+  test(`inline trigger rejects ${name}`, () => assert.ok(inspect(source).errors.length > 0));
 for (const [name, source] of [
   [
     "stale dictation label",

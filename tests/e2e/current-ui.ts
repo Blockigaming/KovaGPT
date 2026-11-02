@@ -12,10 +12,12 @@ export async function openResponseOptions(page: Page, recordTrigger?: (trigger: 
       const attach = page.getByRole("button", { name: "Attach", exact: true });
       recordTrigger?.(attach);
       await attach.click();
-      const sheet = page.getByTestId("mobile-bottom-sheet");
-      const moreTools = sheet.locator("summary").filter({ hasText: /^More tools$/ });
+      const menu = page
+        .getByRole("dialog", { name: /^(Attach|Attach files and tools)$/ })
+        .filter({ visible: true });
+      const moreTools = menu.locator("summary").filter({ hasText: /^More tools$/ });
       if (await moreTools.isVisible()) await moreTools.click();
-      await sheet.getByRole("button", { name: "Response options", exact: true }).click();
+      await menu.getByRole("button", { name: "Response options", exact: true }).click();
     }
   }
   await expect(panel).toBeVisible();
@@ -121,9 +123,15 @@ export async function chooseSettingsSection(page: Page, section: string) {
       .getByRole("option", { name: new RegExp(`^${label}(?: Selected)?$`) })
       .click();
   };
+  const back = surface.getByRole("button", { name: "Back to settings", exact: true });
+  // Route changes can briefly hide navigation while React replaces the section.
+  // Wait for whichever responsive navigation control is actually available.
+  await expect(tab.or(picker).or(back).filter({ visible: true }).first()).toBeVisible();
   if (!(await tab.isVisible()) && !(await picker.isVisible())) {
-    const back = surface.getByRole("button", { name: "Back to settings", exact: true });
-    if (await back.isVisible()) await back.click();
+    if (await back.isVisible()) {
+      await back.click();
+      await expect(tab).toBeVisible();
+    }
   }
   if (await tab.isVisible()) {
     try {

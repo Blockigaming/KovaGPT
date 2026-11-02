@@ -7,7 +7,7 @@ const mfa = await readFile("src/components/MfaPanel.tsx", "utf8");
 const sidebar = await readFile("src/components/Sidebar.tsx", "utf8");
 const home = await readFile("src/routes/index.tsx", "utf8");
 const shares = await readFile("src/lib/shared-chats.functions.ts", "utf8");
-const settings = await readFile("src/components/SettingsDialog.tsx", "utf8");
+const library = await readFile("src/routes/library.tsx", "utf8");
 const apiAuth = await readFile("src/lib/api-auth.server.ts", "utf8");
 const authSecurity = await readFile("src/lib/auth-security.mjs", "utf8");
 
@@ -46,6 +46,11 @@ test("shared-chat failures remain distinguishable from truthful empty states", (
   assert.match(shares, /Shared chats could not be loaded/);
   assert.match(shares, /Chats shared with you could not be loaded/);
   assert.doesNotMatch(shares, /\[listMySharedChats\][\s\S]{0,100}return \[\]/);
-  assert.match(settings, /Library data is unavailable/);
-  assert.match(settings, /setLoadError/);
+  assert.match(library, /Shared chats could not be loaded/);
+  assert.match(
+    library,
+    /setLoadError\(e instanceof Error \? e.message : "Could not load your library\."\)/,
+  );
+  assert.match(library, /loadError \? \(\s*<section[^>]*role="alert"/);
+  assert.match(library, /Could not load Library/);
 });

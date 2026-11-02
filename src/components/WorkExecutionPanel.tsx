@@ -1,4 +1,5 @@
 import { Textarea } from "@/components/ui/textarea";
+import { WorkQuestionCard } from "@/components/WorkQuestionCard";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -435,9 +436,14 @@ export function WorkExecutionPanel({
             </div>
           )}
           {run.question && run.status === "waiting_for_user" && (
-            <p className="whitespace-pre-wrap text-sm">{run.question.text}</p>
+            <WorkQuestionCard
+              key={run.question.id}
+              question={run.question}
+              disabled={locked}
+              onAnswer={(text) => command({ type: "answer", questionId: run.question!.id, text })}
+            />
           )}
-          {!WORK_TERMINAL.includes(run.status) && (
+          {!WORK_TERMINAL.includes(run.status) && run.status !== "waiting_for_user" && (
             <div>
               <label className="block text-sm">
                 {run.status === "waiting_for_user" ? "Your answer" : "Direction for the next step"}
@@ -478,19 +484,21 @@ export function WorkExecutionPanel({
             </div>
           ))}
           {run.approval && run.status === "approval_required" && (
-            <div className="rounded border p-3">
-              <p className="font-medium">
-                Review action: {run.approval.action.replaceAll("_", " ")}
-              </p>
+            <div className="rounded-3xl border bg-muted/40 p-5 space-y-3">
+              <p className="font-medium">Kova needs your permission</p>
+              <p className="text-sm">{run.approval.action.replaceAll("_", " ")}</p>
               <p className="text-sm">
                 Approval applies once to the exact input below. It does not grant general
                 permission.
               </p>
-              <pre className="my-2 max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs">
-                {run.approval.canonicalInput}
-              </pre>
-              <p className="break-all text-xs">Input SHA-256: {run.approval.inputHash}</p>
-              <div className="mt-2 flex gap-2">
+              <details>
+                <summary className="cursor-pointer text-sm">Review exact action details</summary>
+                <pre className="my-2 max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs">
+                  {run.approval.canonicalInput}
+                </pre>
+                <p className="break-all text-xs">Input SHA-256: {run.approval.inputHash}</p>
+              </details>
+              <div className="mt-2 flex flex-wrap justify-end gap-2">
                 {(["approve", "deny"] as const).map((type) => (
                   <Button
                     variant="outline"

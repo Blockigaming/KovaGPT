@@ -97,7 +97,7 @@ export function auditUiTruthfulness() {
   const stateSources = [
     "src/components/OperationalState.tsx",
     "src/components/states.tsx",
-    "src/components/RealtimeReadiness.tsx",
+    "src/components/CollaborationStatus.tsx",
     "src/lib/readiness-client.ts",
   ]
     .filter((path) => existsSync(join(root, path)))

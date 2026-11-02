@@ -14,21 +14,15 @@ import { ResultServerExportDialog } from "./ResultServerExportDialog";
 import { downloadBytes, safeDocumentFilename } from "@/lib/writing-export/common";
 import "./result-editor.css";
 import {
-  Copy,
-  Check,
-  Bookmark,
   X,
-  Wand2,
   Eye,
   Pencil,
   AlertTriangle,
   Download,
   History,
   ListTree,
-  Columns2,
   RotateCcw,
   GitCompare,
-  MessageSquare,
   Search,
   Undo2,
   Redo2,
@@ -39,7 +33,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
-import { addToContextPack, continueInChat, openInWork } from "@/lib/workspace-handoffs";
+import { openInWork } from "@/lib/workspace-handoffs";
 import { CollaborationStatus } from "@/components/CollaborationStatus";
 import { CanvasComments } from "@/components/CanvasComments";
 import {
@@ -340,14 +334,6 @@ function ArtifactEditorSession({
       setSaving(false);
       setDeleteCommentTarget(null);
       clearTimeout(savedTimerRef.current);
-      let preferred: string | undefined;
-
-      try {
-        preferred =
-          JSON.parse(localStorage.getItem("kova-workspace-defaults-v1") ?? "{}").artifact ?? "";
-      } catch {
-        /* Invalid local preferences fall back to the requested initial mode. */
-      }
       // Generated previews require an explicit Run preview action each session.
       setMode("edit");
       setSplitView(false);

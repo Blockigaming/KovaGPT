@@ -454,8 +454,11 @@ class SyntheticTests(unittest.TestCase):
         pins={k:"c"*64 for k in ["emptyBaselineCensusSha256","emptyBaselineCatalogSha256","emptyBaselineRowsSha256","emptyBaselineSchemaSha256"]}
         p.native_snapshot=lambda *_:{"fingerprints":pins,"roleMatch":True,"namespaceMatch":True,"extensionMatch":True}
         p.verify_effective_firewalls=lambda:None;p.denial_probes=lambda *_:12;p.inspect_and_recheck_runtime=lambda *_:None
+        p.restore_preflight=lambda *_:{"ok":True,"preflightPassed":True,"changedPinsRejected":4}
         p.cleanup=lambda:True
         result=p.execute_synthetic();self.assertTrue(result["syntheticNativeProofComplete"])
+        self.assertEqual(result["nativeRestorePreflightPassedCount"],2)
+        self.assertEqual(result["nativeRestoreChangedBaselineRejectedCount"],8)
         self.assertEqual(result["serverImageTransport"],p.server_image_qualification)
         self.assertEqual(result["serverImageTransport"]["actualRepoDigest"],m.base.server_image.TRANSPORT_REF)
         self.assertNotEqual(result["serverImageTransport"]["actualRepoDigest"],m.base.server_image.ORIGINAL_ECR_REF)
@@ -620,7 +623,8 @@ class SyntheticTests(unittest.TestCase):
               "login":False,"replication":False,"bypassRls":False,"connectionLimit":-1,"validUntil":None}
         bootstrap={**role,"name":m.FIXTURE_BOOTSTRAP,"super":True,"createRole":True,"createDb":True,"login":True}
         fixture={"bootstrapRole":m.FIXTURE_BOOTSTRAP,"roles":[role,bootstrap,{**role,"name":m.FIXTURE_OWNER},
-                   {**role,"name":m.FIXTURE_GRANT_ROLE},{**role,"name":m.FIXTURE_GRANT_MEMBER}],
+                   {**role,"name":m.FIXTURE_GRANT_ROLE},{**role,"name":m.FIXTURE_GRANT_MEMBER},
+                   {**role,"name":"authenticator"}],
                  "memberships":[{"role":m.FIXTURE_GRANT_ROLE,"member":m.FIXTURE_GRANT_MEMBER,
                     "grantor":m.FIXTURE_BOOTSTRAP,"admin":False,"inherit":True,"set":True}],
                  "schemas":[{"name":"public","owner":"pg_database_owner","acl":None,"comment":None}],
@@ -637,6 +641,9 @@ class SyntheticTests(unittest.TestCase):
         self.assertTrue(p.metadata["syntheticFixtureDerivedOnlyFromPinnedImage"])
         self.assertEqual(p.metadata["bootstrapRole"],m.FIXTURE_BOOTSTRAP)
         self.assertEqual(p.metadata["roles"],fixture["roles"])
+        self.assertEqual(p.metadata["roleSettings"],[{"role":"authenticator","database":"*",
+                         "settings":["session_preload_libraries=supautils, safeupdate"]}])
+        self.assertIn('CREATE ROLE "authenticator" NOLOGIN;',calls[0])
         self.assertEqual(p.metadata["extensionNamespaces"],[{"name":"cron","extension":"pg_cron"},
                                                            {"name":"net","extension":"pg_net"}])
         self.assertEqual(next(s for s in p.metadata["schemas"] if s["name"]=="cron"),

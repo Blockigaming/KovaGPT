@@ -317,7 +317,10 @@ class NativeProbeTests(unittest.TestCase):
             "settingFingerprints":[{"key":"session_preload_libraries","sha256":m.digest(raw.encode()),"retained":True}]}]
         m.validate_metadata(d,source_sha="a"*40)
         sql=m.role_setup_sql(d)
-        self.assertIn('ALTER ROLE "authenticator" SET "session_preload_libraries"',sql)
+        self.assertIn('ALTER ROLE "authenticator" SET "session_preload_libraries" FROM CURRENT;',sql)
+        self.assertIn("BEGIN;\nSELECT pg_catalog.set_config('session_preload_libraries','supautils, safeupdate',true);",sql)
+        self.assertIn('FROM CURRENT;\nCOMMIT;',sql)
+        self.assertNotIn('"session_preload_libraries" TO',sql)
         self.assertNotIn(m.OPERATOR,sql)
         for role in ["*","postgres",m.OPERATOR]:
             with self.subTest(role=role),self.assertRaises(m.Stopped):
@@ -340,11 +343,35 @@ class NativeProbeTests(unittest.TestCase):
         snapshot=p.native_snapshot("a")
         self.assertTrue(snapshot["extensionMatch"])
         self.assertTrue(snapshot["roleMatch"])
+        diagnostic=snapshot["metadataComparison"]
+        self.assertEqual(diagnostic["roleFailureCode"],None)
+        self.assertEqual(diagnostic["namespaceDifferences"],
+                         {"missing":0,"unexpected":0,"owner":0,"acl":0,"comment":0})
         catalog["extensions"][0]["owner"]="wrong_owner"
-        self.assertFalse(p.native_snapshot("a")["extensionMatch"])
+        snapshot=p.native_snapshot("a")
+        self.assertFalse(snapshot["extensionMatch"])
+        self.assertFalse(snapshot["metadataComparison"]["extensionOwnerVersionMatch"])
+        self.assertFalse(snapshot["metadataComparison"]["extensionCatalogMatch"])
         catalog["extensions"][0]["owner"]="postgres"
         namespace_members.append({"name":"cron","extension":"pg_cron"})
-        self.assertFalse(p.native_snapshot("a")["extensionMatch"])
+        snapshot=p.native_snapshot("a")
+        self.assertFalse(snapshot["extensionMatch"])
+        self.assertFalse(snapshot["metadataComparison"]["extensionNamespaceMatch"])
+        namespace_members.clear()
+        catalog["roles"][0]["login"]=False
+        catalog["schemas"][0]["comment"]="private-value-never-log"
+        snapshot=p.native_snapshot("a")
+        self.assertFalse(snapshot["roleMatch"])
+        self.assertFalse(snapshot["namespaceMatch"])
+        diagnostic=snapshot["metadataComparison"]
+        self.assertEqual(diagnostic["roleFailureCode"],"managed_role_baseline_mismatch")
+        self.assertEqual(diagnostic["namespaceDifferences"]["comment"],1)
+        for private in ["private-value-never-log","postgres","public","plpgsql","wrong_owner"]:
+            self.assertNotIn(private,json.dumps(diagnostic))
+        with patch.object(m.recovery,"role_compatibility",side_effect=m.recovery.Stopped("private-error-never-log")):
+            diagnostic=p.native_snapshot("a")["metadataComparison"]
+        self.assertEqual(diagnostic["roleFailureCode"],"unclassified")
+        self.assertNotIn("private-error-never-log",json.dumps(diagnostic))
 
     def test_blank_census_bounds_table_components_without_reclassifying_ownership(self):
         obj={"catalog":"pg_attrdef","schema":"cron","identity":"for cron.job.jobid",
@@ -462,7 +489,8 @@ class NativeProbeTests(unittest.TestCase):
         fingerprints={k:"f"*64 for k in ["emptyBaselineCensusSha256","emptyBaselineCatalogSha256",
                       "emptyBaselineRowsSha256","emptyBaselineSchemaSha256"]}
         p.native_snapshot=lambda *_:{"fingerprints":fingerprints,"roleMatch":True,"namespaceMatch":True,
-                  "extensionMatch":True,"namespaceObjectCount":0,"globalObjectCount":0,"tableCount":0}
+                  "extensionMatch":True,"namespaceObjectCount":0,"globalObjectCount":0,"tableCount":0,
+                  "metadataComparison":{"syntheticFixture":True}}
         p.extension_coverage=lambda target:{"notMatching":target}
         p.verify_effective_firewalls=lambda:None;p.denial_probes=lambda *_:0;p.cleanup=lambda:True
         with patch.object(m,"denial_targets",return_value=[]):result=p.execute()

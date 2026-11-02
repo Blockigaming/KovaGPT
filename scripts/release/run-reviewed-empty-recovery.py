@@ -380,7 +380,10 @@ class Coordinator:
         if code:
             try:
                 failure=strict_json(client_output)
-                if failure.get("stage") in recovery.PUBLIC_STAGES and failure.get("code") in recovery.PUBLIC_FAILURE_CODES:
+                if ((failure.get("stage") in recovery.PUBLIC_STAGES
+                        and failure.get("code") in recovery.PUBLIC_FAILURE_CODES|{"unclassified_private_failure"})
+                    or (failure.get("stage")=="private-client-input"
+                        and failure.get("code")=="client_input_or_runtime_unqualified")):
                     self.client_failure={"stage":failure["stage"],"code":failure["code"]}
             except Exception:pass
             raise Stopped("private_client_restore_failed")

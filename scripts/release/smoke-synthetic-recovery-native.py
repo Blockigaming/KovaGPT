@@ -93,6 +93,7 @@ SAFE_FAILURE_CODES=frozenset({
     "timeout_control_identity_unconfirmed","timeout_control_positive_unconfirmed",
     "timeout_control_expiry_unconfirmed","outbound_connection_not_denied","numeric_denial_cause_unconfirmed",
     "embedded_dns_udp_denial_unconfirmed",
+    "synthetic_restore_preflight_unqualified",
     "synthetic_image_baselines_differ","synthetic_fixture_metadata_differs",
     "native_blank_census_unqualified","native_table_census_coverage_missing",
     "native_target_contains_seed_data","identifier_review_required","schema_review_required","dump_wrapper_invalid",
@@ -163,6 +164,7 @@ RAM_STOPPED_TYPES=(operator.ram.Stopped,builder.ram.Stopped,operator.volume_proo
 
 NATIVE_COMMAND_STAGES=frozenset({"not-attempted","git-head","docker-info","pinned-server-pull","server-buildx-version","server-raw-manifest","server-semantic-config","server-loaded-image","native-other"})
 NATIVE_PROBE_STAGES=frozenset({"synthetic_initial","synthetic_toolchain","synthetic_fixture_from_image",
+    "synthetic_restore_preflight",
     "synthetic_complete","initial","native_tools","network_create","native_metadata_prepare",
     "native_tls_controls","native_catalog_proof","native_extension_coverage","original_destination_guard",
     "actual_egress_denial","native_proof_complete"})
@@ -444,6 +446,7 @@ class SyntheticProbe(operator.OperatorProbe):
         # database and extension OIDs in only one target.
         fixture_sql="CREATE ROLE "+base.ident(FIXTURE_OWNER)+" NOLOGIN;\n" \
             +"CREATE ROLE "+base.ident(FIXTURE_GRANT_MEMBER)+" NOLOGIN;\n"
+        fixture_sql+='CREATE ROLE "authenticator" NOLOGIN;\n'
         fixture_sql+="CREATE ROLE "+base.ident(FIXTURE_GRANT_ROLE)+" NOLOGIN;\n" \
             +"GRANT "+base.ident(FIXTURE_GRANT_ROLE)+" TO "+base.ident(FIXTURE_GRANT_MEMBER) \
             +" WITH ADMIN FALSE GRANTED BY "+base.ident(FIXTURE_BOOTSTRAP)+";\n"
@@ -475,6 +478,8 @@ class SyntheticProbe(operator.OperatorProbe):
                       "login":False,"replication":False,"bypassRls":False,"connectionLimit":-1,"validUntil":None}
         require([r for r in value["roles"] if r["name"]==FIXTURE_OWNER]==[fixture_role],
                 "synthetic_fixture_role_collision")
+        require([r for r in value["roles"] if r["name"]=="authenticator"]==[{**fixture_role,"name":"authenticator"}],
+                "synthetic_fixture_role_collision")
         extensions=[]
         for row in value["available"]:
             require(re.fullmatch(r"[a-zA-Z0-9_.+-]+",row["version"]),"synthetic_fixture_extension_version")
@@ -497,9 +502,63 @@ class SyntheticProbe(operator.OperatorProbe):
         next(s for s in schemas if s["name"]=="net")["acl"]=[
             FIXTURE_BOOTSTRAP+"=UC/"+FIXTURE_BOOTSTRAP,"=U/"+FIXTURE_BOOTSTRAP]
         self.metadata={"bootstrapRole":value["bootstrapRole"],"roles":value["roles"],"memberships":value["memberships"],
-                       "schemas":schemas,"extensions":extensions,"roleSettings":[],
+                       "schemas":schemas,"extensions":extensions,
+                       "roleSettings":[{"role":"authenticator","database":"*",
+                           "settings":["session_preload_libraries=supautils, safeupdate"]}],
                        "extensionNamespaces":extension_namespaces,
                        "fixtureSettingsComplete":True,"syntheticFixtureDerivedOnlyFromPinnedImage":True}
+
+    def restore_preflight(self,target,system,fingerprints):
+        # Exercise the real restore engine's read-only preflight inside the
+        # exact generic client. No archive, phrase, source URL or restore call
+        # exists in this fixture; only already qualified empty targets are read.
+        fixture={"host":self.hosts[target],"ip":self.addresses[target][0],
+                 "systemIdentifier":system,"fingerprints":fingerprints}
+        program="""import importlib.util,json,os,pathlib,sys,tempfile
+path=pathlib.Path('/opt/kova/scripts/release/managed-auth-recovery.py')
+spec=importlib.util.spec_from_file_location('synthetic_empty_preflight',path)
+engine=importlib.util.module_from_spec(spec);spec.loader.exec_module(engine)
+fixture=json.loads(sys.argv[1])
+env={'PATH':os.environ['PATH'],'LANG':'C.UTF-8','LC_ALL':'C.UTF-8','TMPDIR':'/work',
+ 'PGPASSFILE':'/run/client/pgpass','APPROVED_ISOLATED_HOST':fixture['host'],
+ 'APPROVED_ISOLATED_DBNAME':'postgres','APPROVED_ISOLATED_PORT':'5432',
+ 'APPROVED_ISOLATED_SERVER_IP':fixture['ip'],
+ 'APPROVED_ISOLATED_SYSTEM_IDENTIFIER':fixture['systemIdentifier'],
+ 'APPROVED_ISOLATED_PG17_DATABASE_URL':'postgresql://kova_probe_operator@'+fixture['host']+
+ ':5432/postgres?sslmode=verify-full&sslrootcert=/run/client/ca.crt'}
+try:
+ approved=json.loads(engine.run(['node',str(engine.GUARD),'--configuration'],env,timeout=5))
+ target=engine.target_environment(env,approved)
+ def check(pins):
+  with tempfile.TemporaryDirectory(prefix='synthetic-preflight-',dir='/work') as folder:
+   return engine.empty_target_preflight(target,approved,pins,pathlib.Path(folder),'fixture')
+ check(fixture['fingerprints'])
+ rejected=0
+ for key in sorted(fixture['fingerprints']):
+  changed={**fixture['fingerprints'],key:'0'*64}
+  try:check(changed)
+  except engine.Stopped as error:
+   if error.args!=('empty_target_baseline_pin_mismatch',):raise
+   rejected+=1
+  else:raise RuntimeError('synthetic pin mutation accepted')
+ print(json.dumps({'ok':True,'preflightPassed':True,'changedPinsRejected':rejected}))
+except Exception as error:
+ print(json.dumps(engine.public_failure(error)))
+ raise SystemExit(1)
+"""
+        code,raw=self.docker(["exec","--user",str(self.uid)+":"+str(self.gid),self.names["client"],
+            self.client_tools["python3"],"-c",program,base.encoded(fixture).decode()],
+            timeout=180,allow_failure=True)
+        try:result=json.loads(raw)
+        except (ValueError,TypeError):result={}
+        if code:
+            if (type(result) is dict and result.get("stage") in base.recovery.PUBLIC_STAGES
+                    and result.get("code") in base.recovery.PUBLIC_FAILURE_CODES|{"unclassified_private_failure"}):
+                self.restore_preflight_failure={k:result[k] for k in ["stage","code"]}
+        require(code==0 and type(result) is dict and result.get("ok") is True
+                and result.get("preflightPassed") is True and result.get("changedPinsRejected")==4,
+                "synthetic_restore_preflight_unqualified")
+        return result
 
     def execute(self):
         # Seal the inherited generic method so fixture DTOs can never emit a
@@ -555,7 +614,12 @@ class SyntheticProbe(operator.OperatorProbe):
                 self.consumer_proof(target)
                 require(self.native_snapshot(target)["fingerprints"]==before["fingerprints"],"synthetic_target_changed")
             self.inspect_and_recheck_runtime("client")
+            self.stage="synthetic_restore_preflight"
+            preflights=[self.restore_preflight(target,system,before["fingerprints"])
+                        for target,system,before in zip(["a","b"],systems,snapshots)]
             result.update(syntheticNativeProofComplete=True,fixtureDerivedOnlyFromPinnedImage=True,
+                nativeRestorePreflightPassedCount=len(preflights),
+                nativeRestoreChangedBaselineRejectedCount=sum(r["changedPinsRejected"] for r in preflights),
                 nativeToolSmokePassed=True,nativeToolSmokeSha256=base.digest(base.encoded(self.operator_smoke)),
                 nativeServerVersionNum=170006,independentFreshTemplate0Count=2,distinctClusterCount=2,
                 privateTlsIpv4PositiveCount=2,privateTlsIpv6PositiveCount=2,wrongHostnameRejectedCount=2,
@@ -570,6 +634,8 @@ class SyntheticProbe(operator.OperatorProbe):
             self.stage="synthetic_complete"
         except Exception as error:
             preserve_primary_failure(result,error,self.stage)
+            if getattr(self,"restore_preflight_failure",None):
+                result["restorePreflightFailure"]=self.restore_preflight_failure
             result["failedStage"]=self.stage if self.stage in NATIVE_PROBE_STAGES else "native-stage-unconfirmed"
             # Copy the sanitized primary command evidence BEFORE cleanup can
             # change last_stderr or attempt another native command.

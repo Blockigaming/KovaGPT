@@ -273,7 +273,11 @@ test("fake provider drives actual service, protocol, approvals, question and pri
   const f = await fixture(t, {
     actionBroker: broker,
     results: [
-      { kind: "question", text: "Which audience?" },
+      {
+        kind: "question",
+        text: "Which audience?",
+        options: ["Technical readers", "General readers"],
+      },
       { kind: "approval", action: operation.action, input: approvedInput },
       {
         kind: "outputs",
@@ -374,6 +378,7 @@ test("fake provider drives actual service, protocol, approvals, question and pri
   };
   await finish(await step());
   assert.equal(state.status, "waiting_for_user");
+  assert.deepEqual(state.question.options, ["Technical readers", "General readers"]);
   assert.equal(state.step, null);
   await ownerCommand({ type: "answer", questionId: state.question.id, text: "Technical readers" });
   await finish(await step());

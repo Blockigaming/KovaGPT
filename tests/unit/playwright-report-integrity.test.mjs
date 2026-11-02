@@ -75,7 +75,7 @@ test("settings touch-target coverage measures the visible mobile list", () => {
   const returnToList = source.indexOf('name: "Back to settings", exact: true }).click()');
   const visibleList = source.indexOf("await expect(navigation).toBeVisible()");
   const tabs = source.indexOf('const options = navigation.getByRole("tab")');
-  const primarySections = source.indexOf("await expect(options).toHaveCount(11)");
+  const primarySections = source.indexOf("await expect(options).toHaveCount(12)");
   assert.ok(navigation > 0 && navigation < returnToList && returnToList < visibleList);
   assert.ok(visibleList < tabs && tabs < primarySections);
   assert.match(source, /await options\.nth\(index\)\.scrollIntoViewIfNeeded\(\)/);

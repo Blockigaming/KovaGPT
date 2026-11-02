@@ -114,12 +114,16 @@ function AuthAuthorityGate({ pending }: { pending: boolean }) {
   return (
     <dialog
       ref={dialog}
-      aria-label="Verifying your session"
+      aria-label="Loading KovaGPT"
       className="fixed inset-0 m-0 h-dvh w-screen max-h-none max-w-none border-0 bg-background p-0 text-foreground backdrop:bg-background"
       onCancel={(event) => event.preventDefault()}
     >
-      <div className="grid h-full place-items-center text-sm text-muted-foreground" role="status">
-        Verifying your session…
+      <div className="flex h-full flex-col px-6 py-5" aria-busy="true">
+        <span className="text-lg font-semibold tracking-tight">KovaGPT</span>
+        <div className="m-auto w-full max-w-2xl space-y-8 text-center">
+          <p className="text-3xl font-medium tracking-tight">What can I help with?</p>
+          <div className="h-28 rounded-3xl border border-border bg-muted/30" />
+        </div>
       </div>
     </dialog>
   );
@@ -194,6 +198,7 @@ function KovaClerkProvider({
     let running = false;
     let repeat = false;
     let initial = true;
+    let refreshingAuthority = false;
     const refresh = async () => {
       if (cancelled) return;
       if (running) {
@@ -248,10 +253,17 @@ function KovaClerkProvider({
         if (!cancelled && repeat) {
           repeat = false;
           void refresh();
+        } else {
+          refreshingAuthority = false;
         }
       }
     };
-    const invalidate = () => {
+    const invalidate = (force = false) => {
+      // Focus, visibility and pageshow often arrive together. Share the
+      // current probe rather than invalidating and restarting it three times.
+      // A real cross-tab credential change still invalidates an in-flight probe.
+      if (cancelled || (!force && (running || refreshingAuthority))) return;
+      refreshingAuthority = true;
       // Fence data dispatch synchronously, but a focus or storage hint is not
       // proof that the displayed principal changed. Keep its provider mounted
       // until the cookie probe confirms a change, so bounded tasks survive a
@@ -268,18 +280,19 @@ function KovaClerkProvider({
     const visible = () => {
       if (document.visibilityState === "visible") invalidate();
     };
+    const refreshOnReturn = () => invalidate();
     const storage = (event: StorageEvent) => {
-      if (event.key === KOVA_AUTH_CHANGE_KEY && event.newValue !== event.oldValue) invalidate();
+      if (event.key === KOVA_AUTH_CHANGE_KEY && event.newValue !== event.oldValue) invalidate(true);
     };
-    window.addEventListener("focus", invalidate);
-    window.addEventListener("pageshow", invalidate);
+    window.addEventListener("focus", refreshOnReturn);
+    window.addEventListener("pageshow", refreshOnReturn);
     window.addEventListener("storage", storage);
     document.addEventListener("visibilitychange", visible);
     void refresh();
     return () => {
       cancelled = true;
-      window.removeEventListener("focus", invalidate);
-      window.removeEventListener("pageshow", invalidate);
+      window.removeEventListener("focus", refreshOnReturn);
+      window.removeEventListener("pageshow", refreshOnReturn);
       window.removeEventListener("storage", storage);
       document.removeEventListener("visibilitychange", visible);
     };

@@ -48,52 +48,10 @@ FORBIDDEN_ENV = {"KOVA_PRODUCTION_DATABASE_URL", "PGPASSWORD", "OPENAI_API_KEY",
 SAFE_SETTINGS = metadata_source.SAFE_GUC_KEYS
 NATIVE_WORKERS = {"client backend", "checkpointer", "background writer", "walwriter",
                   "autovacuum launcher", "logical replication launcher"}
-# These are associated surfaces, not extension ownership. The complete original
-# census (including every AUTO/normal dependency and catalog payload hash) is
-# still compared between two independently initialized pinned-image targets.
-NATIVE_RELATION_SURFACE_SQL = """WITH RECURSIVE
- owned(classid,objid,objsubid,extension) AS (
-  SELECT d.classid,d.objid,d.objsubid,e.extname::text
-  FROM pg_catalog.pg_depend d JOIN pg_catalog.pg_extension e
-   ON d.refclassid='pg_catalog.pg_extension'::regclass AND d.refobjid=e.oid AND d.deptype='e'
-  UNION
-  SELECT d.classid,d.objid,d.objsubid,o.extension FROM pg_catalog.pg_depend d JOIN owned o
-   ON d.refclassid=o.classid AND d.refobjid=o.objid AND d.refobjsubid=o.objsubid
-   WHERE d.deptype='i'
- ),
- relations(extension,relid) AS (
-  SELECT extension,objid FROM owned WHERE classid='pg_catalog.pg_class'::regclass AND objsubid=0
- ),
- associated(extension,catalog,classid,objid,schema) AS (
-  SELECT r.extension,'pg_class','pg_catalog.pg_class'::regclass,i.indexrelid,n.nspname
-   FROM relations r JOIN pg_catalog.pg_index i ON i.indrelid=r.relid
-   JOIN pg_catalog.pg_class c ON c.oid=i.indexrelid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
-  UNION SELECT r.extension,'pg_attrdef','pg_catalog.pg_attrdef'::regclass,a.oid,n.nspname
-   FROM relations r JOIN pg_catalog.pg_attrdef a ON a.adrelid=r.relid
-   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
-  UNION SELECT r.extension,'pg_constraint','pg_catalog.pg_constraint'::regclass,a.oid,n.nspname
-   FROM relations r JOIN pg_catalog.pg_constraint a ON a.conrelid=r.relid
-   JOIN pg_catalog.pg_namespace n ON n.oid=a.connamespace
-  UNION SELECT o.extension,'pg_constraint','pg_catalog.pg_constraint'::regclass,a.oid,n.nspname
-   FROM owned o JOIN pg_catalog.pg_type t
-    ON o.classid='pg_catalog.pg_type'::regclass AND o.objsubid=0 AND t.oid=o.objid AND t.typtype='d'
-   JOIN pg_catalog.pg_constraint a ON a.contypid=t.oid AND a.conrelid=0 AND a.contype='c'
-   JOIN pg_catalog.pg_namespace n ON n.oid=a.connamespace
-  UNION SELECT r.extension,'pg_trigger','pg_catalog.pg_trigger'::regclass,a.oid,n.nspname
-   FROM relations r JOIN pg_catalog.pg_trigger a ON a.tgrelid=r.relid
-   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
-  UNION SELECT r.extension,'pg_policy','pg_catalog.pg_policy'::regclass,a.oid,n.nspname
-   FROM relations r JOIN pg_catalog.pg_policy a ON a.polrelid=r.relid
-   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
-  UNION SELECT r.extension,'pg_rewrite','pg_catalog.pg_rewrite'::regclass,a.oid,n.nspname
-   FROM relations r JOIN pg_catalog.pg_rewrite a ON a.ev_class=r.relid
-   JOIN pg_catalog.pg_class c ON c.oid=r.relid JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
- )
- SELECT coalesce(jsonb_agg(jsonb_build_object('extension',a.extension,'catalog',a.catalog,
-  'schema',a.schema,'identity',(pg_catalog.pg_identify_object(a.classid,a.objid,0)).identity)
-  ORDER BY a.extension,a.catalog,a.schema,a.objid),'[]'::jsonb)::text
- FROM associated a WHERE a.schema<>'information_schema' AND a.schema !~ '^pg_'"""
-NATIVE_SURFACE_CATALOGS={"pg_class","pg_attrdef","pg_constraint","pg_trigger","pg_policy","pg_rewrite"}
+# The restore engine and native qualifier share this exact finite surface
+# validation. The original census and independent baseline hashes stay intact.
+NATIVE_RELATION_SURFACE_SQL = recovery.EMPTY_RELATION_SURFACE_SQL
+NATIVE_SURFACE_CATALOGS = recovery.EMPTY_SURFACE_CATALOGS
 NATIVE_BLANK_CATALOGS=frozenset({"pg_class","pg_proc","pg_type","pg_constraint","pg_trigger","pg_policy",
     "pg_rewrite","pg_attrdef","pg_collation","pg_conversion","pg_operator","pg_opclass","pg_opfamily",
     "pg_ts_config","pg_ts_dict","pg_ts_parser","pg_ts_template","pg_statistic_ext","other"})
@@ -141,41 +99,10 @@ def digest(value):
 
 
 def native_blank_surface(census,catalog,extensions,associated):
-    """Bound auxiliary objects without declaring AUTO/normal objects owned.
-
-    This is only a preparation check. It cannot qualify a baseline: both fresh
-    complete census/catalog/row/schema fingerprints and later stability checks
-    must still match. An ordinary table or unrelated namespace object fails.
-    """
-    require(census.get("serverVersionNum")==170006 and not catalog.get("largeObjects"),
-            "native_blank_census_unqualified")
-    objects=census.get("namespaceObjects");tables=census.get("tables")
-    count=census.get("counts",{}).get("unownedNamespaceObjects")
-    require(type(objects) is list and type(tables) is list and type(count) is int and 0<=count<=1000000,
-            "native_blank_census_unqualified")
-    def member(row):
-        return any(type(row.get(k)) is str and row[k] in extensions for k in ["directExtension","internalExtension"])
-    require(all(type(t) is dict and member(t) for t in tables),"native_blank_census_unqualified")
-    unowned=[o for o in objects if type(o) is dict and not member(o)]
-    require(all(type(o) is dict for o in objects) and len(unowned)==count,
-            "native_blank_census_unqualified")
-    require(type(associated) is list,"native_blank_census_unqualified")
-    bound={}
-    for row in associated:
-        require(type(row) is dict and set(row)=={"extension","catalog","schema","identity"}
-                and type(row["extension"]) is str and row["extension"] in extensions
-                and type(row["catalog"]) is str and row["catalog"] in NATIVE_SURFACE_CATALOGS
-                and type(row["schema"]) is str and IDENT.fullmatch(row["schema"])
-                and type(row["identity"]) is str and 0<len(row["identity"])<=4096
-                and not any(c in row["identity"] for c in "\x00\r\n"),"native_blank_census_unqualified")
-        key=tuple(row[k] for k in ["catalog","schema","identity"])
-        require(key not in bound,"native_blank_census_unqualified")
-        bound[key]=row["extension"]
-    require(all(all(type(o.get(k)) is str for k in ["catalog","schema","identity"])
-                and o["catalog"] in NATIVE_SURFACE_CATALOGS
-                and tuple(o[k] for k in ["catalog","schema","identity"]) in bound for o in unowned),
-            "native_blank_census_unqualified")
-    return count
+    try:
+        return recovery.empty_target_surface(census,catalog,extensions,associated)
+    except recovery.Stopped:
+        raise Stopped("native_blank_census_unqualified") from None
 
 
 def native_blank_observations(census,catalog,extensions,associated):
@@ -407,6 +334,15 @@ def role_setup_sql(metadata):
                 # then immediately restore the private operator's fixed path.
                 statements += ["SELECT pg_catalog.set_config('search_path',"+literal(value)+",false);",
                                prefix+' SET "search_path" FROM CURRENT;',"SET search_path=pg_catalog;"]
+            elif key=="session_preload_libraries":
+                # This validated list belongs only to the inactive authenticator
+                # role. A single ALTER ROLE literal quotes the entire list as
+                # one library. Copy the exact GUC bytes inside this transaction;
+                # session preloads run only at connection start, never here.
+                # The private operator's setting reverts before the next SQL.
+                statements += ["BEGIN;",
+                    "SELECT pg_catalog.set_config('session_preload_libraries',"+literal(value)+",true);",
+                    prefix+' SET "session_preload_libraries" FROM CURRENT;',"COMMIT;"]
             else:
                 statements.append(prefix+" SET "+'"'+key+'"'+" TO "+literal(value)+";")
     return "\n".join(statements)+"\n"
@@ -1000,21 +936,40 @@ while :; do sleep 1; done"""
         _,schema=self.docker(args+[self.names["client"],self.native_schema_dump_tool(),"--no-password","--schema-only"],timeout=60)
         expected={"bootstrapRole":self.metadata["bootstrapRole"],"roles":self.metadata["roles"],"memberships":self.metadata["memberships"],
                   "roleSettings":[{k:r[k] for k in ["role","database","settings"]} for r in self.metadata["roleSettings"]]}
-        role_match=True
+        role_match=True;role_failure=None
         try:recovery.role_compatibility(expected,catalog,[OPERATOR])
-        except recovery.Stopped:role_match=False
+        except recovery.Stopped as error:
+            role_match=False
+            # Exception text and source metadata stay private. Only these fixed
+            # comparison classes may leave the native process.
+            code=error.args[0] if len(error.args)==1 else None
+            role_failure=code if code in {"managed_bootstrap_role_mismatch",
+                "managed_role_baseline_mismatch","managed_role_privileges_mismatch"} else "unclassified"
         source_ns={s["name"]:s for s in self.metadata["schemas"]}
-        ns_match=source_ns=={s["name"]:s for s in catalog["schemas"]}
+        target_ns={s["name"]:s for s in catalog["schemas"]}
+        ns_match=source_ns==target_ns
         _,raw=self.client_sql(target,"SELECT coalesce(jsonb_agg(jsonb_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname,'owner',pg_get_userbyid(e.extowner)) ORDER BY e.extname),'[]')::text FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace;\n")
         owned_extensions=json.loads(raw)
         _,raw=self.client_sql(target,metadata_source.EXTENSION_NAMESPACES_SQL+";\n")
         extension_namespace_match=encoded(json.loads(raw))==encoded(self.metadata["extensionNamespaces"])
-        extension_match=encoded(owned_extensions)==encoded(self.metadata["extensions"]) \
-            and encoded(catalog["extensions"])==encoded(self.metadata["extensions"]) and extension_namespace_match
+        extension_owner_match=encoded(owned_extensions)==encoded(self.metadata["extensions"])
+        extension_catalog_match=encoded(catalog["extensions"])==encoded(self.metadata["extensions"])
+        extension_match=extension_owner_match and extension_catalog_match and extension_namespace_match
+        # Bounded booleans/counts diagnose a failed exact comparison without
+        # publishing role names, settings, grants, comments or extension values.
+        common_ns=source_ns.keys() & target_ns.keys()
+        comparison={"roleMatch":role_match,"roleFailureCode":role_failure,"namespaceMatch":ns_match,
+            "namespaceDifferences":{"missing":len(source_ns.keys()-target_ns.keys()),
+                "unexpected":len(target_ns.keys()-source_ns.keys()),
+                **{key:sum(source_ns[name].get(key)!=target_ns[name].get(key) for name in common_ns)
+                   for key in ["owner","acl","comment"]}},
+            "extensionOwnerVersionMatch":extension_owner_match,"extensionCatalogMatch":extension_catalog_match,
+            "extensionNamespaceMatch":extension_namespace_match}
         return {"fingerprints":{"emptyBaselineCensusSha256":digest(encoded(census)),
                  "emptyBaselineCatalogSha256":digest(encoded(catalog)),"emptyBaselineRowsSha256":digest(encoded(rows)),
                  "emptyBaselineSchemaSha256":recovery.schema_hash(schema)},
                 "roleMatch":role_match,"namespaceMatch":ns_match,"extensionMatch":extension_match,
+                "metadataComparison":comparison,
                 "tableCount":len(rows),"namespaceObjectCount":len(census["namespaceObjects"]),
                 "globalObjectCount":len(census["globalObjects"])}
 
@@ -1285,6 +1240,7 @@ while :; do sleep 1; done"""
                 observedBaselineFingerprints=snapshots[0]["fingerprints"],
                 nativeNamespaceObjectCount=snapshots[0]["namespaceObjectCount"],
                 nativeGlobalObjectCount=snapshots[0]["globalObjectCount"],nativeTargetTableCount=snapshots[0]["tableCount"])
+            result["metadataComparison"]=[snapshot["metadataComparison"] for snapshot in snapshots]
             if extension_coverages[0] is not None:
                 require(encoded(extension_coverages[0])==encoded(extension_coverages[1]),
                         "independent_extension_coverage_differ")

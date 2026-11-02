@@ -1,0 +1,30 @@
+[Unit]
+Description=Kova isolated Work broker
+Requires=docker.service kova-work-secrets.service
+After=docker.service kova-work-secrets.service network-online.target
+ConditionPathExists=/etc/kova-work/ACTIVATED
+
+[Service]
+Type=simple
+User=kova-work
+Group=kova-work
+SupplementaryGroups=docker
+UMask=0077
+WorkingDirectory=/opt/kova-work/source
+EnvironmentFile=/run/kova-work/runner.env
+ExecStart=/usr/bin/node /opt/kova-work/source/work-runner/entrypoint.mjs
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=60
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/kova-work
+LimitCORE=0
+TasksMax=256
+MemoryMax=2G
+StandardOutput=null
+
+[Install]
+WantedBy=multi-user.target

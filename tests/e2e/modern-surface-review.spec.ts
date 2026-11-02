@@ -76,7 +76,11 @@ test("menus retain focus, placement, and reduced-motion behavior", async ({ page
   };
   const panel = await openResponseOptions(page, rememberTrigger);
   expect(optionsTrigger).toBeDefined();
+  await expect(
+    page.locator('[data-slot="popover-content"][aria-label="Attach files and tools"]'),
+  ).toHaveCount(0);
   await expect(panel).toBeVisible();
+  await expect(panel.getByRole("combobox", { name: "Format", exact: true })).toBeFocused();
   const box = await panel.boundingBox();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);

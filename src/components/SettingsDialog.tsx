@@ -9,7 +9,6 @@ import { WorkspacePageUtilities } from "@/components/WorkspacePageUtilities";
 import { AppearanceSettings } from "@/components/AppearanceSettings";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { formatDisplayDateTime } from "@/lib/time-format";
-import { useTimeFormatPreference } from "@/hooks/use-time-format-preference";
 import { restoreDialogFocus } from "@/lib/dialog-return-focus";
 import { parseAccountDeletionStatus, requestAccountDeletion } from "@/lib/account-deletion-client";
 import { AccountEmailPreferences } from "@/components/AccountEmailPreferences";
@@ -36,9 +35,7 @@ import { SearchablePicker } from "@/components/ui/searchable-picker";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -65,7 +62,6 @@ import {
   Info,
   LogOut,
   RefreshCw,
-  FolderOpen,
   Settings as Cog,
   Users,
   Keyboard,
@@ -132,11 +128,12 @@ import {
   mergeConversations,
   parseDeviceDataExport,
 } from "@/lib/device-data-portability";
-import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
+import { getUsage } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, type ThemeMode } from "@/lib/theme";
 import { authFetch } from "@/lib/auth-fetch";
+import { CloudBrowserSettings } from "@/components/CloudBrowserSettings";
 
 import {
   DEFAULT_SETTINGS,
@@ -200,6 +197,12 @@ const TAB_GROUPS: TabGroup[] = [
     hint: "Your account, storage, and privacy",
     tabs: [
       { v: "security", label: "Safety & security", icon: ShieldCheck },
+      {
+        v: "cloud-browser",
+        label: "Cloud Browser",
+        icon: ShieldCheck,
+        keywords: ["permissions", "websites", "login", "rules"],
+      },
       { v: "data", label: "Data control", icon: Database },
       { v: "storage", label: "Storage", icon: HardDrive },
     ],
@@ -278,7 +281,7 @@ export function SettingsDialog({
   const normalizedInitialTab = initialTab === "subscription" ? "billing" : initialTab;
   const [tab, setTab] = useState<string>(normalizedInitialTab ?? "general");
   const [settingsQuery, setSettingsQuery] = useState("");
-  const [mobileHome, setMobileHome] = useState(true);
+  const [mobileHome, setMobileHome] = useState(!initialTab);
   const [usage, setUsage] = useState<DailyUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageLoaded, setUsageLoaded] = useState(false);
@@ -1024,6 +1027,12 @@ export function SettingsDialog({
         { v: "storage", label: "Storage", icon: HardDrive },
         { v: "notifications", label: "Notifications", icon: Bell },
         { v: "linked", label: "Connections", icon: Link2 },
+        {
+          v: "cloud-browser",
+          label: "Cloud Browser",
+          icon: ShieldCheck,
+          keywords: ["permissions", "websites", "login", "rules"],
+        },
         { v: "data", label: "Privacy", icon: ShieldCheck },
         { v: "usage", label: "Usage", icon: BarChart3 },
         {
@@ -1179,7 +1188,13 @@ export function SettingsDialog({
         }}
       >
         <DialogHeader
-          className={`${page ? "kova-settings-page-header" : "px-5 sm:px-7"} pt-5 pb-4 border-b border-border ${loggedIn && !page ? "hidden" : ""}`}
+          className={
+            loggedIn
+              ? page
+                ? "sr-only"
+                : "hidden"
+              : "kova-settings-page-header px-5 sm:px-7 pt-5 pb-4 border-b border-border"
+          }
         >
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -1195,18 +1210,6 @@ export function SettingsDialog({
                   : "Appearance and preferences for this browser."}
               </p>
             </div>
-            {page ? pageUtilities : null}
-            {page ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Close settings"
-                onClick={() => onOpenChange(false)}
-              >
-                <X aria-hidden="true" />
-              </Button>
-            ) : null}
             {loggedIn && !page && (
               <div
                 aria-live="polite"
@@ -1222,6 +1225,21 @@ export function SettingsDialog({
             )}
           </div>
         </DialogHeader>
+
+        {page ? (
+          <div className="kova-settings-page-actions">
+            {pageUtilities}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Close settings"
+              onClick={() => onOpenChange(false)}
+            >
+              <X aria-hidden="true" />
+            </Button>
+          </div>
+        ) : null}
 
         {!loggedIn ? (
           <SignedOutSettings
@@ -1355,6 +1373,13 @@ export function SettingsDialog({
                 </details>
               ) : null}
               {/* GENERAL */}
+              <TabsContent
+                value="cloud-browser"
+                aria-labelledby={currentSectionHeadingId}
+                className="overflow-y-auto px-7 pb-8 py-5"
+              >
+                {userKey && <CloudBrowserSettings key={userKey} ownerId={userKey} />}
+              </TabsContent>
               <TabsContent
                 aria-labelledby={currentSectionHeadingId}
                 value="general"
@@ -1597,14 +1622,28 @@ export function SettingsDialog({
                           principal: userKey,
                           enabled: value && isSignedIn,
                         });
-                        onChange({ ...settings, rememberAcross: value });
+                        onChange({
+                          ...settings,
+                          rememberAcross: value,
+                          ...(!value ? { automaticMemory: false } : {}),
+                        });
                       }}
                     />
                     <ToggleRow
                       title="Update memory from conversations"
                       hint="Save explicit preferences and facts you share in synced chats. You can review, edit, or delete these notes. Editing a note prevents automatic replacement."
                       checked={settings.automaticMemory === true}
-                      onCheckedChange={(value) => onChange({ ...settings, automaticMemory: value })}
+                      onCheckedChange={(value) => {
+                        if (value) {
+                          allowMemoryWrites(userKey);
+                          configureMemoryWrites({ principal: userKey, enabled: isSignedIn });
+                        }
+                        onChange({
+                          ...settings,
+                          automaticMemory: value,
+                          ...(value ? { rememberAcross: true } : {}),
+                        });
+                      }}
                     />
                     <p className="text-xs text-muted-foreground">
                       {tier === "pro"
@@ -1613,7 +1652,10 @@ export function SettingsDialog({
                           ? "Plus keeps more detailed notes and remembers more context than Free."
                           : "Free includes basic memory. Plus and Pro expand detail and capacity."}
                     </p>
-                    <MemoryOverview ownerId={userKey} />
+                    <MemoryOverview
+                      ownerId={userKey}
+                      automaticMemory={settings.rememberAcross && settings.automaticMemory === true}
+                    />
                     <p className="text-xs text-muted-foreground">
                       Turning this off stops saved-memory reads and new summary POSTs from chats
                       sent in this browser. It does not delete summaries already saved to your
@@ -2686,8 +2728,6 @@ function ToggleRow({
   );
 }
 
-type LibItem = import("@/lib/library.functions").LibraryItem;
-
 type WorkspaceDefaultValues = {
   project: string;
   work: string;
@@ -2776,370 +2816,6 @@ function WorkspaceDefaults({
           </Select>
         </div>
       ))}
-    </section>
-  );
-}
-
-function LibraryItemViewer({
-  item,
-  onClose,
-  onDelete,
-}: {
-  item: LibItem | null;
-  onClose: () => void;
-  onDelete: (id: string) => void;
-}) {
-  const { user, isLoaded } = useUser();
-  const timeFormat = useTimeFormatPreference(user?.id ?? null, isLoaded);
-  const [imgUrl, setImgUrl] = useState<string | null>(null);
-  const [imgErr, setImgErr] = useState<string | null>(null);
-  const [imgRetry, setImgRetry] = useState(0);
-  const itemId = item?.id;
-  const itemType = item?.item_type;
-  useEffect(() => setImgRetry(0), [itemId]);
-  useEffect(() => {
-    let cancelled = false;
-    setImgUrl(null);
-    setImgErr(null);
-    if (!itemId || itemType !== "image") return;
-    (async () => {
-      try {
-        const { getLibraryImageUrl } = await import("@/lib/library-images.functions");
-        const { url } = await getLibraryImageUrl({ data: { id: itemId } });
-        if (!cancelled) setImgUrl(url);
-      } catch (e) {
-        if (!cancelled) setImgErr(e instanceof Error ? e.message : "Could not load image");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [imgRetry, itemId, itemType]);
-
-  const isImage = item?.item_type === "image";
-  return (
-    <Dialog open={!!item} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
-          <DialogTitle className="text-base truncate">{item?.title ?? ""}</DialogTitle>
-          <div className="text-[11px] text-muted-foreground">
-            {item
-              ? `${item.item_type} · ${formatDisplayDateTime(item.created_at, timeFormat)}`
-              : ""}
-          </div>
-        </DialogHeader>
-        <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
-          {isImage ? (
-            imgErr ? (
-              <div className="text-sm text-destructive">{imgErr}</div>
-            ) : imgUrl ? (
-              <img
-                src={imgUrl}
-                alt={item?.title ?? ""}
-                className="max-h-[55vh] mx-auto rounded-lg"
-                onError={() => {
-                  if (imgRetry < 2) setImgRetry((attempt) => attempt + 1);
-                  else setImgErr("Image preview unavailable. Close and reopen this item to retry.");
-                }}
-              />
-            ) : (
-              <div className="text-sm text-muted-foreground">Loading image…</div>
-            )
-          ) : item?.content_text ? (
-            <pre className="whitespace-pre-wrap text-sm font-sans">{item.content_text}</pre>
-          ) : (
-            <div className="text-sm text-muted-foreground">No text content for this item.</div>
-          )}
-        </div>
-        <div className="px-6 py-3 border-t border-border flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              if (isImage && imgUrl) {
-                await navigator.clipboard.writeText(imgUrl);
-                toast.success("Short-lived link copied (expires in ~1 min).");
-                return;
-              }
-              if (!item?.content_text) return;
-              await navigator.clipboard.writeText(item.content_text);
-              toast.success("Copied.");
-            }}
-            disabled={isImage ? !imgUrl : !item?.content_text}
-          >
-            Copy
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (item) onDelete(item.id);
-            }}
-          >
-            Delete
-          </Button>
-          <Button size="sm" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function LibraryPanel() {
-  const { user } = useUser();
-  return <LibraryPanelForOwner key={user?.id ?? "guest"} ownerId={user?.id ?? null} />;
-}
-function LibraryPanelForOwner({ ownerId }: { ownerId: string | null }) {
-  const active = useRef(true);
-  useEffect(() => {
-    active.current = true;
-    return () => {
-      active.current = false;
-    };
-  }, []);
-  const [items, setItems] = useState<LibItem[]>([]);
-  const [shared, setShared] = useState<import("@/lib/shared-chats.functions").SharedChatInbox[]>(
-    [],
-  );
-  const [mine, setMine] = useState<import("@/lib/shared-chats.functions").SharedChatSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [viewing, setViewing] = useState<LibItem | null>(null);
-
-  const load = async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const [lib, inbox, mineShares] = await Promise.all([
-        (await import("@/lib/library.functions")).listMyLibrary(),
-        (await import("@/lib/shared-chats.functions")).listSharedWithMe(),
-        (await import("@/lib/shared-chats.functions")).listMySharedChats(),
-      ]);
-      if (!active.current) return;
-      setItems(lib);
-      setShared(inbox);
-      setMine(mineShares);
-    } catch (e) {
-      console.error("[settings] library load failed");
-      setLoadError(e instanceof Error ? e.message : "Library data could not be loaded.");
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    load();
-  }, []);
-
-  const remove = async (id: string) => {
-    try {
-      const { deleteLibraryItem } = await import("@/lib/library.functions");
-      const item = items.find((value) => value.id === id);
-      if (!item || !ownerId || !active.current) return;
-      await deleteLibraryItem({
-        data: {
-          id,
-          expectedOwnerId: ownerId,
-          generation: item.original_generation,
-          contentGeneration: item.content_generation,
-          revision: item.content_revision,
-        },
-      });
-      if (!active.current) return;
-      setItems((prev) => prev.filter((i) => i.id !== id));
-      setViewing((v) => (v?.id === id ? null : v));
-      toast.success("Deleted.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not delete.");
-    }
-  };
-
-  const revoke = async (id: string) => {
-    try {
-      const { revokeSharedChat } = await import("@/lib/shared-chats.functions");
-      await revokeSharedChat({ data: { id } });
-      setMine((prev) => prev.map((m) => (m.id === id ? { ...m, status: "revoked" } : m)));
-      toast.success("Share revoked.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not revoke.");
-    }
-  };
-
-  const filtered = items.filter((it) => {
-    if (typeFilter !== "all") {
-      if (typeFilter === "chat" && !(it.item_type === "chat_artifact")) return false;
-      if (typeFilter === "document" && it.item_type !== "document") return false;
-      if (typeFilter === "code" && it.item_type !== "code") return false;
-      if (typeFilter === "image" && it.item_type !== "image") return false;
-      if (
-        typeFilter === "other" &&
-        ["chat_artifact", "document", "code", "image"].includes(it.item_type)
-      )
-        return false;
-    }
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return it.title.toLowerCase().includes(q) || (it.content_text ?? "").toLowerCase().includes(q);
-  });
-
-  return (
-    <section className="space-y-6">
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold">My library</h3>
-          <Button size="sm" variant="ghost" onClick={load} disabled={loading}>
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground mb-3">
-          Your saved files, drafts, and generated items will appear here.
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-2 mb-3">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search title or content..."
-            className="h-8 text-xs"
-          />
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger aria-label="Filter library by item type" className="h-8 text-xs sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              <SelectItem value="chat">Chat artifacts</SelectItem>
-              <SelectItem value="document">Documents</SelectItem>
-              <SelectItem value="code">Code</SelectItem>
-              <SelectItem value="image">Images</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {loadError ? (
-          <div
-            role="alert"
-            className="rounded-lg border border-destructive/30 bg-destructive/5 p-4"
-          >
-            <p className="text-sm font-medium text-destructive">Library data is unavailable</p>
-            <p className="mt-1 text-xs text-muted-foreground">{loadError}</p>
-            <Button size="sm" variant="outline" onClick={load} className="mt-3">
-              <RefreshCw className="h-3.5 w-3.5" /> Retry
-            </Button>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            {loading
-              ? "Loading…"
-              : items.length === 0
-                ? "Nothing saved yet. Use the Save button on any AI response to add it here."
-                : "No items match your search."}
-          </div>
-        ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {filtered.map((it) => (
-              <li key={it.id} className="p-3 flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{it.title}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
-                    {it.item_type} · {new Date(it.created_at).toLocaleDateString()}
-                  </div>
-                  {it.content_text && (
-                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2 whitespace-pre-wrap">
-                      {it.content_text.slice(0, 240)}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs"
-                    onClick={() => setViewing(it)}
-                  >
-                    Open
-                  </Button>
-                  {it.content_text && (
-                    <button
-                      onClick={async () => {
-                        await navigator.clipboard.writeText(it.content_text ?? "");
-                        toast.success("Copied.");
-                      }}
-                      className="p-1.5 rounded hover:bg-accent transition"
-                      title="Copy"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => remove(it.id)}
-                    className="p-1.5 rounded hover:bg-accent transition"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <LibraryItemViewer item={viewing} onClose={() => setViewing(null)} onDelete={remove} />
-      </div>
-
-      <div>
-        <h3 className="text-sm font-semibold mb-2">Shared with me</h3>
-        {shared.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-            No chats shared with you yet.
-          </div>
-        ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {shared.map((s) => (
-              <li key={s.id} className="p-3">
-                <div className="text-sm font-medium">{s.title}</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">
-                  Shared {new Date(s.created_at).toLocaleDateString()} ·{" "}
-                  {s.snapshot.messages.length} messages
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div>
-        <h3 className="text-sm font-semibold mb-2">Chats I've shared</h3>
-        {mine.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-            You haven't shared any chats yet. Use the Share button next to any chat in the sidebar.
-          </div>
-        ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {mine.map((s) => (
-              <li key={s.id} className="p-3 flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{s.title}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
-                    To {s.recipient_email} · {s.status} ·{" "}
-                    {new Date(s.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-                {s.status !== "revoked" && (
-                  <Button size="sm" variant="ghost" onClick={() => revoke(s.id)}>
-                    Revoke
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </section>
   );
 }

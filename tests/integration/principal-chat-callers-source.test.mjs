@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 const callerPaths = [
-  "src/components/ArchivedChatsDialog.tsx",
+  "src/components/SettingsDialog.tsx",
   "src/components/WorkspaceIntelligence.tsx",
   "src/routes/context-packs.tsx",
   "src/routes/knowledge-graph.tsx",
@@ -20,12 +20,13 @@ test("all remaining local chat callers carry the resolved principal", async () =
   );
 
   assert.match(archived, /loadArchivedConversations\(userKey\)/);
-  assert.match(archived, /saveArchivedConversations\(userKey, \[\]\)/);
-  assert.equal(
-    (archived.match(/removeArchivedConversation\(userKey, chat\.id\)/g) ?? []).length,
-    2,
+  assert.match(
+    archived,
+    /saveArchivedConversations\(\s*userKey,\s*loadArchivedConversations\(userKey\)\.filter\(\(item\) => item\.id !== chat\.id\)/,
   );
-  assert.match(archived, /archiveState\.principal === principal/);
+  assert.match(archived, /contextRef\.current\.userKey === userKey/);
+  assert.match(archived, /contextRef\.current\.epoch === epoch/);
+  assert.match(archived, /deleteTarget\?\.userKey === userKey/);
 
   assert.match(intelligence, /loadConversations\(userKey\)/);
   assert.match(intelligence, /savePendingActive\(userKey, item\.id\)/);

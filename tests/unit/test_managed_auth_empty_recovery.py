@@ -98,6 +98,7 @@ class EmptyRecoveryTests(unittest.TestCase):
         observed={"database":"postgres","serverAddress":"192.0.2.9","serverPort":5432,
                   "serverVersionNum":170006,"systemIdentifier":"123","managedRelationsPresent":[]}
         census={"format":1,"serverVersionNum":170006,"namespaceObjects":[],"globalObjects":[],
+                "tables":[],"counts":{"unownedNamespaceObjects":0},
                 "completeness":{"explicitPg17CatalogEnumeration":True},
                 "structuralCatalogs":{k:"e"*64 for k in m.EMPTY_STRUCTURAL_KEYS}}
         c=catalog();c["schemas"]=[s for s in c["schemas"] if s["name"]=="public"]
@@ -107,11 +108,12 @@ class EmptyRecoveryTests(unittest.TestCase):
             emptyBaselineSchemaSha256=m.schema_hash(schema))
         return observed,census,c,rows,schema,a
 
-    def preflight(self, fixture):
+    def preflight(self, fixture, associated=()):
         observed,census,c,rows,schema,a=fixture
         def query(_env,sql,**_):
             if sql==m.EMPTY_IDENTITY_SQL:return m.encoded(observed)
             if sql==m.CATALOG_SQL:return m.encoded(c)
+            if sql==m.EMPTY_RELATION_SURFACE_SQL+";\n":return m.encoded(list(associated))
             if "cron.launch_active_jobs" in sql:return b"off"
             return m.encoded(census)
         def command(argv,_env,**_):
@@ -120,6 +122,49 @@ class EmptyRecoveryTests(unittest.TestCase):
         with patch.object(m,"psql",side_effect=query),patch.object(m,"row_fingerprints",return_value=rows),\
              patch.object(m,"run",side_effect=command),patch.object(m.EMPTY_CENSUS.__class__,"read_text",return_value="SELECT synthetic census;"):
             return m.empty_target_preflight({},self.approved,a,self.root,"fixture-"+str(len(list(self.root.iterdir()))))
+
+    def associated_default_fixture(self):
+        fixture=self.proof_fixture()
+        _,census,c,rows,schema,a=fixture
+        census["namespaceObjects"]=[{"catalog":"pg_attrdef","schema":"cron","identity":"for cron.job.jobid",
+            "directExtension":None,"internalExtension":None,"details":{"catalogRowSha256":"a"*64}}]
+        census["tables"]=[{"schema":"cron","name":"job","kind":"r",
+            "directExtension":"pg_cron","internalExtension":"pg_cron"}]
+        census["counts"]["unownedNamespaceObjects"]=1
+        c["extensions"]=[{"name":"pg_cron","schema":"cron","version":"synthetic-fixture"}]
+        c["schemas"].append({"name":"cron","owner":"postgres","acl":None,"comment":None})
+        c["tables"]=[{"schema":"cron","name":"job","kind":"r"}]
+        rows.append({"schema":"cron","name":"job","rows":0,"sha256":m.digest(b"")})
+        a.update(emptyBaselineCensusSha256=m.digest(m.encoded(census)),
+            emptyBaselineCatalogSha256=m.digest(m.encoded(c)),emptyBaselineRowsSha256=m.digest(m.encoded(rows)),
+            emptyBaselineSchemaSha256=m.schema_hash(schema))
+        associated=[{"catalog":"pg_attrdef","schema":"cron","identity":"for cron.job.jobid","extension":"pg_cron"}]
+        return fixture,associated
+
+    def test_reviewed_extension_relation_defaults_preserve_original_census_and_all_pins(self):
+        fixture,associated=self.associated_default_fixture()
+        before=m.encoded(fixture[1])
+        self.assertEqual(self.preflight(fixture,associated),fixture[2])
+        self.assertEqual(m.encoded(fixture[1]),before)
+        self.assertIsNone(fixture[1]["namespaceObjects"][0]["directExtension"])
+        for key in fixture[5]:
+            if not key.startswith("emptyBaseline") or not key.endswith("Sha256"):continue
+            changed,associations=self.associated_default_fixture();changed[5][key]="0"*64
+            with self.subTest(pin=key),self.assertRaisesRegex(m.Stopped,"empty_target_baseline_pin_mismatch"):
+                self.preflight(changed,associations)
+
+    def test_unassociated_objects_ordinary_tables_and_forged_associations_still_fail(self):
+        for change in ["missing","wrong-extension","duplicate","wrong-identity","ordinary-table","catalog-payload"]:
+            fixture,associated=self.associated_default_fixture()
+            if change=="missing":associated=[]
+            elif change=="wrong-extension":associated[0]["extension"]="unreviewed"
+            elif change=="duplicate":associated.append(dict(associated[0]))
+            elif change=="wrong-identity":associated[0]["identity"]="unrelated default"
+            elif change=="ordinary-table":fixture[1]["tables"][0].update(directExtension=None,internalExtension=None)
+            else:fixture[1]["namespaceObjects"][0]["details"]["catalogRowSha256"]="b"*64
+            code="empty_target_baseline_pin_mismatch" if change=="catalog-payload" else "empty_target_user_objects_present"
+            with self.subTest(change=change),self.assertRaisesRegex(m.Stopped,code):
+                self.preflight(fixture,associated)
 
     def test_independently_pinned_blank_proof_passes_without_fabricating_absent_auth_counts(self):
         fixture=self.proof_fixture()

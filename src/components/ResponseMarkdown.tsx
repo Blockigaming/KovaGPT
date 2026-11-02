@@ -6,7 +6,7 @@ import type { ChatImageActions } from "./ChatImage";
 import type { Components, ExtraProps } from "react-markdown";
 import type { Element, Root, RootContent } from "hast";
 import remarkGfm from "remark-gfm";
-import { Check, Copy, Download, ExternalLink } from "lucide-react";
+import { Check, Copy, Download } from "lucide-react";
 import type { ResponseSource } from "@/lib/response-sources";
 import "./response-output-blocks.css";
 import { observeTableOverflow } from "@/lib/table-overflow";

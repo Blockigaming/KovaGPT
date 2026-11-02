@@ -110,10 +110,16 @@ test("signed-out storage copy matches the implemented guest lifecycle", () => {
   assert.doesNotMatch(settingsSource, /chats and preferences stay only until/i);
 });
 
-test("Settings select controls expose stable accessible names", () => {
-  for (const label of ["Preferred response length", "Filter library by item type", "Appearance"]) {
+test("Settings selects and Library filters expose stable accessible names", async () => {
+  for (const label of ["Preferred response length", "Appearance"]) {
     assert.match(settingsSource, new RegExp(`aria-label="${label}"`));
   }
+  const librarySource = await readFile(
+    new URL("../../src/routes/library.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(librarySource, /aria-label="Filter Library items"/);
+  assert.match(librarySource, /role="group" aria-label="Library filters"/);
   const toneControls = matching(
     parsed,
     (node) =>
@@ -221,6 +227,7 @@ test("settings navigation is centralized and routes every rendered category", ()
       "Location",
       "Parental controls",
       "Safety & security",
+      "Cloud Browser",
       "Data control",
       "Storage",
       "Apps",
@@ -261,6 +268,7 @@ test("settings navigation is centralized and routes every rendered category", ()
       "storage",
       "notifications",
       "connections",
+      "cloud-browser",
       "privacy",
       "usage",
       "billing",
@@ -363,9 +371,14 @@ test("authenticated modal sizing, full-page Settings, and phone safe-area owners
     settingsPageStylesSource,
     ".kova-settings-route section.kova-settings-page.kova-settings-dialog",
   ).declarations;
-  assert.equal(page.position, "static");
+  assert.equal(page.position, "relative");
   assert.equal(page.width, "100%");
-  assert.equal(page.height, "100dvh");
+  assert.equal(page.height, "100%");
+  assert.equal(
+    styleRule(settingsPageStylesSource, ".kova-settings-route.kova-secondary-page").declarations
+      .height,
+    "100dvh",
+  );
   assert.equal(page["max-height"], "none");
   assert.equal(page.background, "var(--background)");
   for (const selector of [

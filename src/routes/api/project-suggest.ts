@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   AiProviderError,
   chatCompletions,
-  utilityModel,
   missingAiProviderResponse,
   providerErrorFromResponse,
   providerErrorResponse,

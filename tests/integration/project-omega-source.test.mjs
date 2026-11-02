@@ -39,15 +39,14 @@ test("Project, Artifact, and Work surfaces expose graceful realtime degradation"
     read("src/components/ProjectCollaboration.tsx"),
     read("src/components/ArtifactEditor.tsx"),
     read("src/routes/work.tsx"),
-    read("src/components/RealtimeReadiness.tsx"),
+    read("src/components/CollaborationStatus.tsx"),
   ]);
   assert.match(project, /CollaborationStatus/);
   assert.match(artifact, /CollaborationStatus/);
   assert.match(work, /throw redirect/);
-  assert.match(status, /Realtime unavailable/);
-  const collaborationStatus = await read("src/components/CollaborationStatus.tsx");
-  assert.match(collaborationStatus, /Reconnecting/);
-  assert.match(collaborationStatus, /unavailable/);
+  assert.match(status, /role="status"/);
+  assert.match(status, /Reconnecting/);
+  assert.match(status, /Collaboration unavailable/);
 });
 
 test("MCP and enterprise configurations remain scoped drafts", async () => {
