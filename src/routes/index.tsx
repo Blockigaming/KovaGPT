@@ -1,5 +1,4 @@
 import { normalizeBrowserActivity } from "@/lib/browser-activity-contract.mjs";
-import { appendMessageActivity } from "@/lib/message-activity-list.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
 import {
   snapshotNextPrompt,
@@ -35,7 +34,11 @@ import {
   chatHistorySnapshot,
   CHAT_HISTORY_CHANGED_EVENT,
 } from "@/lib/chat-history-bridge";
-import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat-store";
+import {
+  appendMessageActivity,
+  chatRequestMessages,
+  chatRequestLocale as safeLocale,
+} from "@/lib/chat-store";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
