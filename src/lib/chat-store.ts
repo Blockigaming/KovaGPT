@@ -18,7 +18,6 @@ import {
 import { normalizeResponseSources, type ResponseSource } from "./response-sources.ts";
 
 export { normalizeResponseSources, type ResponseSource } from "./response-sources.ts";
-export { appendMessageActivity } from "./message-activity-list.mjs";
 
 export type Role = "user" | "assistant";
 export type TemporaryChatContext = "clean" | "personalized";

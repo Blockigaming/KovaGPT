@@ -1,6 +1,40 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { appendMessageActivity } from "../../src/lib/message-activity-list.mjs";
+import {
+  appendMessageActivity,
+  messageActivitiesFromDelta,
+} from "../../src/lib/message-activity-list.mjs";
+
+test("streamed activity retains operation IDs and truthful pending and terminal states", () => {
+  const delta = { tool: "search_web", activity_id: "site", label: "Searching", status: "pending" };
+  const rows = messageActivitiesFromDelta([], delta);
+  assert.equal(rows[0].status, "running");
+  const completed = messageActivitiesFromDelta(rows, {
+    ...delta,
+    label: "Read site",
+    status: "failed",
+  });
+  assert.equal(completed.length, 1);
+  assert.equal(completed[0].status, "failed");
+  assert.equal(completed[0].label, "Read site");
+});
+
+test("streamed browser metadata retains safe preview references and excludes arbitrary URLs", () => {
+  const [row] = messageActivitiesFromDelta([], {
+    tool: "browser_interact",
+    label: "Read site",
+    status: "done",
+    browser: {
+      sessionId: "demo",
+      tabCount: 1,
+      observedAt: 123,
+      previewPath: "https://example.com/x",
+    },
+  });
+  assert.equal(row.status, "done");
+  assert.equal(row.browser.sessionId, "demo");
+  assert.equal(row.browser.previewPath, undefined);
+});
 
 const activity = (label, status = "done", activityId) => ({
   tool: "search_web",

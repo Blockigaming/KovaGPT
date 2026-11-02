@@ -1,3 +1,24 @@
+import { normalizeBrowserActivity } from "./browser-activity-contract.mjs";
+
+export function messageActivitiesFromDelta(current, delta) {
+  return appendMessageActivity(current, {
+    ...(typeof delta.activity_id === "string" && delta.activity_id.trim()
+      ? { activityId: delta.activity_id.slice(0, 160) }
+      : {}),
+    tool: String(delta.tool ?? ""),
+    label: String(delta.label),
+    ...(delta.tool === "browser_interact"
+      ? { browser: normalizeBrowserActivity(delta.browser) }
+      : {}),
+    status:
+      delta.status === "failed" || delta.status === "canceled"
+        ? delta.status
+        : delta.status === "running" || delta.status === "pending"
+          ? "running"
+          : "done",
+  });
+}
+
 // Keep each operation in arrival order; only its own status updates replace a row.
 export function appendMessageActivity(current, next) {
   let match = -1;

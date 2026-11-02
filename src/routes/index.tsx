@@ -1,4 +1,3 @@
-import { normalizeBrowserActivity } from "@/lib/browser-activity-contract.mjs";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
 import {
   snapshotNextPrompt,
@@ -34,11 +33,7 @@ import {
   chatHistorySnapshot,
   CHAT_HISTORY_CHANGED_EVENT,
 } from "@/lib/chat-history-bridge";
-import {
-  appendMessageActivity,
-  chatRequestMessages,
-  chatRequestLocale as safeLocale,
-} from "@/lib/chat-store";
+import { chatRequestMessages, chatRequestLocale as safeLocale } from "@/lib/chat-store";
 import { MAPS_RELEASE_APPROVED } from "@/lib/maps-release-gate";
 import { createMemorySourceUpdater } from "@/lib/memory-sources.mjs";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -174,7 +169,6 @@ import {
 import { type ModeId } from "@/lib/modes";
 import {
   type Conversation,
-  type Activity,
   type Message,
   type TemporaryChatContext,
   type ConversationWorkflowSkill,
@@ -2194,7 +2188,7 @@ function KovaGPT() {
         );
         await consumeChatSse(resp.body, {
           signal: controller.signal,
-          onEvent: (parsed) => {
+          onEvent: async (parsed) => {
             if (!isCurrentRequest()) {
               throw new DOMException("A newer chat request replaced this one.", "AbortError");
             }
@@ -2227,24 +2221,11 @@ function KovaGPT() {
             }
 
             if (delta?.kind === "activity" && delta?.label) {
+              const { messageActivitiesFromDelta } =
+                await import("@/lib/message-activity-list.mjs");
+              if (!isCurrentRequest()) return;
               updateAssistantMessage((message) => {
-                const activity: Activity = {
-                  ...(typeof delta.activity_id === "string" && delta.activity_id.trim()
-                    ? { activityId: delta.activity_id.slice(0, 160) }
-                    : {}),
-                  tool: String(delta.tool ?? ""),
-                  label: String(delta.label),
-                  ...(delta.tool === "browser_interact"
-                    ? { browser: normalizeBrowserActivity(delta.browser) }
-                    : {}),
-                  status:
-                    delta.status === "failed" || delta.status === "canceled"
-                      ? delta.status
-                      : delta.status === "running" || delta.status === "pending"
-                        ? ("running" as const)
-                        : ("done" as const),
-                };
-                const activities = appendMessageActivity(message.activities ?? [], activity);
+                const activities = messageActivitiesFromDelta(message.activities ?? [], delta);
                 return { ...message, activities };
               });
             }
