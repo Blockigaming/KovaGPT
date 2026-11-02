@@ -44,6 +44,11 @@ const editHelpers = await import(
   `data:text/javascript;base64,${Buffer.from(editHelperJs).toString("base64")}`
 );
 
+const admissionJs = js(readFileSync("src/lib/chat-admission-retry.ts", "utf8"));
+const { fetchChatWithAdmissionRetry } = await import(
+  `data:text/javascript;base64,${Buffer.from(admissionJs).toString("base64")}`
+);
+
 // Reuse the existing isolated send fixture's constructor without executing or
 // re-registering its other tests. The send/Stop callbacks come from current source.
 const oldHarness = parse("tests/unit/chat-send-next-runtime.test.mjs");
@@ -66,6 +71,7 @@ globalThis.setSelectedTool = ${arrow("setSelectedTool")};
 globalThis.startLifetime = () => () => undefined;`);
 const sendFixtureFactory = vm.runInNewContext(`(${fixtureSource})`, {
   helpers,
+  fetchChatWithAdmissionRetry,
   React,
   // This reused send fixture does not render controls; keep its transparent
   // shared Button dependency bound while exercising the actual chat callbacks.

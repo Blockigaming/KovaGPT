@@ -13,6 +13,13 @@ const Button = React.forwardRef(({ variant: _variant, size: _size, ...props }, r
   React.createElement("button", { ...props, ref }),
 );
 
+const admissionJs = ts.transpileModule(readFileSync("src/lib/chat-admission-retry.ts", "utf8"), {
+  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const { fetchChatWithAdmissionRetry } = await import(
+  `data:text/javascript;base64,${Buffer.from(admissionJs).toString("base64")}`
+);
+
 const helperSource = readFileSync("src/lib/chat-send-next.ts", "utf8");
 const helperJs = ts.transpileModule(helperSource, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
@@ -135,6 +142,7 @@ function fixture() {
   let sequence = 0;
   const context = {
     ...helpers,
+    fetchChatWithAdmissionRetry,
     React,
     Button,
     Suspense: React.Suspense,
