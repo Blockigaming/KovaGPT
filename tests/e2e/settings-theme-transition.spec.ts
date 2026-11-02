@@ -156,7 +156,8 @@ test("signed-in mobile settings list keeps every option at least 44px tall", asy
   }
   await expect(navigation).toBeVisible();
   const options = navigation.getByRole("tab");
-  await expect(options).toHaveCount(11);
+  await expect(options).toHaveCount(12);
+  await expect(navigation.getByRole("tab", { name: "Cloud Browser", exact: true })).toBeVisible();
   for (let index = 0; index < (await options.count()); index++) {
     await options.nth(index).scrollIntoViewIfNeeded();
     await expect(options.nth(index)).toBeVisible();
