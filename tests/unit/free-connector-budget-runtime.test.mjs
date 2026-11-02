@@ -9,6 +9,7 @@ import ts from "typescript";
 import { createGitHubChatTools } from "../../src/lib/github-chat-read.server.mjs";
 import { planAllowance } from "../../src/lib/plan-usage-policy.mjs";
 import { estimateProviderInput } from "../../src/lib/ai/token-estimator.server.ts";
+import { CONNECTION_FLOWS, canReadConnection } from "../../src/integrations/connection-flows.mjs";
 
 // Run the real route and request adapter. Only authentication, stored account
 // state, connector I/O and the provider network boundary use offline fixtures.
@@ -30,7 +31,12 @@ const seams = {
     "stagePendingAction",
   ],
   "@/integrations/connected-tools.server": ["getConnectedToolContext", "runConnectedTool"],
-  "@/lib/ai/accounting.server": ["acquireGeneration", "finalizeGeneration", "hashGuestIp"],
+  "@/lib/ai/accounting.server": [
+    "acquireGeneration",
+    "finalizeGeneration",
+    "getGenerationTokenHeadroom",
+    "hashGuestIp",
+  ],
   "@/lib/runtime-env.server": ["runtimeEnv"],
   "@/integrations/supabase/client.server": ["supabaseAdmin"],
 };
@@ -130,15 +136,73 @@ const googleAst = ts.createSourceFile(
   true,
 );
 let googleDefinitions;
+let googleWriteDefinitions;
 function findGoogleTools(node) {
   if (ts.isVariableDeclaration(node) && node.name.getText(googleAst) === "READ_ONLY_TOOLS")
     googleDefinitions = node.initializer.getText(googleAst);
+  if (ts.isVariableDeclaration(node) && node.name.getText(googleAst) === "WRITE_TOOLS")
+    googleWriteDefinitions = node.initializer.getText(googleAst);
   ts.forEachChild(node, findGoogleTools);
 }
 findGoogleTools(googleAst);
 assert.ok(googleDefinitions);
 const googleTools = JSON.parse(JSON.stringify(vm.runInNewContext("(" + googleDefinitions + ")")));
 assert.equal(googleTools.length, 5);
+assert.ok(googleWriteDefinitions);
+const googleWriteTools = JSON.parse(
+  JSON.stringify(vm.runInNewContext("(" + googleWriteDefinitions + ")")),
+).filter((entry) =>
+  ["gmail_create_draft", "gmail_send", "calendar_create_event"].includes(entry.function.name),
+);
+const allGoogleTools = [...googleTools, ...googleWriteTools];
+assert.equal(allGoogleTools.length, 8);
+
+// Generate the actual Linear schema with the production context builder.
+const connectedAst = ts.createSourceFile(
+  "connected-tools.server.ts",
+  readFileSync("src/integrations/connected-tools.server.ts", "utf8"),
+  ts.ScriptTarget.Latest,
+  true,
+);
+const contextBuilder = connectedAst.statements.find(
+  (node) => ts.isFunctionDeclaration(node) && node.name?.text === "getConnectedToolContext",
+);
+assert.ok(contextBuilder);
+const connectedExports = {};
+const linkedAccount = {
+  id: "linear-fixture",
+  provider_id: "linear",
+  account_label: "Offline Linear account",
+  status: "connected",
+  granted_scopes: ["read"],
+  token_expires_at: null,
+};
+const accountQuery = {
+  select: () => accountQuery,
+  eq: () => accountQuery,
+  is: () => accountQuery,
+  order: () => accountQuery,
+  limit: async () => ({ data: [linkedAccount], error: null }),
+};
+vm.runInNewContext(
+  ts.transpileModule(contextBuilder.getText(connectedAst), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText,
+  {
+    exports: connectedExports,
+    supabaseAdmin: {},
+    db: { from: () => accountQuery },
+    accountColumns: "offline-fixture-columns",
+    assertLockdownAllows: async () => {},
+    configuredOAuthProviders: () => [{ id: "linear" }],
+    CONNECTION_FLOWS,
+    canReadConnection,
+    githubChatTools: { getContext: async () => ({ tools: [tool] }) },
+  },
+);
+const allConnectedTools = (await connectedExports.getConnectedToolContext(owner)).tools;
+assert.equal(allConnectedTools.length, 2);
+assert.ok(allConnectedTools.some((entry) => entry.function.name === "linear_search"));
 const call = {
   id: "call_read",
   type: "function",
@@ -225,15 +289,24 @@ function fixture(options = {}) {
     "@/lib/google-tools.server": {
       getGoogleToolContext: async () =>
         options.googleTools
-          ? { binding: { connectionId: "google-fixture" }, tools: googleTools }
+          ? {
+              binding: { connectionId: "google-fixture" },
+              tools: options.googleTools === "all" ? allGoogleTools : googleTools,
+            }
           : null,
       TOOL_ACTIVITY: {},
       WRITE_TOOL_NAMES: new Set(),
-      runGoogleTool: denied,
+      runGoogleTool: options.planningCalls
+        ? async (...args) => {
+            reads.push(args);
+            return { results: [], count: 0 };
+          }
+        : denied,
       stagePendingAction: denied,
     },
     "@/integrations/connected-tools.server": {
-      getConnectedToolContext: async () => (options.noTools ? null : { tools: [tool] }),
+      getConnectedToolContext: async () =>
+        options.noTools ? null : { tools: options.linear ? allConnectedTools : [tool] },
       runConnectedTool: async (...args) => {
         reads.push(args);
         if (options.abortAfterRead) abort.abort();
@@ -243,12 +316,25 @@ function fixture(options = {}) {
       },
     },
     "@/lib/ai/accounting.server": {
+      getGenerationTokenHeadroom: async ({ userId, plan }) => {
+        assert.equal(userId, owner);
+        assert.equal(plan, "free");
+        if (options.headroomError) throw new Error("offline-headroom-unavailable");
+        const daily = planAllowance(Number(env.KOVA_MAX_TOKENS_PER_USER_DAY ?? 50_000), plan);
+        const monthly = planAllowance(Number(env.KOVA_MAX_TOKENS_PER_USER_MONTH ?? 500_000), plan);
+        const dayRemaining = Math.max(0, daily - (options.usedToday ?? 0));
+        const monthRemaining = Math.max(0, monthly - (options.usedMonth ?? 0));
+        return {
+          tokenLimit: Math.min(dayRemaining, monthRemaining),
+          limitingQuota: dayRemaining <= monthRemaining ? "daily_tokens" : "monthly_tokens",
+        };
+      },
       acquireGeneration: async (value) => {
         acquisitions.push(value);
         const daily = planAllowance(Number(env.KOVA_MAX_TOKENS_PER_USER_DAY ?? 50_000), value.plan);
         return options.rejection
           ? { rejection: options.rejection }
-          : value.reservedTokens > daily
+          : value.reservedTokens + (options.usedToday ?? 0) > daily
             ? { rejection: "daily_tokens" }
             : { eventId: "offline-usage-event" };
       },
@@ -275,7 +361,11 @@ function fixture(options = {}) {
         return Response.json({
           choices: [
             {
-              message: { role: "assistant", content: null, tool_calls: [call] },
+              message: {
+                role: "assistant",
+                content: null,
+                tool_calls: options.planningCalls ?? [call],
+              },
               finish_reason: "tool_calls",
             },
           ],
@@ -412,6 +502,47 @@ test("Free Thinking fits the real Gmail, Calendar, Drive and GitHub tool schemas
   assert.ok(maximum <= f.acquisitions[0].reservedTokens);
 });
 
+test("a Free connector request fits the remaining allowance after an ordinary chat", async () => {
+  const f = fixture({ googleTools: "all", linear: true, usedToday: 1_953 });
+  const { response, text } = await f.post();
+  assert.equal(response.status, 200, `${text}; reserved=${f.acquisitions[0]?.reservedTokens}`);
+  assert.ok(f.acquisitions[0].reservedTokens <= 8_047);
+  assert.equal(f.providers[0].tools.length, 10);
+  assert.equal(f.providers.length, 2);
+  assert.equal(f.reads.length, 1);
+  const maximum = f.normalizedProviders.reduce(
+    (sum, body) => sum + estimateProviderInput(body).tokens + body.max_output_tokens,
+    0,
+  );
+  assert.ok(maximum <= f.acquisitions[0].reservedTokens);
+});
+
+test("five minimal connector results fit after prior usage without losing any tool-call ID", async () => {
+  const planningCalls = [
+    ["gmail_search", { query: "kova-impossible-fixture", max_results: 1 }],
+    ["calendar_list_events", { max_results: 1 }],
+    ["drive_search", { query: "kova-impossible-fixture", max_results: 1 }],
+    ["github_read", { repository: "owner/repo", operation: "readme" }],
+    ["linear_search", { account_id: "linear-fixture", query: "kova-impossible-fixture" }],
+  ].map(([name, args], index) => ({
+    id: `call_${index}`,
+    type: "function",
+    function: { name, arguments: JSON.stringify(args) },
+  }));
+  const f = fixture({ googleTools: "all", linear: true, usedToday: 1_953, planningCalls });
+  const { response, text } = await f.post();
+  assert.equal(response.status, 200, text);
+  assert.equal(f.providers.length, 2);
+  assert.equal(f.reads.length, 5);
+  assert.ok(f.acquisitions[0].reservedTokens <= 8_047);
+  assert.deepEqual(
+    f.providers[1].messages
+      .filter((message) => message.role === "tool")
+      .map((message) => message.tool_call_id),
+    planningCalls.map((entry) => entry.id),
+  );
+});
+
 for (const code of ["daily_tokens", "monthly_tokens", "premium_period", "premium_quota"]) {
   test(`${code} is a non-retryable allowance rejection before provider or connector work`, async () => {
     const f = fixture({ rejection: code });
@@ -440,10 +571,42 @@ test("concurrency retains a retryable rate-limit response", async () => {
 test("a smaller operator allowance is honored before admission and cannot be raised by connector planning", async () => {
   const f = fixture({ env: { KOVA_MAX_TOKENS_PER_USER_DAY: "1" } });
   const { response, text } = await f.post();
-  assert.equal(response.status, 413, text);
-  assert.equal(JSON.parse(text).code, "request_budget");
+  assert.equal(response.status, 429, text);
+  assert.equal(JSON.parse(text).code, "daily_tokens");
   assert.equal(f.acquisitions.length, 0);
   assert.equal(f.providers.length, 0);
+});
+
+test("monthly headroom and exhausted daily allowance stop before any provider or connector read", async () => {
+  for (const options of [{ usedMonth: 100_000 }, { usedToday: 10_000 }]) {
+    const f = fixture(options);
+    const { response, text } = await f.post();
+    assert.equal(response.status, 429, text);
+    assert.equal(JSON.parse(text).code, options.usedMonth ? "monthly_tokens" : "daily_tokens");
+    assert.equal(f.acquisitions.length, 0);
+    assert.equal(f.providers.length, 0);
+    assert.equal(f.reads.length, 0);
+  }
+});
+
+test("a failed headroom read never admits or starts a generation", async () => {
+  const f = fixture({ headroomError: true });
+  const { response, text } = await f.post();
+  assert.equal(response.status, 503, text);
+  assert.equal(JSON.parse(text).code, "chat_preflight_failed");
+  assert.equal(f.acquisitions.length, 0);
+  assert.equal(f.providers.length, 0);
+  assert.equal(f.reads.length, 0);
+});
+
+test("a concurrent reservation can still reject a positive headroom hint before provider work", async () => {
+  const f = fixture({ usedToday: 1_953, googleTools: "all", rejection: "daily_tokens" });
+  const { response, text } = await f.post();
+  assert.equal(response.status, 429, text);
+  assert.equal(f.acquisitions.length, 1);
+  assert.ok(f.acquisitions[0].reservedTokens <= 8_047);
+  assert.equal(f.providers.length, 0);
+  assert.equal(f.reads.length, 0);
 });
 
 test("a rejected final provider call retains already spent planning usage", async () => {
@@ -483,7 +646,7 @@ test("an unexpectedly large planning usage receipt stops before connector reads 
 });
 
 test("ordinary chat without connectors retains its single-call reservation", async () => {
-  const f = fixture({ noTools: true });
+  const f = fixture({ noTools: true, headroomError: true });
   const { response, text } = await f.post();
   assert.equal(response.status, 200, text);
   assert.equal(f.providers.length, 1);
@@ -540,7 +703,7 @@ test("resolved Lite and Medium use the regular allowance; reasoning modes use Th
 });
 
 test("paid connector planning retains its existing hop and reservation policy", async () => {
-  const f = fixture({ tier: "plus" });
+  const f = fixture({ tier: "plus", headroomError: true });
   const { response, text } = await f.post();
   assert.equal(response.status, 200, text);
   assert.equal(f.providers.length, 4);

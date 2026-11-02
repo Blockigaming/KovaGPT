@@ -50,6 +50,22 @@ test("invalid allowances and a request that cannot retain a usable final answer 
     assert.throws(() => budget({ tokenLimit }), /budget/);
 });
 
+test("remaining tokens can shorten marked source excerpts while preserving the final answer floor", () => {
+  const full = budget();
+  const floor =
+    full.planningInputTokens +
+    full.planningOutputTokens +
+    full.finalInputTokenLimit -
+    1_536 +
+    512 +
+    1_024;
+  const tight = budget({ tokenLimit: floor });
+  assert.equal(tight.reservedTokens, floor);
+  assert.equal(tight.finalOutputTokens, 1_024);
+  assert.equal(tight.finalInputTokenLimit, full.finalInputTokenLimit - 1_024);
+  assert.throws(() => budget({ tokenLimit: floor - 1 }), /budget/);
+});
+
 test("unknown planning and final outcomes retain conservative usage until valid receipts arrive", () => {
   const b = budget();
   b.startPlanning();

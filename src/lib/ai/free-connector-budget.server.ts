@@ -68,12 +68,24 @@ export class FreeConnectorBudget {
     this.planningInputTokens =
       estimateProviderInput({ messages: input.planningMessages, tools: input.tools }).tokens + 128;
     this.planningOutputTokens = Math.min(1_024, outputCeiling);
-    this.finalInputTokenLimit =
-      estimateProviderInput({ messages: input.finalMessages }).tokens + 1_536 + 128;
+    const finalBaseTokens = estimateProviderInput({ messages: input.finalMessages }).tokens + 128;
+    const minimumFinalOutput = Math.min(1_024, outputCeiling);
+    const sourceAllowance = Math.min(
+      1_536,
+      tokenLimit -
+        this.planningInputTokens -
+        this.planningOutputTokens -
+        finalBaseTokens -
+        minimumFinalOutput,
+    );
+    // Keep every instruction and argument. Only source excerpts can shrink,
+    // and boundFinalMessages marks their omitted content explicitly.
+    if (sourceAllowance < 512) throw new Error("connector_request_budget_exceeded");
+    this.finalInputTokenLimit = finalBaseTokens + sourceAllowance;
     const remainingOutput =
       tokenLimit - this.planningInputTokens - this.planningOutputTokens - this.finalInputTokenLimit;
     this.finalOutputTokens = Math.min(outputCeiling, remainingOutput);
-    if (this.finalOutputTokens < Math.min(1_024, outputCeiling))
+    if (this.finalOutputTokens < minimumFinalOutput)
       throw new Error("connector_request_budget_exceeded");
     this.reservedTokens =
       this.planningInputTokens +
