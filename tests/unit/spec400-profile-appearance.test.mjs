@@ -314,10 +314,10 @@ test("Settings utility and narrow headings use a page-only alignment rule; previ
   const layout = readFileSync("src/styles/settings-page-layout.css", "utf8");
   const preview = readFileSync("src/styles/appearance-settings.css", "utf8");
   assert.match(route, /<AppShell utilitiesInHeader hideUtilities>/);
-  assert.match(layout, /@container settings \(max-width: 719px\)/);
+  assert.match(layout, /@media \(max-width: 767px\)/);
   assert.match(
     layout,
-    /\.kova-settings-content-header\s*\{\s*padding-inline: 0;\s*margin-inline: 0;/,
+    /\.kova-settings-content-header\s*\{\s*min-height: 80px;\s*padding: 16px 72px 16px 12px;/,
   );
   assert.match(preview, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(preview, /width: 100%/);

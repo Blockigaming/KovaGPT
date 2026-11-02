@@ -28,6 +28,16 @@ const compiledView = ts.transpileModule(
     },
   },
 ).outputText;
+const compiledInlineView = ts.transpileModule(
+  readFileSync("src/components/ComposerDictationView.tsx", "utf8"),
+  {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+      jsx: ts.JsxEmit.ReactJSX,
+    },
+  },
+).outputText;
 const text = (node) =>
   node == null || typeof node === "boolean"
     ? ""
@@ -316,6 +326,15 @@ function fixture(initial = {}, options = {}) {
     },
   });
   modules["@/components/ComposerVoiceDialogView"] = viewExports;
+  const inlineViewExports = {};
+  vm.runInNewContext(compiledInlineView, {
+    exports: inlineViewExports,
+    require(name) {
+      assert.ok(name in modules, `Unexpected inline view import: ${name}`);
+      return modules[name];
+    },
+  });
+  modules["@/components/ComposerDictationView"] = inlineViewExports;
   const exports = {};
   vm.runInNewContext(compiled, {
     exports,
@@ -324,6 +343,7 @@ function fixture(initial = {}, options = {}) {
       return modules[name];
     },
     AbortController,
+    Event,
     Blob,
     File,
     FormData,
@@ -1906,3 +1926,45 @@ for (const mode of ["dictate", "voice"]) {
     }
   });
 }
+
+test("inline dictation starts once after the explicit open, adds reviewed text only, and closes safely", async () => {
+  const f = fixture({ inlineDictation: true });
+  assert.equal(f.microphoneRequests.length, 0, "capability check precedes microphone request");
+  await f.ready();
+  assert.equal(f.microphoneRequests.length, 1);
+  await f.flush();
+  assert.equal(f.microphoneRequests.length, 1, "rerenders do not request the microphone again");
+  const stream = await f.acquire();
+  assert.ok(f.nodes().some((node) => node.props.id === "kova-inline-dictation"));
+  await f.click("Stop and transcribe");
+  assert.ok(stream.tracks.every((track) => track.stopped > 0));
+  f.requests.at(-1).resolve(Response.json({ text: "A dictated message." }));
+  await f.flush();
+  assert.equal(
+    f.submitted.length,
+    0,
+    "transcription cannot send or change the draft automatically",
+  );
+  const use = f.nodes().find((node) => node.props["aria-label"] === "Use in chat");
+  assert.ok(use);
+  use.props.onClick();
+  await f.flush();
+  assert.deepEqual(f.submitted, ["A dictated message."]);
+  assert.deepEqual(f.closed, [false]);
+  assert.equal(f.voiceSubmissions.length, 0);
+  f.unmount();
+});
+
+test("canceling inline dictation rejects late microphone access and stops all acquired tracks", async () => {
+  const f = fixture({ inlineDictation: true });
+  await f.ready();
+  const cancel = f.nodes().find((node) => node.props["aria-label"] === "Cancel dictation");
+  cancel.props.onClick();
+  await f.flush();
+  const late = await f.acquire();
+  assert.ok(late.tracks.every((track) => track.stopped > 0));
+  assert.equal(f.recorders.length, 0);
+  assert.equal(f.requests.length, 1, "cancelled capture cannot upload audio");
+  assert.deepEqual(f.closed, [false]);
+  f.unmount();
+});

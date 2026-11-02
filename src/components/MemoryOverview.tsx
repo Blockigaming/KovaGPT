@@ -4,7 +4,13 @@ import { Link } from "@tanstack/react-router";
 import { listMemoryCenter, type MemoryRecord } from "@/lib/workspace.functions";
 import { MEMORY_SOURCES_CHANGED_EVENT } from "@/lib/memory-sources.mjs";
 
-export function MemoryOverview({ ownerId }: { ownerId: string | null }) {
+export function MemoryOverview({
+  ownerId,
+  automaticMemory = false,
+}: {
+  ownerId: string | null;
+  automaticMemory?: boolean;
+}) {
   const list = useServerFn(listMemoryCenter);
   const [state, setState] = useState<{
     owner: string | null;
@@ -54,7 +60,9 @@ export function MemoryOverview({ ownerId }: { ownerId: string | null }) {
             : current.error
               ? "Memory couldn't be loaded. Reopen this tab to retry."
               : !current.items.length
-                ? "No saved notes yet. Turn on conversation updates, or save a reviewed memory from a chat."
+                ? automaticMemory
+                  ? "No saved notes yet. Preferences and facts you share in synced chats will appear here automatically."
+                  : "No saved notes yet. Turn on conversation updates, or save a reviewed memory from a chat."
                 : current.items.slice(0, 3).map((item) => (
                     <p key={`${item.source}:${item.id}`} className="whitespace-pre-wrap">
                       {item.content.slice(0, 220)}
