@@ -83,7 +83,7 @@ export function ComposerPluginList({
     const contents = (
       <>
         <img
-          src={PLUGIN_BRAND_ASSET_URLS[plugin.id]}
+          src={PLUGIN_BRAND_ASSET_URLS[plugin.id === "outlook-calendar" ? "outlook" : plugin.id]}
           className="kova-composer-plugin-logo"
           alt=""
           aria-hidden="true"
