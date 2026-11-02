@@ -32,7 +32,11 @@ test("conversation branching records origin and truncates at a selected message"
   assert.match(store, /branchOrigin/);
   assert.match(store, /slice\(0, index \+ 1\)/);
   assert.match(store, /The selected message is no longer available/);
-  assert.match(read("src/components/ChatMessage.tsx"), /Branch from this message in a new chat/);
+  const message = read("src/components/ChatMessage.tsx");
+  const prompt = read("src/components/PromptMessage.tsx");
+  assert.match(message, /<PromptMessage[\s\S]*?onBranch=\{onBranch\}/);
+  assert.match(prompt, /Branch from this message in a new chat/);
+  assert.match(prompt, /<ContextMenuItem onSelect=\{onBranch\}/);
 });
 
 test("conversation outline derives only real prompts and headings", () => {

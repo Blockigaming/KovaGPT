@@ -70,6 +70,63 @@ async function billingPeriod(
 
 export type Acquisition = { eventId: string } | { rejection: string };
 
+/** A read-only sizing hint. acquireGeneration remains the atomic admission gate. */
+export async function getGenerationTokenHeadroom(input: {
+  userId: string;
+  plan: "free";
+  signal?: AbortSignal;
+}): Promise<{ tokenLimit: number; limitingQuota: "daily_tokens" | "monthly_tokens" }> {
+  const config = getAiRuntimeConfig();
+  const db = client();
+  const now = new Date();
+  const dayStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  let usedDay = 0;
+  let usedMonth = 0;
+  let expectedCount: number | undefined;
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    let query = db
+      .from("ai_usage_events")
+      .select("created_at,actual_billable_tokens,reserved_tokens", { count: "exact" })
+      .eq("user_id", input.userId)
+      .gte("created_at", monthStart)
+      .not("status", "in", "(quota_rejected,provider_rejected,provider_failed,accounting_failed)")
+      .order("id")
+      .range(offset, offset + pageSize - 1);
+    if (input.signal) query = query.abortSignal(input.signal);
+    const { data, error, count } = await query;
+    if (
+      error ||
+      !Array.isArray(data) ||
+      !Number.isSafeInteger(count) ||
+      count === null ||
+      count < 0 ||
+      count > 10_000 ||
+      (expectedCount !== undefined && count !== expectedCount)
+    )
+      throw new Error("usage_headroom_unavailable");
+    expectedCount = count;
+    for (const row of data) {
+      const tokens = row.actual_billable_tokens ?? row.reserved_tokens;
+      const created = Date.parse(row.created_at);
+      if (!Number.isSafeInteger(tokens) || tokens < 0 || !Number.isFinite(created))
+        throw new Error("usage_headroom_unavailable");
+      usedMonth += tokens;
+      if (created >= dayStart) usedDay += tokens;
+      if (!Number.isSafeInteger(usedMonth)) throw new Error("usage_headroom_unavailable");
+    }
+    if (offset + data.length === count) break;
+    if (data.length !== pageSize) throw new Error("usage_headroom_unavailable");
+  }
+  const daily = Math.max(0, planAllowance(config.maxTokensPerUserDay, input.plan) - usedDay);
+  const monthly = Math.max(0, planAllowance(config.maxTokensPerUserMonth, input.plan) - usedMonth);
+  return {
+    tokenLimit: Math.min(daily, monthly),
+    limitingQuota: daily <= monthly ? "daily_tokens" : "monthly_tokens",
+  };
+}
+
 export async function acquireGeneration(input: {
   requestId: string;
   idempotencyKey: string;
