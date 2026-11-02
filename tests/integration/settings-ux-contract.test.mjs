@@ -110,10 +110,16 @@ test("signed-out storage copy matches the implemented guest lifecycle", () => {
   assert.doesNotMatch(settingsSource, /chats and preferences stay only until/i);
 });
 
-test("Settings select controls expose stable accessible names", () => {
-  for (const label of ["Preferred response length", "Filter library by item type", "Appearance"]) {
+test("Settings selects and Library filters expose stable accessible names", async () => {
+  for (const label of ["Preferred response length", "Appearance"]) {
     assert.match(settingsSource, new RegExp(`aria-label="${label}"`));
   }
+  const librarySource = await readFile(
+    new URL("../../src/routes/library.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(librarySource, /aria-label="Filter Library items"/);
+  assert.match(librarySource, /role="group" aria-label="Library filters"/);
   const toneControls = matching(
     parsed,
     (node) =>

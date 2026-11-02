@@ -37,7 +37,8 @@ test("Modes, Pricing, and Help consume one typed capability registry", () => {
   assert.match(registry, /DAILY_PLAN_ALLOWANCES/);
   assert.match(registry, /DAILY_IMAGE_LIMIT_BY_TIER/);
   assert.match(registry, /DAILY_UPLOAD_LIMIT_BY_TIER/);
-  assert.match(registry, /STORAGE_LIMITS_BYTES/);
+  assert.match(registry, /const allowance = PLAN_ALLOWANCE_COPY\[tier\]/);
+  assert.match(registry, /allowance\.storage/);
   assert.match(registry, /BILLING_PLANS\.plus_monthly\.trialPeriodDays/);
 });
 
