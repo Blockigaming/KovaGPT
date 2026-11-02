@@ -1123,6 +1123,7 @@ export function SettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <Surface
+        style={tab === "billing" ? { width: "100vw", maxWidth: "100vw", height: "100dvh", maxHeight: "100dvh", inset: 0, transform: "none", borderRadius: 0 } : undefined}
         closeLabel="Close settings"
         data-ui-reference="chatgpt.settings"
         className={`kova-settings-dialog kova-settings-reference ${loggedIn ? "is-authenticated" : "is-guest"} bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border overflow-hidden flex flex-col gap-0 p-0`}
