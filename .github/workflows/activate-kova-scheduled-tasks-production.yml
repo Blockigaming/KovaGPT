@@ -80,7 +80,7 @@ jobs:
           const container = containers[0];
           const existingCommand = [...(container.command || []), ...(container.args || [])].join(" ");
           // Do not repurpose an existing job running a different workload.
-          if (existingCommand && !/scheduled[-_]?(execution|task)|production-worker\.mjs/.test(existingCommand))
+          if (/auth-email|notification-dispatch|receipt-maintenance/.test(existingCommand) ||\n              (existingCommand && !/scheduled[-_]?(execution|task)|scripts\/scheduled-tasks\/production-worker\.mjs/.test(existingCommand)))
             throw Error("job_is_used_by_another_workload");
           const env = container.env || [];
           if (!env.some(e => ["SCHEDULED_TASK_SECRET", "CRON_SECRET"].includes(e.name) && e.secretRef && !e.value))
