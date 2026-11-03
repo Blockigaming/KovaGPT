@@ -85,6 +85,7 @@ function fixture(options = {}) {
     "@/components/PasskeyPanel": { PasskeyPanel: "legacy-passkeys" },
     "@/components/KovaPasswordPanel": { KovaPasswordPanel: "owned-password" },
     "@/components/KovaPasskeyPanel": { KovaPasskeyPanel: "owned-passkeys" },
+    "@/components/HostedGitHubLinkPanel": { HostedGitHubLinkPanel: "hosted-github-link" },
     "@/lib/kova-auth-browser": {
       isKovaSessionActive: () => options.owned !== false,
       browserKovaAuthMode: () => options.browserMode ?? "dual",
