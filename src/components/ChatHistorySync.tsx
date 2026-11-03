@@ -125,7 +125,7 @@ export function ChatHistorySyncRuntime() {
     document.addEventListener("visibilitychange", readOnlyRefresh);
     event("connecting");
     async function acquire(lock: Lock | null): Promise<void> {
-      if (lifetime.signal.aborted) return;
+      if (!ownerId || lifetime.signal.aborted) return;
       if (!lock) {
         event("other_tab");
         await readOnlyRefresh();
