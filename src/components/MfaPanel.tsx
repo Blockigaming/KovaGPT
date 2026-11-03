@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { PasskeyPanel } from "@/components/PasskeyPanel";
 import { KovaPasswordPanel } from "@/components/KovaPasswordPanel";
 import { KovaPasskeyPanel } from "@/components/KovaPasskeyPanel";
+import { HostedGitHubLinkPanel } from "@/components/HostedGitHubLinkPanel";
 import {
   browserKovaAuthMode,
   clearKovaAuthCache,
@@ -385,6 +386,7 @@ export function MfaPanel() {
 
   return (
     <div className="space-y-4">
+      {!useKovaAuth ? <HostedGitHubLinkPanel /> : null}
       {!useKovaAuth ? <PasskeyPanel /> : null}
       {useKovaAuth ? <KovaPasskeyPanel /> : null}
       {useKovaAuth ? <KovaPasswordPanel /> : null}

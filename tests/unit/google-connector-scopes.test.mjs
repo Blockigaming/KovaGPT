@@ -138,8 +138,12 @@ test("actual chat Google-tool gate permits signed-in Default while retaining con
     source.indexOf("const googleContext =") + "const googleContext =".length,
     source.indexOf("? ((await preflight.run", source.indexOf("const googleContext =")),
   );
+  const greeting = source.slice(
+    source.indexOf("const simpleGreeting ="),
+    source.indexOf("const selectedHostedTool =", source.indexOf("const simpleGreeting =")),
+  );
   const enabled = (input) =>
-    vm.runInNewContext(`Boolean(${expression})`, {
+    vm.runInNewContext(`${greeting} Boolean(${expression})`, {
       selectedHostedTool: null,
       auth: { userId: "owner" },
       usesExistingContext: true,
@@ -150,7 +154,10 @@ test("actual chat Google-tool gate permits signed-in Default while retaining con
       ...input,
     });
   assert.equal(enabled({}), true);
+  assert.equal(enabled({ lastText: "Hi, find my latest email" }), true);
   for (const input of [
+    { lastText: "Hi" },
+    { lastText: "  Hello there!  " },
     { auth: null },
     { usesExistingContext: false },
     { hasAttachments: true },

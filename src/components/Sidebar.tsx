@@ -491,6 +491,74 @@ export function Sidebar({
     };
   }, [open]);
 
+  // Close the mobile drawer with a deliberate left swipe, without stealing
+  // vertical scrolling or horizontal gestures from nested scrollable controls.
+  useEffect(() => {
+    if (!open) return;
+    const drawer = drawerRef.current;
+    if (!drawer) return;
+    let start: { id: number; x: number; y: number; time: number } | null = null;
+    const onStart = (event: TouchEvent) => {
+      start = null;
+      if (!isMobileViewport() || event.touches.length !== 1 || !window.getSelection()?.isCollapsed)
+        return;
+      const target = event.target;
+      if (
+        !(target instanceof Element) ||
+        target.closest('input, textarea, select, [contenteditable="true"]')
+      )
+        return;
+      for (let el: Element | null = target; el && el !== drawer; el = el.parentElement) {
+        if (
+          el.scrollWidth > el.clientWidth + 1 &&
+          /^(auto|scroll)$/.test(getComputedStyle(el).overflowX)
+        )
+          return;
+      }
+      const t = event.touches[0];
+      start = { id: t.identifier, x: t.clientX, y: t.clientY, time: event.timeStamp };
+    };
+    const onMove = (event: TouchEvent) => {
+      if (!start) return;
+      if (
+        event.touches.length !== 1 ||
+        !window.getSelection()?.isCollapsed ||
+        event.timeStamp - start.time > 700
+      ) {
+        start = null;
+        return;
+      }
+      const t = event.touches[0];
+      if (t.identifier !== start.id) {
+        start = null;
+        return;
+      }
+      const dx = t.clientX - start.x;
+      const dy = Math.abs(t.clientY - start.y);
+      if (dy > 32 && dy > Math.abs(dx)) {
+        start = null;
+        return;
+      }
+      if (dx <= -72 && dy <= 48 && -dx >= dy * 2) {
+        start = null;
+        swipeToggleRef.current();
+      }
+    };
+    const reset = () => {
+      start = null;
+    };
+    drawer.addEventListener("touchstart", onStart, { passive: true });
+    drawer.addEventListener("touchmove", onMove, { passive: true });
+    drawer.addEventListener("touchend", reset);
+    drawer.addEventListener("touchcancel", reset);
+    return () => {
+      drawer.removeEventListener("touchstart", onStart);
+      drawer.removeEventListener("touchmove", onMove);
+      drawer.removeEventListener("touchend", reset);
+      drawer.removeEventListener("touchcancel", reset);
+    };
+  }, [open]);
+
   useEffect(() => {
     const openSearch = () => {
       setSearchOpen(true);

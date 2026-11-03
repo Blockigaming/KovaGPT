@@ -19,15 +19,19 @@ const visit = (node) => {
   ts.forEachChild(node, visit);
 };
 visit(ast);
-const attribute = (name, includes) =>
-  nodes
-    .find(
-      (node) =>
-        ts.isJsxAttribute(node) &&
-        node.name.getText(ast) === name &&
-        node.getText(ast).includes(includes),
-    )
-    .initializer.expression.getText(ast);
+const attribute = (name, includes) => {
+  const node = nodes.find(
+    (node) =>
+      ts.isJsxAttribute(node) &&
+      node.name.getText(ast) === name &&
+      node.getText(ast).includes(includes),
+  );
+  assert.ok(
+    node && ts.isJsxExpression(node.initializer),
+    `Missing ${name} handler containing ${includes}`,
+  );
+  return node.initializer.expression.getText(ast);
+};
 const compile = (code, deps) =>
   new Function(
     ...Object.keys(deps),
@@ -40,7 +44,8 @@ function fixture() {
   const hooks = createHookHarness(),
     module = deferred(),
     errors = [],
-    listeners = new Map();
+    listeners = new Map(),
+    timers = new Map();
   const selection = {
     isCollapsed: false,
     anchorNode: {},
@@ -77,13 +82,19 @@ function fixture() {
     return { selectedText, selectionOpen, selectionTarget, selectionInstruction, selectionAskOpen,
       selectionAskPassage, bodyRef, selectionActionsRef, lastSelectionRef, rememberSelection, openSelectionEdit,
       pointerDown: ${attribute("onPointerDown", "event.isPrimary")},
-      blur: ${attribute("onBlur", "rememberSelection")},
+
       ask: ${attribute("onClick", "setSelectionAskPassage(lastSelectionRef.current)")},
     };
   };`,
     {
       ...hooks.react,
       Element,
+      setTimeout: (callback) => {
+        const id = {};
+        timers.set(id, callback);
+        return id;
+      },
+      clearTimeout: (id) => timers.delete(id),
       document,
       window: { getSelection: () => selection },
       selectionModule: module.promise,
@@ -133,6 +144,14 @@ function fixture() {
     props,
     module,
     resolve: () => module.resolve({ locateSelection }),
+    selectionChanged() {
+      listeners.get("selectionchange")();
+      for (const [id, callback] of timers) {
+        timers.delete(id);
+        callback();
+      }
+      render();
+    },
     get view() {
       return view;
     },
@@ -192,7 +211,7 @@ test("keyboard focus in the toolbar retains the passage; leaving it clears a col
   f.render();
   assert.equal(f.view.selectedText, "chosen passage");
   f.document.activeElement = {};
-  f.view.blur({ currentTarget: f.view.selectionActionsRef.current, relatedTarget: null });
+  f.selectionChanged();
   f.render();
   assert.equal(f.view.selectedText, "");
   assert.equal(f.view.lastSelectionRef.current, "");

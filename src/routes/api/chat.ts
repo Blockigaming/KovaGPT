@@ -1511,6 +1511,14 @@ export const Route = createFileRoute("/api/chat")({
             //
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
+            // A greeting needs no external account access. Avoid loading every
+            // connected tool schema and reserving a second model call for it.
+            // This only skips connector discovery; normal auth, quota and
+            // per-request cost enforcement still run on the standard chat path.
+            const simpleGreeting =
+              /^(?:hi|hello|hey|hey there|hello there|hi there|good morning|good afternoon|good evening)[!?.\s]*$/i.test(
+                lastText.trim(),
+              );
             const selectedHostedTool = explicitHostedTool ? clientTool : null;
             const googleContext =
               !selectedHostedTool &&
@@ -1518,7 +1526,8 @@ export const Route = createFileRoute("/api/chat")({
               usesExistingContext &&
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
-              lastText.length > 0
+              lastText.length > 0 &&
+              !simpleGreeting
                 ? ((await preflight.run(
                     "connector_tools",
                     () => getGoogleToolContext(auth.userId),
@@ -1531,7 +1540,8 @@ export const Route = createFileRoute("/api/chat")({
               usesExistingContext &&
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
-              lastText.length > 0
+              lastText.length > 0 &&
+              !simpleGreeting
                 ? ((await preflight.run(
                     "other_connector_tools",
                     () => getConnectedToolContext(auth.userId),
