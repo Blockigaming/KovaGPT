@@ -497,10 +497,11 @@ export function Sidebar({
     if (!open) return;
     const drawer = drawerRef.current;
     if (!drawer) return;
-    let start: { id: number; x: number; y: number } | null = null;
+    let start: { id: number; x: number; y: number; time: number } | null = null;
     const onStart = (event: TouchEvent) => {
       start = null;
-      if (!isMobileViewport() || event.touches.length !== 1) return;
+      if (!isMobileViewport() || event.touches.length !== 1 || !window.getSelection()?.isCollapsed)
+        return;
       const target = event.target;
       if (
         !(target instanceof Element) ||
@@ -515,10 +516,18 @@ export function Sidebar({
           return;
       }
       const t = event.touches[0];
-      start = { id: t.identifier, x: t.clientX, y: t.clientY };
+      start = { id: t.identifier, x: t.clientX, y: t.clientY, time: event.timeStamp };
     };
     const onMove = (event: TouchEvent) => {
-      if (!start || event.touches.length !== 1) return;
+      if (!start) return;
+      if (
+        event.touches.length !== 1 ||
+        !window.getSelection()?.isCollapsed ||
+        event.timeStamp - start.time > 700
+      ) {
+        start = null;
+        return;
+      }
       const t = event.touches[0];
       if (t.identifier !== start.id) {
         start = null;
