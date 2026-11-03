@@ -29,7 +29,11 @@ test("GitHub login rejects unrelated and malicious redirects", () => {
     );
   }
   assert.throws(
-    () => validateHostedGitHubLoginRedirect("https://example.supabase.co/auth/v1/authorize?provider=github", ""),
+    () =>
+      validateHostedGitHubLoginRedirect(
+        "https://example.supabase.co/auth/v1/authorize?provider=github",
+        "",
+      ),
     /github_login_redirect_invalid/,
   );
 });
