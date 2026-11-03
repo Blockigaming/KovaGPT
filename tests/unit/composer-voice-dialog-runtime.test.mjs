@@ -534,7 +534,7 @@ test("opening, guests, missing configuration, and playback-only setup never requ
   normal.unmount();
 });
 
-test("recording submits authenticated multipart, reviews edits, and only inserts after Use in chat", async () => {
+test("recording submits authenticated multipart and inserts dictation directly in the draft", async () => {
   const f = fixture();
   await f.ready();
   const stream = await f.recordToRequest();
@@ -548,54 +548,11 @@ test("recording submits authenticated multipart, reviews edits, and only inserts
   assert.equal(call.init.body.get("audio").type, "audio/wav");
   call.resolve(Response.json({ text: "Original text" }));
   await f.flush();
-  assert.deepEqual(f.submitted, []);
-  let input = f.nodes().find((node) => node.type === "textarea").props;
-  input.onChange({ target: { value: "" } });
-  await f.flush();
-  assert.ok(
-    f.nodes().some((node) => node.type === "textarea"),
-    "Empty review remains editable",
-  );
-  assert.equal(f.control("Use in chat").disabled, true);
-  input = f.nodes().find((node) => node.type === "textarea").props;
-  input.onChange({ target: { value: "  Reviewed text  " } });
-  await f.flush();
-  const useReviewed = f.control("Use in chat");
-  useReviewed.onClick();
-  useReviewed.onClick();
-  await f.flush();
-  assert.deepEqual(f.submitted, ["Reviewed text"]);
+  assert.deepEqual(f.submitted, ["Original text"]);
   assert.deepEqual(f.closed, [false]);
+  assert.equal(f.voiceSubmissions.length, 0);
   f.unmount();
 });
-
-for (const change of [{ userId: "owner-b" }, { contextKey: "chat-b" }, { open: false }]) {
-  test(`stale capability/transcription results cannot escape ${JSON.stringify(change)}`, async () => {
-    const config = fixture();
-    const old = config.requests[0];
-    await config.update(change);
-    assert.equal(old.init.signal.aborted, true);
-    old.resolve(Response.json(configured));
-    await config.flush();
-    assert.ok(
-      !config
-        .nodes()
-        .some((node) => node.type === "button" && text(node).trim() === "Start recording"),
-    );
-    config.unmount();
-    const f = fixture();
-    await f.ready();
-    await f.recordToRequest();
-    const pending = f.requests.at(-1);
-    await f.update(change);
-    assert.equal(pending.init.signal.aborted, true);
-    pending.resolve(Response.json({ text: "Stale secret transcript" }));
-    await f.flush();
-    assert.doesNotMatch(f.text(), /Stale secret transcript/);
-    assert.deepEqual(f.submitted, []);
-    f.unmount();
-  });
-}
 
 test("cancelled microphone prompts stop every late-acquired track and do not record", async () => {
   const f = fixture();
@@ -851,10 +808,8 @@ test("normalization failure retains the original recording for explicit retry wi
   assert.equal(f.preparations[0].blob, f.preparations[1].blob);
   f.requests.at(-1).resolve(Response.json({ text: "Recovered recording" }));
   await f.flush();
-  assert.equal(
-    f.nodes().find((node) => node.type === "textarea").props.value,
-    "Recovered recording",
-  );
+  assert.deepEqual(f.submitted, ["Recovered recording"]);
+  assert.deepEqual(f.closed, [false]);
   assert.ok(
     !f
       .nodes()
@@ -893,30 +848,19 @@ test("late audio conversion cannot upload after cancel, close, account/context c
   }
 });
 
-test("provider failure preserves both recording retry and edited transcript; Cancel drops retained audio", async () => {
+test("provider failure retains retryable audio and recovery inserts transcript directly", async () => {
   const f = fixture();
   await f.ready();
   await f.recordToRequest();
-  f.requests.at(-1).resolve(Response.json({ text: "Original draft" }));
+  f.requests.at(-1).resolve(Response.json({ error: "voice_provider_unavailable" }, { status: 502 }));
   await f.flush();
-  f.nodes()
-    .find((node) => node.type === "textarea")
-    .props.onChange({ target: { value: "Edited draft" } });
-  await f.flush();
-  await f.recordToRequest();
-  f.requests
-    .at(-1)
-    .resolve(Response.json({ error: "voice_provider_unavailable" }, { status: 502 }));
-  await f.flush();
-  assert.equal(f.nodes().find((node) => node.type === "textarea").props.value, "Edited draft");
   assert.equal(f.control("Retry transcription").disabled, false);
-  await f.click("Cancel");
-  assert.ok(
-    !f
-      .nodes()
-      .some((node) => node.type === "button" && text(node).trim() === "Retry transcription"),
-  );
-  assert.equal(f.nodes().find((node) => node.type === "textarea").props.value, "Edited draft");
+  assert.deepEqual(f.submitted, []);
+  await f.click("Retry transcription");
+  f.requests.at(-1).resolve(Response.json({ text: "Recovered draft" }));
+  await f.flush();
+  assert.deepEqual(f.submitted, ["Recovered draft"]);
+  assert.deepEqual(f.closed, [false]);
   f.unmount();
 });
 
@@ -1350,13 +1294,8 @@ test("transcript and playback prioritize their content while inactive voice uses
   await f.recordToRequest();
   f.requests.at(-1).resolve(Response.json({ text: "A transcript that remains fully editable." }));
   await f.flush();
-  assert.equal(
-    f.nodes().find((node) => node.type === "DialogContent").props["data-voice-content-first"],
-    "true",
-  );
-  assert.ok(!f.nodes().some((node) => node.props?.className === "kova-voice-mark"));
-  assert.equal(f.nodes().find((node) => node.type === "textarea").props.disabled, false);
-  assert.equal(f.control("Use in chat").disabled, false);
+  assert.deepEqual(f.submitted, ["A transcript that remains fully editable."]);
+  assert.deepEqual(f.closed, [false]);
   f.unmount();
 
   const playback = fixture();
@@ -1503,7 +1442,6 @@ test("Dictate still produces a composer draft when conversation speech is unavai
   assert.equal(f.requests.at(-1).init.body.get("action"), "stt");
   f.requests.at(-1).resolve(Response.json({ text: "Available dictation" }));
   await f.flush();
-  await f.click("Use in chat");
   assert.deepEqual(f.submitted, ["Available dictation"]);
   assert.equal(f.voiceSubmissions.length, 0);
   assert.equal(f.requests.filter((request) => request.url === "/api/speech").length, 0);
@@ -1940,16 +1878,8 @@ test("inline dictation starts once after the explicit open, adds reviewed text o
   assert.ok(stream.tracks.every((track) => track.stopped > 0));
   f.requests.at(-1).resolve(Response.json({ text: "A dictated message." }));
   await f.flush();
-  assert.equal(
-    f.submitted.length,
-    0,
-    "transcription cannot send or change the draft automatically",
-  );
-  const use = f.nodes().find((node) => node.props["aria-label"] === "Use in chat");
-  assert.ok(use);
-  use.props.onClick();
-  await f.flush();
   assert.deepEqual(f.submitted, ["A dictated message."]);
+  assert.equal(f.voiceSubmissions.length, 0, "Dictation must not send chat automatically");
   assert.deepEqual(f.closed, [false]);
   assert.equal(f.voiceSubmissions.length, 0);
   f.unmount();
