@@ -75,6 +75,7 @@ import {
 } from "@/lib/sidebar-layout.mjs";
 import "@/styles/sidebar-personalization.css";
 import { requestDrawerNavigationFocus } from "@/lib/drawer-navigation-focus";
+import { isClearSidebarSwipe } from "@/lib/sidebar-swipe.mjs";
 
 const SHORTCUT_ICONS: Record<SidebarShortcutId, SidebarGlyph> = {
   images: ImagesGlyph,
@@ -438,7 +439,7 @@ export function Sidebar({
         !(target instanceof Element) ||
         !target.closest(".kova-assistant, .kova-app-shell") ||
         target.closest(
-          'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+          'button, a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable]:not([contenteditable="false"])',
         ) ||
         document.querySelector('[aria-modal="true"], dialog[open]') ||
         !window.getSelection()?.isCollapsed
@@ -469,12 +470,12 @@ export function Sidebar({
       }
       const dx = touch.clientX - gesture.x;
       const dy = Math.abs(touch.clientY - gesture.y);
-      if (event.timeStamp - gesture.time > 700 || dx < -24 || (dy > 24 && dy > Math.abs(dx))) {
+      if (event.timeStamp - gesture.time > 750 || dx > 24 || (dy > 24 && dy > Math.abs(dx))) {
         reset();
         return;
       }
-      // A clear, quick right swipe can start anywhere on the page.
-      if (dx >= 96 && dy <= 48 && dx >= dy * 2) {
+      // Right-to-left opens, as requested; clear horizontal intent is required.
+      if (isClearSidebarSwipe({ open: false, dx, dy, elapsedMs: event.timeStamp - gesture.time })) {
         reset();
         swipeToggleRef.current();
       }
@@ -505,7 +506,7 @@ export function Sidebar({
       const target = event.target;
       if (
         !(target instanceof Element) ||
-        target.closest('input, textarea, select, [contenteditable="true"]')
+        target.closest('button:not(.kova-sidebar-scrim), a, input, textarea, select, [role="button"], [role="link"], [role="slider"], [contenteditable="true"]')
       )
         return;
       for (let el: Element | null = target; el && el !== drawer; el = el.parentElement) {
@@ -539,7 +540,7 @@ export function Sidebar({
         start = null;
         return;
       }
-      if (dx <= -72 && dy <= 48 && -dx >= dy * 2) {
+      if (isClearSidebarSwipe({ open: true, dx, dy, elapsedMs: event.timeStamp - start.time })) {
         start = null;
         swipeToggleRef.current();
       }
@@ -975,7 +976,7 @@ export function Sidebar({
           : tier === "plus"
             ? "Plus"
             : "Free"
-        : "View your plan";
+        : "Plan unavailable";
 
   return (
     <>
@@ -1626,21 +1627,6 @@ export function Sidebar({
             </section>
           </div>
 
-          {signedIn ? (
-            <div className="kova-sidebar-help">
-              <button
-                className="kova-nav-row"
-                type="button"
-                onClick={() => {
-                  closeAfterMobileNavigation("/help");
-                  onOpenHelp();
-                }}
-              >
-                {icon(CircleHelp)}
-                <span>Help</span>
-              </button>
-            </div>
-          ) : null}
           <footer className="kova-sidebar-footer">
             {signedIn ? (
               <>
@@ -1662,31 +1648,42 @@ export function Sidebar({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="top" align="end" className="kova-profile-menu">
-                    <DropdownMenuLabel className="max-w-64 break-words font-normal">
-                      {accountEmail || "Email unavailable"}
+                    <DropdownMenuLabel className="kova-profile-menu-account">
+                      <span className="kova-profile-menu-avatar" aria-hidden="true">
+                        {avatarUrl ? <img src={avatarUrl} alt="" /> : accountInitial || <UserRound size={20} />}
+                      </span>
+                      <span className="min-w-0">
+                        <strong className="block truncate">{displayName}</strong>
+                        <small className="block truncate text-muted-foreground">{planLabel}</small>
+                        {accountEmail ? <small className="block truncate text-muted-foreground">{accountEmail}</small> : null}
+                      </span>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {tierStatus === "ready" && tier !== "pro" ? (
-                      <>
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            closeAfterMobileNavigation("/settings/billing");
-                            onOpenSettings("billing");
-                          }}
-                        >
-                          <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-                          Upgrade plan
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                      </>
-                    ) : null}
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        closeAfterMobileNavigation("/settings/billing");
+                        onOpenSettings("billing");
+                      }}
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+                      {tierStatus === "ready" && tier === "pro" ? "Manage plan" : "Upgrade plan"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        closeAfterMobileNavigation("/settings/general");
+                        onOpenSettings("general");
+                      }}
+                    >
+                      <CustomizeGlyph className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Personalization
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onSelect={() => {
                         closeAfterMobileNavigation("/settings/profile");
                         onOpenSettings("personalization");
                       }}
                     >
-                      <UserRound className="mr-2 h-4 w-4" />
+                      <UserRound className="mr-2 h-4 w-4" aria-hidden="true" />
                       Profile
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -1695,42 +1692,26 @@ export function Sidebar({
                         onOpenSettings("appearance");
                       }}
                     >
-                      <SettingsIcon className="mr-2 h-4 w-4" /> Settings
+                      <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Settings
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/settings/usage");
-                        onOpenSettings("usage");
-                      }}
-                    >
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Usage
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/settings/billing");
-                        onOpenSettings("billing");
-                      }}
-                    >
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Subscriptions
-                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onSelect={() => {
                         closeAfterMobileNavigation("/help");
                         onOpenHelp();
                       }}
                     >
-                      <CircleHelp className="mr-2 h-4 w-4" /> Help
+                      <CircleHelp className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Help
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onSelect={() => {
                         closeAfterMobileNavigation();
                         onOpenSettings("logout");
                       }}
                     >
-                      <LogOut className="mr-2 h-4 w-4" />
+                      <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
                       Log out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
