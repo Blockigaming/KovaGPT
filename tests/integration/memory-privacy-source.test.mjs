@@ -37,7 +37,7 @@ test("Temporary Chat enforces clean or personalized context without new memory",
   const chatApi = read("src/routes/api/chat.ts");
   const dialog = read("src/components/TemporaryChatStartDialog.tsx");
   const chatStore = read("src/lib/chat-store.ts");
-  const requestStart = page.indexOf('authFetch("/api/chat"');
+  const requestStart = page.indexOf('fetchChatWithAdmissionRetry(authFetch, "/api/chat"');
   const requestEnd = page.indexOf("signal: controller.signal", requestStart);
   assert.ok(requestStart >= 0 && requestEnd > requestStart);
   const chatRequest = page.slice(requestStart, requestEnd);
