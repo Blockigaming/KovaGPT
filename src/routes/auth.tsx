@@ -7,13 +7,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
-import { supabase } from "@/integrations/supabase/client";
-import { getEmailAuthRedirectUri, getSafePostAuthRedirect } from "@/lib/oauth-session";
-import { browserKovaAuthEnabled, kovaPublicAuthJson } from "@/lib/kova-auth-browser";
+import { resolveLegacyAuthContext, supabase } from "@/integrations/supabase/client";
+import {
+  getEmailAuthRedirectUri,
+  getOAuthRedirectUri,
+  getSafePostAuthRedirect,
+  rememberPostAuthRedirect,
+} from "@/lib/oauth-session";
+import {
+  browserKovaAuthEnabled,
+  browserKovaAuthMode,
+  kovaPublicAuthJson,
+} from "@/lib/kova-auth-browser";
 import { signInWithKovaPasskey } from "@/lib/kova-auth-passkey-browser";
 import { browserSupportsPasskeys } from "@/lib/passkey-support";
 import { cn } from "@/lib/utils";
 import { authRetryDelay } from "@/lib/auth-retry-delay.mjs";
+import { useAuthProviders } from "@/hooks/useAuthProviders";
+import githubLogo from "@/assets/plugins/github.svg";
+import { validateHostedGitHubLoginRedirect } from "@/lib/hosted-github-login-redirect.mjs";
 
 type AuthSearch = {
   email?: string;
@@ -74,6 +86,9 @@ function AuthPage() {
   const navigate = useNavigate();
   const isSignUp = search.mode === "sign-up";
   const useKovaAuth = browserKovaAuthEnabled();
+  const providers = useAuthProviders();
+  const githubAvailable =
+    browserKovaAuthMode() !== "kova" && providers.resolved && providers.github;
   const minimumPasswordLength = useKovaAuth ? 12 : 6;
 
   const [email, setEmail] = useState(search.email ?? "");
@@ -84,6 +99,7 @@ function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
   const [passkeySupported, setPasskeySupported] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
@@ -320,6 +336,36 @@ function AuthPage() {
     }
   };
 
+  const submitGitHub = async () => {
+    if (loading || githubLoading || !githubAvailable || hasMfaChallenge) return;
+    clearAuthError();
+    setGithubLoading(true);
+    try {
+      // Hosted GitHub authority is supported only while hosted auth is enabled.
+      // Never exchange GitHub connector credentials or forge a Kova-owned session.
+      const context = await resolveLegacyAuthContext();
+      context.assertCurrent();
+      rememberPostAuthRedirect();
+      const { data, error } = await context.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo: getOAuthRedirectUri(),
+          skipBrowserRedirect: true,
+        },
+      });
+      context.assertCurrent();
+      if (error || !data?.url) throw new Error("github_login_unavailable");
+      const destination = validateHostedGitHubLoginRedirect(
+        data.url,
+        import.meta.env.VITE_SUPABASE_URL,
+      );
+      window.location.assign(destination);
+    } catch {
+      showAuthError("GitHub sign in could not start. Please try again.");
+      setGithubLoading(false);
+    }
+  };
+
   const submitPasskey = async () => {
     if (!useKovaAuth || !browserSupportsPasskeys() || !guard()) return;
     const feedbackRevision = authFeedbackRef.current.revision;
@@ -439,6 +485,38 @@ function AuthPage() {
           >
             Continue with a passkey
           </Button>
+        ) : null}
+        {!hasMfaChallenge && !magicSent && browserKovaAuthMode() !== "kova" ? (
+          <div className="mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading || githubLoading || !githubAvailable}
+              aria-busy={githubLoading}
+              aria-describedby={!githubAvailable ? "kova-github-auth-status" : undefined}
+              onClick={() => void submitGitHub()}
+              className="h-12 w-full rounded-full"
+            >
+              <img
+                src={githubLogo}
+                alt=""
+                aria-hidden="true"
+                className="mr-2 h-5 w-5 dark:invert"
+              />
+              {githubLoading ? "Connecting to GitHub…" : "Continue with GitHub"}
+            </Button>
+            {!githubAvailable ? (
+              <p
+                id="kova-github-auth-status"
+                role="status"
+                className="mt-2 text-xs text-muted-foreground"
+              >
+                {!providers.resolved && !providers.error
+                  ? "Checking GitHub sign-in availability…"
+                  : "GitHub sign-in is not enabled for this deployment. Use email or another sign-in method."}
+              </p>
+            ) : null}
+          </div>
         ) : null}
         {hasMfaChallenge ? (
           <form onSubmit={submitMfa} className="space-y-3">

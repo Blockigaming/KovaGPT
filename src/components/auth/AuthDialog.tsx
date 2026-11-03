@@ -7,6 +7,7 @@ import { resolveLegacyAuthContext, supabase } from "@/integrations/supabase/clie
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import githubLogo from "@/assets/plugins/github.svg";
+import { validateHostedGitHubLoginRedirect } from "@/lib/hosted-github-login-redirect.mjs";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
   getEmailAuthRedirectUri,
@@ -193,7 +194,11 @@ export function AuthDialog({
   const githubAvailable =
     browserKovaAuthMode() !== "kova" && providers.resolved && providers.github;
   const handleGithub = async () => {
-    if (!githubAvailable || !guard("github")) return;
+    if (!githubAvailable) {
+      toast.error("GitHub sign in is not enabled for this deployment.");
+      return;
+    }
+    if (!guard("github")) return;
     try {
       const context = await resolveLegacyAuthContext();
       context.assertCurrent();
@@ -205,7 +210,9 @@ export function AuthDialog({
       context.assertCurrent();
       if (error) throw error;
       if (!data?.url) throw new Error("github_redirect_missing");
-      window.location.assign(data.url);
+      window.location.assign(
+        validateHostedGitHubLoginRedirect(data.url, import.meta.env.VITE_SUPABASE_URL),
+      );
     } catch {
       toast.error("GitHub sign in could not start. Please try again.");
     } finally {
