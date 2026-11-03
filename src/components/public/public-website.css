@@ -27,7 +27,6 @@
 }
 .public-website-brand {
   display: inline-flex;
-  min-height: 44px;
   align-items: center;
   gap: 10px;
   text-decoration: none;
@@ -523,6 +522,9 @@
 }
 .kova-footer-brand {
   min-width: 0;
+}
+.kova-footer-brand .public-website-brand {
+  min-height: 44px;
 }
 .kova-footer-nav {
   display: grid;
