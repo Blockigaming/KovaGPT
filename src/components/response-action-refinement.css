@@ -150,3 +150,23 @@ body .kova-response-menu[role="menu"] {
   overflow-x: hidden;
   overscroll-behavior: contain;
 }
+
+/* Keep response actions aligned to the answer's leading edge rather than
+   inheriting margins from surrounding message rows. */
+.kova-message-reading-column > .flex > .kova-response-action-bar {
+  margin-left: 0;
+  margin-right: auto;
+  justify-content: flex-start;
+}
+/* A single accessible keyboard focus treatment: avoid stacking browser
+   outlines with the app's own focus ring on action controls. */
+.kova-message-actions button:focus:not(:focus-visible),
+.kova-selection-actions button:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+.kova-message-actions button:focus-visible,
+.kova-selection-actions button:focus-visible {
+  outline: 1px solid var(--ring);
+  outline-offset: 2px;
+}
