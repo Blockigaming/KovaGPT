@@ -5,7 +5,13 @@ import test from "node:test";
 import ts from "typescript";
 
 const source = readFileSync("src/components/ChatHistorySync.tsx", "utf8");
-const ast = ts.createSourceFile("ChatHistorySync.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const ast = ts.createSourceFile(
+  "ChatHistorySync.tsx",
+  source,
+  ts.ScriptTarget.Latest,
+  true,
+  ts.ScriptKind.TSX,
+);
 let callback;
 function visit(node) {
   if (ts.isFunctionDeclaration(node) && node.name?.text === "acquire") callback = node;
@@ -39,7 +45,9 @@ function harness() {
     notifyChatHistoryChanged: () => {},
     tick: async () => {},
     createChatHistoryController: () => ({
-      initialize: async () => { initialized += 1; },
+      initialize: async () => {
+        initialized += 1;
+      },
     }),
     navigator: {
       locks: {
@@ -49,7 +57,11 @@ function harness() {
           assert.equal(options.steal, undefined);
           assert.equal(options.ifAvailable, undefined);
           return new Promise((resolve, reject) => {
-            options.signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+            options.signal.addEventListener(
+              "abort",
+              () => reject(new DOMException("Aborted", "AbortError")),
+              { once: true },
+            );
             requests.push({ acquire, resolve, reject });
           });
         },
@@ -60,7 +72,11 @@ function harness() {
   return { acquire, context, lifetime, requests, events, view, initialized: () => initialized };
 }
 
-const flush = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
+const flush = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+};
 
 test("a blocked tab waits without stealing or writing and resumes on release", async () => {
   const h = harness();
@@ -106,7 +122,10 @@ test("ownership initialization must finish before the composer becomes writable"
   const h = harness();
   let finish;
   h.context.createChatHistoryController = () => ({
-    initialize: () => new Promise((resolve) => { finish = resolve; }),
+    initialize: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
   });
   const owned = h.acquire({ name: "kova-chat-history:owner-a" });
   await flush();
@@ -122,7 +141,10 @@ test("an owner stopped during initialization cannot enable editing", async () =>
   const h = harness();
   let finish;
   h.context.createChatHistoryController = () => ({
-    initialize: () => new Promise((resolve) => { finish = resolve; }),
+    initialize: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
   });
   const owned = h.acquire({ name: "kova-chat-history:owner-a" });
   await flush();
