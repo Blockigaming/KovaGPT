@@ -228,7 +228,12 @@ test("New chat, Search, customization and Settings invoke their existing callbac
     ({ type, children }) => type === "DropdownMenuItem" && children.includes("Settings"),
   );
   settings.props.onSelect();
-  assert.deepEqual(f.calls, [["new"], ["search"], ["customize", opener], ["settings", "appearance"]]);
+  assert.deepEqual(f.calls, [
+    ["new"],
+    ["search"],
+    ["customize", opener],
+    ["settings", "appearance"],
+  ]);
 });
 
 test("Search without a workspace callback opens the existing chat search", () => {
