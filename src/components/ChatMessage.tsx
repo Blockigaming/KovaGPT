@@ -1145,6 +1145,11 @@ function ChatMessageInner({
                   )
                     event.preventDefault();
                 }}
+                onBlur={(event) => {
+                  // When keyboard focus leaves the toolbar, clear a collapsed selection.
+                  // This does not suppress native pointer-based selection or Copy.
+                  if (!event.currentTarget.contains(event.relatedTarget)) rememberSelection();
+                }}
               >
                 {onDraftPrompt && (
                   <button
