@@ -524,7 +524,7 @@
   min-width: 0;
 }
 .kova-footer-brand .public-website-brand {
-  min-height: 44px;
+  min-height: 45px;
 }
 .kova-footer-nav {
   display: grid;
@@ -544,7 +544,7 @@
 }
 .kova-footer-nav a {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 45px;
   padding: 8px 0;
   color: #ededed;
   text-decoration: none;
@@ -682,7 +682,6 @@
     gap: 35px 25px;
   }
   .kova-footer-nav a {
-    min-height: 44px;
     padding: 10px 0;
   }
   .kova-footer-copyright {
