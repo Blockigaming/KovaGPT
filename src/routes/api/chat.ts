@@ -1519,6 +1519,15 @@ export const Route = createFileRoute("/api/chat")({
               /^(?:hi|hello|hey|hey there|hello there|hi there|good morning|good afternoon|good evening)[!?.\s]*$/i.test(
                 lastText.trim(),
               );
+            // These complete, literal requests need no connected account data.
+            // Keep ambiguous follow-ups and all external-data requests on the
+            // normal planner path, with its existing authorization and budget.
+            const selfContainedTurn =
+              simpleGreeting ||
+              /^(?:reply|respond)(?: with)? exactly\s*:\s*[^\r\n]{1,240}$/i.test(lastText.trim()) ||
+              /^(?:(?:what is|what's|calculate|compute)\s+)?[-+]?\d+(?:\.\d+)?(?:\s*[+*/×÷-]\s*[-+]?\d+(?:\.\d+)?)+\s*[?!.]?$/i.test(
+                lastText.trim(),
+              );
             const selectedHostedTool = explicitHostedTool ? clientTool : null;
             const googleContext =
               !selectedHostedTool &&
@@ -1527,7 +1536,7 @@ export const Route = createFileRoute("/api/chat")({
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
               lastText.length > 0 &&
-              !simpleGreeting
+              !selfContainedTurn
                 ? ((await preflight.run(
                     "connector_tools",
                     () => getGoogleToolContext(auth.userId),
@@ -1541,7 +1550,7 @@ export const Route = createFileRoute("/api/chat")({
               (!customKova || customKova.config.apps.length > 0) &&
               !hasAttachments &&
               lastText.length > 0 &&
-              !simpleGreeting
+              !selfContainedTurn
                 ? ((await preflight.run(
                     "other_connector_tools",
                     () => getConnectedToolContext(auth.userId),

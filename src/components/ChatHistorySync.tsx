@@ -179,6 +179,7 @@ export function ChatHistorySyncRuntime() {
           void tick();
         }
       } catch {
+        if (lifetime.signal.aborted) return;
         view.writable = true;
         unregister();
         event("device_error");
@@ -238,7 +239,8 @@ export function ChatHistorySyncStatus() {
     offline: "Chat sync is offline. Device changes are retained.",
     device_error:
       "Chat history could not be saved on this device. Keep this page open and export important drafts.",
-    other_tab: "Chat editing is open in another tab. Close that tab to resume editing here automatically.",
+    other_tab:
+      "Chat editing is open in another tab. Close that tab to resume editing here automatically.",
     unavailable: "Account chat sync is unavailable in this browser.",
     cleared: "Device history was cleared. Reload to resume account sync.",
   };

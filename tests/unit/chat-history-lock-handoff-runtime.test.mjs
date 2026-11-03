@@ -57,12 +57,16 @@ function harness() {
           assert.equal(options.steal, undefined);
           assert.equal(options.ifAvailable, undefined);
           return new Promise((resolve, reject) => {
-            options.signal.addEventListener(
-              "abort",
-              () => reject(new DOMException("Aborted", "AbortError")),
-              { once: true },
-            );
-            requests.push({ acquire, resolve, reject });
+            const abort = () => reject(new DOMException("Aborted", "AbortError"));
+            options.signal.addEventListener("abort", abort, { once: true });
+            requests.push({
+              acquire(lock) {
+                options.signal.removeEventListener("abort", abort);
+                return acquire(lock);
+              },
+              resolve,
+              reject,
+            });
           });
         },
       },
@@ -152,4 +156,22 @@ test("an owner stopped during initialization cannot enable editing", async () =>
   finish();
   await owned;
   assert.equal(h.view.writable, false);
+});
+
+test("cancelled initialization cannot restore a stopped owner's writable state", async () => {
+  const h = harness();
+  let fail;
+  h.context.createChatHistoryController = () => ({
+    initialize: () =>
+      new Promise((resolve, reject) => {
+        fail = reject;
+      }),
+  });
+  const owned = h.acquire({ name: "kova-chat-history:owner-a" });
+  await flush();
+  h.lifetime.abort();
+  fail(new DOMException("Aborted", "AbortError"));
+  await owned;
+  assert.equal(h.view.writable, false);
+  assert.deepEqual(h.events, ["connecting"]);
 });
