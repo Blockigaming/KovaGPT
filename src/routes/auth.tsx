@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { authRetryDelay } from "@/lib/auth-retry-delay.mjs";
 import { useAuthProviders } from "@/hooks/useAuthProviders";
 import githubLogo from "@/assets/plugins/github.svg";
+import { validateHostedGitHubLoginRedirect } from "@/lib/hosted-github-login-redirect.mjs";
 
 type AuthSearch = {
   email?: string;
@@ -354,17 +355,11 @@ function AuthPage() {
       });
       context.assertCurrent();
       if (error || !data?.url) throw new Error("github_login_unavailable");
-      const destination = new URL(data.url);
-      const configuredOrigin = new URL(import.meta.env.VITE_SUPABASE_URL);
-      if (
-        destination.protocol !== "https:" ||
-        destination.origin !== configuredOrigin.origin ||
-        destination.pathname !== "/auth/v1/authorize" ||
-        destination.searchParams.get("provider") !== "github"
-      ) {
-        throw new Error("github_login_redirect_invalid");
-      }
-      window.location.assign(destination.toString());
+      const destination = validateHostedGitHubLoginRedirect(
+        data.url,
+        import.meta.env.VITE_SUPABASE_URL,
+      );
+      window.location.assign(destination);
     } catch {
       showAuthError("GitHub sign in could not start. Please try again.");
       setGithubLoading(false);
