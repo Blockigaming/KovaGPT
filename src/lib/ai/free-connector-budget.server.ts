@@ -67,11 +67,11 @@ export class FreeConnectorBudget {
     // result envelopes and source excerpts that will be repeated in the final call.
     this.planningInputTokens =
       estimateProviderInput({ messages: input.planningMessages, tools: input.tools }).tokens + 128;
-    this.planningOutputTokens = Math.min(1_024, outputCeiling);
+    this.planningOutputTokens = Math.min(384, outputCeiling);
     const finalBaseTokens = estimateProviderInput({ messages: input.finalMessages }).tokens + 128;
-    const minimumFinalOutput = Math.min(1_024, outputCeiling);
+    const minimumFinalOutput = Math.min(768, outputCeiling);
     const sourceAllowance = Math.min(
-      1_536,
+      1_024,
       tokenLimit -
         this.planningInputTokens -
         this.planningOutputTokens -
@@ -80,7 +80,7 @@ export class FreeConnectorBudget {
     );
     // Keep every instruction and argument. Only source excerpts can shrink,
     // and boundFinalMessages marks their omitted content explicitly.
-    if (sourceAllowance < 512) throw new Error("connector_request_budget_exceeded");
+    if (sourceAllowance < 256) throw new Error("connector_request_budget_exceeded");
     this.finalInputTokenLimit = finalBaseTokens + sourceAllowance;
     const remainingOutput =
       tokenLimit - this.planningInputTokens - this.planningOutputTokens - this.finalInputTokenLimit;

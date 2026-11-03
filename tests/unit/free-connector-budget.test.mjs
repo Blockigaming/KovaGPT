@@ -56,13 +56,13 @@ test("remaining tokens can shorten marked source excerpts while preserving the f
     full.planningInputTokens +
     full.planningOutputTokens +
     full.finalInputTokenLimit -
-    1_536 +
-    512 +
-    1_024;
+    1_024 +
+    256 +
+    768;
   const tight = budget({ tokenLimit: floor });
   assert.equal(tight.reservedTokens, floor);
-  assert.equal(tight.finalOutputTokens, 1_024);
-  assert.equal(tight.finalInputTokenLimit, full.finalInputTokenLimit - 1_024);
+  assert.equal(tight.finalOutputTokens, 768);
+  assert.equal(tight.finalInputTokenLimit, full.finalInputTokenLimit - 768);
   assert.throws(() => budget({ tokenLimit: floor - 1 }), /budget/);
 });
 
