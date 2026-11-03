@@ -1258,12 +1258,12 @@ function ChatMessageInner({
                       onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
                       disabled={feedbackSaving || feedbackLoadFailed}
                       className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
-                        feedback === "up" ? "bg-accent text-foreground" : ""
+                        feedback === "up" ? "bg-accent text-white" : ""
                       }`}
                       aria-label="Good response"
                       aria-pressed={feedback === "up"}
                     >
-                      <ThumbsUp className="h-4 w-4" />
+                      <ThumbsUp className={`h-4 w-4 ${feedback === "up" ? "fill-current" : ""}`} />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Good response</TooltipContent>
@@ -1276,12 +1276,12 @@ function ChatMessageInner({
                       onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
                       disabled={feedbackSaving || feedbackLoadFailed}
                       className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
-                        feedback === "down" ? "bg-accent text-foreground" : ""
+                        feedback === "down" ? "bg-accent text-white" : ""
                       }`}
                       aria-label="Bad response"
                       aria-pressed={feedback === "down"}
                     >
-                      <ThumbsDown className="h-4 w-4" />
+                      <ThumbsDown className={`h-4 w-4 ${feedback === "down" ? "fill-current" : ""}`} />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Bad response</TooltipContent>
