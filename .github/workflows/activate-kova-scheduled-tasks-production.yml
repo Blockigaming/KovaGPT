@@ -35,6 +35,7 @@ jobs:
       ACR_SERVER: ${{ vars.KOVA_PRODUCTION_ACR_LOGIN_SERVER }}
       IMAGE_REPOSITORY: ${{ vars.KOVA_PRODUCTION_IMAGE_REPOSITORY }}
       IMAGE_REFERENCE: ${{ inputs.image_reference }}
+      CONTAINER_APP_NAME: ${{ vars.KOVA_PRODUCTION_CONTAINER_APP_NAME }}
       JOB_NAME: kovagpt-scheduled-execution
 
     steps:
@@ -103,6 +104,19 @@ jobs:
           }
           test "$(docker run --rm --entrypoint test "$IMAGE_REFERENCE" -f /app/scripts/scheduled-tasks/production-worker.mjs >/dev/null 2>&1; echo $?)" = "0"
 
+      - name: Resolve direct Azure origin without Cloudflare
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CONTAINER_APP_NAME" == "kovagpt-prod-web" ]] || exit 1
+          fqdn="$(az containerapp show -n "$CONTAINER_APP_NAME" -g "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv --only-show-errors)"
+          [[ "$fqdn" =~ ^[a-z0-9.-]+\\.azurecontainerapps\\.io$ ]] || {
+            echo "::error::A verified Azure Container Apps origin hostname is required."
+            exit 1
+          }
+          echo "KOVA_SCHEDULED_TASK_ALLOWED_HOST=$fqdn" >> "$GITHUB_ENV"
+          echo "KOVA_SCHEDULED_TASK_ENDPOINT=https://$fqdn/api/internal/scheduled-execution" >> "$GITHUB_ENV"
+
       - name: Update dedicated worker image and command
         shell: bash
         run: |
@@ -111,7 +125,7 @@ jobs:
             --image "$IMAGE_REFERENCE" \
             --command node \
             --args /app/scripts/scheduled-tasks/production-worker.mjs \
-            --set-env-vars KOVA_SCHEDULED_TASK_ENDPOINT=https://kovagpt.com/api/internal/scheduled-execution \
+            --set-env-vars KOVA_SCHEDULED_TASK_ENDPOINT="$KOVA_SCHEDULED_TASK_ENDPOINT" KOVA_SCHEDULED_TASK_ALLOWED_HOST="$KOVA_SCHEDULED_TASK_ALLOWED_HOST" \
             --only-show-errors --output none
 
       - name: Activate one-minute Azure UTC schedule
@@ -120,7 +134,7 @@ jobs:
           set -euo pipefail
           id="$(az containerapp job show -n "$JOB_NAME" -g "$RESOURCE_GROUP" --query id -o tsv --only-show-errors)"
           [[ "$id" == *"/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.App/jobs/$JOB_NAME" ]] || exit 1
-          body='{"properties":{"configuration":{"triggerType":"Schedule","scheduleTriggerConfig":{"cronExpression":"* * * * *","parallelism":1,"replicaCompletionCount":1},"replicaRetryLimit":0,"replicaTimeout":120}}}'
+          body='{"properties":{"configuration":{"triggerType":"Schedule","manualTriggerConfig":null,"scheduleTriggerConfig":{"cronExpression":"* * * * *","parallelism":1,"replicaCompletionCount":1},"replicaRetryLimit":0,"replicaTimeout":120}}}'
           az rest --method PATCH --uri "https://management.azure.com${id}?api-version=2025-07-01" \
             --headers "Content-Type=application/json" --body "$body" --output none --only-show-errors
 
