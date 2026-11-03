@@ -26,6 +26,7 @@ test("a Microsoft account is usable only for the service scopes it actually has"
   };
   assert.equal(canReadConnection(account, "outlook"), true);
   assert.equal(canReadConnection(account, "onedrive"), false);
+  assert.equal(canReadConnection(account, "outlook-calendar"), false);
   assert.equal(
     canReadConnection({ ...account, deleted_at: new Date().toISOString() }, "outlook"),
     false,
@@ -40,6 +41,73 @@ test("a Microsoft account is usable only for the service scopes it actually has"
     true,
   );
   assert.equal(hasConnectionScopes(["Files.Read"], ["Sites.Read.All"]), false);
+});
+
+test("calendar reads accept only an actual basic-or-broader calendar grant on the selected Microsoft account", () => {
+  const account = { provider_id: "microsoft", status: "connected", token_expires_at: null };
+  for (const scope of ["Calendars.ReadBasic", "Calendars.Read", "Calendars.ReadWrite"])
+    for (const prefix of ["", "https://graph.microsoft.com/"])
+      assert.equal(
+        canReadConnection({ ...account, granted_scopes: [prefix + scope] }, "outlook-calendar"),
+        true,
+      );
+  for (const scopes of [[], ["Mail.Read"], ["Files.Read.All"], ["Calendars.Read.Shared"]])
+    assert.equal(
+      canReadConnection({ ...account, granted_scopes: scopes }, "outlook-calendar"),
+      false,
+    );
+  assert.equal(
+    canReadConnection(
+      { ...account, provider_id: "github", granted_scopes: ["Calendars.ReadBasic"] },
+      "outlook-calendar",
+    ),
+    false,
+  );
+});
+
+test("calendar subject prefixes are escaped as data and requests read only basic fields from the default calendar", () => {
+  const query = "O'Brien') or true or startsWith(subject,'";
+  const req = connectionReadRequest("outlook-calendar", query, "fake-token");
+  const url = new URL(req.url);
+  assert.equal(url.origin + url.pathname, "https://graph.microsoft.com/v1.0/me/calendar/events");
+  assert.equal(
+    url.searchParams.get("$filter"),
+    `startsWith(subject,'${query.replaceAll("'", "''")}')`,
+  );
+  assert.equal(url.searchParams.get("$select"), "id,subject,start,end,webLink");
+  assert.equal(url.searchParams.get("$top"), "10");
+  assert.equal(req.init.method, "GET");
+  assert.equal(req.init.body, undefined);
+  assert.equal(req.init.headers.Prefer, 'outlook.timezone="UTC"');
+  assert.equal(req.init.redirect, "error");
+});
+
+test("calendar results show bounded event times and discard provider bodies, attendees, tokens and pagination", async () => {
+  let calls = 0;
+  const result = await readConnection("outlook-calendar", "Meeting", "fake-token", async () => {
+    calls += 1;
+    return Response.json({
+      "@odata.nextLink": "https://evil.example/next?token=must-not-leak",
+      value: Array.from({ length: 50 }, (_, i) => ({
+        id: String(i),
+        subject: "Meeting " + i,
+        start: { dateTime: "2026-11-02T12:00:00", timeZone: "UTC" },
+        end: { dateTime: "2026-11-02T13:00:00", timeZone: "UTC" },
+        webLink: "https://outlook.live.com/calendar/item/" + i,
+        bodyPreview: "must-not-leak",
+        attendees: ["must-not-leak"],
+        access_token: "must-not-leak",
+      })),
+    });
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.service, "Outlook Calendar");
+  assert.equal(result.results.length, 10);
+  assert.equal(
+    result.results[0].snippet,
+    "Start: 2026-11-02T12:00:00 (UTC); End: 2026-11-02T13:00:00 (UTC)",
+  );
+  assert.doesNotMatch(JSON.stringify(result), /must-not-leak|fake-token|evil\.example/);
 });
 
 test("authorization redirects reject other origins, paths, schemes, and URL credentials", () => {

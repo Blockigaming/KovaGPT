@@ -4,6 +4,7 @@ import path from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import type { GoogleStatus } from "../../src/lib/google-client";
 import type { AccountStatus } from "../../src/hooks/use-connected-accounts";
+import { MASTER_CONNECTORS } from "../../src/lib/connector-master-list.mjs";
 type FixtureWindow = Window & { operations: unknown[][]; toasts: string[][] };
 if (process.env.KOVA_TEST_CHROMIUM_EXECUTABLE) {
   test.use({ launchOptions: { executablePath: process.env.KOVA_TEST_CHROMIUM_EXECUTABLE } });
@@ -132,16 +133,19 @@ async function boot(
     content: `:root { --background:#fff; --foreground:#222; --card:#fafafa; --muted:#eee; --muted-foreground:#666; --border:#ddd; --input:#aaa; --ring:#369; --text-success:#286137; --text-warning:#815300; }*{box-sizing:border-box}body{margin:0;padding:32px;font:15px/1.5 Arial;background:var(--background);color:var(--foreground)}button,input,select{font:inherit}h1,h2,h3,p{margin:0}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.spec400-plugins{margin:auto}button{cursor:pointer}.spec400-plugin-detail{position:fixed;background:white;z-index:50;overflow-y:auto;translate:-50% -50%}.spec400-plugin-detail [data-kova-dialog-close]{position:absolute;right:12px;top:12px;width:44px;height:44px}.spec400-plugin-detail svg{width:20px;height:20px}[role="alertdialog"]{position:fixed;inset:20%;background:white;border:1px solid #888;padding:24px;z-index:100}.spec400-plugin-management button{margin:4px}${css}`,
   });
   await page.addScriptTag({ content: script });
-  await expect(page.locator("[data-plugin-id]")).toHaveCount(12);
+  await expect(page.locator("[data-plugin-id]")).toHaveCount(37);
   await expect(page.locator('[data-plugin-id="gmail"]')).not.toContainText("Checking connection…");
 }
 
-test("approved 12-plugin directory supports primary and category filters", async ({ page }) => {
+test("approved master directory supports primary and category filters", async ({ page }) => {
   await boot(page);
   await expect(page.getByRole("heading", { name: "Connections", exact: true })).toBeVisible();
   await expect(page.getByText("Connect tools and sources to Kova", { exact: true })).toBeVisible();
   await expect(page.locator(".spec400-plugin-logo img")).toHaveCount(12);
-  await expect(page.locator('[data-plugin-id="hubspot"]')).toHaveCount(0);
+  for (const item of MASTER_CONNECTORS) {
+    await expect(page.locator(`[data-plugin-id="${item.id}"]`)).toHaveCount(1);
+  }
+  await expect(page.locator('[data-plugin-id="hubspot"]')).toContainText("Coming soon");
   await page.getByRole("combobox", { name: "Category", exact: true }).click();
   await page.getByRole("option", { name: "Email", exact: true }).click();
   await expect(page.locator("[data-plugin-id]")).toHaveCount(2);
@@ -150,9 +154,38 @@ test("approved 12-plugin directory supports primary and category filters", async
   await page.getByRole("textbox", { name: "Search connections" }).fill("missing");
   await expect(page.getByRole("heading", { name: "No matching connections" })).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(page.locator("[data-plugin-id]")).toHaveCount(12);
+  await expect(page.locator("[data-plugin-id]")).toHaveCount(37);
   await page.getByRole("tab", { name: /Connected/ }).click();
   await expect(page.getByRole("heading", { name: "No connections yet" })).toBeVisible();
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
+});
+
+test("new master entries support aliases and cannot start unimplemented connections", async ({
+  page,
+}) => {
+  await boot(page);
+  const search = page.getByRole("textbox", { name: "Search connections" });
+  for (const [query, id] of [
+    ["IBKR", "interactive-brokers"],
+    ["Outlook Mail", "outlook"],
+    ["bring your own server", "custom-mcp"],
+    ["HealthKit", "apple-health"],
+  ]) {
+    await search.fill(query);
+    await expect(page.locator("[data-plugin-id]")).toHaveCount(1);
+    await expect(page.locator(`[data-plugin-id="${id}"]`)).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Coming soon Apple Health", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("native mobile implementation");
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Connect", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Close connection details" }).click();
+  await search.fill("HubSpot");
+  await page.getByRole("button", { name: "Coming soon HubSpot", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "No connection flow or provider operations are enabled",
+  );
   expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
 });
 
@@ -288,6 +321,62 @@ test("Microsoft account management searches only the explicitly selected authori
   await expect(page.getByRole("alertdialog")).toContainText("Other Microsoft services");
   await page.getByRole("alertdialog").getByRole("button", { name: "Cancel", exact: true }).click();
   expect((await page.evaluate(() => (window as FixtureWindow).operations)).length).toBe(1);
+});
+
+test("Outlook Calendar reuses only a calendar-authorized account and requests basic read access explicitly", async ({
+  page,
+}) => {
+  const mailId = "11111111-1111-4111-8111-111111111111";
+  const calendarId = "22222222-2222-4222-8222-222222222222";
+  await boot(page, emptyGoogle, "https://kova-plugins.test/apps", {
+    configuredProviders: [{ id: "microsoft" }],
+    accounts: [
+      {
+        id: mailId,
+        provider_id: "microsoft",
+        account_label: "mail-only@example.test",
+        status: "connected",
+        granted_scopes: ["Mail.Read"],
+        token_expires_at: null,
+      },
+      {
+        id: calendarId,
+        provider_id: "microsoft",
+        account_label: "calendar@example.test",
+        status: "connected",
+        granted_scopes: ["Calendars.ReadWrite"],
+        token_expires_at: null,
+      },
+    ],
+  });
+  await page.getByRole("button", { name: "Manage Outlook Calendar", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("subject starts with");
+  expect(await page.evaluate(() => (window as FixtureWindow).operations)).toEqual([]);
+  await dialog
+    .getByRole("textbox", { name: "Search Outlook Calendar", exact: true })
+    .fill("Meeting");
+  const mail = dialog.getByRole("listitem").filter({ hasText: "mail-only@example.test" });
+  const calendar = dialog.getByRole("listitem").filter({ hasText: "calendar@example.test" });
+  await expect(
+    mail.getByRole("button", { name: "Search this account", exact: true }),
+  ).toBeDisabled();
+  await calendar.getByRole("button", { name: "Search this account", exact: true }).click();
+  expect((await page.evaluate(() => (window as FixtureWindow).operations))[0]).toEqual([
+    "provider-read",
+    { connectionId: "outlook-calendar", accountId: calendarId, query: "Meeting" },
+  ]);
+  await mail.getByRole("button", { name: "Reconnect or add read access", exact: true }).click();
+  const operations = await page.evaluate(() => (window as FixtureWindow).operations);
+  expect(operations).toHaveLength(2);
+  expect(operations[1][0]).toBe("provider-request");
+  const init = operations[1][2] as { body: string };
+  expect(JSON.parse(init.body)).toEqual({
+    provider: "microsoft",
+    optionalScopes: ["Calendars.ReadBasic"],
+    returnPath: "/apps?connection_view=outlook-calendar",
+    existingAccountId: mailId,
+  });
 });
 
 test("Salesforce management sends the selected record type with the owner-bound account", async ({

@@ -1,5 +1,6 @@
 import { CONNECTION_FLOWS } from "@/integrations/connection-flows.mjs";
 import { getConnector, type ConnectorItem } from "./connectors-catalog";
+import { MASTER_CONNECTOR_IDS } from "./connector-master-list.mjs";
 import gmailLogo from "../assets/plugins/gmail.svg";
 import googleCalendarLogo from "../assets/plugins/google-calendar.svg";
 import googleDriveLogo from "../assets/plugins/google-drive.svg";
@@ -42,7 +43,11 @@ export type PluginReviewEntry = {
   availability: "implemented" | "planned";
   availabilityNote: string;
   permissions: readonly PluginReviewPermission[];
-  brandAsset: { status: "verified_local_asset"; src: string; provenance: string };
+  brandAsset: {
+    status: "verified_local_asset" | "generic_placeholder";
+    src: string;
+    provenance: string;
+  };
 };
 
 export const PLUGIN_REVIEW_PERMISSION_NOTICE =
@@ -60,16 +65,8 @@ const supported = (
   ...sourceFiles: string[]
 ): PluginReviewPermission => ({ access, label, verification: "source_contract", sourceFiles });
 
-const sharePoint: ConnectorItem = {
-  id: "sharepoint",
-  label: "SharePoint",
-  description: "Find SharePoint sites you can access.",
-  category: "Storage & Files",
-  status: "setup_required",
-  domain: "sharepoint.com",
-};
 function entry(id: string, permissions: PluginReviewPermission[]): PluginReviewEntry {
-  const connector = id === "sharepoint" ? sharePoint : getConnector(id);
+  const connector = getConnector(id);
   if (!connector) throw new Error(`Missing launch review connector: ${id}`);
   const implemented =
     ["gmail", "google-calendar", "google-drive", "github"].includes(id) ||
@@ -92,9 +89,9 @@ function entry(id: string, permissions: PluginReviewPermission[]): PluginReviewE
         ]
       : permissions,
     brandAsset: {
-      status: "verified_local_asset",
-      src: PLUGIN_BRAND_ASSET_URLS[id],
-      provenance: "src/assets/plugins/provenance.json",
+      status: PLUGIN_BRAND_ASSET_URLS[id] ? "verified_local_asset" : "generic_placeholder",
+      src: PLUGIN_BRAND_ASSET_URLS[id] ?? "",
+      provenance: PLUGIN_BRAND_ASSET_URLS[id] ? "src/assets/plugins/provenance.json" : "",
     },
   };
 }
@@ -198,8 +195,28 @@ export const LAUNCH_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
   ]),
 ];
 
+/** Complete approved directory; runtime configuration and grants remain authoritative. */
+export const MASTER_PLUGIN_REVIEW_CATALOG: readonly PluginReviewEntry[] = [
+  ...LAUNCH_PLUGIN_REVIEW_CATALOG,
+  ...MASTER_CONNECTOR_IDS.filter(
+    (id) => !LAUNCH_PLUGIN_REVIEW_CATALOG.some((item) => item.connector.id === id),
+  ).map((id) => {
+    const review = entry(id, []);
+    if (id === "plaid")
+      review.availabilityNote =
+        "Bank connection setup is managed in Finances. Production approval and an eligible account are required.";
+    if (["oura", "whoop"].includes(id))
+      review.availabilityNote =
+        "Health connection setup is managed in Health. Eligible developer credentials and account consent are required.";
+    if (["apple-health", "android-health-connect"].includes(id))
+      review.availabilityNote =
+        "Requires a native mobile implementation and on-device health permissions. Web OAuth is unavailable.";
+    return review;
+  }),
+];
+
 export function getPluginReview(id: string): PluginReviewEntry | undefined {
-  return LAUNCH_PLUGIN_REVIEW_CATALOG.find((entry) => entry.connector.id === id);
+  return MASTER_PLUGIN_REVIEW_CATALOG.find((entry) => entry.connector.id === id);
 }
 
 /** Display model only; never use these labels to select or authorize adapter calls. */

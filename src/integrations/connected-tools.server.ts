@@ -79,7 +79,7 @@ export async function refreshExpiringConnection(
   ownerId: string,
   id: string,
   version: string,
-  forceSalesforce = false,
+  forceRejectedRead = false,
 ) {
   await assertLockdownAllows(supabaseAdmin, ownerId, "connector_read");
   const { data: row, error } = await db
@@ -95,10 +95,12 @@ export async function refreshExpiringConnection(
   if (
     error ||
     !row ||
-    (!(forceSalesforce && row.provider_id === "salesforce") &&
+    (!(forceRejectedRead && ["salesforce", "notion"].includes(row.provider_id)) &&
       (!row.token_expires_at || Date.parse(row.token_expires_at) > Date.now() + 60_000)) ||
     !row.refresh_token_ciphertext ||
-    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce"].includes(row.provider_id)
+    !["microsoft", "linear", "slack", "oura", "whoop", "salesforce", "notion"].includes(
+      row.provider_id,
+    )
   )
     return null;
   const provider = OAUTH_PROVIDERS[row.provider_id as OAuthProviderId];
@@ -199,7 +201,7 @@ export async function refreshExpiringConnection(
       .maybeSingle();
     return updateError || !renewed
       ? null
-      : forceSalesforce && provider.id === "salesforce"
+      : forceRejectedRead && ["salesforce", "notion"].includes(provider.id)
         ? { ...renewed, renewalCiphertext: newCiphertext }
         : renewed;
   } catch {
@@ -357,7 +359,7 @@ export async function runConnectionAccountSearch(
     result = await readConnection(id, String(args.query ?? ""), token, fetch, options);
   } catch (error) {
     if (
-      id !== "salesforce" ||
+      !["salesforce", "notion"].includes(id) ||
       !(error instanceof Error) ||
       error.message !== "connection_reauthorization_required"
     )

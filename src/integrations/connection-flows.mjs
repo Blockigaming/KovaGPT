@@ -16,6 +16,14 @@ export const CONNECTION_FLOWS = {
     label: "Outlook",
     description: "Search your Outlook mail.",
   },
+  "outlook-calendar": {
+    provider: "microsoft",
+    scopes: ["Calendars.ReadBasic"],
+    tool: "outlook_calendar_search",
+    label: "Outlook Calendar",
+    description:
+      "Find events whose subject starts with your search in your default Outlook calendar. Returns event titles and times, including series masters; recurring instances are not expanded. Read-only.",
+  },
   onedrive: {
     provider: "microsoft",
     scopes: ["Files.Read"],
@@ -66,7 +74,11 @@ export function hasConnectionScopes(scopes, required) {
     (scopes ?? []).map((scope) => scope.replace(/^https:\/\/graph\.microsoft\.com\//u, "")),
   );
   return required.every(
-    (scope) => granted.has(scope) || (scope === "Files.Read" && granted.has("Files.Read.All")),
+    (scope) =>
+      granted.has(scope) ||
+      (scope === "Files.Read" && granted.has("Files.Read.All")) ||
+      (scope === "Calendars.ReadBasic" &&
+        (granted.has("Calendars.Read") || granted.has("Calendars.ReadWrite"))),
   );
 }
 
