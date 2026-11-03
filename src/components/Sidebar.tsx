@@ -40,7 +40,8 @@ import {
 import { Link, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
-import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
+import { SignInButton, useClerkSafe, useUser } from "@/components/auth/ClerkSafe";
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
   DropdownMenu,
@@ -150,6 +151,7 @@ export function Sidebar({
   compactOnly?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
+  const clerk = useClerkSafe();
   const { tier, status: tierStatus } = useTier();
   const drawerRef = useRef<HTMLElement | null>(null);
   const expandButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -176,6 +178,7 @@ export function Sidebar({
   const accountRef = useRef(user?.id);
   accountRef.current = user?.id;
   const [searchOpen, setSearchOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [renameChat, setRenameChat] = useState<Conversation | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
@@ -978,8 +981,86 @@ export function Sidebar({
             : "Free"
         : "Plan unavailable";
 
+  const renderAccountMenu = (rail = false) => (
+                  <DropdownMenuContent side={rail ? "right" : "top"} align="end" className="kova-profile-menu">
+                    <DropdownMenuLabel className="kova-profile-menu-account">
+                      <span className="kova-profile-menu-avatar" aria-hidden="true">
+                        {avatarUrl ? <img src={avatarUrl} alt="" /> : accountInitial || <UserRound size={20} />}
+                      </span>
+                      <span className="min-w-0">
+                        <strong className="block truncate">{displayName}</strong>
+                        <small className="block truncate text-muted-foreground">{planLabel}</small>
+                        {accountEmail ? <small className="block truncate text-muted-foreground">{accountEmail}</small> : null}
+                      </span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        closeAfterMobileNavigation("/settings/billing");
+                        onOpenSettings("billing");
+                      }}
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
+                      {tierStatus === "ready" && tier === "pro" ? "Manage plan" : "Upgrade plan"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        closeAfterMobileNavigation("/settings/general");
+                        onOpenSettings("general");
+                      }}
+                    >
+                      <CustomizeGlyph className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Personalization
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        closeAfterMobileNavigation("/settings/profile");
+                        onOpenSettings("personalization");
+                      }}
+                    >
+                      <UserRound className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        closeAfterMobileNavigation("/settings/appearance");
+                        onOpenSettings("appearance");
+                      }}
+                    >
+                      <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        closeAfterMobileNavigation("/help");
+                        onOpenHelp();
+                      }}
+                    >
+                      <CircleHelp className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Help
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        closeAfterMobileNavigation();
+                        setLogoutConfirmOpen(true);
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+  );
+
   return (
     <>
+      {signedIn && (
+        <LogoutConfirmDialog
+          open={logoutConfirmOpen}
+          onOpenChange={setLogoutConfirmOpen}
+          onConfirm={() => clerk.signOut()}
+        />
+      )}
       {railDialogOpen ? (
         <dialog
           ref={railDialogRef}
@@ -1420,20 +1501,18 @@ export function Sidebar({
                 <CustomizeGlyph aria-hidden="true" />
               </button>
             </RailTooltip>
-            <RailTooltip label="Settings">
-              <button
-                type="button"
-                className="kova-rail-account"
-                onClick={() => onOpenSettings("general")}
-                aria-label="Settings"
-              >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="" />
-                ) : (
-                  <span aria-hidden="true">{accountInitial || <UserRound size={20} />}</span>
-                )}
-              </button>
-            </RailTooltip>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="kova-rail-account" aria-label="Account menu" title="Account menu">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="" />
+                  ) : (
+                    <span aria-hidden="true">{accountInitial || <UserRound size={20} />}</span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              {renderAccountMenu(true)}
+            </DropdownMenu>
           </nav>
         </TooltipProvider>
       ) : null}
@@ -1647,74 +1726,7 @@ export function Sidebar({
                       <ChevronDown className="ml-auto h-4 w-4" aria-hidden="true" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="end" className="kova-profile-menu">
-                    <DropdownMenuLabel className="kova-profile-menu-account">
-                      <span className="kova-profile-menu-avatar" aria-hidden="true">
-                        {avatarUrl ? <img src={avatarUrl} alt="" /> : accountInitial || <UserRound size={20} />}
-                      </span>
-                      <span className="min-w-0">
-                        <strong className="block truncate">{displayName}</strong>
-                        <small className="block truncate text-muted-foreground">{planLabel}</small>
-                        {accountEmail ? <small className="block truncate text-muted-foreground">{accountEmail}</small> : null}
-                      </span>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/settings/billing");
-                        onOpenSettings("billing");
-                      }}
-                    >
-                      <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-                      {tierStatus === "ready" && tier === "pro" ? "Manage plan" : "Upgrade plan"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/settings/general");
-                        onOpenSettings("general");
-                      }}
-                    >
-                      <CustomizeGlyph className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Personalization
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/settings/profile");
-                        onOpenSettings("personalization");
-                      }}
-                    >
-                      <UserRound className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/settings/appearance");
-                        onOpenSettings("appearance");
-                      }}
-                    >
-                      <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation("/help");
-                        onOpenHelp();
-                      }}
-                    >
-                      <CircleHelp className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Help
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        closeAfterMobileNavigation();
-                        onOpenSettings("logout");
-                      }}
-                    >
-                      <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Log out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
+                  {renderAccountMenu()}
                 </DropdownMenu>
               </>
             ) : isLoaded ? (
