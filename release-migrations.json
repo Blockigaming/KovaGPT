@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 208,
-  "latest": "20261102204500_kova_scheduled_task_requested_allowances.sql",
+  "count": 207,
+  "latest": "20261101012355_kova_daily_message_modes_and_memory_tiers.sql",
   "migrations": [
     {
       "order": 1,
@@ -4383,22 +4383,6 @@
         "kova_owned_session_guard",
         "kova_owned_session_guard"
       ],
-      "indexes": []
-    },
-    {
-      "order": 208,
-      "filename": "20261102204500_kova_scheduled_task_requested_allowances.sql",
-      "timestamp": "20261102204500",
-      "sha256": "848978f41c36e848b3813d5d16e676497d65ceb93757bc99bf4008b8c8ea2055",
-      "tables": [],
-      "functions": [
-        "mutate_scheduled_task"
-      ],
-      "destructive": false,
-      "dataBackfill": false,
-      "reversible": false,
-      "rls": [],
-      "policies": [],
       "indexes": []
     }
   ]
