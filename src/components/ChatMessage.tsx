@@ -622,8 +622,22 @@ function ChatMessageInner({
     setSelectedText(text);
   }, []);
   useEffect(() => {
-    document.addEventListener("selectionchange", rememberSelection);
-    return () => document.removeEventListener("selectionchange", rememberSelection);
+    // Selection changes fire continuously during dragging, and every rendered
+    // message is subscribed. Wait for the range to settle before showing a
+    // contextual toolbar so native text selection and browser Copy remain stable.
+    let pending: ReturnType<typeof setTimeout> | undefined;
+    const onSelectionChange = () => {
+      if (pending !== undefined) clearTimeout(pending);
+      pending = setTimeout(() => {
+        pending = undefined;
+        rememberSelection();
+      }, 120);
+    };
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", onSelectionChange);
+      if (pending !== undefined) clearTimeout(pending);
+    };
   }, [rememberSelection]);
   const openSelectionEdit = useCallback(
     async (instruction = "") => {
