@@ -77,7 +77,7 @@ test("home hydrates and serves its scripts and styles from the Node origin", asy
   expect(failures).toEqual([]);
 });
 
-test("public catalog loads on navigation while missing public pages remain unavailable", async ({
+test("public website navigation leaves the legacy catalog unloaded and missing pages remain unavailable", async ({
   page,
 }) => {
   const catalogRequests: string[] = [];
@@ -96,9 +96,9 @@ test("public catalog loads on navigation while missing public pages remain unava
     .getByRole("link", { name: "Features", exact: true })
     .click();
   await expect(page).toHaveURL(/\/features$/u);
-  await expect(page).toHaveTitle("KovaGPT features | KovaGPT");
-  await expect(page.getByRole("heading", { name: "KovaGPT features", exact: true })).toBeVisible();
-  expect(catalogRequests.length).toBeGreaterThan(0);
+  await expect(page).toHaveTitle("Explore KovaGPT | KovaGPT");
+  await expect(page.getByRole("heading", { name: "Explore KovaGPT", exact: true })).toBeVisible();
+  expect(catalogRequests).toEqual([]);
 
   const missing = await page.goto("/azure-missing-public-page", { waitUntil: "domcontentloaded" });
   expect(missing?.status()).toBe(404);
