@@ -992,9 +992,9 @@ export function Sidebar({
         <span className="min-w-0">
           <strong className="block truncate">{displayName}</strong>
           <small className="block truncate text-muted-foreground">{planLabel}</small>
-          {accountEmail ? (
-            <small className="block truncate text-muted-foreground">{accountEmail}</small>
-          ) : null}
+          <small className="block truncate text-muted-foreground">
+            {accountEmail || "Email unavailable"}
+          </small>
         </span>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
