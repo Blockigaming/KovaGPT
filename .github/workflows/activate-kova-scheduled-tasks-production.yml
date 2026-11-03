@@ -81,10 +81,12 @@ jobs:
           const container = containers[0];
           const existingCommand = [...(container.command || []), ...(container.args || [])].join(" ");
           // Do not repurpose an existing job running a different workload.
+          const isDedicatedTaskJob =
+            /scheduled[-_]?(execution|task)/.test(existingCommand) ||
+            existingCommand.includes("scripts/scheduled-tasks/production-worker.mjs");
           if (
             /auth-email|notification-dispatch|receipt-maintenance/.test(existingCommand) ||
-            (existingCommand &&
-              !/scheduled[-_]?(execution|task)|scripts\\/scheduled-tasks\\/production-worker\\.mjs/.test(existingCommand))
+            (existingCommand && !isDedicatedTaskJob)
           )
             throw Error("job_is_used_by_another_workload");
           const env = container.env || [];
