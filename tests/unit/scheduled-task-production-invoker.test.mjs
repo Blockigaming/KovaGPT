@@ -38,10 +38,20 @@ test("missing secret, wrong host, wrong scheme and altered path fail before netw
   };
   for (const unsafe of [
     { ...env, SCHEDULED_TASK_SECRET: "" },
-    { ...env, KOVA_SCHEDULED_TASK_ENDPOINT: "https://example.com/api/internal/scheduled-execution" },
-    { ...env, KOVA_SCHEDULED_TASK_ENDPOINT: "http://kovagpt.com/api/internal/scheduled-execution" },
+    {
+      ...env,
+      KOVA_SCHEDULED_TASK_ENDPOINT: "https://example.com/api/internal/scheduled-execution",
+    },
+    {
+      ...env,
+      KOVA_SCHEDULED_TASK_ENDPOINT: "http://kovagpt.com/api/internal/scheduled-execution",
+    },
     { ...env, KOVA_SCHEDULED_TASK_ENDPOINT: "https://kovagpt.com/api/chat" },
-    { ...env, KOVA_SCHEDULED_TASK_ENDPOINT: "https://kovagpt.com/api/internal/scheduled-execution?token=x" },
+    {
+      ...env,
+      KOVA_SCHEDULED_TASK_ENDPOINT:
+        "https://kovagpt.com/api/internal/scheduled-execution?token=x",
+    },
   ]) {
     await assert.rejects(invokeScheduledExecution({ env: unsafe, request }), /task_worker_/);
   }
