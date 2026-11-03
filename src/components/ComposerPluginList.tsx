@@ -36,6 +36,7 @@ export function ComposerPluginList({
   const readGitHub = useServerFn(getGitHubManagement);
   const readGitHubAccess = useServerFn(getGitHubChatReadAccess);
   const [snapshot, setSnapshot] = useState<ComposerConnectionSnapshot | null>(null);
+  const [pluginQuery, setPluginQuery] = useState("");
   useEffect(() => {
     if (!userId || !authLoaded) {
       setSnapshot(null);
@@ -67,8 +68,12 @@ export function ComposerPluginList({
     }
     onNavigate();
   };
+  const normalizedQuery = pluginQuery.trim().toLocaleLowerCase();
   const plugins = CONNECTOR_CATALOG.filter(
-    (plugin) => plugin.id !== "google" && connectorConnectFlow(plugin) !== null,
+    (plugin) =>
+      plugin.id !== "google" &&
+      connectorConnectFlow(plugin) !== null &&
+      (normalizedQuery === "" || plugin.label.toLocaleLowerCase().includes(normalizedQuery)),
   );
   const connection = (id: string) => composerPluginConnection(id, { userId, authLoaded, snapshot });
   const connected = rankConnectedComposerPlugins(
@@ -130,7 +135,23 @@ export function ComposerPluginList({
   };
   return (
     <section className="kova-composer-plugins" aria-label="Supported plugins">
+      <label className="block p-2">
+        <span className="sr-only">Search plugins</span>
+        <input
+          type="search"
+          aria-label="Search plugins"
+          placeholder="Search plugins…"
+          value={pluginQuery}
+          onChange={(event) => setPluginQuery(event.target.value)}
+          className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+        />
+      </label>
       <div className="kova-composer-plugin-list">
+        {plugins.length === 0 ? (
+          <p role="status" className="px-3 py-2 text-sm text-muted-foreground">
+            No matching plugins.
+          </p>
+        ) : null}
         {connected.length > 0 && (
           <>
             <h3
