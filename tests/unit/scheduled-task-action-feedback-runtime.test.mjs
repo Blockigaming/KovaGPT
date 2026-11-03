@@ -237,6 +237,7 @@ function routeFixture(initialTasks = [task]) {
       },
       "@/lib/management-list-preferences.mjs": { MAX_MANAGEMENT_QUERY_LENGTH: 200 },
       "@/components/auth/ClerkSafe": { useUser: () => account },
+      "@/hooks/useTier": { useTier: () => ({ tier: "free", status: "ready" }) },
       "@/hooks/use-time-format-preference": { useTimeFormatPreference: () => "system" },
       "@/lib/time-format": { formatDisplayDateTime: () => "Jan 1" },
       "@/components/AppShell": { AppShell: "AppShell" },
