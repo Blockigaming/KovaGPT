@@ -1292,7 +1292,9 @@ function ChatMessageInner({
                       aria-label="Bad response"
                       aria-pressed={feedback === "down"}
                     >
-                      <ThumbsDown className={`h-4 w-4 ${feedback === "down" ? "fill-current" : ""}`} />
+                      <ThumbsDown
+                        className={`h-4 w-4 ${feedback === "down" ? "fill-current" : ""}`}
+                      />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Bad response</TooltipContent>
