@@ -19,6 +19,11 @@ test("implemented homepage, pricing tabs, FAQ, original asset, and responsive ev
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
+  if (process.env.KOVA_BUILD_SHA)
+    await expect(page.locator('meta[name="kova-build"]')).toHaveAttribute(
+      "content",
+      process.env.KOVA_BUILD_SHA,
+    );
   await expect(
     page.getByRole("heading", { name: "Question what’s next", exact: true }),
   ).toBeVisible();
@@ -72,8 +77,14 @@ test("implemented homepage, pricing tabs, FAQ, original asset, and responsive ev
     expect(overflow, `horizontal overflow at ${width}`).toBe(false);
     if (width === 390) {
       await page.goto("/");
-      await page.screenshot({ path: `${evidence}/mobile-home.png`, fullPage: true });
+      await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "ready");
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+        window.scrollTo(0, 0);
+      });
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
       await page.screenshot({ path: `${evidence}/mobile-hero.png` });
+      await page.screenshot({ path: `${evidence}/mobile-home.png`, fullPage: true });
     }
   }
   expect(errors).toEqual([]);

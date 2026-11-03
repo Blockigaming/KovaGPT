@@ -41,7 +41,11 @@ Use `npm run typecheck`, `npm run test:unit`, `npm run test:api`, `npm run test:
 
 `Public website approval evidence` runs a production Node/Azure build with no secrets, visits the real routes, tests desktop and mobile widths from 320 to 2560, checks the FAQ and pricing toggle, and exports screenshots. Email entry uses a synthetic `.invalid` address and stops before authentication submission. No real account or charge is created.
 
-The initial GitHub browser run at commit `711636e97f1ee99525c511a6430b6207139069b8` passed its production build, loaded all 119 checked destinations with HTTP 200, and reached the existing password page from a synthetic email. Its FAQ selector timed out before responsive checks; that locator was corrected for the next run. The initial screenshots demonstrate implementation but do not qualify a later commit.
+The complete local unit run passed 7,426 tests with four existing skips and no failures. All 65 API tests and 61 focused billing contract tests passed. TypeScript, formatting, source security checks, and the high-severity dependency audit passed. The audit reports four low and four moderate existing dependency findings. No dependencies were added.
+
+The GitHub browser run at commit `08a749868f1e7e3f269c9d423834499eb4712a18` passed its production build and all three approval tests, including 119 destinations returning HTTP 200, widths 320–2560 without horizontal overflow, pricing tabs, keyboard FAQ, and synthetic email entry. Later visual and regression refinements must be qualified by their own exact-commit workflow results. The workflow checks its build stamp against the candidate SHA and also exercises existing signed-out accessibility, modal authentication, theme, and navigation tests. Raw browser captures update only the intentionally changed guest visual baselines; visual assertions and thresholds remain intact.
+
+The PR's final CI run and downloadable report are the authoritative final-candidate results. Fixture tests do not qualify real OAuth callbacks, email delivery, Stripe Checkout, subscription lifecycle, or Customer Portal acceptance.
 
 ## Approval and rollback
 

@@ -29,7 +29,9 @@ test("signed-out workspace discovery keeps focused hierarchy and truthful contro
     await waitForKovaHydration(page);
     await expectOneMainWithoutOverflow(page);
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Continue with email", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Create an account", exact: true }),
     ).toBeVisible();

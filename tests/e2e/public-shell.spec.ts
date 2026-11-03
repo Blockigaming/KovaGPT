@@ -94,7 +94,7 @@ test("mobile public navigation is keyboard-operable and preserves its primary ac
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "phone-390x844");
-  await page.goto("/features");
+  await page.goto("/overview");
   await waitForHydration(page);
 
   const toggle = page.getByRole("button", { name: "Open navigation" });
@@ -103,7 +103,7 @@ test("mobile public navigation is keyboard-operable and preserves its primary ac
 
   const menu = page.getByRole("navigation", { name: "Mobile public navigation" });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole("link", { name: "Features", exact: true })).toHaveAttribute(
+  await expect(menu.getByRole("link", { name: "About", exact: true })).toHaveAttribute(
     "aria-current",
     "page",
   );

@@ -91,7 +91,9 @@ test("signed-out visitors must log in before chat or model access", async ({ pag
   await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toHaveCount(0);
   await expect(page.getByTestId("thinking-upgrade-button")).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Create an account", exact: true })).toBeVisible();
 });
 

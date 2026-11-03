@@ -57,7 +57,9 @@ test("home hydrates and serves its scripts and styles from the Node origin", asy
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(0);
   const assets = await page
     .locator('script[src], link[rel="stylesheet"]')
@@ -151,11 +153,15 @@ test("hosted-auth integration opens and validates the existing password flow wit
 test("guest Projects and Library routes hydrate without an external service", async ({ page }) => {
   await page.goto("/projects", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "New project", exact: true })).toHaveCount(0);
   await page.goto("/library", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Search Library", exact: true })).toHaveCount(0);
 });
 

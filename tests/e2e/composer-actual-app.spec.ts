@@ -406,7 +406,13 @@ test("guest account gate prevents messaging and restores login focus", async ({ 
   await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Attach", exact: true })).toHaveCount(0);
-  const login = page.getByRole("button", { name: "Log in", exact: true });
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeVisible();
+  // The homepage opens auth inline; paid entry still exercises the shared modal.
+  await page.goto("/pricing");
+  await waitForKovaHydration(page);
+  const login = page.getByRole("button", { name: "Start Plus", exact: true });
   await login.click();
   const dialog = page.getByRole("dialog", { name: "Log in to Kova", exact: true });
   await expect(dialog).toBeVisible();

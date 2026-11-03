@@ -13,7 +13,9 @@ test("connected apps and scheduled tasks expose truthful signed-out states", asy
   for (const path of ["/apps", "/scheduled-tasks"]) {
     await page.goto(path, { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Continue with email", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Create an account", exact: true }),
     ).toBeVisible();

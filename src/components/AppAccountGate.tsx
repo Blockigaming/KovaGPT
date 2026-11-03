@@ -22,7 +22,7 @@ export function AppAccountGate({ children }: { children: ReactNode }) {
   if (!isLoaded && pathname !== "/") return <SessionLoading />;
   return (
     <Suspense fallback={<SessionLoading />}>
-      <AccountWelcome />
+      <AccountWelcome pending={!isLoaded} />
     </Suspense>
   );
 }

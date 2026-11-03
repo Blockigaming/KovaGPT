@@ -23,7 +23,9 @@ async function verifyConversationShell(
     await expect(page.getByRole("button", { name: "Type with voice", exact: true })).toBeVisible();
     await expect(page.locator("textarea:visible").first()).toBeVisible();
   } else {
-    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Continue with email", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Create an account", exact: true }),
     ).toBeVisible();
@@ -198,7 +200,9 @@ test.describe("ChatGPT-like Kova conversation shell", () => {
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Continue with email", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Create an account", exact: true }),
     ).toBeVisible();

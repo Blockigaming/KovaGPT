@@ -83,11 +83,17 @@ export function WebsiteFaq() {
   );
 }
 
-export function PublicWebsiteHome({ mode = "sign-in" }: { mode?: "sign-in" | "sign-up" }) {
+export function PublicWebsiteHome({
+  mode = "sign-in",
+  pending = false,
+}: {
+  mode?: "sign-in" | "sign-up";
+  pending?: boolean;
+}) {
   const [open, setOpen] = useState(true);
   return (
     <PublicWebsiteLayout>
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" tabIndex={-1} aria-busy={pending || undefined}>
         <section className="public-website-hero" aria-labelledby="public-home-title">
           <div className="public-website-hero-left">
             <h1 id="public-home-title">Question what’s next</h1>
