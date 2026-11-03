@@ -639,7 +639,8 @@ button.kova-auth-sign-up:hover {
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
     width: min(360px, calc(100vw - 80px));
     max-width: calc(100vw - 64px);
-    border-radius: 0;
+    border-radius: 0 24px 24px 0;
+    overflow: hidden;
     --sidebar-row-height: 48px;
     --sidebar-icon-slot: 22px;
     font-size: 16px;
@@ -688,5 +689,20 @@ button.kova-auth-sign-up:hover {
   .kova-sidebar .kova-nav-row,
   .kova-sidebar .kova-chat-row-main {
     font-size: 16px;
+  }
+}
+
+/* Consistent, reachable controls inside the phone navigation drawer. */
+@media (max-width: 767px) {
+  .kova-sidebar[data-kova-core-sidebar] :is(button, [role="button"]) {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  .kova-sidebar[data-kova-core-sidebar] :is(.kova-nav-row, .kova-chat-row-main) {
+    border-radius: 14px;
+  }
+  .kova-sidebar[data-kova-core-sidebar] :is(.kova-header-button, .kova-sidebar-toggle) {
+    min-width: 44px;
+    border-radius: 14px;
   }
 }
