@@ -11,6 +11,8 @@ This branch is an implementation candidate. It is not approved for merge or prod
 - Login and signup entry routes preserve a safe post-authentication destination. Protected app routes still require the existing account gate.
 - Incorporates the guarded hosted GitHub login work from PR #562. Kova-only GitHub identity adoption is not implemented or enabled. Hosted GitHub login and GitHub repository connections stay separate.
 - New homepage paid actions read the authenticated server subscription summary before opening existing Stripe Checkout. Existing subscriptions, inherited access, and conflicts go to Billing. Account changes invalidate pending checks and close account-scoped checkout.
+- Checkout initialization now shares one attempt across parent renders and Stripe callbacks, and missing Stripe browser configuration displays a recoverable error instead of throwing during rendering.
+- The branch incorporates current `main` correction #563 for Free Scheduled Tasks admission.
 - No database migration, secret change, production flag activation, existing-subscription repricing, Azure change, or production deployment.
 
 ## Read-only Stripe catalog observation — November 3, 2026
@@ -38,6 +40,8 @@ No price migration is needed. No account, customer, payment, subscription, webho
 Use `npm run typecheck`, `npm run test:unit`, `npm run test:api`, `npm run test:integration`, and the existing release checks. The new `public-website.test.mjs` covers distinct content, indexing, intended-plan preservation, existing subscription protection, Free checkout admission, failed verification, and stale-account invalidation.
 
 `Public website approval evidence` runs a production Node/Azure build with no secrets, visits the real routes, tests desktop and mobile widths from 320 to 2560, checks the FAQ and pricing toggle, and exports screenshots. Email entry uses a synthetic `.invalid` address and stops before authentication submission. No real account or charge is created.
+
+The initial GitHub browser run at commit `711636e97f1ee99525c511a6430b6207139069b8` passed its production build, loaded all 119 checked destinations with HTTP 200, and reached the existing password page from a synthetic email. Its FAQ selector timed out before responsive checks; that locator was corrected for the next run. The initial screenshots demonstrate implementation but do not qualify a later commit.
 
 ## Approval and rollback
 

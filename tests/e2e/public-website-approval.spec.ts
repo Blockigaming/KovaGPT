@@ -43,8 +43,10 @@ test("implemented homepage, pricing tabs, FAQ, original asset, and responsive ev
     .locator(".public-plans")
     .screenshot({ path: `${evidence}/pricing-team-enterprise.png` });
   await page.getByRole("button", { name: "Individual", exact: true }).click();
-  const summary = page.getByText("What is KovaGPT and how does it work?", { exact: true });
-  await summary.focus();
+  const summary = page
+    .locator(".public-website-faq summary")
+    .filter({ hasText: "What is KovaGPT and how does it work?" });
+  await summary.focus({ timeout: 10000 });
   await page.keyboard.press("Enter");
   await expect(page.locator(".public-website-faq details").first()).toHaveAttribute("open", "");
   await page.locator(".public-website-faq").screenshot({ path: `${evidence}/faq.png` });

@@ -1,3 +1,4 @@
+import { validateHostedGitHubLoginRedirect } from "../../src/lib/hosted-github-login-redirect.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { reactFixture } from "../helpers/kova-react-fixture.mjs";
@@ -25,6 +26,7 @@ test("callback effect replay cancels the first start before consuming one-use cr
     modules: {
       "@tanstack/react-router": { createFileRoute: () => (route) => route },
       "@/components/NovaLogo": { NovaLogo: "logo" },
+      "@/lib/hosted-github-login-redirect.mjs": { validateHostedGitHubLoginRedirect },
       "@/lib/oauth-session": {
         getCallbackPostAuthRedirect: () => "/settings",
         completeOAuthSessionFromUrl: async (_source, signal) => {
@@ -65,7 +67,10 @@ function dialogFixture({ mode = "dual", github = true, rejected = false } = {}) 
         onOpenChange() {},
       }),
     {
-      globals: { window: { location: { assign: (url) => redirects.push(url) } } },
+      globals: {
+        __env: { VITE_SUPABASE_URL: "https://auth.example.test" },
+        window: { location: { assign: (url) => redirects.push(url) } },
+      },
       modules: {
         "@/components/ui/dialog": {
           Dialog: "dialog",
@@ -75,6 +80,7 @@ function dialogFixture({ mode = "dual", github = true, rejected = false } = {}) 
         },
         "@tanstack/react-router": { useNavigate: () => () => {} },
         "@/components/NovaLogo": { NovaLogo: "logo" },
+        "@/lib/hosted-github-login-redirect.mjs": { validateHostedGitHubLoginRedirect },
         "@/integrations/supabase/client": {
           supabase: {},
           resolveLegacyAuthContext: async () => {
@@ -84,7 +90,10 @@ function dialogFixture({ mode = "dual", github = true, rejected = false } = {}) 
               auth: {
                 signInWithOAuth: async (input) => {
                   calls.push(input);
-                  return { data: { url: "https://auth.example.test/authorize" }, error: null };
+                  return {
+                    data: { url: "https://auth.example.test/auth/v1/authorize?provider=github" },
+                    error: null,
+                  };
                 },
               },
             };
@@ -121,7 +130,7 @@ test("GitHub replaces passkey and starts the guarded identity OAuth flow", async
   assert.equal(calls[0].provider, "github");
   assert.equal(calls[0].options.redirectTo, "https://kovagpt.com/~oauth/callback");
   assert.equal(calls[0].options.skipBrowserRedirect, true);
-  assert.deepEqual(redirects, ["https://auth.example.test/authorize"]);
+  assert.deepEqual(redirects, ["https://auth.example.test/auth/v1/authorize?provider=github"]);
 });
 
 for (const options of [{ github: false }, { mode: "kova" }])

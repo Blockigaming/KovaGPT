@@ -150,12 +150,15 @@ test("only a verified Free summary opens the allowlisted monthly checkout", asyn
 });
 
 test("an account change or unmount invalidates pending plan verification", async () => {
-  for (const end of ["switch", "unmount"]) {
+  for (const end of ["switch", "switch-back", "unmount"]) {
     const operation = deferred();
     const f = planFixture(() => operation.promise);
     f.click();
     if (end === "switch") f.changeAccount("account-two");
-    else f.hooks.unmount();
+    else if (end === "switch-back") {
+      f.changeAccount("account-two");
+      f.changeAccount("account-one");
+    } else f.hooks.unmount();
     operation.resolve({
       billingConflict: false,
       activeSubscriptionCount: 0,
