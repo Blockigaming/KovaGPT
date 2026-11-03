@@ -16,7 +16,9 @@ test("signed-out chat requires an account before exposing uploads or creation to
 }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Attach", exact: true })).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /analyze (data|files)/i })).toHaveCount(0);

@@ -62,6 +62,12 @@ function fixture(options = {}) {
         useNavigate: () => (destination) => navigations.push(plain(destination)),
       },
       "@/components/NovaLogo": { NovaLogo: "logo" },
+      "@/integrations/supabase/config": {
+        SUPABASE_BROWSER_CONFIG: { url: "https://auth.example.invalid" },
+      },
+      "@/hooks/useAuthProviders": { useAuthProviders: () => ({ resolved: true, github: false }) },
+      "@/assets/plugins/github.svg": { default: "/github.svg" },
+      "@/lib/hosted-github-login-redirect.mjs": { validateHostedGitHubLoginRedirect: (url) => url },
       "@/components/auth/ForgotPasswordDialog": { ForgotPasswordDialog: "forgot" },
       "@/integrations/supabase/client": {
         supabase: {
@@ -80,6 +86,7 @@ function fixture(options = {}) {
       "@/lib/auth-retry-delay.mjs": authRetry,
       "@/lib/kova-auth-browser": {
         browserKovaAuthEnabled: () => options.owned !== false,
+        browserKovaAuthMode: () => (options.owned !== false ? "kova" : "supabase"),
         kovaPublicAuthJson: (...args) => auth("owned", ...args),
       },
       "@/lib/kova-auth-passkey-browser": {

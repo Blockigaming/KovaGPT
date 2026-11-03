@@ -1,3 +1,5 @@
+import { PUBLIC_WEBSITE_FOOTER } from "../../src/lib/public-website-catalog.mjs";
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHookHarness, elements, loadUiModule, text } from "../helpers/ui-state-harness.mjs";
@@ -8,6 +10,8 @@ function fixture(initialPath = "/features") {
   const listeners = new Map();
   let focusCount = 0;
   const dependencies = {
+    "./public/public-website.css": {},
+    "@/lib/public-website-catalog.mjs": { PUBLIC_WEBSITE_FOOTER },
     react: hooks.react,
     "@tanstack/react-router": {
       Link: "Link",
@@ -156,21 +160,23 @@ test("public navigation closes after route changes and names only the exact curr
 test("footer columns adapt to available text width while preserving legal and help links", () => {
   const f = fixture("/help");
   const tree = f.footer();
-  includesClasses(tree, ["min-w-0", "[overflow-wrap:anywhere]"]);
-  const layout = elements(tree, (node) => node.props.className?.includes("lg:grid-cols-"))[0];
-  includesClasses(layout, ["lg:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)]"]);
+  includesClasses(tree, ["kova-public-footer"]);
+  const css = readFileSync("src/components/public/public-website.css", "utf8");
+  assert.match(css, /overflow-wrap: anywhere/);
+  assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   const nav = elements(tree, (node) => node.props["aria-label"] === "Footer navigation")[0];
-  includesClasses(nav, ["min-w-0", "grid-cols-[repeat(auto-fit,minmax(min(100%,7rem),1fr))]"]);
+  includesClasses(nav, ["kova-footer-nav"]);
   const links = elements(nav, (node) => node.type === "Link");
-  assert.equal(links.length, 17);
+  assert.equal(links.length, 58);
   for (const link of links) {
     assert.ok(text(link).trim());
-    includesClasses(link, ["min-h-11", "min-w-0", "max-w-full", "py-2.5"]);
+    includesClasses(link, ["min-h-11"]);
   }
   const paths = new Set(links.map((node) => node.props.to));
   for (const required of [
     "/help",
-    "/contact-support",
+    "/help/contact",
     "/privacy",
     "/terms",
     "/security",

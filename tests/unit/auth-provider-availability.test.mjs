@@ -12,7 +12,7 @@ test("provider availability starts unresolved so no provider is falsely advertis
 });
 
 test("the probe uses only the publishable key and never a service role secret", () => {
-  assert.match(source, /VITE_SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(source, /const \{ url, publishableKey: key \} = SUPABASE_BROWSER_CONFIG/);
   assert.doesNotMatch(source, /SERVICE_ROLE/);
   assert.doesNotMatch(source, /process\.env/);
 });

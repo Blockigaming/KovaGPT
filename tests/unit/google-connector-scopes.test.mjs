@@ -155,9 +155,19 @@ test("actual chat Google-tool gate permits signed-in Default while retaining con
     });
   assert.equal(enabled({}), true);
   assert.equal(enabled({ lastText: "Hi, find my latest email" }), true);
+  for (const lastText of [
+    "What is my bank balance?",
+    "What is 2 + 2 in my spreadsheet?",
+    "Read README.md in my connected GitHub repository.",
+    "What about tomorrow?",
+    "Reply exactly as described in my latest email",
+  ])
+    assert.equal(enabled({ lastText }), true);
   for (const input of [
     { lastText: "Hi" },
     { lastText: "  Hello there!  " },
+    { lastText: "Reply exactly: KovaGPT production chat verified." },
+    { lastText: "What is 2 + 2?" },
     { auth: null },
     { usesExistingContext: false },
     { hasAttachments: true },

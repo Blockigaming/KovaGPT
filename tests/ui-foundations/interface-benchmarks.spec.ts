@@ -73,7 +73,9 @@ for (const width of [390, 1440]) {
         await page.keyboard.press("Enter");
         await expect(menu).toHaveAttribute("aria-expanded", "false");
       } else {
-        const overview = page.getByRole("link", { name: "Overview", exact: true });
+        const overview = page
+          .getByRole("navigation", { name: "Public navigation", exact: true })
+          .getByRole("link", { name: "About", exact: true });
         await overview.focus();
         await expect(overview).toBeFocused();
         await page.keyboard.press("Enter");

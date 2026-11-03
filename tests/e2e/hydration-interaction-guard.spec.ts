@@ -138,7 +138,9 @@ for (const { mode, system, dark } of themeCases) {
       await expect(root).toHaveClass(dark ? /\bdark\b/ : /^(?!.*\bdark\b)/);
       await expect(page.locator("body")).toHaveCSS("background-color", background);
       await expect(page.locator("body")).toHaveCSS("color", foreground);
-      await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Continue with email", exact: true }),
+      ).toBeVisible();
       await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(
         0,
       );
@@ -155,7 +157,9 @@ for (const { mode, system, dark } of themeCases) {
       if (mode === "dark") {
         await page.goto("/settings/appearance");
         await waitForKovaHydration(page);
-        await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: "Continue with email", exact: true }),
+        ).toBeVisible();
         await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toHaveCount(0);
         await expect(page.locator("body")).toHaveCSS("background-color", background);
       }

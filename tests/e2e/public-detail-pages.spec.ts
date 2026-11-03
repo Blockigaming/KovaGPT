@@ -96,8 +96,13 @@ test.describe.parallel("complete public detail content", () => {
         await expect(page.locator("main#main-content"), route).toHaveCount(1);
         await expect(page.getByRole("heading", { level: 1 }), route).toHaveCount(1);
         await expect(page.getByRole("navigation", { name: "Breadcrumb" }), route).toBeVisible();
-        await expect(page.getByRole("region", { name: "Page highlights" }), route).toBeVisible();
-        await expect(page.locator("main article"), route).toHaveCount(2);
+        if (await page.locator("main.public-website-article").count()) {
+          await expect(page.getByRole("complementary", { name: "On this page" })).toBeVisible();
+          await expect(page.locator(".public-article-body section")).toHaveCount(2);
+        } else {
+          await expect(page.getByRole("region", { name: "Page highlights" }), route).toBeVisible();
+          await expect(page.locator("main article"), route).toHaveCount(2);
+        }
         const primaryAction = page.locator("[data-public-primary]");
         await expect(primaryAction, route).toHaveCount(1);
         if (route === "/plans/free") await expect(primaryAction).toHaveAttribute("href", "/");

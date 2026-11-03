@@ -1,39 +1,46 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { DEVELOPER_DOC_BY_SLUG } from "@/lib/developer-docs";
 import { PublicPageView } from "@/components/public/PublicSite";
+import { PUBLIC_WEBSITE_PAGE_BY_PATH } from "@/lib/public-website-catalog.mjs";
+import { PublicWebsiteArticle, websitePageHead } from "@/components/public/PublicWebsiteArticle";
 export const Route = createFileRoute("/developers/$docSlug")({
   loader: ({ params }) => {
+    const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(`/developers/${params.docSlug}`);
+    if (websitePage) return { kind: "website" as const, item: websitePage };
     const doc = DEVELOPER_DOC_BY_SLUG.get(params.docSlug);
     if (!doc) throw notFound();
-    return doc;
+    return { kind: "legacy" as const, item: doc };
   },
   component: UnavailableDeveloperDoc,
   head: ({ loaderData: doc }) =>
-    doc
-      ? {
-          meta: [
-            { title: `${doc.title} | KovaGPT Developers` },
-            { name: "description", content: doc.description },
-            { name: "robots", content: "noindex, follow" },
-          ],
-          links: [
-            {
-              rel: "canonical",
-              href: `https://kovagpt.com/developers/${doc.slug}`,
-            },
-          ],
-        }
-      : {},
+    doc?.kind === "website"
+      ? websitePageHead(doc.item)
+      : doc
+        ? {
+            meta: [
+              { title: `${doc.item.title} | KovaGPT Developers` },
+              { name: "description", content: doc.item.description },
+              { name: "robots", content: "noindex, follow" },
+            ],
+            links: [
+              {
+                rel: "canonical",
+                href: `https://kovagpt.com/developers/${doc.item.slug}`,
+              },
+            ],
+          }
+        : {},
 });
 
 function UnavailableDeveloperDoc() {
   const doc = Route.useLoaderData();
+  if (doc.kind === "website") return <PublicWebsiteArticle item={doc.item} />;
   return (
     <PublicPageView
       reference="claude-documentation"
       eyebrow="Developer documentation"
-      title={doc.title}
-      summary={doc.description}
+      title={doc.item.title}
+      summary={doc.item.description}
     >
       <section className="space-y-3 rounded-xl border p-6">
         <h2 className="text-lg font-semibold">Prepare an integration</h2>

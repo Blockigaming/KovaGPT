@@ -432,7 +432,10 @@ function fixture(options = {}) {
           body: JSON.stringify({
             mode: options.mode ?? "instant",
             messages: options.messages ?? [
-              { role: "user", content: "Read README.md in my connected GitHub repository." },
+              {
+                role: "user",
+                content: options.prompt ?? "Read README.md in my connected GitHub repository.",
+              },
             ],
             user: { customInstructions: "FINAL_CONTEXT_FIXTURE" },
           }),
@@ -727,6 +730,25 @@ test("the ordinary fallback still obeys the authoritative account quota and oper
   assert.equal(cost.providers.length, 0);
   assert.equal(cost.reads.length, 0);
 });
+for (const prompt of [
+  "Hi",
+  "Reply exactly: KovaGPT production chat verified.",
+  "Reply with exactly: KOVA_CHAT_OK",
+  "What is 2 + 2?",
+  "Compute -2.5 * 4",
+]) {
+  test(`self-contained turn avoids connector planning with connected accounts: ${prompt}`, async () => {
+    const f = fixture({ prompt, googleTools: "all", linear: true, headroomError: true });
+    const { response, text } = await f.post();
+    assert.equal(response.status, 200, text);
+    assert.equal(f.providers.length, 1);
+    assert.equal(f.providers[0].stream, true);
+    assert.equal(f.providers[0].tools, undefined);
+    assert.equal(f.reads.length, 0);
+    assert.equal(f.acquisitions.length, 1);
+    assert.equal(f.settlements.length, 1);
+  });
+}
 
 test("cancellation after a connector read settles planning usage without a final request", async () => {
   const f = fixture({ abortAfterRead: true });

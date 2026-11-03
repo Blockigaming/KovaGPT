@@ -144,23 +144,31 @@ test("review fixture events are identity-scoped and stale selections cannot rese
 
 function pricingFixture(isSignedIn) {
   const calls = [];
+  const auth = {
+    user: { id: "sample", email: "sample@example.test" },
+    isSignedIn,
+    isLoaded: true,
+  };
+  const checkout = { open: false };
   const f = reactFixture("src/routes/pricing.tsx", (exports) => exports.PricingPage, {
     sourceSuffix: "\nexport { PricingPage };",
     modules: {
       "@tanstack/react-router": { createFileRoute: () => (config) => config },
       "@/components/auth/ClerkSafe": {
-        useUser: () => ({
-          user: { id: "sample", email: "sample@example.test" },
-          isSignedIn,
-          isLoaded: true,
-        }),
+        useUser: () => ({ ...auth }),
         useClerkSafe: () => ({ openSignIn: () => calls.push("sign-in") }),
       },
       "@/hooks/useStripeCheckout": {
         useStripeCheckout: () => ({
-          openCheckout: (options) => calls.push({ type: "checkout", options: { ...options } }),
-          closeCheckout: () => calls.push("close"),
-          isOpen: false,
+          openCheckout: (options) => {
+            checkout.open = true;
+            calls.push({ type: "checkout", options: { ...options } });
+          },
+          closeCheckout: () => {
+            checkout.open = false;
+            calls.push("close");
+          },
+          isOpen: checkout.open,
           checkoutElement: null,
         }),
       },
@@ -179,8 +187,44 @@ function pricingFixture(isSignedIn) {
     },
   });
   f.render();
-  return { ...f, calls };
+  return { ...f, calls, auth, checkout };
 }
+
+test("pricing withholds checkout immediately on logout, account switch, or unresolved identity and does not restore an old checkout", async () => {
+  for (const change of ["logout", "switch", "loading"]) {
+    const f = pricingFixture(true);
+    const plus = f
+      .nodes()
+      .find((node) => node.type?.name === "PlanCard" && node.props.name === "Plus");
+    plus.props.onCta({ currentTarget: {} });
+    f.render();
+    assert.equal(f.find("dialog").props.open, true);
+    if (change === "logout") f.auth.isSignedIn = false;
+    if (change === "switch") f.auth.user = { id: "other", email: "other@example.test" };
+    if (change === "loading") f.auth.isLoaded = false;
+    f.render();
+    assert.equal(f.find("dialog").props.open, false);
+    await f.flush();
+    assert.equal(f.checkout.open, false);
+    f.auth.isLoaded = true;
+    f.auth.isSignedIn = true;
+    f.auth.user = { id: "sample", email: "sample@example.test" };
+    await f.flush();
+    assert.equal(f.find("dialog").props.open, false);
+  }
+});
+
+test("pricing does not start checkout before identity resolves", () => {
+  const f = pricingFixture(true);
+  f.auth.isLoaded = false;
+  f.render();
+  const plus = f
+    .nodes()
+    .find((node) => node.type?.name === "PlanCard" && node.props.name === "Plus");
+  plus.props.onCta({ currentTarget: {} });
+  assert.deepEqual(f.calls, []);
+  assert.equal(f.checkout.open, false);
+});
 
 test("pricing routes signed-in paid CTAs to canonical checkout and guests to sign-in without claiming eligibility", () => {
   for (const signedIn of [true, false]) {

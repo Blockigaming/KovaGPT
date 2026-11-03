@@ -11,7 +11,9 @@ test.describe("Signed-out gating", () => {
   test("/projects requires an account before exposing the workspace", async ({ page }) => {
     await page.goto("/projects");
     await waitForKovaHydration(page);
-    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Continue with email", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Create an account", exact: true }),
     ).toBeVisible();
@@ -24,7 +26,9 @@ test.describe("Signed-out gating", () => {
     // No redirect off "/"; some KovaGPT branded element must be visible.
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator("body")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Continue with email", exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(
       0,
     );

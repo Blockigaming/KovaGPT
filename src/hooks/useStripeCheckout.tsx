@@ -1,5 +1,9 @@
-import { useCallback, useState } from "react";
-import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
+import { lazy, Suspense, useCallback, useState } from "react";
+
+const StripeEmbeddedCheckout = lazy(async () => {
+  const checkout = await import("@/components/StripeEmbeddedCheckout");
+  return { default: checkout.StripeEmbeddedCheckout };
+});
 
 interface CheckoutOptions {
   priceId: string;
@@ -22,7 +26,12 @@ export function useStripeCheckout() {
     setOptions(null);
   }, []);
 
-  const checkoutElement = isOpen && options ? <StripeEmbeddedCheckout {...options} /> : null;
+  const checkoutElement =
+    isOpen && options ? (
+      <Suspense fallback={<p role="status">Loading secure checkout…</p>}>
+        <StripeEmbeddedCheckout {...options} />
+      </Suspense>
+    ) : null;
 
   return { openCheckout, closeCheckout, isOpen, checkoutElement };
 }

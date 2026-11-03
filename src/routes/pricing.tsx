@@ -129,14 +129,23 @@ export const Route = createFileRoute("/pricing")({
 
 function PricingPage() {
   const [enterpriseOpen, setEnterpriseOpen] = useState(false);
+  const [checkoutOwner, setCheckoutOwner] = useState<string | null>(null);
   const [checkoutStatus, setCheckoutStatus] = useState<"idle" | "loading" | "loaded" | "error">(
     "idle",
   );
   const checkoutRegionRef = useRef<HTMLDivElement>(null);
   const checkoutReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const { user, isSignedIn, isLoaded } = useUser();
+  const owner = isLoaded && isSignedIn ? (user?.id ?? null) : null;
   const { openSignIn } = useClerk();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
+
+  useEffect(() => {
+    if (checkoutOwner !== null && checkoutOwner !== owner) {
+      closeCheckout();
+      setCheckoutOwner(null);
+    }
+  }, [owner, checkoutOwner, closeCheckout]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -172,6 +181,7 @@ function PricingPage() {
   }, [isOpen]);
 
   const startCheckout = (priceId: string, trigger: HTMLButtonElement) => {
+    if (!isLoaded) return;
     if (isLoaded && !isSignedIn) {
       try {
         openSignIn();
@@ -180,6 +190,8 @@ function PricingPage() {
       }
       return;
     }
+    if (!owner) return;
+    setCheckoutOwner(owner);
     checkoutReturnFocusRef.current = trigger;
     setCheckoutStatus("loading");
     openCheckout({
@@ -339,7 +351,10 @@ function PricingPage() {
 
       <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
 
-      <Dialog open={isOpen} onOpenChange={(open) => !open && closeCheckout()}>
+      <Dialog
+        open={isOpen && owner !== null && checkoutOwner === owner}
+        onOpenChange={(open) => !open && closeCheckout()}
+      >
         <DialogContent
           className="gap-0 overflow-hidden p-0 sm:p-0 [&>button]:h-11 [&>button]:w-11"
           onCloseAutoFocus={(event) => {

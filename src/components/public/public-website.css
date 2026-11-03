@@ -1,0 +1,699 @@
+.public-website {
+  color-scheme: dark;
+  --public-bg: #111111;
+  --public-card: #0b0b0b;
+  --public-muted: #a5a5a5;
+  min-height: 100dvh;
+  background: var(--public-bg);
+  color: #f1f1ef;
+  font-family: "DM Sans", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.public-website *,
+.kova-public-footer * {
+  box-sizing: border-box;
+}
+.public-website :where(button, a, input, summary):focus-visible {
+  outline: 2px solid #c9c9c9;
+  outline-offset: 4px;
+}
+.public-website a {
+  text-underline-offset: 3px;
+}
+.public-website-header {
+  padding: 24px 4.4vw;
+}
+.public-website-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #f1f1ef;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 29px;
+  font-weight: 500;
+}
+.public-website-mark.kova-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 0;
+  background: transparent;
+}
+.public-website-hero {
+  max-width: 1320px;
+  margin: 60px auto 0;
+  padding: 0 44px;
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  align-items: start;
+  gap: 96px;
+}
+.public-website-hero-left {
+  text-align: center;
+  min-width: 0;
+}
+.public-website h1,
+.public-website h2,
+.public-plan-card h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+.public-website-hero h1 {
+  margin: 0;
+  font-size: clamp(36px, 4.5vw, 64px);
+  line-height: 1.13;
+  white-space: nowrap;
+}
+.public-website-subtitle {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21px;
+  line-height: 1.45;
+  margin: 16px 0 30px;
+}
+.public-sign-in {
+  margin: 0 auto;
+  max-width: 448px;
+  padding: 28px;
+  border: 1px solid #222;
+  border-radius: 30px;
+}
+.public-sign-in > button,
+.public-sign-in form > button,
+.public-sign-in input {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #292929;
+  background: #333;
+  color: #f1f1f1;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 9px 14px;
+}
+.public-sign-in > button + button {
+  margin-top: 12px;
+}
+.public-sign-in button {
+  cursor: pointer;
+}
+.public-sign-in button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.public-sign-in button:enabled:hover {
+  background: #414141;
+}
+.public-github-logo {
+  filter: invert(1);
+}
+.public-sign-in input {
+  margin-bottom: 14px;
+  background: #1e1e1e;
+  font-weight: 400;
+  text-align: left;
+  justify-content: start;
+  min-width: 0;
+}
+.public-sign-in input::placeholder {
+  color: #a0a0a0;
+}
+.public-auth-divider {
+  padding: 12px 0;
+  font-size: 12px;
+  color: #b4b4b4;
+}
+.public-sign-in .public-auth-legal {
+  color: #a5a5a5;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 10px 0 0;
+}
+.public-auth-legal a,
+.public-desktop-availability a {
+  text-decoration: underline;
+}
+.public-sign-in .public-provider-status {
+  font-size: 11px;
+  color: #b2b2b2;
+  margin: 5px 0 10px;
+  line-height: 1.5;
+}
+.public-auth-switch {
+  color: #a5a5a5;
+  font-size: 12px;
+  margin: 12px 0 0;
+}
+.public-auth-switch button {
+  text-decoration: underline;
+  color: #ededed;
+  padding: 6px 3px;
+  min-height: 44px;
+  background: transparent;
+  border: 0;
+}
+.public-primary,
+.public-sign-in button.public-primary {
+  background: #f1f1f1;
+  border: 1px solid #f1f1f1;
+  color: #111;
+}
+.public-primary:hover,
+.public-sign-in button.public-primary:hover {
+  background: #dcdcdc;
+}
+.public-desktop-availability {
+  margin: 22px auto 0;
+  color: #a5a5a5;
+  font-size: 12px;
+}
+.public-classroom {
+  margin: 22px 0 0;
+  min-width: 0;
+}
+.public-classroom img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 164 / 117;
+  object-fit: contain;
+  border-radius: 18px;
+}
+.public-plans {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 150px 44px 30px;
+}
+.public-plans > h2,
+.public-website-faq > h2 {
+  margin: 0;
+  font-size: 34px;
+  text-align: center;
+  line-height: 1.25;
+}
+.public-plan-toggle {
+  display: flex;
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
+  margin: 32px auto 48px;
+  background: #202020;
+  border-radius: 10px;
+}
+.public-plan-toggle button {
+  font: inherit;
+  min-height: 44px;
+  background: transparent;
+  color: #f1f1f1;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.public-plan-toggle button[aria-pressed="true"] {
+  background: #333;
+  border-color: #4a4a4a;
+}
+.public-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+}
+.public-plan-card {
+  min-width: 0;
+  position: relative;
+  border: 1px solid #1d1d1d;
+  border-radius: 25px;
+  background: var(--public-card);
+  padding: 32px;
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+}
+.public-plan-glyph {
+  margin-bottom: 24px;
+  color: #dedede;
+}
+.public-plan-card h3 {
+  font-size: 34px;
+  line-height: 1.15;
+  margin: 0 0 5px;
+}
+.public-plan-description {
+  margin: 0;
+  min-height: 47px;
+  font-size: 15px;
+}
+.public-plan-price {
+  font-size: 25px;
+  font-weight: 600;
+  margin-top: 21px;
+}
+.public-plan-price span {
+  font-size: 15px;
+  color: #aaa;
+  font-weight: 400;
+  margin-left: 4px;
+}
+.public-plan-period {
+  font-size: 13px;
+  color: #a5a5a5;
+  margin: 2px 0 32px;
+}
+.public-plan-action {
+  min-height: 44px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.public-plan-action:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.public-plan-cancel {
+  color: #aaa;
+  text-align: center;
+  margin: 7px 0 24px;
+  font-size: 12px;
+}
+.public-plan-card ul {
+  margin: 0 0 25px;
+  padding: 24px 0 0;
+  list-style: none;
+  border-top: 1px solid #1b1b1b;
+}
+.public-plan-card li {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 15px;
+  color: #aaa;
+}
+.public-plan-card li svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: #eee;
+}
+.public-plan-details {
+  margin-top: auto;
+  font-size: 13px;
+  color: #bdbdbd;
+  text-decoration: underline;
+}
+.public-plan-tax {
+  font-size: 13px;
+  text-align: center;
+  color: #aaa;
+  margin: 38px auto 0;
+  max-width: 850px;
+}
+.public-business-plans {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.public-plan-badge {
+  position: absolute;
+  top: 32px;
+  right: 28px;
+  border: 1px solid #6c5c29;
+  border-radius: 12px;
+  padding: 1px 9px;
+  color: #e1c573;
+  font-size: 11px;
+}
+.public-business-copy {
+  color: #aaa;
+  margin: 24px 0;
+  min-height: 116px;
+}
+.public-website-faq {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 135px 28px 150px;
+}
+.public-website-faq > h2 {
+  margin-bottom: 42px;
+}
+.public-website-faq details {
+  border-bottom: 1px solid #222;
+}
+.public-website-faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 0;
+  min-height: 48px;
+  cursor: pointer;
+  list-style: none;
+}
+.public-website-faq summary::-webkit-details-marker {
+  display: none;
+}
+.public-website-faq summary span {
+  font-size: 21px;
+  line-height: 1;
+  color: #aaa;
+}
+.public-website-faq details[open] summary span {
+  transform: rotate(90deg);
+}
+.public-website-faq details p {
+  color: #b5b5b5;
+  margin: 0;
+  padding: 0 24px 20px 0;
+  line-height: 1.75;
+}
+.public-billing-error {
+  padding: 18px;
+  border: 1px solid #666;
+  border-radius: 10px;
+  margin-top: 20px;
+}
+.public-billing-error a {
+  text-decoration: underline;
+}
+.public-checkout-dialog {
+  width: 100vw;
+  max-width: 100vw !important;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow-y: auto;
+  border-radius: 0;
+  padding: 32px max(24px, calc((100vw - 1000px) / 2));
+}
+.public-website-article {
+  max-width: 1050px;
+  padding: 70px 32px 110px;
+  margin: 0 auto;
+}
+.public-website-breadcrumb {
+  color: #aaa;
+  margin-bottom: 40px;
+  font-size: 13px;
+}
+.public-website-article h1 {
+  font-size: clamp(36px, 5vw, 62px);
+  line-height: 1.15;
+  max-width: 900px;
+  margin: 10px 0 24px;
+}
+.public-article-lede {
+  color: #bbb;
+  font-size: 19px;
+  max-width: 760px;
+  line-height: 1.65;
+}
+.public-article-body {
+  display: grid;
+  grid-template-columns: minmax(0, 700px) minmax(180px, 1fr);
+  gap: 64px;
+  margin-top: 48px;
+}
+.public-article-body section {
+  margin: 0 0 40px;
+  scroll-margin-top: 24px;
+}
+.public-article-body section h2 {
+  font-size: 29px;
+  line-height: 1.3;
+  margin: 0 0 15px;
+}
+.public-article-body section p {
+  color: #b8b8b8;
+  line-height: 1.85;
+  margin: 0 0 14px;
+}
+.public-article-body ul,
+.public-article-body ol {
+  color: #b8b8b8;
+  padding-left: 20px;
+  line-height: 1.85;
+}
+.public-article-body aside {
+  font-size: 13px;
+}
+.public-article-body aside h2 {
+  font: inherit;
+  font-weight: 600;
+  color: #aaa;
+  margin-bottom: 14px;
+}
+.public-article-body aside a {
+  display: block;
+  min-height: 40px;
+  padding: 9px 0;
+  text-decoration: none;
+}
+.public-article-body a {
+  text-decoration: underline;
+}
+.public-article-label {
+  font-size: 12px;
+  color: #aaa;
+}
+.public-directory-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 30px;
+}
+.public-directory-links a {
+  padding: 16px 0;
+  border-bottom: 1px solid #333;
+  text-decoration: none;
+}
+.public-directory-links strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 16px;
+}
+.public-directory-links span {
+  color: #aaa;
+  font-size: 13px;
+}
+.public-availability {
+  display: inline-block;
+  border: 1px solid #554e35;
+  border-radius: 8px;
+  padding: 6px 11px;
+  margin-top: 20px;
+  color: #dfca88;
+  font-size: 12px;
+}
+.public-website-pricing .public-plans {
+  padding-top: 65px;
+}
+.kova-public-footer {
+  color-scheme: dark;
+  background: #202020;
+  color: #ededeb;
+  border: 0;
+  font:
+    13px/1.5 "DM Sans",
+    Arial,
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.kova-footer-inner {
+  padding: 60px 4.4vw 38px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+.kova-footer-content {
+  display: grid;
+  grid-template-columns: minmax(170px, 1.2fr) minmax(0, 3.8fr);
+  gap: 65px;
+}
+.kova-footer-brand {
+  min-width: 0;
+}
+.kova-footer-brand .public-website-brand {
+  min-height: 45px;
+}
+.kova-footer-nav {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 38px 35px;
+  min-width: 0;
+}
+.kova-footer-nav h2 {
+  color: #a7a7a7;
+  font: inherit;
+  margin: 0 0 14px;
+}
+.kova-footer-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kova-footer-nav a {
+  display: inline-flex;
+  min-height: 45px;
+  padding: 8px 0;
+  color: #ededed;
+  text-decoration: none;
+  border-radius: 2px;
+}
+.kova-footer-nav a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kova-footer-nav a:focus-visible {
+  outline: 2px solid #ddd;
+  outline-offset: 4px;
+}
+.kova-footer-copyright {
+  color: #a7a7a7;
+  font-size: 12px;
+  margin-top: 65px;
+}
+@media (min-width: 1600px) {
+  .public-website-hero {
+    margin-top: 100px;
+  }
+}
+@media (max-width: 1100px) {
+  .public-website-hero {
+    gap: 45px;
+    padding: 0 30px;
+    grid-template-columns: 1.25fr 1fr;
+  }
+  .public-website-hero h1 {
+    font-size: 45px;
+    white-space: normal;
+  }
+  .public-plan-card {
+    padding: 25px;
+  }
+  .public-plan-grid {
+    gap: 20px;
+  }
+  .kova-footer-content {
+    gap: 40px;
+  }
+}
+@media (max-width: 760px) {
+  .public-website-header {
+    padding: 21px 24px;
+  }
+  .public-website-brand {
+    font-size: 26px;
+  }
+  .public-website-hero {
+    margin-top: 45px;
+    padding: 0 24px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 42px;
+  }
+  .public-website-hero h1 {
+    font-size: clamp(31px, 7.5vw, 46px);
+  }
+  .public-website-subtitle {
+    font-size: 18px;
+    margin-top: 16px;
+  }
+  .public-sign-in {
+    padding: 22px;
+    border-radius: 24px;
+  }
+  .public-sign-in > button,
+  .public-sign-in input,
+  .public-sign-in form > button {
+    min-height: 46px;
+  }
+  .public-auth-switch button {
+    min-height: 44px;
+  }
+  .public-classroom {
+    width: min(100%, 448px);
+    margin: 0 auto;
+  }
+  .public-plans {
+    padding: 85px 24px 20px;
+  }
+  .public-plans > h2,
+  .public-website-faq > h2 {
+    font-size: 31px;
+  }
+  .public-plan-toggle {
+    margin: 26px auto 34px;
+  }
+  .public-plan-toggle button {
+    padding: 10px 13px;
+    font-size: 13px;
+  }
+  .public-plan-grid,
+  .public-business-plans {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 448px;
+    margin: 0 auto;
+  }
+  .public-plan-card {
+    padding: 28px;
+  }
+  .public-plan-description {
+    min-height: auto;
+  }
+  .public-business-copy {
+    min-height: auto;
+  }
+  .public-website-faq {
+    padding: 85px 24px 90px;
+  }
+  .public-article-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 25px;
+  }
+  .public-article-body aside {
+    border-top: 1px solid #333;
+    padding-top: 25px;
+  }
+  .public-website-article {
+    padding: 45px 24px 75px;
+  }
+  .public-directory-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kova-footer-inner {
+    padding: 42px 24px 30px;
+  }
+  .kova-footer-content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 38px;
+  }
+  .kova-footer-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 35px 25px;
+  }
+  .kova-footer-nav a {
+    padding: 10px 0;
+  }
+  .kova-footer-copyright {
+    margin-top: 35px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-website *,
+  .public-website *::before,
+  .public-website *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
