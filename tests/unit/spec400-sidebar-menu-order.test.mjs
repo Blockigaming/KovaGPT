@@ -23,7 +23,7 @@ test("account menu uses the specified order and a separate destructive group", (
     assert.ok(match.index > position, label);
     position = match.index;
   }
-  assert.doesNotMatch(menu, />\\s*(?:Usage|Subscriptions)\\s*</);
+  assert.doesNotMatch(menu, />\s*(?:Usage|Subscriptions)\s*</);
   assert.doesNotMatch(menu, /Customize sidebar/);
   assert.ok(menu.indexOf("<DropdownMenuSeparator") < menu.indexOf("Log out"));
 });
