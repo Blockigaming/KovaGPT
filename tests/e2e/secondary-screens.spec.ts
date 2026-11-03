@@ -49,15 +49,17 @@ test("secondary controls remain keyboard-visible and touchable", async ({ page }
   }
 });
 
-test("auth dialog dismisses with Escape and restores its trigger", async ({ page }) => {
+test("inline sign-in preserves keyboard focus and entered email after Escape", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  const login = page.getByRole("button", { name: "Log in" }).first();
-  await login.focus();
-  await page.keyboard.press("Enter");
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
+  const email = page.getByRole("textbox", { name: "Email address", exact: true });
+  await email.fill("keyboard-check@example.invalid");
   await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-  await expect(login).toBeFocused();
+  await expect(email).toBeVisible();
+  await expect(email).toBeFocused();
+  await expect(email).toHaveValue("keyboard-check@example.invalid");
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeFocused();
 });

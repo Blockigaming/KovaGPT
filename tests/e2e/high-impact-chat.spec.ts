@@ -460,7 +460,9 @@ test("signed-out chat cannot start a generation or create history", async ({ pag
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toHaveCount(0);
   await expect(page.getByTestId("send-button")).toHaveCount(0);
   expect(requests).toBe(0);

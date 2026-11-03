@@ -13,6 +13,8 @@ import {
 } from "@/lib/locales";
 import { ReviewDirectory, ReviewWorkspace } from "@/components/public/ReviewWorkspace";
 import { findReviewPage } from "@/lib/review-page-content";
+import { PUBLIC_WEBSITE_PAGE_BY_PATH } from "@/lib/public-website-catalog.mjs";
+import { PublicWebsiteArticle, websitePageHead } from "@/components/public/PublicWebsiteArticle";
 import { ArrowRight } from "lucide-react";
 import {
   Select,
@@ -258,6 +260,8 @@ const label = (value: string) =>
     .join(" ");
 export const Route = createFileRoute("/$slug")({
   loader: async ({ params }) => {
+    const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(`/${params.slug}`);
+    if (websitePage) return { kind: "website" as const, item: websitePage };
     if (["review", "bot", "legal"].includes(params.slug))
       return {
         kind: "review-directory" as const,
@@ -300,6 +304,7 @@ export const Route = createFileRoute("/$slug")({
   },
   head: ({ loaderData: data }) => {
     if (!data) return {};
+    if (data.kind === "website") return websitePageHead(data.item);
     if (data.kind === "review" || data.kind === "review-directory")
       return {
         meta: [
@@ -360,6 +365,7 @@ export const Route = createFileRoute("/$slug")({
 });
 function Page() {
   const data = Route.useLoaderData();
+  if (data.kind === "website") return <PublicWebsiteArticle item={data.item} />;
   if (data.kind === "review") return <ReviewWorkspace key={data.item.slug} page={data.item} />;
   if (data.kind === "review-directory")
     return <ReviewDirectory key={data.family ?? "all"} family={data.family} />;

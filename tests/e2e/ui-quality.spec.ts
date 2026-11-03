@@ -234,6 +234,10 @@ for (const theme of ["light", "dark"] as const) {
 for (const theme of ["light", "dark"] as const) {
   test(`guest core shell visual baseline in ${theme} mode`, async ({ page }, testInfo) => {
     test.skip(!new Set(["phone-390x844", "desktop-1440x900"]).has(testInfo.project.name));
+    // Keep the visual fixture independent of production provider configuration.
+    await page.route("**/auth/v1/settings", (route) =>
+      route.fulfill({ json: { external: { google: false, github: false, email: true } } }),
+    );
     const hydrationErrors: string[] = [];
     page.on("console", (message) => {
       if (
@@ -256,9 +260,11 @@ for (const theme of ["light", "dark"] as const) {
     }, theme);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("your next big thing.");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Question what’s next");
     await expect(page.getByRole("main")).toHaveCount(1);
-    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Continue with email", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Create an account", exact: true }),
     ).toBeVisible();
@@ -270,6 +276,10 @@ for (const theme of ["light", "dark"] as const) {
       true,
     );
     expect(hydrationErrors).toEqual([]);
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page.locator(".public-classroom img")).toHaveJSProperty("complete", true);
+    await expect(page.locator("#public-google-status")).toContainText("unavailable");
+    await expect(page.locator("#public-github-status")).toContainText("coming soon");
     await expect(page).toHaveScreenshot(`account-entry-${theme}.png`, {
       animations: "disabled",
       caret: "hide",

@@ -6,7 +6,9 @@ test("a signed-out visitor must choose login or signup", async ({ page }) => {
   await fixture(page, "dark", false);
   await page.goto("/");
   await waitForKovaHydration(page);
-  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Create an account", exact: true })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(0);
 });

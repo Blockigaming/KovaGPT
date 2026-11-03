@@ -74,7 +74,7 @@ test("checkout uses an accessible modal with truthful loading and safe errors", 
     read("src/components/StripeEmbeddedCheckout.tsx"),
   ]);
 
-  assert.match(pricing, /<Dialog open=\{isOpen\}/);
+  assert.match(pricing, /open=\{isOpen && owner !== null && checkoutOwner === owner\}/);
   assert.match(pricing, /onOpenChange=\{\(open\) => !open && closeCheckout\(\)\}/);
   assert.match(pricing, /<DialogTitle>Secure checkout<\/DialogTitle>/);
   assert.match(pricing, /<DialogDescription>/);

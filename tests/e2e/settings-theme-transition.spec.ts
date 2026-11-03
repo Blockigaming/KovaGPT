@@ -103,9 +103,11 @@ test("guest Settings URLs require an account with a consistent first-paint surfa
 }) => {
   await page.goto("/settings/appearance", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  const surface = page.locator(".kova-account-gate");
+  const surface = page.locator(".public-website");
   await expect(surface).toBeVisible();
-  await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Theme", exact: true })).toHaveCount(0);
   const frames = await surface.evaluate(async (node) => {
     const colors: string[] = [];
@@ -116,7 +118,7 @@ test("guest Settings URLs require an account with a consistent first-paint surfa
     return colors;
   });
   expect(frames).toHaveLength(12);
-  expect(new Set(frames)).toEqual(new Set(["rgb(244, 243, 238)"]));
+  expect(new Set(frames)).toEqual(new Set(["rgb(17, 17, 17)"]));
 });
 
 test("signed-in mobile settings list keeps every option at least 44px tall", async ({

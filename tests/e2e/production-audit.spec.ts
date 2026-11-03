@@ -67,7 +67,12 @@ test("guest account entry requires login and restores focus after dismissing aut
   await page.goto("/");
   await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: /message kovagpt/i })).toHaveCount(0);
-  const login = page.getByRole("button", { name: "Log in", exact: true });
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeVisible();
+  await page.goto("/pricing");
+  await waitForKovaHydration(page);
+  const login = page.getByRole("button", { name: "Start Plus", exact: true });
   await login.click();
   const auth = page.getByRole("dialog", { name: "Log in to Kova", exact: true });
   await expect(auth).toBeVisible();
@@ -75,6 +80,8 @@ test("guest account entry requires login and restores focus after dismissing aut
   await page.keyboard.press("Escape");
   await expect(auth).toBeHidden();
   await expect(login).toBeFocused();
+  await page.goto("/");
+  await waitForKovaHydration(page);
   await expect(page.getByRole("button", { name: "Create an account", exact: true })).toBeVisible();
 });
 

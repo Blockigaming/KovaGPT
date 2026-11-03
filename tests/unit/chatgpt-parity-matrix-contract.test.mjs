@@ -15,7 +15,7 @@ test("ChatGPT-parity verification covers every required width, theme, and auth s
   }
   assert.match(spec, /const themes = \["light", "dark"\]/u);
   assert.match(spec, /signed-out account entry/u);
-  assert.match(spec, /name: "Log in", exact: true/u);
+  assert.match(spec, /name: "Continue with email", exact: true/u);
   assert.match(spec, /name: "Create an account", exact: true/u);
   assert.match(spec, /expect\(page\.locator\("textarea:visible"\)\)\.toHaveCount\(0\)/u);
   assert.match(spec, /signed-in shell/u);

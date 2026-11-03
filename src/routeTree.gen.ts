@@ -37,6 +37,7 @@ import { Route as ImagesRouteImport } from './routes/images'
 import { Route as KnowledgeGraphRouteImport } from './routes/knowledge-graph'
 import { Route as KovasRouteImport } from './routes/kovas'
 import { Route as LibraryRouteImport } from './routes/library'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as MapsRouteImport } from './routes/maps'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MemoryRouteImport } from './routes/memory'
@@ -53,6 +54,7 @@ import { Route as ResearchAssistantRouteImport } from './routes/research-assista
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ScheduledTasksRouteImport } from './routes/scheduled-tasks'
 import { Route as ShareInboxRouteImport } from './routes/share-inbox'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SitesRouteImport } from './routes/sites'
 import { Route as StatusRouteImport } from './routes/status'
@@ -369,6 +371,11 @@ const LibraryRoute = LibraryRouteImport.update({
   path: '/library',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MapsRoute = MapsRouteImport.update({
   id: '/maps',
   path: '/maps',
@@ -447,6 +454,11 @@ const ScheduledTasksRoute = ScheduledTasksRouteImport.update({
 const ShareInboxRoute = ShareInboxRouteImport.update({
   id: '/share-inbox',
   path: '/share-inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -1390,6 +1402,7 @@ export interface FileRoutesByFullPath {
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
   '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
@@ -1406,6 +1419,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/share-inbox': typeof ShareInboxRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sites': typeof SitesRoute
   '/status': typeof StatusRoute
@@ -1611,6 +1625,7 @@ export interface FileRoutesByTo {
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
   '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
@@ -1627,6 +1642,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/share-inbox': typeof ShareInboxRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sites': typeof SitesRoute
   '/status': typeof StatusRoute
@@ -1833,6 +1849,7 @@ export interface FileRoutesById {
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/kovas': typeof KovasRoute
   '/library': typeof LibraryRoute
+  '/login': typeof LoginRoute
   '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
@@ -1849,6 +1866,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/scheduled-tasks': typeof ScheduledTasksRoute
   '/share-inbox': typeof ShareInboxRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sites': typeof SitesRoute
   '/status': typeof StatusRoute
@@ -2056,6 +2074,7 @@ export interface FileRouteTypes {
     | '/knowledge-graph'
     | '/kovas'
     | '/library'
+    | '/login'
     | '/maps'
     | '/mcp'
     | '/memory'
@@ -2072,6 +2091,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/scheduled-tasks'
     | '/share-inbox'
+    | '/signup'
     | '/sitemap.xml'
     | '/sites'
     | '/status'
@@ -2277,6 +2297,7 @@ export interface FileRouteTypes {
     | '/knowledge-graph'
     | '/kovas'
     | '/library'
+    | '/login'
     | '/maps'
     | '/mcp'
     | '/memory'
@@ -2293,6 +2314,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/scheduled-tasks'
     | '/share-inbox'
+    | '/signup'
     | '/sitemap.xml'
     | '/sites'
     | '/status'
@@ -2498,6 +2520,7 @@ export interface FileRouteTypes {
     | '/knowledge-graph'
     | '/kovas'
     | '/library'
+    | '/login'
     | '/maps'
     | '/mcp'
     | '/memory'
@@ -2514,6 +2537,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/scheduled-tasks'
     | '/share-inbox'
+    | '/signup'
     | '/sitemap.xml'
     | '/sites'
     | '/status'
@@ -2720,6 +2744,7 @@ export interface RootRouteChildren {
   KnowledgeGraphRoute: typeof KnowledgeGraphRoute
   KovasRoute: typeof KovasRoute
   LibraryRoute: typeof LibraryRoute
+  LoginRoute: typeof LoginRoute
   MapsRoute: typeof MapsRoute
   McpRoute: typeof McpRoute
   MemoryRoute: typeof MemoryRoute
@@ -2736,6 +2761,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ScheduledTasksRoute: typeof ScheduledTasksRoute
   ShareInboxRoute: typeof ShareInboxRoute
+  SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SitesRoute: typeof SitesRoute
   StatusRoute: typeof StatusRoute
@@ -3099,6 +3125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LibraryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/maps': {
       id: '/maps'
       path: '/maps'
@@ -3209,6 +3242,13 @@ declare module '@tanstack/react-router' {
       path: '/share-inbox'
       fullPath: '/share-inbox'
       preLoaderRoute: typeof ShareInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -4588,6 +4628,7 @@ const rootRouteChildren: RootRouteChildren = {
   KnowledgeGraphRoute: KnowledgeGraphRoute,
   KovasRoute: KovasRoute,
   LibraryRoute: LibraryRoute,
+  LoginRoute: LoginRoute,
   MapsRoute: MapsRoute,
   McpRoute: McpRoute,
   MemoryRoute: MemoryRoute,
@@ -4604,6 +4645,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ScheduledTasksRoute: ScheduledTasksRoute,
   ShareInboxRoute: ShareInboxRoute,
+  SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SitesRoute: SitesRoute,
   StatusRoute: StatusRoute,

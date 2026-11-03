@@ -31,19 +31,15 @@ for (const theme of ["light", "dark"] as const) {
     if (theme === "dark") await expect(page.locator("html")).toHaveClass(/\bdark\b/);
     else await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
     await expect(page.getByRole("main")).toHaveCount(1);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      /A little space for\s*your next big thing\./,
-    );
-    await expect(
-      page.getByRole("region", { name: "A little space for your next big thing." }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Question what’s next");
+    await expect(page.getByRole("region", { name: "Question what’s next" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Message KovaGPT", exact: true })).toHaveCount(
       0,
     );
     for (const name of ["Attach", "Send message", "Voice", "Dictate", "Options"])
       await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
     await expect(page.getByTestId("model-selector-trigger")).toHaveCount(0);
-    const login = page.getByRole("button", { name: "Log in", exact: true });
+    const login = page.getByRole("button", { name: "Continue with email", exact: true });
     const signup = page.getByRole("button", { name: "Create an account", exact: true });
     await expectMinimumTouchTarget(login);
     await expectMinimumTouchTarget(signup);
@@ -55,20 +51,17 @@ for (const theme of ["light", "dark"] as const) {
     await expect(skip).toBeVisible();
     await page.keyboard.press("Enter");
     await expect(page.locator("#main-content")).toBeFocused();
+    await signup.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Log in", exact: true }).click();
+    await expect(signup).toBeVisible();
+    const email = page.getByRole("textbox", { name: "Email address", exact: true });
+    await email.fill("accessibility@example.test");
     await login.focus();
     await page.keyboard.press("Enter");
-    const auth = page.getByRole("dialog", { name: "Log in to Kova", exact: true });
-    await expect(auth).toBeVisible();
-    await expect(auth.getByPlaceholder("Email address")).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(auth).toBeHidden();
-    await expect(login).toBeFocused();
-    await signup.click();
-    const create = page.getByRole("dialog", { name: "Create your Kova account", exact: true });
-    await expect(create).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(create).toBeHidden();
-    await expect(signup).toBeFocused();
+    await expect(page).toHaveURL(/\/auth\?email=accessibility%40example\.test/);
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
     expect(chatRequests).toBe(0);
     await page.goto("/auth?email=accessibility%40example.test&mode=sign-in", {
       waitUntil: "domcontentloaded",
