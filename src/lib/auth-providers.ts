@@ -1,3 +1,5 @@
+import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
+
 /**
  * Truthful auth-provider availability diagnostic.
  *
@@ -118,9 +120,9 @@ export async function fetchAuthProviderAvailability(
 ): Promise<AuthProviderAvailability> {
   if (signal?.aborted) return unavailable();
 
-  const url = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
-  const key = (import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ??
-    import.meta.env["VITE_SUPABASE_ANON_KEY"]) as string | undefined;
+  // Probe the exact public configuration used by the sign-in client, including
+  // its committed publishable fallback when a build has no VITE overrides.
+  const { url, publishableKey: key } = SUPABASE_BROWSER_CONFIG;
   if (!url || !key) {
     return unavailable();
   }

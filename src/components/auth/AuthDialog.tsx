@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { resolveLegacyAuthContext, supabase } from "@/integrations/supabase/client";
+import { SUPABASE_BROWSER_CONFIG } from "@/integrations/supabase/config";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import githubLogo from "@/assets/plugins/github.svg";
@@ -214,7 +215,7 @@ export function AuthDialog({
       if (error) throw error;
       if (!data?.url) throw new Error("github_redirect_missing");
       window.location.assign(
-        validateHostedGitHubLoginRedirect(data.url, import.meta.env.VITE_SUPABASE_URL),
+        validateHostedGitHubLoginRedirect(data.url, SUPABASE_BROWSER_CONFIG.url),
       );
     } catch {
       toast.error("GitHub sign in could not start. Please try again.");

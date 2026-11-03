@@ -9,15 +9,36 @@ const code = ts.transpileModule(
   readFileSync("src/lib/auth-providers.ts", "utf8").replaceAll("import.meta.env", "TEST_ENV"),
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
 ).outputText;
+const configCode = ts.transpileModule(
+  readFileSync("src/integrations/supabase/config.ts", "utf8").replaceAll(
+    "import.meta.env",
+    "TEST_ENV",
+  ),
+  { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
+).outputText;
 
-function fixture() {
+function fixture({
+  environment = {
+    VITE_SUPABASE_URL: "https://auth.example.invalid",
+    VITE_SUPABASE_PUBLISHABLE_KEY: "public-fixture-key",
+  },
+} = {}) {
   const requests = [];
   const timers = [];
   let now = 0;
-  const environment = {
-    VITE_SUPABASE_URL: "https://auth.example.invalid",
-    VITE_SUPABASE_PUBLISHABLE_KEY: "public-fixture-key",
-  };
+  const configExports = {};
+  vm.runInNewContext(configCode, {
+    exports: configExports,
+    TEST_ENV: environment,
+    require: (name) => {
+      assert.equal(name, "@/config/public-config");
+      return {
+        PUBLIC_BACKEND_URL: "https://fallback.example.invalid",
+        PUBLIC_BACKEND_KEY: "fallback-public-key",
+      };
+    },
+  });
+  const browserConfig = { ...configExports.SUPABASE_BROWSER_CONFIG };
   const api = {};
   vm.runInNewContext(code, {
     exports: api,
@@ -37,6 +58,10 @@ function fixture() {
       timer.cleared = true;
     },
     TEST_ENV: environment,
+    require: (name) => {
+      assert.equal(name, "@/integrations/supabase/config");
+      return { SUPABASE_BROWSER_CONFIG: browserConfig };
+    },
     fetch: (url, options) =>
       new Promise((resolve, reject) => {
         requests.push({ url, options, resolve, reject });
@@ -66,7 +91,7 @@ function fixture() {
     hook,
     succeed,
     timers,
-    environment,
+    browserConfig,
     advance: (milliseconds) => {
       now += milliseconds;
     },
@@ -174,7 +199,7 @@ test("an expired successful cache cannot advertise Google after the replacement 
 test("provider settings are not shared across different project configurations", async () => {
   const f = fixture();
   const original = f.api.fetchAuthProviderAvailability();
-  f.environment.VITE_SUPABASE_URL = "https://other-auth.example.invalid";
+  f.browserConfig.url = "https://other-auth.example.invalid";
   const other = f.api.fetchAuthProviderAvailability();
   assert.equal(f.requests.length, 2);
   f.succeed(1);
@@ -184,3 +209,41 @@ test("provider settings are not shared across different project configurations",
   assert.equal((await f.api.fetchAuthProviderAvailability()).google, true);
   assert.equal(f.requests.length, 2);
 });
+
+for (const [label, environment, expectedUrl, expectedKey] of [
+  ["no build overrides", {}, "https://fallback.example.invalid", "fallback-public-key"],
+  [
+    "empty build overrides",
+    { VITE_SUPABASE_URL: "", VITE_SUPABASE_PUBLISHABLE_KEY: "" },
+    "https://fallback.example.invalid",
+    "fallback-public-key",
+  ],
+  [
+    "explicit project",
+    {
+      VITE_SUPABASE_URL: "https://custom.example.invalid/",
+      VITE_SUPABASE_PUBLISHABLE_KEY: "custom-public-key",
+    },
+    "https://custom.example.invalid",
+    "custom-public-key",
+  ],
+  [
+    "legacy anon key",
+    { VITE_SUPABASE_ANON_KEY: "legacy-public-key" },
+    "https://fallback.example.invalid",
+    "legacy-public-key",
+  ],
+]) {
+  test(`provider availability uses the sign-in client's resolved public configuration: ${label}`, async () => {
+    const f = fixture({ environment });
+    const result = f.api.fetchAuthProviderAvailability();
+    assert.equal(f.requests.length, 1);
+    assert.equal(f.requests[0].url, `${expectedUrl}/auth/v1/settings`);
+    assert.equal(f.requests[0].options.headers.apikey, expectedKey);
+    f.requests[0].resolve(Response.json({ external: { google: true, github: true, email: true } }));
+    const availability = await result;
+    assert.equal(availability.resolved, true);
+    assert.equal(availability.google, true);
+    assert.equal(availability.github, true);
+  });
+}

@@ -17,6 +17,10 @@ test("dialog and full account page initiate GitHub sign-in through guarded hoste
     assert.match(source, /skipBrowserRedirect: true/);
     assert.match(source, /getOAuthRedirectUri\(\)/);
     assert.match(source, /validateHostedGitHubLoginRedirect/);
+    assert.match(
+      source,
+      /validateHostedGitHubLoginRedirect\(data\.url, SUPABASE_BROWSER_CONFIG\.url\)/,
+    );
     assert.match(source, /providers\.resolved && providers\.github/);
     assert.match(source, /browserKovaAuthMode\(\) !== "kova"/);
     assert.doesNotMatch(source, /scope: "repo"|repo user:email|GITHUB_OAUTH_CLIENT_SECRET/);

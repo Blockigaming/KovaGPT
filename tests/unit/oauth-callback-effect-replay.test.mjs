@@ -55,7 +55,7 @@ test("callback effect replay cancels the first start before consuming one-use cr
   assert.equal(timers.size, 0);
 });
 
-function dialogFixture({ mode = "dual", github = true, rejected = false } = {}) {
+function dialogFixture({ mode = "dual", github = true, rejected = false, inline = false } = {}) {
   const calls = [],
     redirects = [];
   const f = reactFixture(
@@ -64,11 +64,11 @@ function dialogFixture({ mode = "dual", github = true, rejected = false } = {}) 
       e.AuthDialog({
         open: true,
         mode: "sign-in",
+        inline,
         onOpenChange() {},
       }),
     {
       globals: {
-        __env: { VITE_SUPABASE_URL: "https://auth.example.test" },
         window: { location: { assign: (url) => redirects.push(url) } },
       },
       modules: {
@@ -80,6 +80,9 @@ function dialogFixture({ mode = "dual", github = true, rejected = false } = {}) 
         },
         "@tanstack/react-router": { useNavigate: () => () => {} },
         "@/components/NovaLogo": { NovaLogo: "logo" },
+        "@/integrations/supabase/config": {
+          SUPABASE_BROWSER_CONFIG: { url: "https://auth.example.test" },
+        },
         "@/lib/hosted-github-login-redirect.mjs": { validateHostedGitHubLoginRedirect },
         "@/integrations/supabase/client": {
           supabase: {},
@@ -121,17 +124,18 @@ function dialogFixture({ mode = "dual", github = true, rejected = false } = {}) 
   return { f, calls, redirects };
 }
 
-test("GitHub replaces passkey and starts the guarded identity OAuth flow", async () => {
-  const { f, calls, redirects } = dialogFixture();
-  await f.flush();
-  assert.ok(!f.text().includes("passkey"));
-  await f.click("Continue with GitHub");
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].provider, "github");
-  assert.equal(calls[0].options.redirectTo, "https://kovagpt.com/~oauth/callback");
-  assert.equal(calls[0].options.skipBrowserRedirect, true);
-  assert.deepEqual(redirects, ["https://auth.example.test/auth/v1/authorize?provider=github"]);
-});
+for (const inline of [false, true])
+  test(`GitHub starts with resolved public config and no VITE override (inline=${inline})`, async () => {
+    const { f, calls, redirects } = dialogFixture({ inline });
+    await f.flush();
+    assert.ok(!f.text().includes("passkey"));
+    await f.click("Continue with GitHub");
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].provider, "github");
+    assert.equal(calls[0].options.redirectTo, "https://kovagpt.com/~oauth/callback");
+    assert.equal(calls[0].options.skipBrowserRedirect, true);
+    assert.deepEqual(redirects, ["https://auth.example.test/auth/v1/authorize?provider=github"]);
+  });
 
 for (const options of [{ github: false }, { mode: "kova" }])
   test(`GitHub stays disabled when unavailable: ${JSON.stringify(options)}`, async () => {

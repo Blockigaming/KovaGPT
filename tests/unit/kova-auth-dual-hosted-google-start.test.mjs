@@ -101,6 +101,12 @@ function fixture({
         publishableKey: "fixture-publishable",
       },
     },
+    "@/integrations/supabase/config": {
+      SUPABASE_BROWSER_CONFIG: {
+        url: "https://fixture.supabase.co",
+        publishableKey: "fixture-publishable",
+      },
+    },
     "@/lib/kova-auth-data-fetch": {
       createKovaDataFetch: () => assert.fail("Hosted action must not use the Kova data client"),
     },
