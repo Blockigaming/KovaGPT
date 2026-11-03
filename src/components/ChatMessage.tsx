@@ -1131,9 +1131,6 @@ function ChatMessageInner({
                   )
                     event.preventDefault();
                 }}
-                onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget)) rememberSelection();
-                }}
               >
                 {onDraftPrompt && (
                   <button
