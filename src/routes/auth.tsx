@@ -497,11 +497,20 @@ function AuthPage() {
               onClick={() => void submitGitHub()}
               className="h-12 w-full rounded-full"
             >
-              <img src={githubLogo} alt="" aria-hidden="true" className="mr-2 h-5 w-5 dark:invert" />
+              <img
+                src={githubLogo}
+                alt=""
+                aria-hidden="true"
+                className="mr-2 h-5 w-5 dark:invert"
+              />
               {githubLoading ? "Connecting to GitHub…" : "Continue with GitHub"}
             </Button>
             {!githubAvailable ? (
-              <p id="kova-github-auth-status" role="status" className="mt-2 text-xs text-muted-foreground">
+              <p
+                id="kova-github-auth-status"
+                role="status"
+                className="mt-2 text-xs text-muted-foreground"
+              >
                 {!providers.resolved && !providers.error
                   ? "Checking GitHub sign-in availability…"
                   : "GitHub sign-in is not enabled for this deployment. Use email or another sign-in method."}
