@@ -1,0 +1,59 @@
+name: PR 568 one-off format repair
+
+on:
+  push:
+    branches:
+      - fix/workspace-ui-loading-account-sidebar-20261103
+    paths:
+      - .github/workflows/pr568-format-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout current PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: fix/workspace-ui-loading-account-sidebar-20261103
+      - name: Set up Node 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked formatter
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Format only the seven reported files
+        run: |
+          npx --no-install prettier --write \
+            src/components/AppAccountGate.tsx \
+            src/components/ComposerProjectPicker.tsx \
+            src/components/Sidebar.tsx \
+            src/lib/sidebar-swipe.mjs \
+            src/styles/app-finish.css \
+            src/styles/sidebar-core.css \
+            tests/unit/sidebar-swipe.test.mjs
+          npx --no-install prettier --check \
+            src/components/AppAccountGate.tsx \
+            src/components/ComposerProjectPicker.tsx \
+            src/components/Sidebar.tsx \
+            src/lib/sidebar-swipe.mjs \
+            src/styles/app-finish.css \
+            src/styles/sidebar-core.css \
+            tests/unit/sidebar-swipe.test.mjs
+      - name: Commit only the formatter output to this PR branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- src/components/AppAccountGate.tsx src/components/ComposerProjectPicker.tsx src/components/Sidebar.tsx src/lib/sidebar-swipe.mjs src/styles/app-finish.css src/styles/sidebar-core.css tests/unit/sidebar-swipe.test.mjs
+          if git diff --cached --quiet; then
+            echo "Already formatted"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Format PR 568 UI corrections with locked Prettier"
+          git push origin HEAD:fix/workspace-ui-loading-account-sidebar-20261103
