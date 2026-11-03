@@ -502,9 +502,17 @@ export function Sidebar({
       start = null;
       if (!isMobileViewport() || event.touches.length !== 1) return;
       const target = event.target;
-      if (!(target instanceof Element) || target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (
+        !(target instanceof Element) ||
+        target.closest('input, textarea, select, [contenteditable="true"]')
+      )
+        return;
       for (let el: Element | null = target; el && el !== drawer; el = el.parentElement) {
-        if (el.scrollWidth > el.clientWidth + 1 && /^(auto|scroll)$/.test(getComputedStyle(el).overflowX)) return;
+        if (
+          el.scrollWidth > el.clientWidth + 1 &&
+          /^(auto|scroll)$/.test(getComputedStyle(el).overflowX)
+        )
+          return;
       }
       const t = event.touches[0];
       start = { id: t.identifier, x: t.clientX, y: t.clientY };
@@ -512,16 +520,24 @@ export function Sidebar({
     const onMove = (event: TouchEvent) => {
       if (!start || event.touches.length !== 1) return;
       const t = event.touches[0];
-      if (t.identifier !== start.id) { start = null; return; }
+      if (t.identifier !== start.id) {
+        start = null;
+        return;
+      }
       const dx = t.clientX - start.x;
       const dy = Math.abs(t.clientY - start.y);
-      if (dy > 32 && dy > Math.abs(dx)) { start = null; return; }
+      if (dy > 32 && dy > Math.abs(dx)) {
+        start = null;
+        return;
+      }
       if (dx <= -72 && dy <= 48 && -dx >= dy * 2) {
         start = null;
         swipeToggleRef.current();
       }
     };
-    const reset = () => { start = null; };
+    const reset = () => {
+      start = null;
+    };
     drawer.addEventListener("touchstart", onStart, { passive: true });
     drawer.addEventListener("touchmove", onMove, { passive: true });
     drawer.addEventListener("touchend", reset);
