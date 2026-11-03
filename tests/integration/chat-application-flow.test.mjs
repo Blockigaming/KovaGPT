@@ -407,6 +407,14 @@ new Function(
   }).outputText,
 )(nextPromptHelpers);
 
+const admissionHelpers = {};
+new Function(
+  "exports",
+  ts.transpileModule(readFileSync("src/lib/chat-admission-retry.ts", "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText,
+)(admissionHelpers);
+
 function composer(f) {
   const ownerId = f.ownerId;
   let items = [],
@@ -436,6 +444,7 @@ function composer(f) {
     // Current mounted Home callback also owns the next-message/quota recovery
     // scope. Keep these fixture state bindings in step with its real closure.
     ...nextPromptHelpers,
+    ...admissionHelpers,
     nextPromptScopeRef: ref({
       principal: ownerId,
       conversationId: f.chatId,

@@ -65,7 +65,7 @@ import {
 } from "@/lib/ai/model-catalog.server";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
-import { FreeConnectorBudget } from "@/lib/ai/free-connector-budget.server";
+import { FreeConnectorBudget, fitFreeConnectorBudget } from "@/lib/ai/free-connector-budget.server";
 import { planAllowance } from "@/lib/plan-usage-policy.mjs";
 
 import { routeAiModel } from "@/lib/ai/model-router.server";
@@ -1549,7 +1549,7 @@ export const Route = createFileRoute("/api/chat")({
             const enableTools = availableTools.length > 0;
 
             const freeConnectorRequest = enableTools && callerTier === "free";
-            const finalMessages = body.messages as unknown as ChatMsg[];
+            let finalMessages = body.messages as unknown as ChatMsg[];
             // A selected workflow resource may have influenced any earlier
             // assistant response (and therefore a durable conversation summary).
             // Tool planning gets a fresh, provenance-isolated transcript: only
@@ -1557,7 +1557,7 @@ export const Route = createFileRoute("/api/chat")({
             // instructions, and the user's current text request. The complete
             // conversation and resource bodies return only for the final call,
             // where no connector tools are available.
-            const toolPlanningMessages: ChatMsg[] = workflowSkill
+            let toolPlanningMessages: ChatMsg[] = workflowSkill
               ? [
                   {
                     role: "system",
@@ -1664,7 +1664,7 @@ export const Route = createFileRoute("/api/chat")({
                 );
               }
               try {
-                freeConnectorBudget = new FreeConnectorBudget({
+                const fitted = fitFreeConnectorBudget({
                   planningMessages: toolPlanningMessages,
                   finalMessages,
                   tools: availableTools,
@@ -1675,6 +1675,10 @@ export const Route = createFileRoute("/api/chat")({
                     planAllowance(runtimeConfig.maxTokensPerUserMonth, "free"),
                   ),
                 });
+                freeConnectorBudget = fitted.budget;
+                toolPlanningMessages = fitted.planningMessages;
+                finalMessages = fitted.finalMessages;
+                body.messages = finalMessages;
                 body.max_completion_tokens = freeConnectorBudget.finalOutputTokens;
                 estimatedCost = estimateMaximumCostUsd(
                   catalogModel,
@@ -1790,7 +1794,9 @@ export const Route = createFileRoute("/api/chat")({
             if (webSources.length) {
               const activity = createToolActivityEvent(
                 "search_web",
-                `Searched ${webSources.length} ${webSources.length === 1 ? "source" : "sources"}`,
+                `Searched ${Array.from(new Set(webSources.map((source) => source.domain)))
+                  .slice(0, 3)
+                  .join(", ")} for “${lastText.slice(0, 100)}${lastText.length > 100 ? "…" : ""}”`,
                 "complete",
               );
               activityEvents.push({ tool: activity.type, label: activity.label });

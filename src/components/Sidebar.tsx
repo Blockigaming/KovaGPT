@@ -1659,7 +1659,7 @@ export function Sidebar({
                     <DropdownMenuItem
                       onSelect={() => {
                         closeAfterMobileNavigation();
-                        onOpenSettings("logout");
+                        window.dispatchEvent(new Event("kova-confirm-logout"));
                       }}
                     >
                       <LogOut className="mr-2 h-4 w-4" />

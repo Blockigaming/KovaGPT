@@ -50,6 +50,10 @@ const fields =
 function safeTaskError(code?: string, message?: string): Error {
   if (message === "task_execution_unavailable")
     return new Error("Background execution is not ready. Your task was not started.");
+  if (message === "task_capacity")
+    return new Error(
+      "Your task limit has been reached. Free includes 2 tasks, Plus includes 5, and Pro has no task count limit.",
+    );
   if (message === "task_plan_required")
     return new Error("Task execution is not available for this account in this deployment.");
   if (message === "task_recipient_unavailable")

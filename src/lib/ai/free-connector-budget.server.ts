@@ -179,3 +179,48 @@ export class FreeConnectorBudget {
     };
   }
 }
+
+/** Fit older history before rejecting a connected request. Instructions, selected
+ * context, tool schemas and the latest user request are never truncated. */
+export function fitFreeConnectorBudget<T extends Message>(input: {
+  planningMessages: T[];
+  finalMessages: T[];
+  tools: unknown;
+  outputCeiling: number;
+  tokenLimit: number;
+}): { budget: FreeConnectorBudget; planningMessages: T[]; finalMessages: T[]; trimmed: boolean } {
+  const planningMessages = [...input.planningMessages];
+  const finalMessages = [...input.finalMessages];
+  let trimmed = false;
+  const dropOldestTurn = (messages: T[]) => {
+    let latestUser = -1;
+    for (let index = messages.length - 1; index >= 0; index--) {
+      if (messages[index].role === "user") {
+        latestUser = index;
+        break;
+      }
+    }
+    const index = messages.findIndex(
+      (message, index) =>
+        index < latestUser && (message.role === "user" || message.role === "assistant"),
+    );
+    if (index < 0) return false;
+    messages.splice(index, 1);
+    // Avoid an orphaned assistant answer from the dropped user turn.
+    if (index < messages.length && messages[index].role === "assistant") messages.splice(index, 1);
+    return true;
+  };
+  for (;;) {
+    try {
+      const budget = new FreeConnectorBudget({ ...input, planningMessages, finalMessages });
+      return { budget, planningMessages, finalMessages, trimmed };
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== "connector_request_budget_exceeded")
+        throw error;
+      const planningDropped = dropOldestTurn(planningMessages);
+      const finalDropped = dropOldestTurn(finalMessages);
+      if (!planningDropped && !finalDropped) throw error;
+      trimmed = true;
+    }
+  }
+}

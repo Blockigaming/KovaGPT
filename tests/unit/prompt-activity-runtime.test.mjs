@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import * as React from "react";
 import { loadUiModule, elements, text } from "../helpers/ui-state-harness.mjs";
 
 const icon = (name) => Symbol(name);
@@ -16,6 +17,7 @@ const menus = Object.fromEntries(
   ]),
 );
 const { MessageActivityList } = loadUiModule("src/components/MessageActivityList.tsx", {
+  react: React,
   "lucide-react": icons,
 });
 const { PromptMessage } = loadUiModule("src/components/PromptMessage.tsx", {

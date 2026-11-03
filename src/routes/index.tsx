@@ -1,3 +1,5 @@
+import { fetchChatWithAdmissionRetry } from "@/lib/chat-admission-retry";
+import { AccountLogoutDialog } from "@/components/AccountLogoutDialog";
 import type { createTranscriptReadingAnchorController } from "@/lib/chat-reading-anchor";
 import {
   snapshotNextPrompt,
@@ -2131,7 +2133,7 @@ function KovaGPT() {
           },
         );
 
-        const resp = await authFetch("/api/chat", {
+        const resp = await fetchChatWithAdmissionRetry(authFetch, "/api/chat", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -2365,7 +2367,11 @@ function KovaGPT() {
             : !canManualRetry
               ? raw
               : category === "rate_limit"
-                ? "You're going a bit fast — try again in a moment."
+                ? err.code === "principal_concurrency"
+                  ? "Another reply is still running. Stop it or wait for it to finish, then retry."
+                  : err.code === "global_concurrency"
+                    ? "Kova is busy right now. Please retry in a moment."
+                    : raw
                 : category === "quota_exceeded"
                   ? "You've hit your plan's limit. Try again later or upgrade."
                   : category === "model_timeout"
@@ -3584,6 +3590,7 @@ function KovaGPT() {
       </main>
 
       <Suspense fallback={null}>
+        <AccountLogoutDialog />
         {settingsOpen && (
           <SettingsDialog
             open={settingsOpen}

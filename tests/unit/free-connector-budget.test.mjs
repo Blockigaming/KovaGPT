@@ -10,7 +10,7 @@ const compiled = await build({
   platform: "node",
   format: "esm",
 });
-const { FreeConnectorBudget } = await import(
+const { FreeConnectorBudget, fitFreeConnectorBudget } = await import(
   `data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString("base64")}`
 );
 const finalMessages = [
@@ -153,4 +153,37 @@ test("a known client rejection releases only its own call; an uncertain server f
     cachedInputTokens: 0,
     reasoningTokens: 0,
   });
+});
+
+test("connected requests fit older history while retaining instructions, selected context and current prompt", () => {
+  const instructions = { role: "system", content: "Keep consent and selected context intact." };
+  const current = { role: "user", content: "Read my README." };
+  const history = [
+    instructions,
+    { role: "user", content: "old question" },
+    { role: "assistant", content: "x".repeat(30000) },
+    current,
+  ];
+  const fitted = fitFreeConnectorBudget({
+    planningMessages: history,
+    finalMessages: history,
+    tools: [],
+    outputCeiling: 2200,
+    tokenLimit: 10000,
+  });
+  assert.equal(fitted.trimmed, true);
+  assert.deepEqual(fitted.finalMessages, [instructions, current]);
+  assert.deepEqual(fitted.planningMessages, [instructions, current]);
+  assert.ok(fitted.budget.reservedTokens <= 10000);
+  assert.throws(
+    () =>
+      fitFreeConnectorBudget({
+        planningMessages: [instructions, current],
+        finalMessages: [instructions, current],
+        tools: [],
+        outputCeiling: 2200,
+        tokenLimit: 1,
+      }),
+    /budget/,
+  );
 });

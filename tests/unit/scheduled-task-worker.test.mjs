@@ -15,6 +15,7 @@ class ProviderError extends Error {
 }
 class ConnectionError extends Error {}
 function worker({
+  plan = "plus",
   rejectUsage = false,
   revokedBeforeDispatch = false,
   providerFailure = false,
@@ -44,7 +45,7 @@ function worker({
           : name === "claim_due_scheduled_tasks"
             ? [task]
             : name === "begin_scheduled_task_run"
-              ? { task, plan: "plus", event: null, connectionGrants: [] }
+              ? { task, plan, event: null, connectionGrants: [] }
               : name === "read_scheduled_task_saved_context"
                 ? []
                 : name === "scheduled_task_check_execution"
@@ -247,4 +248,22 @@ test("native event intake failure leaves durable inbox retries and time schedule
   const { run, calls } = worker({ eventPumpFailure: true });
   assert.equal((await run()).complete, 1);
   assert.equal(calls.filter((call) => call.name === "provider").length, 1);
+});
+
+for (const plan of ["free", "plus", "pro"]) {
+  test(`${plan} scheduled prompts execute with their own usage admission`, async () => {
+    const { run, calls } = worker({ plan });
+    assert.equal((await run()).complete, 1);
+    assert.equal(calls.find((call) => call.name === "acquire").args.plan, plan);
+    assert.equal(calls.filter((call) => call.name === "provider").length, 1);
+  });
+}
+
+test("unknown task plans cannot acquire usage or call the provider", async () => {
+  const { run, calls } = worker({ plan: "unknown" });
+  await assert.rejects(run(), /scheduled_run_admission_failed/);
+  assert.equal(
+    calls.some((call) => ["acquire", "provider"].includes(call.name)),
+    false,
+  );
 });

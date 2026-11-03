@@ -36,7 +36,6 @@ import { AutomationBuilder, type AutomationDraft } from "@/components/Automation
 import { ScheduledTaskEditor } from "@/components/ScheduledTaskEditor";
 import { ScheduledTaskCopies } from "@/components/ScheduledTaskCopies";
 import { ScheduledTaskLastRun } from "@/components/ScheduledTaskLastRun";
-import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import { useScheduledTaskRunPreviews } from "@/hooks/use-scheduled-task-run-previews";
 import { TASK_RUN_PAGE_SIZE } from "@/lib/scheduled-task-run-page";
 import {
@@ -174,7 +173,6 @@ function ScheduledTasksPage() {
   const [executionAvailable, setExecutionAvailable] = useState(false);
   const [runRefreshVersion, setRunRefreshVersion] = useState(0);
   const [taskPage, setTaskPage] = useState({ scope: "", index: 0 });
-  const [relatedWorkspaceOpen, setRelatedWorkspaceOpen] = useState(false);
 
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -214,7 +212,6 @@ function ScheduledTasksPage() {
     retryPendingRef.current = null;
     setBuilderOpen(false);
     setExecutionAvailable(false);
-    setRelatedWorkspaceOpen(false);
     setTitle("");
     setPrompt("");
     setWhen("");
@@ -676,6 +673,9 @@ function ScheduledTasksPage() {
                 Scheduled tasks
               </h1>
               <p>Run a prompt automatically on a schedule</p>
+              <p className="text-xs text-muted-foreground">
+                Free: 2 tasks · Plus: 5 tasks · Pro: unlimited tasks
+              </p>
             </div>
             {visibleAccess === "eligible" && (
               <div className="flex flex-wrap items-center gap-2">
@@ -1305,27 +1305,6 @@ function ScheduledTasksPage() {
                   </nav>
                 )}
               </TabsContent>
-              <details
-                className="mt-6 rounded-xl border border-border"
-                open={relatedWorkspaceOpen}
-                onToggle={(event) => setRelatedWorkspaceOpen(event.currentTarget.open)}
-              >
-                <summary className="min-h-11 cursor-pointer content-center px-3 py-3 text-sm font-medium">
-                  Related workspace
-                </summary>
-                {relatedWorkspaceOpen && (
-                  <div className="px-3 pb-3">
-                    <p className="text-xs text-muted-foreground">
-                      Browse projects, context packs, files, and memories. Browsing does not attach
-                      them to a task. Choose context in the task editor to attach it.
-                    </p>
-                    <RelatedWorkspaceItems
-                      kinds={["project", "context_pack", "file", "memory"]}
-                      title="Context for automations"
-                    />
-                  </div>
-                )}
-              </details>
             </Tabs>
           )}
         </main>

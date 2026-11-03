@@ -965,7 +965,7 @@ function ChatMessageInner({
               .map((activity, index) => (
                 <TaskCreatedBubble key={`schedule-${index}`} activity={activity} />
               ))}
-            <MessageActivityList activities={message.activities} />
+            <MessageActivityList activities={message.activities} sources={message.sources} />
             {message.pendingConfirms?.map((confirm) => (
               <ToolConfirmCard
                 key={confirm.actionId}
@@ -1114,10 +1114,11 @@ function ChatMessageInner({
                 )}
               </div>
             )}
-            {!streaming && selectedText && (
+            {!streaming && (
               <div
                 ref={selectionActionsRef}
                 className="kova-selection-actions mt-3 flex flex-wrap gap-2"
+                hidden={!selectedText}
                 role="toolbar"
                 aria-label="Selected text actions"
                 onPointerDown={(event) => {
@@ -1263,7 +1264,10 @@ function ChatMessageInner({
                       aria-label="Good response"
                       aria-pressed={feedback === "up"}
                     >
-                      <ThumbsUp className="h-4 w-4" />
+                      <ThumbsUp
+                        className="h-4 w-4"
+                        fill={feedback === "up" ? "currentColor" : "none"}
+                      />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Good response</TooltipContent>
@@ -1281,7 +1285,10 @@ function ChatMessageInner({
                       aria-label="Bad response"
                       aria-pressed={feedback === "down"}
                     >
-                      <ThumbsDown className="h-4 w-4" />
+                      <ThumbsDown
+                        className="h-4 w-4"
+                        fill={feedback === "down" ? "currentColor" : "none"}
+                      />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Bad response</TooltipContent>

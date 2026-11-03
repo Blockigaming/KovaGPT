@@ -150,3 +150,30 @@ body .kova-response-menu[role="menu"] {
   overflow-x: hidden;
   overscroll-behavior: contain;
 }
+
+/* Keep selection controls out of document flow so native drag handles do not jump. */
+.kova-assistant-message > div {
+  position: relative;
+}
+.kova-selection-actions {
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: 0;
+  transform: translateY(100%);
+  z-index: 20;
+  background: var(--background);
+  border-radius: var(--kova-radius-button);
+  box-shadow: 0 2px 12px #0003;
+}
+.kova-selection-actions[hidden] {
+  display: none;
+}
+.kova-response-action-bar {
+  margin-inline-start: -7px;
+}
+.kova-message-actions button[aria-pressed="true"] {
+  color: var(--foreground);
+}
+.dark .kova-message-actions button[aria-pressed="true"] {
+  color: #fff;
+}
