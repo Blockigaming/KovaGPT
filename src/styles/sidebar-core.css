@@ -18,12 +18,13 @@
   display: flex;
   width: var(--sidebar-expanded, var(--kova-sidebar-width, 260px));
   min-width: var(--sidebar-expanded, var(--kova-sidebar-width, 260px));
-  height: 100dvh;
+  height: calc(100dvh - 16px);
+  margin: 8px 0 8px 8px;
   flex: 0 0 auto;
   flex-direction: column;
   overflow: hidden;
   border: 0;
-  border-radius: 0;
+  border-radius: 20px;
   transition:
     width var(--kova-motion-standard) var(--kova-ease),
     min-width var(--kova-motion-standard) var(--kova-ease),
@@ -31,6 +32,7 @@
     visibility 0ms;
 }
 .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
+  margin-left: 0;
   width: 0;
   min-width: 0;
   visibility: hidden;
@@ -480,11 +482,13 @@ button.kova-sidebar-scrim {
 @media (max-width: 1023px) {
   .kova-sidebar[data-kova-core-sidebar] {
     position: fixed;
-    inset: 0 auto 0 0;
+    inset: 8px auto 8px 8px;
+    height: calc(100dvh - 16px);
+    margin: 0;
     width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
     min-width: 0;
     max-width: calc(100vw - 24px);
-    border-radius: 0 24px 24px 0;
+    border-radius: 24px;
   }
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
     width: var(--kova-sidebar-drawer-width, min(320px, calc(100vw - 32px)));
@@ -639,7 +643,7 @@ button.kova-auth-sign-up:hover {
   .kova-sidebar[data-kova-core-sidebar][data-state="closed"] {
     width: min(360px, calc(100vw - 80px));
     max-width: calc(100vw - 64px);
-    border-radius: 0 24px 24px 0;
+    border-radius: 24px;
     overflow: hidden;
     --sidebar-row-height: 48px;
     --sidebar-icon-slot: 22px;
@@ -676,8 +680,7 @@ button.kova-auth-sign-up:hover {
   .kova-assistant:has(.kova-sidebar[data-state="open"]) > .kova-chat-main,
   .kova-app-content[data-sidebar="open"] {
     transform: translateX(min(360px, calc(100vw - 80px)));
-    border-radius: 28px 0 0 28px;
-    overflow: hidden;
+    /* The sidebar, not the conversation pane, owns the rounded corners. */
   }
 }
 @media (max-width: 767px) {
@@ -705,4 +708,37 @@ button.kova-auth-sign-up:hover {
     min-width: 44px;
     border-radius: 14px;
   }
+}
+
+/* A clear account entry and a full-width profile summary inside its dropdown. */
+.kova-account-main {
+  border-radius: 15px;
+  background: var(--sidebar-active);
+}
+.kova-account-main:hover {
+  background: var(--sidebar-hover);
+}
+.kova-profile-menu [role="menuitem"] { min-height: 42px; }
+.kova-profile-menu-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 12px;
+  font-weight: 400;
+}
+.kova-profile-menu-avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.kova-profile-menu-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
