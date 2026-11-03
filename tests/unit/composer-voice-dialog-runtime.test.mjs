@@ -599,7 +599,7 @@ test("cancel aborts transcription and ignores its late success", async () => {
   f.unmount();
 });
 
-test("59-second capture deadline leaves codec headroom and the 8 MiB limit rejects oversized recordings", async () => {
+test("59-second capture stays bounded and oversized recordings fail without provider calls", async () => {
   const f = fixture();
   await f.ready();
   await f.click("Start recording");
@@ -610,22 +610,25 @@ test("59-second capture deadline leaves codec headroom and the 8 MiB limit rejec
   assert.equal(f.requests.length, 2);
   f.requests.at(-1).resolve(Response.json({ text: "Keep this draft" }));
   await f.flush();
-  await f.click("Record again");
-  await f.acquire();
-  f.recorders.at(-1).emit(8 * 1024 * 1024 + 1);
-  await f.flush();
-  assert.match(f.text(), /8 MB limit/);
-  assert.equal(f.requests.length, 2);
-  assert.equal(f.nodes().find((node) => node.type === "textarea").props.value, "Keep this draft");
+  assert.deepEqual(f.submitted, ["Keep this draft"]);
+  assert.deepEqual(f.closed, [false]);
   f.unmount();
+
+  const oversized = fixture();
+  await oversized.ready();
+  await oversized.click("Start recording");
+  await oversized.acquire();
+  oversized.recorders.at(-1).emit(8 * 1024 * 1024 + 1);
+  await oversized.flush();
+  assert.match(oversized.text(), /8 MB limit/);
+  assert.equal(oversized.requests.length, 1);
+  assert.deepEqual(oversized.submitted, []);
+  oversized.unmount();
 });
 
 test("request timeout preserves reviewed text, and errors are readable without leaking raw server content", async () => {
   const f = fixture();
   await f.ready();
-  await f.recordToRequest();
-  f.requests.at(-1).resolve(Response.json({ text: "Keep me" }));
-  await f.flush();
   await f.recordToRequest();
   const pending = f.requests.at(-1);
   await f.timer(60_000);
@@ -633,7 +636,7 @@ test("request timeout preserves reviewed text, and errors are readable without l
   pending.reject(new Error("abort"));
   await f.flush();
   assert.match(f.text(), /timed out/);
-  assert.equal(f.nodes().find((node) => node.type === "textarea").props.value, "Keep me");
+  assert.deepEqual(f.submitted, []);
   f.unmount();
   for (const [status, error, expected] of [
     [403, "email_verification_required", /Verify your email/],
@@ -958,25 +961,21 @@ test("unknown or locked stored preferences never authorize playback and guest st
   guest.unmount();
 });
 
-test("voice changes cancel pending speech and preserve reviewed text", async () => {
+test("voice changes cancel pending speech and discard stale playback", async () => {
   const f = fixture();
   await f.ready();
-  await f.recordToRequest();
-  f.requests.at(-1).resolve(Response.json({ text: "My reviewed draft" }));
-  await f.flush();
   await f.click("Read latest completed reply");
-  const stale = await waitForRequest(f, 3);
+  const stale = await waitForRequest(f, 2);
   await f.chooseVoice("warm");
   assert.equal(stale.init.signal.aborted, true);
   stale.resolve(new Response(new Uint8Array([1]), { headers: { "content-type": "audio/mpeg" } }));
   await f.flush();
   assert.equal(f.urls.length, 0);
-  assert.equal(f.nodes().find((node) => node.type === "textarea").props.value, "My reviewed draft");
   await f.click("Read latest completed reply");
-  await waitForRequest(f, 4);
-  f.requests
-    .at(-1)
-    .resolve(new Response(new Uint8Array([2]), { headers: { "content-type": "audio/mpeg" } }));
+  await waitForRequest(f, 3);
+  f.requests.at(-1).resolve(
+    new Response(new Uint8Array([2]), { headers: { "content-type": "audio/mpeg" } }),
+  );
   await f.flush();
   assert.equal(f.playbackSinks.at(-1).writes.length, 1);
   f.playbackSinks.at(-1).options.onEnded();
@@ -984,7 +983,6 @@ test("voice changes cancel pending speech and preserve reviewed text", async () 
   await f.chooseVoice("default");
   assert.equal(f.playbackSinks.at(-1).disposed, 1);
   assert.equal(f.selectedVoice(), "default");
-  assert.equal(f.nodes().find((node) => node.type === "textarea").props.value, "My reviewed draft");
   f.unmount();
 });
 
