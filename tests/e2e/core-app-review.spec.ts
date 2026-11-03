@@ -173,7 +173,14 @@ test("sidebar search and all main destinations keep honest service states", asyn
   // standalone Subscriptions item. Billing remains reachable via Upgrade plan.
   const accountMenu = page.getByRole("menu");
   await expect(accountMenu.getByText("Plus", { exact: true })).toBeVisible();
-  for (const label of ["Upgrade plan", "Personalization", "Profile", "Settings", "Help", "Log out"]) {
+  for (const label of [
+    "Upgrade plan",
+    "Personalization",
+    "Profile",
+    "Settings",
+    "Help",
+    "Log out",
+  ]) {
     await expect(accountMenu.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
   }
   await accountMenu.getByRole("menuitem", { name: "Help", exact: true }).click();
