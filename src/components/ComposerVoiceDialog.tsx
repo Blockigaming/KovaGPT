@@ -685,12 +685,20 @@ export function ComposerVoiceDialog({
       }
       retainedRecording.current = null;
       setCanRetryRecording(false);
-      setTranscript(result.text.trim());
-      setHasTranscript(true);
       finishRequest(controller);
-      if (current.current.mode === "voice" && voiceSessionActive.current)
+      if (current.current.mode === "voice" && voiceSessionActive.current) {
+        setTranscript(result.text.trim());
+        setHasTranscript(true);
         await submitVoiceTurn(scope, result.text.trim());
-      else updatePhase("idle");
+      } else if (current.current.mode === "dictate") {
+        // Dictation behaves like typing: insert into the current composer draft
+        // without a second transcript review or an automatic Send action.
+        closing.current = true;
+        onTranscript(result.text.trim());
+        closeDialog(false);
+      } else {
+        updatePhase("idle");
+      }
     } catch (cause) {
       if (isCurrent(scope)) {
         failOperation(
