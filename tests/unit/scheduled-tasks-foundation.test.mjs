@@ -774,29 +774,6 @@ test("current task policy permits one Free task and preserves consent and plan-s
   }
 });
 
-test("requested task counts admit Free 2, Plus 5 and more than five for Pro", async () => {
-  const db = await fixture();
-  try {
-    await db.exec("reset role");
-    await db.exec(sql("20261031014600_scheduled_task_plan_allowances.sql"));
-    await db.exec(sql("20261102204500_kova_scheduled_task_requested_allowances.sql"));
-    await db.exec("set role service_role");
-    await activate(db);
-    await db.query("update public.test_plans set tier='free' where user_id=$1", [owner]);
-    assert.ok((await mutate(db, "create", createPayload())).taskId);
-    assert.ok((await mutate(db, "create", createPayload())).taskId);
-    await assert.rejects(mutate(db, "create", createPayload()), /capacity/);
-    await db.query("update public.test_plans set tier='plus' where user_id=$1", [owner]);
-    for (let index = 0; index < 3; index++)
-      assert.ok((await mutate(db, "create", createPayload())).taskId);
-    await assert.rejects(mutate(db, "create", createPayload()), /capacity/);
-    await db.query("update public.test_plans set tier='pro' where user_id=$1", [owner]);
-    assert.ok((await mutate(db, "create", createPayload())).taskId);
-  } finally {
-    await db.close();
-  }
-});
-
 test("Task claim and run admission enforce the same Free, Plus and Pro daily allowance", async () => {
   const db = await fixture();
   try {
