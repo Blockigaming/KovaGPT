@@ -50,14 +50,12 @@ export async function invokeScheduledExecution({
     cache: "no-store",
     signal: AbortSignal.timeout(timeoutMs),
   });
-  if (!response.ok)
-    throw new Error(`task_worker_http_${response.status}`);
+  if (!response.ok) throw new Error(`task_worker_http_${response.status}`);
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.toLowerCase().includes("application/json"))
     throw new Error("task_worker_invalid_response");
   const payload = await response.text();
-  if (payload.length > MAX_RESPONSE_BYTES)
-    throw new Error("task_worker_response_too_large");
+  if (payload.length > MAX_RESPONSE_BYTES) throw new Error("task_worker_response_too_large");
   let result;
   try {
     result = JSON.parse(payload);
