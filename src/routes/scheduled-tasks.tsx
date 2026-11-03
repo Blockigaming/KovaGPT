@@ -20,6 +20,7 @@ import {
 } from "@/lib/management-list-preferences.mjs";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { useTier } from "@/hooks/useTier";
 import { useTimeFormatPreference } from "@/hooks/use-time-format-preference";
 import { formatDisplayDateTime } from "@/lib/time-format";
 import { AppShell } from "@/components/AppShell";
@@ -106,6 +107,7 @@ const taskActionLabels: Record<TaskAction, string> = {
 
 function ScheduledTasksPage() {
   const { isLoaded, isSignedIn, user } = useUser();
+  const { tier, status: tierStatus } = useTier();
   const { taskId: requestedTaskId } = Route.useSearch();
   const openedTaskLink = useRef<string | null>(null);
   const taskListLoaded = useRef(false);
@@ -123,6 +125,11 @@ function ScheduledTasksPage() {
     principal !== null && dataPrincipal === principal && dataGeneration === generationRef.current;
   const [accessState, setAccessState] = useState<AccessState>("loading");
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
+  const activeTaskCount = tasks.filter((task) =>
+    ["scheduled", "running", "paused"].includes(task.status),
+  ).length;
+  const taskPlanLimit = tier === "pro" ? null : tier === "plus" ? 5 : 2;
+
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editor, setEditor] = useState<ScheduledTask | "new" | null>(null);
@@ -673,6 +680,13 @@ function ScheduledTasksPage() {
                 Scheduled tasks
               </h1>
               <p>Run a prompt automatically on a schedule</p>
+              {visibleAccess === "eligible" && tierStatus === "ready" && (
+                <p className="text-xs text-muted-foreground" aria-live="polite">
+                  {taskPlanLimit === null
+                    ? `${activeTaskCount} active tasks · Pro has no plan-based task count limit`
+                    : `${activeTaskCount} of ${taskPlanLimit} active tasks · ${tier === "plus" ? "Plus" : "Free"} plan`}
+                </p>
+              )}
             </div>
             {visibleAccess === "eligible" && (
               <div className="flex flex-wrap items-center gap-2">
