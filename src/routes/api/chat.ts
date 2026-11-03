@@ -1515,7 +1515,10 @@ export const Route = createFileRoute("/api/chat")({
             // connected tool schema and reserving a second model call for it.
             // This only skips connector discovery; normal auth, quota and
             // per-request cost enforcement still run on the standard chat path.
-            const simpleGreeting = /^(?:hi|hello|hey|hey there|hello there|hi there|good morning|good afternoon|good evening)[!?.\\s]*$/i.test(lastText.trim());
+            const simpleGreeting =
+              /^(?:hi|hello|hey|hey there|hello there|hi there|good morning|good afternoon|good evening)[!?.\s]*$/i.test(
+                lastText.trim(),
+              );
             const selectedHostedTool = explicitHostedTool ? clientTool : null;
             const googleContext =
               !selectedHostedTool &&
