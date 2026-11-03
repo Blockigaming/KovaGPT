@@ -59,5 +59,7 @@ test("inline sign-in preserves keyboard focus and entered email after Escape", a
   await expect(email).toBeFocused();
   await expect(email).toHaveValue("keyboard-check@example.invalid");
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Continue with email", exact: true })).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Continue with email", exact: true }),
+  ).toBeFocused();
 });
