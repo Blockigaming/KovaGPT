@@ -83,6 +83,7 @@ COPY --from=build --chown=kova:kova /app/package.json ./package.json
 COPY --from=build --chown=kova:kova /app/scripts/auth-email/dispatch.mjs ./scripts/auth-email/dispatch.mjs
 COPY --from=build --chown=kova:kova /app/scripts/auth-email/notification-dispatch.mjs ./scripts/auth-email/notification-dispatch.mjs
 COPY --from=build --chown=kova:kova /app/scripts/auth-email/production-worker.mjs ./scripts/auth-email/production-worker.mjs
+COPY --from=build --chown=kova:kova /app/scripts/scheduled-tasks/production-worker.mjs ./scripts/scheduled-tasks/production-worker.mjs
 COPY --from=build --chown=kova:kova /app/src/lib/kova-email-worker-auth.server.mjs ./src/lib/kova-email-worker-auth.server.mjs
 COPY --from=build --chown=kova:kova /app/src/lib/azure-direct-origin.server.mjs ./src/lib/azure-direct-origin.server.mjs
 COPY --from=build --chown=kova:kova /app/src/lib/kova-auth-email.server.mjs ./src/lib/kova-auth-email.server.mjs
