@@ -73,6 +73,7 @@ test("implemented homepage, pricing tabs, FAQ, original asset, and responsive ev
     if (width === 390) {
       await page.goto("/");
       await page.screenshot({ path: `${evidence}/mobile-home.png`, fullPage: true });
+      await page.screenshot({ path: `${evidence}/mobile-hero.png` });
     }
   }
   expect(errors).toEqual([]);
@@ -137,4 +138,38 @@ test("email entry uses the existing auth route and does not submit a real accoun
   await page.getByRole("button", { name: "Continue with email", exact: true }).click();
   await expect(page).toHaveURL(/\/auth\?email=public-preview%40example\.invalid/);
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+});
+
+// These are raw browser captures used to review and update the intentional
+// signed-out design change. The normal visual suite still compares committed baselines.
+test("collect exact guest visual baselines for review", async ({ browser }) => {
+  for (const [project, width, height] of [
+    ["phone-390x844", 390, 844],
+    ["desktop-1440x900", 1440, 900],
+  ] as const) {
+    for (const theme of ["light", "dark"] as const) {
+      const context = await browser.newContext({
+        baseURL: "http://127.0.0.1:4189",
+        viewport: { width, height },
+        isMobile: project.startsWith("phone"),
+        hasTouch: project.startsWith("phone"),
+        colorScheme: theme,
+        reducedMotion: "reduce",
+      });
+      const page = await context.newPage();
+      await page.addInitScript((value) => localStorage.setItem("kova-theme-mode", value), theme);
+      await page.goto("/");
+      await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "ready");
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Question what’s next");
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page.locator(".public-classroom img")).toHaveJSProperty("complete", true);
+      await page.screenshot({
+        path: `${evidence}/account-entry-${theme}-${project}-linux.png`,
+        animations: "disabled",
+        caret: "hide",
+        scale: "css",
+      });
+      await context.close();
+    }
+  }
 });

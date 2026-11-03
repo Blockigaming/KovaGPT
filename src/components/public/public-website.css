@@ -88,7 +88,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   border-radius: 10px;
   border: 1px solid #292929;
   background: #333;
@@ -154,7 +154,7 @@
   text-decoration: underline;
   color: #ededed;
   padding: 6px 3px;
-  min-height: 34px;
+  min-height: 44px;
   background: transparent;
   border: 0;
 }

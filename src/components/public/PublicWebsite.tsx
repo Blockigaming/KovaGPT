@@ -54,7 +54,9 @@ export function PublicWebsiteLayout({ children }: { children: ReactNode }) {
   return (
     <div className="public-website">
       <header className="public-website-header">
-        <WebsiteBrand />
+        <nav aria-label="Public navigation">
+          <WebsiteBrand />
+        </nav>
       </header>
       {children}
       <PublicFooter />

@@ -80,12 +80,15 @@ export function PublicWebsiteArticle({ item }: { item: WebsitePage }) {
         </div>
         {item.related.length > 0 && (
           <section aria-label="Continue exploring" className="public-directory-links">
-            {item.related.map((related) => (
-              <Link key={related.to} to={related.to as never}>
+            {item.related.map((related, index) => (
+              <Link
+                key={related.to}
+                to={related.to as never}
+                data-public-primary={index === 0 ? "" : undefined}
+                className="min-h-11"
+              >
                 <strong>{related.label}</strong>
-                <span>
-                  {related.to === "/" ? "Open KovaGPT" : `Read ${related.label.toLowerCase()}`} →
-                </span>
+                <span>Continue →</span>
               </Link>
             ))}
           </section>

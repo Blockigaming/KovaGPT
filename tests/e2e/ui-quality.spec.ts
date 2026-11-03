@@ -256,9 +256,11 @@ for (const theme of ["light", "dark"] as const) {
     }, theme);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForKovaHydration(page);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("your next big thing.");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Question what’s next");
     await expect(page.getByRole("main")).toHaveCount(1);
-    await expect(page.getByRole("button", { name: "Log in", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Continue with email", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Create an account", exact: true }),
     ).toBeVisible();
@@ -270,6 +272,8 @@ for (const theme of ["light", "dark"] as const) {
       true,
     );
     expect(hydrationErrors).toEqual([]);
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page.locator(".public-classroom img")).toHaveJSProperty("complete", true);
     await expect(page).toHaveScreenshot(`account-entry-${theme}.png`, {
       animations: "disabled",
       caret: "hide",
