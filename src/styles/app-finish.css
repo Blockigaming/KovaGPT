@@ -1094,12 +1094,29 @@
   background: color-mix(in srgb, var(--foreground) 9%, transparent);
   animation: kova-session-pulse 1.6s ease-in-out infinite alternate;
 }
-.kova-session-nav-wide { width: 90%; }
-.kova-session-nav-short { width: 65%; }
-.kova-session-header-title { width: 140px; height: 24px; }
-.kova-session-header-action { width: 38px; height: 38px; border-radius: 50%; }
-.kova-session-content-line { width: 75%; height: 22px; }
-.kova-session-content-line-short { width: 48%; height: 22px; }
+.kova-session-nav-wide {
+  width: 90%;
+}
+.kova-session-nav-short {
+  width: 65%;
+}
+.kova-session-header-title {
+  width: 140px;
+  height: 24px;
+}
+.kova-session-header-action {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+.kova-session-content-line {
+  width: 75%;
+  height: 22px;
+}
+.kova-session-content-line-short {
+  width: 48%;
+  height: 22px;
+}
 .kova-session-composer-placeholder {
   width: 100%;
   height: 134px;
@@ -1108,12 +1125,20 @@
   border-radius: 24px;
 }
 @keyframes kova-session-pulse {
-  to { opacity: 0.45; }
+  to {
+    opacity: 0.45;
+  }
 }
 @media (max-width: 1023px) {
-  .kova-session-shell-sidebar { display: none; }
-  .kova-session-shell-body { margin-top: 14vh; }
+  .kova-session-shell-sidebar {
+    display: none;
+  }
+  .kova-session-shell-body {
+    margin-top: 14vh;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kova-session-skeleton { animation: none; }
+  .kova-session-skeleton {
+    animation: none;
+  }
 }

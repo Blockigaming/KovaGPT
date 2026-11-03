@@ -17,5 +17,6 @@ test("vertical, incomplete and stale gestures are ignored", () => {
     { open: false, dx: -120, dy: 2, elapsedMs: 900 },
     { open: true, dx: 95, dy: 60, elapsedMs: 200 },
     { open: true, dx: Number.NaN, dy: 0, elapsedMs: 200 },
-  ]) assert.equal(isClearSidebarSwipe(args), false);
+  ])
+    assert.equal(isClearSidebarSwipe(args), false);
 });

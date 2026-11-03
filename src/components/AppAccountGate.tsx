@@ -23,8 +23,14 @@ function SessionLoading() {
         <div className="kova-session-shell-body">
           <p role="status">Checking your account…</p>
           <div className="kova-session-skeleton kova-session-content-line" aria-hidden="true" />
-          <div className="kova-session-skeleton kova-session-content-line-short" aria-hidden="true" />
-          <div className="kova-session-skeleton kova-session-composer-placeholder" aria-hidden="true" />
+          <div
+            className="kova-session-skeleton kova-session-content-line-short"
+            aria-hidden="true"
+          />
+          <div
+            className="kova-session-skeleton kova-session-composer-placeholder"
+            aria-hidden="true"
+          />
         </div>
       </main>
     </div>

@@ -718,7 +718,9 @@ button.kova-auth-sign-up:hover {
 .kova-account-main:hover {
   background: var(--sidebar-hover);
 }
-.kova-profile-menu [role="menuitem"] { min-height: 42px; }
+.kova-profile-menu [role="menuitem"] {
+  min-height: 42px;
+}
 .kova-profile-menu-account {
   display: flex;
   align-items: center;

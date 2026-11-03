@@ -286,7 +286,9 @@ export function ComposerProjectPicker({
               ))}
             </ul>
             {matchingProjects.length === 0 ? (
-              <p role="status" className="text-sm text-muted-foreground">No matching projects.</p>
+              <p role="status" className="text-sm text-muted-foreground">
+                No matching projects.
+              </p>
             ) : null}
           </div>
         )}
