@@ -36,6 +36,7 @@ function buttons(node, result = []) {
 function fixture({
   mode = "dual",
   dialogMode = "sign-in",
+  inline = false,
   ownedGoogle = false,
   providers = { resolved: true, google: true },
   probe = () => Response.json({ session: null }),
@@ -172,7 +173,7 @@ function fixture({
   modules["@/lib/kova-auth-browser"] = browser;
   modules["@/integrations/supabase/client"] = load(sources.client);
   const dialog = load(sources.dialog).AuthDialog;
-  const tree = dialog({ open: true, mode: dialogMode, onOpenChange: () => {} });
+  const tree = dialog({ open: true, mode: dialogMode, onOpenChange: () => {}, inline });
   const renderedButtons = buttons(tree);
   return {
     events,
@@ -201,6 +202,36 @@ test("dual offers an explicit hosted Google login when owned Google is disabled"
     "https://accounts.example.invalid/authorize",
   );
   assert.equal(f.browser.isKovaSessionActive(), false);
+});
+
+test("inline dual login presents its working explicit Google action without an unavailable duplicate", async () => {
+  const f = fixture({ inline: true });
+  assert.ok(f.hosted);
+  assert.equal(f.hosted.props.disabled, false);
+  assert.equal(f.owned, undefined);
+  assert.doesNotMatch(text(f.tree), /Google sign-in is unavailable/);
+  await f.hosted.props.onClick();
+  assert.equal(f.count("cookie-probe"), 1);
+  assert.equal(f.count("hosted-start"), 1);
+});
+
+test("inline dual login waits for provider verification without falsely reporting unavailability", async () => {
+  const f = fixture({ inline: true, providers: { resolved: false, google: false } });
+  assert.ok(f.hosted);
+  assert.equal(f.hosted.props.disabled, true);
+  assert.equal(f.owned, undefined);
+  assert.match(text(f.tree), /Checking Google availability/);
+  assert.doesNotMatch(text(f.tree), /Google sign-in is unavailable/);
+  await f.hosted.props.onClick();
+  assert.equal(f.count("hosted-start"), 0);
+  assert.equal(f.count("cookie-probe"), 0);
+});
+
+test("inline dual signup does not turn existing Google login into hosted signup", () => {
+  const f = fixture({ inline: true, dialogMode: "sign-up" });
+  assert.equal(f.hosted, undefined);
+  assert.ok(f.owned);
+  assert.equal(f.owned.props.disabled, true);
 });
 
 for (const mode of ["kova", "supabase"])

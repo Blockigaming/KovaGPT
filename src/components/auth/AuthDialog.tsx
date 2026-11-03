@@ -256,22 +256,47 @@ export function AuthDialog({
   );
 
   if (inline) {
+    const showOwnedGoogle = !showHostedGoogle || googleAvailable;
     return (
       <div className="public-sign-in" aria-label="Sign in to KovaGPT">
-        <button
-          type="button"
-          onClick={handleGoogle}
-          disabled={loading || !googleAvailable}
-          aria-describedby={!googleAvailable ? "public-google-status" : undefined}
-        >
-          <GoogleIcon />
-          {loadingMethod === "google" ? "Connecting…" : "Continue with Google"}
-        </button>
-        {!googleAvailable && (
-          <p id="public-google-status" className="public-provider-status" role="status">
-            {!useKovaAuth && !providers.resolved && !providers.error
-              ? "Checking Google availability…"
-              : "Google sign-in is unavailable. You can continue with email."}
+        {showOwnedGoogle && (
+          <>
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={loading || !googleAvailable}
+              aria-describedby={!googleAvailable ? "public-google-status" : undefined}
+            >
+              <GoogleIcon />
+              {loadingMethod === "google" ? "Connecting…" : "Continue with Google"}
+            </button>
+            {!googleAvailable && (
+              <p id="public-google-status" className="public-provider-status" role="status">
+                {!useKovaAuth && !providers.resolved && !providers.error
+                  ? "Checking Google availability…"
+                  : "Google sign-in is unavailable. You can continue with email."}
+              </p>
+            )}
+          </>
+        )}
+        {showHostedGoogle && (hostedGoogleAvailable || hostedGooglePending) && (
+          <button
+            type="button"
+            onClick={handleHostedGoogle}
+            disabled={loading || !hostedGoogleAvailable}
+          >
+            <GoogleIcon />
+            {loadingMethod === "hosted-google" ? "Connecting…" : "Log in with existing Google"}
+          </button>
+        )}
+        {!showOwnedGoogle && hostedGooglePending && (
+          <p className="public-provider-status" role="status">
+            Checking Google availability…
+          </p>
+        )}
+        {!showOwnedGoogle && !hostedGoogleAvailable && !hostedGooglePending && (
+          <p className="public-provider-status" role="status">
+            Google sign-in is unavailable. You can continue with email.
           </p>
         )}
         <button
@@ -289,12 +314,6 @@ export function AuthDialog({
               ? "Checking GitHub availability…"
               : "GitHub sign-in is coming soon. You can continue with email."}
           </p>
-        )}
-        {hostedGoogleAvailable && (
-          <button type="button" onClick={handleHostedGoogle} disabled={loading}>
-            <GoogleIcon />
-            Log in with existing Google
-          </button>
         )}
         <div className="public-auth-divider">OR</div>
         <form onSubmit={handleContinueEmail}>
