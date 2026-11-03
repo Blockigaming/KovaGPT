@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { installAuthenticatedFixture } from "./authenticated-fixture";
+import { waitForKovaHydration } from "./hydration";
 import {
   PUBLIC_WEBSITE_PAGES,
   PUBLIC_WEBSITE_FOOTER,
@@ -149,6 +151,31 @@ test("email entry uses the existing auth route and does not submit a real accoun
   await page.getByRole("button", { name: "Continue with email", exact: true }).click();
   await expect(page).toHaveURL(/\/auth\?email=public-preview%40example\.invalid/);
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+});
+
+test("deferred checkout opens a recoverable configuration error without payment requests", async ({
+  page,
+}) => {
+  // This workflow deliberately builds without payment credentials. The fixture
+  // owns authentication only; this is not real Stripe acceptance evidence.
+  await installAuthenticatedFixture(page);
+  const stripeRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/(?:^|\.)stripe\.(?:com|network)$/u.test(new URL(request.url()).hostname))
+      stripeRequests.push(request.method());
+  });
+  await page.goto("/pricing");
+  await waitForKovaHydration(page);
+  const start = page.getByRole("button", { name: "Start Plus", exact: true });
+  await start.click();
+  const dialog = page.getByRole("dialog", { name: "Secure checkout", exact: true });
+  await expect(dialog.locator('[data-checkout-state="error"]')).toBeVisible();
+  await expect(dialog).toContainText("Checkout couldn't load");
+  await page.screenshot({ path: `${evidence}/checkout-unconfigured-error.png` });
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(start).toBeFocused();
+  expect(stripeRequests).toEqual([]);
 });
 
 // These are raw browser captures used to review and update the intentional
