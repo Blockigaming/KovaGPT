@@ -306,7 +306,9 @@ function fixture(options = {}) {
     },
     "@/integrations/connected-tools.server": {
       getConnectedToolContext: async () =>
-        options.noTools ? null : { tools: options.linear ? allConnectedTools : [tool] },
+        options.noTools
+          ? null
+          : { tools: options.connectedTools ?? (options.linear ? allConnectedTools : [tool]) },
       runConnectedTool: async (...args) => {
         reads.push(args);
         if (options.abortAfterRead) abort.abort();
@@ -377,7 +379,9 @@ function fixture(options = {}) {
           { status: options.finalStatus },
         );
       const frames =
-        event({ choices: [{ delta: { content: "Read the repository fixture." } }] }) +
+        event({
+          choices: [{ delta: { content: options.finalText ?? "Read the repository fixture." } }],
+        }) +
         event({ choices: [], usage: receipt(300, 200) }) +
         "data: [DONE]\n\n";
       return new Response(frames, { headers: { "Content-Type": "text/event-stream" } });
@@ -427,7 +431,7 @@ function fixture(options = {}) {
           },
           body: JSON.stringify({
             mode: options.mode ?? "instant",
-            messages: [
+            messages: options.messages ?? [
               { role: "user", content: "Read README.md in my connected GitHub repository." },
             ],
             user: { customInstructions: "FINAL_CONTEXT_FIXTURE" },
@@ -655,6 +659,73 @@ test("ordinary chat without connectors retains its single-call reservation", asy
   assert.equal(f.settlements.length, 1);
   assert.equal(f.settlements[0].inputTokens, 300);
   assert.equal(f.settlements[0].outputTokens, 200);
+});
+
+const oversizedCatalog = [
+  {
+    ...tool,
+    function: { ...tool.function, description: "Permitted connector schema. ".repeat(15000) },
+  },
+];
+const ordinaryFollowUp = [
+  { role: "user", content: "Hi" },
+  { role: "assistant", content: "Hi! How can I help?" },
+  { role: "user", content: "What is 12 times 13? Answer briefly." },
+];
+
+test("ordinary Free follow-ups survive an oversized optional connector catalog with one metered Responses call", async () => {
+  const f = fixture({
+    connectedTools: oversizedCatalog,
+    messages: ordinaryFollowUp,
+    finalText: "156",
+  });
+  const { response, text } = await f.post();
+  assert.equal(response.status, 200, text);
+  assert.ok(text.includes("156"));
+  assert.equal(f.providers.length, 1);
+  assert.equal(f.providers[0].stream, true);
+  assert.equal(f.providers[0].tools, undefined);
+  assert.equal(f.reads.length, 0);
+  assert.equal(f.acquisitions.length, 1);
+  const normalized = f.normalizedProviders[0];
+  assert.ok(
+    estimateProviderInput(normalized).tokens + normalized.max_output_tokens <=
+      f.acquisitions[0].reservedTokens,
+  );
+  assert.ok(f.acquisitions[0].reservedTokens <= 10000);
+  const sent = JSON.stringify(f.providers[0].messages);
+  for (const message of ordinaryFollowUp) assert.ok(sent.includes(message.content));
+  assert.ok(sent.includes("FINAL_CONTEXT_FIXTURE"));
+  assert.ok(sent.includes("Connected tools were not run"));
+  assert.ok(sent.includes("Never invent retrieved data or claim an action succeeded"));
+  assert.equal(f.settlements.length, 1);
+  assert.equal(f.settlements[0].inputTokens, 300);
+  assert.equal(f.settlements[0].outputTokens, 200);
+});
+
+test("the ordinary fallback still obeys the authoritative account quota and operator cost ceiling", async () => {
+  const quota = fixture({
+    connectedTools: oversizedCatalog,
+    messages: ordinaryFollowUp,
+    rejection: "daily_tokens",
+  });
+  const q = await quota.post();
+  assert.equal(q.response.status, 429, q.text);
+  assert.equal(JSON.parse(q.text).code, "daily_tokens");
+  assert.equal(quota.acquisitions.length, 1);
+  assert.equal(quota.providers.length, 0);
+  assert.equal(quota.reads.length, 0);
+  const cost = fixture({
+    connectedTools: oversizedCatalog,
+    messages: ordinaryFollowUp,
+    env: { KOVA_MAX_COST_USD_PER_REQUEST: "0.000001" },
+  });
+  const c = await cost.post();
+  assert.equal(c.response.status, 413, c.text);
+  assert.equal(JSON.parse(c.text).code, "request_budget");
+  assert.equal(cost.acquisitions.length, 0);
+  assert.equal(cost.providers.length, 0);
+  assert.equal(cost.reads.length, 0);
 });
 
 test("cancellation after a connector read settles planning usage without a final request", async () => {

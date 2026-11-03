@@ -1709,7 +1709,9 @@ export const Route = createFileRoute("/api/chat")({
                 finalMessages = connectedToolsUnavailableMessages(finalMessages);
                 toolPlanningMessages = finalMessages;
                 body.messages = finalMessages;
-                inputEstimate = estimateProviderInput({ messages: finalMessages });
+                inputEstimate = estimateProviderInput(
+                  prepareChatResponsesRequest({ ...body, stream: true }),
+                );
                 maximumProviderCalls = 1;
                 estimatedCost = estimateMaximumCostUsd(
                   catalogModel,
