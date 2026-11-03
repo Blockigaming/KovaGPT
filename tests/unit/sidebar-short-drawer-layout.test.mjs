@@ -90,7 +90,7 @@ test("short-height fallback scrolls the complete drawer instead of shrinking nav
   assert.equal(property(rule(".kova-sidebar-scroll"), "flex"), "1");
 });
 
-test("history, primary navigation, Help and account retain their source order and separate containers", () => {
+test("history and navigation precede the account footer without duplicate Help", () => {
   const source = read("src/components/Sidebar.tsx");
   const file = ts.createSourceFile(
     "Sidebar.tsx",
@@ -134,9 +134,9 @@ test("history, primary navigation, Help and account retain their source order an
   });
   assert.deepEqual(siblings.slice(siblings.indexOf("kova-sidebar-scroll")), [
     "kova-sidebar-scroll",
-    "kova-sidebar-help",
     "kova-sidebar-footer",
   ]);
+  assert.doesNotMatch(source, /className="kova-sidebar-help"/);
   assert.match(source, /pinned\.slice\(0, 8\)\.map\(chatRow\)/);
   assert.match(source, /recents\.slice\(0, 8\)\.map\(chatRow\)/);
 });
