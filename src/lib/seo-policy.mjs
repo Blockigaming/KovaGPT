@@ -1,3 +1,5 @@
+import { PUBLIC_WEBSITE_INDEXABLE_PATHS, PUBLIC_WEBSITE_PAGES } from "./public-website-catalog.mjs";
+
 const PUBLIC_POLICY_PATHS = Object.freeze([
   "/policies/ad-credit-terms",
   "/policies/ad-policies",
@@ -673,8 +675,16 @@ const PUBLIC_REVIEW_PATHS = Object.freeze([
   ]),
 ]);
 
-const PUBLIC_INDEXABLE_PATHS = new Set(PUBLIC_SITEMAP_ENTRIES.map((entry) => entry.path));
-const PUBLIC_FOLLOWABLE_NOINDEX_PATHS = new Set(PUBLIC_REVIEW_PATHS);
+const PUBLIC_INDEXABLE_PATHS = new Set([
+  ...PUBLIC_SITEMAP_ENTRIES.map((entry) => entry.path),
+  ...PUBLIC_WEBSITE_INDEXABLE_PATHS,
+]);
+const PUBLIC_FOLLOWABLE_NOINDEX_PATHS = new Set([
+  ...PUBLIC_REVIEW_PATHS,
+  ...PUBLIC_WEBSITE_PAGES.filter((page) => !page.indexable).map((page) => page.path),
+  "/login",
+  "/signup",
+]);
 const NON_INDEXABLE_STATUSES = new Set(["error", "notFound", "redirected"]);
 
 function normalizePathname(pathname) {

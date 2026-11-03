@@ -1,3 +1,4 @@
+import { validateHostedGitHubLoginRedirect } from "../../src/lib/hosted-github-login-redirect.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -69,6 +70,7 @@ function fixture({
     "@/components/ui/input": { Input: "input" },
     "@/components/ui/button": { Button: "button" },
     "@/assets/plugins/github.svg": { default: "github.svg" },
+    "@/lib/hosted-github-login-redirect.mjs": { validateHostedGitHubLoginRedirect },
     "@/components/NovaLogo": { NovaLogo: "logo" },
     "lucide-react": Object.fromEntries(
       ["AlertTriangle", "ArrowLeft", "KeyRound", "Loader2"].map((name) => [name, name]),

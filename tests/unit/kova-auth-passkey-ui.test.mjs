@@ -1,3 +1,4 @@
+import { validateHostedGitHubLoginRedirect } from "../../src/lib/hosted-github-login-redirect.mjs";
 import assert from "node:assert/strict";
 import { authRetryDelay } from "../../src/lib/auth-retry-delay.mjs";
 import test from "node:test";
@@ -233,6 +234,10 @@ function loginSurface(dialog, options = {}) {
   const events = [];
   const owned = options.owned !== false;
   const modules = {
+    "@/lib/hosted-github-login-redirect.mjs": { validateHostedGitHubLoginRedirect },
+    "@/integrations/supabase/config": {
+      SUPABASE_BROWSER_CONFIG: { url: "https://fixture.supabase.co" },
+    },
     "@/lib/kova-auth-browser": {
       browserKovaAuthEnabled: () => owned,
       browserKovaAuthMode: () => (owned ? "kova" : "supabase"),

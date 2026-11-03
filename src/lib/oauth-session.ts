@@ -56,7 +56,11 @@ function readRememberedPostAuthRedirect(): string | null {
 export function rememberPostAuthRedirect() {
   if (typeof window === "undefined") return;
   try {
-    const path = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const url = new URL(window.location.href);
+    const isEntry = url.pathname === "/login" || url.pathname === "/signup";
+    const path = isEntry
+      ? safeRelativeRedirect(url.searchParams.get(POST_AUTH_REDIRECT_PARAM), url.origin)
+      : `${url.pathname}${url.search}${url.hash}`;
     if (!path || path.startsWith(OAUTH_CALLBACK_PATH)) return;
     sessionStorage.setItem(POST_AUTH_REDIRECT_KEY, path);
   } catch (error) {

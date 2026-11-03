@@ -4,9 +4,13 @@ import { PublicDetailPageView, PublicPageView } from "@/components/public/Public
 import { isPublicIndexableRoute } from "@/lib/seo-policy.mjs";
 import { ReviewWorkspace } from "@/components/public/ReviewWorkspace";
 import { findReviewPage } from "@/lib/review-page-content";
+import { PUBLIC_WEBSITE_PAGE_BY_PATH } from "@/lib/public-website-catalog.mjs";
+import { PublicWebsiteArticle, websitePageHead } from "@/components/public/PublicWebsiteArticle";
 export const Route = createFileRoute("/$section/$articleSlug")({
   loader: async ({ params }) => {
     const key = publicationKey(params.section, params.articleSlug);
+    const websitePage = PUBLIC_WEBSITE_PAGE_BY_PATH.get(`/${key}`);
+    if (websitePage) return { kind: "website" as const, item: websitePage };
     const reviewPage = findReviewPage(key);
     if (reviewPage) return { kind: "review" as const, item: reviewPage };
     const aliases: Record<string, string> = {
@@ -68,41 +72,47 @@ export const Route = createFileRoute("/$section/$articleSlug")({
     throw notFound();
   },
   head: ({ loaderData: data }) =>
-    data?.kind === "review"
-      ? {
-          meta: [
-            { title: `${data.item.title} | KovaGPT` },
-            { name: "robots", content: "noindex, nofollow" },
-          ],
-        }
-      : data
+    data?.kind === "website"
+      ? websitePageHead(data.item)
+      : data?.kind === "review"
         ? {
             meta: [
               { title: `${data.item.title} | KovaGPT` },
-              { name: "description", content: data.item.description },
-              {
-                name: "robots",
-                content: isPublicIndexableRoute(`/${data.item.section}/${data.item.slug}`)
-                  ? "index, follow"
-                  : "noindex, follow",
-              },
-              { property: "og:title", content: data.item.title },
-              { property: "og:description", content: data.item.description },
-              { property: "og:type", content: data.kind === "publication" ? "article" : "website" },
-              { property: "og:image", content: "https://kovagpt.com/og/home.jpg" },
-            ],
-            links: [
-              {
-                rel: "canonical",
-                href: `https://kovagpt.com/${data.item.section}/${data.item.slug}`,
-              },
+              { name: "robots", content: "noindex, nofollow" },
             ],
           }
-        : {},
+        : data
+          ? {
+              meta: [
+                { title: `${data.item.title} | KovaGPT` },
+                { name: "description", content: data.item.description },
+                {
+                  name: "robots",
+                  content: isPublicIndexableRoute(`/${data.item.section}/${data.item.slug}`)
+                    ? "index, follow"
+                    : "noindex, follow",
+                },
+                { property: "og:title", content: data.item.title },
+                { property: "og:description", content: data.item.description },
+                {
+                  property: "og:type",
+                  content: data.kind === "publication" ? "article" : "website",
+                },
+                { property: "og:image", content: "https://kovagpt.com/og/home.jpg" },
+              ],
+              links: [
+                {
+                  rel: "canonical",
+                  href: `https://kovagpt.com/${data.item.section}/${data.item.slug}`,
+                },
+              ],
+            }
+          : {},
   component: Article,
 });
 function Article() {
   const data = Route.useLoaderData();
+  if (data.kind === "website") return <PublicWebsiteArticle item={data.item} />;
   if (data.kind === "review") return <ReviewWorkspace key={data.item.slug} page={data.item} />;
   if (data.kind === "detail") return <PublicDetailPageView item={data.item} />;
   const item = data.item;

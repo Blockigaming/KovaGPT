@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { resolveLegacyAuthContext, supabase } from "@/integrations/supabase/clie
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import githubLogo from "@/assets/plugins/github.svg";
+import { validateHostedGitHubLoginRedirect } from "@/lib/hosted-github-login-redirect.mjs";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
   getEmailAuthRedirectUri,
@@ -36,11 +37,14 @@ export function AuthDialog({
   mode: initialMode,
   onOpenChange,
   returnFocusTarget,
+  inline = false,
 }: {
   open: boolean;
   mode: Mode;
   onOpenChange: (open: boolean) => void;
   returnFocusTarget?: HTMLElement | null;
+  /** Public landing page; shares the exact same guarded authentication actions. */
+  inline?: boolean;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [step, setStep] = useState<Step>("identify");
@@ -193,7 +197,11 @@ export function AuthDialog({
   const githubAvailable =
     browserKovaAuthMode() !== "kova" && providers.resolved && providers.github;
   const handleGithub = async () => {
-    if (!githubAvailable || !guard("github")) return;
+    if (!githubAvailable) {
+      toast.error("GitHub sign in is not enabled for this deployment.");
+      return;
+    }
+    if (!guard("github")) return;
     try {
       const context = await resolveLegacyAuthContext();
       context.assertCurrent();
@@ -205,7 +213,9 @@ export function AuthDialog({
       context.assertCurrent();
       if (error) throw error;
       if (!data?.url) throw new Error("github_redirect_missing");
-      window.location.assign(data.url);
+      window.location.assign(
+        validateHostedGitHubLoginRedirect(data.url, import.meta.env.VITE_SUPABASE_URL),
+      );
     } catch {
       toast.error("GitHub sign in could not start. Please try again.");
     } finally {
@@ -243,6 +253,88 @@ export function AuthDialog({
     },
     [cooldown, email],
   );
+
+  if (inline) {
+    return (
+      <div className="public-sign-in" aria-label="Sign in to KovaGPT">
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={loading || !googleAvailable}
+          aria-describedby={!googleAvailable ? "public-google-status" : undefined}
+        >
+          <GoogleIcon />
+          {loadingMethod === "google" ? "Connecting…" : "Continue with Google"}
+        </button>
+        {!googleAvailable && (
+          <p id="public-google-status" className="public-provider-status" role="status">
+            {!useKovaAuth && !providers.resolved && !providers.error
+              ? "Checking Google availability…"
+              : "Google sign-in is unavailable. You can continue with email."}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => void handleGithub()}
+          disabled={loading || !githubAvailable}
+          aria-describedby={!githubAvailable ? "public-github-status" : undefined}
+        >
+          <img src={githubLogo} width={18} height={18} alt="" className="public-github-logo" />
+          {loadingMethod === "github" ? "Connecting…" : "Continue with GitHub"}
+        </button>
+        {!githubAvailable && (
+          <p id="public-github-status" className="public-provider-status" role="status">
+            {!providers.resolved && !providers.error && browserKovaAuthMode() !== "kova"
+              ? "Checking GitHub availability…"
+              : "GitHub sign-in is coming soon. You can continue with email."}
+          </p>
+        )}
+        {hostedGoogleAvailable && (
+          <button type="button" onClick={handleHostedGoogle} disabled={loading}>
+            <GoogleIcon />
+            Log in with existing Google
+          </button>
+        )}
+        <div className="public-auth-divider">OR</div>
+        <form onSubmit={handleContinueEmail}>
+          <label htmlFor="public-sign-in-email" className="sr-only">
+            Email address
+          </label>
+          <input
+            id="public-sign-in-email"
+            type="email"
+            autoComplete="email"
+            required
+            maxLength={320}
+            placeholder="Enter your email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            onBlur={() => setEmailTouched(true)}
+            aria-invalid={emailTouched && !emailValid}
+            aria-describedby={emailTouched && !emailValid ? "public-email-error" : undefined}
+          />
+          {emailTouched && !emailValid && (
+            <p id="public-email-error" role="alert">
+              Enter a valid email address.
+            </p>
+          )}
+          <button className="public-primary" type="submit" disabled={loading}>
+            Continue with email
+          </button>
+        </form>
+        <p className="public-auth-legal">
+          By continuing, you agree to KovaGPT’s <Link to="/terms">Terms of Service</Link> and
+          acknowledge its <Link to="/privacy">Privacy Policy</Link>.
+        </p>
+        <p className="public-auth-switch">
+          {isSignUp ? "Already have an account?" : "New to KovaGPT?"}{" "}
+          <button type="button" onClick={() => setMode(isSignUp ? "sign-in" : "sign-up")}>
+            {isSignUp ? "Log in" : "Create an account"}
+          </button>
+        </p>
+      </div>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -1,0 +1,468 @@
+{
+  "target_count": 111,
+  "catalog_count": 105,
+  "combined_count": 114,
+  "targets": [
+    "/",
+    "/login",
+    "/signup",
+    "/pricing",
+    "/features",
+    "/about",
+    "/contact",
+    "/help",
+    "/downloads",
+    "/changelog",
+    "/status",
+    "/roadmap",
+    "/features/chat",
+    "/features/search",
+    "/features/reasoning",
+    "/features/images",
+    "/features/files",
+    "/features/projects",
+    "/features/memory",
+    "/features/library",
+    "/features/voice",
+    "/features/agents",
+    "/features/cloud-browser",
+    "/features/scheduled-tasks",
+    "/features/connections",
+    "/features/research",
+    "/features/code",
+    "/features/temporary-chats",
+    "/features/shared-chats",
+    "/features/personalization",
+    "/features/security",
+    "/features/mobile",
+    "/connections",
+    "/connections/github",
+    "/connections/google-drive",
+    "/connections/gmail",
+    "/connections/google-calendar",
+    "/connections/stripe",
+    "/connections/notion",
+    "/connections/linear",
+    "/connections/figma",
+    "/connections/canva",
+    "/connections/box",
+    "/connections/onedrive",
+    "/connections/sharepoint",
+    "/connections/microsoft-teams",
+    "/connections/outlook",
+    "/connections/salesforce",
+    "/connections/vercel",
+    "/connections/wix",
+    "/connections/custom-mcp",
+    "/connections/health",
+    "/developers",
+    "/developers/docs",
+    "/developers/quickstart",
+    "/developers/authentication",
+    "/developers/api-keys",
+    "/developers/models",
+    "/developers/responses",
+    "/developers/files",
+    "/developers/images",
+    "/developers/search",
+    "/developers/agents",
+    "/developers/webhooks",
+    "/developers/rate-limits",
+    "/developers/errors",
+    "/developers/changelog",
+    "/security",
+    "/security/privacy",
+    "/security/encryption",
+    "/security/authentication",
+    "/security/data-isolation",
+    "/security/permissions",
+    "/security/incident-response",
+    "/security/vulnerability-reporting",
+    "/security/data-retention",
+    "/security/account-deletion",
+    "/security/subprocessors",
+    "/security/compliance",
+    "/legal",
+    "/legal/terms",
+    "/legal/privacy",
+    "/legal/cookies",
+    "/legal/acceptable-use",
+    "/legal/billing",
+    "/legal/refunds",
+    "/legal/data-processing",
+    "/legal/intellectual-property",
+    "/legal/third-party-services",
+    "/help/getting-started",
+    "/help/account",
+    "/help/login",
+    "/help/billing",
+    "/help/subscriptions",
+    "/help/cancel",
+    "/help/refunds",
+    "/help/files",
+    "/help/projects",
+    "/help/connections",
+    "/help/troubleshooting",
+    "/help/contact",
+    "/company",
+    "/company/mission",
+    "/company/news",
+    "/company/careers",
+    "/company/press",
+    "/resources",
+    "/resources/guides",
+    "/resources/tutorials",
+    "/resources/faq",
+    "/resources/updates"
+  ],
+  "paths": [
+    "/",
+    "/about",
+    "/changelog",
+    "/company",
+    "/company/careers",
+    "/company/mission",
+    "/company/news",
+    "/company/press",
+    "/connections",
+    "/connections/box",
+    "/connections/canva",
+    "/connections/custom-mcp",
+    "/connections/figma",
+    "/connections/github",
+    "/connections/gmail",
+    "/connections/google-calendar",
+    "/connections/google-drive",
+    "/connections/health",
+    "/connections/linear",
+    "/connections/microsoft-teams",
+    "/connections/notion",
+    "/connections/onedrive",
+    "/connections/outlook",
+    "/connections/salesforce",
+    "/connections/sharepoint",
+    "/connections/stripe",
+    "/connections/vercel",
+    "/connections/wix",
+    "/contact",
+    "/developers",
+    "/developers/agents",
+    "/developers/api-keys",
+    "/developers/authentication",
+    "/developers/changelog",
+    "/developers/docs",
+    "/developers/errors",
+    "/developers/files",
+    "/developers/images",
+    "/developers/models",
+    "/developers/quickstart",
+    "/developers/rate-limits",
+    "/developers/responses",
+    "/developers/search",
+    "/developers/webhooks",
+    "/downloads",
+    "/features",
+    "/features/agents",
+    "/features/chat",
+    "/features/cloud-browser",
+    "/features/code",
+    "/features/connections",
+    "/features/files",
+    "/features/images",
+    "/features/library",
+    "/features/memory",
+    "/features/mobile",
+    "/features/personalization",
+    "/features/projects",
+    "/features/reasoning",
+    "/features/research",
+    "/features/scheduled-tasks",
+    "/features/search",
+    "/features/security",
+    "/features/shared-chats",
+    "/features/temporary-chats",
+    "/features/voice",
+    "/help",
+    "/help/account",
+    "/help/billing",
+    "/help/cancel",
+    "/help/connections",
+    "/help/contact",
+    "/help/data-export",
+    "/help/files",
+    "/help/getting-started",
+    "/help/login",
+    "/help/plans",
+    "/help/projects",
+    "/help/recovery",
+    "/help/refunds",
+    "/help/subscriptions",
+    "/help/troubleshooting",
+    "/legal",
+    "/legal/acceptable-use",
+    "/legal/billing",
+    "/legal/cookies",
+    "/legal/data-processing",
+    "/legal/intellectual-property",
+    "/legal/privacy",
+    "/legal/refunds",
+    "/legal/terms",
+    "/legal/third-party-services",
+    "/login",
+    "/pricing",
+    "/resources",
+    "/resources/faq",
+    "/resources/guides",
+    "/resources/tutorials",
+    "/resources/updates",
+    "/roadmap",
+    "/security",
+    "/security/account-deletion",
+    "/security/authentication",
+    "/security/compliance",
+    "/security/data-isolation",
+    "/security/data-retention",
+    "/security/encryption",
+    "/security/incident-response",
+    "/security/permissions",
+    "/security/privacy",
+    "/security/subprocessors",
+    "/security/vulnerability-reporting",
+    "/signup",
+    "/status"
+  ],
+  "footer_links": [
+    {
+      "label": "KovaGPT",
+      "to": "/"
+    },
+    {
+      "label": "Chat",
+      "to": "/features/chat"
+    },
+    {
+      "label": "Projects",
+      "to": "/features/projects"
+    },
+    {
+      "label": "Images",
+      "to": "/features/images"
+    },
+    {
+      "label": "Library",
+      "to": "/features/library"
+    },
+    {
+      "label": "Search",
+      "to": "/features/search"
+    },
+    {
+      "label": "Thinking",
+      "to": "/features/reasoning"
+    },
+    {
+      "label": "Agents",
+      "to": "/features/agents"
+    },
+    {
+      "label": "Cloud Browser",
+      "to": "/features/cloud-browser"
+    },
+    {
+      "label": "Scheduled Tasks",
+      "to": "/features/scheduled-tasks"
+    },
+    {
+      "label": "Connections",
+      "to": "/connections"
+    },
+    {
+      "label": "Pricing",
+      "to": "/pricing"
+    },
+    {
+      "label": "Downloads",
+      "to": "/downloads"
+    },
+    {
+      "label": "Log in",
+      "to": "/login"
+    },
+    {
+      "label": "Overview",
+      "to": "/developers"
+    },
+    {
+      "label": "Documentation",
+      "to": "/developers/docs"
+    },
+    {
+      "label": "Quickstart",
+      "to": "/developers/quickstart"
+    },
+    {
+      "label": "Authentication",
+      "to": "/developers/authentication"
+    },
+    {
+      "label": "Models",
+      "to": "/developers/models"
+    },
+    {
+      "label": "Responses",
+      "to": "/developers/responses"
+    },
+    {
+      "label": "Images",
+      "to": "/developers/images"
+    },
+    {
+      "label": "Webhooks",
+      "to": "/developers/webhooks"
+    },
+    {
+      "label": "Rate limits",
+      "to": "/developers/rate-limits"
+    },
+    {
+      "label": "Changelog",
+      "to": "/developers/changelog"
+    },
+    {
+      "label": "Help Center",
+      "to": "/help"
+    },
+    {
+      "label": "Getting started",
+      "to": "/help/getting-started"
+    },
+    {
+      "label": "Guides",
+      "to": "/resources/guides"
+    },
+    {
+      "label": "Tutorials",
+      "to": "/resources/tutorials"
+    },
+    {
+      "label": "FAQ",
+      "to": "/resources/faq"
+    },
+    {
+      "label": "Product updates",
+      "to": "/resources/updates"
+    },
+    {
+      "label": "Status",
+      "to": "/status"
+    },
+    {
+      "label": "Contact support",
+      "to": "/help/contact"
+    },
+    {
+      "label": "Security",
+      "to": "/security"
+    },
+    {
+      "label": "Privacy",
+      "to": "/privacy"
+    },
+    {
+      "label": "Terms",
+      "to": "/terms"
+    },
+    {
+      "label": "Acceptable use",
+      "to": "/legal/acceptable-use"
+    },
+    {
+      "label": "Data retention",
+      "to": "/security/data-retention"
+    },
+    {
+      "label": "Account deletion",
+      "to": "/security/account-deletion"
+    },
+    {
+      "label": "Billing",
+      "to": "/legal/billing"
+    },
+    {
+      "label": "Refunds",
+      "to": "/refund"
+    },
+    {
+      "label": "Vulnerability reporting",
+      "to": "/security/vulnerability-reporting"
+    },
+    {
+      "label": "Accessibility",
+      "to": "/accessibility"
+    },
+    {
+      "label": "About",
+      "to": "/company"
+    },
+    {
+      "label": "Mission",
+      "to": "/company/mission"
+    },
+    {
+      "label": "News",
+      "to": "/company/news"
+    },
+    {
+      "label": "Careers",
+      "to": "/company/careers"
+    },
+    {
+      "label": "Press",
+      "to": "/company/press"
+    },
+    {
+      "label": "Contact",
+      "to": "/contact"
+    },
+    {
+      "label": "Transparency",
+      "to": "/transparency"
+    },
+    {
+      "label": "GitHub",
+      "to": "/connections/github"
+    },
+    {
+      "label": "Google Drive",
+      "to": "/connections/google-drive"
+    },
+    {
+      "label": "Gmail",
+      "to": "/connections/gmail"
+    },
+    {
+      "label": "Google Calendar",
+      "to": "/connections/google-calendar"
+    },
+    {
+      "label": "Notion",
+      "to": "/connections/notion"
+    },
+    {
+      "label": "Linear",
+      "to": "/connections/linear"
+    },
+    {
+      "label": "Microsoft Teams",
+      "to": "/connections/microsoft-teams"
+    },
+    {
+      "label": "SharePoint",
+      "to": "/connections/sharepoint"
+    },
+    {
+      "label": "All connections",
+      "to": "/connections"
+    }
+  ]
+}

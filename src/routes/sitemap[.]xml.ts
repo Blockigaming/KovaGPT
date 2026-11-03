@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { PUBLIC_SITEMAP_ENTRIES } from "@/lib/seo-policy.mjs";
+import { PUBLIC_WEBSITE_INDEXABLE_PATHS } from "@/lib/public-website-catalog.mjs";
 
 const BASE_URL = "https://kovagpt.com";
 
@@ -8,7 +9,16 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const urls = PUBLIC_SITEMAP_ENTRIES.map((entry) =>
+        const existing = new Set(PUBLIC_SITEMAP_ENTRIES.map((entry) => entry.path));
+        const entries = [
+          ...PUBLIC_SITEMAP_ENTRIES,
+          ...PUBLIC_WEBSITE_INDEXABLE_PATHS.filter((path) => !existing.has(path)).map((path) => ({
+            path,
+            changefreq: "monthly",
+            priority: "0.5",
+          })),
+        ];
+        const urls = entries.map((entry) =>
           [
             `  <url>`,
             `    <loc>${BASE_URL}${entry.path}</loc>`,
