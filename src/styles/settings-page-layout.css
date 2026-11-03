@@ -58,6 +58,8 @@
   margin: 0;
   padding: 24px 16px 16px;
   background: var(--surface-sidebar, var(--sidebar));
+  /* Delineate the settings navigation even when the global sidebar collapses. */
+  border-right: 1px solid var(--border);
   border-radius: 0;
   overflow-y: auto;
   overscroll-behavior-y: contain;

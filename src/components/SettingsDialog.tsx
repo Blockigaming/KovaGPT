@@ -575,6 +575,7 @@ export function SettingsDialog({
   useEffect(() => {
     if (open && initialTab) {
       setTab(initialTab === "subscription" ? "billing" : initialTab);
+      if (initialTab === "logout") setLogoutConfirmOpen(true);
       setMobileHome(false);
     }
     if (!open) {
@@ -1098,6 +1099,10 @@ export function SettingsDialog({
       ].filter((group) => group.tabs.length > 0)
     : groups;
   const selectTab = (value: string) => {
+    if (value === "logout") {
+      setLogoutConfirmOpen(true);
+      return;
+    }
     pendingMobileFocusRef.current = "content";
     setTab(value);
     if (page) onSectionChange?.(settingsSectionForTab(value));

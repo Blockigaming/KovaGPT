@@ -20,6 +20,7 @@ import {
 } from "@/lib/management-list-preferences.mjs";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { useTier } from "@/hooks/useTier";
 import { useTimeFormatPreference } from "@/hooks/use-time-format-preference";
 import { formatDisplayDateTime } from "@/lib/time-format";
 import { AppShell } from "@/components/AppShell";
@@ -36,7 +37,6 @@ import { AutomationBuilder, type AutomationDraft } from "@/components/Automation
 import { ScheduledTaskEditor } from "@/components/ScheduledTaskEditor";
 import { ScheduledTaskCopies } from "@/components/ScheduledTaskCopies";
 import { ScheduledTaskLastRun } from "@/components/ScheduledTaskLastRun";
-import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import { useScheduledTaskRunPreviews } from "@/hooks/use-scheduled-task-run-previews";
 import { TASK_RUN_PAGE_SIZE } from "@/lib/scheduled-task-run-page";
 import {
@@ -107,6 +107,7 @@ const taskActionLabels: Record<TaskAction, string> = {
 
 function ScheduledTasksPage() {
   const { isLoaded, isSignedIn, user } = useUser();
+  const { tier, status: tierStatus } = useTier();
   const { taskId: requestedTaskId } = Route.useSearch();
   const openedTaskLink = useRef<string | null>(null);
   const taskListLoaded = useRef(false);
@@ -124,6 +125,11 @@ function ScheduledTasksPage() {
     principal !== null && dataPrincipal === principal && dataGeneration === generationRef.current;
   const [accessState, setAccessState] = useState<AccessState>("loading");
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
+  const activeTaskCount = tasks.filter((task) =>
+    ["scheduled", "running", "paused"].includes(task.status),
+  ).length;
+  const taskPlanLimit = tier === "pro" ? null : tier === "plus" ? 5 : 2;
+
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editor, setEditor] = useState<ScheduledTask | "new" | null>(null);
@@ -174,7 +180,6 @@ function ScheduledTasksPage() {
   const [executionAvailable, setExecutionAvailable] = useState(false);
   const [runRefreshVersion, setRunRefreshVersion] = useState(0);
   const [taskPage, setTaskPage] = useState({ scope: "", index: 0 });
-  const [relatedWorkspaceOpen, setRelatedWorkspaceOpen] = useState(false);
 
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -214,7 +219,6 @@ function ScheduledTasksPage() {
     retryPendingRef.current = null;
     setBuilderOpen(false);
     setExecutionAvailable(false);
-    setRelatedWorkspaceOpen(false);
     setTitle("");
     setPrompt("");
     setWhen("");
@@ -676,6 +680,13 @@ function ScheduledTasksPage() {
                 Scheduled tasks
               </h1>
               <p>Run a prompt automatically on a schedule</p>
+              {visibleAccess === "eligible" && tierStatus === "ready" && (
+                <p className="text-xs text-muted-foreground" aria-live="polite">
+                  {taskPlanLimit === null
+                    ? `${activeTaskCount} active tasks · Pro has no plan-based task count limit`
+                    : `${activeTaskCount} of ${taskPlanLimit} active tasks · ${tier === "plus" ? "Plus" : "Free"} plan`}
+                </p>
+              )}
             </div>
             {visibleAccess === "eligible" && (
               <div className="flex flex-wrap items-center gap-2">
@@ -1305,27 +1316,6 @@ function ScheduledTasksPage() {
                   </nav>
                 )}
               </TabsContent>
-              <details
-                className="mt-6 rounded-xl border border-border"
-                open={relatedWorkspaceOpen}
-                onToggle={(event) => setRelatedWorkspaceOpen(event.currentTarget.open)}
-              >
-                <summary className="min-h-11 cursor-pointer content-center px-3 py-3 text-sm font-medium">
-                  Related workspace
-                </summary>
-                {relatedWorkspaceOpen && (
-                  <div className="px-3 pb-3">
-                    <p className="text-xs text-muted-foreground">
-                      Browse projects, context packs, files, and memories. Browsing does not attach
-                      them to a task. Choose context in the task editor to attach it.
-                    </p>
-                    <RelatedWorkspaceItems
-                      kinds={["project", "context_pack", "file", "memory"]}
-                      title="Context for automations"
-                    />
-                  </div>
-                )}
-              </details>
             </Tabs>
           )}
         </main>

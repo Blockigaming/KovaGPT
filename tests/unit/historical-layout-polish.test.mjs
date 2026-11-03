@@ -14,16 +14,10 @@ test("Library preview title matches desktop body left inset without encroaching 
   assert.match(source, /border-b border-border p-4 pr-16 sm:pl-6/);
   assert.match(source, /overflow-auto p-4[^"\n]+sm:p-6/);
 });
-test("Task related context remains in the same padded page container", () => {
+test("Scheduled Tasks does not render unrelated workspace browsing or errors", () => {
   const source = read("routes/scheduled-tasks.tsx");
-  assert.match(
-    source,
-    /<details[\s\S]*?<summary className="min-h-11[^\"]*">\s*Related workspace\s*<\/summary>[\s\S]*?<RelatedWorkspaceItems[\s\S]*?title="Context for automations"\s*\/>[\s\S]*?<\/details>[\s\S]*?<\/main>/,
-  );
-  assert.ok(source.indexOf("<RelatedWorkspaceItems") > source.indexOf("{visibleTasks.map"));
-  assert.match(source, /\{relatedWorkspaceOpen && \(/);
-  assert.match(source, /\[relatedWorkspaceOpen, setRelatedWorkspaceOpen\] = useState\(false\)/);
-  assert.match(source, /Browsing does not attach/);
+  assert.doesNotMatch(source, /RelatedWorkspaceItems|relatedWorkspaceOpen|Context for automations/);
+  assert.match(source, /<Tabs value=\{filter\}/);
 });
 
 test("image failure remains adjacent to its prompt and linked for assistive reading", () => {

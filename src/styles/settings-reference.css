@@ -523,3 +523,14 @@
     font-size: 16px;
   }
 }
+
+/* Avoid the browser's native focus halo stacking with Tailwind/Radix rings.
+   Keep one visible keyboard focus outline, but no focus ring on mouse clicks. */
+.kova-settings-reference :is(button, [role="button"]):focus-visible {
+  outline: 1px solid var(--ring);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.kova-settings-reference :is(button, [role="button"]):focus:not(:focus-visible) {
+  outline: none;
+}

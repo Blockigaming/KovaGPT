@@ -622,8 +622,22 @@ function ChatMessageInner({
     setSelectedText(text);
   }, []);
   useEffect(() => {
-    document.addEventListener("selectionchange", rememberSelection);
-    return () => document.removeEventListener("selectionchange", rememberSelection);
+    // Selection changes fire continuously during dragging, and every rendered
+    // message is subscribed. Wait for the range to settle before showing a
+    // contextual toolbar so native text selection and browser Copy remain stable.
+    let pending: ReturnType<typeof setTimeout> | undefined;
+    const onSelectionChange = () => {
+      if (pending !== undefined) clearTimeout(pending);
+      pending = setTimeout(() => {
+        pending = undefined;
+        rememberSelection();
+      }, 120);
+    };
+    document.addEventListener("selectionchange", onSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", onSelectionChange);
+      if (pending !== undefined) clearTimeout(pending);
+    };
   }, [rememberSelection]);
   const openSelectionEdit = useCallback(
     async (instruction = "") => {
@@ -1131,9 +1145,6 @@ function ChatMessageInner({
                   )
                     event.preventDefault();
                 }}
-                onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget)) rememberSelection();
-                }}
               >
                 {onDraftPrompt && (
                   <button
@@ -1258,12 +1269,12 @@ function ChatMessageInner({
                       onClick={() => void persistFeedback(feedback === "up" ? null : "up")}
                       disabled={feedbackSaving || feedbackLoadFailed}
                       className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
-                        feedback === "up" ? "bg-accent text-foreground" : ""
+                        feedback === "up" ? "bg-accent text-white" : ""
                       }`}
                       aria-label="Good response"
                       aria-pressed={feedback === "up"}
                     >
-                      <ThumbsUp className="h-4 w-4" />
+                      <ThumbsUp className={`h-4 w-4 ${feedback === "up" ? "fill-current" : ""}`} />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Good response</TooltipContent>
@@ -1276,12 +1287,12 @@ function ChatMessageInner({
                       onClick={() => void persistFeedback(feedback === "down" ? null : "down")}
                       disabled={feedbackSaving || feedbackLoadFailed}
                       className={`kova-message-icon-action inline-flex items-center justify-center p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${
-                        feedback === "down" ? "bg-accent text-foreground" : ""
+                        feedback === "down" ? "bg-accent text-white" : ""
                       }`}
                       aria-label="Bad response"
                       aria-pressed={feedback === "down"}
                     >
-                      <ThumbsDown className="h-4 w-4" />
+                      <ThumbsDown className={`h-4 w-4 ${feedback === "down" ? "fill-current" : ""}`} />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Bad response</TooltipContent>
