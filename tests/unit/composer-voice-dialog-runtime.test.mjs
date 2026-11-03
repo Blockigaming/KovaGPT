@@ -855,7 +855,9 @@ test("provider failure retains retryable audio and recovery inserts transcript d
   const f = fixture();
   await f.ready();
   await f.recordToRequest();
-  f.requests.at(-1).resolve(Response.json({ error: "voice_provider_unavailable" }, { status: 502 }));
+  f.requests
+    .at(-1)
+    .resolve(Response.json({ error: "voice_provider_unavailable" }, { status: 502 }));
   await f.flush();
   assert.equal(f.control("Retry transcription").disabled, false);
   assert.deepEqual(f.submitted, []);
@@ -973,9 +975,9 @@ test("voice changes cancel pending speech and discard stale playback", async () 
   assert.equal(f.urls.length, 0);
   await f.click("Read latest completed reply");
   await waitForRequest(f, 3);
-  f.requests.at(-1).resolve(
-    new Response(new Uint8Array([2]), { headers: { "content-type": "audio/mpeg" } }),
-  );
+  f.requests
+    .at(-1)
+    .resolve(new Response(new Uint8Array([2]), { headers: { "content-type": "audio/mpeg" } }));
   await f.flush();
   assert.equal(f.playbackSinks.at(-1).writes.length, 1);
   f.playbackSinks.at(-1).options.onEnded();
