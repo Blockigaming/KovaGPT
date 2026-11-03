@@ -206,8 +206,8 @@
   flex-shrink: 0;
 }
 .kova-profile-menu {
-  width: var(--radix-dropdown-menu-trigger-width) !important;
-  min-width: 0 !important;
+  width: min(330px, calc(100vw - 24px)) !important;
+  min-width: min(280px, calc(100vw - 24px)) !important;
   max-width: calc(100vw - 24px);
   border-radius: 16px;
 }
@@ -1033,4 +1033,87 @@
   place-items: center;
   color: var(--muted-foreground);
   font-size: 14px;
+}
+
+/* Protected routes show skeleton geometry during authentication, never an
+   opaque overlay obscuring content that is ready to paint. */
+.kova-session-shell {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--background);
+  color: var(--foreground);
+}
+.kova-session-shell-sidebar {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 264px;
+  flex-direction: column;
+  gap: 18px;
+  margin: 8px 0 8px 8px;
+  padding: 24px 20px;
+  border-radius: 20px;
+  background: var(--sidebar);
+}
+.kova-session-shell-sidebar strong {
+  margin-bottom: 16px;
+  font-size: 20px;
+  font-weight: 500;
+}
+.kova-session-shell-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+.kova-session-shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 16px 24px;
+}
+.kova-session-shell-body {
+  display: flex;
+  width: min(100%, 760px);
+  flex: 1;
+  flex-direction: column;
+  gap: 18px;
+  margin: 12vh auto 0;
+  padding: 24px;
+}
+.kova-session-shell-body p {
+  margin: 0 0 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+.kova-session-skeleton {
+  display: block;
+  flex: 0 0 auto;
+  height: 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--foreground) 9%, transparent);
+  animation: kova-session-pulse 1.6s ease-in-out infinite alternate;
+}
+.kova-session-nav-wide { width: 90%; }
+.kova-session-nav-short { width: 65%; }
+.kova-session-header-title { width: 140px; height: 24px; }
+.kova-session-header-action { width: 38px; height: 38px; border-radius: 50%; }
+.kova-session-content-line { width: 75%; height: 22px; }
+.kova-session-content-line-short { width: 48%; height: 22px; }
+.kova-session-composer-placeholder {
+  width: 100%;
+  height: 134px;
+  margin-top: auto;
+  margin-bottom: 7vh;
+  border-radius: 24px;
+}
+@keyframes kova-session-pulse {
+  to { opacity: 0.45; }
+}
+@media (max-width: 1023px) {
+  .kova-session-shell-sidebar { display: none; }
+  .kova-session-shell-body { margin-top: 14vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kova-session-skeleton { animation: none; }
 }
