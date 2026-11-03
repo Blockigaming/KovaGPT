@@ -49,8 +49,7 @@ test("missing secret, wrong host, wrong scheme and altered path fail before netw
     { ...env, KOVA_SCHEDULED_TASK_ENDPOINT: "https://kovagpt.com/api/chat" },
     {
       ...env,
-      KOVA_SCHEDULED_TASK_ENDPOINT:
-        "https://kovagpt.com/api/internal/scheduled-execution?token=x",
+      KOVA_SCHEDULED_TASK_ENDPOINT: "https://kovagpt.com/api/internal/scheduled-execution?token=x",
     },
   ]) {
     await assert.rejects(invokeScheduledExecution({ env: unsafe, request }), /task_worker_/);
