@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 207,
+  "migrationCount": 208,
   "sourceInventoryLimitations": "Literal policy and direct table SELECT/ALL statement order only; verify effective grants, conditional SQL, inherited privileges and RLS against the replayed database catalog.",
   "tables": [
     "account_audit_entries",
@@ -895,6 +895,7 @@
     "scheduled_task_event_grant_ready",
     "scheduled_task_event_ingress_rpc",
     "scheduled_task_heartbeat",
+    "scheduled_task_reader_is_active",
     "scheduled_task_runtime_ready",
     "search_workspace_sources",
     "session_is_active",
@@ -2159,6 +2160,7 @@
     "execute on function kova_private.next_task_occurrence(timestamp,text,text,timestamptz) to service_role",
     "execute on function kova_private.reject_export_while_account_deletion_pending()\n  to service_role",
     "execute on function kova_private.scheduled_task_connection_current(uuid,text,text,text,text,text[]) to service_role",
+    "execute on function kova_private.scheduled_task_reader_is_active() to authenticated",
     "execute on function kova_private.site_authorized_session(uuid,uuid,text) to service_role",
     "execute on function kova_private.track_account_export_artifact_lifetime() to service_role",
     "execute on function kova_private.validate_scheduled_task_context(uuid,jsonb,jsonb) to service_role",
@@ -2821,6 +2823,7 @@
     "all on function kova_private.retire_password_authority() from public, anon, authenticated, service_role",
     "all on function kova_private.rotate_security_session(kova_private.auth_sessions,text,text,timestamptz,text,jsonb,timestamptz)\n  from public, anon, authenticated, service_role",
     "all on function kova_private.scheduled_task_connection_current(uuid,text,text,text,text,text[]) from public,anon,authenticated",
+    "all on function kova_private.scheduled_task_reader_is_active()\n  from public,anon,authenticated,service_role",
     "all on function kova_private.site_authorized_session(uuid,uuid,text) from public,anon,authenticated",
     "all on function kova_private.track_account_export_artifact_lifetime()\n  from public, anon, authenticated",
     "all on function kova_private.validate_scheduled_task_context(uuid,jsonb,jsonb) from public,anon,authenticated",
@@ -3736,5 +3739,5 @@
     { "table": "public.writing_documents", "role": "authenticated", "granted": true },
     { "table": "public.writing_documents", "role": "service_role", "granted": true }
   ],
-  "sha256": "ef34e988aae0d0b82f3c8769b55869d3482153dd71f0f39ad784f54be012a019"
+  "sha256": "46153910fa3e45709fa63808281ad4094edd8b0b21c832a02f674f23c30dcc3b"
 }
