@@ -75,6 +75,11 @@ function fixture(options = {}) {
     planLabel: "Plan",
     avatarUrl: null,
     accountInitial: "S",
+    accountEmail: "owner@example.test",
+    tier: "plus",
+    tierStatus: "ready",
+    onOpenHelp: () => calls.push(["help"]),
+    setLogoutConfirmOpen: (next) => calls.push(["logout", next]),
     expandButtonRef: { current: null },
     drawerRef: { current: null },
     onNew: () => calls.push(["new"]),
@@ -91,6 +96,16 @@ function fixture(options = {}) {
     ...Object.fromEntries(
       [
         "Link",
+        "DropdownMenu",
+        "DropdownMenuTrigger",
+        "DropdownMenuContent",
+        "DropdownMenuLabel",
+        "DropdownMenuSeparator",
+        "DropdownMenuItem",
+        "Sparkles",
+        "SettingsIcon",
+        "CircleHelp",
+        "LogOut",
         "RailTooltip",
         "TooltipProvider",
         "NovaLogo",
@@ -114,6 +129,7 @@ function fixture(options = {}) {
   deps.searchButton = compile(`return (${variable("searchButton")});`, deps);
   deps.availableShortcuts = compile(`return (${variable("availableShortcuts")});`, deps);
   deps.railLink = compile(`return (${variable("railLink")});`, deps);
+  deps.renderAccountMenu = compile(`return (${variable("renderAccountMenu")});`, deps);
   const tree = compile(`return (${rail});`, deps);
   const find = (label) => all(tree).find((node) => node.props["aria-label"] === label);
   const searchNode = nodes.find(
@@ -207,8 +223,12 @@ test("New chat, Search, customization and Settings invoke their existing callbac
   f.search.props.onClick();
   const opener = {};
   f.find("Customize sidebar").props.onClick({ currentTarget: opener });
-  f.find("Settings").props.onClick();
-  assert.deepEqual(f.calls, [["new"], ["search"], ["customize", opener], ["settings", "general"]]);
+  const menu = all(f.tree).find(({ type }) => type === "DropdownMenuContent");
+  const settings = all(menu).find(
+    ({ type, children }) => type === "DropdownMenuItem" && children.includes("Settings"),
+  );
+  settings.props.onSelect();
+  assert.deepEqual(f.calls, [["new"], ["search"], ["customize", opener], ["settings", "appearance"]]);
 });
 
 test("Search without a workspace callback opens the existing chat search", () => {
@@ -263,7 +283,11 @@ test("every collapsed action is wrapped in the shared pointer-and-keyboard Toolt
     mapsReleaseApproved: true,
   });
   const wrappers = all(f.tree).filter(({ type }) => type === "RailTooltip");
-  assert.equal(wrappers.length, controls(f.tree).length);
+  // The account dropdown trigger owns its own focus and menu affordance.
+  const navigationControls = controls(f.tree).filter(
+    ({ props }) => props["aria-label"] !== "Account menu",
+  );
+  assert.equal(wrappers.length, navigationControls.length);
   for (const wrapper of wrappers) {
     assert.equal(wrapper.props.label, controls(wrapper)[0].props["aria-label"]);
     assert.equal(
