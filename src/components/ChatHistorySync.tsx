@@ -124,67 +124,77 @@ export function ChatHistorySyncRuntime() {
     window.addEventListener("online", online);
     document.addEventListener("visibilitychange", readOnlyRefresh);
     event("connecting");
+    async function acquire(lock: Lock | null): Promise<void> {
+      if (!ownerId || lifetime.signal.aborted) return;
+      if (!lock) {
+        event("other_tab");
+        await readOnlyRefresh();
+        if (lifetime.signal.aborted) return;
+        // Wait for the current writer to release ownership. Never steal its
+        // lock or make this tab writable before initialization completes.
+        return navigator.locks.request(
+          `kova-chat-history:${ownerId}`,
+          { signal: lifetime.signal },
+          acquire,
+        );
+      }
+      event("connecting");
+      controller = createChatHistoryController({
+        ownerId,
+        signal: lifetime.signal,
+        loadDevice: loadChatHistoryDevice,
+        commitDevice: commitChatHistoryDevice,
+        getLegacy: () => legacy,
+        transport: ({ method, epoch, cursor, body, signal }) =>
+          requestWorkSync(
+            ownerId,
+            method === "GET"
+              ? `/api/chat/history?cursor=${cursor ?? 0}${epoch ? `&epoch=${encodeURIComponent(epoch)}` : ""}`
+              : "/api/chat/history",
+            signal,
+            body,
+          ),
+        changed: ({ active, archived, source, dirty }) => {
+          if (lifetime.signal.aborted) return;
+          view.active = active;
+          view.archived = archived;
+          view.ready = true;
+          view.dirty = dirty;
+          notifyChatHistoryChanged(ownerId, source);
+          channel?.postMessage({ ownerId });
+        },
+        status: (value) => {
+          view.dirty = controller?.dirty ?? false;
+          if (!lifetime.signal.aborted) publish(value);
+        },
+      });
+      controls.set(ownerId, controller);
+      try {
+        await controller.initialize();
+        if (!lifetime.signal.aborted) {
+          view.writable = true;
+          // Publish the writable boundary after the device snapshot. A lazy
+          // controller must be ready before the composer accepts a first send.
+          notifyChatHistoryChanged(ownerId, "cloud");
+          void tick();
+        }
+      } catch {
+        if (lifetime.signal.aborted) return;
+        view.writable = true;
+        unregister();
+        event("device_error");
+      }
+      await new Promise<void>((resolve) => {
+        if (lifetime.signal.aborted) resolve();
+        else lifetime.signal.addEventListener("abort", () => resolve(), { once: true });
+      });
+    }
     if (!navigator.locks) {
       unregister();
       event("unavailable");
     } else
       void navigator.locks
-        .request(`kova-chat-history:${ownerId}`, { ifAvailable: true }, async (lock) => {
-          if (lifetime.signal.aborted) return;
-          if (!lock) {
-            event("other_tab");
-            await readOnlyRefresh();
-            return;
-          }
-          controller = createChatHistoryController({
-            ownerId,
-            signal: lifetime.signal,
-            loadDevice: loadChatHistoryDevice,
-            commitDevice: commitChatHistoryDevice,
-            getLegacy: () => legacy,
-            transport: ({ method, epoch, cursor, body, signal }) =>
-              requestWorkSync(
-                ownerId,
-                method === "GET"
-                  ? `/api/chat/history?cursor=${cursor ?? 0}${epoch ? `&epoch=${encodeURIComponent(epoch)}` : ""}`
-                  : "/api/chat/history",
-                signal,
-                body,
-              ),
-            changed: ({ active, archived, source, dirty }) => {
-              if (lifetime.signal.aborted) return;
-              view.active = active;
-              view.archived = archived;
-              view.ready = true;
-              view.dirty = dirty;
-              notifyChatHistoryChanged(ownerId, source);
-              channel?.postMessage({ ownerId });
-            },
-            status: (value) => {
-              view.dirty = controller?.dirty ?? false;
-              if (!lifetime.signal.aborted) publish(value);
-            },
-          });
-          controls.set(ownerId, controller);
-          try {
-            await controller.initialize();
-            if (!lifetime.signal.aborted) {
-              view.writable = true;
-              // Publish the writable boundary after the device snapshot. A lazy
-              // controller must be ready before the composer accepts a first send.
-              notifyChatHistoryChanged(ownerId, "cloud");
-              void tick();
-            }
-          } catch {
-            view.writable = true;
-            unregister();
-            event("device_error");
-          }
-          await new Promise<void>((resolve) => {
-            if (lifetime.signal.aborted) resolve();
-            else lifetime.signal.addEventListener("abort", () => resolve(), { once: true });
-          });
-        })
+        .request(`kova-chat-history:${ownerId}`, { ifAvailable: true }, acquire)
         .catch(() => {
           if (!lifetime.signal.aborted) {
             unregister();
@@ -229,7 +239,8 @@ export function ChatHistorySyncStatus() {
     offline: "Chat sync is offline. Device changes are retained.",
     device_error:
       "Chat history could not be saved on this device. Keep this page open and export important drafts.",
-    other_tab: "Chat editing is open in another tab. Close it and reload here to edit.",
+    other_tab:
+      "Chat editing is open in another tab. Close that tab to resume editing here automatically.",
     unavailable: "Account chat sync is unavailable in this browser.",
     cleared: "Device history was cleared. Reload to resume account sync.",
   };
