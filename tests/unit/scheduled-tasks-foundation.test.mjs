@@ -779,7 +779,7 @@ test("requested task counts admit Free 2, Plus 5 and more than five for Pro", as
   try {
     await db.exec("reset role");
     await db.exec(sql("20261031014600_scheduled_task_plan_allowances.sql"));
-    await db.exec(sql("20261102204500_scheduled_task_requested_allowances.sql"));
+    await db.exec(sql("20261102204500_kova_scheduled_task_requested_allowances.sql"));
     await db.exec("set role service_role");
     await activate(db);
     await db.query("update public.test_plans set tier='free' where user_id=$1", [owner]);
