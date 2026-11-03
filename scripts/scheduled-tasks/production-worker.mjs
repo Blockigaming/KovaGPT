@@ -36,8 +36,7 @@ export async function invokeScheduledExecution({
   )
     throw new Error("task_worker_endpoint_invalid");
   const allowed = (env.KOVA_SCHEDULED_TASK_ALLOWED_HOST || "kovagpt.com").toLowerCase();
-  if (url.hostname.toLowerCase() !== allowed)
-    throw new Error("task_worker_endpoint_host_mismatch");
+  if (url.hostname.toLowerCase() !== allowed) throw new Error("task_worker_endpoint_host_mismatch");
   const response = await request(url.toString(), {
     method: "POST",
     headers: {
