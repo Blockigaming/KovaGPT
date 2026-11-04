@@ -14,8 +14,8 @@ function evidenceDirectory(projectName: string) {
 const inventory = JSON.parse(
   await readFile("docs/public-website/route-inventory.json", "utf8"),
 ) as { paths: string[] };
-test.beforeEach(async ({}, testInfo) => {
-  await mkdir(evidenceDirectory(testInfo.project.name), { recursive: true });
+test.beforeEach(async () => {
+  await mkdir(evidenceDirectory(test.info().project.name), { recursive: true });
 });
 
 test("implemented homepage, pricing tabs, FAQ, original asset, and responsive evidence", async ({
