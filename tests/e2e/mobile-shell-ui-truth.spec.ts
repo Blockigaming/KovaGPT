@@ -7,7 +7,7 @@ test.describe("mobile shell UI truth", () => {
   test.beforeEach(async ({ page }) => {
     await installAuthenticatedFixture(page);
   });
-  test("the phone drawer fills the viewport and restores focus", async ({ page }) => {
+  test("the phone drawer keeps its vertical gutters and restores focus", async ({ page }) => {
     const viewport = page.viewportSize();
     test.skip(
       !viewport || (viewport.width >= 768 && viewport.height >= 500),
@@ -22,11 +22,17 @@ test.describe("mobile shell UI truth", () => {
 
     const drawer = page.getByRole("dialog", { name: "Primary navigation" });
     await expect(drawer).toBeVisible();
-    const box = await drawer.boundingBox();
-    expect(box).not.toBeNull();
-    expect(box!.x).toBeLessThanOrEqual(1);
-    expect(box!.y).toBeLessThanOrEqual(1);
-    expect(box!.height).toBeGreaterThanOrEqual(viewport.height - 1);
+    await expect
+      .poll(async () => {
+        const box = await drawer.boundingBox();
+        return (
+          box && {
+            top: Math.round(box.y),
+            bottom: Math.round(viewport.height - box.y - box.height),
+          }
+        );
+      })
+      .toEqual({ top: 8, bottom: 8 });
 
     const close = page.getByRole("button", { name: "Close sidebar", exact: true });
     // Translation can briefly subtract fractional edges as 43.99998px for a
