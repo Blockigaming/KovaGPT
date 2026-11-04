@@ -35,12 +35,10 @@
   max-width: 100%;
 }
 .kova-user-message-actions {
-  margin-right: 0;
   opacity: 0;
   transition: opacity 120ms ease;
 }
-.kova-user-message-group:hover + .kova-user-message-actions,
-.kova-user-message-actions:hover,
+.kova-message:has(.kova-user-message-group:hover) .kova-user-message-actions,
 .kova-user-message-actions:focus-within {
   opacity: 1;
 }

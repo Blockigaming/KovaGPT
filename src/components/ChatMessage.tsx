@@ -1200,12 +1200,26 @@ function ChatMessageInner({
       <div className="mx-auto kova-message-reading-column">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && isUser && message.content && (
-            <div className="kova-message-actions kova-user-message-actions mt-1" role="toolbar" aria-label="Message actions">
-              <button type="button" onClick={copy} className="kova-message-icon-action" aria-label="Copy message">
+            <div
+              className="kova-message-actions kova-user-message-actions mt-1"
+              role="toolbar"
+              aria-label="Message actions"
+            >
+              <button
+                type="button"
+                onClick={copy}
+                className="kova-message-icon-action"
+                aria-label="Copy message"
+              >
                 <Copy className="w-4 h-4" />
               </button>
               {onDraftPrompt && (
-                <button type="button" onClick={() => onDraftPrompt(message.content ?? "")} className="kova-message-icon-action" aria-label="Edit message">
+                <button
+                  type="button"
+                  onClick={() => onDraftPrompt(message.content ?? "")}
+                  className="kova-message-icon-action"
+                  aria-label="Edit message"
+                >
                   <Pencil className="w-4 h-4" />
                 </button>
               )}
