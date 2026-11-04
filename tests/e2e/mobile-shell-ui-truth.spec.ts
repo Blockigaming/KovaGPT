@@ -22,9 +22,7 @@ test.describe("mobile shell UI truth", () => {
 
     const drawer = page.getByRole("dialog", { name: "Primary navigation" });
     await expect(drawer).toBeVisible();
-    await expect
-      .poll(async () => (await drawer.boundingBox())?.x ?? 0)
-      .toBeCloseTo(8, 0);
+    await expect.poll(async () => (await drawer.boundingBox())?.x ?? 0).toBeCloseTo(8, 0);
     const box = (await drawer.boundingBox())!;
     expect(box.y).toBeCloseTo(8, 0);
     expect(box.height).toBeCloseTo(viewport.height - 16, 0);
